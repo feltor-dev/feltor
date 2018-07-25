@@ -1082,7 +1082,7 @@ struct BathRZ{
         R_min_(R_min), Z_min_(Z_min),
         gamma_(gamma), L_E_(L_E) , amp_(amp),
         kvec( N_kR_*N_kZ_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
-        normal1(kvec), normal2(kvec), normalamp(kvec), normalphase(kvec)
+        normal1(kvec), normal2(kvec), alpha(kvec), theta(kvec)
     {
         double N_kR2=(double)(N_kR_*N_kR_);
         double N_kZ2=(double)(N_kZ_*N_kZ_);
@@ -1110,8 +1110,8 @@ struct BathRZ{
                 unif2[z]=sin(udistribution(generator));
                 normal1[z]=ndistribution(generator);
                 normal2[z]=ndistribution(generator);
-                normalamp[z]=sqrt(normal1[z]*normal1[z]+normal2[z]*normal2[z]);
-                normalphase[z]=atan2(normal2[z],normal1[z]);
+                alpha[z]=sqrt(normal1[z]*normal1[z]+normal2[z]*normal2[z]);
+                theta[z]=atan2(normal2[z],normal1[z]);
             }
         }
 
@@ -1141,7 +1141,7 @@ struct BathRZ{
     DG_DEVICE
     double operator()(double R, double Z)const
     {
-        double f, RZphasecos, RR, ZZ;
+        double f, kappa, RR, ZZ;
         RR=R-R_min_;
         ZZ=Z-Z_min_;
         f=0.;
@@ -1150,8 +1150,8 @@ struct BathRZ{
             for (unsigned i=0;i<N_kR_;i++)
             {
                 int z=j*N_kR_+i;
-                RZphasecos= RR*unif1[z]+ZZ*unif2[z];
-                f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]);
+                kappa= RR*unif1[z]+ZZ*unif2[z];
+                f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
             }
         }
         return amp_*norm_*f;
@@ -1183,7 +1183,7 @@ struct BathRZ{
      */
     DG_DEVICE
     double operator()(double R, double Z, double phi)const {
-        double f, RZphasecos;
+        double f, kappa;
         double  RR, ZZ;
         RR=R-R_min_;
         ZZ=Z-Z_min_;
@@ -1195,8 +1195,8 @@ struct BathRZ{
                 for (unsigned i=0;i<N_kR_;i++)
                 {
                     int z=(j)*(N_kR_)+(i);
-                    RZphasecos= RR*unif1[z]+ZZ*unif2[z];
-                    f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]);
+                    kappa= RR*unif1[z]+ZZ*unif2[z];
+                    f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
                 }
             }
         return amp_*norm_*f;
@@ -1213,7 +1213,7 @@ struct BathRZ{
     double norm_;
     std::vector<double> kvec;
     std::vector<double> sqEkvec;
-    std::vector<double> unif1, unif2, normal1,normal2,normalamp,normalphase;
+    std::vector<double> unif1, unif2, normal1,normal2,alpha,theta;
 };
 /**
  * @brief Exponential \f[ f(x) = A \exp(\lambda x)\f]
