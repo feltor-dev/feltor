@@ -46,15 +46,16 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    bool mhw = ( p.equations == "modified");
-    mima::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.eps_pol, mhw); 
+    bool mhw = ( p.equations == "fullF");
+    mima::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.tau, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.amp);
 
-    dg::DVec phi = dg::evaluate( vortex, grid), omega( phi), y0(phi), y1(phi);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM( grid);
+//     dg::DVec phi = dg::evaluate( vortex, grid), omega( phi), y0(phi), y1(phi);
+    dg::DVec phi = dg::evaluate( gaussian, grid), omega( phi), y0(phi), y1(phi);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM( grid, dg::normed, dg::centered);
     dg::blas2::gemv( laplaceM, phi, omega);
     dg::blas1::axpby( 1., phi, 1., omega, y0);
 
