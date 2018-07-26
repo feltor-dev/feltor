@@ -293,17 +293,17 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-BinaryFunctorsLvl2 createPsip( solovev::Parameters gp)
+static inline BinaryFunctorsLvl2 createPsip( solovev::Parameters gp)
 {
     BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
     return psip;
 }
-BinaryFunctorsLvl1 createIpol( solovev::Parameters gp)
+static inline BinaryFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
-dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
+static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }
@@ -320,7 +320,7 @@ dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
  * @ingroup geom
  * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
-dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
+static inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }

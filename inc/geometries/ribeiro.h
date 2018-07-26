@@ -32,7 +32,10 @@ struct Fpsi
     {
         R_init = x0; Z_init = y0;
         while( fabs( psi.dfx()(R_init, Z_init)) <= 1e-10 && fabs( psi.dfy()( R_init, Z_init)) <= 1e-10)
-            R_init = x0 + 1.; Z_init = y0;
+        {
+            R_init = x0 + 1.;
+            Z_init = y0;
+        }
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0)

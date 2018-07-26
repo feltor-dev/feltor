@@ -17,7 +17,7 @@ namespace geo
  * @param Z_X start value on input, X-point on output
  * @ingroup misc_geo
  */
-void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     dg::geo::HessianRZtau hessianRZtau(  psi);
     std::array<double,2> X({0,0}), XN(X), X_OLD(X);
@@ -80,7 +80,7 @@ struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
+static inline BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -114,7 +114,7 @@ BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& 
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;

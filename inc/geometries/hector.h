@@ -23,22 +23,23 @@ namespace detail
 {
 
 //interpolate the two components of a vector field
+template<class real_type>
 struct Interpolate
 {
-    Interpolate( const thrust::host_vector<double>& fZeta,
-                 const thrust::host_vector<double>& fEta,
+    Interpolate( const thrust::host_vector<real_type>& fZeta,
+                 const thrust::host_vector<real_type>& fEta,
                  const dg::aTopology2d& g2d ):
         iter0_( dg::create::forward_transform( fZeta, g2d) ),
         iter1_( dg::create::forward_transform(  fEta, g2d) ),
         g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
-    void operator()(double t, const thrust::host_vector<double>& zeta, thrust::host_vector<double>& fZeta)
+    void operator()(real_type t, const thrust::host_vector<real_type>& zeta, thrust::host_vector<real_type>& fZeta)
     {
         fZeta[0] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter0_, g_);
         fZeta[1] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter1_, g_);
         //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
         //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
     }
-    void operator()(double t, const std::array<thrust::host_vector<double>,2 >& zeta, std::array< thrust::host_vector<double>,2 >& fZeta)
+    void operator()(real_type t, const std::array<thrust::host_vector<real_type>,2 >& zeta, std::array< thrust::host_vector<real_type>,2 >& fZeta)
     {
         for( unsigned i=0; i<zeta[0].size(); i++)
         {
@@ -47,32 +48,33 @@ struct Interpolate
         }
     }
     private:
-    thrust::host_vector<double> iter0_;
-    thrust::host_vector<double> iter1_;
-    dg::Grid2d g_;
-    double zeta1_, eta1_;
+    thrust::host_vector<real_type> iter0_;
+    thrust::host_vector<real_type> iter1_;
+    dg::RealGrid2d<real_type> g_;
+    real_type zeta1_, eta1_;
 };
 
 //compute c_0
-double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::aTopology2d& g2d)
+template<class real_type>
+real_type construct_c0( const thrust::host_vector<real_type>& etaVinv, const dg::aRealTopology2d<real_type>& g2d)
 {
     //this is a normal integration:
-    thrust::host_vector<double> etaVinvL( dg::create::forward_transform(  etaVinv, g2d) );
+    thrust::host_vector<real_type> etaVinvL( dg::create::forward_transform(  etaVinv, g2d) );
     dg::Grid1d g1d( 0., 2.*M_PI, g2d.n(), g2d.Ny());
     dg::HVec eta = dg::evaluate(dg::cooX1d, g1d);
     dg::HVec w1d = dg::create::weights( g1d);
     dg::HVec int_etaVinv(eta);
     for( unsigned i=0; i<eta.size(); i++)
         int_etaVinv[i] = interpolate( 0., eta[i], etaVinvL, g2d);
-    double c0 = 2.*M_PI/dg::blas1::dot( w1d, int_etaVinv );
+    real_type c0 = 2.*M_PI/dg::blas1::dot( w1d, int_etaVinv );
     return c0;
 
     //the following is too naiv (gives a slightly wrong result):
     //the right way to do it is to integrate de/de=1, dv/de = f(e) because in only dv/de = f(e) our integrator assumes dv/de=f(v)
-    //Interpolate inter( thrust::host_vector<double>( etaVinv.size(), 0), etaVinv, g2d);
-    //thrust::host_vector<double> begin( 2, 0), end(begin), end_old(begin);
+    //Interpolate inter( thrust::host_vector<real_type>( etaVinv.size(), 0), etaVinv, g2d);
+    //thrust::host_vector<real_type> begin( 2, 0), end(begin), end_old(begin);
     //begin[0] = 0, begin[1] = 0;
-    //double eps = 1e10, eps_old = 2e10;
+    //real_type eps = 1e10, eps_old = 2e10;
     //unsigned N = 5;
     //while( (eps < eps_old || eps > 1e-7)&& eps > 1e-12)
     //{
@@ -83,27 +85,28 @@ double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::aTopo
     //    std::cout << "\t error c0  "<<fabs(c0-2.*M_PI/end[1])<<" with "<<N<<" steps: " << 2*M_PI/end[1]<<"\n";
     //}
     ////std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
-    //double f_psi = 2.*M_PI/end_old[1];
+    //real_type f_psi = 2.*M_PI/end_old[1];
 
     //return f_psi;
 }
 
 
 //compute the vector of zeta and eta - values that form first v surface
+template<class real_type>
 void compute_zev(
-        const thrust::host_vector<double>& etaV,
-        const thrust::host_vector<double>& v_vec,
-        thrust::host_vector<double>& eta,
-        const dg::aTopology2d& g2d
+        const thrust::host_vector<real_type>& etaV,
+        const thrust::host_vector<real_type>& v_vec,
+        thrust::host_vector<real_type>& eta,
+        const dg::aRealTopology2d<real_type>& g2d
         )
 {
-    Interpolate iter( thrust::host_vector<double>( etaV.size(), 0), etaV, g2d);
+    Interpolate<real_type> iter( thrust::host_vector<real_type>( etaV.size(), 0), etaV, g2d);
     eta.resize( v_vec.size());
-    thrust::host_vector<double> eta_old(v_vec.size(), 0), eta_diff( eta_old);
-    thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
+    thrust::host_vector<real_type> eta_old(v_vec.size(), 0), eta_diff( eta_old);
+    thrust::host_vector<real_type> begin( 2, 0), end(begin), temp(begin);
     begin[0] = 0., begin[1] = 0.;
     unsigned steps = 1;
-    double eps = 1e10, eps_old=2e10;
+    real_type eps = 1e10, eps_old=2e10;
     while( (eps < eps_old||eps > 1e-7) && eps > 1e-12)
     {
         //begin is left const
@@ -126,29 +129,30 @@ void compute_zev(
     }
 }
 
+template<class real_type>
 void construct_grid(
-        const thrust::host_vector<double>& zetaU, //2d Zeta component
-        const thrust::host_vector<double>& etaU,  //2d Eta component
-        const thrust::host_vector<double>& u_vec,  //1d u values
-        const thrust::host_vector<double>& zeta_init, //1d intial values
-        const thrust::host_vector<double>& eta_init, //1d intial values
-        thrust::host_vector<double>& zeta,
-        thrust::host_vector<double>& eta,
-        const dg::aGeometry2d& g2d
+        const thrust::host_vector<real_type>& zetaU, //2d Zeta component
+        const thrust::host_vector<real_type>& etaU,  //2d Eta component
+        const thrust::host_vector<real_type>& u_vec,  //1d u values
+        const thrust::host_vector<real_type>& zeta_init, //1d intial values
+        const thrust::host_vector<real_type>& eta_init, //1d intial values
+        thrust::host_vector<real_type>& zeta,
+        thrust::host_vector<real_type>& eta,
+        const dg::aRealGeometry2d<real_type>& g2d
     )
 {
-    Interpolate inter( zetaU, etaU, g2d);
+    Interpolate<real_type> inter( zetaU, etaU, g2d);
     unsigned N = 1;
-    double eps = 1e10, eps_old=2e10;
-    std::array<thrust::host_vector<double>,2 > begin;
+    real_type eps = 1e10, eps_old=2e10;
+    std::array<thrust::host_vector<real_type>,2 > begin;
     begin[0] = zeta_init, begin[1] = eta_init;
     //now we have the starting values
-    std::array<thrust::host_vector<double>,2 > end(begin), temp(begin);
+    std::array<thrust::host_vector<real_type>,2 > end(begin), temp(begin);
     unsigned sizeU = u_vec.size(), sizeV = zeta_init.size();
     unsigned size2d = sizeU*sizeV;
     zeta.resize(size2d), eta.resize(size2d);
-    double u0=0, u1 = u_vec[0];
-    thrust::host_vector<double> zeta_old(zeta), zeta_diff( zeta), eta_old(eta), eta_diff(eta);
+    real_type u0=0, u1 = u_vec[0];
+    thrust::host_vector<real_type> zeta_old(zeta), zeta_diff( zeta), eta_old(eta), eta_diff(eta);
     while( (eps < eps_old || eps > 1e-6) && eps > 1e-7)
     {
         zeta_old = zeta, eta_old = eta; eps_old = eps;

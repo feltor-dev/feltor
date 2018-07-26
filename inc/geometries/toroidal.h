@@ -12,7 +12,7 @@ namespace toroidal{
  * @brief constant \f$\psi_p = 1\f$
  * @return
  */
-BinaryFunctorsLvl2 createPsip( )
+static inline BinaryFunctorsLvl2 createPsip( )
 {
     BinaryFunctorsLvl2 psip( new Constant(1), new Constant(0), new Constant(0),new Constant(0), new Constant(0), new Constant(0));
     return psip;
@@ -21,7 +21,7 @@ BinaryFunctorsLvl2 createPsip( )
  * @brief constant \f$ I = 1\f$
  * @return
  */
-BinaryFunctorsLvl1 createIpol( )
+static inline BinaryFunctorsLvl1 createIpol( )
 {
     BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
     return ipol;
@@ -33,7 +33,7 @@ BinaryFunctorsLvl1 createIpol( )
  * \f$ B=\frac{R_0}{R}\f$, \f$ \psi_p = 1\f$ and \f$ I = 1\f$.
  @note The solovev field can also be made to model a todoidal slab field
  */
-TokamakMagneticField createMagField( double R0)
+static inline TokamakMagneticField createMagField( double R0)
 {
     return TokamakMagneticField( R0, createPsip(), createIpol());
 }
@@ -89,7 +89,7 @@ struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
  * @brief circular \f$\psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right)\f$
  * @return
  */
-BinaryFunctorsLvl2 createPsip( double R0 )
+static inline BinaryFunctorsLvl2 createPsip( double R0 )
 {
     BinaryFunctorsLvl2 psip( new Psip(R0), new PsipR(R0), new PsipZ(),new Constant(1), new Constant(0), new Constant(1));
     return psip;
@@ -98,7 +98,7 @@ BinaryFunctorsLvl2 createPsip( double R0 )
  * @brief constant \f$ I = I_0\f$
  * @return
  */
-BinaryFunctorsLvl1 createIpol( double I0 )
+static inline BinaryFunctorsLvl1 createIpol( double I0 )
 {
     BinaryFunctorsLvl1 ipol( new Constant(I0), new Constant(0), new Constant(0));
     return ipol;
@@ -115,7 +115,7 @@ BinaryFunctorsLvl1 createIpol( double I0 )
  * @ingroup geom
  * @note The solovev field can also be made to model a todoidal slab field
  */
-dg::geo::TokamakMagneticField createToroidalField( double R0)
+static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 {
     return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol());
 }
@@ -128,7 +128,7 @@ dg::geo::TokamakMagneticField createToroidalField( double R0)
  * @return A magnetic field object
  * @ingroup geom
  */
-dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
+static inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
 {
     return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol(I0));
 }

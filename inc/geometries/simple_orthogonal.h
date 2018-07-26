@@ -97,17 +97,18 @@ struct Fpsi
 
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
+template<class real_type>
 void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi,
-        const thrust::host_vector<double>& y_vec,
-        thrust::host_vector<double>& r,
-        thrust::host_vector<double>& z,
-        double R_0, double Z_0, double f_psi, int mode )
+        const thrust::host_vector<real_type>& y_vec,
+        thrust::host_vector<real_type>& r,
+        thrust::host_vector<real_type>& z,
+        real_type R_0, real_type Z_0, real_type f_psi, int mode )
 {
 
-    thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
-    thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
+    thrust::host_vector<real_type> r_old(y_vec.size(), 0), r_diff( r_old);
+    thrust::host_vector<real_type> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-    std::array<double,2> begin( {0,0}), end(begin), temp(begin);
+    std::array<real_type,2> begin( {0,0}), end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);
@@ -115,7 +116,7 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1;
-    double eps = 1e10, eps_old=2e10;
+    real_type eps = 1e10, eps_old=2e10;
     while( (eps < eps_old||eps > 1e-7) && eps > 1e-14)
     {
         //begin is left const
@@ -133,10 +134,10 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
         //compute error in R,Z only
         dg::blas1::axpby( 1., r, -1., r_old, r_diff);
         dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-        double er = dg::blas1::dot( r_diff, r_diff);
-        double ez = dg::blas1::dot( z_diff, z_diff);
-        double ar = dg::blas1::dot( r, r);
-        double az = dg::blas1::dot( z, z);
+        real_type er = dg::blas1::dot( r_diff, r_diff);
+        real_type ez = dg::blas1::dot( z_diff, z_diff);
+        real_type ar = dg::blas1::dot( r, r);
+        real_type az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
         steps*=2;
     }

@@ -120,7 +120,7 @@ struct NablaPsiInvY: public aCloneableBinaryFunctor<NablaPsiInvY>
 /**
  * @brief A container class that contains all NablaPsiInv functors
  */
-BinaryFunctorsLvl1 make_NablaPsiInvCollective( const BinaryFunctorsLvl2& psi)
+static inline BinaryFunctorsLvl1 make_NablaPsiInvCollective( const BinaryFunctorsLvl2& psi)
 {
     BinaryFunctorsLvl1 temp( new NablaPsiInv(psi), new NablaPsiInvX(psi), new NablaPsiInvY( psi));
     return temp;
@@ -251,7 +251,7 @@ struct DivLiseikinY : public aCloneableBinaryFunctor<DivLiseikinY>
     BinaryFunctorsLvl2 psi_;
 };
 
-BinarySymmTensorLvl1 make_LiseikinCollective( const BinaryFunctorsLvl2& psi, double k, double eps)
+static inline BinarySymmTensorLvl1 make_LiseikinCollective( const BinaryFunctorsLvl2& psi, double k, double eps)
 {
     BinarySymmTensorLvl1 temp( new Liseikin_XX(psi,k,eps), new Liseikin_XY(psi,k,eps), new Liseikin_YY(psi,k,eps), new DivLiseikinX(psi,k,eps), new DivLiseikinY(psi,k,eps));
     return temp;

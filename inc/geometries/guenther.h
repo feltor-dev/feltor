@@ -137,17 +137,17 @@ struct IpolZ : public aCloneableBinaryFunctor<IpolZ>
     double do_compute(double R, double Z) const { return 0; }
 };
 
-BinaryFunctorsLvl2 createPsip( double R_0)
+static inline BinaryFunctorsLvl2 createPsip( double R_0)
 {
     BinaryFunctorsLvl2 psip( new Psip(R_0), new PsipR(R_0), new PsipZ(R_0),new PsipRR(R_0), new PsipRZ(R_0), new PsipZZ(R_0));
     return psip;
 }
-BinaryFunctorsLvl1 createIpol( double I_0)
+static inline BinaryFunctorsLvl1 createIpol( double I_0)
 {
     BinaryFunctorsLvl1 ipol( new Ipol(I_0), new IpolR(), new IpolZ());
     return ipol;
 }
-TokamakMagneticField createMagField( double R_0, double I_0)
+static inline TokamakMagneticField createMagField( double R_0, double I_0)
 {
     return TokamakMagneticField( R_0, createPsip(R_0), createIpol(I_0));
 }
@@ -320,7 +320,7 @@ struct Divb
  * @return A magnetic field object
  * @ingroup geom
  */
-dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
+static inline dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
 {
     return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0));
 }
