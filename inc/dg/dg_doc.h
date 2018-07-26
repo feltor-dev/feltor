@@ -283,20 +283,6 @@
  dg::blas1::subroutine( Expression(), v, w);
  @endcode
 
- Note that in the C++11 standard there is an elegant solution to defining
- functors: lambdas. Look at this very concise code
- @code
- dg::blas1::subroutine( [] __device__ (double& v, double w){
-                            v = v*v + w;
-                        }, v, w);
- @endcode
- The result is the same as before, but now we make the compiler translate
- the lambda into a functor class for us and we do not need to define a separate
- class any more. Please note, however, that in order to make this example
- work with CUDA we first need to specifiy  the \c __device__ execution space
- specifier and compile with the \c --expt-extended-lambda compiler flag, which
- unfortunately is still in the experimental stage and might change in the future.
-
  Now, we want to use an additional parameter in our expresion. Let's assume we have
  @code
  double parameter = 3.;
@@ -341,13 +327,6 @@
  dg::blas1::subroutine( Expression(), array_v, array_w, array_parameter);
  @endcode
  and use the fact that <tt> std::array </tt> has the \c dg::RecursiveVectorTag.
-
- Of course, the \c Expression class can again be replaced with a lambda function
- @code
- dg::blas1::subroutine( [] __device__ ( double& v, double w, double param){
-                            v = param*v*v + w;
-                        }, array_v, array_w, array_parameter);
- @endcode
 
  In order to compute the sum \f$ \sum_{i=0}^2 p_i\f$ we can use
  @code

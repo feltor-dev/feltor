@@ -8,7 +8,7 @@
 #include "blas.h"
 
 struct Expression{
-   __host__ __device__
+   DG_DEVICE
    void operator() ( double& v, double w, double param){
        v = param*v*v + w;
    }
@@ -48,13 +48,7 @@ int main( int argc, char* argv[])
     std::array<dg::MDVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
     dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
-    if(rank==0)std::cout << "Example2 in documentation      	  "<< (array_v[0].data()[0] == 110 && array_v[1].data()[1] == 820)<<std::endl;
-    dg::transfer( hvec1, array_v);
-    array_w=array_v;
-    dg::blas1::subroutine( [] __device__ (double& v, double w, double param){
-            v = param*v*v+w;
-        }, array_v, array_w, array_p);
-    if(rank==0)std::cout << "Example3 in documentation          "<< (array_v[0].data()[0] == 110 && array_v[1].data()[1] == 820)<<std::endl;
+    if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 110 && array_v[1].data()[1] == 820)<<std::endl;
     if(rank==0)std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
     if(rank==0)std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";

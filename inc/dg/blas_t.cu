@@ -7,7 +7,7 @@
 #include "blas.h"
 
 struct Expression{
-   __host__ __device__
+   DG_DEVICE
    void operator() ( double& v, double w, double param){
        v = param*v*v + w;
    }
@@ -41,15 +41,9 @@ int main()
     std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
     dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
-    std::cout << "Example1 in documentation          "<< (dvec1[0] ==310)<<std::endl;
+    std::cout << "Example in documentation          "<< (dvec1[0] ==310)<<std::endl;
     dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
-    std::cout << "Example2 in documentation          "<< (array_v[0][0] == 110 && array_v[1][1] == 820)<<std::endl;
-    dg::transfer( hvec1, array_v);
-    array_w=array_v;
-    dg::blas1::subroutine( [] __device__ (double& v, double w, double param){
-            v = param*v*v+w;
-        }, array_v, array_w, array_p);
-    std::cout << "Example3 in documentation          "<< (array_v[0][0] == 110 && array_v[1][1] == 820)<<std::endl;
+    std::cout << "Example in documentation          "<< (array_v[0][0] == 110 && array_v[1][1] == 820)<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
     std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";
