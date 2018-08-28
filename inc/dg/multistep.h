@@ -115,7 +115,7 @@ struct AB
     real_type tu_, dt_;
     std::array<ContainerType,k> f_;
     ContainerType u_;
-    const ab_coeff<k,real_type> m_ab;
+    ab_coeff<k,real_type> m_ab;
 };
 
 template< size_t k, class ContainerType>
