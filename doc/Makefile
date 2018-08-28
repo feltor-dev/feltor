@@ -38,8 +38,9 @@ dg: exblas.tag geometries.tag dg_introduction.pdf
 	cd ../inc/dg; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/dg"; \
-		echo "HTML_HEADER = ../../doc/header.html"; \
 		echo "HTML_EXTRA_FILES  = ../../doc/related_pages/dg_introduction/dg_introduction.pdf"; \
+		echo "HTML_HEADER = ../../doc/header.html"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/menubar.css";\
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
 		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html") | doxygen - ;
@@ -51,26 +52,29 @@ geometries: dg.tag parallel.pdf hector.pdf
 		echo "HTML_EXTRA_FILES  = ../../doc/related_pages/parallel/parallel.pdf"; \
 		echo "HTML_EXTRA_FILES += ../../doc/related_pages/hector/hector.pdf"; \
 		echo "HTML_HEADER = ../../doc/header.html"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/menubar.css";\
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
-		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ; 
+		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 file:
 	cd ../inc/file; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/file"; \
 		echo "HTML_HEADER = ../../doc/header.html"; \
-		echo ) | doxygen - ; 
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/menubar.css";\
+		echo ) | doxygen - ;
 
 exblas:
 	cd ../inc/dg/backend/exblas; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../../../doc/exblas"; \
 		echo "HTML_HEADER = ../../../../doc/header.html"; \
-		echo ) | doxygen - ; 
+		echo "HTML_EXTRA_STYLESHEET = ../../../../doc/menubar.css";\
+		echo ) | doxygen - ;
 
 
-%.pdf: 
+%.pdf:
 	cd related_pages/$*; \
 		pdflatex $*.tex; \
 		bibtex $*.aux; \

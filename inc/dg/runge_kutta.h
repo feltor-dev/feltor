@@ -377,7 +377,7 @@ struct RK_opt
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
   private:
     std::array<ContainerType,s> u_; //the order determines the amount of memory needed
-    const rk_coeff<s,real_type> m_rk;
+    rk_coeff<s,real_type> m_rk;
 };
 
 template< size_t k, class ContainerType>
@@ -473,7 +473,7 @@ struct RK
   private:
     std::array<ContainerType,s> k_;
     ContainerType u_;
-    const rk_classic<s, real_type> m_rk;
+    rk_classic<s, real_type> m_rk;
 };
 
 template< size_t s, class ContainerType>
