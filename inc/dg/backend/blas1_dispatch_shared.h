@@ -24,6 +24,16 @@
 ///@cond
 namespace dg
 {
+namespace detail
+{
+template< class To, class From, class ...Params>
+To doConstruct( const From& in, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+{
+    To t( in.begin(), in.end());
+    return t;
+}
+}//namespace detail
+
 namespace blas1
 {
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
@@ -35,12 +45,6 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Conta
 //we need to distinguish between Scalars and Vectors
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-template< class To, class From>
-To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
-{
-    To t( in.begin(), in.end());
-    return t;
-}
 
 template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedVectorTag)

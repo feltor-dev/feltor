@@ -28,7 +28,7 @@ struct Average
     Average( const aTopology2d& g, enum coo2d direction)
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
-        m_w=dg::transfer<container>(dg::create::weights(g, direction));
+        m_w=dg::construct<container>(dg::create::weights(g, direction));
         m_temp1d = m_temp = m_w;
         m_transpose = false;
         if( direction == coo2d::x)
@@ -44,7 +44,7 @@ struct Average
     ///@copydoc Average()
     Average( const aTopology3d& g, enum coo3d direction)
     {
-        m_w = dg::transfer<container>(dg::create::weights(g, direction));
+        m_w = dg::construct<container>(dg::create::weights(g, direction));
         m_temp1d = m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();

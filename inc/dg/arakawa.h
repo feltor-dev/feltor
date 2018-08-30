@@ -97,7 +97,7 @@ struct ArakawaX
 ///@cond
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
-    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
+    dxlhs( dg::construct<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf( dg::create::dx( g, g.bcx())),
     bdyf( dg::create::dy( g, g.bcy()))
 {
@@ -107,7 +107,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
 }
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
-    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
+    dxlhs( dg::construct<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
     bdyf(dg::create::dy( g, bcy))
 {

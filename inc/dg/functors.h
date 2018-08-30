@@ -1159,7 +1159,6 @@ struct BathRZ{
         return amp_*norm_*f;
     }
     /**
-      /**
      * @brief Return the value of the Bath 
      *
        \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 

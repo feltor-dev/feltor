@@ -148,7 +148,7 @@ dg::DMatrix dx;
 dg::blas2::transfer( dg::create::dx(g2d), dx);
 
 //discretize the function on the grid and transfer the result to the device
-const dg::DVec x = dg::transfer<dg::DVec>( dg::evaluate( function, g2d));
+const dg::DVec x = dg::construct<dg::DVec>( dg::evaluate( function, g2d));
 
 //allocate memory for the result
 dg::DVec y=x;

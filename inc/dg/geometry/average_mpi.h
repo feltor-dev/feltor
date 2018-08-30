@@ -29,7 +29,7 @@ struct Average<MPI_Vector<container> >
     Average( const aMPITopology2d& g, enum coo2d direction)
     {
         m_nx = g.local().Nx()*g.n(), m_ny = g.local().Ny()*g.n();
-        m_w=dg::transfer<MPI_Vector<container>>(dg::create::weights(g, direction));
+        m_w=dg::construct<MPI_Vector<container>>(dg::create::weights(g, direction));
         m_temp1d = m_temp = m_w;
         int remain_dims[] = {false,false}; //true true false
         m_transpose = false;
@@ -52,7 +52,7 @@ struct Average<MPI_Vector<container> >
     ///@copydoc Average()
     Average( const aMPITopology3d& g, enum coo3d direction)
     {
-        m_w = dg::transfer<MPI_Vector<container>>(dg::create::weights(g, direction));
+        m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, direction));
         m_temp1d = m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.local().Nx(), ny = g.n()*g.local().Ny(), nz = g.local().Nz();

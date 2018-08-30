@@ -17,10 +17,10 @@ namespace dg
 {
 
 /**
-* @brief Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
+* @brief Solves the Equation \f[ \frac{1}{W} \hat O \phi = \rho \f]
 *
- * using a multigrid algorithm for any operator \f$\hat O\f$ that was made symmetric
- * by appropriate weights \f$W\f$ (s. comment below).
+ * using a multigrid algorithm for any operator \f$\hat O\f$ that is symmetric
+ * and appropriate weights \f$W\f$ (s. comment below).
 *
 * @snippet elliptic2d_b.cu multigrid
 * We use conjugate gradient (CG) at each stage and refine the grids in the first two dimensions (2d / x and y)
@@ -41,62 +41,70 @@ namespace dg
 template< class Geometry, class Matrix, class container>
 struct MultigridCG2d
 {
+    MultigridCG2d(){}
     /**
      * @brief Construct the grids and the interpolation/projection operators
      *
      * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
      * @param stages number of grids in total (The second grid contains half the points of the original grids,
      *   The third grid contains half of the second grid ...). Must be > 1
-     * @param scheme_type scheme type in the solve function (irrelevant for \c direct_solve method)
+     *   @param ps parameters necessary for \c dg::construct to construct a \c container from a \c dg::HVec
     */
-    MultigridCG2d( const Geometry& grid, const unsigned stages, const int scheme_type = 0 )
+    template<class ...Params>
+    MultigridCG2d( const Geometry& grid, const unsigned stages, Params&& ... ps)
     {
-        stages_= stages;
+        construct( grid, stages, std::forward<Params>(ps)...);
+    }
+    template<class ...Params>
+    void construct( const Geometry& grid, const unsigned stages, Params&& ... ps)
+    {
+        m_stages = stages;
         if(stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
 
-		grids_.resize(stages);
-        cg_.resize(stages);
+		m_grids.resize(stages);
+        m_cg.resize(stages);
 
-        grids_[0].reset( grid);
-        //grids_[0].get().display();
+        m_grids[0].reset( grid);
+        //m_grids[0].get().display();
 
 		for(unsigned u=1; u<stages; u++)
         {
-            grids_[u] = grids_[u-1]; // deep copy
-            grids_[u].get().multiplyCellNumbers(0.5, 0.5);
-            //grids_[u].get().display();
+            m_grids[u] = m_grids[u-1]; // deep copy
+            m_grids[u].get().multiplyCellNumbers(0.5, 0.5);
+            //m_grids[u].get().display();
         }
 
-		inter_.resize(stages-1);
-		interT_.resize(stages-1);
-        project_.resize( stages-1);
+		m_inter.resize(stages-1);
+		m_interT.resize(stages-1);
+        m_project.resize( stages-1);
 
 		for(unsigned u=0; u<stages-1; u++)
         {
             // Projecting from one grid to the next is the same as
             // projecting from the original grid to the coarse grids
-            project_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::normed);
-            inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(), 2, 2);
-            interT_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::not_normed);
+            m_project[u].construct( dg::create::fast_projection(m_grids[u].get(), 2, 2, dg::normed), std::forward<Params>(ps)...);
+            m_inter[u].construct( dg::create::fast_interpolation(m_grids[u+1].get(), 2, 2), std::forward<Params>(ps)...);
+            m_interT[u].construct( dg::create::fast_projection(m_grids[u].get(), 2, 2, dg::not_normed), std::forward<Params>(ps)...);
         }
 
-        container x0;
-        dg::blas1::transfer( dg::evaluate( dg::zero, grid), x0);
-        x_ = project(x0);
-        m_r = x_,
-		b_ = x_;
-        set_scheme(scheme_type);
+        m_x.resize( m_stages);
+        for( unsigned u=0; u<m_stages; u++)
+            m_x[u] = dg::construct<container>( dg::evaluate( dg::zero, m_grids[u].get()), std::forward<Params>(ps)...);
+        m_r = m_b = m_x;
+        for (unsigned u = 0; u < m_stages; u++)
+            m_cg[u].construct(m_x[u], 1);
     }
 
+    /*
 	template<class SymmetricOp>
-	std::vector<unsigned> solve(/*const*/ std::vector<SymmetricOp>& op, container& x, const container& b, const double eps)
+	std::vector<unsigned> solve( std::vector<SymmetricOp>& op, container& x, const container& b, const double eps)
 	{
         //project initial guess down to coarse grid
-        project(x, x_);
-        dg::blas2::symv(op[0].weights(), b, b_[0]);
+        project(x, m_x);
+        dg::blas2::symv(op[0].weights(), b, m_b[0]);
         // project b down to coarse grid
-        for( unsigned u=0; u<stages_-1; u++)
-            dg::blas2::gemv( interT_[u], b_[u], b_[u+1]);
+        for( unsigned u=0; u<m_stages-1; u++)
+            dg::blas2::gemv( m_interT[u], m_b[u], m_b[u+1]);
 
 
         unsigned int numStageSteps = m_schemeLayout.size();
@@ -109,8 +117,8 @@ struct MultigridCG2d
             unsigned w = u + m_schemeLayout[i].m_step;
             //
             // iterate the solver on the system A x = b, with x = 0 as inital guess
-            cg_[u].set_max(m_schemeLayout[i].m_niter);
-            number[i] = cg_[u](op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps);
+            m_cg[u].set_max(m_schemeLayout[i].m_niter);
+            number[i] = m_cg[u](op[u], m_x[u], m_b[u], op[u].precond(), op[u].inv_weights(), eps);
 
             //
             // debug print
@@ -120,30 +128,31 @@ struct MultigridCG2d
             {
                 //
                 // compute residual r = Wb - A x
-                dg::blas2::symv(op[u], x_[u], m_r[u]);
-                dg::blas1::axpby(-1.0, m_r[u], 1.0, b_[u], m_r[u]);
+                dg::blas2::symv(op[u], m_x[u], m_r[u]);
+                dg::blas1::axpby(-1.0, m_r[u], 1.0, m_b[u], m_r[u]);
                 //
                 // transfer residual to the rhs of the coarser grid
-                dg::blas2::symv(interT_[u], m_r[u], b_[w]);
-                //dg::blas2::symv(project_[u], x_[u], x_[w]);
+                dg::blas2::symv(m_interT[u], m_r[u], m_b[w]);
+                //dg::blas2::symv(m_project[u], m_x[u], m_x[w]);
                 //std::cout << "zeroed " << w << ", ";
-                dg::blas1::scal(x_[w], 0.0);
+                dg::blas1::scal(m_x[w], 0.0);
             }
             else if (m_schemeLayout[i].m_step < 0)
             {
                 //
                 // correct the solution vector of the finer grid
                 // x[w] = x[w] + P^{-1} x[u]
-                dg::blas2::symv(1., inter_[w], x_[u], 1., x_[w]);
-                //dg::blas2::symv(inter_[w], x_[u], x_[w]);
+                dg::blas2::symv(1., m_inter[w], m_x[u], 1., m_x[w]);
+                //dg::blas2::symv(m_inter[w], m_x[u], m_x[w]);
             }
 
             u = w;
 		}
 
-		x_[0].swap(x);
+		m_x[0].swap(x);
 		return number;
 	}
+    */
 
     /**
      * @brief Nested iterations
@@ -164,28 +173,28 @@ struct MultigridCG2d
     template<class SymmetricOp>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
     {
-        dg::blas2::symv(op[0].weights(), b, b_[0]);
+        dg::blas2::symv(op[0].weights(), b, m_b[0]);
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
-        dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], m_r[0]);
+        dg::blas1::axpby(-1.0, m_r[0], 1.0, m_b[0], m_r[0]);
         // project residual down to coarse grid
-        for( unsigned u=0; u<stages_-1; u++)
-            dg::blas2::gemv( interT_[u], m_r[u], m_r[u+1]);
-        std::vector<unsigned> number(stages_);
+        for( unsigned u=0; u<m_stages-1; u++)
+            dg::blas2::gemv( m_interT[u], m_r[u], m_r[u+1]);
+        std::vector<unsigned> number(m_stages);
 #ifdef DG_BENCHMARK
         Timer t;
 #endif //DG_BENCHMARK
 
-        dg::blas1::scal( x_[stages_-1], 0.0);
+        dg::blas1::scal( m_x[m_stages-1], 0.0);
         //now solve residual equations
-		for( unsigned u=stages_-1; u>0; u--)
+		for( unsigned u=m_stages-1; u>0; u--)
         {
 #ifdef DG_BENCHMARK
             t.tic();
 #endif //DG_BENCHMARK
-            cg_[u].set_max(grids_[u].get().size());
-            number[u] = cg_[u]( op[u], x_[u], m_r[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
-            dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
+            m_cg[u].set_max(m_grids[u].get().size());
+            number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
+            dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();
 #ifdef MPI_VERSION
@@ -202,9 +211,9 @@ struct MultigridCG2d
 #endif //DG_BENCHMARK
 
         //update initial guess
-        dg::blas1::axpby( 1., x_[0], 1., x);
-        cg_[0].set_max(grids_[0].get().size());
-        number[0] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps);
+        dg::blas1::axpby( 1., m_x[0], 1., x);
+        m_cg[0].set_max(m_grids[0].get().size());
+        number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(), op[0].inv_weights(), eps);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -226,8 +235,8 @@ struct MultigridCG2d
     void project( const container& src, std::vector<container>& out)
     {
         dg::blas1::copy( src, out[0]);
-        for( unsigned u=0; u<grids_.size()-1; u++)
-            dg::blas2::gemv( project_[u], out[u], out[u+1]);
+        for( unsigned u=0; u<m_stages-1; u++)
+            dg::blas2::gemv( m_project[u], out[u], out[u+1]);
     }
 
     /**
@@ -237,23 +246,22 @@ struct MultigridCG2d
     */
     std::vector<container> project( const container& src)
     {
-        std::vector<container> out( grids_.size());
-        for( unsigned u=0; u<grids_.size(); u++)
-            dg::blas1::transfer( dg::evaluate( dg::zero, grids_[u].get()), out[u]);
+        //use the fact that m_x has the correct sizes from the constructor
+        std::vector<container> out( m_x);
         project( src, out);
         return out;
 
     }
     ///@return number of stages
-    unsigned stages()const{return stages_;}
+    unsigned stages()const{return m_stages;}
 
     ///observe the grids at all stages
-    const std::vector<dg::ClonePtr< Geometry > > grids()const { return grids_; }
+    const std::vector<dg::ClonePtr< Geometry > > grids()const { return m_grids; }
 
 
     ///After a call to a solution method returns the maximum number of iterations allowed at stage  0
     ///(if the solution method returns this number, failure is indicated)
-    unsigned max_iter() const{return cg_[0].get_max();}
+    unsigned max_iter() const{return m_cg[0].get_max();}
 
 private:
 
@@ -262,8 +270,8 @@ private:
         assert(scheme_type <= 1 && scheme_type >= 0);
 
         // initialize one conjugate-gradient for each grid size
-        for (unsigned u = 0; u < stages_; u++)
-            cg_[u].construct(x_[u], 1);
+        for (unsigned u = 0; u < m_stages; u++)
+            m_cg[u].construct(m_x[u], 1);
 
         switch (scheme_type)
         {
@@ -271,21 +279,21 @@ private:
         case(0):
 
             //m_mode = nestediteration;
-            m_startStage = stages_ - 1;
-            for (int u = stages_ - 1; u >= 0; u--)
-                m_schemeLayout.push_back(stepinfo(-1, x_[u].size()));
+            m_startStage = m_stages - 1;
+            for (int u = m_stages - 1; u >= 0; u--)
+                m_schemeLayout.push_back(stepinfo(-1, m_x[u].size()));
             break;
 
         case(1):
 
             //m_mode = correctionscheme;
             m_startStage = 0;
-            for (unsigned u = 0; u < stages_-1; u++)
+            for (unsigned u = 0; u < m_stages-1; u++)
                 m_schemeLayout.push_back(stepinfo(1, 5));
 
             m_schemeLayout.push_back(stepinfo(-1, 1000));
 
-            for (int u = stages_ - 2; u >= 0; u--)
+            for (int u = m_stages - 2; u >= 0; u--)
                 m_schemeLayout.push_back(stepinfo(-1, 1000));
 
             break;
@@ -295,7 +303,7 @@ private:
         }
 
         // there is no step at the last stage so the step must be zero
-        m_schemeLayout.back().m_niter = x_[0].size();
+        m_schemeLayout.back().m_niter = m_x[0].size();
         m_schemeLayout.back().m_step = 0;
 
         //PrintScheme();
@@ -305,11 +313,11 @@ private:
         // (1) there can not be more than n-1 interpolations in succession
 
         unsigned u = m_startStage;
-        assert( u <= stages_ - 1);
+        assert( u <= m_stages - 1);
         for (unsigned i = 0; i < m_schemeLayout.size(); i++)
         {
             u += m_schemeLayout[i].m_step;
-            assert( u <= stages_ - 1);
+            assert( u <= m_stages - 1);
         }
         assert(u == 0);
 	}
@@ -326,13 +334,13 @@ private:
     }
 
 private:
-    unsigned stages_;
-    std::vector< dg::ClonePtr< Geometry> > grids_;
-    std::vector< MultiMatrix<Matrix, container> >  inter_;
-    std::vector< MultiMatrix<Matrix, container> >  interT_;
-    std::vector< MultiMatrix<Matrix, container> >  project_;
-    std::vector< CG<container> > cg_;
-    std::vector< container> x_, m_r, b_;
+    unsigned m_stages;
+    std::vector< dg::ClonePtr< Geometry> > m_grids;
+    std::vector< MultiMatrix<Matrix, container> >  m_inter;
+    std::vector< MultiMatrix<Matrix, container> >  m_interT;
+    std::vector< MultiMatrix<Matrix, container> >  m_project;
+    std::vector< CG<container> > m_cg;
+    std::vector< container> m_x, m_r, m_b;
 
     struct stepinfo
     {

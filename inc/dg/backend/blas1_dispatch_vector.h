@@ -17,24 +17,39 @@
 ///@cond
 namespace dg
 {
-namespace blas1
-{
+template<class to_ContainerType, class from_ContainerType, class ...Params>
+inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);
 
-template<class to_ContainerType, class from_ContainerType>
-inline to_ContainerType transfer( const from_ContainerType& src);
-
-namespace detail
-{
-
-template<class To, class From>
-To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
+namespace detail{
+template<class To, class From, class ...Params>
+To doConstruct( const From& src, ArrayVectorTag, AnyVectorTag, Params&&...ps )
 {
     To t;
     using inner_vector = typename To::value_type;
     for (unsigned i=0; i<t.size(); i++)
-        t[i] = dg::blas1::transfer<inner_vector>(src);
+        t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
     return t;
 }
+
+template<class To, class From, class Size, class ...Params>
+To doConstruct( const From& src, RecursiveVectorTag, AnyVectorTag, Size size, Params&&... ps )
+{
+    To t(size);
+    using inner_vector = typename To::value_type;
+    for (int i=0; i<(int)size; i++)
+        t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
+    return t;
+}
+
+} //namespace detail
+
+namespace blas1
+{
+
+
+namespace detail
+{
+
 
 template< class Vector1, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2, RecursiveVectorTag)

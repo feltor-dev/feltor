@@ -53,10 +53,10 @@ int main()
     dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    Vector lhs = dg::transfer<Vector>(dg::evaluate ( left, grid)), jac(lhs);
-    Vector rhs = dg::transfer<Vector>(dg::evaluate ( right,grid));
-    const Vector sol = dg::transfer<Vector>(dg::evaluate( jacobian, grid ));
-    Vector eins = dg::transfer<Vector>(dg::evaluate( dg::one, grid ));
+    Vector lhs = dg::construct<Vector>(dg::evaluate ( left, grid)), jac(lhs);
+    Vector rhs = dg::construct<Vector>(dg::evaluate ( right,grid));
+    const Vector sol = dg::construct<Vector>(dg::evaluate( jacobian, grid ));
+    Vector eins = dg::construct<Vector>(dg::evaluate( dg::one, grid ));
     //std::cout<< std::setprecision(2);
 
     dg::ArakawaX<dg::CartesianGrid2d, Matrix, Vector> arakawa( grid);

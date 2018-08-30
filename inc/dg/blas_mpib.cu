@@ -146,7 +146,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( M, x, y);
     t.toc();
     if(rank==0)std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
+    ArrayVec x_half = dg::construct<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     dg::blas2::gemv( inter, x_half, x); //warm up
     t.tic();
     for( int i=0; i<multi; i++)

@@ -147,7 +147,7 @@
 
   /** @class hide_container_geometry
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::transfer.
+  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::construct.
   * We assume that \c container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry

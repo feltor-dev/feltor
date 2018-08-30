@@ -23,7 +23,7 @@ namespace dg{
  * @return greatest common divisor
  * @ingroup misc
  */
-static unsigned gcd( unsigned a, unsigned b)
+static inline unsigned gcd( unsigned a, unsigned b)
 {
     unsigned r2 = std::max(a,b);
     unsigned r1 = std::min(a,b);
@@ -44,7 +44,7 @@ static unsigned gcd( unsigned a, unsigned b)
  * @return Least common multiple
  * @ingroup misc
  */
-static unsigned lcm( unsigned a, unsigned b)
+static inline unsigned lcm( unsigned a, unsigned b)
 {
     unsigned g = gcd( a,b);
     return a/g*b;
