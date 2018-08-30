@@ -42,26 +42,27 @@ int main()
     dg::Grid3d g2n (0, M_PI, 0, M_PI, 0,1, n_new, N_new, N_new, 4);
     //cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
     cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
-    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new);
+    dg::MultiMatrix< dg::HMatrix, std::vector<thrust::host_vector<double>> > proj2d;
+    proj2d.construct( dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new), 2);
     dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > fast_inte2d = dg::create::fast_interpolation( g2n, N_old/N_new, N_old/N_new);
-    const dg::HVec sinO = dg::evaluate( sine, g2o),
-                   sinN = dg::evaluate( sine, g2n);
+    const std::vector<dg::HVec> sinO(2, dg::evaluate( sine, g2o)),
+                                sinN(2, dg::evaluate( sine, g2n));
     dg::HVec w2do = dg::create::weights( g2o);
     dg::HVec w2dn = dg::create::weights( g2n);
-    dg::HVec sinP( g2n.size()), sinI(g2o.size());
-    dg::blas2::gemv( proj2d, sinO, sinP);
+    std::vector<dg::HVec> sinP( sinN), sinI(sinO);
+    dg::blas2::gemv( proj2d, sinO, sinP); //FAST PROJECTION
     std::cout << "Original vector     "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) << "\n";
     std::cout << "Projected vector    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
     std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << std::endl;
     std::cout << "Difference between projection and evaluation      ";
     dg::blas1::axpby( 1., sinN, -1., sinP);
     std::cout << sqrt(dg::blas2::dot( sinP, w2dn, sinP)/dg::blas2::dot(sinN, w2dn, sinN))<<"\n";
-    dg::blas2::gemv( inte2d, sinO, sinP);
-    std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
-    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
-    dg::blas2::gemv( fast_inte2d, sinN, sinI);
-    std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) << "\n";
-    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) - sqrt(dg::blas2::dot( sinN, w2dn, sinN)) << "\n" << std::endl;
+    dg::blas2::gemv( inte2d, sinO[0], sinP[0]);
+    std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinP[0], w2dn, sinP[0])) << "\n";
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO[0], w2do, sinO[0])) - sqrt(dg::blas2::dot( sinP[0], w2dn, sinP[0])) << "\n" << std::endl;
+    dg::blas2::gemv( fast_inte2d, sinN[0], sinI[0]);
+    std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinI[0], w2do, sinI[0])) << "\n";
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinI[0], w2do, sinI[0])) - sqrt(dg::blas2::dot( sinN[0], w2dn, sinN[0])) << "\n" << std::endl;
 
     return 0;
 }
