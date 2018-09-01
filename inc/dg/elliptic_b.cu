@@ -14,15 +14,17 @@
 #include "elliptic.h"
 
 
-const double R_0 = 1000;
+const double R_0 = 10;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
-double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
+double fct(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
+double derivative( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
+double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
+double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
+dg::bc bcz = dg::PER;
 double initial( double x, double y, double z) {return sin(0);}
 
 
@@ -35,25 +37,22 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
-    dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER);
+    dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, bcz);
     dg::DVec w3d = dg::create::volume( grid);
     dg::DVec v3d = dg::create::inv_volume( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
     std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
-    std::cout << "Create Laplacian\n";
-    t.tic();
-    dg::Elliptic<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    //std::cout << "Create Laplacian\n";
+    dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
     dg::DMatrix DX = dg::create::dx( grid);
-    t.toc();
-    std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny);
+    dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
 
-    std::cout<<"Expand right hand side\n";
+    //std::cout<<"Expand right hand side\n";
     const dg::DVec solution = dg::evaluate ( fct, grid);
     const dg::DVec deriv = dg::evaluate( derivative, grid);
-    dg::DVec b = dg::evaluate ( laplace_fct, grid);
+    dg::DVec b = dg::evaluate ( laplace3d_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
 
@@ -81,7 +80,7 @@ int main()
 
     std::cout << "TEST SPLIT SOLUTION\n";
     x = dg::evaluate( initial, grid);
-    b = dg::evaluate ( laplace_fct, grid);
+    b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aGeometry2d> grid_perp = grid.perp_grid();
     dg::DVec v2d = dg::create::inv_volume( grid_perp.get());

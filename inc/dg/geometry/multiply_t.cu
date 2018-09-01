@@ -21,9 +21,9 @@ int main()
 {
     std::cout << "Test dg::Sparse Tensor class \n";
     dg::SparseTensor<thrust::host_vector<double> > t;
-    t.idx(0,0) = 2, t.idx(0,1)=t.idx(1,0) = 3;
-    t.idx(1,1) = 4;
-    t.idx(2,2) = 1;
+    t.idx(0,0) = 2, t.idx(0,1) = 3, t.idx(0,2) = 0;
+    t.idx(1,0) = 3, t.idx(1,1) = 4, t.idx(1,2) = 0;
+    t.idx(2,0) = 0, t.idx(2,1) = 0, t.idx(2,2) = 1;
     t.values().resize(5);
     t.values()[0] = zero, t.values()[1] = one, t.values()[2]= two, t.values()[3] = three, t.values()[4]=four;
     thrust::host_vector<double> inout0=eight, inout1=nine, inout2=two, work0(inout0), work1(inout1), work2(inout2);
@@ -53,9 +53,9 @@ int main()
     dg::tensor::multiply3d(t, eight, nine,two, work0, work1, work2);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"] ([102 48 76])\n";
     inout0=eight, inout1=nine, inout2=two;
-    dg::tensor::multiply3d(t, inout0, inout1, inout2, work0, work1, inout2);
-    std::cout << "Result inplace is ["<<work0[0]<<" "<<work1[0]<<" "<<inout2[0]<<"] ([102 48 76])\n";
-    std::cout << "Determinant3d of T: "<<dg::tensor::determinant3d(t)[0]<<" (312)\n";
+    dg::tensor::multiply3d(t, inout0, inout1, inout2, inout0, inout1, inout2);
+    std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<" "<<inout2[0]<<"] ([102 48 76])\n";
+    std::cout << "Determinant3d of T: "<<dg::tensor::determinant(t)[0]<<" (312)\n";
     std::cout << "Determinant2d of T: "<<dg::tensor::determinant2d(t)[0]<<" (-36)\n";
     return 0;
 

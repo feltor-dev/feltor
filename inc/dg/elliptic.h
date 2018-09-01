@@ -699,6 +699,221 @@ struct TensorElliptic
     ClonePtr<Geometry> g_;
 };
 
+/**
+ * @brief %Operator that acts as a 3d negative elliptic differential operator
+ *
+ * @ingroup matrixoperators
+ *
+ * The term discretized is \f[ -\nabla \cdot ( \mathbf \chi\cdot \nabla ) \f]
+ * where \f$ \mathbf \chi \f$ is a positive semi-definit tensor.
+ * In general coordinates that means
+ * \f[ -\frac{1}{\sqrt{g}}\left(
+ * \partial_x\left(\sqrt{g}\left(\chi^{xx}\partial_x + \chi^{xy}\partial_y + \chi^{xz}\partial_z \right)\right)
+ + \partial_y\left(\sqrt{g}\left(\chi^{yx}\partial_x + \chi^{yy}\partial_y + \chi^{yz}\partial_z \right)\right)
+ + \partial_z\left(\sqrt{g}\left(\chi^{zx}\partial_x + \chi^{zy}\partial_y + \chi^{zz}\partial_z \right)\right)
+ \right)\f]
+ is discretized. Note that the local discontinuous Galerkin discretization adds so-called
+ jump terms
+ \f[ D^\dagger \chi D + \alpha J \f]
+ where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
+ (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
+ Usually the default \f$ \alpha=1 \f$ is a good choice.
+ However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
+ \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
+ In a time dependent problem the value of \f$\alpha\f$ determines the
+ numerical diffusion, i.e. for too low values numerical oscillations may appear.
+ Also note that a forward discretization has more diffusion than a centered discretization.
+
+ The following code snippet demonstrates the use of \c Elliptic in an inversion problem
+ * @snippet elliptic3d_b.cu invert
+ * @copydoc hide_geometry_matrix_container
+ * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
+ * and thus in a conjugate gradient solver.
+ * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
+ * results
+ * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
+ * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
+ *
+ */
+template <class Geometry, class Matrix, class container>
+class Elliptic3d
+{
+    public:
+    using value_type = get_value_type<container>;
+    ///@brief empty object ( no memory allocation, call \c construct before using the object)
+    Elliptic3d(){}
+    /**
+     * @brief Construct from Grid
+     *
+     * @param g The Grid, boundary conditions are taken from here
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative
+
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @note chi is assumed 1 per default
+     */
+    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
+    {
+        construct( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor);
+    }
+
+    ///@copydoc Elliptic3d::construct()
+    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
+    {
+        construct( g, bcx, bcy, no, dir, jfactor);
+    }
+
+    /**
+     * @brief Construct from grid and boundary conditions
+     * @param g The Grid
+     * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param bcz boundary contition in z
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
+     * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     */
+    void construct( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
+    {
+        m_no=no, m_jfactor=jfactor;
+        dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
+        dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
+        dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dir)), m_leftz);
+        dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
+        dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
+        dg::blas2::transfer( dg::create::dz( g, bcz, dir), m_rightz);
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
+
+        dg::blas1::transfer( dg::create::inv_volume(g),    m_inv_weights);
+        dg::blas1::transfer( dg::create::volume(g),        m_weights);
+        dg::blas1::transfer( dg::create::inv_weights(g),   m_precond);
+        m_temp = m_tempx = m_tempy = m_tempz = m_inv_weights;
+        m_chi=g.metric();
+        m_vol=dg::tensor::volume(m_chi);
+        dg::tensor::scal( m_chi, m_vol);
+        dg::transfer( dg::create::weights(g), m_weights_wo_vol);
+    }
+
+    ///@copydoc  Elliptic3d::Elliptic3d(const Geometry&,norm,direction,value_type)
+    void construct( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor = 1.){
+        construct( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor);
+    }
+
+    SparseTensor<container>& chi(){ return m_chi;}
+    const SparseTensor<container>& chi()const { return m_chi;}
+
+    /**
+     * @brief Return the vector missing in the un-normed symmetric matrix
+     *
+     * i.e. the inverse of the weights() function
+     * @return inverse volume form including inverse weights
+     */
+    const container& inv_weights()const {
+        return m_inv_weights;
+    }
+    /**
+     * @brief Return the vector making the matrix symmetric
+     *
+     * i.e. the volume form
+     * @return volume form including weights
+     */
+    const container& weights()const {
+        return m_weights;
+    }
+    /**
+     * @brief Return the default preconditioner to use in conjugate gradient
+     *
+     * Currently returns the inverse weights without volume elment divided by the current \f$ \chi\f$.
+     * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
+     * @return the inverse of \f$\chi\f$.
+     */
+    const container& precond()const {
+        return m_precond;
+    }
+    /**
+     * @brief Set the currently used jfactor
+     *
+     * @param new_jfactor The new scale factor for jump terms
+     */
+    void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
+    /**
+     * @brief Get the currently used jfactor
+     *
+     * @return  The current scale factor for jump terms
+     */
+    value_type get_jfactor() const {return m_jfactor;}
+
+    /**
+     * @brief Computes the polarisation term
+     *
+     * @param x left-hand-side
+     * @param y result
+     * @note memops required:
+            - 19 reads + 9 writes
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y){
+        symv( 1, x, 0, y);
+    }
+    /**
+     * @brief Computes the polarisation term
+     *
+     * @param alpha a scalar
+     * @param x left-hand-side
+     * @param beta a scalar
+     * @param y result
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
+    {
+        //compute gradient
+        dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
+        dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
+        dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
+
+        //multiply with tensor (note the alias)
+        dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
+
+        //now take divergence
+        dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
+        dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+        dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
+
+        //add jump terms
+        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( m_no == normed)
+            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
+        if( m_no == not_normed)//multiply weights without volume
+            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+    }
+
+    private:
+    bc inverse( bc bound)
+    {
+        if( bound == DIR) return NEU;
+        if( bound == NEU) return DIR;
+        if( bound == DIR_NEU) return NEU_DIR;
+        if( bound == NEU_DIR) return DIR_NEU;
+        return PER;
+    }
+    direction inverse( direction dir)
+    {
+        if( dir == forward) return backward;
+        if( dir == backward) return forward;
+        return centered;
+    }
+    Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
+    container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
+    container m_tempx, m_tempy, m_tempz, m_temp;
+    norm m_no;
+    SparseTensor<container> m_chi;
+    container m_vol;
+    value_type m_jfactor;
+};
 ///@cond
 template< class G, class M, class V>
 struct TensorTraits< Elliptic<G, M, V> >
@@ -721,6 +936,12 @@ struct TensorTraits< GeneralEllipticSym<G, M, V> >
 };
 template< class G, class M, class V>
 struct TensorTraits< TensorElliptic<G, M, V> >
+{
+    using value_type      = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
+};
+template< class G, class M, class V>
+struct TensorTraits< Elliptic3d<G, M, V> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
