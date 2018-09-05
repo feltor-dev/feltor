@@ -375,9 +375,9 @@ b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} 
 b^\varphi = -{\frac{I}{R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2}
 \label{}
 \end{align}
-Let us redefine
+Let us redefine/approximate
 \begin{align}
-\bhat\times\kappa := \nabla\times\bhat = \frac{1}{B}\nabla\times \vec B + \bhat \times\nabla\ln B
+\bhat\times\kappa \approx \nabla\times\bhat = \frac{1}{B}\nabla\times \vec B + \bhat \times\nabla\ln B
 \label{}
 \end{align}
 and write
@@ -390,9 +390,14 @@ and write
 \end{align}
 
 \begin{align}
-\frac{1}{B^2}(\nabla\times \vec B)^R &= \frac{R_0 }{B^2R}\frac{\partial I}{\partial Z} \\
-\frac{1}{B^2}(\nabla\times \vec B)^Z &= -\frac{R_0 }{B^2R}\frac{\partial I}{\partial R} \\
-\frac{1}{B^2}(\nabla\times \vec B)^\varphi &= -\frac{1}{B^2R^2}\left(\frac{1}{R}\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) + \frac{\partial^2 \psi}{\partial Z^2}\right)
+\vec K_\kappa^R &= \frac{R_0 }{B^2R}\left( \frac{\partial I}{\partial Z} -\frac{I}{B}\frac{\partial B}{\partial Z}\right) \\
+\vec K_\kappa^Z &= \frac{R_0 }{B^2R} \left( \frac{I}{B}\frac{\partial B}{\partial R} - \frac{\partial I}{\partial R} \right)\\
+\vec K_\kappa^\varphi &= \frac{1}{B^2R^2}\left(
++ \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
++ \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
+-\frac{1}{R}\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
+- \frac{\partial^2 \psi}{\partial Z^2}
+\right)
 %contravariant phi component
 \label{}
 \end{align}
