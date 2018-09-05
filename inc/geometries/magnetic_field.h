@@ -294,7 +294,7 @@ struct Divb: public aCloneableBinaryFunctor<GradLnB>
 };
 
 /**
- * @brief \f[ B_\varphi = R_0I/R^2\f]
+ * @brief \f[ B^\varphi = R_0I/R^2\f]
  */
 struct FieldP: public aCloneableBinaryFunctor<FieldP>
 {
@@ -309,7 +309,7 @@ struct FieldP: public aCloneableBinaryFunctor<FieldP>
 };
 
 /**
- * @brief \f[ B_R = R_0\psi_Z /R\f]
+ * @brief \f[ B^R = R_0\psi_Z /R\f]
  */
 struct FieldR: public aCloneableBinaryFunctor<FieldR>
 {
@@ -324,7 +324,7 @@ struct FieldR: public aCloneableBinaryFunctor<FieldR>
 };
 
 /**
- * @brief \f[ B_Z = -R_0\psi_R /R\f]
+ * @brief \f[ B^Z = -R_0\psi_R /R\f]
  */
 struct FieldZ: public aCloneableBinaryFunctor<FieldZ>
 {
@@ -361,7 +361,7 @@ struct FieldT: public aCloneableBinaryFunctor<FieldT>
 };
 
 /**
- * @brief \f[ b_R = B_R/|B|\f]
+ * @brief \f[ b^R = B^R/|B|\f]
  */
 struct BHatR: public aCloneableBinaryFunctor<BHatR>
 {
@@ -377,7 +377,7 @@ struct BHatR: public aCloneableBinaryFunctor<BHatR>
 };
 
 /**
- * @brief \f[ b_Z = B_Z/|B|\f]
+ * @brief \f[ b^Z = B^Z/|B|\f]
  */
 struct BHatZ: public aCloneableBinaryFunctor<BHatZ>
 {
@@ -392,7 +392,7 @@ struct BHatZ: public aCloneableBinaryFunctor<BHatZ>
 };
 
 /**
- * @brief \f[ b_\varphi = B_\varphi/|B|\f]
+ * @brief \f[ b^\varphi = B^\varphi/|B|\f]
  */
 struct BHatP: public aCloneableBinaryFunctor<BHatP>
 {
