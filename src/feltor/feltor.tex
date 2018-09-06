@@ -347,72 +347,21 @@ With the help of the metric elements we get a well behaved volume element \(\sqr
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The magnetic field}\label{sec:magnetic}
-In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be rewritten to
-\begin{align}
- \vec{B} &= \frac{R_0I(\psi)}{R} \vec{\hat{e}}_{\varphi} + \frac{R_0}{R}\left[\frac{\partial \psi}{\partial Z} \vec{\hat{e}}_R 
-         -  \frac{\partial \psi}{\partial R} \vec{\hat{e}}_Z\right] ,
-\end{align}
-which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
-For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\vec{\hat{e}}_R - \frac{\partial \psi}{\partial R}\vec{\hat{e}}_Z\right)
-\) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \vec{\hat{e}}_{\varphi}\).
-The unit vectors are denoted by \(\vec{\hat{e}}_{R}\), \(\vec{\hat{e}}_{Z}\), \(\vec{\hat{e}}_{\varphi}\). Note that $B^R=B_R$ and $B^Z=B_Z$ whereas
-$B^\varphi = R_0I/R^2$ and $B_\varphi=R_0I$ (contra- and covariant components of $\vec B$).
-
-By construction we have $\partial_\varphi B = 0$ with
-\begin{align}
-  B = \frac{R_0}{R}\sqrt{ {I^2 + |\nabla \psi_p|^2}}.
-    \label{}
-\end{align}
-Furthermore, we have
-\begin{align}
-  \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ}.
-    \label{}
-\end{align}
-and
-\begin{align}
-b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
-b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad 
-b^\varphi = -{\frac{I}{R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2}
-\label{}
-\end{align}
-Let us redefine/approximate
-\begin{align}
-\bhat\times\kappa \approx \nabla\times\bhat = \frac{1}{B}\nabla\times \vec B + \bhat \times\nabla\ln B
-\label{}
-\end{align}
-and write
-\begin{align}
-\vec K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\bhat^\varphi \frac{1}{B^2}\frac{\partial B}{\partial Z}\\
-\vec K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial \psi}{\partial R}\equiv \bhat^\varphi \frac{1}{B^2}\frac{\partial B}{\partial R}\\
-\vec K_{\nabla B}^\varphi &= \frac{1}{B^3R^2}\left(\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
-    \equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
-\label{}
-\end{align}
-
-\begin{align}
-\vec K_\kappa^R &= \frac{R_0 }{B^2R}\left( \frac{\partial I}{\partial Z} -\frac{I}{B}\frac{\partial B}{\partial Z}\right) \\
-\vec K_\kappa^Z &= \frac{R_0 }{B^2R} \left( \frac{I}{B}\frac{\partial B}{\partial R} - \frac{\partial I}{\partial R} \right)\\
-\vec K_\kappa^\varphi &= \frac{1}{B^2R^2}\left(
-+ \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
-+ \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
--\frac{1}{R}\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
-- \frac{\partial^2 \psi}{\partial Z^2}
-\right)
-%contravariant phi component
-\label{}
-\end{align}
-
-
+There are two choices for the magnetic field, purely toroidal or
+the more general
+toroidal-poloidal magnetic field. Even though the first is a special
+case of the latter we treat it seperately since many terms in the
+equations simplify of vanish.
 \subsection{The toroidal field}\label{sec:toroidal}
-One choice is a purely toroidal magnetic field ($I(\psi)=\psi=1$) of the form
+One choice is a purely toroidal magnetic field of the form %($I(\psi)=\psi=1$) 
 \begin{align}
-  \vec B(R) := \frac{R_0}{R}\vec e_\varphi
+  \vec B(R) := \frac{R_0}{R}\vec{ \hat e_\varphi}
   \label{}
 \end{align}
-We then have $\bhat = \vec e_\varphi$ and $\vec\kappa = -\frac{1}{R}\vec e_R$. The curvature operators simplify to
+We then have $\bhat = \vec{\hat e_\varphi}$ and $\vec\kappa = -\frac{1}{R}\vec{ \hat e_R}$. The curvature operators simplify to
 \begin{align}
-  \vec{ \mathcal K_\kappa} &= \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \vec e_Z \\
-\vec{ \mathcal K} &= -\frac{2}{R_0}\vec e_Z
+  \vec{ \mathcal K_\kappa} &= \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \vec{\hat e_Z} \\
+\vec{ \mathcal K} &= -\frac{2}{R_0}\vec{\hat e_Z}
   \label{}
 \end{align}
 We have
@@ -430,6 +379,28 @@ Cartesian coordinates while straightening the field lines for large $R_0$
 lead to the familiar slab geometry.
 
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
+In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be rewritten to
+\begin{align}
+ \vec{B} &= \frac{R_0I(\psi)}{R} \vec{\hat{e}}_{\varphi} + \frac{R_0}{R}\left[\frac{\partial \psi}{\partial Z} \vec{\hat{e}}_R 
+         -  \frac{\partial \psi}{\partial R} \vec{\hat{e}}_Z\right] ,
+\end{align}
+which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
+For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\vec{\hat{e}}_R - \frac{\partial \psi}{\partial R}\vec{\hat{e}}_Z\right)
+\) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \vec{\hat{e}}_{\varphi}\).
+The unit vectors are denoted by \(\vec{\hat{e}}_{R}\), \(\vec{\hat{e}}_{Z}\), \(\vec{\hat{e}}_{\varphi}\). Note that $B^R=B_R$ and $B^Z=B_Z$ whereas
+$B^\varphi = R_0I/R^2$ and $B_\varphi=R_0I$ (contra- and covariant components of $\vec B$).
+By construction we have $\partial_\varphi B = 0$ with
+\begin{align}
+  B = \frac{R_0}{R}\sqrt{ {I^2 + |\nabla \psi_p|^2}}.
+    \label{}
+\end{align}
+Furthermore, we have
+\begin{align}
+  \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ}.
+    \label{}
+\end{align}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
 First, we normalise our variables according to \( R = \rho_s \hat{R} \), \( Z = \rho_s \hat{Z} \), \( \psi_p = \psi_{p0} \hat{\psi_p}\), \( p =  \frac{\psi_{p0}^2}{\mu_0 \rho_s^4}\hat{p}= p_0 \hat{p} \), \( I = \frac{\psi_{p0}}{\rho_s} \hat{I} = I_0 \hat{I} \),
  \(j_\varphi = \frac{\psi_{p0}}{\rho_s^3 \mu_0} \hat{I} = j_{\varphi 0} \hat{j}_\varphi \) and rewrite the GSEin normalised form:
 \begin{align}\label{eq:GSEdimless}
@@ -538,6 +509,60 @@ This simplifies the curvature operators to:
 \end{align}
 The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
 However this property has to be checked for a specified coordinate system, since e.g. in cylindrical coordinates \((R,Z,\varphi)\) the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
+\subsubsection{Without approximation}
+We have
+\begin{align}
+b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
+b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad 
+b^\varphi = -{\frac{I}{R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2}
+\label{}
+\end{align}
+Let us approximate
+\begin{align}
+\bhat\times\kappa \approx \nabla\times\bhat
+\label{}
+\end{align}
+This is in fact a sufficient condition for $\nabla\cdot \vec{ \mathcal K} = 0$.
+We can then explicitly write
+\begin{align}
+\vec K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\bhat^\varphi \frac{1}{B^2}\frac{\partial B}{\partial Z}\\
+\vec K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial \psi}{\partial R}\equiv \bhat^\varphi \frac{1}{B^2}\frac{\partial B}{\partial R}\\
+\vec K_{\nabla B}^\varphi &= \frac{1}{B^3R^2}\left(\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
+    \equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
+\label{}
+\end{align}
+and
+\begin{align}
+\vec K_\kappa^R &= \frac{R_0 }{B^2R}\left( \frac{\partial I}{\partial Z} -\frac{I}{B}\frac{\partial B}{\partial Z}\right) \\
+\vec K_\kappa^Z &= \frac{R_0 }{B^2R} \left( \frac{I}{B}\frac{\partial B}{\partial R} - \frac{\partial I}{\partial R} \right)\\
+\vec K_\kappa^\varphi &= \frac{1}{B^2R^2}\left(
++ \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
++ \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
+-\frac{1}{R}\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
+- \frac{\partial^2 \psi}{\partial Z^2}
+\right) \\
+\nabla\cdot\vec{\mathcal K_\kappa} &= -\nabla\cdot\vec{\mathcal K_{\nabla B}}= -\vec{\mathcal K_\kappa}\cdot \nabla\ln B
+%contravariant phi component
+\label{}
+\end{align}
+
+Furthermore, we write
+\begin{align}
+(\nabla_\perp f)^i = (g^{ij}-b^ib^j)\partial_j f =: h^{ij}\partial_j f
+\label{}
+\end{align}
+where we defined the projection tensor $h$, which is positive semi-definite.
+Finally, we have
+\begin{align}
+[f,g]_\perp := \bhat \cdot(\nabla f\times\nabla g) =
+ \frac{1}{\sqrt{g}}\left(
+ b_R [f,g]_{Z\varphi}
+ + b_Z [f,g]_{\varphi R} 
+ + b_\varphi [f,g]_{RZ}
+ \right)
+\label{}
+\end{align}
+where $[f,g]_{ij} = \partial_i f\partial_jg - \partial_j f\partial_i g$.
 \section{Numerical methods}
 discontinuous Galerkin on structured grid 
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
