@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <array>
 #include <cusp/csr_matrix.h>
 
 #include "dg/backend/transpose.h"
@@ -44,7 +45,7 @@ namespace detail{
 struct DSFieldCylindrical
 {
     DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
-    void operator()( double t, const dg::HVec& y, dg::HVec& yp) const {
+    void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
         double vz = v_.z()(R, Z);
@@ -53,10 +54,10 @@ struct DSFieldCylindrical
         yp[2] = 1./vz;
     }
 
-    double error( const dg::HVec& x0, const dg::HVec& x1)const {
+    double error( const std::array<double,3>& x0, const std::array<double,3>& x1)const {
         return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
     }
-    bool monitor( const dg::HVec& end)const{
+    bool monitor( const std::array<double,3>& end)const{
         if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) )
         {
             return false;
@@ -92,7 +93,7 @@ struct DSField
     }
     //interpolate the vectors given in the constructor on the given point
     //if point lies outside of grid boundaries zero is returned
-    void operator()(double t, const thrust::host_vector<double>& y, thrust::host_vector<double>& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double R = y[0], Z = y[1];
         g_.get().shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
@@ -107,11 +108,11 @@ struct DSField
     }
 
     ///take the sum of the absolute errors perp and parallel
-    double error( const dg::HVec& x0, const dg::HVec& x1) const {
+    double error( const std::array<double,3>& x0, const std::array<double,3>& x1) const {
         //here, we don't need to shift coordinates since x0 and x1 are both end points
         return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1]))+sqrt((x0[2]-x1[2])*(x0[2]-x1[2]));
     }
-    bool monitor( const dg::HVec& end)const{
+    bool monitor( const std::array<double,3>& end)const{
         if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) )
         {
             return false;
@@ -139,20 +140,21 @@ void clip_to_boundary( real_type& x, real_type& y, const dg::aRealTopology2d<rea
     if (!(y < grid.y1())) { y=grid.y1();}
 }
 template<class real_type>
-void clip_to_boundary( thrust::host_vector<real_type>& x, const dg::aRealTopology2d<real_type>& grid)
+void clip_to_boundary( std::array<double,3>& x, const dg::aRealTopology2d<real_type>& grid)
 {
     clip_to_boundary(x[0], x[1], grid);
 }
 
 template<class real_type>
 void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aRealTopology2d<real_type>& g2dFine, const dg::aRealTopology2d<real_type>& boundary, //2 different grid on account of the MPI implementation
-        const std::vector<thrust::host_vector<real_type> >& yp_coarse,
-        const std::vector<thrust::host_vector<real_type> >& ym_coarse,
-        std::vector<thrust::host_vector<real_type> >& yp_fine,
-        std::vector<thrust::host_vector<real_type> >& ym_fine
+        const std::array<thrust::host_vector<real_type>,3>& yp_coarse,
+        const std::array<thrust::host_vector<real_type>,3>& ym_coarse,
+        std::array<thrust::host_vector<real_type>,3>& yp_fine,
+        std::array<thrust::host_vector<real_type>,3>& ym_fine
         )
 {
-    std::vector<thrust::host_vector<real_type> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp);
+    thrust::host_vector<real_type> tmp(dg::evaluate(dg::zero, g2dFine));
+    std::array<thrust::host_vector<real_type>,3 > yp{ tmp, tmp, tmp}, ym(yp);
     for( unsigned i=0; i<3; i++)
     {
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
@@ -183,12 +185,12 @@ struct BoxIntegrator
      * @param g The 2d or 3d grid
      * @param eps the accuracy of the runge kutta integrator
      */
-    BoxIntegrator( const Field& field, const Topology& g, double eps): m_field(field), m_g(g), m_coords0(3), m_coords1(3), m_deltaPhi0(0), m_eps(eps) {}
+    BoxIntegrator( const Field& field, const Topology& g, double eps): m_field(field), m_g(g), m_deltaPhi0(0), m_eps(eps) {}
     /**
      * @brief Set the starting coordinates for next field line integration
      * @param coords the new coords (must have size = 3)
      */
-    void set_coords( const thrust::host_vector<double>& coords){
+    void set_coords( const std::array<double,3>& coords){
         m_coords0 = coords;
         m_deltaPhi0 = 0;
     }
@@ -211,7 +213,7 @@ struct BoxIntegrator
     private:
     const Field& m_field;
     const Topology& m_g;
-    thrust::host_vector<double> m_coords0, m_coords1;
+    std::array<double,3> m_coords0, m_coords1;
     double m_deltaPhi0;
     double m_eps;
 };
@@ -230,8 +232,8 @@ struct BoxIntegrator
  */
 template< class Field, class Topology>
 void boxintegrator( const Field& field, const Topology& grid,
-        const thrust::host_vector<double>& coords0,
-        thrust::host_vector<double>& coords1,
+        const std::array<double,3>& coords0,
+        std::array<double,3>& coords1,
         double& phi1, double eps)
 {
     dg::integrateRK<6>( field, 0., coords0, phi1, coords1, eps, 2); //integration
@@ -260,7 +262,7 @@ void boxintegrator( const Field& field, const Topology& grid,
         detail::clip_to_boundary( coords1, grid);
         //now assume the rest is purely toroidal
         double deltaS = coords1[2];
-        thrust::host_vector<double> temp=coords0;
+        std::array<double,3> temp=coords0;
         //compute the vector value on the boundary point
         field(0., coords1, temp); //we are just interested in temp[2]
         coords1[2] = deltaS + (deltaPhi-phi1)*temp[2]; // ds + dphi*f[2]
@@ -272,16 +274,17 @@ template<class real_type>
 void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     const dg::aRealGeometry2d<real_type>& grid_field,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
-    std::vector<thrust::host_vector<real_type> >& yp_result,
-    std::vector<thrust::host_vector<real_type> >& ym_result,
+    std::array<thrust::host_vector<real_type>,3>& yp_result,
+    std::array<thrust::host_vector<real_type>,3>& ym_result,
     real_type deltaPhi, real_type eps)
 {
     //grid_field contains the global geometry for the field and the boundaries
     //grid_evaluate contains the points to actually integrate
-    std::vector<thrust::host_vector<real_type> > y( 3, dg::evaluate( dg::cooX2d, grid_evaluate)); //x
+    thrust::host_vector<real_type> tmp( dg::evaluate( dg::cooX2d, grid_evaluate));
+    std::array<thrust::host_vector<real_type>,3> y{tmp,tmp,tmp};; //x
     y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
     y[2] = dg::evaluate( dg::zero,   grid_evaluate); //s
-    std::vector<thrust::host_vector<real_type> > yp( 3, y[0]), ym(yp);
+    std::array<thrust::host_vector<real_type>,3> yp{ tmp,tmp,tmp}, ym(yp);
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
@@ -289,8 +292,8 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
-        thrust::host_vector<real_type> coords(3), coordsP(3), coordsM(3);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
+        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP, coordsM;
+        //x,y,s
         real_type phi1 = deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
         {
@@ -560,7 +563,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym;
+    std::array<thrust::host_vector<double>,3 > yp_coarse, ym_coarse, yp, ym;
 
 #ifdef DG_BENCHMARK
     dg::Timer t;

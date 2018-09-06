@@ -19,9 +19,9 @@ struct Implicit
         p(p),
         gp(gp),
         dsNU_(dg::geo::createSolovevField( gp), g, g.bcx(), g.bcy(),
-              dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), 
+              dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim),
               dg::normed, dg::forward,
-              gp.rk4eps, 1,1, true, true), 
+              gp.rk4eps, 1,1, true, true),
         elliptic( g, dg::normed, dg::forward)
     {
         using namespace dg::geo::solovev;
@@ -39,12 +39,12 @@ struct Implicit
     {
         dg::blas1::scal( y, 0.);
         if (p.p_diff ==0)    {
-          dg::blas2::gemv( dsNU_, x[0], y[0]); 
-          dg::blas1::scal(y[0], p.nu_parallel );  
+          dg::blas2::gemv( dsNU_, x[0], y[0]);
+          dg::blas1::scal(y[0], p.nu_parallel );
        }
         if (p.p_diff ==4)    {
             dg::blas2::gemv( elliptic, x[0], y[0]); //lapd is negative
-            dg::blas1::scal(y[0], -p.nu_parallel );  
+            dg::blas1::scal(y[0], -p.nu_parallel );
         }
     }
     const container& damping(){return dampprof_;}

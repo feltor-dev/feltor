@@ -461,7 +461,7 @@ struct GeneralEllipticSym
      * @param dir Direction of the right first derivative
      */
     GeneralEllipticSym( const Geometry& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward):
-        ellipticForward_( g, bcx, bcy, no, dir), ellipticBackward_(g,bcx,bcy,no,inverse(dir)),
+        ellipticForward_( g, bcx, bcy, bcz, no, dir), ellipticBackward_(g,bcx,bcy,bcz,no,inverse(dir)),
         temp_( dg::evaluate( one, g) )
     {
     }
