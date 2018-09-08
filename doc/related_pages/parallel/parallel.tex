@@ -409,7 +409,13 @@ needed.
 When the fieldlines leave the simulation domain we force the poloidal
 components of $\vec v$ to vanish. This makes it necessary to integrate all
 fieldlines of the fine grid in order to locate the exact location of
-the fieldline kink.
+the fieldline kink. In contrast, if we try to interpolate the endpoints
+from the coarse to the fine grid, the location is not sufficiently
+resolved if it happens between grid points.
+
+Another problem is the time integrator. Since we make the ODE
+discontinuous it takes more iterations to integrate close to the kink.
+We use a traditional Prince Dormand method with stepsize control.
 \section{Field aligned initialization} \label{sec:parallelc}
 
 An important aspect of our simulations is a judicious initialization of the
