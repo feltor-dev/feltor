@@ -375,6 +375,7 @@ struct RK_opt
     */
     template< class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
+    ///global order of the algorithm
     constexpr size_t order() const {
         return s;
     }
@@ -431,6 +432,7 @@ struct RK_opt<1, ContainerType>
         blas1::axpby( 1., u0, dt, u_, u1);
         t1 = t0 + dt;
     }
+    ///global order of the algorithm
     constexpr size_t order() const {
         return 1;
     }
@@ -476,6 +478,7 @@ struct RK
     ///@copydoc RK_opt::step(RHS&,real_type,const ContainerType&,real_type&,ContainerType&,real_type)
     template<class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
+    ///global order of the algorithm
     constexpr size_t order() const {
         return s;
     }
@@ -561,6 +564,7 @@ void stepperRK(RHS& rhs, get_value_type<ContainerType>  t_begin, const Container
  * @param eps_abs desired accuracy in the error function between \c end and \c end_old
  * @param NT_init initial number of steps
  * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
+ * @attention This function is superseded by the better \c dg::integrateHRK Halfstep function
  */
 template<unsigned s, class RHS, class ContainerType>
 int integrateRK(RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_abs, unsigned NT_init = 2 )

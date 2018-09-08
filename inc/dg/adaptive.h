@@ -14,6 +14,7 @@ namespace dg
 \f]
 
 The coefficients for the Butcher tableau were taken from https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method
+The Prince Dormand method is an embedded Runge Kutta method, i.e. computes a solution together with an error estimate.
 
 * @ingroup time
 *
@@ -39,7 +40,7 @@ struct PrinceDormand
     ///@param delta Contains error estimate on output (must have equal sizeas u0)
     template<class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
-    ///global order of the solution
+    ///global order of the algorithm
     int order() const {return 4;}
   private:
     std::array<ContainerType,7> m_k;
@@ -86,6 +87,7 @@ struct PrinceDormand
         }
     };
 };
+
 template< class ContainerType>
 template< class RHS>
 void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
@@ -126,6 +128,7 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     blas1::subroutine( Delta(), delta, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], m_k[6], dt);
 }
 
+///@cond
 template<class Stepper>
 struct HalfStep
 {
@@ -146,22 +149,58 @@ struct HalfStep
     private:
     Stepper m_stepper;
 };
+///@endcond
 
+///Default Monitor for \c dg::integrateAdaptive function
 struct DefaultMonitor
 {
+    ///same as \c sqrt(dg::blas1::dot(x,x))
     template<class ContainerType>
     get_value_type<ContainerType> norm( const ContainerType& x)const
     {
         return sqrt(dg::blas1::dot( x,x));
     }
-    template<class ContainerType>
-    bool monitor(const ContainerType&)const {
-        return true;
-    }
 };
 
+///@addtogroup time
+///@{
+
+/**
+ * @brief Integrates a differential equation using a one-step explicit Timestepper, with adaptive stepsize-control and monitoring the sanity of integration
+ *
+ The adaptivity is given by: \c dt_current*=0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ;
+ If the error lies above the desired accuracy, a step is rejected and subsequently recomputed.
+ * @tparam Stepper must have the \c step member function and an \c order member function
+ * @copydoc hide_rhs
+ * @copydoc hide_ContainerType
+ * @tparam Monitor
+ * Must have a member function \c real_type \c norm( const ContainerType& ); which computes the norm in which the integrator should converge. The DefaultMonitor is usually sufficient.
+ * @param rhs The right-hand-side
+ * @param t_begin initial time
+ * @param begin initial condition
+ * @param t_end final time
+ * @param end (write-only) contains solution on output
+ * @param eps_rel the desired accuracy is given by
+         \c eps_rel*norm+eps_abs, where \c norm is the norm of the current step
+ * @param eps_abs the desired accuracy is given by
+         \c eps_rel*norm+eps_abs, where \c norm is the norm of the current step
+ * @param epus error per unit step ( if \c true, the desired accuracy is multiplied with \c dt to make the global error small, instead of only the local one)
+ * @param dt_init initial guess for the timestep (if 0, then the algorithm will come up with an initial guess)
+ * @param monitor instance of the \c Monitor class
+ * @return number of steps
+ */
 template<class Stepper, class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+int integrateAdaptive(Stepper& stepper,
+                      RHS& rhs,
+                      get_value_type<ContainerType> t_begin,
+                      const ContainerType& begin,
+                      get_value_type<ContainerType> t_end,
+                      ContainerType& end,
+                      get_value_type<ContainerType> eps_rel,
+                      get_value_type<ContainerType> eps_abs=1e-10,
+                      bool epus=true,
+                      get_value_type<ContainerType> dt_init=0,
+                      Monitor monitor=Monitor() )
 {
     using  real_type = get_value_type<ContainerType>;
     real_type t_current = t_begin, dt_current = dt_init, t_next;
@@ -174,10 +213,10 @@ int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> 
     //1. Find initial test step
     if( dt_init == 0)
     {
-        real_type norm = monitor.norm( current);
+        real_type desired_accuracy = eps_rel*monitor.norm(current) + eps_abs;
         rhs( t_current, current, next);
-        real_type desired_accuracy = eps_rel*norm + eps_abs;
         dt_current = std::min( fabs( t_end - t_begin), pow(desired_accuracy, 1./(real_type)stepper.order())/monitor.norm(next));
+        if( t_end - t_begin < 0) dt_current*=-1.;
         //std::cout << t_current << " "<<dt_current<<"\n";
     }
     int counter =0;
@@ -188,13 +227,6 @@ int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> 
         // Compute a step and error
         stepper.step( rhs, t_current, current, t_next, next, dt_current, delta);
         counter++;
-        if( !monitor.monitor( next ) )  //sanity check
-        {
-            #ifdef DG_DEBUG
-                std::cout << "---------Got sanity error at t "<<t_current<<" -> abort: dt = "<< dt_current << std::endl;
-            #endif
-            break;
-        }
         real_type norm = monitor.norm( next);
         real_type error = monitor.norm( delta);
         real_type desired_accuracy = eps_rel*norm + eps_abs;
@@ -214,17 +246,21 @@ int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> 
     return counter;
 }
 
+///Shortcut for \c dg::integrateAdaptive with the \c dg::PrinceDormand class as timestepper
+///@snippet adaptive_t.cu function
+///@snippet adaptive_t.cu doxygen
 template< class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateERK45( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0., bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+int integrateRK45( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=1e-10, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
 {
     dg::PrinceDormand<ContainerType> pd( begin);
     return integrateAdaptive( pd, rhs, t_begin, begin, t_end, end, eps_rel, eps_abs, epus, dt_init, monitor);
 }
+///Shortcut for \c dg::integrateAdaptive with a half-step Runge Kutta (\c dg::RK) of stage \c s scheme as timestepper (recompute each step with half the stepsize to get the error estimate)
 template< size_t s, class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateHRK( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+int integrateHRK( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=1e-10, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
 {
     dg::HalfStep<dg::RK<s, ContainerType>> rk( begin);
     return integrateAdaptive( rk, rhs, t_begin, begin, t_end, end, eps_rel, eps_abs, epus, dt_init, monitor);
 }
-
+///@}
 }//namespace dg
