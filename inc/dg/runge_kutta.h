@@ -375,6 +375,9 @@ struct RK_opt
     */
     template< class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
+    constexpr size_t order() const {
+        return s;
+    }
   private:
     std::array<ContainerType,s> u_; //the order determines the amount of memory needed
     rk_coeff<s,real_type> m_rk;
@@ -428,6 +431,9 @@ struct RK_opt<1, ContainerType>
         blas1::axpby( 1., u0, dt, u_, u1);
         t1 = t0 + dt;
     }
+    constexpr size_t order() const {
+        return 1;
+    }
     private:
     ContainerType u_;
 };
@@ -470,6 +476,9 @@ struct RK
     ///@copydoc RK_opt::step(RHS&,real_type,const ContainerType&,real_type&,ContainerType&,real_type)
     template<class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
+    constexpr size_t order() const {
+        return s;
+    }
   private:
     std::array<ContainerType,s> k_;
     ContainerType u_;
@@ -495,7 +504,8 @@ void RK<s, ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, 
 
     }
     //Now add everything up to u1
-    for( unsigned i=0; i<s; i++)
+    blas1::axpby( dt*m_rk.b[0], k_[0],1.,u0, u1);
+    for( unsigned i=1; i<s; i++)
         blas1::axpby( dt*m_rk.b[i], k_[i],1., u1);
     t1 = t0 + dt;
 }

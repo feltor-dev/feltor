@@ -43,18 +43,27 @@ int main()
     const double t_start = 0., t_end = 1.;
     //set physical parameters and initial condition
     const double damping = 0.2, omega_0 = 1.0, omega_drive = 0.9;
-    std::array<double,2> u = solution(t_start, damping, omega_0, omega_drive), delta(u);
-    //construct Runge Kutta class
-    dg::PrinceDormand<std::array<double,2> >  pd( u);
+    std::array<double,2> u_start = solution(t_start, damping, omega_0, omega_drive), u_end(u_start);
     //construct a functor with the right interface
     using namespace std::placeholders; //for _1, _2, _3
     auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);
     //integration loop
-    dg::integrateAdaptive( pd, functor, t_start, u, t_end, u, 1e-6);
+    int counter = dg::integrateERK45( functor, t_start, u_start, t_end, u_end, 1e-6);
     //now compute error
-    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u);
-    std::cout << "Norm of error is "<<sqrt(dg::blas1::dot( u, u))<<"\n";
+    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
+    std::cout << "With "<<counter<<"\t Embedded RK 4-5 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
     //![doxygen]
+    counter = dg::integrateHRK<4>( functor, t_start, u_start, t_end, u_end, 1e-6);
+    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
+    std::cout << "With "<<counter<<"\t Halfstep RK 4 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
+
+    counter = dg::integrateHRK<6>( functor, t_start, u_start, t_end, u_end, 1e-6);
+    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
+    std::cout << "With "<<counter<<"\t Halfstep RK 6 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
+
+    counter = dg::integrateHRK<17>( functor, t_start, u_start, t_end, u_end, 1e-6);
+    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
+    std::cout << "With "<<counter<<"\t Halfstep RK 17 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
 
     return 0;
 }

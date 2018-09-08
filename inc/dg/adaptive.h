@@ -1,5 +1,6 @@
 #pragma once
 
+#include "runge_kutta.h"
 
 namespace dg
 {
@@ -125,6 +126,26 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     blas1::subroutine( Delta(), delta, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], m_k[6], dt);
 }
 
+template<class Stepper>
+struct HalfStep
+{
+    HalfStep(){}
+    HalfStep( const Stepper& copyable): m_stepper(copyable){}
+    template <class Explicit, class ContainerType>
+    void step( Explicit& exp, get_value_type<ContainerType> t0, const ContainerType& u0, get_value_type<ContainerType>&  t1, ContainerType& u1, get_value_type<ContainerType> dt, ContainerType& delta)
+    {
+        m_stepper.step( exp, t0, u0, t1, delta, dt); //one full step
+        m_stepper.step( exp, t0, u0, t1, u1, dt/2.);
+        m_stepper.step( exp, t1, u1, t1, u1, dt/2.);
+        dg::blas1::axpby( 1., u1, -1., delta);
+        t1 = t0 + dt;
+    }
+    int order() const{
+        return m_stepper.order();
+    }
+    private:
+    Stepper m_stepper;
+};
 
 struct DefaultMonitor
 {
@@ -140,7 +161,7 @@ struct DefaultMonitor
 };
 
 template<class Stepper, class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0., bool pus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
 {
     using  real_type = get_value_type<ContainerType>;
     real_type t_current = t_begin, dt_current = dt_init, t_next;
@@ -159,13 +180,14 @@ int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> 
         dt_current = std::min( fabs( t_end - t_begin), pow(desired_accuracy, 1./(real_type)stepper.order())/monitor.norm(next));
         //std::cout << t_current << " "<<dt_current<<"\n";
     }
-
+    int counter =0;
     while( t_current < t_end)
     {
         if( t_current+dt_current > t_end)
             dt_current = t_end-t_current;
         // Compute a step and error
         stepper.step( rhs, t_current, current, t_next, next, dt_current, delta);
+        counter++;
         if( !monitor.monitor( next ) )  //sanity check
         {
             #ifdef DG_DEBUG
@@ -176,10 +198,11 @@ int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> 
         real_type norm = monitor.norm( next);
         real_type error = monitor.norm( delta);
         real_type desired_accuracy = eps_rel*norm + eps_abs;
-        if( pus)
+        //std::cout << eps_abs << " " <<desired_accuracy<<std::endl;
+        if( epus)
             desired_accuracy*=dt_current;
-        dt_current *= std::max( 0.5, std::min( 2., 0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ) );
-        //std::cout << t_current << " "<<dt_current<<" acc "<<error<<" "<<desired_accuracy<<"\n";
+        dt_current *= std::max( 0.1, std::min( 10., 0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ) );
+        //std::cout << t_current << " "<<t_next<<" "<<dt_current<<" acc "<<error<<" "<<desired_accuracy<<"\n";
         if( error>desired_accuracy)
             continue;
         else
@@ -188,7 +211,20 @@ int integrateAdaptive(Stepper& stepper, RHS& rhs, get_value_type<ContainerType> 
             t_current = t_next;
         }
     }
-    return 0;
+    return counter;
+}
+
+template< class RHS, class ContainerType, class Monitor = DefaultMonitor>
+int integrateERK45( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0., bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+{
+    dg::PrinceDormand<ContainerType> pd( begin);
+    return integrateAdaptive( pd, rhs, t_begin, begin, t_end, end, eps_rel, eps_abs, epus, dt_init, monitor);
+}
+template< size_t s, class RHS, class ContainerType, class Monitor = DefaultMonitor>
+int integrateHRK( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=0, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+{
+    dg::HalfStep<dg::RK<s, ContainerType>> rk( begin);
+    return integrateAdaptive( rk, rhs, t_begin, begin, t_end, end, eps_rel, eps_abs, epus, dt_init, monitor);
 }
 
 }//namespace dg
