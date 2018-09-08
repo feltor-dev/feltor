@@ -209,6 +209,7 @@ int integrateAdaptive(Stepper& stepper,
     ContainerType& current(end);
     if( t_end == t_begin)
         return 0;
+    bool forward = (t_end - t_begin > 0);
 
     //1. Find initial test step
     if( dt_init == 0)
@@ -216,13 +217,13 @@ int integrateAdaptive(Stepper& stepper,
         real_type desired_accuracy = eps_rel*monitor.norm(current) + eps_abs;
         rhs( t_current, current, next);
         dt_current = std::min( fabs( t_end - t_begin), pow(desired_accuracy, 1./(real_type)stepper.order())/monitor.norm(next));
-        if( t_end - t_begin < 0) dt_current*=-1.;
+        if( !forward) dt_current*=-1.;
         //std::cout << t_current << " "<<dt_current<<"\n";
     }
     int counter =0;
-    while( t_current < t_end)
+    while( (forward && t_current < t_end) || (!forward && t_current > t_end))
     {
-        if( t_current+dt_current > t_end)
+        if( (forward && t_current+dt_current > t_end) || (!forward && t_current + dt_current < t_end) )
             dt_current = t_end-t_current;
         // Compute a step and error
         stepper.step( rhs, t_current, current, t_next, next, dt_current, delta);
@@ -232,7 +233,7 @@ int integrateAdaptive(Stepper& stepper,
         real_type desired_accuracy = eps_rel*norm + eps_abs;
         //std::cout << eps_abs << " " <<desired_accuracy<<std::endl;
         if( epus)
-            desired_accuracy*=dt_current;
+            desired_accuracy*=fabs(dt_current);
         dt_current *= std::max( 0.1, std::min( 10., 0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ) );
         //std::cout << t_current << " "<<t_next<<" "<<dt_current<<" acc "<<error<<" "<<desired_accuracy<<"\n";
         if( error>desired_accuracy)

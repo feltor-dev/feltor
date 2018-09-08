@@ -14,7 +14,7 @@
 #include "dg/geometry/geometry.h"
 #include "dg/functors.h"
 #include "dg/nullstelle.h"
-#include "dg/runge_kutta.h"
+#include "dg/adaptive.h"
 #include "magnetic_field.h"
 #include "fluxfunctions.h"
 #include "curvilinear.h"
@@ -204,7 +204,7 @@ struct BoxIntegrator
     double operator()( double deltaPhi)
     {
         double delta = deltaPhi - m_deltaPhi0;
-        dg::integrateRK<4>( m_field, 0., m_coords0, delta, m_coords1, m_eps, 2);
+        dg::integrateRK45( m_field, 0., m_coords0, delta, m_coords1, m_eps);
         m_deltaPhi0 = deltaPhi;
         m_coords0 = m_coords1;
         if( !m_g.contains( m_coords1[0], m_coords1[1]) ) return -1;
@@ -236,7 +236,7 @@ void boxintegrator( const Field& field, const Topology& grid,
         std::array<double,3>& coords1,
         double& phi1, double eps)
 {
-    dg::integrateRK<6>( field, 0., coords0, phi1, coords1, eps, 2); //integration
+    dg::integrateRK45( field, 0., coords0, phi1, coords1, eps);
     double R = coords1[0], Z=coords1[1];
     //First, catch periodic domain
     grid.shift_topologic( coords0[0], coords0[1], R, Z);
@@ -250,14 +250,14 @@ void boxintegrator( const Field& field, const Topology& grid,
             double dPhiMin = 0, dPhiMax = phi1;
             dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
             phi1 = (dPhiMin+dPhiMax)/2.;
-            dg::integrateRK<4>( field, 0., coords0, dPhiMax, coords1, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
+            dg::integrateRK45( field, 0., coords0, dPhiMax, coords1, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
         }
         else // phi1 < 0
         {
             double dPhiMin = phi1, dPhiMax = 0;
             dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
             phi1 = (dPhiMin+dPhiMax)/2.;
-            dg::integrateRK<4>( field, 0., coords0, dPhiMin, coords1, eps);
+            dg::integrateRK45( field, 0., coords0, dPhiMin, coords1, eps);
         }
         detail::clip_to_boundary( coords1, grid);
         //now assume the rest is purely toroidal
