@@ -210,7 +210,7 @@ struct DS
     void backwardDiv(const container& f, container& g){
         do_backwardDiv( 1.,f,0.,g, dg::normed);
     }
-    ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f) g\f$
+    ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@note centeredDiv is the negative adjoint of centered
     void centeredDiv(const container& f, container& g){

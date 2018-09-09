@@ -453,15 +453,15 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    thrust::host_vector<double> hp( m_perp_size), hm(hp), hz(hp);
-    dg::blas2::symv( projection, yp[2], hp);
-    dg::blas2::symv( projection, ym[2], hm);
-    dg::blas1::scal( hm, -1.);
-    dg::blas1::axpby(  1., hp, +1., hm, hz);
-    //thrust::host_vector<double> hp = dg::evaluate( vec.z(), grid_coarse.get()), hm(hp), hz(hp);
-    //dg::blas1::pointwiseDivide( deltaPhi, hp, hp);
-    //dg::blas1::pointwiseDivide( deltaPhi, hm, hm);
-    //dg::blas1::pointwiseDivide( 2.*deltaPhi, hz, hz);
+    //thrust::host_vector<double> hp( m_perp_size), hm(hp), hz(hp);
+    //dg::blas2::symv( projection, yp[2], hp);
+    //dg::blas2::symv( projection, ym[2], hm);
+    //dg::blas1::scal( hm, -1.);
+    //dg::blas1::axpby(  1., hp, +1., hm, hz);
+    thrust::host_vector<double> hp = dg::evaluate( vec.z(), grid_coarse.get()), hm(hp), hz(hp);
+    dg::blas1::pointwiseDivide( deltaPhi, hp, hp);
+    dg::blas1::pointwiseDivide( deltaPhi, hm, hm);
+    dg::blas1::pointwiseDivide( 2.*deltaPhi, hz, hz);
 
     dg::blas1::transfer( hp, m_hp);
     dg::blas1::transfer( hm, m_hm);

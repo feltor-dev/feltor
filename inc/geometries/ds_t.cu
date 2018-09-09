@@ -23,6 +23,11 @@ double deriNEU(double R, double Z, double phi)
            + I_0/R*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi)
            )/sqrt(I_0*I_0+r2);
 }
+double deriAdjNEU(double R, double Z, double phi)
+{
+    double r2 = (R-R_0)*(R-R_0)+Z*Z; //(grad psi)^2
+    return Z/R/(I_0*I_0+r2)*funcNEU(R,Z,phi) + deriNEU(R,Z,phi);
+}
 double funcDIR(double R, double Z, double phi)
 {
     return cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
@@ -35,11 +40,15 @@ double deriDIR(double R, double Z, double phi)
             +I_0/R*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi)
            )/sqrt(I_0*I_0+r2);
 }
+double deriAdjDIR(double R, double Z, double phi)
+{
+    double r2 = (R-R_0)*(R-R_0)+Z*Z; //(grad psi)^2
+    return Z/R/(I_0*I_0+r2)*funcDIR(R,Z,phi) + deriDIR(R,Z,phi);
+}
 
 int main(int argc, char * argv[])
 {
     std::cout << "First test the cylindrical version\n";
-    std::cout << "Note that it's faster to compute with OMP_NUM_THREADS=1\n";
     std::cout << "Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
@@ -61,46 +70,65 @@ int main(int argc, char * argv[])
     ///##########################################################///
     //apply to function
     dg::DVec function = dg::evaluate( funcNEU, g3d), derivative(function);
-    ds( function, derivative);
+    ds.centered( function, derivative);
     //![doxygen]
     std::cout << "TEST NEU Boundary conditions!\n";
     dg::DVec solution = dg::evaluate( deriNEU, g3d);
-    dg::blas1::axpby( 1., solution, -1., derivative);
     const dg::DVec vol3d = dg::create::volume( g3d);
-    double norm = dg::blas2::dot( derivative, vol3d, derivative);
     double sol = dg::blas2::dot( vol3d, solution);
-    std::cout << "Error centered derivative "<< sqrt( norm/sol )<<"\n";
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    double norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error centered derivative \t"<< sqrt( norm/sol )<<"\n";
     ds.forward( 1., function, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Forward  Derivative "<<sqrt( norm/sol)<<"\n";
+    std::cout << "Error Forward  Derivative \t"<<sqrt( norm/sol)<<"\n";
     ds.backward( 1., function, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Backward Derivative "<<sqrt( norm/sol)<<"\n";
+    std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+    ///We unfortunately cannot test convergence of adjoint because
+    ///b and therefore bf does not fulfill Neumann boundary conditions
     ///##########################################################///
-    {
     std::cout << "TEST DIR Boundary conditions!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my, true,true,true);
     ds.construct( dsFA, dg::not_normed, dg::centered);
     //apply to function
-    function = dg::evaluate( funcDIR, g3d);
-    ds( function, derivative);
-    //![doxygen]
+    dg::DVec functionDIR = dg::evaluate( funcDIR, g3d);
     solution = dg::evaluate( deriDIR, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.centered( functionDIR, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error centered derivative \t"<< sqrt( norm/sol )<<"\n";
+    ds.forward( 1., functionDIR, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    std::cout << "Error Forward  Derivative \t"<<sqrt( norm/sol)<<"\n";
+    ds.backward( 1., functionDIR, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+
+    ///##########################################################///
+    std::cout << "TEST ADJOINT derivatives!\n";
+    solution = dg::evaluate( deriAdjDIR, g3d);
     sol = dg::blas2::dot( vol3d, solution);
-    std::cout << "Error centered derivative "<< sqrt( norm/sol )<<"\n";
-    ds.forward( 1., function, 0., derivative);
+
+    ds.centeredDiv( functionDIR, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error centered divergence \t"<< sqrt( norm/sol )<<"\n";
+    ds.forwardDiv( 1., functionDIR, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Forward  Derivative "<<sqrt( norm/sol)<<"\n";
-    ds.backward( 1., function, 0., derivative);
+    std::cout << "Error Forward  divergence \t"<<sqrt( norm/sol)<<"\n";
+    ds.backwardDiv( 1., functionDIR, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Backward Derivative "<<sqrt( norm/sol)<<"\n";
-    }
+    std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+
     ///##########################################################///
     std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
