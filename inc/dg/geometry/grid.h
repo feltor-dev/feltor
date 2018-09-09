@@ -208,6 +208,23 @@ struct RealGrid1d
         if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx();
         if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx();
     }
+    /**
+     * @brief Shifts a point coordinate if periodic
+     *
+     * This function shifts a point coordinate to its value between x0() and x1() if \c bcx==dg::PER
+     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
+     * @param x1 end point (inout)
+     * @param bcx overrule grid internal boundary condition
+     */
+    void shift_topologic( real_type x0, real_type& x1, bc bcx)const
+    {
+        real_type deltaX;
+        if( x1 > x0_) deltaX = x1 -x0_;
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx());
+        if( x1  > x1_ && bcx == dg::PER) x1 -= N*lx();
+        if( x1  < x0_ && bcx == dg::PER) x1 += N*lx();
+    }
 
     /**
      * @brief Check if the grid contains a point
@@ -395,6 +412,16 @@ struct aRealTopology2d
     {
         gx_.shift_topologic( x0,x1);
         gy_.shift_topologic( y0,y1);
+    }
+    /**
+     * @copydoc shift_topologic(real_type,real_type,real_type&,real_type&)const
+     * @param bcx overrule grid internal boundary condition with this value
+     * @param bcy overrule grid internal boundary condition with this value
+     */
+    void shift_topologic( real_type x0, real_type y0, real_type& x1, real_type& y1, bc bcx, bc bcy)const
+    {
+        gx_.shift_topologic( x0,x1,bcx);
+        gy_.shift_topologic( y0,y1,bcy);
     }
     /**
      * @brief Check if the grid contains a point
@@ -635,6 +662,18 @@ struct aRealTopology3d
         gx_.shift_topologic( x0,x1);
         gy_.shift_topologic( y0,y1);
         gz_.shift_topologic( z0,z1);
+    }
+    /**
+     * @copydoc shift_topologic(real_type,real_type,real_type,real_type&,real_type&,real_type&)const
+     * @param bcx overrule grid internal boundary condition with this value
+     * @param bcy overrule grid internal boundary condition with this value
+     * @param bcz overrule grid internal boundary condition with this value
+     */
+    void shift_topologic( real_type x0, real_type y0, real_type z0, real_type& x1, real_type& y1, real_type& z1, bc bcx, bc bcy, bc bcz)const
+    {
+        gx_.shift_topologic( x0,x1,bcx);
+        gy_.shift_topologic( y0,y1,bcy);
+        gz_.shift_topologic( z0,z1,bcz);
     }
 
     /**

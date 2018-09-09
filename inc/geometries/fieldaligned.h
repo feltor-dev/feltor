@@ -46,15 +46,10 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary, bc bcx, bc bcy):v_(v), m_b(boundary), m_bcx(bcx), m_bcy(bcy) { }
+    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary), m_bcx(bcx), m_bcy(bcy) { }
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
-        if( set_zero(R,Z))
-        {
-            yp[0] = yp[1] = yp[2] = 0;
-            return;
-        }
         double vz = v_.z()(R, Z);
         yp[0] = v_.x()(R, Z)/vz;
         yp[1] = v_.y()(R, Z)/vz;
@@ -64,19 +59,6 @@ struct DSFieldCylindrical
     private:
     dg::geo::BinaryVectorLvl0 v_;
     dg::Grid2d m_b;
-    bc m_bcx, m_bcy;
-    bool set_zero( double R, double Z) const
-    {
-        if( (m_bcx == DIR || m_bcx==NEU_DIR) && R>m_b.x1())
-            return true;
-        if( (m_bcx == DIR || m_bcx==DIR_NEU) && R<m_b.x0())
-            return true;
-        if( (m_bcy == DIR || m_bcy==NEU_DIR) && Z>m_b.y1())
-            return true;
-        if( (m_bcy == DIR || m_bcy==DIR_NEU) && Z<m_b.y0())
-            return true;
-        return false;
-    }
 };
 struct DSMonitor
 {
@@ -126,43 +108,48 @@ struct DSField
 };
 
 template<class real_type>
-void clip_to_boundary( real_type& x, real_type& y, const dg::aRealTopology2d<real_type>& grid)
+bool mirror_at_boundary( real_type& x, real_type& y, const dg::aRealTopology2d<real_type>& grid)
 {
+    //return if mirrored
     //there is no shift_topologic because if interpolating the results
-    if (!(x > grid.x0())) { x=grid.x0();}
-    if (!(x < grid.x1())) { x=grid.x1();}
-    if (!(y > grid.y0())) { y=grid.y0();}
-    if (!(y < grid.y1())) { y=grid.y1();}
+    if (x < grid.x0() ) { x=2.*grid.x0()-x; return true;}
+    if (x < grid.x1() ) { x=2.*grid.x1()-x; return true;}
+    if (y > grid.y0() ) { y=2.*grid.y0()-y; return true;}
+    if (y < grid.y1() ) { y=2.*grid.y1()-y; return true;}
+    return false;
 }
 template<class real_type>
-void clip_to_boundary( std::array<double,3>& x, const dg::aRealTopology2d<real_type>& grid)
+bool mirror_at_boundary( std::array<double,3>& x, const dg::aRealTopology2d<real_type>& grid)
 {
-    clip_to_boundary(x[0], x[1], grid);
+    return mirror_at_boundary(x[0], x[1], grid);
 }
 
 template<class real_type>
-void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aRealTopology2d<real_type>& g2dFine, const dg::aRealTopology2d<real_type>& boundary, //2 different grid on account of the MPI implementation
+void interpolate_and_mirror( const dg::IHMatrix& interpolate, const dg::aRealTopology2d<real_type>& g2dFine, const dg::aRealTopology2d<real_type>& boundary, //2 different grid on account of the MPI implementation
         const std::array<thrust::host_vector<real_type>,3>& yp_coarse,
         const std::array<thrust::host_vector<real_type>,3>& ym_coarse,
         std::array<thrust::host_vector<real_type>,3>& yp_fine,
         std::array<thrust::host_vector<real_type>,3>& ym_fine
+        std::vector<bool>& mirrorP,
+        std::vector<bool>& mirrorM
         )
 {
     thrust::host_vector<real_type> tmp(dg::evaluate(dg::zero, g2dFine));
-    std::array<thrust::host_vector<real_type>,3 > yp{ tmp, tmp, tmp}, ym(yp);
+    yp_fine.fill(tmp), ym_fine.fill(tmp);
     for( unsigned i=0; i<3; i++)
     {
-        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
-        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
+        dg::blas2::symv( interpolate, yp_coarse[i], yp_fine[i]);
+        dg::blas2::symv( interpolate, ym_coarse[i], ym_fine[i]);
     }
     for( unsigned i=0; i<yp[0].size(); i++)
     {
-        boundary.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
-        boundary.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
-        detail::clip_to_boundary( yp[0][i], yp[1][i], boundary);
-        detail::clip_to_boundary( ym[0][i], ym[1][i], boundary);
+        boundary.shift_topologic( yp_fine[0][i], yp_fine[1][i], yp_fine[0][i], yp_fine[1][i]);
+        boundary.shift_topologic( ym_fine[0][i], ym_fine[1][i], ym_fine[0][i], ym_fine[1][i]);
+        //mirror here
+        error
+        detail::mirror_at_boundary( yp_fine[0][i], yp_fine[1][i], boundary);
+        detail::mirror_at_boundary( ym_fine[0][i], ym_fine[1][i], boundary);
     }
-    yp_fine=yp, ym_fine=ym;
 }
 
 
@@ -171,8 +158,8 @@ template<class real_type>
 void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     const dg::aRealGeometry2d<real_type>& grid_field,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
-    std::array<thrust::host_vector<real_type>,3>& yp_result,
-    std::array<thrust::host_vector<real_type>,3>& ym_result,
+    std::array<thrust::host_vector<real_type>,3>& yp,
+    std::array<thrust::host_vector<real_type>,3>& ym,
     real_type deltaPhi, real_type eps, dg::bc bcx, dg::bc bcy)
 {
     //grid_field contains the global geometry for the field and the boundaries
@@ -181,7 +168,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     std::array<thrust::host_vector<real_type>,3> y{tmp,tmp,tmp};; //x
     y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
     y[2] = dg::evaluate( dg::zero,   grid_evaluate); //s
-    std::array<thrust::host_vector<real_type>,3> yp{ tmp,tmp,tmp}, ym(yp);
+    yp.fill(tmp), ym.fill(tmp);
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
@@ -194,29 +181,19 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
         //x,y,s
         real_type phi1 = deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-        {
-            //boxintegrator( cyl_field, grid_field, coords, coordsP, phi1, eps);
             dg::integrateAdaptive(pd, cyl_field, 0., coords, phi1, coordsP, eps, 0,false,0,DSMonitor()); //integration
-        }
         else
-            //boxintegrator( field, grid_field, coords, coordsP, phi1, eps);
             dg::integrateAdaptive(pd, field, 0., coords, phi1, coordsP, eps, 0,false,0,DSMonitor()); //integration
         phi1 =  - deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-        {
-            //boxintegrator( cyl_field, grid_field, coords, coordsM, phi1, eps);
             dg::integrateAdaptive(pd, cyl_field, 0., coords, phi1, coordsM, eps, 0,false,0,DSMonitor()); //integration
-        }
         else
-            //boxintegrator( field, grid_field, coords, coordsM, phi1, eps);
             dg::integrateAdaptive(pd, field, 0., coords, phi1, coordsM, eps, 0,false,0,DSMonitor()); //integration
-        clip_to_boundary( coordsP, grid_field);
-        clip_to_boundary( coordsM, grid_field);
+        //mirroredP[i] = mirror_at_boundary( coordsP, grid_field);
+        //mirroredM[i] = mirror_at_boundary( coordsM, grid_field);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-    yp_result=yp;
-    ym_result=ym;
 }
 
 }//namespace detail
@@ -485,13 +462,13 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     std::cout << "High order grid gen  took: "<<t.diff()<<"\n";
     t.tic();
 #endif
-    if(integrateAll)
-        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_fine, yp, ym, deltaPhi, eps, bcx, bcy);
-    else
+    //if(integrateAll)
+    //    detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_fine, yp, ym, deltaPhi, eps, bcx, bcy);
+    //else
     {
         detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps, bcx, bcy);
         dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
-        dg::geo::detail::interpolate_and_clip( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
+        dg::geo::detail::interpolate_and_mirror( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
     }
 #ifdef DG_BENCHMARK
     t.toc();

@@ -132,12 +132,12 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points ( has to have equal size as x)
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix,
- NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
- * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
+ * @param bcx determines what to do when a point lies outside the boundary in x. If \c PER the point will be shifted topologically. Else the
+ * point will be mirrored at the boundary: \c NEU will then simply interpolate at the resulting point, \c DIR will take the negative of the interpolation.
+ \c NEU and \c PER interpolate the inner side polynomial. (\c DIR_NEU and \c NEU_DIR apply \c NEU / \c DIR to the respective left or right boundary )
+ * @param bcy determines what to do when a point lies outside the boundary in y. Behaviour correponds to bcx.
  *
  * @return interpolation matrix
- * @attention all points (x,y) must lie within or on the boundaries of g.
  */
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopology2d<real_type>& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
@@ -151,19 +151,44 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
 
     for( int i=0; i<(int)x.size(); i++)
     {
+        real_type X = x[i], Y = y[i];
+        g.shift_topologic( X,Y,X,Y, bcx, bcy);
+        //mirror at boundary
+        bool mirror = false;
+        if (X < g.x0() ) {
+            X=2.*g.x0()-X;
+            if( bcx == dg::DIR || bcx == dg::DIR_NEU)
+                mirror = true;
+        }
+        if (X > g.x1() ) {
+            X=2.*g.x1()-X;
+            if( bcx == dg::DIR || bcx == dg::NEU_DIR)
+                mirror = true;
+        }
+        if (Y < g.y0() ) {
+            Y=2.*g.y0()-Y;
+            if( bcy == dg::DIR || bcy == dg::DIR_NEU)
+                mirror = true;
+        }
+        if (Y > g.y1() ) {
+            Y=2.*g.y1()-Y;
+            if( bcy == dg::DIR || bcy == dg::NEU_DIR)
+                mirror = true;
+        }
+        mirror = false;
         //assert that point is inside the grid boundaries
-        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
+        if (!(X >= g.x0() && X <= g.x1())) {
+            std::cerr << g.x0()<<"< xi = " << X <<" < "<<g.x1()<<std::endl;
         }
-        assert(x[i] >= g.x0() && x[i] <= g.x1());
-        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
+        assert(X >= g.x0() && X <= g.x1());
+        if (!(Y >= g.y0() && Y <= g.y1())) {
+            std::cerr << g.y0()<<"< yi = " << Y <<" < "<<g.y1()<<std::endl;
         }
-        assert( y[i] >= g.y0() && y[i] <= g.y1());
+        assert( Y >= g.y0() && Y <= g.y1());
 
         //determine which cell (x,y) lies in
-        real_type xnn = (x[i]-g.x0())/g.hx();
-        real_type ynn = (y[i]-g.y0())/g.hy();
+        real_type xnn = (X-g.x0())/g.hx();
+        real_type ynn = (Y-g.y0())/g.hy();
         unsigned nn = (unsigned)floor(xnn);
         unsigned mm = (unsigned)floor(ynn);
         //determine normalized coordinates
@@ -204,15 +229,12 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxy[k*px.size()+l]= pyF[k]*pxF[l];
-            if (  (x[i] == g.x0() && (bcx==dg::DIR || bcx==dg::DIR_NEU) )
-                ||(x[i] == g.x1() && (bcx==dg::DIR || bcx==dg::NEU_DIR) )
-                ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
-                ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
+            if (mirror )
             {
-                //zeroe boundary values
+                //negative values
                 for(unsigned k=0; k<py.size(); k++)
                 for( unsigned l=0; l<px.size(); l++)
-                    pxy[k*px.size()+l]= 0;
+                    pxy[k*px.size()+l]*= -1.;
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -279,7 +301,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
  * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix,
- NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
+ NEU and \c PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
  * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
  *
  * @return interpolation matrix
