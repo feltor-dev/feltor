@@ -14,18 +14,22 @@ namespace dg
 \f]
 
 The coefficients for the Butcher tableau were taken from https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method
-The Prince Dormand method is an embedded Runge Kutta method, i.e. computes a solution together with an error estimate.
+The Prince Dormand method is an embedded Runge Kutta method, i.e. computes a solution together with an error estimate. It is effecitve due to its First Same as Last property.
 
 * @ingroup time
 *
 * @copydoc hide_ContainerType
+* @attention Call the \c reset() member before using the \c step() method on
+* a different Equation
 */
 template< class ContainerType>
 struct PrinceDormand
 {
     using real_type = get_value_type<ContainerType>;
     ///@copydoc RK_opt::RK_opt()
-    PrinceDormand(){}
+    PrinceDormand(){
+        m_init=true;
+    }
     ///@copydoc RK_opt::construct(const ContainerType&)
     PrinceDormand( const ContainerType& copyable){
         construct( copyable);
@@ -35,6 +39,14 @@ struct PrinceDormand
         m_k.fill( copyable);
         m_u = copyable;
         m_init = true;
+    }
+    /*!@brief Call this function before using step on a
+     * different ODE
+     *
+     * The reason behind this is that the implementation uses the last function evaluation as the initial value for the integration
+    */
+    void reset() {
+        m_init=true;
     }
     ///@copydoc RK_opt::step(RHS&,real_type,const ContainerType&,real_type&,ContainerType&,real_type)
     ///@param delta Contains error estimate on output (must have equal sizeas u0)

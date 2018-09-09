@@ -378,7 +378,7 @@ void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, Co
     std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<ti.diff()<<"s\n";
 #else
     pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
-#endif //BENCHMARK
+#endif //DG_BENCHMARK
     blas1::copy( u, u_[0]); //store result
     f(t_, u_[0], f_[0]); //call f on new point
 }

@@ -283,6 +283,23 @@ struct DS
     void do_centeredDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_symv(double alpha, const container& f, double beta, container& dsf);
     void do_dss(double alpha, const container& f, double beta, container& dsf);
+    struct ComputeDSS{
+        ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
+        DG_DEVICE
+        void operator()( double& dssf, double fp, double f, double fm, double h_inv) const{
+            dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
+        }
+        private:
+        double m_alpha, m_beta;
+    };
+    struct ComputeSymv{
+        DG_DEVICE
+        void operator()( double& ssf, double fp, double fm, double h_inv, double vol3d) const{
+            ssf = 1./2.*( fp-fm)*h_inv;
+            ssf = 1./2.*vol3d*ssf*h_inv;
+        }
+    };
+
 
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
     container m_temp;
@@ -325,14 +342,14 @@ void DS<G,I,M,container>::do_forward( double alpha, const container& f, double b
 {
     //direct
     m_fa(einsPlus, f, m_tempP);
-    dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.hp_inv(), -alpha, f, m_fa.hp_inv(), beta, dsf);
+    dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.h_inv(), -alpha, f, m_fa.h_inv(), beta, dsf);
 }
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_backward( double alpha, const container& f, double beta, container& dsf)
 {
     //direct
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::pointwiseDot( alpha, f, m_fa.hm_inv(), -alpha, m_tempM, m_fa.hm_inv(), beta, dsf);
+    dg::blas1::pointwiseDot( alpha, f, m_fa.h_inv(), -alpha, m_tempM, m_fa.h_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centered( double alpha, const container& f, double beta, container& dsf)
@@ -340,13 +357,13 @@ void DS<G, I,M,container>::do_centered( double alpha, const container& f, double
     //direct discretisation
     m_fa(einsPlus, f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.hz_inv(), -alpha, m_tempM, m_fa.hz_inv(), beta, dsf);
+    dg::blas1::pointwiseDot( alpha/2., m_tempP, m_fa.h_inv(), -alpha/2., m_tempM, m_fa.h_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G,I,M,container>::do_backwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hp_inv(), 0., m_temp0);
+    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.h_inv(), 0., m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
     if(no == dg::normed)
         dg::blas1::pointwiseDot( alpha, m_temp0, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
@@ -357,7 +374,7 @@ template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_forwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hm_inv(),0., m_temp0);
+    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.h_inv(),0., m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
     if(no == dg::normed)
         dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_temp0, m_inv3d, beta, dsf);
@@ -368,7 +385,7 @@ template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hz_inv(), 0.,m_temp0);
+    dg::blas1::pointwiseDot( 1./2., m_vol3d, f, m_fa.h_inv(), 0.,m_temp0);
     m_fa(einsPlusT,  m_temp0, m_tempP);
     m_fa(einsMinusT, m_temp0, m_tempM);
     if(no == dg::normed)
@@ -378,13 +395,18 @@ void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, dou
 
 }
 
+
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
     if(m_dir == dg::centered)
     {
-        do_centered( 1., f, 0., m_tempP);
-        do_centeredDiv( 1., m_tempP, 0., m_temp, dg::not_normed);
+        m_fa(einsPlus, f, m_tempP);
+        m_fa(einsMinus, f, m_tempM);
+        dg::blas1::subroutine( ComputeSymv(), m_temp0, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
+        m_fa(einsPlusT,  m_temp0, m_tempP);
+        m_fa(einsMinusT, m_temp0, m_tempM);
+        dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, m_temp0);
     }
     else
     {
@@ -406,24 +428,13 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
         dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, dsTdsf);
 }
 
-struct ComputeDSS{
-    ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
-    DG_DEVICE
-    void operator()( double& dssf, double fp, double f, double fm, double hp_inv, double hm_inv, double hz_inv) const{
-        dssf = m_alpha*2.*(fp*hp_inv*hz_inv - f*hp_inv*hm_inv + fm*hm_inv*hz_inv) + m_beta*dssf;
-    }
-    private:
-    double m_alpha, m_beta;
-};
-
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta, container& dssf)
 {
     m_fa(einsPlus,  f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
     dg::blas1::subroutine( ComputeDSS( alpha, beta),
-            dssf, m_tempP, f, m_tempM,
-            m_fa.hp_inv(), m_fa.hm_inv(), m_fa.hz_inv());
+            dssf, m_tempP, f, m_tempM, m_fa.h_inv());
 }
 ///@endcond
 
