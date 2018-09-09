@@ -42,12 +42,19 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
+
+
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
+    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary, bc bcx, bc bcy):v_(v), m_b(boundary), m_bcx(bcx), m_bcy(bcy) { }
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
+        if( set_zero(R,Z))
+        {
+            yp[0] = yp[1] = yp[2] = 0;
+            return;
+        }
         double vz = v_.z()(R, Z);
         yp[0] = v_.x()(R, Z)/vz;
         yp[1] = v_.y()(R, Z)/vz;
@@ -57,6 +64,19 @@ struct DSFieldCylindrical
     private:
     dg::geo::BinaryVectorLvl0 v_;
     dg::Grid2d m_b;
+    bc m_bcx, m_bcy;
+    bool set_zero( double R, double Z) const
+    {
+        if( (m_bcx == DIR || m_bcx==NEU_DIR) && R>m_b.x1())
+            return true;
+        if( (m_bcx == DIR || m_bcx==DIR_NEU) && R<m_b.x0())
+            return true;
+        if( (m_bcy == DIR || m_bcy==NEU_DIR) && Z>m_b.y1())
+            return true;
+        if( (m_bcy == DIR || m_bcy==DIR_NEU) && Z<m_b.y0())
+            return true;
+        return false;
+    }
 };
 struct DSMonitor
 {
@@ -153,7 +173,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp_result,
     std::array<thrust::host_vector<real_type>,3>& ym_result,
-    real_type deltaPhi, real_type eps)
+    real_type deltaPhi, real_type eps, dg::bc bcx, dg::bc bcy)
 {
     //grid_field contains the global geometry for the field and the boundaries
     //grid_evaluate contains the points to actually integrate
@@ -165,7 +185,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field);
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field, bcx, bcy);
     unsigned size = grid_evaluate.size();
     dg::PrinceDormand<std::array<double,3>> pd;
     for( unsigned i=0; i<size; i++)
@@ -190,6 +210,8 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
         else
             //boxintegrator( field, grid_field, coords, coordsM, phi1, eps);
             dg::integrateAdaptive(pd, field, 0., coords, phi1, coordsM, eps, 0,false,0,DSMonitor()); //integration
+        clip_to_boundary( coordsP, grid_field);
+        clip_to_boundary( coordsM, grid_field);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
@@ -460,20 +482,20 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
     t.toc();
-     std::cout << "High order grid gen   took: "<<t.diff()<<"\n";
+    std::cout << "High order grid gen  took: "<<t.diff()<<"\n";
     t.tic();
 #endif
-    //if(integrateAll)
-    //    detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_fine, yp, ym, deltaPhi, eps);
-    //else
+    if(integrateAll)
+        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_fine, yp, ym, deltaPhi, eps, bcx, bcy);
+    else
     {
-        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
+        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps, bcx, bcy);
         dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
         dg::geo::detail::interpolate_and_clip( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
     }
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
+    std::cout << "Computing all points took: "<<t.diff()<<"\n";
 
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
@@ -485,7 +507,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     cusp::multiply( projection, minusFine, minus);
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "Multiplication        took: "<<t.diff()<<"\n";
+    std::cout << "Multiplication       took: "<<t.diff()<<"\n";
 #endif
     plusT = dg::transpose( plus);
     minusT = dg::transpose( minus);
@@ -494,15 +516,15 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //thrust::host_vector<double> hp( m_perp_size), hm(hp), hz(hp);
-    //dg::blas2::symv( projection, yp[2], hp);
-    //dg::blas2::symv( projection, ym[2], hm);
-    //dg::blas1::scal( hm, -1.);
-    //dg::blas1::axpby(  1., hp, +1., hm, hz);
-    thrust::host_vector<double> hp = dg::evaluate( vec.z(), grid_coarse.get()), hm(hp), hz(hp);
-    dg::blas1::pointwiseDivide( deltaPhi, hp, hp);
-    dg::blas1::pointwiseDivide( deltaPhi, hm, hm);
-    dg::blas1::pointwiseDivide( 2.*deltaPhi, hz, hz);
+    thrust::host_vector<double> hp( m_perp_size), hm(hp), hz(hp);
+    dg::blas2::symv( projection, yp[2], hp);
+    dg::blas2::symv( projection, ym[2], hm);
+    dg::blas1::scal( hm, -1.);
+    dg::blas1::axpby(  1., hp, +1., hm, hz);
+    //thrust::host_vector<double> hp = dg::evaluate( vec.z(), grid_coarse.get()), hm(hp), hz(hp);
+    //dg::blas1::pointwiseDivide( deltaPhi, hp, hp);
+    //dg::blas1::pointwiseDivide( deltaPhi, hm, hm);
+    //dg::blas1::pointwiseDivide( 2.*deltaPhi, hz, hz);
 
     dg::blas1::transfer( hp, m_hp);
     dg::blas1::transfer( hm, m_hm);
