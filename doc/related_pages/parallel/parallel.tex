@@ -175,7 +175,8 @@ The fieldline equations~\eqref{eq:fieldline} are still
 \label{eq:fieldlines}
 \end{subequations}
 The issue here is that when integrating fieldlines we
-have to interpolate the vector field $\vec v$ at arbitrary points. 
+have to interpolate the vector field $\vec v$ at arbitrary points
+instead of simply evaluating the exact values.
 However, the interpolation error vanishes with order $P$ in the 
 perpendicular plane. In order to mitigate this error
 we transform $\vec v$ on a finer grid/higher order polynomials for more accurate
@@ -199,6 +200,11 @@ $\varphi_b$ such that the result of the integration of Eq.~\eqref{eq:fieldline} 
 $0$ to $\varphi_b$ lies on the boundary. 
 The angle $\varphi_b$ can be found by a bisection algorithm knowing that $0<\varphi_b < \Delta\varphi$. 
 This kind of procedure is known as a shooting method. 
+Another possibility is to trick the fieldline integrator into finding the point for us. 
+We do this by setting $\vec v \equiv 0$ on all points outside the simulation box, which 
+makes the integrator stop once it crosses the domain boundary. This works
+fairly well with the adaptive embedded Runge Kutta method that we use. 
+
 Secondly, for Dirichlet boundaries the small 
 distance of a point to the wall seriously deteriorates the CFL condition. (To ease the CFL condition 
 was the reason to devise the algorithm in the first place)
@@ -227,6 +233,8 @@ the perpendicular ones since the fieldlines never leave the domain.
 We simply interpolate the quantity to derive on the inner side of the
 domain boundary (Neumann conditions = "No boundary condition") or 
 set the value to zero (Dirichlet condition).
+Unfortunately, when testing this procedure with an analytical solution
+the error does not converge neither for Dirichlet nor for Neumann.
 
 \subsection{Poloidal limiters}
 A poloidal limiter can simply be implemented via a boundary condition in $\varphi$. 
