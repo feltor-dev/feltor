@@ -46,7 +46,7 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary), m_bcx(bcx), m_bcy(bcy) { }
+    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
@@ -107,52 +107,6 @@ struct DSField
     dg::ClonePtr<dg::aGeometry2d> g_;
 };
 
-template<class real_type>
-bool mirror_at_boundary( real_type& x, real_type& y, const dg::aRealTopology2d<real_type>& grid)
-{
-    //return if mirrored
-    //there is no shift_topologic because if interpolating the results
-    if (x < grid.x0() ) { x=2.*grid.x0()-x; return true;}
-    if (x < grid.x1() ) { x=2.*grid.x1()-x; return true;}
-    if (y > grid.y0() ) { y=2.*grid.y0()-y; return true;}
-    if (y < grid.y1() ) { y=2.*grid.y1()-y; return true;}
-    return false;
-}
-template<class real_type>
-bool mirror_at_boundary( std::array<double,3>& x, const dg::aRealTopology2d<real_type>& grid)
-{
-    return mirror_at_boundary(x[0], x[1], grid);
-}
-
-template<class real_type>
-void interpolate_and_mirror( const dg::IHMatrix& interpolate, const dg::aRealTopology2d<real_type>& g2dFine, const dg::aRealTopology2d<real_type>& boundary, //2 different grid on account of the MPI implementation
-        const std::array<thrust::host_vector<real_type>,3>& yp_coarse,
-        const std::array<thrust::host_vector<real_type>,3>& ym_coarse,
-        std::array<thrust::host_vector<real_type>,3>& yp_fine,
-        std::array<thrust::host_vector<real_type>,3>& ym_fine
-        std::vector<bool>& mirrorP,
-        std::vector<bool>& mirrorM
-        )
-{
-    thrust::host_vector<real_type> tmp(dg::evaluate(dg::zero, g2dFine));
-    yp_fine.fill(tmp), ym_fine.fill(tmp);
-    for( unsigned i=0; i<3; i++)
-    {
-        dg::blas2::symv( interpolate, yp_coarse[i], yp_fine[i]);
-        dg::blas2::symv( interpolate, ym_coarse[i], ym_fine[i]);
-    }
-    for( unsigned i=0; i<yp[0].size(); i++)
-    {
-        boundary.shift_topologic( yp_fine[0][i], yp_fine[1][i], yp_fine[0][i], yp_fine[1][i]);
-        boundary.shift_topologic( ym_fine[0][i], ym_fine[1][i], ym_fine[0][i], ym_fine[1][i]);
-        //mirror here
-        error
-        detail::mirror_at_boundary( yp_fine[0][i], yp_fine[1][i], boundary);
-        detail::mirror_at_boundary( ym_fine[0][i], ym_fine[1][i], boundary);
-    }
-}
-
-
 //used in constructor of Fieldaligned
 template<class real_type>
 void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
@@ -160,7 +114,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp,
     std::array<thrust::host_vector<real_type>,3>& ym,
-    real_type deltaPhi, real_type eps, dg::bc bcx, dg::bc bcy)
+    real_type deltaPhi, real_type eps)
 {
     //grid_field contains the global geometry for the field and the boundaries
     //grid_evaluate contains the points to actually integrate
@@ -172,7 +126,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field, bcx, bcy);
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field);
     unsigned size = grid_evaluate.size();
     dg::PrinceDormand<std::array<double,3>> pd;
     for( unsigned i=0; i<size; i++)
@@ -466,9 +420,15 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     //    detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_fine, yp, ym, deltaPhi, eps, bcx, bcy);
     //else
     {
-        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps, bcx, bcy);
+        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
         dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
-        dg::geo::detail::interpolate_and_mirror( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
+        thrust::host_vector<double> tmp(dg::evaluate(dg::zero, grid_fine));
+        yp.fill(tmp), ym.fill(tmp);
+        for( unsigned i=0; i<3; i++)
+        {
+            dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
+            dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
+        }
     }
 #ifdef DG_BENCHMARK
     t.toc();

@@ -175,7 +175,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             if( bcy == dg::DIR || bcy == dg::NEU_DIR)
                 mirror = true;
         }
-        mirror = false;
         //assert that point is inside the grid boundaries
         if (!(X >= g.x0() && X <= g.x1())) {
             std::cerr << g.x0()<<"< xi = " << X <<" < "<<g.x1()<<std::endl;
