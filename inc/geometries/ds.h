@@ -72,10 +72,10 @@ struct DS
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         dg::norm no=dg::normed, dg::direction dir = dg::centered,
-        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, bool integrateAll=true, double deltaPhi=-1)
+        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, double deltaPhi=-1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY,integrateAll,deltaPhi);
+        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY,deltaPhi);
         construct( m_fa, no, dir);
     }
     /**
@@ -93,9 +93,9 @@ struct DS
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         dg::norm no=dg::normed, dg::direction dir = dg::centered,
-        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, bool integrateAll=true, double deltaPhi=-1)
+        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, double deltaPhi=-1)
     {
-        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll,deltaPhi);
+        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY,deltaPhi);
         construct( m_fa, no, dir);
     }
     ///@copydoc construct

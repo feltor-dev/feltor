@@ -69,11 +69,11 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
+        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
+        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
@@ -83,10 +83,10 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
+        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
-        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
+        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
     template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec,
@@ -96,7 +96,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
+        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1);
 
     bool dependsOnX()const{return m_dependsOnX;}
@@ -136,16 +136,14 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 
     void operator()(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
 
-    const MPI_Vector<LocalContainer>& hz_inv()const {return m_hz_inv;}
-    const MPI_Vector<LocalContainer>& hp_inv()const {return m_hp_inv;}
-    const MPI_Vector<LocalContainer>& hm_inv()const {return m_hm_inv;}
+    const MPI_Vector<LocalContainer>& h_inv()const {return m_h_inv;}
     const ProductMPIGeometry& grid() const{return m_g.get();}
   private:
     void ePlus( enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     void eMinus(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     MPIDistMat<LocalIMatrix, CommunicatorXY> m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
-    MPI_Vector<LocalContainer> m_hz_inv, m_hp_inv, m_hm_inv; //3d size
-    MPI_Vector<LocalContainer> m_hp, m_hm, m_hz;      //2d size
+    MPI_Vector<LocalContainer> m_h_inv; //3d size
+    MPI_Vector<LocalContainer> m_h;      //2d size
     MPI_Vector<LocalContainer> m_left, m_right; //2d size
     MPI_Vector<LocalContainer> m_limiter; //2d size
     MPI_Vector<LocalContainer> m_ghostM, m_ghostP; //2d size
@@ -163,12 +161,12 @@ template <class Limiter>
 void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid,
     dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, bool bx, bool by, bool integrateAll, double deltaPhi)
+    unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
-    dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
+    dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_h_inv);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     int dims[3], periods[3], coords[3];
@@ -182,14 +180,13 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    std::array<thrust::host_vector<double>,3 > yp_coarse, ym_coarse, yp, ym;
+    std::array<thrust::host_vector<double>,2 > yp_coarse, ym_coarse, yp, ym;
 
 #ifdef DG_BENCHMARK
     dg::Timer t;
     int rank;
     MPI_Comm_rank( grid.communicator(), &rank);
     t.tic();
-    if(rank==0)std::cout << "Generate high order grid...\n";
 #endif
     dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
@@ -198,20 +195,20 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
     t.toc();
-    if(rank==0) std::cout << "High order grid gen   took: "<<t.diff()<<"\n";
+    if(rank==0) std::cout << "DS: High order grid gen   took: "<<t.diff()<<"\n";
     t.tic();
 #endif
-    if(integrateAll)
-        detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_fine.local(), yp, ym, deltaPhi, eps);
-    else
+    detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_coarse.get().local(), yp_coarse, ym_coarse, deltaPhi, eps);
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse.get().local());  //INTERPOLATE TO FINE GRID
+    yp.fill(dg::evaluate( dg::zero, grid_fine.local())); ym = yp;
+    for( int i=0; i<2; i++)
     {
-        detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_coarse.get().local(), yp_coarse, ym_coarse, deltaPhi, eps);
-        dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse.get().local());  //INTERPOLATE TO FINE GRID
-        dg::geo::detail::interpolate_and_clip( interpolate, grid_fine.local(), grid_fine.global(), yp_coarse, ym_coarse, yp, ym);
+        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
+        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
     }
 #ifdef DG_BENCHMARK
     t.toc();
-    if(rank==0) std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
+    if(rank==0) std::cout << "DS: Fieldline integration took: "<<t.diff()<<"\n";
 
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
@@ -223,7 +220,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     cusp::multiply( projection, minusFine, minus);
 #ifdef DG_BENCHMARK
     t.toc();
-    if(rank==0) std::cout << "Multiplication        took: "<<t.diff()<<"\n";
+    if(rank==0) std::cout << "DS: Multiplication PI     took: "<<t.diff()<<"\n";
     t.tic();
 #endif
     dg::MIHMatrix temp = dg::convert( plus, grid_coarse.get()), tempT;
@@ -236,27 +233,15 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::blas2::transfer( tempT, m_minusT);
 #ifdef DG_BENCHMARK
     t.toc();
-    if(rank==0) std::cout << "Conversion            took: "<<t.diff()<<"\n";
+    if(rank==0) std::cout << "DS: Conversion            took: "<<t.diff()<<"\n";
 #endif
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::MHVec hp( dg::evaluate( dg::zero, grid_coarse.get())), hm(hp), hz(hp);
-    dg::blas2::symv( projection, yp[2], hp.data());
-    dg::blas2::symv( projection, ym[2], hm.data());
-    dg::blas1::scal( hm, -1.);
-    dg::blas1::axpby(  1., hp, +1., hm, hz);
-    dg::blas1::transfer( hp, m_hp);
-    dg::blas1::transfer( hm, m_hm);
-    dg::blas1::transfer( hz, m_hz);
+    dg::transfer( dg::evaluate( vec.z(), grid_coarse.get()), m_h);
+    dg::blas1::pointwiseDivide( deltaPhi, m_h, m_h);
 
-    dg::split( m_hp_inv, m_temp, grid);
+    dg::split( m_h_inv, m_temp, grid);
     for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::pointwiseDivide( 1., m_hp, m_temp[i]);
-    dg::split( m_hm_inv, m_temp, grid);
-    for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::pointwiseDivide( 1., m_hm, m_temp[i]);
-    dg::split( m_hz_inv, m_temp, grid);
-    for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::pointwiseDivide( 1., m_hz, m_temp[i]);
+        dg::blas1::pointwiseDivide( 1., m_h, m_temp[i]);
 }
 
 template<class G, class M, class C, class container>
@@ -362,7 +347,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
             dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
         if( m_bcz == dg::NEU || m_bcz == dg::DIR_NEU)
         {
-            dg::blas1::pointwiseDot( m_right, m_hp, m_ghostP);
+            dg::blas1::pointwiseDot( m_right, m_h, m_ghostP);
             dg::blas1::axpby( 1., m_ghostP, 1., m_f[i0], m_ghostP);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
@@ -402,7 +387,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
             dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
         if( m_bcz == dg::NEU || m_bcz == dg::NEU_DIR)
         {
-            dg::blas1::pointwiseDot( m_left, m_hm, m_ghostM);
+            dg::blas1::pointwiseDot( m_left, m_h, m_ghostM);
             dg::blas1::axpby( -1., m_ghostM, 1., m_f[i0], m_ghostM);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fme

@@ -60,12 +60,12 @@ int main(int argc, char * argv[])
     std::cout << "Create parallel Derivative!\n";
 
     //![doxygen]
-    const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::DIR, dg::DIR);
+    const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz);
     //create magnetic field
     const dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     const dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     //create Fieldaligned object and construct DS from it
-    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my, true,true,true);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my, true,true);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
     //apply to function
@@ -91,7 +91,7 @@ int main(int argc, char * argv[])
     ///b and therefore bf does not fulfill Neumann boundary conditions
     ///##########################################################///
     std::cout << "TEST DIR Boundary conditions!\n";
-    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my, true,true,true);
+    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my, true,true);
     ds.construct( dsFA, dg::not_normed, dg::centered);
     //apply to function
     dg::DVec functionDIR = dg::evaluate( funcDIR, g3d);
