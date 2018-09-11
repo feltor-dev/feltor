@@ -2,6 +2,7 @@
 #include <sstream>
 #include <mpi.h>
 #include "dg/backend/mpi_init.h"
+#include "dg/backend/transpose.h"
 #include "dg/blas.h"
 #include "mpi_projection.h"
 #include "mpi_evaluation.h"
@@ -67,12 +68,28 @@ int main(int argc, char* argv[])
     dg::MIHMatrix converted_i = dg::create::interpolation( x,y,g2d);
     dg::MHVec sine = dg::evaluate( function, g2d);
     dg::MHVec temp(sine);
-    dg::HVec global_sine = dg::evaluate( function, g2d.global());
-    dg::HVec g_temp( x.size());
     converted_i.symv( sine, temp);
+    dg::HVec global_sine = dg::evaluate( function, g2d.global());
+    dg::HVec g_temp( g2d.local().size());
     dg::blas2::symv( direct_i, global_sine, g_temp);
     //now compare
     bool success = true;
+    for( unsigned i=0; i<temp.size(); i++)
+        if( temp.data()[i] - g_temp[i] > 1e-14)
+            success = false;
+    if( !success)
+        std::cout << "FAILED from rank "<<rank<<"!\n";
+    else
+        std::cout << "SUCCESS from rank "<<rank<<"!\n";
+    if(rank==0) std::cout << "Now test TRANSPOSITION!\n";
+    direct_i = dg::transpose( direct_i);
+    converted_i = dg::transpose( converted_i);
+    converted_i.symv( sine, temp);
+    dg::HVec local_sine = dg::evaluate( function, g2d.local());
+    g_temp.resize( g2d.global().size());
+    dg::blas2::symv( direct_i, local_sine, g_temp);
+    //now compare
+    success = true;
     for( unsigned i=0; i<temp.size(); i++)
         if( temp.data()[i] - g_temp[i] > 1e-14)
             success = false;

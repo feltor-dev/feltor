@@ -385,20 +385,19 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_h_inv);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     m_perp_size = grid_coarse.get().size();
     dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
     dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    std::array<thrust::host_vector<double>,2 > yp_coarse, ym_coarse, yp, ym;
-
+    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
     dg::Timer t;
     t.tic();
 #endif //DG_BENCHMARK
+    std::array<thrust::host_vector<double>,2> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
     dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
@@ -419,9 +418,9 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
 #ifdef DG_BENCHMARK
     t.toc();
     std::cout << "DS: Computing all points took: "<<t.diff()<<"\n";
-    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
 #endif //DG_BENCHMARK
+    ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), bcx, bcy), plus, plusT;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), bcx, bcy), minus, minusT;
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
@@ -437,7 +436,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas2::transfer( plusT, m_plusT);
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
-    //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%//
     dg::transfer( dg::evaluate( vec.z(), grid_coarse.get()), m_h);
     dg::blas1::pointwiseDivide( deltaPhi, m_h, m_h);
 

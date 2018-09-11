@@ -60,9 +60,10 @@ static void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& globa
  * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
  *
  * @tparam ConversionPolicy has to have the members:
- *  - \c global2localIdx(unsigned,unsigned,unsigned) \c const;
+ *  - \c bool\c global2localIdx(unsigned,unsigned&,unsigned&) \c const;
  * where the first parameter is the global index and the
- * other two are the pair (local idx, rank).
+ * other two are the output pair (localIdx, rank).
+   return true if successful, false if global index is not part of the grid
  *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
  *  - \c local_size(); return the local vector size
  * @param global the column indices and num_cols need to be global, the row indices and num_rows local
@@ -86,7 +87,7 @@ dg::tMIHMatrix<real_type> convert( const dg::tIHMatrix<real_type>& global, const
         cusp::array1d<int, cusp::host_memory> local_idx(global.column_indices), pids(local_idx);
         bool success = true;
         for(unsigned i=0; i<local_idx.size(); i++)
-            if( !policy.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
+            success = policy.global2localIdx(global.column_indices[i], local_idx[i], pids[i]);
         assert( success);
         dg::tIHMatrix<real_type> local( global.num_rows, policy.local_size(), global.values.size());
         comm = dg::GeneralComm< dg::iHVec, thrust::host_vector<real_type>>();

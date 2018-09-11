@@ -163,6 +163,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
+    ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
@@ -176,22 +177,21 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( m_g.get().communicator(), 3, dims, periods, coords);
     m_coords2 = coords[2], m_sizeZ = dims[2];
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::ClonePtr<aMPIGeometry2d> grid_coarse( grid.perp_grid());
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     m_perp_size = grid_coarse.get().local().size();
     dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
     dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    std::array<thrust::host_vector<double>,2 > yp_coarse, ym_coarse, yp, ym;
-
+    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
     dg::Timer t;
     int rank;
     MPI_Comm_rank( grid.communicator(), &rank);
     t.tic();
 #endif
+    std::array<thrust::host_vector<double>,2> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
     dg::ClonePtr<dg::aGeometry2d> global_grid_magnetic = grid_magnetic.get().global_geometry();
@@ -213,10 +213,9 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 #ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "DS: Fieldline integration took: "<<t.diff()<<"\n";
-
-    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
 #endif
+    ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get().global(), bcx, bcy), plus;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get().global(), bcx, bcy), minus;
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get().local(), grid_fine.local());
@@ -239,7 +238,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     t.toc();
     if(rank==0) std::cout << "DS: Conversion            took: "<<t.diff()<<"\n";
 #endif
-    //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%//
     dg::transfer( dg::evaluate( vec.z(), grid_coarse.get()), m_h);
     dg::blas1::pointwiseDivide( deltaPhi, m_h, m_h);
 

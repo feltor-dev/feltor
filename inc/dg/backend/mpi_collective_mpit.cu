@@ -28,9 +28,9 @@ int main( int argc, char * argv[])
     const thrust::host_vector<double> w(v);
     dg::BijectiveComm<thrust::host_vector<int>, thrust::host_vector<double> > c(m, MPI_COMM_WORLD);
     thrust::host_vector<double> receive = c.allocate_buffer();
-    receive = c.global_gather( v);
+    receive = c.global_gather( thrust::raw_pointer_cast(v.data()));
     MPI_Barrier( MPI_COMM_WORLD);
-    c.global_scatter_reduce( receive, v);
+    c.global_scatter_reduce( receive, thrust::raw_pointer_cast(v.data()));
     bool equal = true;
     for( unsigned i=0; i<m.size(); i++)
     {
@@ -55,11 +55,11 @@ int main( int argc, char * argv[])
         if( i>=Nx*Ny) pids[i] = (rank+1)%size;
     }
     dg::GeneralComm<thrust::host_vector<int>, thrust::host_vector<double> > s( idx, pids, MPI_COMM_WORLD);
-    receive = s.global_gather( vec);
+    receive = s.global_gather( thrust::raw_pointer_cast(vec.data()));
     //for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
     //    if(rank==0) std::cout << i<<"\t "<< receive[i] << std::endl;
     thrust::host_vector<double> vec2(vec.size());
-    s.global_scatter_reduce( receive, vec2);
+    s.global_scatter_reduce( receive, thrust::raw_pointer_cast(vec2.data()));
     equal=true;
     for( unsigned i=0; i<(Nx)*(Ny); i++)
     {
@@ -76,29 +76,6 @@ int main( int argc, char * argv[])
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(rank==0)std::cout<< "Test Nearest Neighbor Comm\n";
-    unsigned dims[3] = {Nx, Ny, 1};
-    int np[2] = {2,2}, periods[2] = { false, false};
-    MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-
-    dg::NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > nnch( 2, dims, comm, 1);
-    thrust::host_vector<double> tmp = nnch.allocate_buffer();
-    nnch.global_gather( vec, tmp);
-    vec2=vec;
-    nnch.global_scatter_reduce( tmp, vec2);
-    for( unsigned i=0; i<(Nx)*(Ny); i++)
-    {
-        if( vec[i] != vec2[i]) equal = false;
-    }
-    {
-        if( equal)
-            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
-        else
-            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
-    }
-
-
 
     MPI_Finalize();
 
