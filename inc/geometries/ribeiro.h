@@ -38,7 +38,7 @@ struct Fpsi
     void find_initial( double psi, double& R_0, double& Z_0)
     {
         unsigned N = 50;
-        std::array<double,2> begin2d( {0,0}), end2d( begin2d), end2d_old(begin2d);
+		std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
         begin2d[0] = end2d[0] = end2d_old[0] = R_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
         if(m_verbose)std::cout << "In init function\n";
@@ -57,7 +57,7 @@ struct Fpsi
     double construct_f( double psi, double& R_0, double& Z_0)
     {
         find_initial( psi, R_0, Z_0);
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
         begin[0] = R_0, begin[1] = Z_0;
         if(m_verbose)std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
@@ -164,7 +164,7 @@ struct FieldFinv
         fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
     void operator()(double t, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-        std::array<double,3> begin( {0,0,0}), end(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
         if(mode_==0)dg::stepperRK<17>( fieldRZYTribeiro_,  0., begin, 2*M_PI, end, N_steps);
         if(mode_==1)dg::stepperRK<17>( fieldRZYTequalarc_, 0., begin, 2*M_PI, end, N_steps);

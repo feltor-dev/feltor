@@ -532,7 +532,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
 
     //now compute f and starting values
-    std::array<double,4> begin( {0,0,0,0}), end(begin), temp(begin);
+	std::array<double, 4> begin{ {0,0,0,0} }, end(begin), temp(begin);
     const double f_psi = fpsi.construct_f( psi, begin[0], begin[1]);
     fieldRZYRYZY.set_f(f_psi);
     double fprime = fpsi.f_prime( psi);
