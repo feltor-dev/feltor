@@ -64,8 +64,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     template <class Limiter>
     Fieldaligned(const dg::geo::TokamakMagneticField& vec,
         const ProductMPIGeometry& grid,
-        dg::bc globalbcx = dg::NEU,
-        dg::bc globalbcy = dg::NEU,
+        dg::bc bcx = dg::NEU,
+        dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
@@ -73,26 +73,26 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
         const ProductMPIGeometry& grid,
-        dg::bc globalbcx = dg::NEU,
-        dg::bc globalbcy = dg::NEU,
+        dg::bc bcx = dg::NEU,
+        dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
         bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
-        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
     template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec,
         const ProductMPIGeometry& grid,
-        dg::bc globalbcx = dg::NEU,
-        dg::bc globalbcy = dg::NEU,
+        dg::bc bcx = dg::NEU,
+        dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
@@ -160,9 +160,13 @@ template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class Loca
 template <class Limiter>
 void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid,
-    dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps,
+    dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
+    if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
+        throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
+    if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
+        throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
@@ -213,8 +217,8 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
 #endif
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get().global(), globalbcx, globalbcy), plus;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get().global(), globalbcx, globalbcy), minus;
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get().global(), bcx, bcy), plus;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get().global(), bcx, bcy), minus;
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get().local(), grid_fine.local());
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);

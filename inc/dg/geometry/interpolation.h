@@ -127,15 +127,17 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * The created matrix has \c g.size() columns and \c x.size() rows. It uses
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the given interpolation points.
+ * The given boundary conditions determine how interpolation points outside the grid domain are treated.
  * @snippet geometry/interpolation_t.cu doxygen
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points ( has to have equal size as x)
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies outside the boundary in x. If \c PER the point will be shifted topologically. Else the
- * point will be mirrored at the boundary: \c NEU will then simply interpolate at the resulting point, \c DIR will take the negative of the interpolation.
- \c NEU and \c PER interpolate the inner side polynomial. (\c DIR_NEU and \c NEU_DIR apply \c NEU / \c DIR to the respective left or right boundary )
- * @param bcy determines what to do when a point lies outside the boundary in y. Behaviour correponds to bcx.
+ * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
+ * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
+ (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
+ * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ * @param bcy analogous to \c bcx, applies to y direction
  *
  * @return interpolation matrix
  */

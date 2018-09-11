@@ -153,11 +153,12 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
         is a limiter and 0 if there isn't.
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply.
     * @param vec The vector field to integrate
-    * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
-    * @param bcx This parameter defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction in x
-    * @param bcy This parameter defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction in y
-    * @param limit Instance of the limiter class (Default is a limiter everywhere,
-        note that if \c grid.bcz()==dg::PER , it doesn't matter if there is a limiter or not)
+    * @param grid The grid on which to integrate fieldlines.
+    * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc) (see there for more details)
+    * function and deterimens what happens when the endpoint of the fieldline integration leaves the domain boundaries of \c grid. Note that \c bcx and \c grid.bcx() have to be either both periodic or both not periodic.
+    * @param bcy analogous to \c bcx, applies to y direction
+    * @param limit Instance of the limiter class
+        (Note that if \c grid.bcz()==dg::PER this parameter is ignored, Default is a limiter everywhere)
     */
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
@@ -373,6 +374,11 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
+    ///Let us check boundary conditions:
+    if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
+        throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
+    if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
+        throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
