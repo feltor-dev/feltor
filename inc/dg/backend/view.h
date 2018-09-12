@@ -83,11 +83,25 @@ struct View
         return iterator(m_ptr);
     }
     /**
+     * @brief const Iterator to the beginning
+     * @return iterator to the first element
+     */
+    const_iterator cbegin() const{
+        return const_iterator(m_ptr);
+    }
+    /**
      * @brief Iterator to the end
      * @return iterator to the end
      */
     iterator end() const{
         return iterator(m_ptr + m_size);
+    }
+    /**
+     * @brief const Iterator to the end
+     * @return iterator to the end
+     */
+    const_iterator cend() const{
+        return const_iterator(m_ptr + m_size);
     }
     /**
      * @brief Get the size

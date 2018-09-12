@@ -87,8 +87,26 @@ int main(int argc, char * argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+    ///##########################################################///
     ///We unfortunately cannot test convergence of adjoint because
     ///b and therefore bf does not fulfill Neumann boundary conditions
+    std::cout << "TEST ADJOINT derivatives!\n";
+    solution = dg::evaluate( deriAdjNEU, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.centeredDiv( function, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error centered divergence \t"<< sqrt( norm/sol )<<"\n";
+    ds.forwardDiv( 1., function, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    std::cout << "Error Forward  divergence \t"<<sqrt( norm/sol)<<"\n";
+    ds.backwardDiv( 1., function, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+
     ///##########################################################///
     std::cout << "TEST DIR Boundary conditions!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my, true,true);

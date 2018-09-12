@@ -69,8 +69,10 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
                 metric_.idx(i,j) = metric.idx(i,j);
                 jac_.idx(i,j) = jacobian.idx(i,j);
             }
+        jac_.values().resize( jacobian.values().size());
         for( unsigned i=0; i<jacobian.values().size(); i++)
             jac_.values()[i] = global2local( jacobian.values()[i], *this);
+        metric_.values().resize( metric.values().size());
         for( unsigned i=0; i<metric.values().size(); i++)
             metric_.values()[i] = global2local( metric.values()[i], *this);
         map_.resize(map.size());

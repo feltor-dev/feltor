@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Create parallel Derivative with default mx = my = 10!\n";
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
-    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8);
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, 10, 10, true, true);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
     //apply to function
@@ -80,11 +80,29 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     if(rank==0)std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+    ///##########################################################///
     ///We unfortunately cannot test convergence of adjoint because
     ///b and therefore bf does not fulfill Neumann boundary conditions
+    if(rank==0)std::cout << "TEST ADJOINT derivatives!\n";
+    solution = dg::evaluate( deriAdjNEU, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.centeredDiv( function, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    if(rank==0)std::cout << "Error centered divergence \t"<< sqrt( norm/sol )<<"\n";
+    ds.forwardDiv( 1., function, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    if(rank==0)std::cout << "Error Forward  divergence \t"<<sqrt( norm/sol)<<"\n";
+    ds.backwardDiv( 1., function, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    if(rank==0)std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+
     ///##########################################################///
     if(rank==0)std::cout << "TEST DIR Boundary conditions!\n";
-    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8);
+    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, 10, 10, true, true);
     ds.construct( dsFA, dg::not_normed, dg::centered);
     //apply to function
     dg::MDVec functionDIR = dg::evaluate( funcDIR, g3d);
