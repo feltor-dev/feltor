@@ -36,7 +36,7 @@ void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const 
 ///@brief MPI Version of split
 ///@copydetails dg::split()
 ///@tparam MPIContainer An MPI_Vector of a \c SharedContainer
-///@note every plane in out holds a 2d Cartesian MPI_Communicator
+///@note every plane in \c out holds a 2d Cartesian MPI_Communicator
 ///@note two seperately split vectors have congruent (not identical) MPI_Communicators (Note here the MPI concept of congruent vs. identical communicators)
 template<class MPIContainer, class SharedContainer>
 void split( MPIContainer& in, std::vector<MPI_Vector<View<SharedContainer>> >& out, const aMPITopology3d& grid)

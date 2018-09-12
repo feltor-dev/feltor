@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
     ss<< "2 2 3 8 8";
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm, ss);
     MPI_Comm_rank( comm, &rank);
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0) std::cout << "Test NON-COMMUNICATING MPI matrix-creation!\n";
     dg::MPIGrid2d g2d( 0,1,0,1, n,Nx,Ny, comm);
     dg::MPIGrid2d g2d_half = g2d;
@@ -55,6 +56,7 @@ int main(int argc, char* argv[])
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
 
     MPI_Barrier(comm);
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0) std::cout << "Now test COMMUNICATING MPI matrix-creation!\n";
     x = dg::evaluate( dg::cooX2d, g2d.local());
     y = dg::evaluate( dg::cooY2d, g2d.local());
@@ -64,8 +66,8 @@ int main(int argc, char* argv[])
         y[i] +=shift;
         g2d.global().shift_topologic( x[i], y[i], x[i], y[i]);
     }
-    dg::IHMatrix  direct_i = dg::create::interpolation( x,y,g2d.global());
     dg::MIHMatrix converted_i = dg::create::interpolation( x,y,g2d);
+    dg::IHMatrix  direct_i = dg::create::interpolation( x,y,g2d.global());
     dg::MHVec sine = dg::evaluate( function, g2d);
     dg::MHVec temp(sine);
     converted_i.symv( sine, temp);
@@ -75,23 +77,34 @@ int main(int argc, char* argv[])
     //now compare
     bool success = true;
     for( unsigned i=0; i<temp.size(); i++)
-        if( temp.data()[i] - g_temp[i] > 1e-14)
+        if( fabs(temp.data()[i] - g_temp[i]) > 1e-14)
             success = false;
     if( !success)
         std::cout << "FAILED from rank "<<rank<<"!\n";
     else
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
+    MPI_Barrier(comm);
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0) std::cout << "Now test TRANSPOSITION!\n";
-    direct_i = dg::transpose( direct_i);
     converted_i = dg::transpose( converted_i);
     converted_i.symv( sine, temp);
-    dg::HVec local_sine = dg::evaluate( function, g2d.local());
+    //Compute global transposition and distribute among processes
+    x = dg::evaluate( dg::cooX2d, g2d.global());
+    y = dg::evaluate( dg::cooY2d, g2d.global());
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        x[i] +=shift;
+        y[i] +=shift;
+        g2d.global().shift_topologic( x[i], y[i], x[i], y[i]);
+    }
+    direct_i = dg::transpose(dg::create::interpolation( x,y,g2d.global()));
     g_temp.resize( g2d.global().size());
-    dg::blas2::symv( direct_i, local_sine, g_temp);
+    dg::blas2::symv( direct_i, global_sine, g_temp);
+    dg::MHVec mpi_g_temp = dg::global2local( g_temp, g2d);
     //now compare
     success = true;
     for( unsigned i=0; i<temp.size(); i++)
-        if( temp.data()[i] - g_temp[i] > 1e-14)
+        if( fabs(temp.data()[i] - mpi_g_temp.data()[i]) > 1e-14)
             success = false;
     if( !success)
         std::cout << "FAILED from rank "<<rank<<"!\n";
