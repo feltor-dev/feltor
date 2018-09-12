@@ -320,8 +320,9 @@ directory.
 
 === Using FELTOR on Windows [[sec_windows]]
 FELTOR has been developed mostly on Linux machines.
-Recently, it has become possible to develop on Windows using https://visualstudio.microsoft.com/[Microsoft Visual Studio]. We here describe how to work with FELTORs OpenMP
-shared memory backend on Windows.
+Recently, it has become possible to develop also on Windows
+using https://visualstudio.microsoft.com/[Microsoft Visual Studio]. We here
+describe how to work with FELTOR's OpenMP shared memory backend on Windows.
 [CAUTION]
 Unfortunately, the msvc compiler only supports an outdated OpenMP version so
 consider a performance penalty of approximately a factor 2, when running the OpenMP backend on Windows.
@@ -329,7 +330,7 @@ consider a performance penalty of approximately a factor 2, when running the Ope
 ===== Basic Setup
 
 We suggest to install the Github desktop https://desktop.github.com.
-Please clone all four of the following URLs using `File -> Clone repository ...`
+Please clone all four of the following URLs using `File -> Clone repository...`
 [source,sh]
 ----
 https://www.github.com/feltor-dev/feltor
@@ -340,7 +341,9 @@ https://www.github.com/feltor-dev/vcl
 Please also have a look at the relevant <<tab_requirements, system requirements>> Table.
 
 ===== Creating a basic FELTOR Property Sheet
-We suggest to create a Property Sheet in https://visualstudio.microsoft.com/[Visual Studio]. The Property Sheet can then be conveniently added to any project that includes the FELTOR library
+In Visual Studio we suggest to create a Property Sheet for FELTOR.
+The Property Sheet can then be conveniently added to any project that includes
+the FELTOR library headers `dg/algorithm.h` and/or `geometries/geometries.h`
 
 * Open an existing solution in Visual Studio or create a new project with `File -> New -> Projet ...` selecting `Empty Project` in Visual C++.
 * In the Solution Explorer change to the `Property Manager` tab, then click on `Add New Project Property Sheet`, name it `FeltorPropertySheet.props` and save it
@@ -351,12 +354,21 @@ to a convenient location.
 `path\to\cusplibrary` and `path\to\folder_containing_vcl`
 ** In `C/C++ -> Optimization -> Enable Intrinsic Functions` select `Yes (/Oi)`
 ** In `C/C++ -> Preprocessor -> Preprocessor Definitions` select `Edit` and
-add the line `THRUST_DEVICE_SYTEM=THRUST_DEVICE_SYSTEM_OMP` (Selects the OpenMP backend in FELTOR)
+add the line `THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` (Selects the OpenMP backend in FELTOR)
 ** In `C/C++ -> Code Generation -> Enable Enhanced Instruction Set` select `Advanced Vector Extensions 2 (/arch:AVX2)` (If your CPU supports it, of course)
 ** In `C/C++ -> Language -> Open MP Support` select `Yes (/openmp)`
 * Don't forget to click `Apply` in the end.
 
-That's it. Now, in order to test our Feltor Property Sheet let us add a source file to the project and compile
+That's it.
+You can add your Feltor Property Sheet to any new project
+ by switching to the `Property Manager` again:
+click `Add Existing Property Sheet` and select `FeltorPropertySheet`.
+[TIP]
+ We suggest that you generate a new project for each executable program.
+
+===== Basic test
+In order to test the Feltor Property Sheet let us add a source file to
+ the project and compile
 
 * In the Solution Explorer right click on `Source Files -> Add -> New Item ... -> C++ File (.cpp)`.
 As an example we name it `test.cpp` and copy the contents of <<test_cpp,test.cpp>>
@@ -364,42 +376,46 @@ As an example we name it `test.cpp` and copy the contents of <<test_cpp,test.cpp
 * Compile with `Ctrl + F5` then run the code
 
 [TIP]
-If you want to prevent the console from closing on program exit, set `Properties -> Linker -> System -> SubSystem -> Console (/SUBSYSTEM:CONSOLE)` in your Property Sheet.
-
-We suggest that you generate a new project for each executable program.
-In order to add a project to an existing solution select `File -> Add->New Project...`. 
-You can then add a cpp file: Right click on `Source Files` and add the file as an existing item.
-Add the Feltor Property Sheet by switching to the `Property Manager` again and clicking `Add Existing Property Sheet`.
+If you want to prevent the console from closing on program exit,
+set `Properties -> Linker -> System -> SubSystem -> Console (/SUBSYSTEM:CONSOLE)`
+in your Property Sheet.
 
 ===== Advanced simulation projects
 
 Our simulation codes typically depend on jsoncpp for parameter input,
 glfw3 for plotting or
-netcdf-4 for file output and come with a LaTeX file containing documentation. 
-You will need to download these additional libraries and adapt the project properties accordingly. 
+netcdf-4 for file output and come with a LaTeX file containing documentation.
+You will need to download these additional libraries and adapt the project
+properties accordingly.
 
 jsoncpp::
 
-* Clone `https://github.com/open-source-parsers/jsoncpp`
-* Download and Install https://www.anaconda.com/download[Anaconda] to get a working python3 installation
-* Execute the file `path\to\jsconcpp\amalgamate.py`, which will generate a `dist` folder containing `jsconcpp.cpp` and two header files.
-* Open the Property Sheet and add `path\to\jsoncpp\dist` to `VC++ Directories-> Include Directories`
-* In the Solution Explorer Right click on `Source Files -> Add -> Existing Item -> path\to\jsconcpp\dist\jsoncpp.cpp`
+* Download and Install https://www.anaconda.com/download[Anaconda].
+(Once Anaconda is installed don't do anything yet, it's just to get a working
+ python3 installation)
+* In Github desktop: `File -> Clone repository...` clone `https://github.com/open-source-parsers/jsoncpp`
+* Execute the file `path\to\jsconcpp\amalgamate.py` (double click). The only way
+to confirm its success is to look for a `dist` folder containing `jsconcpp.cpp`
+and a folder containing two header files.
+* Add `path\to\jsoncpp\dist` to `Properties -> VC++ Directories -> Include Directories`
+* In the Solution Explorer Right click
+ `Source Files -> Add -> Existing Item` and select `path\to\jsconcpp\dist\jsoncpp.cpp`
 
 Glfw3::
 
-* Clone `https://github.com/feltor-dev/draw`
+* In Github desktop: `File -> Clone repository...` clone `https://github.com/feltor-dev/draw`
 * Download and extract the Windows binaries from https://www.glfw.org/download.html
-* Add `path\to\glfw-3\include` and `path\to\folder_containing_draw` to `VC++ Directories-> Include Directories`
+* Add `path\to\glfw-3\include` and `path\to\folder_containing_draw` to
+ `Properties -> VC++ Directories -> Include Directories`
 * In `Properties -> Linker -> General -> Additional Library Directories` add `path\to\glfw-3\lib-vc2015`
-* Finally, in `Properties -> Linker -> Input -> Additional Dependencies` add the lines `glfw3.lib` and `opengl32.lib` 
+* Finally, in `Properties -> Linker -> Input -> Additional Dependencies` add the lines `glfw3.lib` and `opengl32.lib`
 (there needs to be a newline in between!)
 
 NetCDF::
 
-* Download and install the NetCDF-4 package from https://www.unidata.ucar.edu/downloads/netcdf/index.jsp 
+* Download and install the `NetCDF-4.x.x-NC4-64.exe` package from https://www.unidata.ucar.edu/downloads/netcdf/index.jsp
 (make sure to Check "Add netCDF to system PATH" during the installation process)
-* Add `path\to\netCDF\include` to `VC++ Directories-> Include Directories`
+* Add `path\to\netCDF\include` to `Properties -> VC++ Directories -> Include Directories`
 * In `Properties -> Linker -> General -> Additional Library Directories` add `path\to\netCDF\lib`
 * Finally, in `Properties -> Linker -> Input -> Additional Dependencies` add the line `netcdf.lib`
 
@@ -439,4 +455,3 @@ troubleshooting and guides on how to contribute.
 == License
 
 This project is licensed under the MIT license - see link:LICENSE[LICENSE] for details.
-
