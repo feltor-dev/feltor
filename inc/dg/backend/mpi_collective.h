@@ -129,6 +129,9 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
  * @brief Struct that performs bijective collective scatter and gather operations across processes
  * on distributed vectors using mpi
  *
+If the gather map idx[i] is bijective, each element of the source vector v maps
+to exactly one location in the buffer vector w. In this case the scatter matrix S
+is the inverse of G. (see \c aCommunicator for more details)
  * @code
  int i = myrank;
  double values[8] = {i,i,i,i, 9,9,9,9};
@@ -162,6 +165,26 @@ struct BijectiveComm : public aCommunicator<Vector>
      */
     BijectiveComm( const thrust::host_vector<int>& pids, MPI_Comm comm) {
         construct( pids, comm);
+    }
+    ///@copydoc GeneralComm::GeneralComm(thrust::host_vector<int>,thrust::host_vector<int>,MPI_Comm)
+    ///@note we assume that the gather map is bijective
+    BijectiveComm( thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
+    {
+        construct( pidGatherMap, comm);
+        p_.transpose();
+    }
+    ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const ConversionPolicy&)
+    ///@note we assume that the gather map is surjective
+    template<class ConversionPolicy>
+    BijectiveComm( const thrust::host_vector<int>& globalGatherMap, const ConversionPolicy& p)
+    {
+        thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
+        bool success = true;
+        for(unsigned i=0; i<local.size(); i++)
+            if( !p.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
+        assert( success);
+        construct( pids, p.communicator());
+        p_.transpose();
     }
 
     ///@copydoc GeneralComm::GeneralComm(const GeneralComm<OtherIndex,OtherVector>&)
@@ -253,8 +276,10 @@ struct BijectiveComm : public aCommunicator<Vector>
  * @brief Struct that performs surjective collective scatter and gather operations across processes on distributed vectors using mpi
  *
  * This Communicator performs surjective global gather and
- scatter operations, which means that the gather/scatter map
- is surjective, i.e. all elements in a source vector get gathered.
+ scatter operations, which means that the gather map
+ is @b surjective: If the gather map idx[i] is surjective, each element of the source vector v
+maps to at least one location in the buffer vector w. This means that the scatter matrix S
+can have more than one 1's in each line. (see \c aCommunicator for more details)
  Compared to \c BijectiveComm in the \c global_gather function there is an additional
  gather and in the \c global_scatter_reduce function a reduction
  needs to be performed.
@@ -364,7 +389,11 @@ struct SurjectiveComm : public aCommunicator<Vector>
  * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
  *
  * This Communicator can perform general global gather and
- scatter operations. Compared to \c SurjectiveComm the \c global_scatter_reduce function needs
+ scatter operations.
+In general the gather map idx[i] might or might not map an element of
+the source vector v. This means that the scatter matrix S can have one or more
+empty lines. (see \c aCommunicator for more details)
+ Compared to \c SurjectiveComm the \c global_scatter_reduce function needs
  to perform an additional scatter as some elements of the source vector might be left empty
  * @tparam Index an integer thrust Vector
  * @tparam Vector a thrust Vector
@@ -436,6 +465,7 @@ struct GeneralComm : public aCommunicator<Vector>
     virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values)const override final {
         surjectiveComm_.global_scatter_reduce( toScatter, thrust::raw_pointer_cast(store_.data().data()));
         typename Vector::pointer values_ptr(values);
+        //ERROR: How do we set values to zero here??? According to definition global_scatter is the true transpose of global_gather
         thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values_ptr);
     }
 

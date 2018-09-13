@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <mpi.h>
+#include "../blas1.h"
 #include "mpi_collective.h"
 #include "mpi_vector.h"
 
@@ -15,7 +16,7 @@ int main( int argc, char * argv[])
     if(size!=4 ){std::cerr <<"You run with "<<size<<" processes. Run with 4 processes!\n"; MPI_Finalize(); return 0;}
 
     if(rank==0)std::cout <<"Nx " <<Nx << " and Ny "<<Ny<<std::endl;
-    if(rank==0)std::cout <<"Size =  " <<size <<std::endl;
+    if(rank==0)std::cout <<"# processes =  " <<size <<std::endl;
 
     if(rank==0)std::cout << "Test BijectiveComm: scatter followed by gather leaves the input vector intact\n";
     thrust::host_vector<double> v( Nx*Ny, 3*rank);
@@ -45,34 +46,39 @@ int main( int argc, char * argv[])
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank==0)std::cout << "Test SurjectiveComm and GeneralComm:\n";
-    Nx = 5, Ny = 5;
-    thrust::host_vector<double> vec( Nx*Ny, rank), result( Nx*Ny);
-    thrust::host_vector<int> idx( (Nx+1)*(Ny+1)), pids( (Nx+1)*(Ny+1));
-    for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
+    MPI_Barrier(MPI_COMM_WORLD);
+    Nx = 10, Ny = 10;
+    thrust::host_vector<double> vec( Nx*Ny, rank), result( Nx*Ny,1);
+    for( int i=0; i<(int)(Nx*Ny); i++)
+        vec[i]*=i;
+    thrust::host_vector<int> idx( (Nx+rank)*(Ny+rank)), pids( (Nx+rank)*(Ny+rank));
+    for( unsigned i=0; i<(Nx+rank)*(Ny+rank); i++)
     {
         idx[i] = i%(Nx*Ny);
+        if(i==10) idx[i]+=1;
         pids[i] = rank;
         if( i>=Nx*Ny) pids[i] = (rank+1)%size;
     }
-    dg::GeneralComm<thrust::host_vector<int>, thrust::host_vector<double> > s( idx, pids, MPI_COMM_WORLD);
+    dg::GeneralComm<thrust::host_vector<int>, thrust::host_vector<double> > s2( idx, pids, MPI_COMM_WORLD), s(s2);
     receive = s.global_gather( thrust::raw_pointer_cast(vec.data()));
-    //for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
-    //    if(rank==0) std::cout << i<<"\t "<< receive[i] << std::endl;
+    /// Test if global_scatter_reduce is in fact the transpose of global_gather
+    dg::MPI_Vector<thrust::host_vector<double>> mpi_receive( receive, MPI_COMM_WORLD);
+    double norm1 = dg::blas1::dot( mpi_receive, mpi_receive);
     thrust::host_vector<double> vec2(vec.size());
     s.global_scatter_reduce( receive, thrust::raw_pointer_cast(vec2.data()));
+    dg::MPI_Vector<thrust::host_vector<double>> mpi_vec( vec, MPI_COMM_WORLD);
+    dg::MPI_Vector<thrust::host_vector<double>> mpi_vec2( vec2, MPI_COMM_WORLD);
+    double norm2 = dg::blas1::dot( mpi_vec, mpi_vec2);
+    //if(rank==0)std::cout << "Test Norm Gv*Gv vs G^T(Gv)*v: "<<norm1<<" ";
+    //if(rank==0)std::cout << norm2<< " "<<norm1-norm2<<std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
     equal=true;
-    for( unsigned i=0; i<(Nx)*(Ny); i++)
-    {
-        //if(rank==1) std::cout << i<<"\t "<< vec[i] << std::endl;
-        result[i] = rank;
-        if( i < (Nx+1)*(Ny+1) - Nx*Ny) result[i] += (rank)%size;
-        if( vec2[i] != result[i]) equal = false;
-    }
+    if( fabs(norm1-norm2)>1e-14) equal = false;
     {
         if( equal)
-            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
+            std::cout <<"Rank "<<rank<<" PASSED "<<std::endl;
         else
-            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
+            std::cerr <<"Rank "<<rank<<" FAILED "<<std::endl;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);

@@ -39,29 +39,39 @@ MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;}
  Note again that an index into v can appear several times or never at all.
  If the index appears more than once, we perform a reduction operation  (we sum up all elements)
  on these indices initializing the sum with 0.
- Note that \f$ v[\text{idx}[i]] = w[i] \f$ is NOT the correct definition of this, because
+ Note that \f$ v[\text{idx}[i]] = w[i] \f$ is INCORRECT definition of this, because
  it does not show the reduction.
 
 It is more accurate to represent the gather and scatter operation
-by a matrix. The gather matrix is just a
+by a matrix. The gather matrix \f$ G\f$ is just a
 (permutation) matrix of 1's and 0's with exactly one "1" in each line.
 In a "coo" formatted sparse matrix format the values array would consist only of "1"s,
 row array is just the index and column array is the gather map.
-We uniquely define the corresponding <b> scatter matrix </b> as the <b> transpose of the gather matrix</b>.
-The scatter matrix can have zero, one or more "1"s in each line.
-\f[ w_1 = G v_1 \\
-    v_2 = S w_2 = G^\mathrm{T} w_2 \f]
-where \f$ v_1\f$ and \f$ v_2\f$ are data vectors and \f$ w_1\f$ and \f$ w_2\f$ are buffer vectors.
+We uniquely define the corresponding <b> scatter matrix as the transpose of the gather matrix</b>
+\f[ S\equiv G^\mathrm{T}\f].
+This means that a simple consistency test is given by \f$ (Gv)\cdot (Gv) = S(Gv)\cdot v\f$.
+
+The scatter matrix can thus have zero, one or more "1"s in each line.
+We distinguish between
+
+@b bijective: If the gather map idx[i] is bijective, each element of the source vector v maps
+to exactly one location in the buffer vector w. In this case the scatter matrix S
+is the inverse of G and v and w have the same size.
+
+@b surjective: If the gather map idx[i] is surjective, each element of the source vector v
+maps to at least one location in the buffer vector w. This means that the scatter matrix S
+can have more than one 1's in each line.
+
+@b general: In general the gather map idx[i] might or might not map an element of
+the source vector v. This means that the scatter matrix S can have one or more
+empty lines.
 
 This class performs these operations for the case that v and w are distributed across processes.
 We always assume that the source vector v is distributed equally among processes, i.e.
 each process holds a chunk of v of equal size. On the other hand the local size
 of w may vary among processes depending on the gather/scatter map.
 
-@note The scatter matrix S is the actual inverse of G if and only if the gather map is bijective.
-In this case the buffer and the vector can swap their roles.
-
-@note Finally note that when v is filled with its indices, i.e. \f$ v[i] = i \f$, then
+@note If v is filled with its indices, i.e. \f$ v[i] = i \f$, then
 the gather operation will reproduce the index map in the buffer w \f$ w[i] = \text{idx}[i]\f$ .
 
  * @tparam LocalContainer a container on a shared memory system (must be default constructible)

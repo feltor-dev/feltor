@@ -537,6 +537,8 @@ struct SinX
      */
     DG_DEVICE
     double operator()( double x, double y)const{ return bamp_+amp_*sin(x*kx_);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x,y);}
   private:
     double amp_,bamp_,kx_;
 };
