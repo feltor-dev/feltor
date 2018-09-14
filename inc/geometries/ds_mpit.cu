@@ -50,16 +50,22 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz;
+    unsigned n, Nx, Ny, Nz, mx[2];
     MPI_Comm comm;
     dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if( rank == 0)
+    {
+        std::cout << "Type mx (10) and my (10)\n";
+        std::cin >> mx[0] >> mx[1];
+        std::cout << "You typed "<<mx[0]<<" "<<mx[1]<<std::endl;
+    }
+    MPI_Bcast( mx, 2, MPI_INT, 0, MPI_COMM_WORLD);
 
     dg::CylindricalMPIGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
-    if(rank==0)std::cout << "Create parallel Derivative with default mx = my = 10!\n";
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
-    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, 1, 1, true, true);
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1], true, true);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
     //apply to function
@@ -102,7 +108,7 @@ int main(int argc, char* argv[])
 
     ///##########################################################///
     if(rank==0)std::cout << "TEST DIR Boundary conditions!\n";
-    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, 10, 10, true, true);
+    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1], true, true);
     ds.construct( dsFA, dg::not_normed, dg::centered);
     //apply to function
     dg::MDVec functionDIR = dg::evaluate( funcDIR, g3d);

@@ -335,67 +335,83 @@
 
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
-@subsection mpi_vector MPI Vectors and the blas1 functions
+@subsection mpi_vector MPI Vectors and the blas functions
 
 In Feltor each mpi process gets an equally sized chunk of a vector.
 The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is
-nothing but a wrapper around any container type object and a \c MPI_Comm.
+nothing but a wrapper around a container type object and a \c MPI_Comm.
 With this the \c dg::blas1 functions can readily be implemented by just redirecting to the
 implementation for the container type. The only functions that need
-communication are the \c dg::blas1::dot functions (\c MPI_Allreduce).
+additional
+communication are the \c dg::blas1::dot and \c dg::blas2::dot functions (\c MPI_Allreduce).
 
-@subsection mpi_matrix Row and column distributed matrices
+@subsection mpi_matrix MPI Matrices and the symv function
 
 Contrary to a vector
 a matrix can be distributed among processes in two ways:
-\a row-distributed and \a column-distributed.
-In a row-distributed matrix each process gets the
-rows of the matrix that correspond to the indices in the
-vector it holds.
-In a column-distributed matrix each process gets the
-columns of the matrix that correspond to the indices in the
-vector it holds.
+\a row-wise and \a column-wise.
 When we implement a matrix-vector multiplication the order
 of communication and computation depends on the distribution
 of the matrix.
-First, we define the structure \c dg::MPIDistMat as a simple a wrapper around a
-LocalMatrix type object
-and an instance of a \c dg::aCommunicator.
-\subsubsection row Row distributed
-For the row-distributed matrix each process first has to gather
-all elements of the input vector it needs to be able to compute the elements of the output. In general this requires MPI communication.
+
+\subsubsection mpi_row Row distributed matrices
+
+In a row-distributed matrix each process holds the
+rows of the matrix that correspond to the portion of the
+\c MPI_Vector it holds. Every process thus holds the same amount of rows.
+When we implement a matrix-vector multiplication
+each process first has to gather
+all the elements of the input vector it needs to be able to compute the elements of its output. In general this requires MPI communication.
 (read the documentation of \c dg::aCommunicator for more info of how global scatter/gather operations work).
-Formally, the gather operation can be written as a matrix \f$G\f$
-of \f$1'\f$s and \f$0'\f$s.
 After the elements have been gathered into a buffer the local matrix-vector
 multiplications can be executed.
+Formally, the gather operation can be written as a matrix \f$G\f$
+of \f$1'\f$s and \f$0'\f$s and we write.
 \f[
-M = R\cdot G
+M v = R\cdot G v
 \f]
 where \f$R\f$ is the row-distributed matrix with modified indices
+into a buffer vector
 and \f$G\f$ is the gather matrix, in which the MPI-communication takes place.
-The \c dg::RowColDistMat goes one step further and separates the matrix \f$ R\f$ into
-a part that can be computed entirely on the local process and a part that needs communication.
+In this way we achieve a simple split between communication \f$ w=Gv\f$
+and computation \f$ Rw\f$. Since the computation of \f$ R w\f$ is entirely local we can reuse the existing
+implementation for shared memory systems.
+Correspondingly, we define the structure \c dg::MPIDistMat as a simple a wrapper around a
+\c LocalMatrix type object
+and an instance of a \c dg::aCommunicator.
 
-\subsubsection column Column distributed
+\subsubsection mpi_column Column distributed matrices
 
+In a column-distributed matrix each process holds the
+columns of the matrix that correspond to the portion of the
+\c MPI_Vector it holds. Each process thus holds the same amount of columns.
 In a column distributed matrix the local matrix-vector multiplication can be executed first because each processor already
 has all vector elements it needs.
-However the resuling elements have to be communicated back to
+However the resulting elements have to be communicated back to
 the process they belong to. Furthermore, a process has to sum
 all elements it receives from other processes on the same
 index. This is a scatter and reduce operation and
-it can be written as a scatter matrix \f$S\f$ (s.a. \c dg::aCommunicator). The transpose
-of the scatter matrix is a gather matrix and vice-versa.
+it can be written as a scatter matrix \f$S\f$ (s.a. \c dg::aCommunicator).
 \f[
-M = S\cdot C
+M v= S\cdot C v
 \f]
 where \f$S\f$ is the scatter matrix and \f$C\f$ is the column distributed
 matrix with modified indices.
+Again, we can reuse our shared memory algorithms to implement
+the local matrix-vector operation \f$ w=Cv\f$ before the communication
+step \f$ S w\f$.
+This is also implemented in \c dg::MPIDistMat.
 
+\subsubsection mpi_row_col Row and Column distributed
+The \c dg::RowColDistMat goes one step further on a row distributed matrix and separates the matrix \f$ R = R_{inner} + R_{outer}\f$ into
+a part that can be computed entirely on the local process and a part that needs communication.
+This enables the implementation of overlapping communication and computation. (s.a. \c dg::NearestNeighborComm)
+\subsubsection mpi_transpose Transposition
 It turns out that a row-distributed matrix can be transposed
-by transposition of the local matrices and the gather matrix (s.a. \c dg::transpose).
+by transposition of both the local matrix and the gather matrix (s.a. \c dg::transpose):
+\f[ M^\mathrm{T} = G^\mathrm{T} R^\mathrm{T}\f]
 The result is then a column distributed matrix.
-The transpose of a column distributed matrix is a row-distributed matrix and vice-versa.
+Analogously, the transpose of a column distributed matrix is a row-distributed matrix.
+\subsubsection mpi_create Creation
 You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
 */

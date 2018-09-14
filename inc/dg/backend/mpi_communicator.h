@@ -60,11 +60,11 @@ is the inverse of G and v and w have the same size.
 
 @b surjective: If the gather map idx[i] is surjective, each element of the source vector v
 maps to at least one location in the buffer vector w. This means that the scatter matrix S
-can have more than one 1's in each line.
+can have more than one 1's in each line and w has at least the size of v.
 
 @b general: In general the gather map idx[i] might or might not map an element of
 the source vector v. This means that the scatter matrix S can have one or more
-empty lines.
+empty lines and w may be smaller than v.
 
 This class performs these operations for the case that v and w are distributed across processes.
 We always assume that the source vector v is distributed equally among processes, i.e.
@@ -80,13 +80,15 @@ the gather operation will reproduce the index map in the buffer w \f$ w[i] = \te
 template< class LocalContainer>
 struct aCommunicator
 {
-    typedef get_value_type<LocalContainer> value_type;
-    typedef LocalContainer container_type; //!< reveal local container type
+    using value_type = get_value_type<LocalContainer>;//!< reveal value type
+
+    using container_type = LocalContainer; //!< reveal local container type
 
     /**
-     * @brief Allocate a buffer object of size \c size()
+     * @brief Allocate a buffer object of size
+     * \c buffer_size()
      * @return a buffer object on the stack
-     * @note if \c size()==0 the default constructor of \c LocalContainer is called
+     * @note if \c buffer_size()==0 the default constructor of \c LocalContainer is called
      */
     LocalContainer allocate_buffer( )const{
         if( do_size() == 0 ) return LocalContainer();
@@ -94,12 +96,12 @@ struct aCommunicator
     }
 
     /**
-     * @brief Globally (across processes) gather data into a buffer
+     * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer
      *
-     * This is the transpose operation of global_scatter_reduce()
-     * @param values data; other processes collect data from this vector
-     * @param buffer on output holds the gathered data ( must be of size \c size())
-     * @note if \c size()==0 nothing happens
+     * The transpose operation is \c global_scatter_reduce()
+     * @param values source vector v; data is collected from this vector
+     * @param buffer on output holds the gathered data ( must be of size \c buffer_size())
+     * @note if \c buffer_size()==0 nothing happens
      */
     void global_gather( const value_type* values, LocalContainer& buffer)const
     {
@@ -108,12 +110,12 @@ struct aCommunicator
     }
 
     /**
-     * @brief Globally (across processes) gather data into a buffer (memory allocating version)
+     * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer (memory allocating version)
      *
-     * This is the transpose operation of global_scatter_reduce()
-     * @param values data; other processes collect data from this vector
-     * @return object that holds the gathered data
-     * @note if \c size()==0 the default constructor of \c LocalContainer is called
+     * The transpose operation is \c global_scatter_reduce()
+     * @param values source vector v; data is collected from this vector (must have \c local_size() elements)
+     * @return object of size \c buffer_size() that holds the gathered data
+     * @note if \c buffer_size()==0 the default constructor of \c LocalContainer is called
      */
     LocalContainer global_gather( const value_type* values) const
     {
@@ -123,12 +125,12 @@ struct aCommunicator
     }
 
     /**
-     * @brief Globally (across processes) scatter data accross processes and reduce on multiple indices
+     * @brief \f$ v = G^\mathrm{T} w\f$. Globally (across processes) scatter data accross processes and reduce on multiple indices
      *
-     * This is the transpose operation of global_gather()
-     * @param toScatter buffer vector; (has to be of size given by size())
-     * @param values on output contains values from other processes sent back to the origin
-     * @note if \c size()==0 nothing happens
+     * This is the transpose operation of \c global_gather()
+     * @param toScatter buffer vector w; (has to be of size given by \c buffer_size())
+     * @param values target vector v; on output contains values from other processes sent back to the origin (must have \c local_size() elements)
+     * @note if \c buffer_size()==0 nothing happens
      */
     void global_scatter_reduce( const LocalContainer& toScatter, value_type* values) const{
         if( do_size() == 0 ) return;
@@ -136,21 +138,34 @@ struct aCommunicator
     }
 
     /**
-    * @brief The size of the local buffer vector w = local map size
+    * @brief The local size of the buffer vector w = local map size
     *
     * Consider that both the source vector v and the buffer w are distributed across processes.
     * In Feltor the vector v is distributed equally among processes and the local size
-    * of v is the same for all processes. However the buffer size might be different for each process.
-    * @return buffer size
+    * of v is the same for all processes. However, the buffer size might be different for each process.
+    * @return buffer size (may be different for each process)
     * @note may return 0 to indicate that no MPI communication is needed
-    * @note we assume that, contrary to \c size(), the vector size is always the local size of a \c dg::MPI_Vector
+    * @sa local_size() isCommunicating()
     */
-    unsigned size() const{return do_size();}
+    unsigned buffer_size() const{return do_size();}
+    /**
+    * @brief The local size of the source vector v = local size of the
+    * \c dg::MPI_Vector
+    *
+    * Consider that both the source vector v and the buffer w are distributed across processes.
+    * In Feltor the vector v is distributed equally among processes and the local size
+    * of v is the same for all processes.
+    * @return local size of v (same for all processes)
+    * @note Important only for general scatter operations where some elements of v might have to be set to zero
+    * @sa buffer_size()
+    */
+    unsigned local_size() const{return m_source_size;}
     /**
      * @brief True if the gather/scatter operation involves actual MPI communication
      *
      * This test can be used to avoid the gather operation alltogether in e.g. the construction of a MPI distributed matrix.
      * @return False, if the global gather can be done without MPI communication (i.e. the indices are all local to each calling process). True else.
+     * @sa buffer_size()
      */
     bool isCommunicating() const{
         if( do_size() == 0) return false;
@@ -170,15 +185,25 @@ struct aCommunicator
     virtual ~aCommunicator(){}
     protected:
     ///@brief only derived classes can construct
-    aCommunicator(){}
+    ///@param local_size the local size of the source vector v
+    aCommunicator(unsigned local_size=0):m_source_size(local_size){}
     ///@brief only derived classes can copy
     ///@param src source
-    aCommunicator(const aCommunicator& src){ }
+    aCommunicator(const aCommunicator& src):m_source_size( src.m_source_size){ }
     ///@brief only derived classes can assign
     ///@param src source
     ///@return *this
-    aCommunicator& operator=(const aCommunicator& src){ return *this; }
+    aCommunicator& operator=(const aCommunicator& src){
+        m_source_size = src.m_source_size;
+        return *this;
+    }
+    ///@brief Set the local size of the source vector v
+    ///@param new_size the new local size for the source vector v
+    void set_local_size( unsigned new_size){
+        m_source_size = new_size;
+    }
     private:
+    unsigned m_source_size;
     virtual MPI_Comm do_communicator() const=0;
     virtual unsigned do_size() const=0;
     virtual LocalContainer do_make_buffer( )const=0;

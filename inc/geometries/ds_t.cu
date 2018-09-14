@@ -50,11 +50,10 @@ int main(int argc, char * argv[])
 {
     std::cout << "First test the cylindrical version\n";
     std::cout << "Type n (3), Nx(20), Ny(20), Nz(20)\n";
-    unsigned n, Nx, Ny, Nz;
+    unsigned n, Nx, Ny, Nz, mx, my;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
     std::cout << "Type mx (10) and my (10)\n";
-    unsigned mx, my;
     std::cin >> mx>> my;
     std::cout << "You typed "<<mx<<" "<<my<<std::endl;
     std::cout << "Create parallel Derivative!\n";

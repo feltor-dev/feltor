@@ -96,7 +96,7 @@ dg::tMIHMatrix<real_type> convert( const dg::tIHMatrix<real_type>& global, const
         local.values=global.values;
         return dg::tMIHMatrix<real_type>( local, comm, dg::row_dist);
     }
-    dg::tIHMatrix<real_type> local( global.num_rows, comm.size(), global.values.size());
+    dg::tIHMatrix<real_type> local( global.num_rows, comm.buffer_size(), global.values.size());
     local.row_offsets=global.row_offsets;
     local.column_indices=buffer_idx;
     local.values=global.values;

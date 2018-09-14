@@ -107,7 +107,6 @@ void Collective<Index, Device>::scatter( const Device& values, Device& store) co
 template< class Index, class Device>
 void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values) const
 {
-    //std::cout << gatherFrom.size()<<" "<<store_size()<<std::endl;
     assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -126,7 +125,7 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
 
 /**
  * @ingroup mpi_structures
- * @brief Struct that performs bijective collective scatter and gather operations across processes
+ * @brief Perform bijective gather and its transpose (scatter) operation across processes
  * on distributed vectors using mpi
  *
 If the gather map idx[i] is bijective, each element of the source vector v maps
@@ -168,13 +167,13 @@ struct BijectiveComm : public aCommunicator<Vector>
     }
     ///@copydoc GeneralComm::GeneralComm(thrust::host_vector<int>,thrust::host_vector<int>,MPI_Comm)
     ///@note we assume that the gather map is bijective
-    BijectiveComm( thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
+    BijectiveComm( unsigned local_size, thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
     {
         construct( pidGatherMap, comm);
         p_.transpose();
     }
     ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const ConversionPolicy&)
-    ///@note we assume that the gather map is surjective
+    ///@note we assume that the gather map is bijective
     template<class ConversionPolicy>
     BijectiveComm( const thrust::host_vector<int>& globalGatherMap, const ConversionPolicy& p)
     {
@@ -217,6 +216,7 @@ struct BijectiveComm : public aCommunicator<Vector>
     }
     void construct( thrust::host_vector<int> pids, MPI_Comm comm)
     {
+        this->set_local_size( pids.size());
         pids_ = pids;
         idx_.resize( pids.size());
         dg::blas1::transfer( pids, idx_);
@@ -273,7 +273,8 @@ struct BijectiveComm : public aCommunicator<Vector>
 
 /**
  * @ingroup mpi_structures
- * @brief Struct that performs surjective collective scatter and gather operations across processes on distributed vectors using mpi
+ * @brief Perform surjective gather and its transpose (scatter) operation across processes
+ * on distributed vectors using mpi
  *
  * This Communicator performs surjective global gather and
  scatter operations, which means that the gather map
@@ -295,9 +296,9 @@ struct SurjectiveComm : public aCommunicator<Vector>
     }
     ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const thrust::host_vector<int>&,MPI_Comm)
     ///@note we assume that the gather map is surjective
-    SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
+    SurjectiveComm( unsigned local_size, const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
-        construct( localGatherMap, pidGatherMap, comm);
+        construct( local_size, localGatherMap, pidGatherMap, comm);
     }
 
     ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const ConversionPolicy&)
@@ -311,14 +312,14 @@ struct SurjectiveComm : public aCommunicator<Vector>
             if( !p.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
 
         assert( success);
-        construct( local, pids, p.communicator());
+        construct( p.local_size(), local, pids, p.communicator());
     }
 
     ///@copydoc GeneralComm::GeneralComm(const GeneralComm<OtherIndex,OtherVector>&)
     template<class OtherIndex, class OtherVector>
     SurjectiveComm( const SurjectiveComm<OtherIndex, OtherVector>& src)
     {
-        construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
+        construct( src.local_size(), src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
 
     ///@copydoc GeneralComm::getLocalGatherMap
@@ -351,8 +352,9 @@ struct SurjectiveComm : public aCommunicator<Vector>
     }
     virtual MPI_Comm do_communicator()const override final{return bijectiveComm_.communicator();}
     virtual unsigned do_size() const override final {return buffer_size_;}
-    void construct( thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
+    void construct( unsigned local_size, thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
     {
+        this->set_local_size(local_size);
         bijectiveComm_ = BijectiveComm<Index, Vector>( pidGatherMap, comm);
         localGatherMap_ = localGatherMap, pidGatherMap_ = pidGatherMap;
         buffer_size_ = localGatherMap.size();
@@ -386,7 +388,8 @@ struct SurjectiveComm : public aCommunicator<Vector>
 
 /**
  * @ingroup mpi_structures
- * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
+ * @brief Perform general gather and its transpose (scatter) operation across processes
+ * on distributed vectors using mpi
  *
  * This Communicator can perform general global gather and
  scatter operations.
@@ -406,21 +409,22 @@ struct GeneralComm : public aCommunicator<Vector>
     /**
     * @brief Construct from local indices and PIDs gather map
     *
-    * The indices in the gather map are written with respect to the buffer vector (unlike in \c BijectiveComm, where it is given wrt the source vector).
+    * The indices in the gather map are written with respect to the buffer vector.
     * Each location in the source vector is uniquely specified by a local vector index and the process rank.
+    * @param local_size local size of a \c dg::MPI_Vector (same for all processes)
     * @param localGatherMap Each element \c localGatherMap[i] represents a local vector index from where to gather the value. There are "local buffer size" elements.
     * @param pidGatherMap Each element \c pidGatherMap[i] represents the pid/rank from where to gather the corresponding local index \c localGatherMap[i].  Same size as localGatherMap.
      *   The pid/rank needs to be element of the given communicator.
     * @param comm The MPI communicator participating in the scatter/gather operations
     */
-    GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
-        construct( localGatherMap, pidGatherMap, comm);
+    GeneralComm( unsigned local_size, const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
+        construct(local_size, localGatherMap, pidGatherMap, comm);
     }
-    ///@brief reconstruct from another type; if src is empty same as default constructor
+    ///@brief reconstruct from another type; if src is empty, same as default constructor
     template<class OtherIndex, class OtherVector>
     GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src){
-        if( src.size() > 0)
-            construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
+        if( src.buffer_size() > 0)
+            construct( src.local_size(), src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
 
     /**
@@ -428,10 +432,12 @@ struct GeneralComm : public aCommunicator<Vector>
      *
      * Uses the \c global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap
      * @tparam ConversionPolicy has to have the members:
-     *  - \c global2localIdx(unsigned,unsigned,unsigned) \c const;
+     *  - \c bool\c global2localIdx(unsigned,unsigned&,unsigned&) \c const;
      * where the first parameter is the global index and the
-     * other two are the pair (local idx, rank).
+     * other two are the output pair (localIdx, rank).
+       return true if successful, false if global index is not part of the grid
      *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
+     *  - \c local_size(); return the local vector size
      * @param globalGatherMap Each element \c globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size == size()" elements.
      * @param p the conversion object
      * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
@@ -444,7 +450,7 @@ struct GeneralComm : public aCommunicator<Vector>
         for(unsigned i=0; i<local.size(); i++)
             if( !p.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
         assert( success);
-        construct( local, pids, p.communicator());
+        construct(p.local_size(), local, pids, p.communicator());
     }
 
     ///@brief read access to the local index gather map
@@ -465,14 +471,21 @@ struct GeneralComm : public aCommunicator<Vector>
     virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values)const override final {
         surjectiveComm_.global_scatter_reduce( toScatter, thrust::raw_pointer_cast(store_.data().data()));
         typename Vector::pointer values_ptr(values);
-        //ERROR: How do we set values to zero here??? According to definition global_scatter is the true transpose of global_gather
+        dg::blas1::detail::doSubroutine_dispatch(
+            get_execution_policy<Vector>(),
+            this->local_size(),
+            dg::equals(),
+            values,
+            0
+        );
         thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values_ptr);
     }
 
-    virtual unsigned do_size() const override final{return surjectiveComm_.size();}
-    void construct( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
+    virtual unsigned do_size() const override final{return surjectiveComm_.buffer_size();}
+    void construct( unsigned local_size, const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
-        surjectiveComm_ = SurjectiveComm<Index,Vector>(localGatherMap, pidGatherMap, comm);
+        this->set_local_size( local_size);
+        surjectiveComm_ = SurjectiveComm<Index,Vector>(local_size, localGatherMap, pidGatherMap, comm);
 
         const Index& sortedGatherMap_ = surjectiveComm_.getSortedGatherMap();
         thrust::host_vector<int> gatherMap;

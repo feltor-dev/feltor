@@ -228,41 +228,6 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 #endif
     dg::MIHMatrix temp = dg::convert( plus, grid_coarse.get()), tempT;
     tempT  = dg::transpose( temp);
-
-    //dg::MHVec test = dg::evaluate( dg::SinX(1, 1,1), grid_coarse.get()), test2(test), test3(test);
-    dg::MHVec test = dg::evaluate( dg::CONSTANT(1), grid_coarse.get()), test2(test), test3(test);
-    dg::blas2::symv( temp, test, test2);
-    double norm = dg::blas1::dot( test2, test2); //buf = G*test, norm = buf*buf
-    if(rank==0)std::cout << "Interpolation: "<<norm <<"\n";
-    dg::blas2::symv( tempT, test2, test3);
-    norm = dg::blas1::dot( test, test3);
-
-
-    dg::HVec buf = temp.collective().allocate_buffer();
-    double * test_ptr = thrust::raw_pointer_cast( test.data().data());
-    double * test3_ptr = thrust::raw_pointer_cast( test3.data().data());
-    temp.collective().global_gather( test_ptr, buf);
-    temp.collective().global_scatter_reduce( buf, test3_ptr);
-    dg::MHVec mpi_buf( buf, grid_coarse.get().communicator());
-    if(rank==1)std::cout << norm <<std::endl;
-    for ( int i=0; i<buf.size(); i++)
-        if(rank==1)std::cout << buf[i]<<" ";
-    if(rank==1)std::cout << std::endl;
-    for ( int i=0; i<buf.size(); i++)
-        if(rank==1)std::cout <<temp.collective().getLocalGatherMap()[i]<< " ";
-    if(rank==1)std::cout << std::endl;
-    for ( int i=0; i<buf.size(); i++)
-        if(rank==1)std::cout <<temp.collective().getPidGatherMap()[i]<<" ";
-    if(rank==1)std::cout << std::endl<<buf.size()<<std::endl;
-    for ( int i=0; i<test3.data().size(); i++)
-        if(rank==1)std::cout << test3.data()[i]<<" ";
-    if(rank==1)std::cout << std::endl<<test3.data().size()<<std::endl;
-
-    norm = dg::blas1::dot( mpi_buf, mpi_buf); //buf = G*test, norm = buf*buf
-    if(rank==1)std::cout << "Communication: "<< norm <<" ";
-    norm = dg::blas1::dot( test, test3); // G^T*buf * test
-    if(rank==1)std::cout << norm <<std::endl;
-
     dg::blas2::transfer( temp, m_plus);
     dg::blas2::transfer( tempT, m_plusT);
     temp = dg::convert( minus, grid_coarse.get());

@@ -141,12 +141,12 @@ struct aRealMPITopology2d
     const DLT<real_type>& dlt() const{return g.dlt();}
     /**
      * @brief The total global number of points
-     * @return equivalent of \c n()*n()*Nx()*Ny()
+     * @return equivalent to \c n()*n()*Nx()*Ny()
      */
     unsigned size() const { return g.size();}
     /**
      * @brief The total local number of points
-     * @return equivalent of \c local.size()
+     * @return equivalent to \c local.size()
      */
     unsigned local_size() const { return l.size();}
     /**
@@ -464,12 +464,12 @@ struct aRealMPITopology3d
     const DLT<real_type>& dlt() const{return g.dlt();}
     /**
      * @brief The total global number of points
-     * @return equivalent of \c n()*n()*Nx()*Ny()*Nz()
+     * @return equivalent to \c n()*n()*Nx()*Ny()*Nz()
      */
     unsigned size() const { return g.size();}
     /**
      * @brief The total local number of points
-     * @return equivalent of \c local.size()
+     * @return equivalent to \c local.size()
      */
     unsigned local_size() const { return l.size();}
     /**
