@@ -396,7 +396,7 @@ Given are the components $v^i(R,Z)$ for $i\in\{R,Z,\varphi\}$ and a compuational
     to the plus/minus points of the fine grid
   \item create a projection matrix that projects from the fine grid to the coarse grid
   \item compute the matrix-matrix multiplications $P\cdot I^\pm$ as well as their transposes
-  \item finally evaluate $v^\varphi$ on the coarse grid
+  \item finally pullback $v^\varphi$ on the coarse grid in the desired coordinates
 \end{itemize}
 
 \paragraph{Notes on the MPI implmentation}

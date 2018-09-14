@@ -240,7 +240,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     if(rank==0) std::cout << "DS: Conversion            took: "<<t.diff()<<"\n";
 #endif
     ///%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%//
-    dg::transfer( dg::evaluate( vec.z(), grid_coarse.get()), m_h);
+    dg::transfer( dg::pullback( vec.z(), grid_coarse.get()), m_h);
     dg::blas1::pointwiseDivide( deltaPhi, m_h, m_h);
 
     dg::split( m_h_inv, m_temp, grid);

@@ -437,7 +437,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
     ///%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%//
-    dg::transfer( dg::evaluate( vec.z(), grid_coarse.get()), m_h);
+    dg::transfer( dg::pullback( vec.z(), grid_coarse.get()), m_h);
     dg::blas1::pointwiseDivide( deltaPhi, m_h, m_h);
 
     dg::split( m_h_inv, m_temp, grid);

@@ -54,27 +54,27 @@ int main(int argc, char * argv[])
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     dg::HVec vol3d = dg::create::volume( g3d);
     dg::blas1::pointwiseDivide( ones3d, B, B);
-    //dg::HVec function = dg::pullback( dg::geo::FuncNeu(mag), g3d), derivative(function);
-    //ds( function, derivative);
 
+    const double sol_norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
     ds.centeredDiv( 1., ones3d, 0., divB);
     dg::blas1::axpby( 1., gradLnB, 1, divB);
     double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Centered Divergence of b is "<<norm<<"\n";
+    std::cout << "TEST ADJOINT derivatives!\n";
+    std::cout << "Error Centered Divergence of b is "<<norm/sol_norm<<"\n";
     ds.forwardDiv( 1., ones3d, 0., divB);
     dg::blas1::axpby( 1., gradLnB, 1, divB);
     norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Forward  Divergence of b is "<<norm<<"\n";
+    std::cout << "Error Forward  Divergence of b is "<<norm/sol_norm<<"\n";
     ds.backwardDiv( 1., ones3d, 0., divB);
     dg::blas1::axpby( 1., gradLnB, 1, divB);
     norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Backward Divergence of b is "<<norm<<"\n";
+    std::cout << "Error Backward Divergence of b is "<<norm/sol_norm<<"\n";
 
     ds.centered( 1., lnB, 0., gradB);
-    norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
     dg::blas1::axpby( 1., gradLnB, -1., gradB);
-    double norm2 = sqrt(dg::blas2::dot(gradB, vol3d, gradB));
-    std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
+    norm = sqrt(dg::blas2::dot(gradB, vol3d, gradB));
+    std::cout << "TEST DIRECT derivatives!\n";
+    std::cout << "rel. error of lnB is    "<<norm/sol_norm<<"\n";
 
     return 0;
 }
