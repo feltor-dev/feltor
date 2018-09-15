@@ -69,11 +69,10 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
@@ -83,10 +82,9 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
-        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
     template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec,
@@ -96,11 +94,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1);
 
-    bool dependsOnX()const{return m_dependsOnX;}
-    bool dependsOnY()const{return m_dependsOnY;}
 
     void set_boundaries( dg::bc bcz, double left, double right)
     {
@@ -152,7 +147,6 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     std::vector<MPI_Vector<dg::View<const LocalContainer>> > m_f;
     std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
-    bool m_dependsOnX, m_dependsOnY;
     unsigned m_coords2, m_sizeZ; //number of processes in z
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
@@ -161,14 +155,13 @@ template <class Limiter>
 void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
+    unsigned mx, unsigned my, double deltaPhi)
 {
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
-    m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_h_inv);

@@ -162,11 +162,10 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     */
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
-    * @param multiplyX defines the resolution in X of the fine grid relative to grid
-    * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
-    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
-    * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz() == 1, then \c deltaPhi is taken instead of \c grid.hz()
+    * @param multiplyX defines the resolution in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
+    * high as possible in given amount of time)
+    * @param multiplyY analogous in Y
+    * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz()==1, then \c deltaPhi is taken instead of \c grid.hz()
     * @note If there is a limiter, the boundary condition on the first/last plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries function.
         If there is no limiter, the boundary condition is periodic.
@@ -201,11 +200,10 @@ struct Fieldaligned
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
 
     ///@brief Construct from a vector field and a grid
@@ -219,10 +217,9 @@ struct Fieldaligned
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1)
     {
-        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
     ///@brief Construct from a field and a grid
     ///@copydoc hide_fieldaligned_physics_parameters
@@ -235,11 +232,8 @@ struct Fieldaligned
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true,
         double deltaPhi = -1);
 
-    bool dependsOnX()const{return m_dependsOnX;}
-    bool dependsOnY()const{return m_dependsOnY;}
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -359,7 +353,6 @@ struct Fieldaligned
     std::vector<dg::View<const container>> m_f;
     std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
-    bool m_dependsOnX, m_dependsOnY;
 };
 
 ///@cond
@@ -372,14 +365,13 @@ template <class Limiter>
 void Fieldaligned<Geometry, IMatrix, container>::construct(
     const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
+    unsigned mx, unsigned my, double deltaPhi)
 {
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
-    m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_h_inv);

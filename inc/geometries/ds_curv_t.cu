@@ -44,7 +44,7 @@ int main(int argc, char * argv[])
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU);
     //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() );
     std::cout << "Constructing Fieldlines..."<<std::endl;
-    dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my);
 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";

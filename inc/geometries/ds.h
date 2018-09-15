@@ -72,10 +72,12 @@ struct DS
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         dg::norm no=dg::normed, dg::direction dir = dg::centered,
-        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, double deltaPhi=-1)
+        double eps = 1e-5,
+        unsigned multiplyX=10, unsigned multiplyY=10,
+        double deltaPhi=-1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY,deltaPhi);
+        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
         construct( m_fa, no, dir);
     }
     /**
@@ -93,9 +95,11 @@ struct DS
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         dg::norm no=dg::normed, dg::direction dir = dg::centered,
-        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, double deltaPhi=-1)
+        double eps = 1e-5,
+        unsigned multiplyX=10, unsigned multiplyY=10,
+        double deltaPhi=-1)
     {
-        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY,deltaPhi);
+        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
         construct( m_fa, no, dir);
     }
     ///@copydoc construct
@@ -416,11 +420,9 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
         do_forwardDiv( 0.5, m_tempM, 0.5, m_temp, dg::not_normed);
     }
     dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);
-    //     add jump term
-    if(m_fa.dependsOnX())
-        dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
-    if(m_fa.dependsOnY())
-        dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
+    //     add jump terms
+    dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
+    dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
 
     if( m_no == dg::normed)
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);
