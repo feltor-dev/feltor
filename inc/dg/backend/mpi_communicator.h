@@ -8,13 +8,13 @@ namespace dg
 template<class value_type>
 static inline MPI_Datatype getMPIDataType(){ assert( false && "Type not supported!\n" ); return MPI_DOUBLE; }
 template<>
-MPI_Datatype getMPIDataType<double>(){ return MPI_DOUBLE;}
+inline MPI_Datatype getMPIDataType<double>(){ return MPI_DOUBLE;}
 template<>
-MPI_Datatype getMPIDataType<float>(){ return MPI_FLOAT;}
+inline MPI_Datatype getMPIDataType<float>(){ return MPI_FLOAT;}
 template<>
-MPI_Datatype getMPIDataType<int>(){ return MPI_INT;}
+inline MPI_Datatype getMPIDataType<int>(){ return MPI_INT;}
 template<>
-MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;}
+inline MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;}
 ///@endcond
 
 /**

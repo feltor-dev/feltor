@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<direct_p.matrix().num_rows+1; i++)
         if( direct_p.matrix().row_offsets[i] - converted_p.matrix().row_offsets[i] > 1e-15) equal_rows = false;
 
-    if( !equal_cols || !equal_rows || !equal_values || direct_p.collective().size() != 0 || converted_p.collective().size() != 0 )
+    if( !equal_cols || !equal_rows || !equal_values || direct_p.collective().buffer_size() != 0 || converted_p.collective().buffer_size() != 0 )
         std::cout << "FAILED from rank "<<rank<<"!\n";
     else
         std::cout << "SUCCESS from rank "<<rank<<"!\n";

@@ -160,7 +160,7 @@ void assert_contains( real_type X, real_type x0, real_type x1, char const * poin
  * @snippet geometry/interpolation_t.cu doxygen
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
- * @param y Y-coordinates of interpolation points ( has to have equal size as x)
+ * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
  * @param g The Grid on which to operate
  * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
  * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
@@ -312,8 +312,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @snippet geometry/interpolation_t.cu doxygen3d
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
- * @param y Y-coordinates of interpolation points
- * @param z Z-coordinates of interpolation points
+ * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
+ * @param z Z-coordinates of interpolation points (\c z.size() must equal \c x.size())
  * @param g The Grid on which to operate
  * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
  * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.

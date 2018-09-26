@@ -150,7 +150,7 @@ dg::tMIHMatrix<real_type> projection( const aRealMPITopology3d<real_type>& g_new
 }
 
 /**
- * @brief Create an MPI row distributed interpolation matrix
+ * @brief Create an MPI row distributed interpolation 2d matrix
  *
  * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc)
  */
@@ -158,6 +158,18 @@ template<class real_type>
 dg::tMIHMatrix<real_type> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealMPITopology2d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     dg::tIHMatrix<real_type> mat = dg::create::interpolation( x,y, g.global(), bcx, bcy);
+    return convert(  mat, g);
+}
+
+/**
+ * @brief Create an MPI row distributed interpolation 3d matrix
+ *
+ * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology3d<real_type>&,dg::bc,dg::bc,dg::bc)
+ */
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealMPITopology2d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER)
+{
+    dg::tIHMatrix<real_type> mat = dg::create::interpolation( x,y,z, g.global(), bcx, bcy, bcz);
     return convert(  mat, g);
 }
 
