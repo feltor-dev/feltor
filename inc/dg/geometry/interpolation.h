@@ -79,7 +79,7 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the given interpolation points.
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @param x X-coordinates of interpolation points
+ * @param x X-coordinates of interpolation points (All points must lie within the grid domain)
  * @param g The Grid on which to operate
  *
  * @return interpolation matrix
@@ -120,6 +120,35 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     }
     return A;
 }
+///@cond
+namespace detail{
+template<class real_type>
+bool mirror_left( real_type& x, real_type x0, bc boundary) {
+    if( x < x0){
+        x = 2.*x0 - x;
+        if( boundary == dg::DIR || boundary == dg::DIR_NEU)
+            return true;
+    }
+    return false;
+}
+template<class real_type>
+bool mirror_right( real_type& x, real_type x1, bc boundary) {
+    if( x > x1){
+        x = 2.*x1 - x;
+    if( boundary == dg::DIR || boundary == dg::NEU_DIR)
+        return true;
+    }
+    return false;
+}
+template<class real_type>
+void assert_contains( real_type X, real_type x0, real_type x1, char const * point){
+    if (!(X >= x0 && X <= x1)) {
+        std::cerr << x0<<"< "<<point<<" = " << X <<" < "<<x1<<std::endl;
+    }
+    assert(X >= x0 && X <= x1);
+}
+}//namespace detail
+///@endcond
 
 /**
  * @brief Create interpolation matrix
@@ -156,36 +185,14 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         real_type X = x[i], Y = y[i];
         g.shift_topologic( X,Y,X,Y, bcx, bcy);
         //mirror at boundary
-        bool mirror = false;
-        if (X < g.x0() ) {
-            X=2.*g.x0()-X;
-            if( bcx == dg::DIR || bcx == dg::DIR_NEU)
-                mirror = true;
-        }
-        if (X > g.x1() ) {
-            X=2.*g.x1()-X;
-            if( bcx == dg::DIR || bcx == dg::NEU_DIR)
-                mirror = true;
-        }
-        if (Y < g.y0() ) {
-            Y=2.*g.y0()-Y;
-            if( bcy == dg::DIR || bcy == dg::DIR_NEU)
-                mirror = true;
-        }
-        if (Y > g.y1() ) {
-            Y=2.*g.y1()-Y;
-            if( bcy == dg::DIR || bcy == dg::NEU_DIR)
-                mirror = true;
-        }
+        bool negative = false;
+        negative = detail::mirror_left(  X, g.x0(), bcx);
+        negative = detail::mirror_right( X, g.x1(), bcx);
+        negative = detail::mirror_left(  Y, g.y0(), bcy);
+        negative = detail::mirror_right( Y, g.y1(), bcy);
         //assert that point is inside the grid boundaries
-        if (!(X >= g.x0() && X <= g.x1())) {
-            std::cerr << g.x0()<<"< xi = " << X <<" < "<<g.x1()<<std::endl;
-        }
-        assert(X >= g.x0() && X <= g.x1());
-        if (!(Y >= g.y0() && Y <= g.y1())) {
-            std::cerr << g.y0()<<"< yi = " << Y <<" < "<<g.y1()<<std::endl;
-        }
-        assert( Y >= g.y0() && Y <= g.y1());
+        detail::assert_contains( X, g.x0(), g.x1(), "xi");
+        detail::assert_contains( Y, g.y0(), g.y1(), "yi");
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
@@ -217,7 +224,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         {
             //evaluate 2d Legendre polynomials at (xn, yn)...
             std::vector<real_type> px = detail::coefficients( xn, g.n()),
-                                py = detail::coefficients( yn, g.n());
+                                   py = detail::coefficients( yn, g.n());
             std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
             for( unsigned l=0; l<g.n(); l++)
                 for( unsigned k=0; k<g.n(); k++)
@@ -230,19 +237,15 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxy[k*px.size()+l]= pyF[k]*pxF[l];
-            if (mirror )
-            {
-                //negative values
-                for(unsigned k=0; k<py.size(); k++)
-                for( unsigned l=0; l<px.size(); l++)
-                    pxy[k*px.size()+l]*= -1.;
-            }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
                 {
                     row_indices.push_back( i);
                     column_indices.push_back( (mm*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
-                    values.push_back( pxy[k*g.n()+l]);
+                    if( !negative)
+                        values.push_back(  pxy[k*g.n()+l]);
+                    else
+                        values.push_back( -pxy[k*g.n()+l]);
                 }
         }
         else if ( idxX < 0 && idxY >=0) //there is a corresponding line
@@ -256,7 +259,11 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             {
                 row_indices.push_back( i);
                 column_indices.push_back( (idxY)*g.Nx()*g.n() + nn*g.n() + l);
-                values.push_back( pxF[l]);
+                if( !negative)
+                    values.push_back( pxF[l]);
+                else
+                    values.push_back(-pxF[l]);
+
             }
         }
         else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
@@ -270,14 +277,21 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             {
                 row_indices.push_back(i);
                 column_indices.push_back((mm*g.n()+k)*g.Nx()*g.n() + idxX);
-                values.push_back(pyF[k]);
+                if( !negative)
+                    values.push_back( pyF[k]);
+                else
+                    values.push_back(-pyF[k]);
+
             }
         }
         else //the point already exists
         {
             row_indices.push_back(i);
             column_indices.push_back(idxY*g.Nx()*g.n() + idxX);
-            values.push_back(1.);
+            if( !negative)
+                values.push_back( 1.);
+            else
+                values.push_back(-1.);
         }
 
     }
@@ -301,15 +315,18 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix,
- NEU and \c PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
- * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
+ * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
+ * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
+ (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
+ * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ * @param bcy analogous to \c bcx, applies to y direction
+ * @param bcz analogous to \c bcx, applies to z direction
  *
  * @return interpolation matrix
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealTopology3d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealTopology3d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER)
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
@@ -321,21 +338,24 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
 
     for( int i=0; i<(int)x.size(); i++)
     {
+        real_type X = x[i], Y = y[i], Z = z[i];
+        g.shift_topologic( X,Y,Z,X,Y,Z, bcx, bcy, bcz);
+        bool negative = false;
+        negative = detail::mirror_left(  X, g.x0(), bcx);
+        negative = detail::mirror_right( X, g.x1(), bcx);
+        negative = detail::mirror_left(  Y, g.y0(), bcy);
+        negative = detail::mirror_right( Y, g.y1(), bcy);
+        negative = detail::mirror_left(  Z, g.z0(), bcz);
+        negative = detail::mirror_right( Z, g.z1(), bcz);
         //assert that point is inside the grid boundaries
-        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
-        } assert(x[i] >= g.x0() && x[i] <= g.x1());
-        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
-        } assert( y[i] >= g.y0() && y[i] <= g.y1());
-        if (!(z[i] >= g.z0() && z[i] <= g.z1())) {
-            std::cerr << g.z0()<<"< zi = " << z[i] <<" < "<<g.z1()<<std::endl;
-        } assert( z[i] >= g.z0() && z[i] <= g.z1());
+        detail::assert_contains( X, g.x0(), g.x1(), "xi");
+        detail::assert_contains( Y, g.y0(), g.y1(), "yi");
+        detail::assert_contains( Z, g.z0(), g.z1(), "zi");
 
         //determine which cell (x,y) lies in
-        real_type xnn = (x[i]-g.x0())/g.hx();
-        real_type ynn = (y[i]-g.y0())/g.hy();
-        real_type znn = (z[i]-g.z0())/g.hz();
+        real_type xnn = (X-g.x0())/g.hx();
+        real_type ynn = (Y-g.y0())/g.hy();
+        real_type znn = (Z-g.z0())/g.hz();
         unsigned nn = (unsigned)floor(xnn);
         unsigned mm = (unsigned)floor(ynn);
         unsigned ll = (unsigned)floor(znn);
@@ -380,22 +400,15 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
-            if (  (x[i] == g.x0() && (bcx==dg::DIR || bcx==dg::DIR_NEU) )
-                ||(x[i] == g.x1() && (bcx==dg::DIR || bcx==dg::NEU_DIR) )
-                ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
-                ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
-            {
-                //zeroe boundary values
-                for(unsigned k=0; k<g.n(); k++)
-                for(unsigned l=0; l<g.n(); l++)
-                    pxyz[k*g.n()+l]= 0;
-            }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
                 {
                     row_indices.push_back( i);
                     column_indices.push_back( ((ll*g.Ny()+mm)*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
-                    values.push_back( pxyz[k*g.n()+l]);
+                    if( !negative)
+                        values.push_back( pxyz[k*g.n()+l]);
+                    else
+                        values.push_back(-pxyz[k*g.n()+l]);
                 }
         }
         else if ( idxX < 0 && idxY >=0) //there is a corresponding line
@@ -409,7 +422,10 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             {
                 row_indices.push_back( i);
                 column_indices.push_back( (ll*g.Ny()*g.n() + idxY)*g.Nx()*g.n() + nn*g.n() + l);
-                values.push_back( pxF[l]);
+                if( !negative)
+                    values.push_back( pxF[l]);
+                else
+                    values.push_back(-pxF[l]);
             }
         }
         else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
@@ -423,14 +439,20 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             {
                 row_indices.push_back(i);
                 column_indices.push_back(((ll*g.Ny()+mm)*g.n()+k)*g.Nx()*g.n() + idxX);
-                values.push_back(pyF[k]);
+                if(!negative)
+                    values.push_back( pyF[k]);
+                else
+                    values.push_back(-pyF[k]);
             }
         }
         else //the point already exists
         {
             row_indices.push_back(i);
             column_indices.push_back((ll*g.Ny()*g.n()+idxY)*g.Nx()*g.n() + idxX);
-            values.push_back(1.);
+            if( !negative)
+                values.push_back( 1.);
+            else
+                values.push_back(-1.);
         }
 
     }

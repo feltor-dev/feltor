@@ -21,7 +21,7 @@ struct Implicit
         dsNU_(dg::geo::createSolovevField( gp), g, g.bcx(), g.bcy(),
               dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim),
               dg::normed, dg::forward,
-              gp.rk4eps, 1,1, true, true),
+              gp.rk4eps, 10,10),
         elliptic( g, dg::normed, dg::forward)
     {
         using namespace dg::geo::solovev;
