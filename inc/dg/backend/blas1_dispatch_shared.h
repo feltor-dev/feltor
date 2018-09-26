@@ -27,10 +27,14 @@ namespace dg
 namespace detail
 {
 template< class To, class From, class ...Params>
-To doConstruct( const From& in, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+To doConstruct( const From& from, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
 {
-    To t( in.begin(), in.end());
-    return t;
+    return To( from.begin(), from.end());
+}
+template< class From, class To, class ...Params>
+void doTransfer( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+{
+    to.assign( from.begin(), from.end());
 }
 }//namespace detail
 

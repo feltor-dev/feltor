@@ -546,29 +546,58 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 }
 
 ///@cond
-template<class to_ContainerType, class from_ContainerType>
-inline to_ContainerType transfer( const from_ContainerType& src)
+template<class ContainerType, class from_ContainerType>
+inline ContainerType transfer( const from_ContainerType& from)
 {
-//ATTENTION: "dg::blas1::transfer is deprecated! Please replace with either dg::blas1::copy (parallel copy between compatible types) or dg::construct (data transfer between devices)"
-    return dg::construct<to_ContainerType>( src);
+//ATTENTION: "dg::blas1::transfer is deprecated! Please replace with dg::construct (data transfer between different devices)"
+    return dg::construct<ContainerType>( from);
 }
 
-template<class from_ContainerType, class to_ContainerType>
-inline void transfer( const from_ContainerType& source, to_ContainerType& target)
+template<class from_ContainerType, class ContainerType>
+inline void transfer( const from_ContainerType& from, ContainerType& to)
 {
-//ATTENTION: "dg::blas1::transfer is deprecated! Please replace with either dg::blas1::copy (parallel copy between compatible types) or dg::construct (data transfer between devices)"
-    target = dg::construct<to_ContainerType, from_ContainerType>( source);
+//ATTENTION: "dg::blas1::transfer is deprecated! Please replace with either dg::blas1::copy (parallel copy between compatible types) or dg::transfer (data transfer between devices)"
+    dg::transfer<from_ContainerType, ContainerType>( from, to);
 }
 ///@endcond
 ///@}
 }//namespace blas1
 
 /**
+ * @brief Generic way to copy the contents of a \c from_ContainerType object to a \c ContainerType object optionally given additional parameters
+ *
+ * The idea of this function is to convert between types with the same data
+ * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector)
+
+ * For example
+ * @code
+dg::HVec host( 100, 1.);
+dg::DVec device(100); 
+dg::transfer( host, device );
+//let us construct a std::vector of 3 dg::DVec from a host vector
+std::vector<dg::DVec> device_vec(3);
+dg::transfer( host, device_vec, 3);
+ * @endcode
+ * @param from source vector
+ * @param to target vector contains a copy of \c from on output (memory is automatically resized if necessary)
+ * @param ps additional parameters usable for the transfer operation
+ * @note it is possible to transfer a \c from_ContainerType to a <tt> std::array<ContainerType, N> </tt>
+(all elements are initialized with from_ContainerType) and also a <tt> std::vector<ContainerType></tt> ( the desired size of the \c std::vector must be provided as an additional parameter)
+ * @copydoc hide_ContainerType
+ * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
+ * @tparam Params in some cases additional parameters that are necessary to assign objects of Type \c ContainerType
+ */
+template<class from_ContainerType, class ContainerType, class ...Params>
+inline void transfer( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
+{
+    dg::detail::doTransfer<from_ContainerType, ContainerType, Params...>( from, to, get_tensor_category<from_ContainerType>(), get_tensor_category<ContainerType>(), std::forward<Params>(ps)...);
+}
+
+/**
  * @brief Generic way to construct an object of \c ContainerType given a \c from_ContainerType object and optional additional parameters
  *
  * The idea of this function is to convert between types with the same data
- * layout but different execution policies (e.g. from CPU to GPU, or sequential
- * to parallel execution)
+ * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector)
 
  * For example
  * @code
@@ -578,19 +607,19 @@ std::array<dg::DVec, 3> device_arr = dg::construct<std::array<dg::DVec, 3>>( hos
 //let us construct a std::vector of 3 dg::DVec from a host vector
 std::vector<dg::DVec> device_vec = dg::construct<std::vector<dg::DVec>>( host, 3);
  * @endcode
- * @param src source
- * @param ps additional parameters
- * @return \c src converted to the new format
- * @note since this function is quite often used there is a higher level alias \c dg::construct(From&&)
- * @note it is possible to transfer a ContainerType to a <tt> std::array<ContainerType, N> </tt>(all elements are initialized to ContainerType) and also a <tt> std::vector<ContainerType></tt> ( the desired size of the \c std::vector must be provided as an additional parameter)
+ * @param from source vector
+ * @param ps additional parameters necessary to construct a \c ContainerType object
+ * @return \c from converted to the new format (memory is allocated accordingly)
+ * @note it is possible to construct a <tt> std::array<ContainerType, N> </tt>
+(all elements are initialized with from_ContainerType) and also a <tt> std::vector<ContainerType></tt> ( the desired size of the \c std::vector must be provided as an additional parameter) given a \c from_ContainerType
  * @copydoc hide_ContainerType
- * @tparam ContainerType another ContainerType type, must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array) but can have different execution policy
+ * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to construct objects of Type \c ContainerType
  */
 template<class ContainerType, class from_ContainerType, class ...Params>
-inline ContainerType construct( const from_ContainerType& src, Params&& ... ps)
+inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
 {
-    return dg::detail::doConstruct<ContainerType, from_ContainerType, Params...>( src, get_tensor_category<ContainerType>(), get_tensor_category<from_ContainerType>(), std::forward<Params>(ps)...);
+    return dg::detail::doConstruct<ContainerType, from_ContainerType, Params...>( from, get_tensor_category<ContainerType>(), get_tensor_category<from_ContainerType>(), std::forward<Params>(ps)...);
 }
 
 

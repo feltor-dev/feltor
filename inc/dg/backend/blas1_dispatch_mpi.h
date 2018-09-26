@@ -14,6 +14,8 @@ namespace dg {
 
 template<class to_ContainerType, class from_ContainerType, class ...Params>
 inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);
+template<class from_ContainerType, class to_ContainerType, class ...Params>
+inline void transfer( const from_ContainerType&, to_ContainerType&, Params&& ...ps);
 namespace detail{
 
 template< class Vector1, class Vector2, class ...Params>
@@ -25,6 +27,13 @@ Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...
     out.data() = dg::construct<container1>( in.data(), std::forward<Params>(ps)...);
     return out;
 }
+template< class Vector1, class Vector2, class ...Params>
+void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
+{
+    out.set_communicator(in.communicator());
+    dg::transfer( in.data(), out.data(), std::forward<Params>(ps)...);
+}
+
 }//namespace detail
 namespace blas1{
 

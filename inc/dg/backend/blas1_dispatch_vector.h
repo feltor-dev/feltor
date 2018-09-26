@@ -19,6 +19,8 @@ namespace dg
 {
 template<class to_ContainerType, class from_ContainerType, class ...Params>
 inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);
+template<class from_ContainerType, class to_ContainerType, class ...Params>
+inline void transfer( const from_ContainerType&, to_ContainerType&, Params&& ...ps);
 
 namespace detail{
 template<class To, class From, class ...Params>
@@ -39,6 +41,20 @@ To doConstruct( const From& src, RecursiveVectorTag, AnyVectorTag, Size size, Pa
     for (int i=0; i<(int)size; i++)
         t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
     return t;
+}
+template<class From, class To, class ...Params>
+void doTransfer( const From& src, To& to, AnyVectorTag, ArrayVectorTag, Params&&...ps )
+{
+    for (unsigned i=0; i<to.size(); i++)
+        dg::transfer(src, to[i], std::forward<Params>(ps)...);
+}
+
+template<class From, class To, class Size, class ...Params>
+void doTransfer( const From& src, To& to, AnyVectorTag, RecursiveVectorTag, Size size, Params&&... ps )
+{
+    to.resize(size);
+    for (int i=0; i<(int)size; i++)
+        dg::transfer(src, to[i], std::forward<Params>(ps)...);
 }
 
 } //namespace detail
