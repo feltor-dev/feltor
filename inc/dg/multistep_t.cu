@@ -3,6 +3,7 @@
 
 #undef DG_DEBUG
 #include "multistep.h"
+#include "runge_kutta.h"
 #include "elliptic.h"
 
 //![function]
