@@ -62,6 +62,7 @@ struct InvNormR
 };
 
 //program seems to be flawed somehow at least I don't get it to work properly (MW)
+//I don't think the boundary conditions are correct here? (MW)
 int main( int argc, char* argv[])
 {
     if( !(argc == 3 ))

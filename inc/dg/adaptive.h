@@ -147,7 +147,13 @@ struct HalfStep
     HalfStep(){}
     HalfStep( const Stepper& copyable): m_stepper(copyable){}
     template <class Explicit, class ContainerType>
-    void step( Explicit& exp, get_value_type<ContainerType> t0, const ContainerType& u0, get_value_type<ContainerType>&  t1, ContainerType& u1, get_value_type<ContainerType> dt, ContainerType& delta)
+    void step( Explicit& exp,
+               get_value_type<ContainerType> t0,
+               const ContainerType& u0,
+               get_value_type<ContainerType>&  t1,
+               ContainerType& u1,
+               get_value_type<ContainerType> dt,
+               ContainerType& delta)
     {
         m_stepper.step( exp, t0, u0, t1, delta, dt); //one full step
         m_stepper.step( exp, t0, u0, t1, u1, dt/2.);
@@ -161,6 +167,32 @@ struct HalfStep
     private:
     Stepper m_stepper;
 };
+template<class ExpImpStepper>
+struct ExpImpHalfStep
+{
+    ExpImpHalfStep(){}
+    ExpImpHalfStep( const ExpImpStepper& copyable): m_stepper(copyable){}
+    template <class Explicit, class Implicit, class ContainerType>
+    void step( std::pair<Explicit&, Implicit&> rhs,
+               get_value_type<ContainerType> t0,
+               const ContainerType& u0,
+               get_value_type<ContainerType>&  t1,
+               ContainerType& u1,
+               get_value_type<ContainerType> dt,
+               ContainerType& delta)
+    {
+        m_stepper.step( std::get<0>(rhs), std::get<1>(rhs), t0, u0, t1, delta, dt); //one full step
+        m_stepper.step( std::get<0>(rhs), std::get<1>(rhs), t0, u0, t1, u1, dt/2.);
+        m_stepper.step( std::get<0>(rhs), std::get<1>(rhs), t1, u1, t1, u1, dt/2.);
+        dg::blas1::axpby( 1., u1, -1., delta);
+        t1 = t0 + dt;
+    }
+    int order() const{
+        return m_stepper.order();
+    }
+    private:
+    ExpImpStepper m_stepper;
+}
 ///@endcond
 
 ///Default Monitor for \c dg::integrateAdaptive function
@@ -182,7 +214,7 @@ struct DefaultMonitor
  *
  The adaptivity is given by: \c dt_current*=0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ;
  If the error lies above the desired accuracy, a step is rejected and subsequently recomputed.
- * @tparam Stepper must have the \c step member function and an \c order member function
+ * @tparam Stepper must have the \c step member function and an \c order member function that returns the global order of the Stepper
  * @copydoc hide_rhs
  * @copydoc hide_ContainerType
  * @tparam Monitor
@@ -190,14 +222,15 @@ struct DefaultMonitor
  * @param rhs The right-hand-side
  * @param t_begin initial time
  * @param begin initial condition
- * @param t_end final time
+ * @param t_end final time. The integrator will truncate the last stepsize such that the final time is exactly \c t_end
  * @param end (write-only) contains solution on output
+ * @param dt on input: initial guess for the timestep (can be 0, then the algorithm will come up with an initial guess on its own)
+ * on output: contains last (untruncated) stepsize that can be used to continue the integration
  * @param eps_rel the desired accuracy is given by
          \c eps_rel*norm+eps_abs, where \c norm is the norm of the current step
  * @param eps_abs the desired accuracy is given by
          \c eps_rel*norm+eps_abs, where \c norm is the norm of the current step
  * @param epus error per unit step ( if \c true, the desired accuracy is multiplied with \c dt to make the global error small, instead of only the local one)
- * @param dt_init initial guess for the timestep (if 0, then the algorithm will come up with an initial guess)
  * @param monitor instance of the \c Monitor class
  * @return number of steps
  */
@@ -208,14 +241,14 @@ int integrateAdaptive(Stepper& stepper,
                       const ContainerType& begin,
                       get_value_type<ContainerType> t_end,
                       ContainerType& end,
+                      get_value_type<ContainerType>& dt,
                       get_value_type<ContainerType> eps_rel,
                       get_value_type<ContainerType> eps_abs=1e-10,
                       bool epus=true,
-                      get_value_type<ContainerType> dt_init=0,
                       Monitor monitor=Monitor() )
 {
     using  real_type = get_value_type<ContainerType>;
-    real_type t_current = t_begin, dt_current = dt_init, t_next;
+    real_type t_current = t_begin, dt_current = dt, t_next;
     ContainerType next(begin), delta(begin);
     blas1::copy( begin, end );
     ContainerType& current(end);
@@ -224,7 +257,7 @@ int integrateAdaptive(Stepper& stepper,
     bool forward = (t_end - t_begin > 0);
 
     //1. Find initial test step
-    if( dt_init == 0)
+    if( dt == 0)
     {
         real_type desired_accuracy = eps_rel*monitor.norm(current) + eps_abs;
         rhs( t_current, current, next);
@@ -235,6 +268,7 @@ int integrateAdaptive(Stepper& stepper,
     int counter =0;
     while( (forward && t_current < t_end) || (!forward && t_current > t_end))
     {
+        dt = dt_current;
         if( (forward && t_current+dt_current > t_end) || (!forward && t_current + dt_current < t_end) )
             dt_current = t_end-t_current;
         // Compute a step and error
@@ -246,7 +280,7 @@ int integrateAdaptive(Stepper& stepper,
         //std::cout << eps_abs << " " <<desired_accuracy<<std::endl;
         if( epus)
             desired_accuracy*=fabs(dt_current);
-        dt_current *= std::max( 0.1, std::min( 10., 0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ) );
+        dt_current *= std::max( 0.1, std::min( 10., 0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ) );  //DON'T DO THIS; MAKES dt FUNCTION NONLINEAR
         //std::cout << t_current << " "<<t_next<<" "<<dt_current<<" acc "<<error<<" "<<desired_accuracy<<"\n";
         if( error>desired_accuracy)
             continue;
@@ -263,17 +297,51 @@ int integrateAdaptive(Stepper& stepper,
 ///@snippet adaptive_t.cu function
 ///@snippet adaptive_t.cu doxygen
 template< class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateRK45( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=1e-10, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+int integrateRK45( RHS& rhs,
+                   get_value_type<ContainerType> t_begin,
+                   const ContainerType& begin,
+                   get_value_type<ContainerType> t_end,
+                   ContainerType& end,
+                   get_value_type<ContainerType>& dt,
+                   get_value_type<ContainerType> eps_rel,
+                   get_value_type<ContainerType> eps_abs=1e-10,
+                   bool epus=true,
+                   Monitor monitor=Monitor() )
 {
     dg::PrinceDormand<ContainerType> pd( begin);
-    return integrateAdaptive( pd, rhs, t_begin, begin, t_end, end, eps_rel, eps_abs, epus, dt_init, monitor);
+    return integrateAdaptive( pd, rhs, t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
 }
 ///Shortcut for \c dg::integrateAdaptive with a half-step Runge Kutta (\c dg::RK) of stage \c s scheme as timestepper (recompute each step with half the stepsize to get the error estimate)
 template< size_t s, class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateHRK( RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_rel, get_value_type<ContainerType> eps_abs=1e-10, bool epus=true, get_value_type<ContainerType> dt_init=0, Monitor monitor=Monitor() )
+int integrateHRK( RHS& rhs,
+                  get_value_type<ContainerType> t_begin,
+                  const ContainerType& begin,
+                  get_value_type<ContainerType> t_end,
+                  ContainerType& end,
+                  get_value_type<ContainerType>& dt,
+                  get_value_type<ContainerType> eps_rel,
+                  get_value_type<ContainerType> eps_abs=1e-10,
+                  bool epus=true,
+                  Monitor monitor=Monitor() )
 {
     dg::HalfStep<dg::RK<s, ContainerType>> rk( begin);
-    return integrateAdaptive( rk, rhs, t_begin, begin, t_end, end, eps_rel, eps_abs, epus, dt_init, monitor);
+    return integrateAdaptive( rk, rhs, t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
+}
+///Shortcut for \c dg::integrateAdaptive with a half-step Runge Kutta (\c dg::RK) of stage \c s scheme as timestepper (recompute each step with half the stepsize to get the error estimate)
+template< class Explicit, class Implicit, class ContainerType, class Monitor = DefaultMonitor>
+int integrateHSIRK( Explicit& exp, Implicit& imp,
+                  get_value_type<ContainerType> t_begin,
+                  const ContainerType& begin,
+                  get_value_type<ContainerType> t_end,
+                  ContainerType& end,
+                  get_value_type<ContainerType>& dt,
+                  get_value_type<ContainerType> eps_rel,
+                  get_value_type<ContainerType> eps_abs=1e-10,
+                  bool epus=true,
+                  Monitor monitor=Monitor() )
+{
+    dg::ExpImpHalfStep<dg::SIRK<ContainerType>> sirk( begin);
+    return integrateAdaptive( sirk, std::make_pair(std::ref(exp),std::ref(imp)), t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
 }
 ///@}
 }//namespace dg

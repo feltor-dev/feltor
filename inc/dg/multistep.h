@@ -65,7 +65,8 @@ struct ab_coeff<5,real_type>{
 *
 * @ingroup time
 *
-* Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f]
+* Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f] with
+* coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
 * Uses only \c blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
 * @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
@@ -250,6 +251,8 @@ struct TensorTraits< detail::Implicit<M, V> >
 *
 * Uses only one evaluation of the explicit part per step.
 * Uses a conjugate gradient method for the implicit operator (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
+* @note The implicit part equals a third order backward differentiation formula (BDF) https://en.wikipedia.org/wiki/Backward_differentiation_formula
+*
 The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
 @snippet multistep_t.cu function
 In the main function:
