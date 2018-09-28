@@ -107,11 +107,11 @@
 
 /** @class hide_binary
   * @tparam BinaryOp A class or function type with a member/signature equivalent to
-  *  - double operator()(double, double) const
+  *  - real_type operator()(real_type, real_type) const
   */
 /** @class hide_ternary
   * @tparam TernaryOp A class or function type with a member/signature equivalent to
-  *  - double operator()(double, double, double) const
+  *  - real_type operator()(real_type, real_type, real_type) const
   */
 
  /** @class hide_ContainerType

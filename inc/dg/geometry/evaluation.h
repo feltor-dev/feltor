@@ -45,16 +45,22 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
 
 
 /**
- * @brief Evaluate a function on gaussian abscissas
+ * @brief Evaluate a 1d function on grid coordinates
  *
- * Evaluates f(x) on the intervall (a,b)
- * @tparam UnaryOp Model of Unary Function
- * @param f The function to evaluate
- * @param g The grid on which to evaluate f
+ * Evaluate is equivalent to the following:
  *
- * @return  A DG Host Vector with values
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * -# generate a list of grid coordinates \f$ x_i\f$ representing the given computational space discretization (the grid)
+ * -# evaluate the given function or functor at these coordinates and store the result 
+ *   in the output vector \f$ v_i = f(x_i)\f$ for all \c i
+ * .
  * @copydoc hide_code_evaluate1d
+ * @tparam UnaryOp Model of Unary Function \c real_type \c f(real_type)
+ * @param f The function to evaluate
+ * @param g The grid that defines the computational space on which to evaluate f
+ *
+ * @return The output vector \c v as a host vector
+ * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d() ) to generate the list of grid coordinates
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  */
 template< class UnaryOp,class real_type>
 thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGrid1d<real_type>& g)
@@ -75,16 +81,22 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
 
 
 /**
- * @brief Evaluate a function on gaussian abscissas
+ * @brief Evaluate a 2d function on grid coordinates
  *
- * Evaluates f(x) on the given grid
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the given computational space discretization (the grid)
+ * -# evaluate the given function or functor at these coordinates and store the result 
+ *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \c i
+ *.
+ * @copydoc hide_code_evaluate2d
  * @copydoc hide_binary
  * @param f The function to evaluate: f = f(x,y)
- * @param g The 2d grid on which to evaluate f
+ * @param g The 2d grid on which to evaluate \c f
  *
- * @return  A dG Host Vector with values
+ * @return The output vector \c v as a host vector
+ * @note Use the elementary function \f$ f(x,y) = x \f$ (\c dg::cooX2d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY2d)
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @copydoc hide_code_evaluate2d
  */
 template< class BinaryOp, class real_type>
 thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopology2d<real_type>& g)
@@ -112,16 +124,22 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
 ///@endcond
 
 /**
- * @brief Evaluate a function on gaussian abscissas
+ * @brief Evaluate a 3d function on grid coordinates
  *
- * Evaluates f(x,y,z) on the given grid
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the given computational space discretization (the grid)
+ * -# evaluate the given function or functor at these coordinates and store the result 
+ *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \c i
+ *.
+ * @copydoc hide_code_evaluate3d
  * @copydoc hide_ternary
  * @param f The function to evaluate: f = f(x,y,z)
- * @param g The 3d grid on which to evaluate f
+ * @param g The 3d grid on which to evaluate \c f
  *
- * @return  A dG Host Vector with values
+ * @return The output vector \c v as a host vector
+ * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d) 
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @copydoc hide_code_evaluate3d
  */
 template< class TernaryOp,class real_type>
 thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopology3d<real_type>& g)

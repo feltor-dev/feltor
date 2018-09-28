@@ -23,16 +23,7 @@ thrust::host_vector<real_type> abscissas( const RealGridX1d<real_type>& g)
 ///@addtogroup evaluation
 ///@{
 
-/**
- * @brief Evaluate a function on gaussian abscissas
- *
- * Evaluates f(x) on the intervall (a,b)
- * @tparam UnaryOp Model of Unary Function
- * @param f The function to evaluate
- * @param g The grid on which to evaluate f
- *
- * @return  A DG Host Vector with values
- */
+///@copydoc dg::evaluate(UnaryOp,const RealGrid1d<real_type>&)
 template< class UnaryOp,class real_type>
 thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGridX1d<real_type>& g)
 {
@@ -46,18 +37,7 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
 };
 ///@endcond
 
-/**
- * @brief Evaluate a function on gaussian abscissas
- *
- * Evaluates f(x) on the given grid
- * @copydoc hide_binary
- * @param f The function to evaluate: f = f(x,y)
- * @param g The 2d grid on which to evaluate f
- *
- * @return  A dG Host Vector with values
- * @note Copies the binary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
- */
+///@copydoc dg::evaluate(const BinaryOp&,const aRealTopology2d<real_type>&)
 template< class BinaryOp, class real_type>
 thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopologyX2d<real_type>& g)
 {
@@ -71,18 +51,7 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
 };
 ///@endcond
 
-/**
- * @brief Evaluate a function on gaussian abscissas
- *
- * Evaluates f(x,y,z) on the given grid
- * @copydoc hide_ternary
- * @param f The function to evaluate: f = f(x,y,z)
- * @param g The 3d grid on which to evaluate f
- *
- * @return  A dG Host Vector with values
- * @note Copies the ternary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
- */
+///@copydoc dg::evaluate(const TernaryOp&,const aRealTopology3d<real_type>&)
 template< class TernaryOp, class real_type>
 thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopologyX3d<real_type>& g)
 {

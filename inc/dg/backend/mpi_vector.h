@@ -209,7 +209,7 @@ struct NearestNeighborComm
         do_global_gather_wait( get_execution_policy<Vector>(), input, ptr, rqst);
 
     }
-    ///@copydoc aCommunicator::size()
+    ///@copydoc aCommunicator::buffer_size()
     unsigned size() const{return do_size();}
     ///@copydoc aCommunicator::isCommunicating()
     bool isCommunicating() const{

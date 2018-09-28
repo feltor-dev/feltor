@@ -15,16 +15,22 @@ namespace dg
 ///@{
 
 /**
- * @brief Evaluate a function on gaussian abscissas
+ * @brief Evaluate a 2d function on mpi distributed grid coordinates
  *
- * Evaluates f(x) on the given grid
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the local part of the given computational space discretization (the grid) that the calling process owns
+ * -# evaluate the given function or functor at these coordinates and store the result 
+ *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \c i
+ *.
+ * @copydoc hide_code_mpi_evaluate2d
  * @copydoc hide_binary
  * @param f The function to evaluate: f = f(x,y)
- * @param g The 2d grid on which to evaluate f
+ * @param g The 2d grid on which to evaluate \c f
  *
- * @return  A MPI Vector with values
+ * @return The output vector \c v as an MPI host Vector
+ * @note Use the elementary function \f$ f(x,y) = x \f$ (\c dg::cooX2d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY2d)
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @copydoc hide_code_mpi_evaluate2d
  */
 template< class BinaryOp,class real_type>
 MPI_Vector<thrust::host_vector<real_type> > evaluate( const BinaryOp& f, const aRealMPITopology2d<real_type>& g)
@@ -73,16 +79,22 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, re
 ///@endcond
 
 /**
- * @brief Evaluate a function on gaussian abscissas
+ * @brief Evaluate a 3d function on mpi distributed grid coordinates
  *
- * Evaluates f(x,y,z) on the given grid
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the local part of the given computational space discretization (the grid) that the calling process owns
+ * -# evaluate the given function or functor at these coordinates and store the result 
+ *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \c i
+ *.
+ * @copydoc hide_code_mpi_evaluate3d
  * @copydoc hide_ternary
  * @param f The function to evaluate: f = f(x,y,z)
- * @param g The 3d grid on which to evaluate f
+ * @param g The 3d grid on which to evaluate \c f
  *
- * @return  A MPI Vector with values
+ * @return The output vector \c v as an MPI host Vector
+ * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d) 
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @copydoc hide_code_mpi_evaluate3d
  */
 template< class TernaryOp,class real_type>
 MPI_Vector<thrust::host_vector<real_type> > evaluate( const TernaryOp& f, const aRealMPITopology3d<real_type>& g)

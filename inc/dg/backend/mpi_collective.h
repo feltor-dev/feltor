@@ -165,7 +165,7 @@ struct BijectiveComm : public aCommunicator<Vector>
     BijectiveComm( const thrust::host_vector<int>& pids, MPI_Comm comm) {
         construct( pids, comm);
     }
-    ///@copydoc GeneralComm::GeneralComm(thrust::host_vector<int>,thrust::host_vector<int>,MPI_Comm)
+    ///@copydoc GeneralComm::GeneralComm(unsigned,const thrust::host_vector<int>&,const thrust::host_vector<int>&,MPI_Comm)
     ///@note we assume that the gather map is bijective
     BijectiveComm( unsigned local_size, thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
     {
@@ -294,7 +294,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
     SurjectiveComm(){
         buffer_size_ = store_size_ = 0;
     }
-    ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const thrust::host_vector<int>&,MPI_Comm)
+    ///@copydoc GeneralComm::GeneralComm(unsigned,const thrust::host_vector<int>&,const thrust::host_vector<int>&,MPI_Comm)
     ///@note we assume that the gather map is surjective
     SurjectiveComm( unsigned local_size, const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {

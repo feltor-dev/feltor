@@ -8,7 +8,7 @@ CFLAGS=-Wall -std=c++11 -mavx -mfma #flags for CC
 NVCC=nvcc #CUDA compiler
 NVCCARCH=-arch sm_35 -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppress=initialization_not_reachable" #nvcc gpu compute capability
 NVCCFLAGS= -std=c++11 -Xcompiler "-Wall -mavx -mfma" #flags for NVCC
-OPT=-O3 # optimization flags for host code
+OPT=-O2 # optimization flags for host code
 OMPFLAG=-fopenmp #openmp flag for CC and MPICC
 
 #external libraries
