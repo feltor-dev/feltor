@@ -58,46 +58,6 @@ struct PrinceDormand
     std::array<ContainerType,7> m_k;
     ContainerType m_u;
     bool m_init;
-    struct U2{
-        DG_DEVICE
-        void operator()(real_type& u2, real_type u0, real_type k0, real_type k1, real_type dt) const{
-            u2 = u0 + dt*( 3./40.*k0+ 9./40.*k1);
-        }
-    };
-    struct U3{
-        DG_DEVICE
-        void operator()(real_type& u3, real_type u0, real_type k0, real_type k1, real_type k2, real_type dt) const{
-            u3 = u0 + dt*( 44./45.*k0 -56./15.*k1+ 32./9.*k2);
-        }
-    };
-    struct U4{
-        DG_DEVICE
-        void operator()(real_type& u4, real_type u0, real_type k0, real_type k1, real_type k2, real_type k3, real_type dt) const{
-            u4 = u0 + dt*(
-            19372./6561.*k0 -25360./2187.*k1+ 64448./6561.*k2 -212./729.*k3);
-        }
-    };
-    struct U5{
-        DG_DEVICE
-        void operator()(real_type& u5, real_type u0, real_type k0, real_type k1, real_type k2, real_type k3, real_type k4, real_type dt) const{
-            u5 = u0 + dt*(
-            9017./3168.*k0 -355./33.*k1+ 46732./5247.*k2 + 49./176.*k3 -5103./18656.*k4);
-        }
-    };
-    struct U6{
-        DG_DEVICE
-        void operator()(real_type& u6, real_type u0, real_type k0, real_type k2, real_type k3, real_type k4, real_type k5, real_type dt) const{
-            u6 = u0 + dt*(
-            35./384.*k0+0.+500./1113.*k2+125./192.*k3-2187./6784.*k4+11./84.*k5);
-        }
-    };
-    struct Delta{
-        DG_DEVICE
-        void operator()(real_type& delta, real_type k0, real_type k2, real_type k3, real_type k4, real_type k5, real_type k6, real_type dt) const{
-            delta = dt*(
-            (35./384.-5179./57600.)*k0+(500./1113.-7571./16695.)*k2+(125./192.-393./640.)*k3-(2187./6784.-92097/339200.)*k4+(11./84.-187./2100.)*k5-1./40.*k6);
-        }
-    };
 };
 
 template< class ContainerType>
@@ -117,27 +77,43 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     tu = t0 + 0.2*dt;
     f( tu, m_u, m_k[1]);
     //2 stage
-    blas1::evaluate( U2(), m_u, u0, m_k[0],m_k[1], dt);
+    blas1::subroutine( m_u, dg::equals(), Sum(), 1., u0, dt*3./40., m_k[0], dt*9./40., m_k[1]);
+    //blas1::evaluate( U2(), m_u, u0, m_k[0],m_k[1], dt);
     tu = t0 + 0.3*dt;
     f( tu, m_u, m_k[2]);
     //3 stage
-    blas1::evaluate( U3(), m_u, u0, m_k[0],m_k[1],m_k[2], dt);
+    blas1::subroutine( m_u, dg::equals(), Sum(), 1.        , u0,
+                         dt*44./45., m_k[0], -dt*56./15., m_k[1], dt*32./9., m_k[2]);
     tu = t0 + 0.8*dt;
     f( tu, m_u, m_k[3]);
     //4 stage
-    blas1::evaluate( U4(), m_u, u0, m_k[0],m_k[1],m_k[2],m_k[3], dt);
+    blas1::subroutine( m_u, dg::equals(), Sum(), 1.             , u0,
+                         dt*19372./6561.,m_k[0], -dt*25360./2187.,m_k[1],
+                        +dt*64448./6561.,m_k[2], -dt*212./729.   ,m_k[3]);
     tu = t0 + 8./9.*dt;
     f( tu, m_u, m_k[4]);
     //5 stage
-    blas1::evaluate( U5(), m_u, u0, m_k[0],m_k[1],m_k[2],m_k[3],m_k[4], dt);
+    blas1::subroutine( m_u, dg::equals(), Sum(), 1., u0,
+            dt*9017./3168.,m_k[0], -dt*355./33.,m_k[1], dt*46732./5247.,m_k[2],
+            dt*49./176.,   m_k[3], -dt*5103./18656., m_k[4]);
     tu = t0 + dt;
     f( tu, m_u, m_k[5]);
     //6 stage
     blas1::evaluate( U6(), u1, u0, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], dt);
+    blas1::subroutine( m_u, dg::equals(), Sum(), 1., u0,
+                       dt*35./384. ,m_k[0],  dt*500./1113., m_k[2],
+                       dt*125./192.,m_k[3], -dt*2187./6784.,m_k[4], dt*11./84., m_k[5]);
     t1 = t0 + dt;
     f( t1, u1, m_k[6]);
     //Now add everything up to get error estimate
     blas1::evaluate( Delta(), delta, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], m_k[6], dt);
+    blas1::subroutine( delta, dg::equals(), Sum(),
+            dt*(35./384.-5179./57600.),m_k[0], 
+            dt*(500./1113.-7571./16695.),m_k[2],
+            dt*(125./192.-393./640.),m_k[3],
+            -dt*(2187./6784.-92097/339200.),m_k[4],
+            dt*(11./84.-187./2100.),m_k[5],
+            -dt/40.,m_k[6]);
 }
 
 ///@cond
@@ -192,7 +168,7 @@ struct ExpImpHalfStep
     }
     private:
     ExpImpStepper m_stepper;
-}
+};
 ///@endcond
 
 ///Default Monitor for \c dg::integrateAdaptive function
@@ -244,7 +220,7 @@ int integrateAdaptive(Stepper& stepper,
                       get_value_type<ContainerType>& dt,
                       get_value_type<ContainerType> eps_rel,
                       get_value_type<ContainerType> eps_abs=1e-10,
-                      bool epus=true,
+                      bool epus=false,
                       Monitor monitor=Monitor() )
 {
     using  real_type = get_value_type<ContainerType>;
@@ -305,7 +281,7 @@ int integrateRK45( RHS& rhs,
                    get_value_type<ContainerType>& dt,
                    get_value_type<ContainerType> eps_rel,
                    get_value_type<ContainerType> eps_abs=1e-10,
-                   bool epus=true,
+                   bool epus=false,
                    Monitor monitor=Monitor() )
 {
     dg::PrinceDormand<ContainerType> pd( begin);
@@ -321,7 +297,7 @@ int integrateHRK( RHS& rhs,
                   get_value_type<ContainerType>& dt,
                   get_value_type<ContainerType> eps_rel,
                   get_value_type<ContainerType> eps_abs=1e-10,
-                  bool epus=true,
+                  bool epus=false,
                   Monitor monitor=Monitor() )
 {
     dg::HalfStep<dg::RK<s, ContainerType>> rk( begin);
@@ -337,7 +313,7 @@ int integrateHSIRK( Explicit& exp, Implicit& imp,
                   get_value_type<ContainerType>& dt,
                   get_value_type<ContainerType> eps_rel,
                   get_value_type<ContainerType> eps_abs=1e-10,
-                  bool epus=true,
+                  bool epus=false,
                   Monitor monitor=Monitor() )
 {
     dg::ExpImpHalfStep<dg::SIRK<ContainerType>> sirk( begin);

@@ -53,6 +53,32 @@ DG_DEVICE void operator()( T1& out, T2 in) const
     }
 };
 
+///@brief \f[ \sum_i \alpha_i x_i \f]
+struct Sum
+{
+    ///@brief \f[ \sum_i \alpha_i x_i \f]
+    template< class T1, class T2, class ...Ts>
+DG_DEVICE T1 operator()( T1 alpha, T2 x, Ts... rest) const
+    {
+        T1 tmp = T1{0};
+        sum( tmp, alpha, x, rest...);
+        return tmp;
+    }
+    private:
+    template<class T, class T1, class T2, class ...Ts>
+DG_DEVICE void sum( T& tmp, T1 alpha, T2 x, Ts... rest) const
+    {
+        tmp = DG_FMA( alpha, x, tmp);
+        sum( tmp, rest...);
+    }
+
+    template<class T, class T1, class T2>
+DG_DEVICE void sum( T& tmp, T1 alpha, T2 x) const
+    {
+        tmp = DG_FMA(alpha, x, tmp);
+    }
+};
+
 ///@}
 ///@cond
 template<class BinarySub, class Functor>
