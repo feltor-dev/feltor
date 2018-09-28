@@ -117,27 +117,27 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     tu = t0 + 0.2*dt;
     f( tu, m_u, m_k[1]);
     //2 stage
-    blas1::subroutine( U2(), m_u, u0, m_k[0],m_k[1], dt);
+    blas1::evaluate( U2(), m_u, u0, m_k[0],m_k[1], dt);
     tu = t0 + 0.3*dt;
     f( tu, m_u, m_k[2]);
     //3 stage
-    blas1::subroutine( U3(), m_u, u0, m_k[0],m_k[1],m_k[2], dt);
+    blas1::evaluate( U3(), m_u, u0, m_k[0],m_k[1],m_k[2], dt);
     tu = t0 + 0.8*dt;
     f( tu, m_u, m_k[3]);
     //4 stage
-    blas1::subroutine( U4(), m_u, u0, m_k[0],m_k[1],m_k[2],m_k[3], dt);
+    blas1::evaluate( U4(), m_u, u0, m_k[0],m_k[1],m_k[2],m_k[3], dt);
     tu = t0 + 8./9.*dt;
     f( tu, m_u, m_k[4]);
     //5 stage
-    blas1::subroutine( U5(), m_u, u0, m_k[0],m_k[1],m_k[2],m_k[3],m_k[4], dt);
+    blas1::evaluate( U5(), m_u, u0, m_k[0],m_k[1],m_k[2],m_k[3],m_k[4], dt);
     tu = t0 + dt;
     f( tu, m_u, m_k[5]);
     //6 stage
-    blas1::subroutine( U6(), u1, u0, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], dt);
+    blas1::evaluate( U6(), u1, u0, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], dt);
     t1 = t0 + dt;
     f( t1, u1, m_k[6]);
     //Now add everything up to get error estimate
-    blas1::subroutine( Delta(), delta, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], m_k[6], dt);
+    blas1::evaluate( Delta(), delta, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], m_k[6], dt);
 }
 
 ///@cond

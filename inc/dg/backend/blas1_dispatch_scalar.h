@@ -30,7 +30,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, AnyScal
 }
 
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void doSubroutine( AnyScalarTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
+inline void doEvaluate( AnyScalarTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
     f(x,xs...);
 }

@@ -32,7 +32,7 @@ inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValu
 }
 
 template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
-inline void doSubroutine_omp( int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
+inline void doEvaluate_omp( int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
 #pragma omp for nowait
     for( int i=0; i<size; i++)
@@ -42,22 +42,22 @@ inline void doSubroutine_omp( int size, Subroutine f, PointerOrValue x, PointerO
 }
 
 template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
-inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
+inline void doEvaluate_dispatch( OmpTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     if(omp_in_parallel())
     {
-        doSubroutine_omp( size, f, x, xs... );
+        doEvaluate_omp( size, f, x, xs... );
         return;
     }
     if(size>MIN_SIZE)
     {
         #pragma omp parallel
         {
-            doSubroutine_omp( size, f, x, xs...);
+            doEvaluate_omp( size, f, x, xs...);
         }
     }
     else
-        doSubroutine_dispatch( SerialTag(), size, f, x, xs...);
+        doEvaluate_dispatch( SerialTag(), size, f, x, xs...);
 }
 
 }//namespace detail

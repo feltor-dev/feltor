@@ -471,7 +471,7 @@ struct GeneralComm : public aCommunicator<Vector>
     virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values)const override final {
         surjectiveComm_.global_scatter_reduce( toScatter, thrust::raw_pointer_cast(store_.data().data()));
         typename Vector::pointer values_ptr(values);
-        dg::blas1::detail::doSubroutine_dispatch(
+        dg::blas1::detail::doEvaluate_dispatch(
             get_execution_policy<Vector>(),
             this->local_size(),
             dg::equals(),

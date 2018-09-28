@@ -39,7 +39,7 @@ inline T& get_device_element( T* x, int i){
 }
 
 template<class Subroutine, class PointerOrValue, class ...PointerOrValues>
- __global__ void subroutine_kernel( int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
+ __global__ void evaluate_kernel( int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -51,11 +51,11 @@ template<class Subroutine, class PointerOrValue, class ...PointerOrValues>
 }
 
 template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
-inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
+inline void doEvaluate_dispatch( CudaTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    subroutine_kernel<Subroutine, PointerOrValue, PointerOrValues...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
+    evaluate_kernel<Subroutine, PointerOrValue, PointerOrValues...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
 }
 
 

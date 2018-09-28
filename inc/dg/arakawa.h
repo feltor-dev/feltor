@@ -161,7 +161,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const ContainerType0& l
     blas2::symv( m_bdyf, lhs, m_dylhs);
     blas2::symv( m_bdxf, rhs, m_dxrhs);
     blas2::symv( m_bdyf, rhs, result);
-    blas1::subroutine( ArakawaFunctor<get_value_type<container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, result);
+    blas1::evaluate( ArakawaFunctor<get_value_type<container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, result);
 
     blas2::symv( 1., m_bdxf, m_dylhs, 1., result);
     blas2::symv( 1., m_bdyf, m_dxrhs, 1., result);

@@ -67,7 +67,7 @@ struct Implicit
             dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 1., yp[1][i]);
         }
         //Resistivity is not linear!
-        //dg::blas1::subroutine( AddResistivity( m_p.c, m_p.mu), y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
+        //dg::blas1::evaluate( AddResistivity( m_p.c, m_p.mu), y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
     }
 
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {
@@ -373,7 +373,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::arr
     //y[1]:= N_i - 1
 
     //First, compute and set chi
-    dg::blas1::subroutine( ComputeChi(), m_chi, y[1], m_binv, m_p.mu[1]);
+    dg::blas1::evaluate( ComputeChi(), m_chi, y[1], m_binv, m_p.mu[1]);
     m_multigrid.project( m_chi, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_pol[u].set_chi( m_multi_chi[u]);
@@ -408,7 +408,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::arr
     dg::blas2::symv( m_dxDIR, m_phi[0], m_dxPhi[0]);
     dg::blas2::symv( m_dyDIR, m_phi[0], m_dyPhi[0]);
     dg::tensor::multiply2d( m_metric, m_dxPhi[0], m_dyPhi[0], m_omega, m_chi);
-    dg::blas1::subroutine( ComputePsi(), m_phi[1], m_dxPhi[0], m_dyPhi[0], m_omega, m_chi, m_binv);
+    dg::blas1::evaluate( ComputePsi(), m_phi[1], m_dxPhi[0], m_dyPhi[0], m_omega, m_chi, m_binv);
     //m_omega now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dxDIR, m_phi[1], m_dxPhi[1]);
     dg::blas2::symv( m_dyDIR, m_phi[1], m_dyPhi[1]);
@@ -426,7 +426,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     timer.tic();
 
     compute_phi( y[0]); //Set phi[0], phi[1], m_dxPhi, m_dyPhi, and m_omega (u_E^2)
-    dg::blas1::subroutine( ComputeLogN(), y[0], m_npe, m_logn); //Transform n-1 to n and n to logn
+    dg::blas1::evaluate( ComputeLogN(), y[0], m_npe, m_logn); //Transform n-1 to n and n to logn
 
     ////////////////////ENERGETICS///////////////////////////////////////
     double z[2]    = {-1.0,1.0};
@@ -454,7 +454,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     for( unsigned i=0; i<2;i++)
     {
 
-        dg::blas1::subroutine( ComputeDiss(), m_chi, m_logn[i], m_phi[i], y[1][i], m_p.mu[i], m_p.tau[i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
+        dg::blas1::evaluate( ComputeDiss(), m_chi, m_logn[i], m_phi[i], y[1][i], m_p.mu[i], m_p.tau[i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
         //Compute parallel dissipation for N
         dg::blas2::symv(m_p.nu_parallel, m_dsN, y[0][i], 0.,  m_lambda); //lambda = nu_parallel Delta_s N
 
@@ -488,7 +488,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
         dg::blas2::gemv( m_dy, y[0][i], m_dyN[i]);
         dg::blas2::gemv( m_dxDIR, y[1][i], m_dxU[i]);
         dg::blas2::gemv( m_dyDIR, y[1][i], m_dyU[i]);
-        dg::blas1::subroutine( ComputePerp(), y[0][i], m_dxN[i], m_dyN[i],
+        dg::blas1::evaluate( ComputePerp(), y[0][i], m_dxN[i], m_dyN[i],
                                               y[1][i], m_dxU[i], m_dyU[i],
                                               m_dxPhi[i], m_dyPhi[i],
                                               m_binv, m_perp_vol_inv,
@@ -514,9 +514,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
 
     }
     //Add Resistivity
-    dg::blas1::subroutine( AddResistivity( m_p.c, m_p.mu), y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
+    dg::blas1::evaluate( AddResistivity( m_p.c, m_p.mu), y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
     //Add particle source to dtN
-    dg::blas1::subroutine( ComputeSource(), m_lambda, y[0][0], m_profne, m_source, m_p.omega_source);
+    dg::blas1::evaluate( ComputeSource(), m_lambda, y[0][0], m_profne, m_source, m_p.omega_source);
     dg::blas1::axpby( 1., m_lambda, 1.0, yp[0][0]);
     dg::blas1::axpby( 1., m_lambda, 1.0, yp[1][1]);
     //add FLR correction to dtNi

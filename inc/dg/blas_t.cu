@@ -38,12 +38,12 @@ int main()
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
     std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
     // test the examples in the documentation
-    dg::blas1::subroutine( []__host__ __device__(double& v){ v+=1.;}, dvec1);
+    dg::blas1::evaluate( []__host__ __device__(double& v){ v+=1.;}, dvec1);
     std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
-    dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
+    dg::blas1::evaluate( Expression(), dvec1, array_w[2], 3);
     std::cout << "Example in documentation          "<< (dvec1[0] ==310)<<std::endl;
-    dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    dg::blas1::evaluate( Expression(), array_v, array_w, array_p);
     std::cout << "Example in documentation          "<< (array_v[0][0] == 110 && array_v[1][1] == 820)<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);

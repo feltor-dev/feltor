@@ -364,7 +364,7 @@ struct GeneralElliptic
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y)
     {
-        //can be faster with blas1::subroutine
+        //can be faster with blas1::evaluate
         dg::blas2::gemv( rightx, x, temp0); //R_x*x
         dg::blas1::pointwiseDot( 1., xchi, temp0, 0., xx);//Chi_x*R_x*x
 

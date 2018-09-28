@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
     // test the examples in the documentation
     std::array<dg::MDVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
-    dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    dg::blas1::evaluate( Expression(), array_v, array_w, array_p);
     if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 110 && array_v[1].data()[1] == 820)<<std::endl;
     if(rank==0)std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);

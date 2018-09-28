@@ -97,11 +97,11 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     if(rank==0)std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
-    //Test new subroutine
+    //Test new evaluate
     std::array<double, 3> array_p{ 1,2,3};
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::subroutine( Expression(), u, v, x, array_p);
+        dg::blas1::evaluate( Expression(), u, v, x, array_p);
     t.toc();
     if(rank==0)std::cout<<"SUBroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////

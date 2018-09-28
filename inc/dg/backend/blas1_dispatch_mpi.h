@@ -67,9 +67,9 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVect
 
 
 template< class Subroutine, class container, class ...Containers>
-inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&&... xs)
+inline void doEvaluate( MPIVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    dg::blas1::subroutine( f,
+    dg::blas1::evaluate( f,
         do_get_data(std::forward<container>(x), get_tensor_category<container>()),
         do_get_data(std::forward<Containers>(xs), get_tensor_category<Containers>())...);
 }
