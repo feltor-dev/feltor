@@ -1,6 +1,6 @@
 #pragma once
 
-#include "runge_kutta.h"
+#include "implicit.h"
 
 namespace dg
 {
@@ -77,43 +77,120 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     tu = t0 + 0.2*dt;
     f( tu, m_u, m_k[1]);
     //2 stage
-    blas1::subroutine( m_u, dg::equals(), Sum(), 1., u0, dt*3./40., m_k[0], dt*9./40., m_k[1]);
+    blas1::subroutine( m_u, dg::equals(), PairSum(), 1., u0, dt*3./40., m_k[0], dt*9./40., m_k[1]);
     //blas1::evaluate( U2(), m_u, u0, m_k[0],m_k[1], dt);
     tu = t0 + 0.3*dt;
     f( tu, m_u, m_k[2]);
     //3 stage
-    blas1::subroutine( m_u, dg::equals(), Sum(), 1.        , u0,
+    blas1::subroutine( m_u, dg::equals(), PairSum(), 1.        , u0,
                          dt*44./45., m_k[0], -dt*56./15., m_k[1], dt*32./9., m_k[2]);
     tu = t0 + 0.8*dt;
     f( tu, m_u, m_k[3]);
     //4 stage
-    blas1::subroutine( m_u, dg::equals(), Sum(), 1.             , u0,
+    blas1::subroutine( m_u, dg::equals(), PairSum(), 1.             , u0,
                          dt*19372./6561.,m_k[0], -dt*25360./2187.,m_k[1],
                         +dt*64448./6561.,m_k[2], -dt*212./729.   ,m_k[3]);
     tu = t0 + 8./9.*dt;
     f( tu, m_u, m_k[4]);
     //5 stage
-    blas1::subroutine( m_u, dg::equals(), Sum(), 1., u0,
+    blas1::subroutine( m_u, dg::equals(), PairSum(), 1., u0,
             dt*9017./3168.,m_k[0], -dt*355./33.,m_k[1], dt*46732./5247.,m_k[2],
             dt*49./176.,   m_k[3], -dt*5103./18656., m_k[4]);
     tu = t0 + dt;
     f( tu, m_u, m_k[5]);
     //6 stage
-    blas1::evaluate( U6(), u1, u0, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], dt);
-    blas1::subroutine( m_u, dg::equals(), Sum(), 1., u0,
+    blas1::subroutine( u1, dg::equals(), PairSum(), 1., u0,
                        dt*35./384. ,m_k[0],  dt*500./1113., m_k[2],
                        dt*125./192.,m_k[3], -dt*2187./6784.,m_k[4], dt*11./84., m_k[5]);
     t1 = t0 + dt;
     f( t1, u1, m_k[6]);
     //Now add everything up to get error estimate
-    blas1::evaluate( Delta(), delta, m_k[0], m_k[2], m_k[3], m_k[4], m_k[5], m_k[6], dt);
-    blas1::subroutine( delta, dg::equals(), Sum(),
+    blas1::subroutine( delta, dg::equals(), PairSum(),
             dt*(35./384.-5179./57600.),m_k[0], 
             dt*(500./1113.-7571./16695.),m_k[2],
             dt*(125./192.-393./640.),m_k[3],
             -dt*(2187./6784.-92097/339200.),m_k[4],
             dt*(11./84.-187./2100.),m_k[5],
             -dt/40.,m_k[6]);
+}
+template< class ContainerType>
+struct ARK423
+{
+    using real_type = get_value_type<ContainerType>;
+    template< class Explicit, class Implicit>
+    void step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
+    private:
+    std::array<ContainerType, 4> m_kE, m_kI;
+    ContainerType m_u, m_rhs;
+    real_type m_eps;
+};
+template< class ContainerType>
+template< class Explicit, class Implicit>
+void ARK423<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+{
+    //1. stage
+    //a^E_00 = a^I_00 = 0
+    ex(t0, u0, m_kE[0]);
+    im(t0, u0, m_kI[0]);
+
+    //2. stage
+    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0, 
+            dt*1767732205903./ 2027836641118., m_kE[0], 
+            dt*1767732205903./4055673282236., m_kI[0]);
+    real_type tu = t0 + dt * 1767732205903./2027836641118.;
+    detail::Implicit<Implicit, ContainerType> implicit( -dt*1767732205903./4055673282236., tu, im);
+    blas2::symv( im.weights(), m_rhs, m_rhs);
+    m_pcg( implicit, m_u, m_rhs, im.precond(), im.inv_weights(), m_eps);
+    ex(tu, m_u, m_kE[1]);
+    im(tu, m_u, m_kI[1]);
+
+    //3. stage
+    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0, 
+             dt*5535828885825./10492691773637., m_kE[0], 
+             dt*788022342437./10882634858940., m_kE[1],
+             dt*2746238789719./10658868560708., m_kI[0], 
+            -dt*640167445237./6845629431997., m_kI[1]);
+    tu = t0 + 3./5.*dt;
+    implicit.alpha() = -dt*1767732205903./4055673282236.;
+    implicit.time()  = tu;
+    blas2::symv( im.weights(), m_rhs, m_rhs);
+    m_pcg( implicit, m_u, m_rhs, im.precond(), im.inv_weights(), m_eps);
+    ex(tu, m_u, m_kE[2]);
+    im(tu, m_u, m_kI[2]);
+    //4. stage
+    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0, 
+             dt*6485989280629./16251701735622., m_kE[0], 
+            -dt*4246266847089./9704473918619.,  m_kE[1], 
+             dt*10755448449292./10357097424841., m_kE[2],
+             dt*1471266399579./7840856788654., m_kI[0],
+            -dt*4482444167858./7529755066697., m_kI[1], 
+             dt*11266239266428./11593286722821., m_kI[2]);
+    t1 = tu = t0 + dt;
+    implicit.alpha() = -dt*1767732205903./4055673282236.;
+    implicit.time()  = tu;
+    blas2::symv( im.weights(), m_rhs, m_rhs);
+    m_pcg( implicit, m_u, m_rhs, im.precond(), im.inv_weights(), m_eps);
+    ex(tu, m_u, m_kE[3]);
+    im(tu, m_u, m_kI[3]);
+    //Now compute result and error estimate
+    blas1::subroutine( u1, dg::equals(), PairSum(), 1., u0,
+             dt*1471266399579./7840856788654., m_kE[0],
+            -dt*4482444167858./7529755066697., m_kE[1], 
+             dt*11266239266428./11593286722821., m_kE[2],
+             dt*1767732205903./4055673282236., m_kE[3],
+             dt*1471266399579./7840856788654., m_kI[0],
+            -dt*4482444167858./7529755066697., m_kI[1], 
+             dt*11266239266428./11593286722821., m_kI[2],
+             dt*1767732205903./4055673282236., m_kI[3]);
+    blas1::subroutine( delta, dg::equals(), PairSum(), +1., u1,
+            -dt*2756255671327./12835298489170., m_kE[0],
+             dt*10771552573575./22201958757719., m_kE[1], 
+            -dt*9247589265047./10645013368117., m_kE[2],
+            -dt*2193209047091./5459859503100., m_kE[3],
+            -dt*2756255671327./12835298489170., m_kI[0],
+             dt*10771552573575./22201958757719., m_kI[1], 
+            -dt*9247589265047./10645013368117., m_kI[2],
+            -dt*2193209047091./5459859503100., m_kI[3]);
 }
 
 ///@cond

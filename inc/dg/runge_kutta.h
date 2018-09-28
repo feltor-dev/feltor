@@ -576,38 +576,38 @@ struct SIRK
      * @param dt timestep
      */
     template <class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
+    void step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
     {
-        exp(t0, u0, f_);
-        imp(t0+d[0]*dt, u0, g_);
+        ex(t0, u0, f_);
+        im(t0+d[0]*dt, u0, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        detail::Implicit<Implicit, ContainerType> implicit( -dt*d[0], t0+d[0]*dt, imp);
+        detail::Implicit<Implicit, ContainerType> implicit( -dt*d[0], t0+d[0]*dt, im);
         implicit.alpha() = -dt*d[0];
         implicit.time()  = t0 + (d[0])*dt;
-        blas2::symv( imp.weights(), rhs_, rhs_);
-        pcg( implicit, k_[0], rhs_, imp.precond(), imp.inv_weights(), eps_);
+        blas2::symv( im.weights(), rhs_, rhs_);
+        pcg( implicit, k_[0], rhs_, im.precond(), im.inv_weights(), eps_);
 
         dg::blas1::axpby( 1., u0, b[1][0], k_[0], rhs_);
-        exp(t0+b[1][0]*dt, rhs_, f_);
+        ex(t0+b[1][0]*dt, rhs_, f_);
         dg::blas1::axpby( 1., u0, c[1][0], k_[0], rhs_);
-        imp(t0+(c[1][0]+d[1])*dt, rhs_, g_);
+        im(t0+(c[1][0]+d[1])*dt, rhs_, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
         implicit.alpha() = -dt*d[1];
         implicit.time()  =  t0 + (c[1][0]+d[1])*dt;
-        blas2::symv( imp.weights(), rhs_, rhs_);
-        pcg( implicit, k_[1], rhs_, imp.precond(), imp.inv_weights(), eps_);
+        blas2::symv( im.weights(), rhs_, rhs_);
+        pcg( implicit, k_[1], rhs_, im.precond(), im.inv_weights(), eps_);
 
         dg::blas1::axpby( 1., u0, b[2][0], k_[0], rhs_);
         dg::blas1::axpby( b[2][1], k_[1], 1., rhs_);
-        exp(t0 + (b[2][1]+b[2][0])*dt, rhs_, f_);
+        ex(t0 + (b[2][1]+b[2][0])*dt, rhs_, f_);
         dg::blas1::axpby( 1., u0, c[2][0], k_[0], rhs_);
         dg::blas1::axpby( c[2][1], k_[1], 1., rhs_);
-        imp(t0 + (c[2][1]+c[2][0] + d[2])*dt, rhs_, g_);
+        im(t0 + (c[2][1]+c[2][0] + d[2])*dt, rhs_, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
         implicit.alpha() = -dt*d[2];
         implicit.time()  =  t0 + (c[2][1]+c[2][0] + d[2])*dt;
-        blas2::symv( imp.weights(), rhs_, rhs_);
-        pcg( implicit, k_[2], rhs_, imp.precond(), imp.inv_weights(), eps_);
+        blas2::symv( im.weights(), rhs_, rhs_);
+        pcg( implicit, k_[2], rhs_, im.precond(), im.inv_weights(), eps_);
         //sum up results
         dg::blas1::copy( u0, u1);
         dg::blas1::axpby( 1., u1, w[0], k_[0], u1);
@@ -630,12 +630,12 @@ struct SIRK
      * @param verbose if true writes error to \c std::cout
      */
     template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type& dt, real_type tolerance, bool verbose = false)
+    void adaptive_step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type& dt, real_type tolerance, bool verbose = false)
     {
         real_type t;
-        step( exp, imp, t0, u0, t, temp_, dt/2.);
-        step( exp, imp, t, temp_, t, temp_, dt/2.);
-        step( exp, imp, t0, u0, t1, u1, dt); //one full step
+        step( ex, im, t0, u0, t, temp_, dt/2.);
+        step( ex, im, t, temp_, t, temp_, dt/2.);
+        step( ex, im, t0, u0, t1, u1, dt); //one full step
         dg::blas1::axpby( 1., u1, -1., temp_);
         real_type error = dg::blas1::dot( temp_, temp_);
         if(verbose)std::cout << "Error " << error<<"\tTime "<<t1<<"\tdt "<<dt;

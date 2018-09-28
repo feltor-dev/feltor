@@ -25,8 +25,8 @@ namespace dg{
     Furthermore, the routines %weights(), %inv_weights() and %precond() must be callable
     and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
     The return type of these member functions must be useable in blas2 functions together with the ContainerType type.
- * @param exp explic part
- * @param imp implicit part ( must be linear in its second argument and symmetric up to weights)
+ * @param ex explic part
+ * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
  */
 
 ///@cond
@@ -259,10 +259,10 @@ struct Karniadakis
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on output the last call to the explicit part \c exp is at \c (t0,u0). This might be interesting if the call to \c exp changes its state.
+     * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
      */
     template< class Explicit, class Implicit>
-    void init( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type dt);
+    void init( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type dt);
 
     /**
     * @brief Advance one timestep
@@ -270,10 +270,10 @@ struct Karniadakis
     * @copydoc hide_explicit_implicit
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
-     * @note the implementation is such that on output the last call to the explicit part \c exp is at the new \c (t,u). This might be interesting if the call to \c exp changes its state.
+     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
     */
     template< class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, real_type& t, ContainerType& u);
+    void step( Explicit& ex, Implicit& im, real_type& t, ContainerType& u);
 
   private:
     std::array<ContainerType,3> u_, f_;
