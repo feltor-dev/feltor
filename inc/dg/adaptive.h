@@ -26,9 +26,9 @@ template< class ContainerType>
 struct PrinceDormand
 {
     using real_type = get_value_type<ContainerType>;
+    using container = ContainerType;
     ///@copydoc RK_opt::RK_opt()
     PrinceDormand(){
-        m_init=true;
     }
     ///@copydoc RK_opt::construct(const ContainerType&)
     PrinceDormand( const ContainerType& copyable){
@@ -54,20 +54,20 @@ struct PrinceDormand
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
     ///global order of the algorithm
     int order() const {return 4;}
+    void set_fsal( bool fsal) { m_init = !fsal;}
   private:
     std::array<ContainerType,7> m_k;
     ContainerType m_u;
-    bool m_init;
+    real_type m_last = 1e310;
 };
 
 template< class ContainerType>
 template< class RHS>
 void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
 {
-    //0 stage
-    if( m_init){
+    //0 stage: probe fsal 
+    if( t0 != m_last){
         f(t0, u0, m_k[0]); //compute k_0
-        m_init = false;
     }
     else
         blas1::copy( m_k[6], m_k[0]);
@@ -102,7 +102,7 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     blas1::subroutine( u1, dg::equals(), PairSum(), 1., u0,
                        dt*35./384. ,m_k[0],  dt*500./1113., m_k[2],
                        dt*125./192.,m_k[3], -dt*2187./6784.,m_k[4], dt*11./84., m_k[5]);
-    t1 = t0 + dt;
+    m_last = t1 = t0 + dt;
     f( t1, u1, m_k[6]);
     //Now add everything up to get error estimate
     blas1::subroutine( delta, dg::equals(), PairSum(),
@@ -114,7 +114,7 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
             -dt/40.,m_k[6]);
 }
 template< class ContainerType>
-struct ARK423
+struct ARK
 {
     using real_type = get_value_type<ContainerType>;
     template< class Explicit, class Implicit>
@@ -123,15 +123,25 @@ struct ARK423
     std::array<ContainerType, 4> m_kE, m_kI;
     ContainerType m_u, m_rhs;
     real_type m_eps;
+    real_type m_tlast = 1e310;
 };
+
 template< class ContainerType>
 template< class Explicit, class Implicit>
-void ARK423<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
 {
     //1. stage
     //a^E_00 = a^I_00 = 0
-    ex(t0, u0, m_kE[0]);
-    im(t0, u0, m_kI[0]);
+    if( t0 == m_tlast)
+    {
+        dg::blas1::copy( m_kE[3], m_kE[0]);
+        dg::blas1::copy( m_kI[3], m_kI[0]);
+    }
+    else
+    {
+        ex(t0, u0, m_kE[0]);
+        im(t0, u0, m_kI[0]);
+    }
 
     //2. stage
     blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0, 
@@ -165,7 +175,7 @@ void ARK423<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, cons
              dt*1471266399579./7840856788654., m_kI[0],
             -dt*4482444167858./7529755066697., m_kI[1], 
              dt*11266239266428./11593286722821., m_kI[2]);
-    t1 = tu = t0 + dt;
+    m_tlast = t1 = tu = t0 + dt;
     implicit.alpha() = -dt*1767732205903./4055673282236.;
     implicit.time()  = tu;
     blas2::symv( im.weights(), m_rhs, m_rhs);
@@ -192,6 +202,123 @@ void ARK423<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, cons
             -dt*9247589265047./10645013368117., m_kI[2],
             -dt*2193209047091./5459859503100., m_kI[3]);
 }
+
+
+template<class Stepper>
+class Adaptive
+{
+    using container = typename Stepper::container;
+    using real_type = typename Stepper::real_type;
+    template<class ...Ts>
+    Adapative( const container& copyable, Ts&& ...xs): m_stepper(copyable, std::forward<Ts>(xs)...) , m_next(copyable), m_delta(copyable){}
+
+    template<class RHS, class Tolerance, class Controller>
+    int step( RHS& rhs, 
+                  real_type t_begin,
+                  const container& begin,
+                  real_type t_end,
+                  container& end,
+                  real_type& dt,
+                  Tolerance& tol,
+                  Controller& control)
+    {
+        real_type t_end;
+        m_stepper.step( rhs, t_current, current, t_end, m_next, dt, m_delta);
+        update( )
+    }
+    template<class Explicit, class Implicit, class Tolerance, class Controller>
+    int step( Explicit& ex, Implicit& im,
+                  real_type t_begin,
+                  const container& begin,
+                  real_type t_end,
+                  container& end,
+                  real_type& dt,
+                  Tolerance& tol,
+                  Controller& control)
+    {
+        real_type t_end;
+        m_stepper.step( ex, im, t_current, current, t_end, m_next, dt, m_delta);
+        update( )
+    }
+    private:
+    void update()
+    bool m_failed = false;
+    Stepper m_stepper;
+    container m_next, m_delta;
+    real_type m_reject_limit = 2;
+};
+template<class Stepper>
+void Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, const ContainerType& begin, real_type& dt, Tolerance& tol, bool forward)
+{
+    ex( t_begin, begin, m_next);
+    real_type norm = tol(m_next);
+    if( forward)
+        dt = 1./norm;
+    else
+        dt = -1./norm;
+}
+
+template<class Stepper>
+template<class RHS, class Tolerance, class Controller>
+void Adaptive<Stepper>::step( RHS& rhs, 
+                  get_value_type<ContainerType> t_current,
+                  const ContainerType& current,
+                  get_value_type<ContainerType>& t_next,
+                  ContainerType& next,
+                  get_value_type<ContainerType>& dt,
+                  Tolerance& tol,
+                  Controller& control)
+{
+    real_type t_end;
+    real_type norm = tol( current, delta);
+    if( norm > m_reject_limit)
+        m_failed = true;
+    else
+    {
+        std::swap( m_norm2, m_norm1);
+        std::swap( norm, m_norm1);
+        dg::blas1::copy( m_next, next);
+        t_next = t_end;
+        m_failed = false;
+    }
+    dt = control( dt, norm, m_norm1, m_norm2, m_stepper.order());
+    return;
+}
+
+template<class real_type>
+struct DefaultTolerance
+{
+    DefaultTolerance( real_type rtol, real_type atol):m_rtol(rtol), m_atol( atol){}
+    real_type operator()( const ContainerType& current, const ContainerType& delta) const{
+        real_type tol = m_rtol*sqrt(dg::blas1::dot( current, current))+m_atol;
+        real_type err = sqrt( dg::blas1::dot( delta, delta));
+        return err/tol;
+    }
+    private:
+    real_type m_rtol, m_atol;
+};
+template<class real_type>
+struct PIController
+{
+    real_type operator()( real_type dt_old, real_type eps_n, real_type eps_n1, real_type eps_n2, int order)const
+    {
+        real_type factor = pow( eps_n,  m_k1/(real_type)order) 
+                         * pow( eps_n1, m_k2/(real_type)order)
+                         * pow( eps_n2, m_k3/(real_type)order);
+        dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) )
+    }
+    void set_lower_limit( real_type lower_limit) {
+        m_lower_limit = lower_limit;
+    }
+    void set_upper_limit( real_type upper_limit) {
+        m_upper_limit = upper_limit;
+    }
+    private:
+    real_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
+    real_type m_lower_limit = 0, m_upper_limit = 1e310;
+};
+
+
 
 ///@cond
 template<class Stepper>
@@ -220,13 +347,13 @@ struct HalfStep
     private:
     Stepper m_stepper;
 };
-template<class ExpImpStepper>
-struct ExpImpHalfStep
+template<class ExImStepper>
+struct ExImHalfStep
 {
-    ExpImpHalfStep(){}
-    ExpImpHalfStep( const ExpImpStepper& copyable): m_stepper(copyable){}
+    ExImHalfStep(){}
+    ExImHalfStep( const ExImStepper& copyable): m_stepper(copyable){}
     template <class Explicit, class Implicit, class ContainerType>
-    void step( std::pair<Explicit&, Implicit&> rhs,
+    void step( Explicit& ex, Implicit& im,
                get_value_type<ContainerType> t0,
                const ContainerType& u0,
                get_value_type<ContainerType>&  t1,
@@ -234,9 +361,9 @@ struct ExpImpHalfStep
                get_value_type<ContainerType> dt,
                ContainerType& delta)
     {
-        m_stepper.step( std::get<0>(rhs), std::get<1>(rhs), t0, u0, t1, delta, dt); //one full step
-        m_stepper.step( std::get<0>(rhs), std::get<1>(rhs), t0, u0, t1, u1, dt/2.);
-        m_stepper.step( std::get<0>(rhs), std::get<1>(rhs), t1, u1, t1, u1, dt/2.);
+        m_stepper.step( ex, im, t0, u0, t1, delta, dt); //one full step
+        m_stepper.step( ex, im, t0, u0, t1, u1, dt/2.);
+        m_stepper.step( ex, im, t1, u1, t1, u1, dt/2.);
         dg::blas1::axpby( 1., u1, -1., delta);
         t1 = t0 + dt;
     }
@@ -244,7 +371,7 @@ struct ExpImpHalfStep
         return m_stepper.order();
     }
     private:
-    ExpImpStepper m_stepper;
+    ExImStepper m_stepper;
 };
 ///@endcond
 
