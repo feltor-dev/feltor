@@ -287,22 +287,6 @@ struct DS
     void do_centeredDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_symv(double alpha, const container& f, double beta, container& dsf);
     void do_dss(double alpha, const container& f, double beta, container& dsf);
-    struct ComputeDSS{
-        ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
-        DG_DEVICE
-        void operator()( double& dssf, double fp, double f, double fm, double h_inv) const{
-            dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
-        }
-        private:
-        double m_alpha, m_beta;
-    };
-    struct ComputeSymv{
-        DG_DEVICE
-        void operator()( double& ssf, double fp, double fm, double h_inv, double vol3d) const{
-            ssf = 1./2.*( fp-fm)*h_inv;
-            ssf = 1./2.*vol3d*ssf*h_inv;
-        }
-    };
 
 
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
@@ -316,6 +300,24 @@ struct DS
 
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
+namespace detail{
+struct ComputeDSS{
+    ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dssf, double fp, double f, double fm, double h_inv) const{
+        dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
+    }
+    private:
+    double m_alpha, m_beta;
+};
+struct ComputeSymv{
+    DG_DEVICE
+    void operator()( double& ssf, double fp, double fm, double h_inv, double vol3d) const{
+        ssf = 1./2.*( fp-fm)*h_inv;
+        ssf = 1./2.*vol3d*ssf*h_inv;
+    }
+};
+}//namespace detail
 
 template<class Geometry, class I, class M, class container>
 void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, container>& fa, dg::norm no, dg::direction dir)
@@ -407,7 +409,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     {
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dg::blas1::subroutine( ComputeSymv(), m_temp0, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
+        dg::blas1::evaluate( detail::ComputeSymv(), m_temp0, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
         m_fa(einsPlusT,  m_temp0, m_tempP);
         m_fa(einsMinusT, m_temp0, m_tempM);
         dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, m_temp0);
@@ -435,7 +437,7 @@ void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta,
 {
     m_fa(einsPlus,  f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::subroutine( ComputeDSS( alpha, beta),
+    dg::blas1::evaluate( detail::ComputeDSS( alpha, beta),
             dssf, m_tempP, f, m_tempM, m_fa.h_inv());
 }
 ///@endcond

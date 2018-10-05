@@ -147,7 +147,7 @@ template<class ContainerType>
 ContainerType determinant( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
-    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+    dg::blas1::subroutine( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
                            t.value(0,0), t.value(0,1), t.value(0,2),
                            t.value(1,0), t.value(1,1), t.value(1,2),
                            t.value(2,0), t.value(2,1), t.value(2,2));
@@ -164,7 +164,7 @@ template<class ContainerType>
 ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
-    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+    dg::blas1::subroutine( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
                            t.value(0,0), t.value(0,1),
                            t.value(1,0), t.value(1,1));
     return det;

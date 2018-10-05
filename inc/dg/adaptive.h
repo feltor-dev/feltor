@@ -19,8 +19,6 @@ The Prince Dormand method is an embedded Runge Kutta method, i.e. computes a sol
 * @ingroup time
 *
 * @copydoc hide_ContainerType
-* @attention Call the \c reset() member before using the \c step() method on
-* a different Equation
 */
 template< class ContainerType>
 struct PrinceDormand
@@ -38,15 +36,6 @@ struct PrinceDormand
     void construct( const ContainerType& copyable){
         m_k.fill( copyable);
         m_u = copyable;
-        m_init = true;
-    }
-    /*!@brief Call this function before using step on a
-     * different ODE
-     *
-     * The reason behind this is that the implementation uses the last function evaluation as the initial value for the integration
-    */
-    void reset() {
-        m_init=true;
     }
     ///@copydoc RK_opt::step(RHS&,real_type,const ContainerType&,real_type&,ContainerType&,real_type)
     ///@param delta Contains error estimate on output (must have equal sizeas u0)
@@ -54,11 +43,10 @@ struct PrinceDormand
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
     ///global order of the algorithm
     int order() const {return 4;}
-    void set_fsal( bool fsal) { m_init = !fsal;}
   private:
     std::array<ContainerType,7> m_k;
     ContainerType m_u;
-    real_type m_last = 1e310;
+    real_type m_last = 1e300;
 };
 
 template< class ContainerType>
@@ -123,7 +111,7 @@ struct ARK
     std::array<ContainerType, 4> m_kE, m_kI;
     ContainerType m_u, m_rhs;
     real_type m_eps;
-    real_type m_tlast = 1e310;
+    real_type m_tlast = 1e300;
 };
 
 template< class ContainerType>
@@ -204,91 +192,93 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
 }
 
 
-template<class Stepper>
-class Adaptive
-{
-    using container = typename Stepper::container;
-    using real_type = typename Stepper::real_type;
-    template<class ...Ts>
-    Adapative( const container& copyable, Ts&& ...xs): m_stepper(copyable, std::forward<Ts>(xs)...) , m_next(copyable), m_delta(copyable){}
-
-    template<class RHS, class Tolerance, class Controller>
-    int step( RHS& rhs, 
-                  real_type t_begin,
-                  const container& begin,
-                  real_type t_end,
-                  container& end,
-                  real_type& dt,
-                  Tolerance& tol,
-                  Controller& control)
-    {
-        real_type t_end;
-        m_stepper.step( rhs, t_current, current, t_end, m_next, dt, m_delta);
-        update( )
-    }
-    template<class Explicit, class Implicit, class Tolerance, class Controller>
-    int step( Explicit& ex, Implicit& im,
-                  real_type t_begin,
-                  const container& begin,
-                  real_type t_end,
-                  container& end,
-                  real_type& dt,
-                  Tolerance& tol,
-                  Controller& control)
-    {
-        real_type t_end;
-        m_stepper.step( ex, im, t_current, current, t_end, m_next, dt, m_delta);
-        update( )
-    }
-    private:
-    void update()
-    bool m_failed = false;
-    Stepper m_stepper;
-    container m_next, m_delta;
-    real_type m_reject_limit = 2;
-};
-template<class Stepper>
-void Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, const ContainerType& begin, real_type& dt, Tolerance& tol, bool forward)
-{
-    ex( t_begin, begin, m_next);
-    real_type norm = tol(m_next);
-    if( forward)
-        dt = 1./norm;
-    else
-        dt = -1./norm;
-}
-
-template<class Stepper>
-template<class RHS, class Tolerance, class Controller>
-void Adaptive<Stepper>::step( RHS& rhs, 
-                  get_value_type<ContainerType> t_current,
-                  const ContainerType& current,
-                  get_value_type<ContainerType>& t_next,
-                  ContainerType& next,
-                  get_value_type<ContainerType>& dt,
-                  Tolerance& tol,
-                  Controller& control)
-{
-    real_type t_end;
-    real_type norm = tol( current, delta);
-    if( norm > m_reject_limit)
-        m_failed = true;
-    else
-    {
-        std::swap( m_norm2, m_norm1);
-        std::swap( norm, m_norm1);
-        dg::blas1::copy( m_next, next);
-        t_next = t_end;
-        m_failed = false;
-    }
-    dt = control( dt, norm, m_norm1, m_norm2, m_stepper.order());
-    return;
-}
+//template<class Stepper>
+//class Adaptive
+//{
+//    using container = typename Stepper::container;
+//    using real_type = typename Stepper::real_type;
+//    template<class ...Ts>
+//    Adapative( const container& copyable, Ts&& ...xs): m_stepper(copyable, std::forward<Ts>(xs)...) , m_next(copyable), m_delta(copyable){}
+//
+//    template<class RHS, class Tolerance, class Controller>
+//    int step( RHS& rhs, 
+//                  real_type t_begin,
+//                  const container& begin,
+//                  real_type t_end,
+//                  container& end,
+//                  real_type& dt,
+//                  Tolerance& tol,
+//                  Controller& control)
+//    {
+//        real_type t_end;
+//        m_stepper.step( rhs, t_current, current, t_end, m_next, dt, m_delta);
+//        update( )
+//    }
+//    template<class Explicit, class Implicit, class Tolerance, class Controller>
+//    int step( Explicit& ex, Implicit& im,
+//                  real_type t_begin,
+//                  const container& begin,
+//                  real_type t_end,
+//                  container& end,
+//                  real_type& dt,
+//                  Tolerance& tol,
+//                  Controller& control)
+//    {
+//        real_type t_end;
+//        m_stepper.step( ex, im, t_current, current, t_end, m_next, dt, m_delta);
+//        update( )
+//    }
+//    private:
+//    void update()
+//    bool m_failed = false;
+//    Stepper m_stepper;
+//    container m_next, m_delta;
+//    real_type m_reject_limit = 2;
+//};
+//template<class Stepper>
+//template<class Explicit>
+//void Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, const ContainerType& begin, real_type& dt, Tolerance& tol, bool forward)
+//{
+//    ex( t_begin, begin, m_next);
+//    real_type norm = tol(m_next);
+//    if( forward)
+//        dt = 1./norm;
+//    else
+//        dt = -1./norm;
+//}
+//
+//template<class Stepper>
+//template<class RHS, class Tolerance, class Controller>
+//void Adaptive<Stepper>::step( RHS& rhs, 
+//                  get_value_type<ContainerType> t_current,
+//                  const ContainerType& current,
+//                  get_value_type<ContainerType>& t_next,
+//                  ContainerType& next,
+//                  get_value_type<ContainerType>& dt,
+//                  Tolerance& tol,
+//                  Controller& control)
+//{
+//    real_type t_end;
+//    real_type norm = tol( current, delta);
+//    if( norm > m_reject_limit)
+//        m_failed = true;
+//    else
+//    {
+//        std::swap( m_norm2, m_norm1);
+//        std::swap( norm, m_norm1);
+//        dg::blas1::copy( m_next, next);
+//        t_next = t_end;
+//        m_failed = false;
+//    }
+//    dt = control( dt, norm, m_norm1, m_norm2, m_stepper.order());
+//    return;
+//}
 
 template<class real_type>
 struct DefaultTolerance
 {
     DefaultTolerance( real_type rtol, real_type atol):m_rtol(rtol), m_atol( atol){}
+    template<class ContainerType>
     real_type operator()( const ContainerType& current, const ContainerType& delta) const{
         real_type tol = m_rtol*sqrt(dg::blas1::dot( current, current))+m_atol;
         real_type err = sqrt( dg::blas1::dot( delta, delta));
@@ -305,7 +295,8 @@ struct PIController
         real_type factor = pow( eps_n,  m_k1/(real_type)order) 
                          * pow( eps_n1, m_k2/(real_type)order)
                          * pow( eps_n2, m_k3/(real_type)order);
-        dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) )
+        real_type dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) );
+        return dt_new;
     }
     void set_lower_limit( real_type lower_limit) {
         m_lower_limit = lower_limit;
@@ -315,7 +306,7 @@ struct PIController
     }
     private:
     real_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
-    real_type m_lower_limit = 0, m_upper_limit = 1e310;
+    real_type m_lower_limit = 0, m_upper_limit = 1e300;
 };
 
 
@@ -520,7 +511,7 @@ int integrateHSIRK( Explicit& exp, Implicit& imp,
                   bool epus=false,
                   Monitor monitor=Monitor() )
 {
-    dg::ExpImpHalfStep<dg::SIRK<ContainerType>> sirk( begin);
+    dg::ExImHalfStep<dg::SIRK<ContainerType>> sirk( begin);
     return integrateAdaptive( sirk, std::make_pair(std::ref(exp),std::ref(imp)), t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
 }
 ///@}
