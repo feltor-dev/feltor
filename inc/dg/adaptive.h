@@ -87,6 +87,7 @@ void PrinceDormand<ContainerType>::step( RHS& f, real_type t0, const ContainerTy
     tu = t0 + dt;
     f( tu, m_u, m_k[5]);
     //6 stage
+    ////The last two should be computed in one go to save vector reads/writes
     blas1::subroutine( u1, dg::equals(), PairSum(), 1., u0,
                        dt*35./384. ,m_k[0],  dt*500./1113., m_k[2],
                        dt*125./192.,m_k[3], -dt*2187./6784.,m_k[4], dt*11./84., m_k[5]);
