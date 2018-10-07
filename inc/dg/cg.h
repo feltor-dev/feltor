@@ -303,10 +303,7 @@ struct Extrapolation
                      break;
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
-            case(2): dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
-                     break;
-            case(3): dg::blas1::axpby( 1., m_x[2], -3., m_x[1], new_x);
-                     dg::blas1::axpby( 3., m_x[0], 1., new_x);
+            case(3): dg::blas1::subroutine( new_x, dg::equals(), dg::PairSum(), 3., m_x[0], -3., m_x[1], 1., m_x[2]);
                      break;
             default: dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
         }

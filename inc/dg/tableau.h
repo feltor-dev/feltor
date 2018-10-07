@@ -64,6 +64,23 @@ struct ButcherTableau{
     bool isEmbedded()const{
         return m_embedded;
     }
+    /// an upper element is non-zero
+    bool isImplicit()const{
+        for( unsigned i=0; i<m_s; i++)
+            for( unsigned j=i; j<m_s; j++)
+                if( a(i,j) != 0)
+                    return true;
+        return false;
+    }
+    /// the last k is evaluated at the solution
+    bool isFsal()const{
+        if( m_c[s-1] != 1)
+            return false;
+        for (unsigned j=0; j<m_s; j++)
+            if( a(s-1,j) != b(j) )
+                return false;
+        return true;
+    }
     private:
     dg::Operator<real_type> m_a;
     std::vector<real_type> m_b, m_c, m_bt;
@@ -660,6 +677,7 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
 }
 
 }//namespace tableau
+
 enum tableau_identifier{
     //Wikipedia
     EXPLICIT_EULER_1_1,
@@ -696,7 +714,10 @@ enum tableau_identifier{
     KVAERNO_7_4_5,
     ARK548L2SA_DIRK_8_4_5
 };
+
+
 namespace create{
+
 template<class real_type>
 ButcherTableau<real_type> tableau( enum tableau_identifier id)
 {
@@ -806,4 +827,17 @@ ButcherTableau<real_type> tableau( std::string name)
         return tableau( str2id[name]);
 }
 }//namespace create
+
+template<class real_type>
+struct ConvertsToButcherTableau
+{
+    ConvertsToButcherTableau( ButcherTableau<real_type> tableau): m_t(tableau){}
+    ConvertsToButcherTableau( enum tableau_identifier id):m_t( dg::create::tableau(id)){}
+    ConvertsToButcherTableau( std::string name):m_t( dg::create::tableau(name)){}
+    operator ButcherTableau<real_type>( )const{
+        return m_t;
+    }
+    private:
+    ButcherTableau<real_type> m_t;
+};
 }//namespace dg

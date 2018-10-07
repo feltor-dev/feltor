@@ -104,6 +104,33 @@ DG_DEVICE void sum( T& tmp, T1 alpha, T2 x) const
         tmp = DG_FMA(alpha, x, tmp);
     }
 };
+///@brief \f[ y = \sum_i a_i x_i,\quad \tilde y = \sum_i \tilde a_i x_i \f]
+struct EmbeddedPairSum
+{
+    ///@brief \f[ \sum_i \alpha_i x_i \f]
+    template< class T1, class ...Ts>
+DG_DEVICE void operator()( T1& y, T1& yt, T1 a, T1 at, T1 x, Ts... rest) const
+    {
+        y = a*x;
+        yt = at*x;
+        sum( y, yt, rest...);
+    }
+    private:
+    template< class T1,  class ...Ts>
+DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k, Ts... rest) const
+    {
+        y_1 = DG_FMA( b, k, y_1);
+        yt_1 = DG_FMA( bt, k, yt_1);
+        sum( rest...);
+    }
+
+    template< class T1>
+DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k) const
+    {
+        y_1 = DG_FMA( b, k, y_1);
+        yt_1 = DG_FMA( bt, k, yt_1);
+    }
+};
 ///@brief \f[ \sum_i \alpha_i x_i y_i \f]
 struct TripletSum
 {

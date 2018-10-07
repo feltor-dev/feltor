@@ -43,18 +43,16 @@ namespace dg{
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
-struct RK
+struct RKStep
 {
     using real_type = get_value_type<ContainerType>;
     ///@brief No memory allocation, Call \c construct before using the object
-    RK(){}
+    RKStep(){}
     ///@copydoc construct()
-    RK( const ContainerType& copyable, std::string tableau): RK( copyable, dg::create::tableau( tableau)){
-    }
-    RK( const ContainerType& copyable, ButcherTableau tableau):m_rk(tableau){
-        m_k.assign(tableau.num_stages(), copyable);
-        m_u = copyable;
-    }
+    RKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau)m_rk(tableau),
+            m_k(m_rk.num_stages(), copyable),
+            m_u( copyable)
+        { }
     /**
     * @brief Reserve internal workspace for the integration
     *
@@ -62,12 +60,9 @@ struct RK
     * @param tableau Name of Butcher Tableau
     * @note it does not matter what values \c copyable contains, but its size is important
     */
-    void construct( const ContainerType& copyable, std::string tableau){
-        construct( copyable, dg::create::tableau(tableau));
-    }
-    void construct( const ContainerType& copyable, ButcherTableau tableau){
+    void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
         m_rk = tableau;
-        m_k.assign(tableau.num_stages(), copyable);
+        m_k.assign(m_rk.num_stages(), copyable);
         m_u = copyable;
     }
     /**
@@ -88,14 +83,14 @@ struct RK
         return m_rk.order();
     }
   private:
-    std::array<ContainerType,s> m_k;
-    ContainerType m_u;
     ButcherTableau<real_type> m_rk;
+    std::vector<ContainerType> m_k;
+    ContainerType m_u;
 };
 
 template< class ContainerType>
 template< class RHS>
-void RK<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
+void RKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
 {
     f(t0, u0, m_k[0]); //compute k_0
     real_type tu = t0;
@@ -145,13 +140,13 @@ far outweighs the increased computational cost of the additional matrix inversio
  * @copydoc hide_ContainerType
  */
 template <class ContainerType>
-struct SIRK
+struct SIRKStep
 {
     using real_type = get_value_type<ContainerType>;
-    ///@copydoc RK_opt::RK_opt()
-    SIRK(){}
+    ///@copydoc RK::RK()
+    SIRKStep(){}
     ///@copydoc Karniadakis::construct()
-    SIRK(const ContainerType& copyable, unsigned max_iter, real_type eps){
+    SIRKStep(const ContainerType& copyable, unsigned max_iter, real_type eps){
         construct( copyable, max_iter, eps);
     }
     ///@copydoc Karniadakis::construct()
@@ -227,6 +222,294 @@ struct SIRK
     real_type eps_;
 };
 
+/**
+* @brief Struct for embedded Runge Kutta explicit time-step with error estimate
+* \f[
+ \begin{align}
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j \\
+    k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
+ \end{align}
+\f]
+
+The coefficients for the Butcher tableau were taken from https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method
+The Prince Dormand method is an embedded Runge Kutta method, i.e. computes a solution together with an error estimate. It is effecitve due to its First Same as Last property.
+
+* @ingroup time
+*
+* @copydoc hide_ContainerType
+*/
+template< class ContainerType>
+struct ERKStep
+{
+    using real_type = get_value_type<ContainerType>;
+    using container = ContainerType;
+    ///@copydoc RK::RK()
+    ERKStep(){
+    }
+    ///@copydoc RK::construct()
+    ERKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau) m_rk(tableau), m_k(m_rk.num_stages(), copyable),
+        m_u( copyable)
+        { }
+    ///@copydoc RK::construct()
+    void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
+        m_rk = tableau;
+        m_k.assign(m_rk.num_stages(), copyable);
+        m_u = copyable;
+    }
+    ///@copydoc RK::step(RHS&,real_type,const ContainerType&,real_type&,ContainerType&,real_type)
+    ///@param delta Contains error estimate on output (must have equal sizeas u0)
+    template<class RHS>
+    void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
+    ///global order of the algorithm
+    int order() const {
+        return m_rk.order();
+    }
+    int embedded_order() const {
+        return m_rk.embedded_order();
+    }
+  private:
+    ButcherTableau<real_type> m_rk;
+    std::vector<ContainerType> m_k;
+    ContainerType m_u;
+    real_type m_last = 1e300;
+};
+
+template< class ContainerType>
+template< class RHS>
+void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+{
+    unsigned s = m_rk.num_stages();
+    //0 stage: probe fsal
+    real_type tu = t0;
+    if( m_rk.isFsal() && t0 == m_last){
+        blas1::copy( m_k[s-1], m_k[0]);
+    }
+    else
+        f(t0, u0, m_k[0]); //compute k_0
+    //1 stage
+    tu = DG_FMA( m_rk.c(1),dt, t0);
+    blas1::axpby( 1., u0, dt*m_rk.a(1,0), m_k[0], m_u);
+    f( tu, m_u, m_k[1]);
+    //2 stage
+    if( s>2) {
+        tu = DG_FMA( m_rk.c(2),dt, t0);
+        blas1::subroutine( m_u, dg::equals(), PairSum(), 1., u0,
+                            dt*m_rk.a(2,0),m_k[0],
+                            dt*m_rk.a(2,1),m_k[1]);
+        f( tu, m_u, m_k[2]);
+    }
+    //3 stage
+    if( s> 3){
+        tu = DG_FMA( m_rk.c(3),dt, t0);
+        blas1::subroutine( m_u, dg::equals(), PairSum(), 1., u0,
+                             dt*m_rk.a(3,0),m_k[0],
+                             dt*m_rk.a(3,1),m_k[1],
+                             dt*m_rk.a(3,2),m_k[2]);
+        f( tu, m_u, m_k[3]);
+    }
+    //4 stage
+    if( s>4){
+        tu = DG_FMA( m_rk.c(4),dt, t0);
+        blas1::subroutine( m_u, dg::equals(), PairSum(), 1.        , u0,
+                             dt*m_rk.a(4,0),m_k[0],  dt*m_rk.a(4,1),m_k[1],
+                             dt*m_rk.a(4,2),m_k[2],  dt*m_rk.a(4,3),m_k[3]);
+        f( tu, m_u, m_k[4]);
+    }
+    //5 stage
+    if( s>5) {
+        tu = DG_FMA( m_rk.c(5),dt, t0);
+        blas1::subroutine( m_u, dg::equals(), PairSum(), 1., u0,
+                 dt*m_rk.a(5,0),m_k[0], dt*m_rk.a(5,1),m_k[1],
+                 dt*m_rk.a(5,2),m_k[2], dt*m_rk.a(5,3),m_k[3],
+                 dt*m_rk.a(5,4),m_k[4]);
+        f( tu, m_u, m_k[5]);
+    }
+    //6 stage
+    if( s>6)
+    {
+        tu = DG_FMA( m_rk.c(6),dt, t0);
+        blas1::subroutine( m_u, dg::equals(), PairSum(), 1., u0,
+                           dt*m_rk.a(6,0),m_k[0], dt*m_rk.a(6,1),m_k[2],
+                           dt*m_rk.a(6,3),m_k[3], dt*m_rk.a(6,4),m_k[4],
+                           dt*m_rk.a(6,5),m_k[5]);
+        f( tu, m_u, m_k[6]);
+        for ( unsigned i=7; i<s; i++)
+        {
+            blas1::axpby( 1.,u0, dt*m_rk.a(i,0),m_k[0], m_u); //l=0
+            tu = DG_FMA( dt,m_rk.c(i),t0); //l=0
+            for( unsigned l=1; l<i; l++)
+                blas1::axpby( dt*m_rk.a(i,l), m_k[l],1., m_u);
+            f( tu, m_u, m_k[i]);
+        }
+    }
+    //Now add everything up to get solution and error estimate
+    m_last = t1 = tu;
+    switch( s)
+    {
+        case 2: blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
+                            dt*m_rk.b(1), dt*m_rk.d(1), m_k[1]); break;
+        case 3: blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
+                            dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
+                            dt*m_rk.b(2), dt*m_rk.d(2), m_k[2]); break;
+        case 4: blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
+                            dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
+                            dt*m_rk.b(2), dt*m_rk.d(2), m_k[2],
+                            dt*m_rk.b(3), dt*m_rk.d(3), m_k[3]); break;
+        case 5: blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
+                            dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
+                            dt*m_rk.b(2), dt*m_rk.d(2), m_k[2],
+                            dt*m_rk.b(3), dt*m_rk.d(3), m_k[3],
+                            dt*m_rk.b(4), dt*m_rk.d(4), m_k[4]); break;
+        case 6: blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
+                            dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
+                            dt*m_rk.b(2), dt*m_rk.d(2), m_k[2],
+                            dt*m_rk.b(3), dt*m_rk.d(3), m_k[3],
+                            dt*m_rk.b(4), dt*m_rk.d(4), m_k[4],
+                            dt*m_rk.b(5), dt*m_rk.d(5), m_k[5]); break;
+        default: blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
+                            dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
+                            dt*m_rk.b(2), dt*m_rk.d(2), m_k[2],
+                            dt*m_rk.b(3), dt*m_rk.d(3), m_k[3],
+                            dt*m_rk.b(4), dt*m_rk.d(4), m_k[4],
+                            dt*m_rk.b(5), dt*m_rk.d(5), m_k[5],
+                            dt*m_rk.b(6), dt*m_rk.d(6), m_k[6]);
+            //sum the rest
+            for( unsigned i=7; i<s; i++)
+            {
+                dg::blas1::axpby( dt*m_rk.b(i), m_k[i], 1., u1);
+                dg::blas1::axpby( dt*m_rk.d(i), m_k[i], 1., delta);
+            }
+    }
+}
+template< class ContainerType>
+struct ARKStep
+{
+    using real_type = get_value_type<ContainerType>;
+    using container = ContainerType;
+    ///@copydoc RK::RK()
+    ARKStep(){ }
+    ARKStep( const ContainerType& copyable,
+             unsigned max_iter,
+             real_type eps_cg,
+             ConvertsToButcherTableau<real_type> ex_tableau,
+             ConvertsToButcherTableau<real_type> im_tableau):
+             m_kE(m_rk.num_stages(), copyable),
+        m_u( copyable),
+        m_rk(tableau)
+        { }
+    void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
+    }
+    void construct( const ContainerType& copyable,
+             unsigned max_iter,
+             real_type eps_cg,
+             ConvertsToButcherTableau<real_type> ex_tableau,
+             ConvertsToButcherTableau<real_type> im_tableau){
+        m_rkE = ex_tableau;
+        m_rkI = im_tableau;
+        assert( m_rkE.num_stages() == m_rkI.num_stages());
+        m_k.assign(m_rkE.num_stages(), copyable);
+        m_u = copyable;
+    }
+    template< class Explicit, class Implicit>
+    void step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
+    private:
+    ButcherTableau<real_type> m_rkE, m_rkI;
+    std::vector<ContainerType> m_kE, m_kI;
+    ContainerType m_u, m_rhs;
+    real_type m_eps;
+};
+
+template< class ContainerType>
+template< class Explicit, class Implicit>
+void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+{
+    //0 stage
+    //a^E_00 = a^I_00 = 0
+    ex(t0, u0, m_kE[0]);
+    im(t0, u0, m_kI[0]);
+
+    //1 stage
+    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0,
+            dt*m_rkE.a(1,0), m_kE[0],
+            dt*m_rkI.a(1,0), m_kI[0]);
+    tu = DG_FMA( m_rkI.c(1),dt, t0);
+    detail::Implicit<Implicit, ContainerType> implicit( -dt*m_rkI.a(1,1), tu, im);
+    blas2::symv( im.weights(), m_rhs, m_rhs);
+    //how to initialize m_u??
+    m_pcg( implicit, m_u, m_rhs, im.precond(), im.inv_weights(), m_eps);
+    ex(tu, m_u, m_kE[1]);
+    im(tu, m_u, m_kI[1]);
+
+    //2 stage
+    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0,
+             dt*m_rkE.a(2,0), m_kE[0],
+             dt*m_rkE.a(2,1), m_kE[1],
+             dt*m_rkI.a(2,0), m_kI[0],
+             dt*m_rkI.a(2,1), m_kI[1]);
+    tu = DG_FMA( m_rkI.c(2),dt, t0);
+    implicit.alpha() = -dt*m_rkI.a(2,2);
+    implicit.time()  = tu;
+    blas2::symv( im.weights(), m_rhs, m_rhs);
+    m_pcg( implicit, m_u, m_rhs, im.precond(), im.inv_weights(), m_eps);
+    ex(tu, m_u, m_kE[2]);
+    im(tu, m_u, m_kI[2]);
+    //3 stage
+    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0,
+             dt*m_rkE.a(3,0), m_kE[0],
+             dt*m_rkE.a(3,1), m_kE[1],
+             dt*m_rkE.a(3,2), m_kE[2],
+             dt*m_rkI.a(3,0), m_kI[0],
+             dt*m_rkI.a(3,1), m_kI[1],
+             dt*m_rkI.a(3,2), m_kI[2]);
+    m_tlast = t1 = tu = t0 + dt;
+    implicit.alpha() = -dt*m_rkI.a(3,3);
+    implicit.time()  = tu;
+    blas2::symv( im.weights(), m_rhs, m_rhs);
+    m_pcg( implicit, m_u, m_rhs, im.precond(), im.inv_weights(), m_eps);
+    ex(tu, m_u, m_kE[3]);
+    im(tu, m_u, m_kI[3]);
+    //Now compute result and error estimate
+    blas1::evaluate( dg::EmbeddedPairSum(),
+            u1, delta,
+             1., 0. u0,
+            dt*m_rkE.b(0), dt*m_rkE.d(0),m_kE[0],
+            dt*m_rkE.b(1), dt*m_rkE.d(1),m_kE[1],
+            dt*m_rkE.b(2), dt*m_rkE.d(2),m_kE[2],
+            dt*m_rkE.b(3), dt*m_rkE.d(3),m_kE[3],
+            dt*m_rkI.b(0), dt*m_rkI.d(0),m_kI[0],
+            dt*m_rkI.b(1), dt*m_rkI.d(1),m_kI[1],
+            dt*m_rkI.b(2), dt*m_rkI.d(2),m_kI[2],
+            dt*m_rkI.b(3), dt*m_rkI.d(3),m_kI[3]);
+    //sum the rest
+    for( unsigned i=4; i<s; i++)
+    {
+        dg::blas1::axpbypgz( dt*m_rkE.b(i), m_kE[i],
+                             dt*m_rkI.b(i), m_kI[i], 1., u1);
+        dg::blas1::axpbypgz( dt*m_rkE.d(i), m_kE[i],
+                             dt*m_rkI.d(i), m_kI[i], 1., delta);
+    }
+}
+
+
 ///@addtogroup time
 ///@{
 
@@ -246,7 +529,7 @@ template< class RHS, class ContainerType>
 void stepperRK(ButcherTableau tableau, RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, unsigned N )
 {
     using real_type = get_value_type<ContainerType>;
-    RK<ContainerType > rk( begin, tableau);
+    RKStep<ContainerType > rk( begin, tableau);
     if( t_end == t_begin){ end = begin; return;}
     real_type dt = (t_end-t_begin)/(real_type)N;
     end = begin;
@@ -257,7 +540,7 @@ void stepperRK(ButcherTableau tableau, RHS& rhs, get_value_type<ContainerType>  
 
 
 /**
- * @brief Integrates the differential equation using a stage s Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
+ * @brief Integrates the differential equation using a Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
  *
  * Doubles the number of timesteps until the desired accuracy is reached
  *
@@ -277,13 +560,20 @@ void stepperRK(ButcherTableau tableau, RHS& rhs, get_value_type<ContainerType>  
  * @param eps_abs desired accuracy in the error function between \c end and \c end_old
  * @param NT_init initial number of steps
  * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
- * @attention This function is superseded by the better \c dg::integrateHRK Halfstep function
  */
 template< class RHS, class ContainerType>
-int integrateRK(ButcherTableau tableau, RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_abs, unsigned NT_init = 2 )
+int integrateRK(
+    const ConvertsToButcherTableau<get_value_type<ContainerType>& tableau,
+    RHS& rhs,
+    get_value_type<ContainerType> t_begin,
+    const ContainerType& begin,
+    get_value_type<ContainerType> t_end,
+    ContainerType& end,
+    get_value_type<ContainerType> eps_abs,
+    unsigned NT_init = 2 )
 {
     using real_type = get_value_type<ContainerType>;
-    RK<ContainerType > rk( begin, tableau);
+    RKStep<ContainerType > rk( begin, tableau);
     ContainerType old_end(begin);
     blas1::copy( begin, end );
     if( t_end == t_begin) return 0;
