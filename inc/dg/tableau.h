@@ -10,9 +10,10 @@ namespace dg{
 template<class real_type>
 struct ButcherTableau{
     ButcherTableau(){}
+    //init embedded part as a copy of real part, embedded order = order
     ButcherTableau(unsigned s, unsigned order,
                    real_type* a , real_type* b , real_type* c):
-        m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(0){}
+        m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order){}
     ButcherTableau(unsigned s, unsigned embedded_order, unsigned order
                real_type* a, real_type* b, real_type* bt, real_type* c):
         m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_embedded(true){}
@@ -138,6 +139,34 @@ ButcherTableau<real_type> classic_4_4()
     real_type c[4] = {0, 0.5, 0.5, 1.};
     return ButcherTableau<real_type>( 4,4, a,b,c);
 }
+//From Yoh and Zhong (AIAA 42, 2004)
+//!Attention! assumes another form of implementation 
+//than ARK tableaus
+template<class real_type>
+ButcherTableau<real_type> sirk3a_ex_3_3()
+{
+    real_type a[9] = {
+        0,0,0,
+        8./7., 0,0,
+        71./252., 7./36.,0
+    };
+    real_type b[3] = {1./8., 1./8., 3./4.};
+    real_type c[3] = {0, 8./7., 120./252.};
+    return ButcherTableau<real_type>( 3,3, a,b,c);
+}
+template<class real_type>
+ButcherTableau<real_type> sirk3a_im_3_3()
+{
+    real_type a[9] = {
+        3./4.,0,0,
+        5589./6524., 75./233.,0,
+        7691./26096., -26335./78288., 65./168.
+    };
+    real_type b[3] = {1./8., 1./8., 3./4.};
+    real_type c[3] = {3./4., 7689./6524., 27028./78288.};
+    return ButcherTableau<real_type>( 3,3, a,b,c);
+}
+
 
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Embedded Butcher tables%%%%%%%%%%%%%%%%%%
@@ -732,6 +761,10 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::kutta_3_3<real_type>();
         case CLASSIC_4_4:
             return dg::tableau::classic_4_4<real_type>();
+        //case SIRK3A_EX_3_3:
+        //    return dg::tableau::sirk3a_ex_3_3<real_type>();
+        //case SIRK3A_IM_3_3:
+        //    return dg::tableau::sirk3a_im_3_3<real_type>();
         case HEUN_EULER_2_1_2:
             return dg::tableau::heun_euler_2_1_2<real_type>();
         case BOGACKI_SHAMPINE_4_2_3:
@@ -789,37 +822,39 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
 template<class real_type>
 ButcherTableau<real_type> tableau( std::string name)
 {
-    std::unordered_map<string, enum tableau_identifier> str2id{
-        {"explicit_euler_1_1", EXPLICIT_EULER_1_1},
-        {"implicit_euler_1_1", IMPLICIT_EULER_1_1},
-        {"midpoint_2_2", MIDPOINT_2_2},
-        {"kutta_3_3", KUTTA_3_3},
-        {"classic_4_4", CLASSIC_4_4},
-        {"heun_euler_2_1_2", HEUN_EULER_2_1_2},
-        {"bogacki_shampine_4_2_3", BOGACKI_SHAMPINE_4_2_3},
-        {"ark324l2sa_erk_4_2_3", ARK324L2SA_ERK_4_2_3},
-        {"zonneveld_5_3_4", ZONNEVELD_5_3_4},
-        {"ark436l2sa_erk_6_3_4", ARK436L2SA_ERK_6_3_4},
-        {"sayfy_aburub_6_3_4", SAYFY_ABURUB_6_3_4},
-        {"cash_karp_6_4_5", CASH_KARP_6_4_5},
-        {"fehlberg_6_4_5", FEHLBERG_6_4_5},
-        {"dormand_prince_7_4_5", DORMAND_PRINCE_7_4_5},
-        {"ark548l2sa_erk_8_4_5", ARK548L2SA_ERK_8_4_5},
-        {"verner_8_5_6", VERNER_8_5_6},
-        {"fehlberg_13_7_8", FEHLBERG_13_7_8},
-        {"feagin_17_8_10", FEAGIN_17_8_10},
-        {"sdirk_2_1_2", SDIRK_2_1_2},
-        {"billington_3_3_2", BILLINGTON_3_3_2},
-        {"trbdf2_3_3_2", TRBDF2_3_3_2},
-        {"kvaerno_4_2_3", KVAERNO_4_2_3},
-        {"ark324l2sa_dirk_4_2_3", ARK324L2SA_DIRK_4_2_3},
-        {"cash_5_2_4", CASH_5_2_4},
-        {"cash_5_3_4", CASH_5_3_4},
-        {"sdirk_5_3_4", SDIRK_5_3_4},
-        {"kvaerno_5_3_4", KVAERNO_5_3_4},
-        {"ark436l2sa_dirk_6_3_4", ARK436L2SA_DIRK_6_3_4},
-        {"kvaerno_7_4_5", KVAERNO_7_4_5},
-        {"ark548l2sa_dirk_8_4_"5 ARK548L2SA_DIRK_8_4_}
+    static std::unordered_map<string, enum tableau_identifier> str2id{
+        {"Euler", EXPLICIT_EULER_1_1},
+        {"Euler (implicit)", IMPLICIT_EULER_1_1},
+        {"Midpoint-2-2", MIDPOINT_2_2},
+        {"Kutta-3-3", KUTTA_3_3},
+        {"Runge-Kutta-4-4", CLASSIC_4_4},
+        //{"sirk3a_ex_3_3", SIRK3A_EX_3_3},
+        //{"sirk3a_im_3_3", SIRK3A_IM_3_3},
+        {"Heun-Euler-2-1-2", HEUN_EULER_2_1_2},
+        {"Bogacki-Shampine-4-2-3", BOGACKI_SHAMPINE_4_2_3},
+        {"ARK-4-2-3 (explicit)", ARK324L2SA_ERK_4_2_3},
+        {"Zonneveld-5-3-4", ZONNEVELD_5_3_4},
+        {"ARK-6-3-4 (explicit)", ARK436L2SA_ERK_6_3_4},
+        {"Sayfy-Aburub-6-3-4", SAYFY_ABURUB_6_3_4},
+        {"Cash-Karp-6-4-5", CASH_KARP_6_4_5},
+        {"Fehlberg-6-4-5", FEHLBERG_6_4_5},
+        {"Dormand-Prince-7-4-5", DORMAND_PRINCE_7_4_5},
+        {"ARK-8-4-5 (explicit)", ARK548L2SA_ERK_8_4_5},
+        {"Verner-8-5-6", VERNER_8_5_6},
+        {"Fehlberg-13-7-8", FEHLBERG_13_7_8},
+        {"Feagin-17-8-10", FEAGIN_17_8_10},
+        {"SDIRK-2-1-2", SDIRK_2_1_2},
+        {"Billington-3-3-2", BILLINGTON_3_3_2},
+        {"TRBDF2-3-3-2", TRBDF2_3_3_2},
+        {"Kvaerno-4-2-3", KVAERNO_4_2_3},
+        {"ARK-4-2-3 (implicit)", ARK324L2SA_DIRK_4_2_3},
+        {"Cash-5-2-4", CASH_5_2_4},
+        {"Cash-5-3-4", CASH_5_3_4},
+        {"SDIRK-5-3-4", SDIRK_5_3_4},
+        {"Kvaerno-5-3-4", KVAERNO_5_3_4},
+        {"ARK-6-3-4 (implicit)", ARK436L2SA_DIRK_6_3_4},
+        {"Kvaerno-7-4-5", KVAERNO_7_4_5},
+        {"ARK-8-4-5 (implicit)", ARK548L2SA_DIRK_8_4_5}
     };
     if( str2id.find(name) == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Butcher Tableau "<<name<<" not found!");

@@ -221,7 +221,7 @@ far outweighs the increased computational cost of the additional matrix inversio
 * @ingroup time
 * @copydoc hide_ContainerType
 */
-template<class ContainerType>
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct Karniadakis
 {
     using real_type = get_value_type<ContainerType>;
@@ -229,8 +229,9 @@ struct Karniadakis
     Karniadakis(){}
 
     ///@copydoc construct()
-    Karniadakis( const ContainerType& copyable, unsigned max_iter, real_type eps){
-        construct( copyable, max_iter, eps);
+    template<class ...SolverParams>
+    Karniadakis( const ContainerType& copyable, SolverParams&& ...ps):m_solver( copyable, std::forward<SolverParams>(ps)...){
+        f_.fill(copyable), u_.fill(copyable);
     }
     /**
     * @brief Reserve memory for the integration
@@ -239,16 +240,10 @@ struct Karniadakis
     * @param max_iter parameter for cg
     * @param eps  accuracy parameter for cg
     */
-    void construct( const ContainerType& copyable, unsigned max_iter, real_type eps){
+    template<class ...SolverParams>
+    void construct( const ContainerType& copyable, SolverParams&& ...ps){
         f_.fill(copyable), u_.fill(copyable);
-        pcg.construct( copyable, max_iter);
-        eps_ = eps;
-        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
-        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
-        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
-        a[0] =  18./11.;    b[0] =  18./11.;
-        a[1] = -9./11.;     b[1] = -18./11.;
-        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
+        m_solver = Solver( copyable, std::forward<SolverParams>(ps)...);
     }
 
     /**
@@ -276,9 +271,16 @@ struct Karniadakis
     void step( Explicit& ex, Implicit& im, real_type& t, ContainerType& u);
 
   private:
+    void init(){
+        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
+        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
+        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
+        a[0] =  18./11.;    b[0] =  18./11.;
+        a[1] = -9./11.;     b[1] = -18./11.;
+        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
+    }
     std::array<ContainerType,3> u_, f_;
-    CG< ContainerType> pcg;
-    real_type eps_;
+    SolverType m_solver;
     real_type t_, dt_;
     real_type a[3];
     real_type b[3];
@@ -321,25 +323,8 @@ void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, Co
     real_type alpha[2] = {2., -1.};
     //real_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
-    blas2::symv( diff.weights(), u_[0], u_[0]);
     t = t_ = t_+ dt_;
-    detail::Implicit<Diffusion, ContainerType> implicit( -dt_*6./11., t, diff);
-#ifdef DG_BENCHMARK
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif//MPI
-    Timer ti;
-    ti.tic();
-    unsigned number = pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
-    ti.toc();
-#ifdef MPI_VERSION
-    if(rank==0)
-#endif//MPI
-    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<ti.diff()<<"s\n";
-#else
-    pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
-#endif //DG_BENCHMARK
+    m_solver.solve( -dt_*6./11., im, t, u, u_[0]);
     blas1::copy( u, u_[0]); //store result
     f(t_, u_[0], f_[0]); //call f on new point
 }
