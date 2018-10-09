@@ -5,107 +5,43 @@
 namespace dg
 {
 
-//template<class Stepper>
-//class Adaptive
-//{
-//    using container = typename Stepper::container;
-//    using real_type = typename Stepper::real_type;
-//    template<class ...Ts>
-//    Adapative( const container& copyable, Ts&& ...xs): m_stepper(copyable, std::forward<Ts>(xs)...) , m_next(copyable), m_delta(copyable){}
-//
-//    template<class RHS, class Tolerance, class Controller>
-//    int step( RHS& rhs, 
-//                  real_type t_begin,
-//                  const container& begin,
-//                  real_type t_end,
-//                  container& end,
-//                  real_type& dt,
-//                  Tolerance& tol,
-//                  Controller& control)
-//    {
-//        real_type t_end;
-//        m_stepper.step( rhs, t_current, current, t_end, m_next, dt, m_delta);
-//        update( )
-//    }
-//    template<class Explicit, class Implicit, class Tolerance, class Controller>
-//    int step( Explicit& ex, Implicit& im,
-//                  real_type t_begin,
-//                  const container& begin,
-//                  real_type t_end,
-//                  container& end,
-//                  real_type& dt,
-//                  Tolerance& tol,
-//                  Controller& control)
-//    {
-//        real_type t_end;
-//        m_stepper.step( ex, im, t_current, current, t_end, m_next, dt, m_delta);
-//        update( )
-//    }
-//    private:
-//    void update()
-//    bool m_failed = false;
-//    Stepper m_stepper;
-//    container m_next, m_delta;
-//    real_type m_reject_limit = 2;
-//};
-//template<class Stepper>
-//template<class Explicit>
-//void Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, const ContainerType& begin, real_type& dt, Tolerance& tol, bool forward)
-//{
-//    ex( t_begin, begin, m_next);
-//    real_type norm = tol(m_next);
-//    if( forward)
-//        dt = 1./norm;
-//    else
-//        dt = -1./norm;
-//}
-//
-//template<class Stepper>
-//template<class RHS, class Tolerance, class Controller>
-//void Adaptive<Stepper>::step( RHS& rhs, 
-//                  get_value_type<ContainerType> t_current,
-//                  const ContainerType& current,
-//                  get_value_type<ContainerType>& t_next,
-//                  ContainerType& next,
-//                  get_value_type<ContainerType>& dt,
-//                  Tolerance& tol,
-//                  Controller& control)
-//{
-//    real_type t_end;
-//    real_type norm = tol( current, delta);
-//    if( norm > m_reject_limit)
-//        m_failed = true;
-//    else
-//    {
-//        std::swap( m_norm2, m_norm1);
-//        std::swap( norm, m_norm1);
-//        dg::blas1::copy( m_next, next);
-//        t_next = t_end;
-//        m_failed = false;
-//    }
-//    dt = control( dt, norm, m_norm1, m_norm2, m_stepper.order());
-//    return;
-//}
+template <class ContainerType>
+get_value_type<ContainerType> l2norm( const ContainerType& x)
+{
+    return sqrt( dg::blas1::dot( x,x));
+}
+template<class real_type>
+real_type pid_control( real_type dt_old, real_type eps_0, real_type eps_1, real_type eps_2, int embedded_order, int order)
+{
+    real_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
+    real_type factor = pow( eps_0  m_k1/(real_type)order)
+                     * pow( eps_1, m_k2/(real_type)order)
+                     * pow( eps_2, m_k3/(real_type)order);
+    return dt_old*factor;
+}
+template<class real_type>
+real_type pi_control( real_type dt_old, real_type eps_0, real_type eps_1, real_type eps_2, int embedded_order, int order)
+{
+    real_type m_k1 = -0.8, m_k2 = 0.31;
+    real_type factor = pow( eps_0, m_k1/(real_type)order)
+                     * pow( eps_1, m_k2/(real_type)order)
+    return dt_old*factor;
+}
+template<class real_type>
+real_type i_control( real_type dt_old, real_type eps_0, real_type eps_1, real_type eps_2, int embedded_order, int order)
+{
+    real_type m_k1 = -1.;
+    real_type factor = pow( eps_0, m_k1/(real_type)order);
+    return dt_old*factor;
+}
 
 template<class real_type>
-struct DefaultTolerance
+struct PIDController
 {
-    DefaultTolerance( real_type rtol, real_type atol):m_rtol(rtol), m_atol( atol){}
-    template<class ContainerType>
-    real_type operator()( const ContainerType& current, const ContainerType& delta) const{
-        real_type tol = m_rtol*sqrt(dg::blas1::dot( current, current))+m_atol;
-        real_type err = sqrt( dg::blas1::dot( delta, delta));
-        return err/tol;
-    }
-    private:
-    real_type m_rtol, m_atol;
-};
-template<class real_type>
-struct PIController
-{
-    real_type operator()( real_type dt_old, real_type eps_n, real_type eps_n1, real_type eps_n2, int order)const
+    PIDController( ){}
+    real_type operator()( real_type dt_old, real_type eps_n, real_type eps_n1, real_type eps_n2, int embedded_order, int order)const
     {
-        real_type factor = pow( eps_n,  m_k1/(real_type)order) 
+        real_type factor = pow( eps_n,  m_k1/(real_type)order)
                          * pow( eps_n1, m_k2/(real_type)order)
                          * pow( eps_n2, m_k3/(real_type)order);
         real_type dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) );
@@ -122,73 +58,112 @@ struct PIController
     real_type m_lower_limit = 0, m_upper_limit = 1e300;
 };
 
+template<class real_type>
+struct Tolerance
+{
+    Tolerance( real_type rtol, real_type atol, real_type size):m_rtol(rtol*sqrt(size)), m_atol( atol*sqrt(size)){}
+    DG_DEVICE
+    void operator()( real_type previous, real_type& delta) const{
+        delta = delta/ ( m_rtol*fabs(previous) + m_atol);
+    }
+    private:
+    real_type m_rtol, m_atol;
+};
 
-
-///@cond
+//%%%%%%%%%%%%%%%%%%%Adaptive%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 template<class Stepper>
-struct HalfStep
+class Adaptive
 {
-    HalfStep(){}
-    HalfStep( const Stepper& copyable): m_stepper(copyable){}
-    template <class Explicit, class ContainerType>
-    void step( Explicit& exp,
-               get_value_type<ContainerType> t0,
-               const ContainerType& u0,
-               get_value_type<ContainerType>&  t1,
-               ContainerType& u1,
-               get_value_type<ContainerType> dt,
-               ContainerType& delta)
+    using container = typename Stepper::container;
+    using real_type = typename Stepper::real_type;
+    template<class ...StepperParams>
+    Adapative( const container& copyable, StepperParams&& ...ps): m_stepper(copyable, std::forward<Ts>(xs)...) , m_next(copyable), m_delta(copyable)
     {
-        m_stepper.step( exp, t0, u0, t1, delta, dt); //one full step
-        m_stepper.step( exp, t0, u0, t1, u1, dt/2.);
-        m_stepper.step( exp, t1, u1, t1, u1, dt/2.);
-        dg::blas1::axpby( 1., u1, -1., delta);
-        t1 = t0 + dt;
+        dg::blas1::transform( copyable, m_next, dg::ONE<real_type>());
+        m_size = dg::blas1::dot( m_next, 1.);
     }
-    int order() const{
-        return m_stepper.order();
-    }
-    private:
-    Stepper m_stepper;
-};
-template<class ExImStepper>
-struct ExImHalfStep
-{
-    ExImHalfStep(){}
-    ExImHalfStep( const ExImStepper& copyable): m_stepper(copyable){}
-    template <class Explicit, class Implicit, class ContainerType>
-    void step( Explicit& ex, Implicit& im,
-               get_value_type<ContainerType> t0,
-               const ContainerType& u0,
-               get_value_type<ContainerType>&  t1,
-               ContainerType& u1,
-               get_value_type<ContainerType> dt,
-               ContainerType& delta)
-    {
-        m_stepper.step( ex, im, t0, u0, t1, delta, dt); //one full step
-        m_stepper.step( ex, im, t0, u0, t1, u1, dt/2.);
-        m_stepper.step( ex, im, t1, u1, t1, u1, dt/2.);
-        dg::blas1::axpby( 1., u1, -1., delta);
-        t1 = t0 + dt;
-    }
-    int order() const{
-        return m_stepper.order();
-    }
-    private:
-    ExImStepper m_stepper;
-};
-///@endcond
+    template<class Explicit, class ErrorNorm>
+    real_type initial_guess( Explicit& ex, real_type t0, container& u0, ErrorNorm& norm, enum direction = dg::forward) const;
 
-///Default Monitor for \c dg::integrateAdaptive function
-struct DefaultMonitor
-{
-    ///same as \c sqrt(dg::blas1::dot(x,x))
-    template<class ContainerType>
-    get_value_type<ContainerType> norm( const ContainerType& x)const
+    template<class RHS, class ControlFunction, class ErrorNorm>
+    int step( RHS& rhs,
+              real_type t_begin,
+              const container& begin,
+              real_type& t_end,
+              container& end,
+              real_type& dt,
+              ControlFunction& control,
+              ErrorNorm& norm,
+              real_time rtol,
+              real_time atol
+              )
     {
-        return sqrt(dg::blas1::dot( x,x));
+        real_type t_next;
+        m_stepper.step( rhs, t_begin, begin, t_next, m_next, dt, m_delta);
+        dg::blas1::subroutine( Tolerance( rtol, atol, m_size), begin, m_delta);
+        real_type eps0 = norm(m_delta);
+        dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
+        if( eps0 > m_reject_limit)
+            m_failed = true;
+        else
+        {
+            std::swap( m_eps2, m_eps1);
+            std::swap( eps0, m_eps1);
+            dg::blas1::copy( m_next, end);
+            t_end = t_next;
+            m_failed = false;
+        }
+        return m_stepper.num_stages();
     }
+    template<class Explicit, class Implicit, class ControlFunction, class ErrorNorm>
+    int step( Explicit& ex,
+              Implicit& im,
+              real_type t_begin,
+              const container& begin,
+              real_type t_end,
+              container& end,
+              real_type& dt,
+              ControlFunction& control,
+              ErrorNorm& norm,
+              real_time rtol,
+              real_time atol
+    {
+        real_type t_end;
+        m_stepper.step( ex, im, t_current, current, t_end, m_next, dt, m_delta);
+        dg::blas1::subroutine( Tolerance( rtol, atol, m_size), begin, m_delta);
+        real_type eps0 = norm(m_delta);
+        dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
+        if( eps0 > m_reject_limit)
+            m_failed = true;
+        else
+        {
+            std::swap( m_eps2, m_eps1);
+            std::swap( eps0, m_eps1);
+            dg::blas1::copy( m_next, end);
+            t_end = t_next;
+            m_failed = false;
+        }
+        return m_stepper.num_stages();
+    }
+    private:
+    bool m_failed = false;
+    Stepper m_stepper;
+    container m_next, m_delta;
+    real_type m_reject_limit = 2;
+    real_type m_size, m_eps0=1., m_eps1=1., m_eps2=1.;
 };
+template<class Stepper>
+template<class Explicit, class ErrorNorm>
+real_type Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, const ContainerType& begin, ErrorNorm& tol, enum direction)
+{
+    ex( t_begin, begin, m_next);
+    real_type norm = tol(m_next), dt;
+    if( forward)
+        dt = 1./norm;
+    else
+        dt = -1./norm;
+    return dt;
+}
 
 ///@addtogroup time
 ///@{
@@ -218,7 +193,7 @@ struct DefaultMonitor
  * @param monitor instance of the \c Monitor class
  * @return number of steps
  */
-template<class Stepper, class RHS, class ContainerType, class Monitor = DefaultMonitor>
+template<class Stepper, class RHS, class ContainerType>
 int integrateAdaptive(Stepper& stepper,
                       RHS& rhs,
                       get_value_type<ContainerType> t_begin,
@@ -228,8 +203,7 @@ int integrateAdaptive(Stepper& stepper,
                       get_value_type<ContainerType>& dt,
                       get_value_type<ContainerType> eps_rel,
                       get_value_type<ContainerType> eps_abs=1e-10,
-                      bool epus=false,
-                      Monitor monitor=Monitor() )
+                      )
 {
     using  real_type = get_value_type<ContainerType>;
     real_type t_current = t_begin, dt_current = dt, t_next;

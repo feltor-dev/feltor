@@ -261,81 +261,125 @@ can be used to get initial guesses based on past solutions
 template<class ContainerType>
 struct Extrapolation
 {
+    using real_type = get_value_type<ContainerType>;
     /*! @brief Set extrapolation number without initializing values
      * @param number number of vectors to use for extrapolation ( 0<=number<=3)
      * @attention the update function must be used at least \c number times before the extrapolate function can be called
      */
-    Extrapolation( unsigned number = 2){ set_number(number); }
+    Extrapolation( unsigned number = 2){
+        set_number(number);
+    }
     /*! @brief Set extrapolation number and initialize values
      * @param number number of vectors to use for extrapolation ( 0<=number<=3)
+     * @param t_init the times are initialized with this value
      * @param init the vectors are initialized with this value
      */
+    Extrapolation( unsigned number, real_type t_init, const ContainerType& init) {
+        set_number(number, t_init, init);
+    }
+    ///initialize time values with 1
     Extrapolation( unsigned number, const ContainerType& init) {
-        set_number(number, init);
+        set_number(number, 1, init);
     }
     ///@copydoc Extrapolation(unsigned)
     void set_number( unsigned number)
     {
+        assert( m_number <= 3 );
         m_number = number;
+        m_t.resize( number);
         m_x.resize( number);
-        assert( m_number <= 3 );
     }
-    ///@copydoc Extrapolation(unsigned,const ContainerType&)
-    void set_number( unsigned number, const ContainerType& init)
+    ///@copydoc Extrapolation(unsigned,real_type,const ContainerType&)
+    void set_number( unsigned number, real_type t_init, const ContainerType& init)
     {
-        m_x.assign( number, init);
-        m_number = number;
         assert( m_number <= 3 );
+        m_x.assign( number, init);
+        m_t.assign( number, t_init)
+        m_number = number;
     }
     ///read the current extrapolation number
-    unsigned get_number( ) const{return m_number;}
+    unsigned get_number( ) const{
+        return m_number;
+    }
 
     /**
     * @brief Extrapolate values (\c number +1 memops)
+    * @param t time to which to extrapolate
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
-    void extrapolate( ContainerType0& new_x) const{
+    void extrapolate( real_type t, ContainerType0& new_x) const{
         switch(m_number)
         {
             case(0):
                      break;
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
-            case(3): dg::blas1::subroutine( new_x, dg::equals(), dg::PairSum(), 3., m_x[0], -3., m_x[1], 1., m_x[2]);
-                     break;
-            default: dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
+            case(3):
+                real_type f0 = (t-m_t[1])(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
+                real_type f1 = (t-m_t[0])(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
+                real_type f0 = (t-m_t[0])(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                dg::blas1::subroutine( new_x, dg::equals(), dg::PairSum(),
+                        f0, m_x[0], f1, m_x[1], f2, m_x[2]);
+                 break;
+            default:
+                real_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]), f1 = (t-m_t[0])/(m_t[1]-m_t[0])
+                dg::blas1::axpby( f0, m_x[0], f1, m_x[1], new_x);
         }
+    }
+    ///Assume that extrapolation time is current head time +1
+    template<class ContainerType0>
+    void extrapolate( ContainerType0& new_x) const{
+        t = m_t[0] +1.;
+        extrapolate( t, new_x);
     }
 
 
     /**
     * @brief move the all values one step back and copy the given vector as current head
+    * @param t_new the time for the new head
     * @param new_head the new head ( may alias the tail)
     * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
-    void update( const ContainerType0& new_head){
+    void update( real_type t_new, const ContainerType0& new_head){
         if( m_number == 0) return;
         //push out last value
         for (unsigned u=m_number-1; u>0; u--)
+        {
+            std::swap( m_t[u], m_t[u-1]);
             m_x[u].swap( m_x[u-1]);
+        }
+        m_t[0] = t_new;
         blas1::copy( new_head, m_x[0]);
+    }
+    ///Assume new time as current head +1
+    template<class ContainerType0>
+    void update( const ContainerType0& new_head){
+        t_new = m_t[0] + 1;
+        update( t_new, new_head);
     }
 
     /**
      * @brief return the current head
      * @return current head (undefined if number==0)
      */
-    const ContainerType& head()const{return m_x[0];}
+    const ContainerType& head()const{
+        return m_x[0];
+    }
     ///write access to tail value ( the one that will be deleted in the next update
-    ContainerType& tail(){return m_x[m_number-1];}
+    ContainerType& tail(){
+        return m_x[m_number-1];
+    }
     ///read access to tail value ( the one that will be deleted in the next update
-    const ContainerType& tail()const{return m_x[m_number-1];}
+    const ContainerType& tail()const{
+        return m_x[m_number-1];
+    }
 
     private:
     unsigned m_number;
+    std::vector<real_type> m_t;
     std::vector<ContainerType> m_x;
 };
 

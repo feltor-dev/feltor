@@ -224,7 +224,7 @@ struct ARKStep
     template<class ...SolverParams>
     ARKStep( const ContainerType& copyable,
              ConvertsToButcherTableau<real_type> ex_tableau,
-             ConvertsToButcherTableau<real_type> im_tableau, 
+             ConvertsToButcherTableau<real_type> im_tableau,
              SolverParams&& ...ps
              ):
          m_rhs( copyable)
@@ -233,7 +233,7 @@ struct ARKStep
          m_kE(m_rkE.num_stages(), copyable),
          m_kI(m_rkI.num_stages(), copyable),
          m_solver( copyable, std::forward<SolverParams>(ps)...),
-    { 
+    {
         assert( m_rkE.num_stages() == m_rkI.num_stages());
     }
     template<class ...SolverParams>
@@ -265,9 +265,11 @@ template< class ContainerType>
 template< class Explicit, class Implicit>
 void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
 {
+    unsigned s = m_rkE.num_stages();
     //0 stage
     //a^E_00 = a^I_00 = 0
-    ex(t0, u0, m_kE[0]);
+    if( t0 != m_t1)
+        ex(t0, u0, m_kE[0]); //freshly compute k_0
     im(t0, u0, m_kI[0]);
 
     //1 stage
@@ -275,8 +277,8 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
             dt*m_rkE.a(1,0), m_kE[0],
             dt*m_rkI.a(1,0), m_kI[0]);
     tu = DG_FMA( m_rkI.c(1),dt, t0);
-    //store solution in delta
-    //how to initialize delta??
+    //store solution in delta, init with last solution
+    blas1::copy( u0, delta);
     m_solver.solve( -dt*m_rkI.a(1,1), im, tu, delta, m_rhs);
     ex(tu, delta, m_kE[1]);
     im(tu, delta, m_kI[1]);
@@ -288,6 +290,7 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
              dt*m_rkI.a(2,0), m_kI[0],
              dt*m_rkI.a(2,1), m_kI[1]);
     tu = DG_FMA( m_rkI.c(2),dt, t0);
+    //just take last solution as init
     m_solver.solve( -dt*m_rkI.a(2,2), im, tu, delta, m_rhs);
     ex(tu, delta, m_kE[2]);
     im(tu, delta, m_kI[2]);
@@ -299,10 +302,23 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
              dt*m_rkI.a(3,0), m_kI[0],
              dt*m_rkI.a(3,1), m_kI[1],
              dt*m_rkI.a(3,2), m_kI[2]);
-    m_tlast = t1 = tu = t0 + dt;
+    tu = DG_FMA( m_rkI.c(3),dt, t0);
     m_solver.solve( -dt*m_rkI.a(3,3), im, tu, delta, m_rhs);
     ex(tu, delta, m_kE[3]);
     im(tu, delta, m_kI[3]);
+    //higher stages
+    for( int i=4; i<s; i++)
+    {
+        dg::blas1::copy( u0, m_rhs);
+        for( unsigned j=0; j<s; j++)
+            dg::blas1::axpbypgz( dt*m_rkE.a(i,j), m_kE[j],
+                                 dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
+        tu = DG_FMA( m_rkI.c(i),dt, t0);
+        m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
+        ex(tu, delta, m_kE[i]);
+        im(tu, delta, m_kI[i]);
+    }
+    m_t1 = t1 = tu;
     // do up to 8 stages for ARK-8-4-5
     //Now compute result and error estimate
     blas1::evaluate( dg::EmbeddedPairSum(),
@@ -324,6 +340,8 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
         dg::blas1::axpbypgz( dt*m_rkE.d(i), m_kE[i],
                              dt*m_rkI.d(i), m_kI[i], 1., delta);
     }
+    //make sure (t1,u1) is the last call to ex
+    ex(t1,u1,m_k[0]);
 }
 
 /**
@@ -381,7 +399,7 @@ struct RKStep
     }
     ///global order of the method
     size_t order() const {
-        return m_rk.order();
+        return m_erk.order();
     }
   private:
     ERKStep<ContainerType> m_erk;
