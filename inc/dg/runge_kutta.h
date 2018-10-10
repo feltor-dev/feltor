@@ -59,11 +59,14 @@ struct ERKStep
     template<class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
     ///global order of the algorithm
-    int order() const {
+    unsigned order() const {
         return m_rk.order();
     }
-    int embedded_order() const {
+    unsigned embedded_order() const {
         return m_rk.embedded_order();
+    }
+    unsigned num_stages() const{
+        return m_rk.num_stages();
     }
   private:
     ButcherTableau<real_type> m_rk;
@@ -261,6 +264,16 @@ struct ARKStep
     }
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
+    ///global order of the method
+    unsigned order() const {
+        return m_rkE.order();
+    }
+    unsigned embedded_order() const {
+        return m_rkE.order();
+    }
+    unsigned num_stages() const{
+        return m_rkE.num_stages();
+    }
     private:
     ContainerType m_rhs, m_u1;
     ButcherTableau<real_type> m_rkE, m_rkI;
@@ -406,8 +419,11 @@ struct RungeKutta
         m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
     }
     ///global order of the method
-    size_t order() const {
+    unsigned order() const {
         return m_erk.order();
+    }
+    unsigned num_stages() const{
+        return m_erk.num_stages();
     }
   private:
     ERKStep<ContainerType> m_erk;

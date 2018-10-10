@@ -49,25 +49,32 @@ int main()
     auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);
     double dt= 0;
     //integration
-    int counter = dg::integrateRK45( functor, t_start, u_start, t_end, u_end, dt, 1e-6);
+    int counter = dg::integrateERK( "Dormand-Prince-7-4-5", functor, t_start, u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6);
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
     std::cout << "With "<<counter<<"\t Embedded RK 4-5 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
     //![doxygen]
-    dt = 0;
-    counter = dg::integrateHRK<4>( functor, t_start, u_start, t_end, u_end, dt, 1e-6);
-    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
-    std::cout << "With "<<counter<<"\t Halfstep RK 4 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
-
-    dt = 0;
-    counter = dg::integrateHRK<6>( functor, t_start, u_start, t_end, u_end, dt, 1e-6);
-    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
-    std::cout << "With "<<counter<<"\t Halfstep RK 6 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
-
-    dt = 0.;
-    counter = dg::integrateHRK<17>( functor, t_start, u_start, t_end, u_end, dt, 1e-6);
-    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
-    std::cout << "With "<<counter<<"\t Halfstep RK 17 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
-
+    std::vector<std::string> names{
+        "Heun-Euler-2-1-2",
+        "Bogacki-Shampine-4-2-3",
+        "ARK-4-2-3 (explicit)",
+        "Zonneveld-5-3-4",
+        "ARK-6-3-4 (explicit)",
+        "Sayfy-Aburub-6-3-4",
+        "Cash-Karp-6-4-5",
+        "Fehlberg-6-4-5",
+        "Dormand-Prince-7-4-5",
+        "ARK-8-4-5 (explicit)",
+        "Verner-8-5-6",
+        "Fehlberg-13-7-8",
+        "Feagin-17-8-10"
+    };
+    for( auto name : names)
+    {
+        dt = 0;
+        counter = dg::integrateERK( name, functor, t_start, u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6);
+        dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
+        std::cout << "With "<<counter<<"\tsteps norm of error in "<<std::setw(24)<<name<<"\t"<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
+    }
     return 0;
 }
