@@ -57,7 +57,7 @@ struct PIDController
     real_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
     real_type m_lower_limit = 0, m_upper_limit = 1e300;
 };
-
+namespace detail{
 template<class real_type>
 struct Tolerance
 {
@@ -69,6 +69,7 @@ struct Tolerance
     private:
     real_type m_rtol, m_atol;
 };
+}
 
 //%%%%%%%%%%%%%%%%%%%Adaptive%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 template<class Stepper>
@@ -82,10 +83,12 @@ class Adaptive
         dg::blas1::transform( copyable, m_next, dg::ONE<real_type>());
         m_size = dg::blas1::dot( m_next, 1.);
     }
-    template<class Explicit, class ErrorNorm>
-    real_type initial_guess( Explicit& ex, real_type t0, container& u0, ErrorNorm& norm, enum direction = dg::forward) const;
+    template<class Explicit, class ErrorNorm = real_type(const container&)>
+    real_type guess_stepsize( Explicit& ex, real_type t0, const container& u0, enum direction dir, ErrorNorm& norm, real_type rtol, real_type atol) const;
 
-    template<class RHS, class ControlFunction, class ErrorNorm>
+    template< class RHS, 
+              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
+              class ErrorNorm = real_type( const container&)>
     int step( RHS& rhs,
               real_type t_begin,
               const container& begin,
@@ -100,27 +103,17 @@ class Adaptive
     {
         real_type t_next;
         m_stepper.step( rhs, t_begin, begin, t_next, m_next, dt, m_delta);
-        dg::blas1::subroutine( Tolerance( rtol, atol, m_size), begin, m_delta);
-        real_type eps0 = norm(m_delta);
-        dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
-        if( eps0 > m_reject_limit)
-            m_failed = true;
-        else
-        {
-            std::swap( m_eps2, m_eps1);
-            std::swap( eps0, m_eps1);
-            dg::blas1::copy( m_next, end);
-            t_end = t_next;
-            m_failed = false;
-        }
-        return m_stepper.num_stages();
+        return update( t_begin, begin, t_end, end, dt, control, norm , rtol, atol);
     }
-    template<class Explicit, class Implicit, class ControlFunction, class ErrorNorm>
+    template< class Explicit,
+              class Implicit,
+              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
+              class ErrorNorm = real_type( const container&)>
     int step( Explicit& ex,
               Implicit& im,
               real_type t_begin,
               const container& begin,
-              real_type t_end,
+              real_type& t_end,
               container& end,
               real_type& dt,
               ControlFunction& control,
@@ -130,10 +123,26 @@ class Adaptive
     {
         real_type t_end;
         m_stepper.step( ex, im, t_current, current, t_end, m_next, dt, m_delta);
-        dg::blas1::subroutine( Tolerance( rtol, atol, m_size), begin, m_delta);
+        return update( t_begin, begin, t_end, end, dt, control, norm , rtol, atol);
+    }
+    private:
+    template<   class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
+                class ErrorNorm = real_type( const container&)>
+    int update( real_type t_begin,
+                const container& begin,
+                real_type& t_end,
+                container& end,
+                real_type& dt,
+                ControlFunction& control,
+                ErrorNorm& norm,
+                real_time rtol,
+                real_time atol
+              )
+    {
+        dg::blas1::subroutine( detail::Tolerance( rtol, atol, m_size), begin, m_delta);
         real_type eps0 = norm(m_delta);
         dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
-        if( eps0 > m_reject_limit)
+        if( eps0 > m_reject_limit || std::isnan( eps0) )
             m_failed = true;
         else
         {
@@ -145,23 +154,21 @@ class Adaptive
         }
         return m_stepper.num_stages();
     }
-    private:
     bool m_failed = false;
     Stepper m_stepper;
     container m_next, m_delta;
     real_type m_reject_limit = 2;
-    real_type m_size, m_eps0=1., m_eps1=1., m_eps2=1.;
+    real_type m_size, m_eps1=1., m_eps2=1.;
 };
 template<class Stepper>
 template<class Explicit, class ErrorNorm>
-real_type Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, const ContainerType& begin, ErrorNorm& tol, enum direction)
+real_type Apaptive<Stepper>::guess_stepsize( Explicit& ex, real_type t_begin, const ContainerType& begin, enum direction dir, ErrorNorm& tol, real_type rtol, real_type atol)
 {
+    real_type desired_accuracy = rtol*tol(begin) + atol;
     ex( t_begin, begin, m_next);
-    real_type norm = tol(m_next), dt;
-    if( forward)
-        dt = 1./norm;
-    else
-        dt = -1./norm;
+    real_type dt = pow(desired_accuracy, 1./(real_type)m_stepper.order())/tol(m_next);
+    if( dir != forward) 
+        dt*=-1.;
     return dt;
 }
 
@@ -193,16 +200,19 @@ real_type Apaptive<Stepper>::initial_guess( Explicit& ex, real_type t_begin, con
  * @param monitor instance of the \c Monitor class
  * @return number of steps
  */
-template<class Stepper, class RHS, class ContainerType>
-int integrateAdaptive(Stepper& stepper,
+template<class Adapative, class RHS, class ContainerType, class ErrorNorm = get_value_type<ContainerType>( const ContainerType&)
+             class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned)> 
+int integrateAdaptive(Adaptive& adaptive,
                       RHS& rhs,
                       get_value_type<ContainerType> t_begin,
                       const ContainerType& begin,
                       get_value_type<ContainerType> t_end,
                       ContainerType& end,
                       get_value_type<ContainerType>& dt,
-                      get_value_type<ContainerType> eps_rel,
-                      get_value_type<ContainerType> eps_abs=1e-10,
+                      ControlFunction control,
+                      ErrorNorm norm,
+                      get_value_type<ContainerType> rtol,
+                      get_value_type<ContainerType> atol=1e-10,
                       )
 {
     using  real_type = get_value_type<ContainerType>;
@@ -213,16 +223,9 @@ int integrateAdaptive(Stepper& stepper,
     if( t_end == t_begin)
         return 0;
     bool forward = (t_end - t_begin > 0);
-
-    //1. Find initial test step
     if( dt == 0)
-    {
-        real_type desired_accuracy = eps_rel*monitor.norm(current) + eps_abs;
-        rhs( t_current, current, next);
-        dt_current = std::min( fabs( t_end - t_begin), pow(desired_accuracy, 1./(real_type)stepper.order())/monitor.norm(next));
-        if( !forward) dt_current*=-1.;
-        //std::cout << t_current << " "<<dt_current<<"\n";
-    }
+        dt_current = adaptive.guess_stepsize( rhs, t_begin, begin, forward ? dg::forward:dg::backward, control, norm, rtol, atol);
+
     int counter =0;
     while( (forward && t_current < t_end) || (!forward && t_current > t_end))
     {
@@ -230,76 +233,32 @@ int integrateAdaptive(Stepper& stepper,
         if( (forward && t_current+dt_current > t_end) || (!forward && t_current + dt_current < t_end) )
             dt_current = t_end-t_current;
         // Compute a step and error
-        stepper.step( rhs, t_current, current, t_next, next, dt_current, delta);
-        counter++;
-        real_type norm = monitor.norm( next);
-        real_type error = monitor.norm( delta);
-        real_type desired_accuracy = eps_rel*norm + eps_abs;
-        //std::cout << eps_abs << " " <<desired_accuracy<<std::endl;
-        if( epus)
-            desired_accuracy*=fabs(dt_current);
-        dt_current *= std::max( 0.1, std::min( 10., 0.9*pow(desired_accuracy/error, 1./(real_type)stepper.order()) ) );  //DON'T DO THIS; MAKES dt FUNCTION NONLINEAR
-        //std::cout << t_current << " "<<t_next<<" "<<dt_current<<" acc "<<error<<" "<<desired_accuracy<<"\n";
-        if( error>desired_accuracy)
-            continue;
-        else
-        {
-            dg::blas1::copy( next, current);
-            t_current = t_next;
-        }
+        counter += adaptive.step( rhs, t_current, current, t_next, next, dt_current, control, norm, rtol, atol);
     }
+    blas1::copy( next, end );
     return counter;
 }
 
-///Shortcut for \c dg::integrateAdaptive with the \c dg::PrinceDormand class as timestepper
+///Shortcut for \c dg::integrateAdaptive with an embedded ERK class as timestepper
 ///@snippet adaptive_t.cu function
 ///@snippet adaptive_t.cu doxygen
-template< class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateRK45( RHS& rhs,
-                   get_value_type<ContainerType> t_begin,
-                   const ContainerType& begin,
-                   get_value_type<ContainerType> t_end,
-                   ContainerType& end,
-                   get_value_type<ContainerType>& dt,
-                   get_value_type<ContainerType> eps_rel,
-                   get_value_type<ContainerType> eps_abs=1e-10,
-                   bool epus=false,
-                   Monitor monitor=Monitor() )
-{
-    dg::PrinceDormand<ContainerType> pd( begin);
-    return integrateAdaptive( pd, rhs, t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
-}
-///Shortcut for \c dg::integrateAdaptive with a half-step Runge Kutta (\c dg::RK) of stage \c s scheme as timestepper (recompute each step with half the stepsize to get the error estimate)
-template< size_t s, class RHS, class ContainerType, class Monitor = DefaultMonitor>
-int integrateHRK( RHS& rhs,
+template<class RHS, class ContainerType, class ErrorNorm = get_value_type<ContainerType>( const ContainerType&)
+             class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned)> 
+int integrateERK( std::string name,
+                  RHS& rhs,
                   get_value_type<ContainerType> t_begin,
                   const ContainerType& begin,
                   get_value_type<ContainerType> t_end,
                   ContainerType& end,
                   get_value_type<ContainerType>& dt,
-                  get_value_type<ContainerType> eps_rel,
-                  get_value_type<ContainerType> eps_abs=1e-10,
-                  bool epus=false,
-                  Monitor monitor=Monitor() )
+                  ControlFunction control,
+                  ErrorNorm norm,
+                  get_value_type<ContainerType> rtol,
+                  get_value_type<ContainerType> atol=1e-10,
+              )
 {
-    dg::HalfStep<dg::RK<s, ContainerType>> rk( begin);
-    return integrateAdaptive( rk, rhs, t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
-}
-///Shortcut for \c dg::integrateAdaptive with a half-step Runge Kutta (\c dg::RK) of stage \c s scheme as timestepper (recompute each step with half the stepsize to get the error estimate)
-template< class Explicit, class Implicit, class ContainerType, class Monitor = DefaultMonitor>
-int integrateHSIRK( Explicit& exp, Implicit& imp,
-                  get_value_type<ContainerType> t_begin,
-                  const ContainerType& begin,
-                  get_value_type<ContainerType> t_end,
-                  ContainerType& end,
-                  get_value_type<ContainerType>& dt,
-                  get_value_type<ContainerType> eps_rel,
-                  get_value_type<ContainerType> eps_abs=1e-10,
-                  bool epus=false,
-                  Monitor monitor=Monitor() )
-{
-    dg::ExImHalfStep<dg::SIRK<ContainerType>> sirk( begin);
-    return integrateAdaptive( sirk, std::make_pair(std::ref(exp),std::ref(imp)), t_begin, begin, t_end, end, dt, eps_rel, eps_abs, epus, monitor);
+    dg::Adaptive<dg::ERK<ContainerType>> pd( begin, name);
+    return integrateAdaptive( pd, rhs, t_begin, begin, t_end, end, dt, control, norm, rtol, atol);
 }
 ///@}
 }//namespace dg

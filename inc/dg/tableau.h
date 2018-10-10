@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <unordered_map>
 #include "geometry/operator.h"
 
@@ -13,10 +14,10 @@ struct ButcherTableau{
     //init embedded part as a copy of real part, embedded order = order
     ButcherTableau(unsigned s, unsigned order,
                    real_type* a , real_type* b , real_type* c):
-        m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order){}
-    ButcherTableau(unsigned s, unsigned embedded_order, unsigned order
+        m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order), m_s(s){}
+    ButcherTableau(unsigned s, unsigned embedded_order, unsigned order,
                real_type* a, real_type* b, real_type* bt, real_type* c):
-        m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_embedded(true){}
+        m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_s(s), m_embedded(true){}
     ///Construct from ARKode standard format
     ButcherTableau(unsigned s, real_type* data):
         m_a(s), m_b(s), m_c(s), m_bt(s), m_s(s), m_embedded(true)
@@ -75,10 +76,10 @@ struct ButcherTableau{
     }
     /// the last k is evaluated at the solution
     bool isFsal()const{
-        if( m_c[s-1] != 1)
+        if( m_c[m_s-1] != 1)
             return false;
         for (unsigned j=0; j<m_s; j++)
-            if( a(s-1,j) != b(j) )
+            if( a(m_s-1,j) != b(j) )
                 return false;
         return true;
     }
@@ -111,16 +112,21 @@ ButcherTableau<real_type> implicit_euler_1_1()
 template<class real_type>
 ButcherTableau<real_type> midpoint_2_2()
 {
-    real_type a[4] = {0,0, .5,0};
-    real_type b[2] = {0.,1.};
+    real_type a[4] = {   0, 0, 
+                       0.5, 0 };
+    real_type b[2] = {0., 1.};
     real_type c[2] = {0, 0.5};
+    //real_type a[4] = {   0, 0, 
+    //                    1, 0 };
+    //real_type b[2] = {0.5,0.5};
+    //real_type c[2] = {0, 1};
     return ButcherTableau<real_type>( 2,2, a,b,c);
 }
 template<class real_type>
 ButcherTableau<real_type> kutta_3_3()
 {
     real_type a[9] = {0,0,0,
-         5., 0., 0.,
+         .5, 0., 0.,
         -1., 2., 0.};
     real_type b[3] = {1./6., 2./3., 1./6.};
     real_type c[3] = {0, 0.5, 1.};
@@ -190,7 +196,7 @@ ButcherTableau<real_type> bogacki_shampine_4_2_3()
         2./9., 1./3., 4./9., 0.};
     real_type b[4] = {2./9., 1./3., 4./9., 0.};
     real_type bt[4] = {7./24., 1./4.,1./3.,1./8.};
-    real_type c = {0.,0.5,3./4.,1.};
+    real_type c[4] = {0.,0.5,3./4.,1.};
     return ButcherTableau<real_type>(4,2,3, a, b, bt, c);
 }
 template<class real_type>
@@ -203,10 +209,10 @@ ButcherTableau<real_type> ark324l2sa_erk_4_2_3()
   1, 6485989280629./16251701735622., -4246266847089./9704473918619., 10755448449292./10357097424841., 0. ,
   3, 1471266399579./7840856788654., -4482444167858./7529755066697., 11266239266428./11593286722821., 1767732205903./4055673282236.,
   2, 2756255671327./12835298489170., -10771552573575./22201958757719., 9247589265047./10645013368117., 2193209047091./5459859503100.
-    }
+    };
     return ButcherTableau<real_type>(4,data);
 }
-template<real_type>
+template<class real_type>
 ButcherTableau<real_type> zonneveld_5_3_4()
 {
     real_type data[] = {
@@ -231,7 +237,7 @@ ButcherTableau<real_type> ark436l2sa_erk_6_3_4()
   1 , 647845179188./3216320057751. , 73281519250./8382639484533. , 552539513391./3454668386233. , 3354512671639./8306763924573. , 4040./17871. , 0 ,
   4 , 82889./524892. , 0 , 15625./83664. , 69875./102672. , -2260./8211. , 0.25 ,
   3 , 4586570599./29645900160. , 0 , 178811875./945068544. , 814220225./1159782912. , -3700637./11593932. , 61727./225920.
-    }
+    };
     return ButcherTableau<real_type>(6,data);
 }
 template<class real_type>
@@ -246,7 +252,7 @@ ButcherTableau<real_type> sayfy_aburub_6_3_4()
   1 , 0.452 , -0.904 , -0.548 , 0 , 2 , 0 ,
   4 , 1./6. , 1./3. , 1./12. , 0 , 1./3. , 1./12. ,
   3 , 1./6. , 2./3. , 1./6. , 0 , 0 , 0
-    }
+    };
     return ButcherTableau<real_type>(6,data);
 }
 template<class real_type>
@@ -260,7 +266,7 @@ ButcherTableau<real_type> cash_karp_6_4_5()
   7./8. , 1631./55296. , 175./512. , 575./13824. , 44275./110592. , 253./4096. , 0 ,
   5 , 37./378. , 0 , 250./621. , 125./594. , 0 , 512./1771. ,
   4 , 2825./27648. , 0 , 18575./48384. , 13525./55296. , 277./14336. , 1./4.
-  }
+  };
     return ButcherTableau<real_type>(6,data);
 }
 template<class real_type>
@@ -275,11 +281,11 @@ ButcherTableau<real_type> fehlberg_6_4_5()
   1./2. , -8./27. , 2 , -3544./2565. , 1859./4104. , -11./40. , 0 ,
   5 , 16./135. , 0 , 6656./12825. , 28561./56430. , -9./50. , 2./55. ,
   4 , 25./216. , 0 , 1408./2565. , 2197./4104. , -1./5. , 0
-    }
+    };
     return ButcherTableau<real_type>(6,data);
 }
 template<class real_type>
-ButcherTableau<real_type dormand_prince_7_4_5()
+ButcherTableau<real_type> dormand_prince_7_4_5()
 {
     real_type data[] = {
         0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
@@ -291,11 +297,11 @@ ButcherTableau<real_type dormand_prince_7_4_5()
   1 , 35./384. , 0 , 500./1113. , 125./192. , -2187./6784. , 11./84. , 0 ,
   5 , 35./384. , 0 , 500./1113. , 125./192. , -2187./6784. , 11./84. , 0 ,
   4 , 5179./57600. , 0 , 7571./16695. , 393./640. , -92097./339200. , 187./2100. , 1./40.
-    }
+    };
     return ButcherTableau<real_type>(7,data);
 }
 template<class real_type>
-ButcherTableau<real_type ark548l2sa_erk_8_4_5()
+ButcherTableau<real_type> ark548l2sa_erk_8_4_5()
 {
     real_type data[] = {
         0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
@@ -308,12 +314,13 @@ ButcherTableau<real_type ark548l2sa_erk_8_4_5()
   1 , -19977161125411./11928030595625. , 0 , -40795976796054./6384907823539. , 177454434618887./12078138498510. , 782672205425./8267701900261. , -69563011059811./9646580694205. , 7356628210526./4942186776405. , 0 ,
   5 , -872700587467./9133579230613. , 0 , 0 , 22348218063261./9555858737531. , -1143369518992./8141816002931. , -39379526789629./19018526304540. , 32727382324388./42900044865799. , 41./200. ,
   4 , -975461918565./9796059967033. , 0 , 0 , 78070527104295./32432590147079. , -548382580838./3424219808633. , -33438840321285./15594753105479. , 3629800801594./4656183773603. , 4035322873751./18575991585200.
-    }
+    };
     return ButcherTableau<real_type>( 8, data);
 }
 template<class real_type>
-ButcherTableau<real_type verner_8_5_6()
+ButcherTableau<real_type> verner_8_5_6()
 {
+  //From ARKode docu (seems to be different from Verner1978 paper)
     real_type data[] = {
         0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
   1./6. , 1./6. , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
@@ -325,7 +332,7 @@ ButcherTableau<real_type verner_8_5_6()
   1 , 3501./1720. , -300./43. , 297275./52632. , -319./2322. , 24068./84065. , 0 , 3850./26703. , 0 ,
   6 , 3./40. , 0 , 875./2244. , 23./72. , 264./1955. , 0 , 125./11592. , 43./616. ,
   5 , 13./160. , 0 , 2375./5984. , 5./16. , 12./85. , 3./44. , 0 , 0
-    }
+    };
     return ButcherTableau<real_type>( 8, data);
 }
 template<class real_type>
@@ -347,7 +354,7 @@ ButcherTableau<real_type> fehlberg_13_7_8()
   1,   -1777./4100., 0, 0, -341./164., 4496./1025., -289./82., 2193./4100., 51./82., 33./164., 12./41., 0, 1, 0,
   8, 0, 0, 0, 0, 0, 34./105., 9./35., 9./35., 9./280., 9./280., 0, 41./840., 41./840. ,
   7, 41./840., 0, 0, 0, 0, 34./105., 9./35., 9./35., 9./280., 9./280., 41./840., 0, 0
-    }
+    };
     return ButcherTableau<real_type>( 13, data);
 }
 //http://sce.uhcl.edu/rungekutta/
@@ -493,7 +500,7 @@ ButcherTableau<real_type> feagin_17_8_10()
 -0.342758159847189839942220553413850871742338734703958919937260,
 -0.675000000000000000000000000000000000000000000000000000000000, 0
 
-    }
+    };
     real_type b[17] = {
     0.0333333333333333333333333333333333333333333333333333333333333,
     0.0250000000000000000000000000000000000000000000000000000000000,
@@ -532,6 +539,25 @@ ButcherTableau<real_type> feagin_17_8_10()
     -0.0277777777777777777777777777777777777777777777777777777777777,
     0.0333333333333333333333333333333333333333333333333333333333333
     };
+    real_type c[17] = {
+ 0.000000000000000000000000000000000000000000000000000000000000,
+ 0.100000000000000000000000000000000000000000000000000000000000,
+ 0.539357840802981787532485197881302436857273449701009015505500,
+ 0.809036761204472681298727796821953655285910174551513523258250,
+ 0.309036761204472681298727796821953655285910174551513523258250,
+ 0.981074190219795268254879548310562080489056746118724882027805,
+ 0.833333333333333333333333333333333333333333333333333333333333,
+ 0.354017365856802376329264185948796742115824053807373968324184,
+ 0.882527661964732346425501486979669075182867844268052119663791,
+ 0.642615758240322548157075497020439535959501736363212695909875,
+ 0.357384241759677451842924502979560464040498263636787304090125,
+ 0.117472338035267653574498513020330924817132155731947880336209,
+ 0.833333333333333333333333333333333333333333333333333333333333,
+ 0.309036761204472681298727796821953655285910174551513523258250,
+ 0.539357840802981787532485197881302436857273449701009015505500,
+ 0.100000000000000000000000000000000000000000000000000000000000,
+ 1.00000000000000000000000000000000000000000000000000000000000
+    };
     return ButcherTableau<real_type>( 17, 8, 10, a, b,bt, c);
 }
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Implicit Butcher tables%%%%%%%%%%%%%%%%%%
@@ -544,7 +570,7 @@ ButcherTableau<real_type> sdirk_2_1_2()
   0 , -1 , 1 ,
   2 , 1./2. , 1./2. ,
   1 , 1 , 0
-    }
+    };
     return ButcherTableau<real_type>( 2, data);
 }
 template<class real_type>
@@ -556,7 +582,7 @@ ButcherTableau<real_type> billington_3_3_2()
   1.292893218813 , 0.740789228841 , 0.259210771159 , 0.292893218813 ,
   2 , 0.740789228840 , 0.259210771159 , 0 ,
   3 , 0.691665115992 , 0.503597029883 , -0.195262145876
-    }
+    };
     return ButcherTableau<real_type>( 3, data);
 }
 template<class real_type>
@@ -565,10 +591,10 @@ ButcherTableau<real_type> trbdf2_3_3_2()
     real_type data[] = {
           0 , 0 , 0 , 0 ,
   2-sqrt(2) , (2-sqrt(2))/2. , (2-sqrt(2))/2. , 0 ,
-  1 , sqrt(2)/4. , sqrt(2)./4. , (2-sqrt(2))/2. ,
+  1 , sqrt(2)/4. , sqrt(2)/4. , (2-sqrt(2))/2. ,
   2 , sqrt(2)/4. , sqrt(2.)/4. , (2-sqrt(2))/2. ,
-  3 , (1-sqrt(2)/4.)/3. , (3*sqrt(2)./4.+1.)/3. , (2-sqrt(2))/6.
-    }
+  3 , (1-sqrt(2)/4.)/3. , (3*sqrt(2)/4.+1.)/3. , (2-sqrt(2))/6.
+    };
     return ButcherTableau<real_type>( 3, data);
 }
 template<class real_type>
@@ -581,7 +607,7 @@ ButcherTableau<real_type> kvaerno_4_2_3()
   1 , 0.308809969973036 , 1.490563388254106 , -1.235239879727145 , 0.4358665215 ,
   3 , 0.308809969973036 , 1.490563388254106 , -1.235239879727145 , 0.4358665215 ,
   2 , 0.490563388419108 , 0.073570090080892 , 0.4358665215 , 0
-    }
+    };
     return ButcherTableau<real_type>( 4, data);
 }
 template<class real_type>
@@ -594,7 +620,7 @@ ButcherTableau<real_type> ark324l2sa_dirk_4_2_3()
   1 , 1471266399579./7840856788654. , -4482444167858./7529755066697. , 11266239266428./11593286722821. , 1767732205903./4055673282236. ,
   3 , 1471266399579./7840856788654. , -4482444167858./7529755066697. , 11266239266428./11593286722821. , 1767732205903./4055673282236. ,
   2 , 2756255671327./12835298489170. , -10771552573575./22201958757719. , 9247589265047./10645013368117. , 2193209047091./5459859503100.
-    }
+    };
     return ButcherTableau<real_type>( 4, data);
 }
 template<class real_type>
@@ -606,10 +632,9 @@ ButcherTableau<real_type> cash_5_2_4()
   0.8 , 1.08543330679 , -0.721299828287 , 0.435866521508 , 0 , 0 ,
   0.924556761814 , 0.416349501547 , 0.190984004184 , -0.118643265417 , 0.435866521508 , 0 ,
   1 , 0.896869652944 , 0.0182725272734 , -0.0845900310706 , -0.266418670647 , 0.435866521508 ,
-  \hline
   4 , 0.896869652944 , 0.0182725272734 , -0.0845900310706 , -0.266418670647 , 0.435866521508 ,
   2 , 1.05646216107052 , -0.0564621610705236 , 0 , 0 , 0
-    }
+    };
     return ButcherTableau<real_type>( 5, data);
 }
 template<class real_type>
@@ -621,14 +646,13 @@ ButcherTableau<real_type> cash_5_3_4()
   0.8 , 1.08543330679 , -0.721299828287 , 0.435866521508 , 0 , 0 ,
   0.924556761814 , 0.416349501547 , 0.190984004184 , -0.118643265417 , 0.435866521508 , 0 ,
   1 , 0.896869652944 , 0.0182725272734 , -0.0845900310706 , -0.266418670647 , 0.435866521508 ,
-  \hline
   4 , 0.896869652944 , 0.0182725272734 , -0.0845900310706 , -0.266418670647 , 0.435866521508 ,
   3 , 0.776691932910 , 0.0297472791484 , -0.0267440239074 , 0.220304811849 , 0
-    }
+    };
     return ButcherTableau<real_type>( 5, data);
 }
 template<class real_type>
-ButcherTableau<real_type> cash_5_3_4()
+ButcherTableau<real_type> sdirk_5_3_4()
 {
     real_type data[] = {
         1./4. , 1./4. , 0 , 0 , 0 , 0 ,
@@ -638,7 +662,7 @@ ButcherTableau<real_type> cash_5_3_4()
   1 , 25./24. , -49./48. , 125./16. , -85./12. , 1./4. ,
   4 , 25./24. , -49./48. , 125./16. , -85./12. , 1./4. ,
   3 , 59./48. , -17./96. , 225./32. , -85./12. , 0
-    }
+    };
     return ButcherTableau<real_type>( 5, data);
 }
 template<class real_type>
@@ -650,10 +674,9 @@ ButcherTableau<real_type> kvaerno_5_3_4()
   0.468238744853136 , 0.140737774731968 , -0.108365551378832 , 0.4358665215 , 0 , 0 ,
   1 , 0.102399400616089 , -0.376878452267324 , 0.838612530151233 , 0.4358665215 , 0 ,
   1 , 0.157024897860995 , 0.117330441357768 , 0.61667803039168 , -0.326899891110444 , 0.4358665215 ,
-  \hline
   4 , 0.157024897860995 , 0.117330441357768 , 0.61667803039168 , -0.326899891110444 , 0.4358665215 ,
   3 , 0.102399400616089 , -0.376878452267324 , 0.838612530151233 , 0.4358665215 , 0
-    }
+    };
     return ButcherTableau<real_type>( 5, data);
 }
 template<class real_type>
@@ -668,7 +691,7 @@ ButcherTableau<real_type> ark436l2sa_dirk_6_3_4()
   1 , 82889./524892. , 0 , 15625./83664. , 69875./102672. , -2260./8211. , 1./4. ,
   4 , 82889./524892. , 0 , 15625./83664. , 69875./102672. , -2260./8211. , 1./4. ,
   3 , 4586570599./29645900160. , 0 , 178811875./945068544. , 814220225./1159782912. , -3700637./11593932. , 61727./225920.
-    }
+    };
     return ButcherTableau<real_type>( 6, data);
 }
 template<class real_type>
@@ -684,7 +707,7 @@ ButcherTableau<real_type> kvaerno_7_4_5()
   1 , 0.13659751177640291 , 0 , -0.05496908796538376 , -0.04118626728321046 , 0.62993304899016403 , 0.06962479448202728 , 0.26 ,
   5 , 0.13659751177640291 , 0 , -0.05496908796538376 , -0.04118626728321046 , 0.62993304899016403 , 0.06962479448202728 , 0.26 ,
   4 , 0.13855640231268224 , 0 , -0.04245337201752043 , 0.02446657898003141 , 0.61943039072480676 , 0.26 , 0
-    }
+    };
     return ButcherTableau<real_type>( 7, data);
 }
 template<class real_type>
@@ -701,7 +724,7 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
   1 , -872700587467./9133579230613. , 0 , 0 , 22348218063261./9555858737531. , -1143369518992./8141816002931. , -39379526789629./19018526304540. , 32727382324388./42900044865799. , 41./200. ,
   5 , -872700587467./9133579230613. , 0 , 0 , 22348218063261./9555858737531. , -1143369518992./8141816002931. , -39379526789629./19018526304540. , 32727382324388./42900044865799. , 41./200. ,
   4 , -975461918565./9796059967033. , 0 , 0 , 78070527104295./32432590147079. , -548382580838./3424219808633. , -33438840321285./15594753105479. , 3629800801594./4656183773603. , 4035322873751./18575991585200.
-    }
+    };
     return ButcherTableau<real_type>( 8, data);
 }
 
@@ -761,10 +784,6 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::kutta_3_3<real_type>();
         case CLASSIC_4_4:
             return dg::tableau::classic_4_4<real_type>();
-        //case SIRK3A_EX_3_3:
-        //    return dg::tableau::sirk3a_ex_3_3<real_type>();
-        //case SIRK3A_IM_3_3:
-        //    return dg::tableau::sirk3a_im_3_3<real_type>();
         case HEUN_EULER_2_1_2:
             return dg::tableau::heun_euler_2_1_2<real_type>();
         case BOGACKI_SHAMPINE_4_2_3:
@@ -822,14 +841,13 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
 template<class real_type>
 ButcherTableau<real_type> tableau( std::string name)
 {
-    static std::unordered_map<string, enum tableau_identifier> str2id{
+    static std::unordered_map<std::string, enum tableau_identifier> str2id{
+        //Explicit methods
         {"Euler", EXPLICIT_EULER_1_1},
-        {"Euler (implicit)", IMPLICIT_EULER_1_1},
         {"Midpoint-2-2", MIDPOINT_2_2},
         {"Kutta-3-3", KUTTA_3_3},
         {"Runge-Kutta-4-4", CLASSIC_4_4},
-        //{"sirk3a_ex_3_3", SIRK3A_EX_3_3},
-        //{"sirk3a_im_3_3", SIRK3A_IM_3_3},
+        //Embedded explicit methods
         {"Heun-Euler-2-1-2", HEUN_EULER_2_1_2},
         {"Bogacki-Shampine-4-2-3", BOGACKI_SHAMPINE_4_2_3},
         {"ARK-4-2-3 (explicit)", ARK324L2SA_ERK_4_2_3},
@@ -843,6 +861,8 @@ ButcherTableau<real_type> tableau( std::string name)
         {"Verner-8-5-6", VERNER_8_5_6},
         {"Fehlberg-13-7-8", FEHLBERG_13_7_8},
         {"Feagin-17-8-10", FEAGIN_17_8_10},
+        //Implicit methods
+        {"Euler (implicit)", IMPLICIT_EULER_1_1},
         {"SDIRK-2-1-2", SDIRK_2_1_2},
         {"Billington-3-3-2", BILLINGTON_3_3_2},
         {"TRBDF2-3-3-2", TRBDF2_3_3_2},
@@ -859,7 +879,7 @@ ButcherTableau<real_type> tableau( std::string name)
     if( str2id.find(name) == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Butcher Tableau "<<name<<" not found!");
     else
-        return tableau( str2id[name]);
+        return tableau<real_type>( str2id[name]);
 }
 }//namespace create
 
@@ -867,8 +887,9 @@ template<class real_type>
 struct ConvertsToButcherTableau
 {
     ConvertsToButcherTableau( ButcherTableau<real_type> tableau): m_t(tableau){}
-    ConvertsToButcherTableau( enum tableau_identifier id):m_t( dg::create::tableau(id)){}
-    ConvertsToButcherTableau( std::string name):m_t( dg::create::tableau(name)){}
+    ConvertsToButcherTableau( enum tableau_identifier id):m_t( dg::create::tableau<real_type>(id)){}
+    ConvertsToButcherTableau( std::string name):m_t( dg::create::tableau<real_type>(name)){}
+    ConvertsToButcherTableau( const char* name):m_t( dg::create::tableau<real_type>(std::string(name))){}
     operator ButcherTableau<real_type>( )const{
         return m_t;
     }

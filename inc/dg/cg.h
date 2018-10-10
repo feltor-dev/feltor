@@ -294,7 +294,7 @@ struct Extrapolation
     {
         assert( m_number <= 3 );
         m_x.assign( number, init);
-        m_t.assign( number, t_init)
+        m_t.assign( number, t_init);
         m_number = number;
     }
     ///read the current extrapolation number
@@ -316,22 +316,25 @@ struct Extrapolation
                      break;
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
-            case(3):
+            case(3): {
                 real_type f0 = (t-m_t[1])(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
                 real_type f1 = (t-m_t[0])(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
-                real_type f0 = (t-m_t[0])(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                real_type f2 = (t-m_t[0])(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
                 dg::blas1::subroutine( new_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
                  break;
-            default:
-                real_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]), f1 = (t-m_t[0])/(m_t[1]-m_t[0])
+            }
+            default: {
+                real_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]); 
+                real_type f1 = (t-m_t[0])/(m_t[1]-m_t[0]);
                 dg::blas1::axpby( f0, m_x[0], f1, m_x[1], new_x);
+            }
         }
     }
     ///Assume that extrapolation time is current head time +1
     template<class ContainerType0>
     void extrapolate( ContainerType0& new_x) const{
-        t = m_t[0] +1.;
+        real_type t = m_t[0] +1.;
         extrapolate( t, new_x);
     }
 
@@ -357,7 +360,7 @@ struct Extrapolation
     ///Assume new time as current head +1
     template<class ContainerType0>
     void update( const ContainerType0& new_head){
-        t_new = m_t[0] + 1;
+        real_type t_new = m_t[0] + 1;
         update( t_new, new_head);
     }
 

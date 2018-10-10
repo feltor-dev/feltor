@@ -49,7 +49,7 @@ struct ERKStep
     using container = ContainerType;
     ERKStep(){
     }
-    ERKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau) m_rk(tableau), m_k(m_rk.num_stages(), copyable),
+    ERKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
         { }
     void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
         m_rk = tableau;
@@ -83,9 +83,11 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
         f(t0, u0, m_k[0]); //freshly compute k_0
     //else take from last call
     //1 stage
-    tu = DG_FMA( m_rk.c(1),dt, t0);
-    blas1::axpby( 1., u0, dt*m_rk.a(1,0), m_k[0], delta);
-    f( tu, delta, m_k[1]);
+    if( s>1) {
+        tu = DG_FMA( m_rk.c(1),dt, t0);
+        blas1::axpby( 1., u0, dt*m_rk.a(1,0), m_k[0], delta);
+        f( tu, delta, m_k[1]);
+    }
     //2 stage
     if( s>2) {
         tu = DG_FMA( m_rk.c(2),dt, t0);
@@ -125,9 +127,9 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     {
         tu = DG_FMA( m_rk.c(6),dt, t0);
         blas1::subroutine( delta, dg::equals(), PairSum(), 1., u0,
-                           dt*m_rk.a(6,0),m_k[0], dt*m_rk.a(6,1),m_k[2],
-                           dt*m_rk.a(6,3),m_k[3], dt*m_rk.a(6,4),m_k[4],
-                           dt*m_rk.a(6,5),m_k[5]);
+                           dt*m_rk.a(6,0),m_k[0], dt*m_rk.a(6,1),m_k[1],
+                           dt*m_rk.a(6,2),m_k[2], dt*m_rk.a(6,3),m_k[3],
+                           dt*m_rk.a(6,4),m_k[4], dt*m_rk.a(6,5),m_k[5]);
         f( tu, delta, m_k[6]);
         for ( unsigned i=7; i<s; i++)
         {
@@ -139,9 +141,14 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
         }
     }
     //Now add everything up to get solution and error estimate
-    m_t1 = t1 = tu;
     switch( s)
     {
+        //the first is for Euler
+        case 1:
+                blas1::evaluate( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rk.b(0), dt*m_rk.d(0), m_k[0]); break;
         case 2: blas1::evaluate( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
@@ -195,6 +202,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
             }
     }
     //make sure (t1,u1) is the last call to f
+    m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
         f(t1,u1,m_k[0]);
     else
@@ -227,12 +235,12 @@ struct ARKStep
              ConvertsToButcherTableau<real_type> im_tableau,
              SolverParams&& ...ps
              ):
-         m_rhs( copyable)
+         m_rhs( copyable),
          m_rkE(ex_tableau),
          m_rkI(im_tableau),
          m_kE(m_rkE.num_stages(), copyable),
          m_kI(m_rkI.num_stages(), copyable),
-         m_solver( copyable, std::forward<SolverParams>(ps)...),
+         m_solver( copyable, std::forward<SolverParams>(ps)...)
     {
         assert( m_rkE.num_stages() == m_rkI.num_stages());
     }
@@ -261,11 +269,12 @@ struct ARKStep
     real_type m_t1 = 1e300;
 };
 
-template< class ContainerType>
+template<class ContainerType, class SolverType>
 template< class Explicit, class Implicit>
-void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
 {
     unsigned s = m_rkE.num_stages();
+    real_type tu = t0;
     //0 stage
     //a^E_00 = a^I_00 = 0
     if( t0 != m_t1)
@@ -323,7 +332,7 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
     //Now compute result and error estimate
     blas1::evaluate( dg::EmbeddedPairSum(),
             u1, delta,
-             1., 0. u0,
+             1., 0., u0,
             dt*m_rkE.b(0), dt*m_rkE.d(0),m_kE[0],
             dt*m_rkE.b(1), dt*m_rkE.d(1),m_kE[1],
             dt*m_rkE.b(2), dt*m_rkE.d(2),m_kE[2],
@@ -341,7 +350,7 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
                              dt*m_rkI.d(i), m_kI[i], 1., delta);
     }
     //make sure (t1,u1) is the last call to ex
-    ex(t1,u1,m_k[0]);
+    ex(t1,u1,m_kE[0]);
 }
 
 /**
@@ -359,17 +368,16 @@ void ARK<ContainerType>::step( Explicit& ex, Implicit& im, real_type t0, const C
 *
 * Uses only \c dg::blas1::axpby() routine to integrate one step.
 * The coefficients are chosen in the classic form given by Runge and Kutta.
-* @tparam s Order of the method (1, 2, 3, 4, 6, 17)
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
-struct RKStep
+struct RungeKutta
 {
     using real_type = get_value_type<ContainerType>;
     ///@brief No memory allocation, Call \c construct before using the object
-    RKStep(){}
+    RungeKutta(){}
     ///@copydoc construct()
-    RKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau): m_erk( copyable, tableau), m_delta( copyable)
+    RungeKutta( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau): m_erk( copyable, tableau), m_delta( copyable)
         { }
     /**
     * @brief Reserve internal workspace for the integration
@@ -422,99 +430,18 @@ struct RKStep
  * @param N number of steps
  */
 template< class RHS, class ContainerType>
-void stepperRK(ButcherTableau tableau, RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, unsigned N )
+void stepperRK(ConvertsToButcherTableau<get_value_type<ContainerType>> tableau, RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, unsigned N )
 {
     using real_type = get_value_type<ContainerType>;
-    RKStep<ContainerType > rk( begin, tableau);
+    RungeKutta<ContainerType > rk( begin, tableau);
     if( t_end == t_begin){ end = begin; return;}
-    real_type dt = (t_end-t_begin)/(real_type)N;
-    end = begin;
+    const real_type dt = (t_end-t_begin)/(real_type)N;
+    dg::blas1::copy( begin, end);
     real_type t0 = t_begin;
     for( unsigned i=0; i<N; i++)
         rk.step( rhs, t0, end, t0, end, dt);
 }
 
-
-/**
- * @brief Integrates the differential equation using a Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
- *
- * Doubles the number of timesteps until the desired accuracy is reached
- *
- * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
- * @copydoc hide_rhs
- * @tparam RHS
- * In addition, there must be the function \c bool \c monitor( const ContainerType& end);
- * available, which is called after every step.
- * Return \c true if everything is ok and \c false if the integrator certainly fails.
- * The other function is the \c real_type \c error( const ContainerType& end0, const ContainerType& end1); which computes the error norm in which the integrator should converge.
- * @copydoc hide_ContainerType
- * @param rhs The right-hand-side
- * @param t_begin initial time
- * @param begin initial condition
- * @param t_end final time
- * @param end (write-only) contains solution on output
- * @param eps_abs desired accuracy in the error function between \c end and \c end_old
- * @param NT_init initial number of steps
- * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
- */
-template< class RHS, class ContainerType>
-int integrateRK(
-    const ConvertsToButcherTableau<get_value_type<ContainerType>& tableau,
-    RHS& rhs,
-    get_value_type<ContainerType> t_begin,
-    const ContainerType& begin,
-    get_value_type<ContainerType> t_end,
-    ContainerType& end,
-    get_value_type<ContainerType> eps_abs,
-    unsigned NT_init = 2 )
-{
-    using real_type = get_value_type<ContainerType>;
-    RKStep<ContainerType > rk( begin, tableau);
-    ContainerType old_end(begin);
-    blas1::copy( begin, end );
-    if( t_end == t_begin) return 0;
-    int NT = NT_init;
-    real_type dt = (t_end-t_begin)/(real_type)NT;
-    real_type error = 1e10;
-    real_type t0 = t_begin;
-
-    while( error > eps_abs && NT < pow( 2, 18) )
-    {
-        blas1::copy( begin, end );
-
-        int i=0;
-        while (i<NT)
-        {
-            rk.step( rhs, t0, end, t0, end, dt);
-            if( !rhs.monitor( end ) )  //sanity check
-            {
-                #ifdef DG_DEBUG
-                    std::cout << "---------Got sanity error -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
-                #endif
-                break;
-            }
-            i++;
-        }
-        error = rhs.error( end, old_end);
-        blas1::copy( end, old_end);
-        t0 = t_begin;
-        dt /= 2.;
-        NT *= 2;
-    }
-    if( std::isnan( error) )
-    {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
-        return -1;
-    }
-    if( error > eps_abs )
-    {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<" with "<<NT<<" steps"<<std::endl;
-        return -2;
-    }
-    return NT;
-
-
-}
 
 ///@}
 
