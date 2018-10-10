@@ -29,35 +29,6 @@ namespace dg{
  * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
  */
 
-///@cond
-template< size_t k,class real_type>
-struct ab_coeff;
-template<class real_type>
-struct ab_coeff<2,real_type>{
-    const real_type b[2] = {
-        1.5, -0.5
-    };
-};
-template<class real_type>
-struct ab_coeff<3,real_type>{
-    const real_type b[3] = {
-        23./12., -4./3., 5./12.
-    };
-};
-template<class real_type>
-struct ab_coeff<4,real_type>{
-    const real_type b[4] = {
-        55./24., -59./24., 37./24., -3./8.
-    };
-};
-template<class real_type>
-struct ab_coeff<5,real_type>{
-    const real_type b[5] = {
-        1901./720., -1387./360., 109./30., -637./360., 251./720.
-    };
-};
-///@endcond
-
 /**
 * @brief Struct for Adams-Bashforth explicit multistep time-integration
 * \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^k b_j f\left(u^{n-j}\right) \f]
@@ -68,21 +39,33 @@ struct ab_coeff<5,real_type>{
 * coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
 * Uses only \c blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
-* @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
 * @copydoc hide_ContainerType
 */
-template< size_t k, class ContainerType>
-struct AB
+template<class ContainerType>
+struct AdamsBashforth
 {
     using real_type = get_value_type<ContainerType>;
-    ///copydoc RK_opt::RK_opt()
-    AB(){}
-    ///@copydoc RK_opt::construct(const ContainerType&)
-    AB( const ContainerType& copyable){ construct(copyable); }
-    ///@copydoc RK_opt::construct(const ContainerType&)
-    void construct(const ContainerType& copyable){
-        f_.fill( copyable);
+    ///copydoc RungeKutta::RungeKutta()
+    AdamsBashforth(){}
+    ///@copydoc RungeKutta::construct(const ContainerType&)
+    //@param order Order of the method (Currently one of 1, 2, 3, 4 or 5)
+    AdamsBashforth( const ContainerType& copyable, unsigned order){
+        construct(copyable, order);
+    }
+    ///@copydoc RungeKutta::construct(const ContainerType&)
+    void construct(const ContainerType& copyable, unsigned order){
+        m_k = order;
+        f_.assign( order, copyable);
         u_ = copyable;
+        m_ab.resize( order);
+        switch (order){
+            case 1: m_ab = {1}; break;
+            case 2: m_ab = {1.5, -0.5}; break;
+            case 3: m_ab = { 23./12., -4./3., 5./12.}; break;
+            case 4: m_ab = {55./24., -59./24., 37./24., -3./8.}; break;
+            case 5: m_ab = { 1901./720., -1387./360., 109./30., -637./360., 251./720.}; break;
+            default: throw dg::Error(dg::Message()<<"Order not implemented in AdamsBashforth!");
+        }
     }
 
     /**
@@ -113,20 +96,21 @@ struct AB
     void step( RHS& f, real_type& t, ContainerType& u);
   private:
     real_type tu_, dt_;
-    std::array<ContainerType,k> f_;
+    std::vector<ContainerType> f_;
     ContainerType u_;
-    ab_coeff<k,real_type> m_ab;
+    std::vector<real_type> m_ab;
+    unsigned m_k;
 };
 
-template< size_t k, class ContainerType>
+template< class ContainerType>
 template< class RHS>
-void AB<k, ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, real_type dt)
+void AdamsBashforth<ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, real_type dt)
 {
     tu_ = t0, dt_ = dt;
     f( t0, u0, f_[0]);
     //now do k Euler steps
     ContainerType u1(u0);
-    for( unsigned i=1; i<k; i++)
+    for( unsigned i=1; i<m_k; i++)
     {
         blas1::axpby( 1., u1, -dt, f_[i-1], u1);
         tu_ -= dt;
@@ -138,54 +122,19 @@ void AB<k, ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, 
     f( tu_, u_, f_[0]);
 }
 
-template< size_t k, class ContainerType>
+template<class ContainerType>
 template< class RHS>
-void AB<k, ContainerType>::step( RHS& f, real_type& t, ContainerType& u)
+void AdamsBashforth<ContainerType>::step( RHS& f, real_type& t, ContainerType& u)
 {
-    for( unsigned i=0; i<k; i++)
-        blas1::axpby( dt_*m_ab.b[i], f_[i], 1., u_);
+    for( unsigned i=0; i<m_k; i++)
+        blas1::axpby( dt_*m_ab[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
-    for( unsigned i=k-1; i>0; i--)
+    for( unsigned i=m_k-1; i>0; i--)
         f_[i-1].swap( f_[i]);
     blas1::copy( u_, u);
     t = tu_ = tu_ + dt_;
     f( tu_, u_, f_[0]); //evaluate f at new point
 }
-
-///@cond
-//Euler specialisation
-template < class ContainerType>
-struct AB<1, ContainerType>
-{
-    using real_type = get_value_type<ContainerType>;
-    AB(){}
-    AB( const ContainerType& copyable){
-        construct(copyable);
-    }
-    void construct(const ContainerType& copyable){
-       f_  = u_ = copyable;
-    }
-    template < class RHS>
-    void init( RHS& f, real_type t0, const ContainerType& u0, real_type dt){
-        u_ = u0;
-        t_ = t0, dt_=dt;
-        f( t_, u_, f_);
-    }
-    template < class RHS>
-    void step( RHS& f, real_type& t, ContainerType& u)
-    {
-        //this implementation calls rhs at end point
-        blas1::axpby( 1., u_, dt_, f_, u); //compute new u
-
-        u_ = u; //store new u
-        t = t_ = t_ + dt_; //and time
-        f( t_, u_, f_); //and update rhs
-    }
-    private:
-    real_type t_, dt_;
-    ContainerType u_, f_;
-};
-///@endcond
 
 /**
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
@@ -225,7 +174,7 @@ template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType
 struct Karniadakis
 {
     using real_type = get_value_type<ContainerType>;
-    ///@copydoc RK_opt::RK_opt()
+    ///@copydoc RungeKutta::RungeKutta()
     Karniadakis(){}
 
     ///@copydoc construct()
@@ -287,9 +236,9 @@ struct Karniadakis
 };
 
 ///@cond
-template< class ContainerType>
+template< class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType>::init( RHS& f, Diffusion& diff, real_type t0, const ContainerType& u0, real_type dt)
+void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, real_type t0, const ContainerType& u0, real_type dt)
 {
     //operator splitting using explicit Euler for both explicit and implicit part
     t_ = t0, dt_ = dt;
@@ -306,9 +255,9 @@ void Karniadakis<ContainerType>::init( RHS& f, Diffusion& diff, real_type t0, co
     f( t0, u0, f_[0]); // and set state in f to (t0,u0)
 }
 
-template<class ContainerType>
+template<class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, ContainerType& u)
+void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, real_type& t, ContainerType& u)
 {
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
@@ -324,7 +273,7 @@ void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, Co
     //real_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
     t = t_ = t_+ dt_;
-    m_solver.solve( -dt_*6./11., im, t, u, u_[0]);
+    m_solver.solve( -dt_*6./11., diff, t, u, u_[0]);
     blas1::copy( u, u_[0]); //store result
     f(t_, u_[0], f_[0]); //call f on new point
 }

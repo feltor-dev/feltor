@@ -38,7 +38,7 @@ struct Explicit
         m_y ( dg::evaluate(dg::cooY2d, g)) //y-coordinate
     {}
     void operator()( double t, const container& T, container& Tp) {
-        dg::blas1::evaluate( Tp, dg::equals(), Source(t,m_nu), m_x, m_y);
+        dg::blas1::subroutine( Tp, dg::equals(), Source(t,m_nu), m_x, m_y);
     }
     private:
     const double m_nu;
@@ -122,11 +122,11 @@ int main()
     double time = 0.;
     dg::DVec error( sol);
 
-    dg::AB< 1, dg::DVec > ab1( y0);
-    dg::AB< 2, dg::DVec > ab2( y0);
-    dg::AB< 3, dg::DVec > ab3( y0);
-    dg::AB< 4, dg::DVec > ab4( y0);
-    dg::AB< 5, dg::DVec > ab5( y0);
+    dg::AdamsBashforth< dg::DVec > ab1( y0,1);
+    dg::AdamsBashforth< dg::DVec > ab2( y0,2);
+    dg::AdamsBashforth< dg::DVec > ab3( y0,3);
+    dg::AdamsBashforth< dg::DVec > ab4( y0,4);
+    dg::AdamsBashforth< dg::DVec > ab5( y0,5);
     ab1.init( full, time, y0, dt);
     ab2.init( full, time, y0, dt);
     ab3.init( full, time, y0, dt);
@@ -170,17 +170,6 @@ int main()
     dg::blas1::axpby( -1., sol, 1., y0);
     res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error AB 5        is "<< res.d<<"\t"<<res.i<<std::endl;
-    //![sirk]
-    //construct time stepper (eps = 1e-8)
-    dg::SIRK< dg::DVec > sirk( y0, y0.size(), eps);
-    time = 0., y0 = init; //y0 and init are of type dg::DVec and contain the initial condition
-    //main time loop (NT = 20, exp and imp are objects of type Explicit and Implicit defined above)
-    for( unsigned i=0; i<NT; i++)
-        sirk.step( exp, imp, time, y0, time, y0, dt); //inplace step
-    //![sirk]
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error SIRK        is "<< res.d<<"\t"<<res.i<<std::endl;
     //![karniadakis]
     //construct time stepper
     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
@@ -194,17 +183,5 @@ int main()
     dg::blas1::axpby( -1., sol, 1., y0);
     res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error Karniadakis is "<< res.d<<"\t"<<res.i<<std::endl;
-    //main time loop
-    std::cout << "\nAdaptive SIRK Timer \n";
-    time = 0., y0 =  init;
-    double adapt = dt;
-    while( time < T-adapt){
-        sirk.adaptive_step( exp, imp, time, y0, time, y0, adapt, 1e-8, true);
-    }
-    adapt = T - time;
-    sirk.adaptive_step( exp, imp, time, y0, time, y0, adapt, 1e-8, true);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error adaptive sirk: "<< res.d<<"\t"<<res.i<<std::endl;
     return 0;
 }
