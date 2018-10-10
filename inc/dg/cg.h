@@ -299,7 +299,7 @@ struct Extrapolation
         m_x.assign( number, init);
         m_t.assign( number, t_init);
         m_number = number;
-        for(unsigned i=1; i<m_t.size(); i++)
+        for(unsigned i=0; i<m_t.size(); i++)
             m_t[i] = t_init - (real_type)i;
     }
     void set_number( unsigned number, const ContainerType& init)
@@ -352,22 +352,29 @@ struct Extrapolation
 
 
     /**
-    * @brief move the all values one step back and copy the given vector as current head
+    * @brief insert a new entry, deleting the oldest entry or update existing entry
     * @param t_new the time for the new head
-    * @param new_head the new head ( may alias the tail)
+    * @param new_entry the new entry ( may alias the tail), replaces value of existing entry if t_new is already there
     * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
-    void update( real_type t_new, const ContainerType0& new_head){
+    void update( real_type t_new, const ContainerType0& new_entry){
         if( m_number == 0) return;
-        //push out last value
+        //check if entry is already there to avoid division by zero errors
+        for( unsigned i=0; i<m_number; i++)
+            if( fabs(t_new - m_t[i]) <1e-14)
+            {
+                blas1::copy( new_entry, m_x[i]);
+                return;
+            }
+        //push out last value (keep track of what is oldest value
         for (unsigned u=m_number-1; u>0; u--)
         {
             std::swap( m_t[u], m_t[u-1]);
             m_x[u].swap( m_x[u-1]);
         }
         m_t[0] = t_new;
-        blas1::copy( new_head, m_x[0]);
+        blas1::copy( new_entry, m_x[0]);
     }
     ///Assume new time as current head +1
     template<class ContainerType0>

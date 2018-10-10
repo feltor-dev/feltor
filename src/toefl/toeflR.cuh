@@ -111,8 +111,8 @@ struct Explicit
 
   private:
     //use chi and omega as helpers to compute square velocity in omega
-    const container& compute_psi( const container& potential);
-    const container& polarisation( const std::vector<container>& y);
+    const container& compute_psi( double t, const container& potential);
+    const container& polarisation( double t, const std::vector<container>& y);
 
     container chi, omega;
     const container binv; //magnetic field
@@ -167,7 +167,7 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
 }
 
 template< class G, class M, class container>
-const container& Explicit<G, M, container>::compute_psi( const container& potential)
+const container& Explicit<G, M, container>::compute_psi( double t, const container& potential)
 {
     if(equations == "gravity_local") return potential;
     //in gyrofluid invert Gamma operator
@@ -177,9 +177,9 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
             dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
         }
         else {
-            old_psi.extrapolate( phi[1]);
+            old_psi.extrapolate( t, phi[1]);
             std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
-            old_psi.update( phi[1]);
+            old_psi.update( t, phi[1]);
             if(  number[0] == multigrid.max_iter())
                 throw dg::Fail( eps_gamma);
         }
@@ -204,7 +204,7 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
 
 //computes and modifies expy!!
 template<class G, class M, class container>
-const container& Explicit<G, M, container>::polarisation( const std::vector<container>& y)
+const container& Explicit<G, M, container>::polarisation( double t, const std::vector<container>& y)
 {
     //compute chi
     if(equations == "global" )
@@ -254,9 +254,9 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
             dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
         }
         else {
-            old_gammaN.extrapolate( gamma_n);
+            old_gammaN.extrapolate(t, gamma_n);
             std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
-            old_gammaN.update( gamma_n);
+            old_gammaN.update(t, gamma_n);
             if(  number[0] == multigrid.max_iter())
                 throw dg::Fail( eps_gamma);
         }
@@ -269,9 +269,9 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
             dg::blas1::pointwiseDivide( omega, chi, omega);
     //invert
 
-    old_phi.extrapolate( phi[0]);
+    old_phi.extrapolate(t, phi[0]);
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
-    old_phi.update( phi[0]);
+    old_phi.update( t, phi[0]);
     if(  number[0] == multigrid.max_iter())
         throw dg::Fail( eps_pol);
     return phi[0];
@@ -285,8 +285,8 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     assert( y.size() == 2);
     assert( y.size() == yp.size());
 
-    phi[0] = polarisation( y);
-    phi[1] = compute_psi( phi[0]);
+    phi[0] = polarisation( t, y);
+    phi[1] = compute_psi( t, phi[0]);
 
     for( unsigned i=0; i<y.size(); i++)
     {
@@ -398,6 +398,9 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
         }
     }
 
+    //If you want to test an explicit timestepper:
+    //for( unsigned i=0; i<y.size(); i++)
+    //    dg::blas2::gemv( -nu, laplaceM, y[i], 1., yp[i]);
     return;
 }
 

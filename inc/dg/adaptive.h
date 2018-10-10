@@ -151,7 +151,7 @@ struct Adaptive
         {
             m_failed = true;
             dg::blas1::copy( begin, end);
-            t_end = m_t_next;
+            t_end = t_begin;
             //std::cout << " Failed ";
         }
         else
@@ -179,7 +179,7 @@ typename Adaptive<Stepper>::real_type Adaptive<Stepper>::guess_stepsize( Explici
     real_type desired_accuracy = rtol*tol(begin) + atol;
     ex( t_begin, begin, m_next);
     real_type dt = pow(desired_accuracy, 1./(real_type)m_stepper.order())/tol(m_next);
-    if( dir != forward) 
+    if( dir != forward)
         dt*=-1.;
     return dt;
 }
@@ -213,7 +213,7 @@ typename Adaptive<Stepper>::real_type Adaptive<Stepper>::guess_stepsize( Explici
  * @return number of steps
  */
 template<class Adaptive, class RHS, class ContainerType, class ErrorNorm = get_value_type<ContainerType>( const ContainerType&),
-             class ControlFunction = get_value_type<ContainerType> (get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned, unsigned)> 
+             class ControlFunction = get_value_type<ContainerType> (get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned, unsigned)>
 int integrateAdaptive(Adaptive& adaptive,
                       RHS& rhs,
                       get_value_type<ContainerType> t_begin,
@@ -255,7 +255,7 @@ int integrateAdaptive(Adaptive& adaptive,
 ///@snippet adaptive_t.cu function
 ///@snippet adaptive_t.cu doxygen
 template<class RHS, class ContainerType, class ErrorNorm = get_value_type<ContainerType>( const ContainerType&),
-             class ControlFunction = get_value_type<ContainerType> (get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned, unsigned)> 
+             class ControlFunction = get_value_type<ContainerType> (get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned, unsigned)>
 int integrateERK( std::string name,
                   RHS& rhs,
                   get_value_type<ContainerType> t_begin,
