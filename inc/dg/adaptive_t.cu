@@ -52,7 +52,7 @@ int main()
     int counter = dg::integrateERK( "Dormand-Prince-7-4-5", functor, t_start, u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6);
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
-    std::cout << "With "<<counter<<"\t Embedded RK 4-5 steps norm of error is\t "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
+    std::cout << "With "<<counter<<"\t Dormand Prince steps norm of error is "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
     //![doxygen]
     std::vector<std::string> names{
         "Heun-Euler-2-1-2",
@@ -72,9 +72,12 @@ int main()
     for( auto name : names)
     {
         dt = 0;
-        counter = dg::integrateERK( name, functor, t_start, u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6);
-        dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
-        std::cout << "With "<<counter<<"\tsteps norm of error in "<<std::setw(24)<<name<<"\t"<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
+        u_start = solution(t_start, damping, omega_0, omega_drive);
+        counter = dg::integrateERK( name, functor, t_start, u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
+
+        std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
+        dg::blas1::axpby( 1.,sol  , -1., u_end);
+        std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "<<std::setw(24)<<name<<"\t"<<dg::l2norm( u_end)<<"\n";
     }
     return 0;
 }

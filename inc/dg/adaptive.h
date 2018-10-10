@@ -89,7 +89,7 @@ struct Adaptive
     template< class RHS, 
               class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
               class ErrorNorm = real_type( const container&)>
-    int step( RHS& rhs,
+    void step( RHS& rhs,
               real_type t_begin,
               const container& begin,
               real_type& t_end,
@@ -108,7 +108,7 @@ struct Adaptive
               class Implicit,
               class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
               class ErrorNorm = real_type( const container&)>
-    int step( Explicit& ex,
+    void step( Explicit& ex,
               Implicit& im,
               real_type t_begin,
               const container& begin,
@@ -126,7 +126,7 @@ struct Adaptive
     private:
     template<   class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
                 class ErrorNorm = real_type( const container&)>
-    int update( real_type t_begin,
+    void update( real_type t_begin,
                 const container& begin,
                 real_type& t_end,
                 container& end,
@@ -137,20 +137,29 @@ struct Adaptive
                 real_type atol
               )
     {
+        //std::cout << "Try stepsize "<<dt;
         dg::blas1::evaluate( detail::Tolerance<real_type>( rtol, atol, m_size), begin, m_delta);
         real_type eps0 = norm(m_delta);
+        //std::cout << " error "<<eps0;
         dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
+        //std::cout << " new stepsize "<<dt;
         if( eps0 > m_reject_limit || std::isnan( eps0) )
+        {
             m_failed = true;
+            dg::blas1::copy( begin, end);
+            t_end = m_t_next;
+            //std::cout << " Failed ";
+        }
         else
         {
-            std::swap( m_eps2, m_eps1);
-            std::swap( eps0, m_eps1);
+            m_eps2 = m_eps1;
+            m_eps1 = eps0;
             dg::blas1::copy( m_next, end);
             t_end = m_t_next;
             m_failed = false;
+            //std::cout << " Success " << t_end<<" "<<end[0]<<" "<<end[1];
         }
-        return m_stepper.num_stages();
+        //std::cout << std::endl;
     }
     bool m_failed = false;
     Stepper m_stepper;
@@ -215,7 +224,7 @@ int integrateAdaptive(Adaptive& adaptive,
                       )
 {
     using  real_type = get_value_type<ContainerType>;
-    real_type t_current = t_begin, dt_current = dt, t_next;
+    real_type t_current = t_begin, dt_current = dt;
     ContainerType next(begin), delta(begin);
     blas1::copy( begin, end );
     ContainerType& current(end);
@@ -232,9 +241,9 @@ int integrateAdaptive(Adaptive& adaptive,
         if( (forward && t_current+dt_current > t_end) || (!forward && t_current + dt_current < t_end) )
             dt_current = t_end-t_current;
         // Compute a step and error
-        counter += adaptive.step( rhs, t_current, current, t_next, next, dt_current, control, norm, rtol, atol);
+        adaptive.step( rhs, t_current, current, t_current, current, dt_current, control, norm, rtol, atol);
+        counter++;
     }
-    blas1::copy( next, end );
     return counter;
 }
 
