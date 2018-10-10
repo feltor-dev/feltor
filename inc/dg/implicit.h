@@ -56,7 +56,7 @@ struct DefaultSolver
     template< class Implicit>
     void solve( real_type alpha, Implicit im, real_type t, ContainerType& y, const ContainerType& rhs)
     {
-        detail::Implicit<Implicit, ContainerType> implicit( -alpha, t, im);
+        detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
         blas2::symv( im.weights(), rhs, m_rhs);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
@@ -70,7 +70,7 @@ struct DefaultSolver
 #ifdef MPI_VERSION
         if(rank==0)
 #endif//MPI
-        std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+        std::cout << "# of pcg iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
 #else
         m_pcg( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
 #endif //DG_BENCHMARK

@@ -271,7 +271,7 @@ struct Extrapolation
     }
     /*! @brief Set extrapolation number and initialize values
      * @param number number of vectors to use for extrapolation ( 0<=number<=3)
-     * @param t_init the times are initialized with this value
+     * @param t_init the times are initialized with this value t_init, t_init -1 , t_init-2
      * @param init the vectors are initialized with this value
      */
     Extrapolation( unsigned number, real_type t_init, const ContainerType& init) {
@@ -279,23 +279,35 @@ struct Extrapolation
     }
     ///initialize time values with 1
     Extrapolation( unsigned number, const ContainerType& init) {
-        set_number(number, 1, init);
+        set_number(number, 0, init);
     }
     ///@copydoc Extrapolation(unsigned)
     void set_number( unsigned number)
     {
-        assert( m_number <= 3 );
+        assert( number <= 3 );
         m_number = number;
         m_t.resize( number);
         m_x.resize( number);
+        for(unsigned i=0; i<m_t.size(); i++)
+            m_t[i] = -(real_type)i;
     }
     ///@copydoc Extrapolation(unsigned,real_type,const ContainerType&)
     void set_number( unsigned number, real_type t_init, const ContainerType& init)
     {
-        assert( m_number <= 3 );
+        //init times 0, -1, -2
+        assert( number <= 3 );
         m_x.assign( number, init);
         m_t.assign( number, t_init);
         m_number = number;
+        for(unsigned i=1; i<m_t.size(); i++)
+            m_t[i] = t_init - (real_type)i;
+    }
+    void set_number( unsigned number, const ContainerType& init)
+    {
+        //init times 0, -1, -2
+        set_number( number, 1, init);
+        for(unsigned i=0; i<m_t.size(); i++)
+            m_t[i] = -(real_type)i;
     }
     ///read the current extrapolation number
     unsigned get_number( ) const{
@@ -317,15 +329,15 @@ struct Extrapolation
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
             case(3): {
-                real_type f0 = (t-m_t[1])(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
-                real_type f1 = (t-m_t[0])(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
-                real_type f2 = (t-m_t[0])(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                real_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
+                real_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
+                real_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
                 dg::blas1::subroutine( new_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
                  break;
             }
             default: {
-                real_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]); 
+                real_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]);
                 real_type f1 = (t-m_t[0])/(m_t[1]-m_t[0]);
                 dg::blas1::axpby( f0, m_x[0], f1, m_x[1], new_x);
             }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "implicit.h"
+#include "runge_kutta.h"
 
 namespace dg
 {
@@ -86,8 +87,8 @@ struct Adaptive
     template<class Explicit, class ErrorNorm = real_type(const container&)>
     real_type guess_stepsize( Explicit& ex, real_type t0, const container& u0, enum direction dir, ErrorNorm& norm, real_type rtol, real_type atol);
 
-    template< class RHS, 
-              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
+    template< class RHS,
+              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned),
               class ErrorNorm = real_type( const container&)>
     void step( RHS& rhs,
               real_type t_begin,
@@ -106,7 +107,7 @@ struct Adaptive
     }
     template< class Explicit,
               class Implicit,
-              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
+              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned),
               class ErrorNorm = real_type( const container&)>
     void step( Explicit& ex,
               Implicit& im,
@@ -123,8 +124,11 @@ struct Adaptive
         m_stepper.step( ex, im, t_begin, begin, m_t_next, m_next, dt, m_delta);
         return update( t_begin, begin, t_end, end, dt, control, norm , rtol, atol);
     }
+    bool hasFailed() const {
+        return m_failed;
+    }
     private:
-    template<   class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned), 
+    template<   class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned),
                 class ErrorNorm = real_type( const container&)>
     void update( real_type t_begin,
                 const container& begin,

@@ -181,6 +181,7 @@ struct Karniadakis
     template<class ...SolverParams>
     Karniadakis( const ContainerType& copyable, SolverParams&& ...ps):m_solver( copyable, std::forward<SolverParams>(ps)...){
         f_.fill(copyable), u_.fill(copyable);
+        init_coeffs();
     }
     /**
     * @brief Reserve memory for the integration
@@ -193,6 +194,7 @@ struct Karniadakis
     void construct( const ContainerType& copyable, SolverParams&& ...ps){
         f_.fill(copyable), u_.fill(copyable);
         m_solver = Solver( copyable, std::forward<SolverParams>(ps)...);
+        init_coeffs();
     }
 
     /**
@@ -220,7 +222,7 @@ struct Karniadakis
     void step( Explicit& ex, Implicit& im, real_type& t, ContainerType& u);
 
   private:
-    void init(){
+    void init_coeffs(){
         //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
         //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
         //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
@@ -232,7 +234,7 @@ struct Karniadakis
     SolverType m_solver;
     real_type t_, dt_;
     real_type a[3];
-    real_type b[3];
+    real_type b[3], g0 = 6./11.;
 };
 
 ///@cond
@@ -273,7 +275,7 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, real
     //real_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
     t = t_ = t_+ dt_;
-    m_solver.solve( -dt_*6./11., diff, t, u, u_[0]);
+    m_solver.solve( -dt_*g0, diff, t, u, u_[0]);
     blas1::copy( u, u_[0]); //store result
     f(t_, u_[0], f_[0]); //call f on new point
 }

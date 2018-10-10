@@ -329,7 +329,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
     ex(tu, delta, m_kE[3]);
     im(tu, delta, m_kI[3]);
     //higher stages
-    for( int i=4; i<s; i++)
+    for( unsigned i=4; i<s; i++)
     {
         dg::blas1::copy( u0, m_rhs);
         for( unsigned j=0; j<s; j++)

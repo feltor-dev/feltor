@@ -3,7 +3,7 @@
 
 #undef DG_DEBUG
 #include "multistep.h"
-#include "runge_kutta.h"
+#include "adaptive.h"
 #include "elliptic.h"
 
 //![function]
@@ -108,8 +108,6 @@ int main()
     const double nu = 0.01;
     //construct the grid and the explicit and implicit parts
     dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    Explicit<dg::DVec> exp( grid, nu);
-    Implicit<dg::DMatrix, dg::DVec> imp( grid, nu);
 
     Full<dg::DMatrix, dg::DVec> full( grid, nu);
     //evaluate the initial condition
@@ -121,67 +119,59 @@ int main()
     const double norm_sol = dg::blas2::dot( w2d, sol);
     double time = 0.;
     dg::DVec error( sol);
-
-    dg::AdamsBashforth< dg::DVec > ab1( y0,1);
-    dg::AdamsBashforth< dg::DVec > ab2( y0,2);
-    dg::AdamsBashforth< dg::DVec > ab3( y0,3);
-    dg::AdamsBashforth< dg::DVec > ab4( y0,4);
-    dg::AdamsBashforth< dg::DVec > ab5( y0,5);
-    ab1.init( full, time, y0, dt);
-    ab2.init( full, time, y0, dt);
-    ab3.init( full, time, y0, dt);
-    ab4.init( full, time, y0, dt);
-    ab5.init( full, time, y0, dt);
-
     exblas::udouble res;
-
-    //main time loop
-    time = 0., y0 =  init;
-    for( unsigned i=0; i<NT; i++)
-        ab1.step( full, time, y0);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 1        is "<< res.d<<"\t"<<res.i<<std::endl;
-    //main time loop
-    time = 0., y0 =  init;
-    for( unsigned i=0; i<NT; i++)
-        ab2.step( full, time, y0);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 2        is "<< res.d<<"\t"<<res.i<<std::endl;
-    //main time loop
-    time = 0., y0 =  init;
-    for( unsigned i=0; i<NT; i++)
-        ab3.step( full, time, y0);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 3        is "<< res.d<<"\t"<<res.i<<std::endl;
-    //main time loop
-    time = 0., y0 =  init;
-    for( unsigned i=0; i<NT; i++)
-        ab4.step( full, time, y0);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 4        is "<< res.d<<"\t"<<res.i<<std::endl;
-    //main time loop
-    time = 0., y0 =  init;
-    for( unsigned i=0; i<NT; i++)
-        ab5.step( full, time, y0);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 5        is "<< res.d<<"\t"<<res.i<<std::endl;
+    for( unsigned i=1; i<6; i++)
+    {
+        time = 0., y0 = init;
+        dg::AdamsBashforth< dg::DVec > ab( y0,i);
+        ab.init( full, time, y0, dt);
+        //main time loop
+        for( unsigned i=0; i<NT; i++)
+            ab.step( full, time, y0);
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+        std::cout << "Relative error AB "<<i<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+    }
+    Explicit<dg::DVec> ex( grid, nu);
+    Implicit<dg::DMatrix, dg::DVec> im( grid, nu);
     //![karniadakis]
     //construct time stepper
     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
     time = 0., y0 = init; //y0 and init are of type dg::DVec and contain the initial condition
-    //initialize the timestepper (exp and imp are objects of type Explicit and Implicit defined above)
-    karniadakis.init( exp, imp, time, y0, dt);
+    //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
+    karniadakis.init( ex, im, time, y0, dt);
     //main time loop (NT = 20)
     for( unsigned i=0; i<NT; i++)
-        karniadakis.step( exp, imp, time, y0); //inplace step
+        karniadakis.step( ex, im, time, y0); //inplace step
     //![karniadakis]
     dg::blas1::axpby( -1., sol, 1., y0);
     res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error Karniadakis is "<< res.d<<"\t"<<res.i<<std::endl;
+
+
+    //TEST ARK methods
+    std::vector<std::string> names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
+    for( auto name : names)
+    {
+        time = 0., y0 = init;
+        dg::Adaptive<dg::ARKStep<dg::DVec>> adapt( y0, name, y0.size(), eps);
+        double time = 0, rtol = 1e-1, atol = 1e-10;
+        //a high rtol will just make it hit the CFL condition and stay there
+        double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol); //maybe just choose a small time
+        int counter=0;
+        while( time < T )
+        {
+            std::cout<<std::boolalpha;
+            //std::cout << "Time "<<time<<" step "<<dt<<" success "<<!adapt.hasFailed()<<std::endl;
+            if( time + dt > T)
+                dt = T-time;
+            adapt.step( ex, im, time, y0, time, y0, dt, dg::pi_control, dg::l2norm, rtol, atol);
+            counter ++;
+        }
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+        std::cout << counter <<" steps! ";
+        std::cout << "Relative error "<<name<<" is "<< res.d<<"\t"<<res.i<<std::endl;
+    }
     return 0;
 }

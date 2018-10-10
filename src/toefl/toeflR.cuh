@@ -125,14 +125,14 @@ struct Explicit
     dg::Elliptic<Geometry, Matrix, container> pol, laplaceM; //contains normalized laplacian
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
-    dg::ArakawaX< Geometry, Matrix, container> arakawa; 
+    dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
     std::vector<container> multi_chi;
 
     const container w2d, one;
-    const double eps_pol, eps_gamma; 
+    const double eps_pol, eps_gamma;
     const double kappa, friction, nu, tau;
     const std::string equations;
     bool boussinesq;
@@ -142,20 +142,20 @@ struct Explicit
 };
 
 template< class Geometry, class M, class container>
-Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Parameters& p ): 
+Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Parameters& p ):
     chi( evaluate( dg::zero, grid)), omega(chi),
-    binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
+    binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
-    pol(     grid, dg::not_normed, dg::centered, p.jfactor), 
+    pol(     grid, dg::not_normed, dg::centered, p.jfactor),
     laplaceM( grid, dg::normed, dg::centered),
-    arakawa( grid), 
+    arakawa( grid),
     multigrid( grid, 3),
-    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi), 
+    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
     w2d( dg::create::volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
-{ 
+{
     multi_chi= multigrid.project( chi);
     multi_pol.resize(3);
     multi_gamma1.resize(3);
@@ -175,7 +175,7 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     {
         if (tau == 0.) {
             dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
-        } 
+        }
         else {
             old_psi.extrapolate( phi[1]);
             std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
@@ -185,7 +185,7 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
         }
     }
     //compute (nabla phi)^2
-    arakawa.variation(potential, omega); 
+    arakawa.variation(potential, omega);
     //compute psi
     if(equations == "global")
     {
@@ -196,9 +196,9 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     {
         dg::blas1::pointwiseDot( 0.5, binv, binv, omega, 0., phi[1]);
     }
-    else if( equations == "gravity_global" ) 
+    else if( equations == "gravity_global" )
         dg::blas1::axpby( 0.5, omega, 0., phi[1]);
-    return phi[1];    
+    return phi[1];
 }
 
 
@@ -206,14 +206,14 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
 template<class G, class M, class container>
 const container& Explicit<G, M, container>::polarisation( const std::vector<container>& y)
 {
-    //compute chi 
+    //compute chi
     if(equations == "global" )
     {
         dg::blas1::transfer( y[1], chi);
-        dg::blas1::plus( chi, 1.); 
+        dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        if( !boussinesq) 
+        if( !boussinesq)
         {
             multigrid.project( chi, multi_chi);
             for( unsigned u=0; u<3; u++)
@@ -224,8 +224,8 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     else if(equations == "gravity_global" )
     {
         dg::blas1::transfer( y[0], chi);
-        dg::blas1::plus( chi, 1.); 
-        if( !boussinesq) 
+        dg::blas1::plus( chi, 1.);
+        if( !boussinesq)
         {
             multigrid.project( chi, multi_chi);
             for( unsigned u=0; u<3; u++)
@@ -236,10 +236,10 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     else if( equations == "drift_global" )
     {
         dg::blas1::transfer( y[0], chi);
-        dg::blas1::plus( chi, 1.); 
+        dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        if( !boussinesq) 
+        if( !boussinesq)
         {
             multigrid.project( chi, multi_chi);
             for( unsigned u=0; u<3; u++)
@@ -252,7 +252,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     {
         if (tau == 0.) {
             dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
-        } 
+        }
         else {
             old_gammaN.extrapolate( gamma_n);
             std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
@@ -262,12 +262,12 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
         }
         dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
     }
-    else 
+    else
         dg::blas1::axpby( -1. ,y[1], 0., omega);
     if( equations == "global" || equations == "gravity_global" || equations == "drift_global")
-        if( boussinesq) 
+        if( boussinesq)
             dg::blas1::pointwiseDivide( omega, chi, omega);
-    //invert 
+    //invert
 
     old_phi.extrapolate( phi[0]);
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
@@ -291,7 +291,7 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     for( unsigned i=0; i<y.size(); i++)
     {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<double>(1.));
-        dg::blas1::transform( ype[i], lny[i], dg::LN<double>()); 
+        dg::blas1::transform( ype[i], lny[i], dg::LN<double>());
         dg::blas2::symv( laplaceM, y[i], lapy[i]);
     }
 
@@ -302,24 +302,24 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     {
         double Ue = dg::blas2::dot( lny[0], w2d, ype[0]);
         double Ui = tau*dg::blas2::dot( lny[1], w2d, ype[1]);
-        double Uphi = 0.5*dg::blas2::dot( ype[1], w2d, omega); 
+        double Uphi = 0.5*dg::blas2::dot( ype[1], w2d, omega);
         energy_ = Ue + Ui + Uphi;
 
-        double Ge = - dg::blas2::dot( one, w2d, lapy[0]) - dg::blas2::dot( lapy[0], w2d, lny[0]); // minus 
-        double Gi = - tau*(dg::blas2::dot( one, w2d, lapy[1]) + dg::blas2::dot( lapy[1], w2d, lny[1])); // minus 
+        double Ge = - dg::blas2::dot( one, w2d, lapy[0]) - dg::blas2::dot( lapy[0], w2d, lny[0]); // minus
+        double Gi = - tau*(dg::blas2::dot( one, w2d, lapy[1]) + dg::blas2::dot( lapy[1], w2d, lny[1])); // minus
         double Gphi = -dg::blas2::dot( phi[0], w2d, lapy[0]);
         double Gpsi = -dg::blas2::dot( phi[1], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    else if ( equations == "drift_global") 
+    else if ( equations == "drift_global")
     {
         double Se = dg::blas2::dot( lny[0], w2d, ype[0]);
         double Ephi = dg::blas2::dot( ype[0], w2d, phi[1]); //phi[1] equals 0.5*u_E^2
         energy_ = Se + Ephi;
 
-        double Ge = - dg::blas2::dot( one, w2d, lapy[0]) - dg::blas2::dot( lapy[0], w2d, lny[0]); // minus 
-        double GeE = - dg::blas2::dot( phi[1], w2d, lapy[0]); 
+        double Ge = - dg::blas2::dot( one, w2d, lapy[0]) - dg::blas2::dot( lapy[0], w2d, lny[0]); // minus
+        double GeE = - dg::blas2::dot( phi[1], w2d, lapy[0]);
         double Gpsi = -dg::blas2::dot( phi[0], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge - GeE - Gpsi);
@@ -334,11 +334,11 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     {
         double Ue = 0.5*dg::blas2::dot( y[0], w2d, y[0]);
         double Ui = 0.5*tau*dg::blas2::dot( y[1], w2d, y[1]);
-        double Uphi = 0.5*dg::blas2::dot( one, w2d, omega); 
+        double Uphi = 0.5*dg::blas2::dot( one, w2d, omega);
         energy_ = Ue + Ui + Uphi;
 
-        double Ge = - dg::blas2::dot( y[0], w2d, lapy[0]); // minus 
-        double Gi = - tau*(dg::blas2::dot( y[1], w2d, lapy[1])); // minus 
+        double Ge = - dg::blas2::dot( y[0], w2d, lapy[0]); // minus
+        double Gi = - tau*(dg::blas2::dot( y[1], w2d, lapy[1])); // minus
         double Gphi = -dg::blas2::dot( phi[0], w2d, lapy[0]);
         double Gpsi = -dg::blas2::dot( phi[1], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
