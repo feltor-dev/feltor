@@ -96,13 +96,9 @@ struct DSField
     dg::ClonePtr<dg::aGeometry2d> g_;
 };
 
-struct DSMonitor
-{
-    double norm( const std::array<double,2>& x0)const {
-        return sqrt( x0[0]*x0[0] +x0[1]*x0[1]);
-    }
-
-};
+double ds_norm( const std::array<double,2>& x0){
+    return sqrt( x0[0]*x0[0] +x0[1]*x0[1]);
+}
 
 //used in constructor of Fieldaligned
 template<class real_type>
@@ -130,14 +126,14 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
         //x,y,s
         real_type phi1 = deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-            dg::integrateRK45( cyl_field, 0., coords, phi1, coordsP, eps, 0,false,0,DSMonitor()); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         else
-            dg::integrateRK45(field, 0., coords, phi1, coordsP, eps, 0,false,0,DSMonitor()); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         phi1 =  - deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-            dg::integrateRK45( cyl_field, 0., coords, phi1, coordsM, eps, 0,false,0,DSMonitor()); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         else
-            dg::integrateRK45( field, 0., coords, phi1, coordsM, eps, 0,false,0,DSMonitor()); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1];
     }
