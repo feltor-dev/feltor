@@ -25,12 +25,13 @@ toc::[]
 
 == 1. Quick start guide [[sec_quickstart]]
 This guide discusses how to setup, test and benchmark the FELTOR library
-installation.
-We then present how to use the software package,
+installation. Please read it before you proceed to the https://feltor-dev.github.io/tutorial/[online tutorial] to learn how to use the library in your own programs.
+We also present how to use the FELTOR software package,
 which requires additional external libraries to be installed on the system.
-[TIP]
+____
 The first part assumes a Linux operating system. If you want to work
-on Windows jump to <<sec_windows,Using Feltor on Windows>>
+on Windows, jump to <<sec_windows,Using Feltor on Windows>>.
+____
 
 === System setup
 
@@ -52,9 +53,10 @@ git clone https://www.github.com/cusplibrary/cusplibrary
 git clone https://www.github.com/feltor-dev/vcl
 ----
 
-[NOTE]
+____
 Our code only depends on external libraries that are themselves openly
 available.
+____
 
 .System requirements [[tab_requirements]]
 
@@ -66,7 +68,7 @@ available.
 | *GPU*     | - | NVidia GPU with compute-capability > 6 and nvcc-8.0
 | *MPI*     | - | mpi installation compatible with compiler (must be cuda-aware in case hybrid MPI+GPU is the target system)
 |=======================================================================
-[NOTE]
+____
 Our GPU backend uses the
 https://developer.nvidia.com/cuda-zone[Nvidia-CUDA] programming
 environment and in order to compile and run a program for a GPU a user
@@ -76,6 +78,7 @@ our software a user does not have to possess a GPU nor the nvcc
 compiler. The CPU version of the backend is equally valid and provides
 the same functionality. Analogously, an MPI installation is only required if the user targets
 a distributed memory system.
+____
 
 === Running a FELTOR test or benchmark program
 
@@ -96,9 +99,10 @@ ln -s path/to/cusplibrary/cusp
 ln -s path/to/vcl
 ----
 
-[TIP]
+____
 If you do not like this, you can also set the include paths in your own config file as
 described link:config/README.md[here].
+____
 
 Now let us compile the first benchmark program.
 
@@ -122,20 +126,22 @@ and when prompted for input vector sizes type for example `3 100 100 10`
 which makes a grid with 3 polynomial coefficients, 100 cells in x, 100
 cells in y and 10 in z. If you compiled for OpenMP, you can set the
 number of threads with e.g. `export OMP_NUM_THREADS=4`.
-[TIP]
+____
 This is a
 benchmark program to benchmark various elemental functions the library
 is built on. Go ahead and vary the input parameters and see how your
 hardware performs. You can compile and run any other program that ends
 in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in
 `feltor/inc/dg` in this way.
+____
 
 Now, let us test the mpi setup
-[TIP]
+____
 You can of course skip this if you
 don't have mpi installed on your computer. If you intend to use the
 MPI backend, an implementation library of the mpi standard is required.
 Per default `mpic++` is used for compilation.
+____
 
 [source,sh]
 ----
@@ -323,9 +329,10 @@ FELTOR has been developed mostly on Linux machines.
 Recently, it has become possible to develop also on Windows
 using https://visualstudio.microsoft.com/[Microsoft Visual Studio]. We here
 describe how to work with FELTOR's OpenMP shared memory backend on Windows.
-[CAUTION]
+____
 Unfortunately, the msvc compiler only supports an outdated OpenMP version so
 consider a performance penalty of approximately a factor 2, when running the OpenMP backend on Windows.
+____
 
 ===== Basic Setup
 
@@ -363,8 +370,9 @@ That's it.
 You can add your Feltor Property Sheet to any new project
  by switching to the `Property Manager` again:
 click `Add Existing Property Sheet` and select `FeltorPropertySheet`.
-[TIP]
- We suggest that you generate a new project for each executable program.
+____
+We suggest that you generate a new project for each executable program.
+____
 
 ===== Basic test
 In order to test the Feltor Property Sheet let us add a source file to
@@ -375,10 +383,11 @@ As an example we name it `test.cpp` and copy the contents of <<test_cpp,test.cpp
 * Change the Platform from x86 to x64.
 * Compile with `Ctrl + F5` then run the code
 
-[TIP]
+____
 If you want to prevent the console from closing on program exit,
 set `Properties -> Linker -> System -> SubSystem -> Console (/SUBSYSTEM:CONSOLE)`
 in your Property Sheet.
+____
 
 ===== Advanced simulation projects
 
