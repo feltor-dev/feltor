@@ -31,7 +31,7 @@ template< class Vector1, class Vector2, class ...Params>
 void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
     out.set_communicator(in.communicator());
-    dg::transfer( in.data(), out.data(), std::forward<Params>(ps)...);
+    dg::assign( in.data(), out.data(), std::forward<Params>(ps)...);
 }
 
 }//namespace detail

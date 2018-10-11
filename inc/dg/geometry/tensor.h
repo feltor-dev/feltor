@@ -26,7 +26,7 @@ struct SparseElement
     SparseElement(const T& value):value_(1,value){ }
     /**
      * @brief Type conversion from other value types
-     * @tparam OtherT dg::transfer must be callable for T and OtherT
+     * @tparam OtherT dg::assign must be callable for T and OtherT
      * @param src the source matrix to convert
      */
     template<class OtherT>
@@ -35,7 +35,7 @@ struct SparseElement
         if(src.isSet())
         {
             value_.resize(1);
-            dg::transfer(src.value(), value_[0]);
+            dg::assign(src.value(), value_[0]);
         }
     }
 
@@ -101,7 +101,7 @@ struct SparseTensor
 
     /**
      * @brief Type conversion from other value types
-     * @tparam OtherT \c dg::transfer must be callable for \c T and \c OtherT
+     * @tparam OtherT \c dg::assign must be callable for \c T and \c OtherT
      * @param src the source matrix to convert
      */
     template<class OtherT>
@@ -111,7 +111,7 @@ struct SparseTensor
                 mat_idx_(i,j)=src.idx(i,j);
 
         for( unsigned i=0; i<src.values().size(); i++)
-            dg::transfer( src.values()[i], values_[i]);
+            dg::assign( src.values()[i], values_[i]);
     }
 
     /**
@@ -335,7 +335,7 @@ struct CholeskyTensor
     }
     /**
      * @brief Type conversion from other value types
-     * @tparam OtherContainer dg::transfer must be callable for ContainerType and OtherContainer
+     * @tparam OtherContainer dg::assign must be callable for ContainerType and OtherContainer
      * @param in the source matrix to convert
      */
     template<class OtherContainer>

@@ -17,7 +17,7 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid( 0., 2.*M_PI, 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, Nz);
     Vector w2d;
-    dg::transfer( dg::create::weights(grid), w2d);
+    dg::assign( dg::create::weights(grid), w2d);
     dg::SparseTensor<Vector> g(3);
     g.idx(0,0) = 0, g.idx(0,1) = g.idx(1,0) = 1, g.idx(1,1) = 2;
     g.values()[0] = g.values()[1] = g.values()[2] = w2d;

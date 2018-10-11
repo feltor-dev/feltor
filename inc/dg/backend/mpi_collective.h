@@ -195,8 +195,7 @@ struct BijectiveComm : public aCommunicator<Vector>
     void construct( thrust::host_vector<int> pids, MPI_Comm comm)
     {
         pids_ = pids;
-        idx_.resize( pids.size());
-        idx_ = dg::construct<Index>( pids);
+        dg::assign( pids, idx_);
         int rank, size;
         MPI_Comm_size( comm, &size);
         MPI_Comm_rank( comm, &rank);
@@ -342,7 +341,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
         sortMap_ = gatherMap_I;
         thrust::sequence( sortMap_.begin(), sortMap_.end());
         thrust::stable_sort_by_key( gatherMap_I.begin(), gatherMap_I.end(), sortMap_.begin());//note: this also sorts the gatherMap
-        sortedGatherMap_ = dg::construct<Index>( gatherMap_I);
+        dg::assign( gatherMap_I, sortedGatherMap_);
         //now we can repeat/invert the sort by a gather/scatter operation with sortMap as map
     }
     unsigned buffer_size_, store_size_;
@@ -439,8 +438,7 @@ struct GeneralComm : public aCommunicator<Vector>
         surjectiveComm_ = SurjectiveComm<Index,Vector>(localGatherMap, pidGatherMap, comm);
 
         const Index& sortedGatherMap_ = surjectiveComm_.getSortedGatherMap();
-        thrust::host_vector<int> gatherMap;
-        gatherMap = dg::construct<thrust::host_vector<int>>( sortedGatherMap_);
+        thrust::host_vector<int> gatherMap = dg::construct<thrust::host_vector<int>>( sortedGatherMap_);
         thrust::host_vector<int> one( gatherMap.size(), 1), keys(one), number(one);
         typedef thrust::host_vector<int>::iterator iterator;
         thrust::pair< iterator, iterator> new_end =

@@ -50,7 +50,7 @@ struct MultiMatrix
         for( unsigned i=0; i<dimsM; i++)
             inter_[i] = src.get_matrices()[i];
         for( unsigned i=0; i<dimsT; i++)
-            dg::transfer( src.get_temp()[i].data(), temp_[i].data());
+            dg::assign( src.get_temp()[i].data(), temp_[i].data());
 
     }
     template<class OtherMatrix, class OtherContainer, class ...Params>
@@ -62,7 +62,7 @@ struct MultiMatrix
         for( unsigned i=0; i<dimsM; i++)
             inter_[i] = src.get_matrices()[i];
         for( unsigned i=0; i<dimsT; i++)
-            dg::transfer( src.get_temp()[i].data(), temp_[i].data(), std::forward<Params>(ps)...);
+            dg::assign( src.get_temp()[i].data(), temp_[i].data(), std::forward<Params>(ps)...);
     }
 
 

@@ -52,7 +52,7 @@ namespace blas1
  * @copydoc hide_iterations
  * @param source vector to copy
  * @param target destination
- * @note in contrast to the \c blas1::transfer functions the \c copy function uses
+ * @note in contrast to the (deprecated) \c blas1::transfer functions the \c copy function uses
  * the execution policy to determine the implementation and thus works
  * only on types with same execution policy
  * @note catches self-assignment
@@ -553,17 +553,17 @@ inline ContainerType transfer( const from_ContainerType& from)
     return dg::construct<ContainerType>( from);
 }
 
-///@attention This function is deprecated! Please replace with either \c dg::blas1::copy (parallel copy between compatible types) or \c dg::transfer (data transfer between devices)"
+///@attention This function is deprecated! Please replace with either \c dg::blas1::copy (parallel copy between compatible types) or \c dg::assign (data transfer between devices)"
 template<class from_ContainerType, class ContainerType>
 inline void transfer( const from_ContainerType& from, ContainerType& to)
 {
-    dg::transfer<from_ContainerType, ContainerType>( from, to);
+    dg::assign<from_ContainerType, ContainerType>( from, to);
 }
 ///@}
 }//namespace blas1
 
 /**
- * @brief Generic way to copy the contents of a \c from_ContainerType object to a \c ContainerType object optionally given additional parameters
+ * @brief Generic way to assign the contents of a \c from_ContainerType object to a \c ContainerType object optionally given additional parameters
  *
  * The idea of this function is to convert between types with the same data
  * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector). If the layout differs, additional parameters can be used
@@ -573,15 +573,15 @@ inline void transfer( const from_ContainerType& from, ContainerType& to)
  * @code{.cpp}
 dg::HVec host( 100, 1.);
 dg::DVec device(100);
-dg::transfer( host, device );
+dg::assign( host, device );
 //let us construct a std::vector of 3 dg::DVec from a host vector
 std::vector<dg::DVec> device_vec(3);
-dg::transfer( host, device_vec, 3);
+dg::assign( host, device_vec, 3);
  * @endcode
  * @param from source vector
  * @param to target vector contains a copy of \c from on output (memory is automatically resized if necessary)
  * @param ps additional parameters usable for the transfer operation
- * @note it is possible to transfer a \c from_ContainerType to a <tt> std::array<ContainerType, N> </tt>
+ * @note it is possible to assign a \c from_ContainerType to a <tt> std::array<ContainerType, N> </tt>
 (all elements are initialized with from_ContainerType) and also a <tt> std::vector<ContainerType></tt> ( the desired size of the \c std::vector must be provided as an additional parameter)
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to assign objects of Type \c ContainerType
@@ -589,7 +589,7 @@ dg::transfer( host, device_vec, 3);
  * @ingroup backend
  */
 template<class from_ContainerType, class ContainerType, class ...Params>
-inline void transfer( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
+inline void assign( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
 {
     dg::detail::doTransfer<from_ContainerType, ContainerType, Params...>( from, to, get_tensor_category<from_ContainerType>(), get_tensor_category<ContainerType>(), std::forward<Params>(ps)...);
 }
