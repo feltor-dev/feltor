@@ -60,14 +60,14 @@ struct Helmholtz
     void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
+        dg::transfer( dg::evaluate( dg::one, g), temp_);
         alpha_ = alpha;
     }
     ///@copydoc Helmholtz::Helmholtz(const Geometry&,double,direction,double)
     void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
+        dg::transfer( dg::evaluate( dg::one, g), temp_);
         alpha_ = alpha;
     }
     /**
@@ -187,16 +187,16 @@ struct Helmholtz2
     void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
+        dg::transfer( dg::evaluate( dg::one, g), temp1_);
+        dg::transfer( dg::evaluate( dg::one, g), temp2_);
         alpha_ = alpha;
     }
     ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,double,direction,double)
     void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
+        dg::transfer( dg::evaluate( dg::one, g), temp1_);
+        dg::transfer( dg::evaluate( dg::one, g), temp2_);
         alpha_ = alpha;
     }
     /**

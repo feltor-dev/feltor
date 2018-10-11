@@ -52,11 +52,11 @@ int main( int argc, char* argv[])
     dg::MPIGrid3d grid( 0., lx, 0, ly,0., ly, n, Nx, Ny, Nz, comm);
     dg::MPIGrid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d;
-    dg::blas1::transfer( dg::create::weights(grid), w2d);
+    dg::transfer( dg::create::weights(grid), w2d);
     dg::Timer t;
     t.tic();
     ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    dg::transfer( dg::evaluate( left, grid), x);
     t.toc();
     double gbytes=(double)x.size()*grid.size()*sizeof(double)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
@@ -161,8 +161,8 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     //////////////////////these functions are more mean to dot
     if(rank==0)std::cout<<"\nGlobal communication\n";
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
-    dg::blas1::transfer( dg::evaluate( right, grid), y);
+    dg::transfer( dg::evaluate( left, grid), x);
+    dg::transfer( dg::evaluate( right, grid), y);
     value_type norm=0;
     norm += dg::blas1::dot( x,y);//warm up
     t.tic();

@@ -44,7 +44,7 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
 template< class Vector1, class Vector2>
 void doTransfer( const Vector1& in, Vector2& out, AnyVectorTag, AnyVectorTag)
 {
-    dg::blas1::transfer(in,out);
+    dg::transfer(in,out);
 }
 
 template< class Vector1, class Matrix, class Vector2>

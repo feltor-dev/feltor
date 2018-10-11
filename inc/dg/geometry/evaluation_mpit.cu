@@ -42,11 +42,11 @@ int main(int argc, char** argv)
     dg::MPIGrid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
 
     //test evaluation and expand functions
-    MDVec func2d = dg::blas1::transfer<MDVec>(dg::evaluate( function, g2d));
-    MDVec func3d = dg::blas1::transfer<MDVec>(dg::evaluate( function, g3d));
+    MDVec func2d = dg::construct<MDVec>(dg::evaluate( function, g2d));
+    MDVec func3d = dg::construct<MDVec>(dg::evaluate( function, g3d));
     //test weights
-    const MDVec w2d = dg::blas1::transfer<MDVec>(dg::create::weights(g2d));
-    const MDVec w3d = dg::blas1::transfer<MDVec>(dg::create::weights(g3d));
+    const MDVec w2d = dg::construct<MDVec>(dg::create::weights(g2d));
+    const MDVec w3d = dg::construct<MDVec>(dg::create::weights(g3d));
     exblas::udouble res;
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;

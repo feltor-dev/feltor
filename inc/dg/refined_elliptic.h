@@ -124,10 +124,10 @@ class RefinedElliptic
         dg::blas2::transfer( dg::create::interpolationT( g_coarse, g_fine), QT_);
         dg::blas2::transfer( dg::create::projection( g_coarse, g_fine), P_);
 
-        dg::blas1::transfer( dg::evaluate( dg::one, g_fine), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g_fine), temp2_);
-        dg::blas1::transfer( dg::create::weights( g_coarse), weights_);
-        dg::blas1::transfer( dg::create::inv_weights( g_coarse), inv_weights_);
+        dg::transfer( dg::evaluate( dg::one, g_fine), temp1_);
+        dg::transfer( dg::evaluate( dg::one, g_fine), temp2_);
+        dg::transfer( dg::create::weights( g_coarse), weights_);
+        dg::transfer( dg::create::inv_weights( g_coarse), inv_weights_);
         inv_vol_ = vol_ = dg::tensor::volume( g_fine.metric());
         dg::tensor::invert( inv_vol_);
 

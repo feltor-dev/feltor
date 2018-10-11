@@ -545,21 +545,20 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 //    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>(), get_tensor_category<ContainerType2>() );
 }
 
-///@cond
+///Deprecated: Use \c dg::construct<ContainerType>() instead
+///@attention This function is deprecated! Please replace with \c dg::construct (data transfer between different devices)
 template<class ContainerType, class from_ContainerType>
 inline ContainerType transfer( const from_ContainerType& from)
 {
-//ATTENTION: "dg::blas1::transfer is deprecated! Please replace with dg::construct (data transfer between different devices)"
     return dg::construct<ContainerType>( from);
 }
 
+///@attention This function is deprecated! Please replace with either \c dg::blas1::copy (parallel copy between compatible types) or \c dg::transfer (data transfer between devices)"
 template<class from_ContainerType, class ContainerType>
 inline void transfer( const from_ContainerType& from, ContainerType& to)
 {
-//ATTENTION: "dg::blas1::transfer is deprecated! Please replace with either dg::blas1::copy (parallel copy between compatible types) or dg::transfer (data transfer between devices)"
     dg::transfer<from_ContainerType, ContainerType>( from, to);
 }
-///@endcond
 ///@}
 }//namespace blas1
 
@@ -567,12 +566,13 @@ inline void transfer( const from_ContainerType& from, ContainerType& to)
  * @brief Generic way to copy the contents of a \c from_ContainerType object to a \c ContainerType object optionally given additional parameters
  *
  * The idea of this function is to convert between types with the same data
- * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector)
+ * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector). If the layout differs, additional parameters can be used
+ * to achieve what you want.
 
  * For example
- * @code
+ * @code{.cpp}
 dg::HVec host( 100, 1.);
-dg::DVec device(100); 
+dg::DVec device(100);
 dg::transfer( host, device );
 //let us construct a std::vector of 3 dg::DVec from a host vector
 std::vector<dg::DVec> device_vec(3);
@@ -583,9 +583,10 @@ dg::transfer( host, device_vec, 3);
  * @param ps additional parameters usable for the transfer operation
  * @note it is possible to transfer a \c from_ContainerType to a <tt> std::array<ContainerType, N> </tt>
 (all elements are initialized with from_ContainerType) and also a <tt> std::vector<ContainerType></tt> ( the desired size of the \c std::vector must be provided as an additional parameter)
- * @copydoc hide_ContainerType
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to assign objects of Type \c ContainerType
+ * @copydoc hide_ContainerType
+ * @ingroup backend
  */
 template<class from_ContainerType, class ContainerType, class ...Params>
 inline void transfer( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
@@ -598,9 +599,10 @@ inline void transfer( const from_ContainerType& from, ContainerType& to, Params&
  *
  * The idea of this function is to convert between types with the same data
  * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector)
+ * If the layout differs, additional parameters can be used to achieve what you want.
 
  * For example
- * @code
+ * @code{.cpp}
 dg::HVec host( 100, 1.);
 dg::DVec device = dg::construct<dg::DVec>( host );
 std::array<dg::DVec, 3> device_arr = dg::construct<std::array<dg::DVec, 3>>( host );
@@ -612,9 +614,10 @@ std::vector<dg::DVec> device_vec = dg::construct<std::vector<dg::DVec>>( host, 3
  * @return \c from converted to the new format (memory is allocated accordingly)
  * @note it is possible to construct a <tt> std::array<ContainerType, N> </tt>
 (all elements are initialized with from_ContainerType) and also a <tt> std::vector<ContainerType></tt> ( the desired size of the \c std::vector must be provided as an additional parameter) given a \c from_ContainerType
- * @copydoc hide_ContainerType
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to construct objects of Type \c ContainerType
+ * @copydoc hide_ContainerType
+ * @ingroup backend
  */
 template<class ContainerType, class from_ContainerType, class ...Params>
 inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)

@@ -99,14 +99,14 @@ class Elliptic
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
 
-        dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
-        dg::blas1::transfer( dg::create::volume(g),        weights_);
-        dg::blas1::transfer( dg::create::inv_weights(g),   precond_);
+        dg::transfer( dg::create::inv_volume(g),    inv_weights_);
+        dg::transfer( dg::create::volume(g),        weights_);
+        dg::transfer( dg::create::inv_weights(g),   precond_);
         tempx = tempy = gradx = inv_weights_;
         chi_=g.metric();
         vol_=dg::tensor::volume(chi_);
         dg::tensor::scal( chi_, vol_);
-        dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
+        dg::transfer( dg::create::weights(g), weights_wo_vol);
     }
 
     ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,double)
@@ -600,9 +600,9 @@ struct TensorElliptic
     {
         get_host_vector<Geometry> chiXX, chiXY, chiYY;
         dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_.get());
-        dg::blas1::transfer( chiXX, chixx_);
-        dg::blas1::transfer( chiXY, chixy_);
-        dg::blas1::transfer( chiYY, chiyy_);
+        dg::transfer( chiXX, chixx_);
+        dg::transfer( chiXY, chixy_);
+        dg::transfer( chiYY, chiyy_);
         set( chixx_, chixy_, chiyy_);
     }
 
@@ -645,14 +645,14 @@ struct TensorElliptic
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
-        dg::blas1::transfer( dg::create::volume(g),        weights_);
-        dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
-        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
-        dg::blas1::transfer( dg::evaluate( dg::one, g),    chixx_);
-        dg::blas1::transfer( dg::evaluate( dg::zero,g),    chixy_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g),    chiyy_);
+        dg::transfer( dg::create::volume(g),        weights_);
+        dg::transfer( dg::create::inv_volume(g),    inv_weights_);
+        dg::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
+        dg::transfer( dg::evaluate( dg::one, g),    chixx_);
+        dg::transfer( dg::evaluate( dg::zero,g),    chixy_);
+        dg::transfer( dg::evaluate( dg::one, g),    chiyy_);
         tempx_ = tempy_ = gradx_ = chixx_;
-        dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
+        dg::transfer( dg::create::weights(g), weights_wo_vol);
 
         vol_=dg::tensor::volume(g.metric());
         dg::tensor::pointwiseDot( vol_, chixx_, chixx_);
