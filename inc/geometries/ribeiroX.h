@@ -41,7 +41,7 @@ struct FpsiX
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
         //double y_old=0;
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
@@ -176,7 +176,7 @@ struct XFieldFinv
             { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-        std::array<double,3> begin( {0,0,0}), end(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin);
         double R_i[2], Z_i[2];
         dg::Timer t;
         t.tic();

@@ -37,7 +37,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-    std::array<double,2> begin( {0,0}), end(begin), temp(begin);
+	std::array<double, 2> begin{ {0,0} }, end(begin), temp(begin);
     begin[0] = R_init[0], begin[1] = Z_init[0];
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi);
     dg::geo::equalarc::FieldRZY fieldRZYequi(psi);
