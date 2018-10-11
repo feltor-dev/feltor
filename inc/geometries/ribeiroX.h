@@ -55,17 +55,17 @@ struct FpsiX
             N*=2;
             if( psi < 0)
             {
-                dg::stepperRK<17>( fieldRZYT_, 0., begin, 2.*M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2.*M_PI, end, N);
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
                 eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             }
             else
             {
-                dg::stepperRK<17>( fieldRZYZ_, begin[1], begin, 0., end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, begin[1], begin, 0., end, N);
                 std::array<double,3> temp(end);
-                dg::stepperRK<17>( fieldRZYT_, 0., begin, M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, M_PI, end, N);
                 temp = end; //temp[1] should be 0 now
-                dg::stepperRK<17>( fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old;
@@ -189,14 +189,14 @@ struct XFieldFinv
         if( psi[0] < -1. && psi[0] > -2.) N*=2;
         if( psi[0] < 0 && psi[0] > -1.) N*=10;
         if( psi[0] <0  )
-            dg::stepperRK<17>( fieldRZYT_, 0., begin, 2.*M_PI, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2.*M_PI, end, N);
         else
         {
-            dg::stepperRK<17>( fieldRZYZ_, begin[1], begin, 0., end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, begin[1], begin, 0., end, N);
             std::array<double,3> temp(end);
-            dg::stepperRK<17>( fieldRZYT_, 0., temp,  M_PI, end, N/2);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., temp,  M_PI, end, N/2);
             temp = end; //temp[1] should be 0 now
-            dg::stepperRK<17>( fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = end[2]/2./M_PI;
@@ -216,7 +216,7 @@ struct XFieldFinv
         while( eps < eps_old && N < 1e6 &&  eps > 1e-9)
         {
             eps_old = eps, end_old = end;
-            N*=2; dg::stepperRK<17>( *this, x0, begin, x, end, N);
+            N*=2; dg::stepperRK( "Feagin-17-8-10",  *this, x0, begin, x, end, N);
             eps = fabs( end[0]- end_old[0]);
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
         }

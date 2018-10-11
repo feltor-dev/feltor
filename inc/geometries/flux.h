@@ -48,7 +48,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK<17>( fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
+            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -66,7 +66,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps, end_old = end; N*=2;
-            dg::stepperRK<17>( fieldRZYT_, 0., begin, 2*M_PI, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";

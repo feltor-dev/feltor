@@ -494,18 +494,18 @@ void construct_psi_values( FieldFinv fpsiMinv,
         eps_old = eps;
         x0 = x_0, x1 = x_vec[0];
         if( psi_1<psi_0) x1*=-1;
-        dg::stepperRK<17>( fpsiMinv, x0, begin, x1, end, N);
+        dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, begin, x1, end, N);
         psi_x[0] = end[0]; fpsiMinv(0.,end,temp); f_x_[0] = temp[0];
         for( unsigned i=1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
             if( psi_1<psi_0) x0*=-1, x1*=-1;
-            dg::stepperRK<17>( fpsiMinv, x0, temp, x1, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, temp, x1, end, N);
             psi_x[i] = end[0]; fpsiMinv(0.,end,temp); f_x_[i] = temp[0];
         }
         temp = end;
-        dg::stepperRK<17>(fpsiMinv, x1, temp, psi_1>psi_0?x_1:-x_1, end,N);
+        dg::stepperRK( "Feagin-17-8-10", fpsiMinv, x1, temp, psi_1>psi_0?x_1:-x_1, end,N);
         double psi_1_numerical = end[0];
         eps = fabs( psi_1_numerical-psi_1);
         if(verbose)std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
@@ -546,14 +546,14 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
-        dg::stepperRK<17>( fieldRZYRYZY, 0, begin, y_vec[0], end, steps);
+        dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 0, begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
         fieldRZYRYZY.derive( r[0], z[0], xr[0], xz[0]);
         //std::cout <<end[0]<<" "<< end[1] <<"\n";
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK<17>( fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive( r[i], z[i], xr[i], xz[i]);
         }

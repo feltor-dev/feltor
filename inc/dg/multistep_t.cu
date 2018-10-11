@@ -120,17 +120,17 @@ int main()
     double time = 0.;
     dg::DVec error( sol);
     exblas::udouble res;
-    for( unsigned i=1; i<6; i++)
+    for( unsigned s=1; s<6; s++)
     {
         time = 0., y0 = init;
-        dg::AdamsBashforth< dg::DVec > ab( y0,i);
+        dg::AdamsBashforth< dg::DVec > ab( y0,s);
         ab.init( full, time, y0, dt);
         //main time loop
-        for( unsigned i=0; i<NT; i++)
+        for( unsigned k=0; k<NT; k++)
             ab.step( full, time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-        std::cout << "Relative error AB "<<i<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+        std::cout << "Relative error AB "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
     }
     Explicit<dg::DVec> ex( grid, nu);
     Implicit<dg::DMatrix, dg::DVec> im( grid, nu);

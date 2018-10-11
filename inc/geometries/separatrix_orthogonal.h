@@ -52,47 +52,47 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         if( nodeX0 != 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[nodeX0-1], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[nodeX0-1], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[nodeX0-1], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[nodeX0-1], end, steps);
             r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
         }
         for( int i=nodeX0-2; i>=0; i--)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i+1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i+1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i+1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i+1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         ////////////////middle region///////////////////////////
         begin[0] = R_init[0], begin[1] = Z_init[0];
-        if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[nodeX0], end, steps);
-        if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[nodeX0], end, steps);
+        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[nodeX0], end, steps);
+        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[nodeX0], end, steps);
         r[nodeX0] = end[0], z[nodeX0] = end[1];
         for( unsigned i=nodeX0+1; i<nodeX1; i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         temp = end;
-        if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
-        if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
         if(verbose)std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
             r[nodeX1] = end[0], z[nodeX1] = end[1];
         }
         for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only

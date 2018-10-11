@@ -79,7 +79,7 @@ real_type construct_c0( const thrust::host_vector<real_type>& etaVinv, const dg:
     //while( (eps < eps_old || eps > 1e-7)&& eps > 1e-12)
     //{
     //    eps_old = eps, end_old = end;
-    //    N*=2; dg::stepperRK<4>( inter, 0., begin, 2*M_PI, end, N);
+    //    N*=2; dg::stepperRK( "ARK-4-2-3 (explicit)", inter, 0., begin, 2*M_PI, end, N);
     //    eps = fabs( end[1]-end_old[1]);
     //    std::cout << "\t error eps "<<eps<<" with "<<N<<" steps: " << 2*M_PI/end[1]<<"\n";
     //    std::cout << "\t error c0  "<<fabs(c0-2.*M_PI/end[1])<<" with "<<N<<" steps: " << 2*M_PI/end[1]<<"\n";
@@ -111,16 +111,16 @@ void compute_zev(
     {
         //begin is left const
         eps_old = eps, eta_old = eta;
-        dg::stepperRK<17>( iter, 0, begin, v_vec[0], end, steps);
+        dg::stepperRK( "Feagin-17-8-10",  iter, 0, begin, v_vec[0], end, steps);
         eta[0] = end[1];
         for( unsigned i=1; i<v_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK<17>( iter, v_vec[i-1], begin, v_vec[i], end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  iter, v_vec[i-1], begin, v_vec[i], end, steps);
             eta[i] = end[1];
         }
         temp = end;
-        dg::stepperRK<17>( iter, v_vec[v_vec.size()-1], begin, 2.*M_PI, end, steps);
+        dg::stepperRK( "Feagin-17-8-10",  iter, v_vec[v_vec.size()-1], begin, 2.*M_PI, end, steps);
         dg::blas1::axpby( 1., eta, -1., eta_old, eta_diff);
         eps =  sqrt( dg::blas1::dot( eta_diff, eta_diff) / dg::blas1::dot( eta, eta));
         //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
@@ -161,7 +161,7 @@ void construct_grid(
         for( unsigned i=0; i<sizeU; i++)
         {
             u0 = i==0?0:u_vec[i-1], u1 = u_vec[i];
-            dg::stepperRK<17>( inter, u0, temp, u1, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  inter, u0, temp, u1, end, N);
             for( unsigned j=0; j<sizeV; j++)
             {
                  unsigned idx = j*sizeU+i;

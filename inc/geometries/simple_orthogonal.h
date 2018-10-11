@@ -49,7 +49,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK<17>( fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
+            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -68,9 +68,9 @@ struct Fpsi
         {
             eps_old = eps, end_old = end; N*=2;
             if( firstline_ == 0)
-                dg::stepperRK<17>( fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
             if( firstline_ == 1)
-                dg::stepperRK<17>( fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -121,14 +121,14 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z;
-        if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[0], end, steps);
-        if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[0], end, steps);
+        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[0], end, steps);
+        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1];
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
@@ -244,7 +244,7 @@ void construct_rz( Nemov nemov,
         {
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK<17>( nemov, x0, temp, x1, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  nemov, x0, temp, x1, end, N);
             for( unsigned j=0; j<sizeY; j++)
             {
                 unsigned idx = j*sizeX+i;
