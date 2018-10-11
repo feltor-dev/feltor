@@ -725,7 +725,7 @@ struct TensorElliptic
  Also note that a forward discretization has more diffusion than a centered discretization.
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
- * @snippet elliptic3d_b.cu invert
+ * @snippet elliptic_b.cu invert
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.

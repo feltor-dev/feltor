@@ -37,21 +37,19 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
+    std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
+    //std::cout << "Create Laplacian\n";
+    //! [invert]
     dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, bcz);
     dg::DVec w3d = dg::create::volume( grid);
     dg::DVec v3d = dg::create::inv_volume( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
-    std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
-    //std::cout << "Create Laplacian\n";
     dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
-    dg::DMatrix DX = dg::create::dx( grid);
 
     dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
 
-    //std::cout<<"Expand right hand side\n";
     const dg::DVec solution = dg::evaluate ( fct, grid);
-    const dg::DVec deriv = dg::evaluate( derivative, grid);
     dg::DVec b = dg::evaluate ( laplace3d_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
@@ -64,6 +62,7 @@ int main()
     t.toc();
     std::cout << "Number of pcg iterations "<<num<<std::endl;
     std::cout << "... on the device took   "<< t.diff()<<"s\n";
+    //! [invert]
     dg::DVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
@@ -72,6 +71,8 @@ int main()
     exblas::udouble res;
     norm = sqrt(normerr/norm); res.d = norm;
     std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
+    const dg::DVec deriv = dg::evaluate( derivative, grid);
+    dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error);

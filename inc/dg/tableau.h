@@ -11,30 +11,52 @@ namespace dg{
 /*! @brief Manage coefficients of a (extended) Butcher tableau
  *
  * The goal of this class is to represent a Butcher tableau for the use
- * in Runge Kutta type time integrators. The coefficients of the tableau
+ * in Runge Kutta type time integrators. See
+ * https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
+ * for an introduction.
+ * The coefficients of the tableau
  * should be easily constructible and accessible afterwards.
- * Furthermore, it provides utilities like the number of stages, whether the 
- * tableau is embedded or not and the order of the method. 
+ * Furthermore, it provides utilities like the number of stages, whether the
+ * tableau is embedded or not and the order of the method.
  * @tparam real_type type of the coefficients
+ * @sa RungeKutta, ERKStep, ARKStep
+ * @ingroup time
  */
 template<class real_type>
 struct ButcherTableau{
-    ///No data allocation
+    ///No memory allocation
     ButcherTableau(){}
-    //init embedded part as a copy of real part, embedded order = order
     /*! @brief Construct a classic non-embedded tableau
+     * @param s number of stages
+     * @param order (global) order of the resulting method
+     * @param a pointer to s*s real numbers interpreted as a_{ij}=a[i*s+j]
+     * @param b pointer to s real numbers interpreted as b_j=b[j]
+     * @param c pointer to s real numbers interpreted as c_i=c[i]
+     * @note This constructor initializes the embedded coefficients bt=b
+     * which makes the embedded method equal to the actual method
      */
     ButcherTableau(unsigned s, unsigned order,
                    real_type* a , real_type* b , real_type* c):
         m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order), m_s(s){}
     /*! @brief Construct an embedded tableau
      *
-     * @param s 
+     * @param s number of stages
+     * @param embedded_order (global) order of the embedded method (corresponding to \c bt)
+     * @param order (global) order of the method (corresponding to \c b)
+     * @param a pointer to s*s real numbers interpreted as a_{ij}=a[i*s+j]
+     * @param b pointer to s real numbers interpreted as b_j=b[j]
+     * @param bt pointer to s real numbers interpreted as bt_j=bt[j]
+     * @param c pointer to s real numbers interpreted as c_i=c[i]
      */
     ButcherTableau(unsigned s, unsigned embedded_order, unsigned order,
                real_type* a, real_type* b, real_type* bt, real_type* c):
         m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_s(s), m_embedded(true){}
     ///Construct from ARKode standard format
+    /*!@brief Construct embedded method from single array
+     * @param s number of stages
+     * @param data Array of (s+1)*(s+2) real numbers, interpreted as:
+     * c[i]=data[i*(s+1)], a_ij=data[i*(s+1)+j+1], order=data[s*(s+1)], b_j=data[s*(s+1)+j+1], embedded_order = data[(s+1)*(s+1)], bt_j=data[(s+1)*(s+1)+j+1]
+     */
     ButcherTableau(unsigned s, real_type* data):
         m_a(s), m_b(s), m_c(s), m_bt(s), m_s(s), m_embedded(true)
    {
@@ -52,37 +74,65 @@ struct ButcherTableau{
            m_bt[j] = data[(s+1)*(s+1)+j+1];
    }
 
+    /**
+    * @brief Read the a_ij coefficients
+    * @param i row number 0<=i<s, i>=s results in undefined behaviour
+    * @param j col number 0<=j<s, j>=s results in undefined behaviour
+    * @return a_ij
+    */
     real_type a( unsigned i, unsigned j) const {
         return m_a(i,j);
     }
+    /**
+    * @brief Read the c_i coefficients
+    * @param i row number 0<=i<s, i>=s results in undefined behaviour
+    * @return c_i
+    */
     real_type c( unsigned i) const {
         return m_c[i];
     }
+    /**
+    * @brief Read the b_j coefficients
+    * @param j col number 0<=j<s, j>=s results in undefined behaviour
+    * @return b_j
+    */
     real_type b( unsigned j) const {
         return m_b[j];
     }
+    /**
+    * @brief Read the embedded bt_j coefficients
+    * @param j col number 0<=j<s, j>=s results in undefined behaviour
+    * @return bt_j
+    */
     real_type bt( unsigned j) const {
         return m_bt[j];
     }
-    ///b[j] - bt[j]
+    /**
+    * @brief Return the coefficients for the error estimate
+    * Equivalent to b(j)-bt(j)
+    * @param j col number 0<=j<s, j>=s results in undefined behaviour
+    * @return b(j)-bt(j)
+    */
     real_type d( unsigned j) const {
         return m_b[j] - m_bt[j];
     }
+    ///The number of stages s
     unsigned num_stages() const  {
         return m_s;
     }
-    ///global order of accuracy for the method
+    ///global order of accuracy for the method represented by b
     unsigned order() const {
         return m_q;
     }
-    ///global order of accuracy for the embedding
+    ///global order of accuracy for the embedded method represented by bt
     unsigned embedded_order() const{
         return m_p;
     }
+    ///True if the method has an embedding
     bool isEmbedded()const{
         return m_embedded;
     }
-    /// an upper element is non-zero
+    /// True if an element on or above the diagonal in a is non-zero
     bool isImplicit()const{
         for( unsigned i=0; i<m_s; i++)
             for( unsigned j=i; j<m_s; j++)
@@ -90,7 +140,8 @@ struct ButcherTableau{
                     return true;
         return false;
     }
-    /// the last k is evaluated at the solution
+    ///True if the method has the "First Same As Last" property:
+    ///the last stage is evaluated at the same point as the first stage of the next step.
     bool isFsal()const{
         if( m_c[m_s-1] != 1)
             return false;
@@ -106,6 +157,7 @@ struct ButcherTableau{
     bool m_embedded = false;
 };
 
+///@cond
 namespace tableau{
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Classic Butcher tables%%%%%%%%%%%%%%%%%%
 //https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods
@@ -745,45 +797,58 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
 }
 
 }//namespace tableau
+///@endcond
 
+/**
+* @brief Identify the Butcher Tableaus provided by this library
+*
+* We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+* as NAME-S-P-Q or NAME-S-Q, where
+*  - NAME is the author or name of the method
+*  - S is the number of stages in the method
+*  - P is the global order of the embedding
+*  - Q is the global order of the method
+*
+*  @note In some of the links below you might want to use the search function of your browser to find the indicated method
+*  @ingroup time
+*/
 enum tableau_identifier{
-    //Wikipedia
-    EXPLICIT_EULER_1_1,
-    IMPLICIT_EULER_1_1,
-    MIDPOINT_2_2,
-    KUTTA_3_3,
-    CLASSIC_4_4,
+    EXPLICIT_EULER_1_1, //!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler</a>
+    MIDPOINT_2_2, //!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint-2-2</a>
+    KUTTA_3_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
+    CLASSIC_4_4,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Runge-Kutta-4-4</a>
     //ARKode tableaus
-    HEUN_EULER_2_1_2,
-    BOGACKI_SHAMPINE_4_2_3,
-    ARK324L2SA_ERK_4_2_3,
-    ZONNEVELD_5_3_4,
-    ARK436L2SA_ERK_6_3_4,
-    SAYFY_ABURUB_6_3_4,
-    CASH_KARP_6_4_5,
-    FEHLBERG_6_4_5,
-    DORMAND_PRINCE_7_4_5,
-    ARK548L2SA_ERK_8_4_5,
-    VERNER_8_5_6,
-    FEHLBERG_13_7_8,
+    HEUN_EULER_2_1_2,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
+    BOGACKI_SHAMPINE_4_2_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine-4-2-3</a>
+    ARK324L2SA_ERK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
+    ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+    ARK436L2SA_ERK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
+    SAYFY_ABURUB_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy-Aburub-6-3-4</a>
+    CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
+    FEHLBERG_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Fehlberg-6-4-5</a>
+    DORMAND_PRINCE_7_4_5,//!< <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince-7-4-5</a>
+    ARK548L2SA_ERK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
+    VERNER_8_5_6,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
+    FEHLBERG_13_7_8,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
     //high order feagin
-    FEAGIN_17_8_10,
+    FEAGIN_17_8_10,//!< <a href="http://sce.uhcl.edu/rungekutta/">Feagin-17-8-10</a>
     //implicit ARKode tableaus
-    SDIRK_2_1_2,
-    BILLINGTON_3_3_2,
-    TRBDF2_3_3_2,
-    KVAERNO_4_2_3,
-    ARK324L2SA_DIRK_4_2_3,
-    CASH_5_2_4,
-    CASH_5_3_4,
-    SDIRK_5_3_4,
-    KVAERNO_5_3_4,
-    ARK436L2SA_DIRK_6_3_4,
-    KVAERNO_7_4_5,
-    ARK548L2SA_DIRK_8_4_5
+    IMPLICIT_EULER_1_1,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler (implicit)</a>
+    SDIRK_2_1_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-2-1-2</a>
+    BILLINGTON_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
+    TRBDF2_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
+    KVAERNO_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+    ARK324L2SA_DIRK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
+    CASH_5_2_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
+    CASH_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
+    SDIRK_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
+    KVAERNO_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
+    ARK436L2SA_DIRK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
+    KVAERNO_7_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
+    ARK548L2SA_DIRK_8_4_5//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
 };
 
-
+///@cond
 namespace create{
 
 template<class real_type>
@@ -898,18 +963,85 @@ ButcherTableau<real_type> tableau( std::string name)
         return tableau<real_type>( str2id[name]);
 }
 }//namespace create
+///@endcond
 
+/*! @brief Convert identifiers to their corresponding \c dg::ButcherTableau
+ *
+ * This is a helper class to simplify the interfaces of our timestepper functions and classes.
+ * The sole purpose is to implicitly convert certain identifiers to an
+ * instance of a ButcherTableau.
+ * @param real_type The type of the coefficients in the ButcherTableau
+ * @ingroup time
+ */
 template<class real_type>
 struct ConvertsToButcherTableau
 {
+    ///Of course a ButcherTableau converts to a ButcherTableau
+    ///Useful if you constructed your very own coefficients
     ConvertsToButcherTableau( ButcherTableau<real_type> tableau): m_t(tableau){}
+
+    /*! @brief Create ButcherTableau from \c dg::tableau_identifier
+    *
+    * The use of this constructor might be a bit awkward because you'll have to write all caps.
+    * @param id the identifier, for example \c dg::DORMAND_PRINCE_7_4_5
+    */
     ConvertsToButcherTableau( enum tableau_identifier id):m_t( dg::create::tableau<real_type>(id)){}
+    /*! @brief Create ButcherTableau from its name (very useful)
+    *
+    *  @note In some of the links in the Description below you might want to use the search function of your browser to find the indicated method
+    *
+    * Explicit methods
+    *
+    *    Name  | Identifier | Description
+    *   ------------- | ------| -------
+    *   Euler| dg::EXPLICIT_EULER_1_1 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Explicit Euler</a>
+    *   Midpoint-2-2 | dg::MIDPOINT_2_2 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint method</a>
+    *   Kutta-3-3 | dg::KUTTA_3_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
+    *   Runge-Kutta-4-4| dg::CLASSIC_4_4 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods"> "The" Runge-Kutta method</a>
+    *   Heun-Euler-2-1-2| dg::HEUN_EULER_2_1_2 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
+    *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a>
+    *   ARK-4-2-3 (explicit) | dg::ARK324L2SA_ERK_4_2_3 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
+    *   Zonneveld-5-3-4 | dg::ZONNEVELD_5_3_4 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+    *   ARK-6-3-4 (explicit) | dg::ARK436L2SA_ERK_6_3_4 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
+    *   Sayfy_Aburub-6-3-4 | dg::SAYFY_ABURUB_6_3_4 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy_Aburub_6_3_4</a>
+    *   Cash_Karp-6-4-5 | dg::CASH_KARP_6_4_5 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
+    *   Fehlberg-6-4-5 | dg::FEHLBERG_6_4_5 | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
+    *   Dormand-Prince-7-4-5 | dg::DORMAND_PRINCE_7_4_5 | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a>
+    *   ARK-8-4-5 (explicit) | dg::ARK548L2SA_ERK_8_4_5 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
+    *   Verner-8-5-6 | dg::VERNER_8_5_6 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
+    *   Fehlberg-13-7-8 | dg::FEHLBERG_13_7_8 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
+    *   Feagin-17-8-10 | dg::FEAGIN_17_8_10 | <a href="http://sce.uhcl.edu/rungekutta/">Feagin</a> (The RK10(8) method)
+
+    Implicit methods
+    *    Name  | Identifier | Description
+    *   ------------- | ------| -------
+    *   Euler (implicit) | dg::IMPLICIT_EULER_1_1 |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">backward Euler</a>
+    *   SDIRK-2-1-2 | dg::SDIRK_2_1_2 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-2-1-2</a>
+    *   Billington-3-3-2 | dg::BILLINGTON_3_3_2 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
+    *   TRBDF2-3-3-2 | dg::TRBDF2_3_3_2 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
+    *   Kvaerno-4-2-3 | dg::KVAERNO_4_2_3 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+    *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
+    *   Cash-5-2-4 | dg::CASH_5_2_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
+    *   Cash-5-3-4 | dg::CASH_5_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
+    *   SDIRK-5-3-4 | dg::SDIRK_5_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
+    *   Kvaerno-5-3-4 | dg::KVAERNO_5_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
+    *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
+    *   Kvaerno-7-4-5 | dg::KVAERNO_7_4_5 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
+    *   ARK-8-4-5 (implicit)  | dg::ARK548L2SA_DIRK_8_4_5  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+    *
+    * @param name The name of the tableau as stated in the Name column above, as a string, for example "Dormand-Prince-7-4-5"
+    */
     ConvertsToButcherTableau( std::string name):m_t( dg::create::tableau<real_type>(name)){}
+    ///@copydoc ConvertsToButcherTableau(std::string)
     ConvertsToButcherTableau( const char* name):m_t( dg::create::tableau<real_type>(std::string(name))){}
+    ///Convert to ButcherTableau
+    ///
+    ///which means an object can be directly assigned to a ButcherTableau
     operator ButcherTableau<real_type>( )const{
         return m_t;
     }
     private:
     ButcherTableau<real_type> m_t;
 };
+
 }//namespace dg
