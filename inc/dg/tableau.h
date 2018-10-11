@@ -8,13 +8,29 @@
 namespace dg{
 
 
+/*! @brief Manage coefficients of a (extended) Butcher tableau
+ *
+ * The goal of this class is to represent a Butcher tableau for the use
+ * in Runge Kutta type time integrators. The coefficients of the tableau
+ * should be easily constructible and accessible afterwards.
+ * Furthermore, it provides utilities like the number of stages, whether the 
+ * tableau is embedded or not and the order of the method. 
+ * @tparam real_type type of the coefficients
+ */
 template<class real_type>
 struct ButcherTableau{
+    ///No data allocation
     ButcherTableau(){}
     //init embedded part as a copy of real part, embedded order = order
+    /*! @brief Construct a classic non-embedded tableau
+     */
     ButcherTableau(unsigned s, unsigned order,
                    real_type* a , real_type* b , real_type* c):
         m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order), m_s(s){}
+    /*! @brief Construct an embedded tableau
+     *
+     * @param s 
+     */
     ButcherTableau(unsigned s, unsigned embedded_order, unsigned order,
                real_type* a, real_type* b, real_type* bt, real_type* c):
         m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_s(s), m_embedded(true){}

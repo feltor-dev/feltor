@@ -229,7 +229,6 @@ int integrateAdaptive(Adaptive& adaptive,
 {
     using  real_type = get_value_type<ContainerType>;
     real_type t_current = t_begin, dt_current = dt;
-    ContainerType next(begin), delta(begin);
     blas1::copy( begin, end );
     ContainerType& current(end);
     if( t_end == t_begin)

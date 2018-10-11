@@ -133,9 +133,10 @@ int main( int argc, char* argv[])
     //RK solver
 //     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
-//     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
-//     karniadakis.init( exp, diffusion, y0, p.dt);
+    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> adaptive(y0, "ARK-4-2-3", grid.size(), p.eps_time);
+    double dt = 1e-5;
+    // dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
+     //karniadakis.init( exp, diffusion, 0, y0, p.dt);
 
     exp.energies( y0);//now energies and potential are at time 0
     dg::DVec T0 = dg::evaluate( dg::one, grid);  
@@ -247,9 +248,9 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-//                 rk( exp, time,y0, time,y0, p.dt); //RK stepper
-                sirk.step(exp,diffusion,time,y0,time,y0,p.dt); //SIRK stepper
-//                 karniadakis( exp, diffusion, time, y0);  //Karniadakis stepper
+//                 rk.step( exp, time,y0, time,y0, p.dt); //RK stepper
+                adaptive.step(exp,diffusion,time,y0,time,y0,dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10); //SIRK stepper
+                 //karniadakis.step( exp, diffusion, time, y0);  //Karniadakis stepper
               }
               catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

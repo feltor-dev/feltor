@@ -102,10 +102,10 @@ int main( int argc, char* argv[])
 
     
     //create RHS     
-    std::cout << "initialize feltor" << std::endl;
-    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p,gp); //initialize before rolkar!
+    std::cout << "initialize ex" << std::endl;
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,gp); //initialize before im!
     std::cout << "initialize implicit" << std::endl;
-    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
@@ -127,30 +127,31 @@ int main( int argc, char* argv[])
     std::cout << "T aligning" << std::endl;  
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-    y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
+    y1[0] = ex.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning
 //     std::cout << "No T aligning" << std::endl;      
 //     y1[0] = dg::evaluate( init0, grid);
-//        dg::blas1::pointwiseDot(rolkar.damping(),y1[0], y1[0]); //damp with gaussprofdamp
+//        dg::blas1::pointwiseDot(im.damping(),y1[0], y1[0]); //damp with gaussprofdamp
  
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
     if (p.bc ==dg::DIR)    {
     dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
     }
 
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
+//     dg::blas1::pointwiseDot(im.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     std::cout << "Done!\n";
 
     //////////////////////////////////////////////////////////////////////////////////
-    //RK solver
-//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
-    //SIRK solver
-    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+    //Runge Kutta solver
+//     dg::RungeKutta<std::vector<dg::DVec> >  rk( y0, "Runge-Kutta-4-4");
+    //Adaptive solver
+    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> adaptive(y0, "ARK-4-2-3", grid.size(),p.eps_time);
+    double dt = 1e-5;
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
-//     karniadakis.init( feltor, rolkar, y0, p.dt);
+//     karniadakis.init( ex, im, y0, p.dt);
 
-     feltor.energies( y0);//now energies and potential are at time 0
+     ex.energies( y0);//now energies and potential are at time 0
    
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
@@ -162,8 +163,8 @@ int main( int argc, char* argv[])
     double time = 0;
     unsigned step = 0;
     
-    const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
+    const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     dg::DVec T0 = dg::evaluate( dg::one, grid);  
@@ -209,20 +210,20 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            feltor.energies( y0); //update energetics
-            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
-            E1 = feltor.energy();
+            ex.energies( y0); //update energetics
+            std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
+            E1 = ex.energy();
             diff = (E1 - E0)/p.dt; //
-            double diss = feltor.energy_diffusion( );
+            double diss = ex.energy_diffusion( );
             dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
             double err = sqrt(dg::blas2::dot( w3d, T1)/normT0);
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << " err =" << err << "\n";
             E0 = E1;
             try{
-//                 rk( feltor, y0, y1, p.dt);
-                 sirk.step(feltor,rolkar,time,y0,time,y0,p.dt);
-//                 karniadakis( feltor, rolkar, y0);
+//                 rk( ex, y0, y1, p.dt);
+                 adaptive.step(ex,im,time,y0,time,y0,dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+//                 karniadakis( ex, im, y0);
 
               }
               catch( dg::Fail& fail) { 
