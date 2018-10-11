@@ -42,7 +42,7 @@ struct Fpsi
     void find_initial( double psi, double& R_0, double& Z_0)
     {
         unsigned N = 50;
-        std::array<double,2> begin2d( {0,0}), end2d( begin2d), end2d_old(begin2d);
+		std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
         begin2d[0] = end2d[0] = end2d_old[0] = X_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
         double eps = 1e10, eps_old = 2e10;
@@ -60,7 +60,7 @@ struct Fpsi
     double construct_f( double psi, double& R_0, double& Z_0)
     {
         find_initial( psi, R_0, Z_0);
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
         begin[0] = R_0, begin[1] = Z_0;
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
@@ -108,7 +108,7 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
     thrust::host_vector<real_type> r_old(y_vec.size(), 0), r_diff( r_old);
     thrust::host_vector<real_type> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-    std::array<real_type,2> begin( {0,0}), end(begin), temp(begin);
+    std::array<real_type,2> begin{ {0,0} }, end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);

@@ -73,13 +73,8 @@ struct FPExpansionVect
      */
     void Flush();
 
-    /**
-     * This function is meant to be used for printing the floating-point expansion
-     */
-    void Dump() const;
 private:
     void FlushVector(T x) const;
-    void DumpVector(T x) const;
     void Insert(T & x);
     void Insert(T & x1, T & x2);
     static void Swap(T & x1, T & x2);
@@ -270,30 +265,6 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     // TODO: update status, handle Inf/Overflow/NaN cases
     // TODO: make it work for other values of 4
     exblas::cpu::Accumulate(superacc, x);
-}
-
-template<typename T, int N, typename TRAITS>
-void FPExpansionVect<T,N,TRAITS>::Dump() const
-{
-    for(unsigned int i = 0; i != N; ++i)
-    {
-        DumpVector(a[i]);
-        std::cout << std::endl;
-    }
-}
-
-template<typename T, int N, typename TRAITS>
-void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
-{
-    double v[8] __attribute__((aligned(64)));
-    x.store_a(v);
-#if INSTRSET >= 7
-    _mm256_zeroupper();
-#endif
-
-    for(unsigned int j = 0; j != 8; ++j) {
-        printf("%a ", v[j]);
-    }
 }
 
 }//namespace cpu

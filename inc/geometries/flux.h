@@ -40,7 +40,7 @@ struct Fpsi
     void find_initial( double psi, double& R_0, double& Z_0)
     {
         unsigned N = 50;
-        std::array<double,2> begin2d( {0,0}), end2d( begin2d), end2d_old(begin2d);
+        std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
         if(m_verbose)std::cout << "In init function\n";
         begin2d[0] = end2d[0] = end2d_old[0] = X_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
