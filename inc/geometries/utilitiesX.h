@@ -20,7 +20,7 @@ namespace geo
 void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     dg::geo::HessianRZtau hessianRZtau(  psi);
-    std::array<double,2> X({0,0}), XN(X), X_OLD(X);
+	std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
     X[0] = R_X, X[1] = Z_X;
     double eps = 1e10, eps_old= 2e10;
     while( (eps < eps_old || eps > 1e-7) && eps > 1e-13)
@@ -232,7 +232,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old), yz_old(r_old), xz_old(z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
     //now compute f and starting values
-    std::array<double,4> begin( {0,0,0,0}), end(begin), temp(begin);
+	std::array<double, 4> begin{ {0,0,0,0} }, end(begin), temp(begin);
     const double fprime = fpsi.f_prime( psi);
     f_psi = fpsi.construct_f(psi, R_0, Z_0);
     fieldRZYRYZY.set_f(f_psi);
@@ -414,7 +414,7 @@ struct SeparatriX
         R_i[3] = (R_min+R_max)/2., Z_i[3] = Z_X-1.;
         if(m_verbose)std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
         //now measure y distance to X-point
-        std::array<double,3> begin2d( {0,0,0}), end2d( begin2d);
+		std::array<double, 3> begin2d{ {0,0,0} }, end2d(begin2d);
         for( int i=0; i<4; i++)
         {
             unsigned N = 1;
@@ -456,7 +456,7 @@ struct SeparatriX
             thrust::host_vector<double>& z ) const
     {
         ///////////////////////////find y coordinate line//////////////
-        std::array<double,2> begin( {0,0}), end(begin), temp(begin);
+		std::array<double, 2> begin{ {0,0} }, end(begin), temp(begin);
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size());
@@ -531,7 +531,7 @@ struct SeparatriX
     {
         if(m_verbose)std::cout << "In construct f function!\n";
 
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 32;
@@ -643,7 +643,7 @@ struct InitialX
      */
     void find_initial( double psi, double* R_0, double* Z_0)
     {
-        std::array<double,2> begin( {0,0}), end( begin), end_old(begin);
+		std::array<double, 2> begin{ {0,0} }, end(begin), end_old(begin);
         for( unsigned i=0; i<2; i++)
         {
             if(psi<0)
