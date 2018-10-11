@@ -20,7 +20,7 @@ namespace dg
 template<class to_ContainerType, class from_ContainerType, class ...Params>
 inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);
 template<class from_ContainerType, class to_ContainerType, class ...Params>
-inline void transfer( const from_ContainerType&, to_ContainerType&, Params&& ...ps);
+inline void assign( const from_ContainerType&, to_ContainerType&, Params&& ...ps);
 
 namespace detail{
 template<class To, class From, class ...Params>
