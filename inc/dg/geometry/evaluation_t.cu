@@ -49,12 +49,12 @@ int main()
     dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
 
     //test evaluation functions
-    const DVec func1d = dg::transfer<DVec>( dg::evaluate( exp, g1d));
-    const DVec func2d = dg::transfer<DVec>( dg::evaluate( function, g2d));
-    const DVec func3d = dg::transfer<DVec>( dg::evaluate( function, g3d));
-    const DVec w1d = dg::transfer<DVec>( dg::create::weights( g1d));
-    const DVec w2d = dg::transfer<DVec>( dg::create::weights( g2d));
-    const DVec w3d = dg::transfer<DVec>( dg::create::weights( g3d));
+    const DVec func1d = dg::construct<DVec>( dg::evaluate( exp, g1d));
+    const DVec func2d = dg::construct<DVec>( dg::evaluate( function, g2d));
+    const DVec func3d = dg::construct<DVec>( dg::evaluate( function, g3d));
+    const DVec w1d = dg::construct<DVec>( dg::create::weights( g1d));
+    const DVec w2d = dg::construct<DVec>( dg::create::weights( g2d));
+    const DVec w3d = dg::construct<DVec>( dg::create::weights( g3d));
     exblas::udouble res;
 
     double integral = dg::blas1::dot( w1d, func1d); res.d = integral;

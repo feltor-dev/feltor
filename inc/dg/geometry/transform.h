@@ -96,8 +96,8 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
     host_vec out1 = pullback( vR, g);
     host_vec out2 = pullback( vZ, g);
     dg::tensor::multiply2d(g.jacobian(), out1, out2, out1, out2);
-    dg::blas1::transfer( out1, vx);
-    dg::blas1::transfer( out2, vy);
+    dg::assign( out1, vx);
+    dg::assign( out2, vy);
 }
 
 /**
@@ -129,9 +129,9 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
     host_vec out2 = pullback( vZ, g);
     host_vec out3 = pullback( vPhi, g);
     dg::tensor::multiply3d(g.jacobian(), out1, out2, out3, out1, out2, out3);
-    dg::blas1::transfer( out1, vx);
-    dg::blas1::transfer( out2, vy);
-    dg::blas1::transfer( out3, vz);
+    dg::assign( out1, vx);
+    dg::assign( out2, vy);
+    dg::assign( out3, vz);
 }
 
 /**
@@ -168,9 +168,9 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
 
     const dg::SparseTensor<container> jac = g.jacobian();
     std::vector<container> values( 3);
-    dg::transfer( chiRR_, values[0]);
-    dg::transfer( chiRZ_, values[1]);
-    dg::transfer( chiZZ_, values[2]);
+    dg::assign( chiRR_, values[0]);
+    dg::assign( chiRZ_, values[1]);
+    dg::assign( chiZZ_, values[2]);
     SparseTensor<container> chi;
     chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;
     chi.values() = values;

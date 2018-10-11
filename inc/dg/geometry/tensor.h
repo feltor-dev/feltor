@@ -53,8 +53,8 @@ struct SparseTensor
         for( int i=0; i<3; i++)
             m_mat_idx( i,i) = 1;
    		m_values.resize(2);
-        dg::transfer( dg::evaluate( dg::zero, grid), m_values[0]);
-        dg::transfer( dg::evaluate( dg::one, grid), m_values[1]);
+        dg::assign( dg::evaluate( dg::zero, grid), m_values[0]);
+        dg::assign( dg::evaluate( dg::one, grid), m_values[1]);
     }
     /**
     * @brief Construct the unit tensor
@@ -71,7 +71,7 @@ struct SparseTensor
 
     /**
      * @brief Type conversion from other value types
-     * @tparam OtherContainer \c dg::blas1::transfer must be callable for \c container and \c OtherContainer
+     * @tparam OtherContainer \c dg::assign must be callable for \c container and \c OtherContainer
      * @param src the source matrix to convert
      */
     template<class OtherContainer>
@@ -81,7 +81,7 @@ struct SparseTensor
                 m_mat_idx(i,j)=src.idx(i,j);
 
         for( unsigned i=0; i<src.values().size(); i++)
-            dg::blas1::transfer( src.values()[i], m_values[i]);
+            dg::assign( src.values()[i], m_values[i]);
     }
 
     /**

@@ -50,9 +50,21 @@ struct MultiMatrix
         for( unsigned i=0; i<dimsM; i++)
             inter_[i] = src.get_matrices()[i];
         for( unsigned i=0; i<dimsT; i++)
-            dg::blas1::transfer(src.get_temp()[i].data(), temp_[i].data());
+            dg::assign( src.get_temp()[i].data(), temp_[i].data());
 
     }
+    template<class OtherMatrix, class OtherContainer, class ...Params>
+    void construct( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ...ps){
+        unsigned dimsM = src.get_matrices().size();
+        unsigned dimsT = src.get_temp().size();
+        inter_.resize( dimsM);
+        temp_.resize(  dimsT);
+        for( unsigned i=0; i<dimsM; i++)
+            inter_[i] = src.get_matrices()[i];
+        for( unsigned i=0; i<dimsT; i++)
+            dg::assign( src.get_temp()[i].data(), temp_[i].data(), std::forward<Params>(ps)...);
+    }
+
 
     void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}
     void symv(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const

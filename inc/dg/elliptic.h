@@ -100,15 +100,15 @@ class Elliptic
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
 
-        dg::blas1::transfer( dg::create::inv_volume(g),    m_inv_weights);
-        dg::blas1::transfer( dg::create::volume(g),        m_weights);
-        dg::blas1::transfer( dg::create::inv_weights(g),   m_precond);
+        dg::assign( dg::create::inv_volume(g),    m_inv_weights);
+        dg::assign( dg::create::volume(g),        m_weights);
+        dg::assign( dg::create::inv_weights(g),   m_precond);
         m_temp = m_tempx = m_tempy = m_inv_weights;
         m_chi=g.metric();
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
-        dg::transfer( dg::create::weights(g), m_weights_wo_vol);
-        dg::transfer( dg::evaluate(dg::one, g), m_chi_old);
+        dg::assign( dg::create::weights(g), m_weights_wo_vol);
+        dg::assign( dg::evaluate(dg::one, g), m_chi_old);
     }
 
     ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,value_type)
@@ -617,9 +617,9 @@ struct TensorElliptic
     {
         get_host_vector<Geometry> chiXX, chiXY, chiYY;
         dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_.get());
-        dg::blas1::transfer( chiXX, chixx_);
-        dg::blas1::transfer( chiXY, chixy_);
-        dg::blas1::transfer( chiYY, chiyy_);
+        dg::assign( chiXX, chixx_);
+        dg::assign( chiXY, chixy_);
+        dg::assign( chiYY, chiyy_);
         set( chixx_, chixy_, chiyy_);
     }
 
@@ -663,14 +663,14 @@ struct TensorElliptic
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
-        dg::blas1::transfer( dg::create::volume(g),        weights_);
-        dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
-        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
-        dg::blas1::transfer( dg::evaluate( dg::one, g),    chixx_);
-        dg::blas1::transfer( dg::evaluate( dg::zero,g),    chixy_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g),    chiyy_);
+        dg::assign( dg::create::volume(g),        weights_);
+        dg::assign( dg::create::inv_volume(g),    inv_weights_);
+        dg::assign( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
+        dg::assign( dg::evaluate( dg::one, g),    chixx_);
+        dg::assign( dg::evaluate( dg::zero,g),    chixy_);
+        dg::assign( dg::evaluate( dg::one, g),    chiyy_);
         tempx_ = tempy_ = gradx_ = chixx_;
-        dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
+        dg::assign( dg::create::weights(g), weights_wo_vol);
 
         vol_=dg::tensor::volume(g.metric());
         dg::blas1::pointwiseDot( vol_, chixx_, chixx_);
@@ -785,14 +785,14 @@ class Elliptic3d
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
 
-        dg::blas1::transfer( dg::create::inv_volume(g),    m_inv_weights);
-        dg::blas1::transfer( dg::create::volume(g),        m_weights);
-        dg::blas1::transfer( dg::create::inv_weights(g),   m_precond);
+        dg::assign( dg::create::inv_volume(g),    m_inv_weights);
+        dg::assign( dg::create::volume(g),        m_weights);
+        dg::assign( dg::create::inv_weights(g),   m_precond);
         m_temp = m_tempx = m_tempy = m_tempz = m_inv_weights;
         m_chi=g.metric();
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
-        dg::transfer( dg::create::weights(g), m_weights_wo_vol);
+        dg::assign( dg::create::weights(g), m_weights_wo_vol);
     }
 
     ///@copydoc  Elliptic3d::Elliptic3d(const Geometry&,norm,direction,value_type)

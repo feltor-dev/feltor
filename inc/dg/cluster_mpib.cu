@@ -78,10 +78,10 @@ int main(int argc, char* argv[])
     dg::Timer t;
     Vector w3d, lhs, rhs, jac, x, y, z;
     try{
-        w3d = dg::transfer<Vector>( dg::create::weights( grid));
-        lhs = dg::transfer<Vector>( dg::evaluate ( left, grid));
-        rhs = dg::transfer<Vector>( dg::evaluate ( right,grid));
-        jac = dg::transfer<Vector>( dg::evaluate ( jacobian,grid));
+        w3d = dg::construct<Vector>( dg::create::weights( grid));
+        lhs = dg::construct<Vector>( dg::evaluate ( left, grid));
+        rhs = dg::construct<Vector>( dg::evaluate ( right,grid));
+        jac = dg::construct<Vector>( dg::evaluate ( jacobian,grid));
         x = y = z = lhs;
     }
     catch( std::exception& e)

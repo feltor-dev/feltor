@@ -52,11 +52,11 @@ int main( int argc, char* argv[])
     dg::MPIGrid3d grid( 0., lx, 0, ly,0., ly, n, Nx, Ny, Nz, comm);
     dg::MPIGrid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d;
-    dg::blas1::transfer( dg::create::weights(grid), w2d);
+    dg::assign( dg::create::weights(grid), w2d);
     dg::Timer t;
     t.tic();
     ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    dg::assign( dg::evaluate( left, grid), x);
     t.toc();
     double gbytes=(double)x.size()*grid.size()*sizeof(double)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
@@ -146,7 +146,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( M, x, y);
     t.toc();
     if(rank==0)std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
+    ArrayVec x_half = dg::construct<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     dg::blas2::gemv( inter, x_half, x); //warm up
     t.tic();
     for( int i=0; i<multi; i++)
@@ -161,8 +161,8 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     //////////////////////these functions are more mean to dot
     if(rank==0)std::cout<<"\nGlobal communication\n";
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
-    dg::blas1::transfer( dg::evaluate( right, grid), y);
+    dg::assign( dg::evaluate( left, grid), x);
+    dg::assign( dg::evaluate( right, grid), y);
     value_type norm=0;
     norm += dg::blas1::dot( x,y);//warm up
     t.tic();

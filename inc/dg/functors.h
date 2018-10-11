@@ -404,13 +404,13 @@ struct GaussianZ
 
 };
 /**
- * @brief Functor for Island 
+ * @brief Functor for Island
  * \f[ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f]
  */
 struct IslandXY
 {
     /**
-     * @brief Construct Island 
+     * @brief Construct Island
      *
      * @param lambda amplitude
      * @param eps y-amplitude
@@ -421,7 +421,6 @@ struct IslandXY
      *
      * @param x x - coordinate
      * @param y y - coordinate
-     
      * @return \f$ f(x,y)\f$
      */
     DG_DEVICE
@@ -438,8 +437,8 @@ struct SinXSinY
     /**
      * @brief Construct with two coefficients
      *
-     * @param amp amplitude
-     * @param bamp backgroundamp
+     * @param amp amplitude A
+     * @param bamp backgroundamp B
      * @param kx  kx
      * @param ky  ky
      */
@@ -466,8 +465,8 @@ struct CosXCosY
     /**
      * @brief Construct with two coefficients
      *
-     * @param amp amplitude
-     * @param bamp backgroundamp
+     * @param amp amplitude A
+     * @param bamp backgroundamp B
      * @param kx  kx
      * @param ky  ky
      */
@@ -522,8 +521,8 @@ struct SinX
     /**
      * @brief Construct with two coefficients
      *
-     * @param amp amplitude
-     * @param bamp backgroundamp
+     * @param amp amplitude A
+     * @param bamp backgroundamp B
      * @param kx  kx
      */
     SinX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
@@ -561,7 +560,6 @@ struct SinY
      *
      * @param x x - coordinate
      * @param y y - coordinate
-     
      * @return \f$ f(x,y)\f$
      */
     DG_DEVICE
@@ -578,8 +576,8 @@ struct CosY
     /**
      * @brief Construct with two coefficients
      *
-     * @param amp amplitude
-     * @param bamp backgroundamp
+     * @param amp amplitude A
+     * @param bamp backgroundamp B
      * @param ky  ky
      */
     CosY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
@@ -588,7 +586,6 @@ struct CosY
      *
      * @param x x - coordinate
      * @param y y - coordinate
-     
      * @return \f$ f(x,y)\f$
      */
     DG_DEVICE
@@ -614,7 +611,6 @@ struct InvCoshXsq
      *
      * @param x x - coordinate
      * @param y y - coordinate
-     
      * @return \f$ f(x,y)\f$
      */
     DG_DEVICE
@@ -631,8 +627,8 @@ struct SinProfX
     /**
      * @brief Construct with two coefficients
      *
-     * @param amp amplitude
-     * @param bamp backgroundamp
+     * @param amp amplitude A
+     * @param bamp backgroundamp B
      * @param kx  kx
      */
     SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
@@ -658,8 +654,8 @@ struct ExpProfX
     /**
      * @brief Construct with two coefficients
      *
-     * @param amp amplitude
-     * @param bamp backgroundamp(choose zero for constant gradient length
+     * @param amp amplitude B
+     * @param bamp backgroundamp A (choose zero for constant gradient length
      * @param ln  ln
      */
     ExpProfX( double amp, double bamp, double ln):amp_(amp), bamp_(bamp),ln_(ln){}
@@ -1054,15 +1050,15 @@ struct Vortex
 /**
 * @brief Makes a random bath in the RZ plane
 *
-\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 
+\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
 \f]
-* with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\ 
-        k:=\sqrt{k_R^2 + k_Z^2} \\ 
+* with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
+        k:=\sqrt{k_R^2 + k_Z^2} \\
         k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
         k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
-        k_0:=2 \pi L_E / N_k\\ 
+        k_0:=2 \pi L_E / N_k\\
         N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
-        E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\ 
+        E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
         \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
         \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
         \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
@@ -1082,7 +1078,7 @@ struct BathRZ{
      * @param amp Amplitude
      */
     BathRZ( unsigned N_kR, unsigned N_kZ, double R_min, double Z_min, double gamma, double L_E, double amp) :
-        N_kR_(N_kR), N_kZ_(N_kZ), 
+        N_kR_(N_kR), N_kZ_(N_kZ),
         R_min_(R_min), Z_min_(Z_min),
         gamma_(gamma), L_E_(L_E) , amp_(amp),
         kvec( N_kR_*N_kZ_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
@@ -1120,18 +1116,18 @@ struct BathRZ{
         }
 
     }
-      /**
-     * @brief Return the value of the Bath 
+    /**
+     * @brief Return the value of the Bath
      *
-       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 
+       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
        \f]
-     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\ 
-                k:=\sqrt{k_R^2 + k_Z^2} \\ 
+     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
+                k:=\sqrt{k_R^2 + k_Z^2} \\
                 k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
                 k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
-                k_0:=2 \pi L_E / N_k\\ 
+                k_0:=2 \pi L_E / N_k\\
                 N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
-                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\ 
+                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
                 \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
                 \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
                 \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
@@ -1161,17 +1157,17 @@ struct BathRZ{
         return amp_*norm_*f;
     }
     /**
-     * @brief Return the value of the Bath 
+     * @brief Return the value of the Bath
      *
-       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 
+       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
        \f]
-     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\ 
-                k:=\sqrt{k_R^2 + k_Z^2} \\ 
+     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
+                k:=\sqrt{k_R^2 + k_Z^2} \\
                 k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
                 k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
-                k_0:=2 \pi L_E / N_k\\ 
+                k_0:=2 \pi L_E / N_k\\
                 N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
-                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\ 
+                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
                 \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
                 \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
                 \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\

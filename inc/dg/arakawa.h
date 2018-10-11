@@ -121,7 +121,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
 
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
-    m_dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), m_dxrhs(m_dxlhs), m_dylhs(m_dxlhs), m_dyrhs( m_dxlhs), m_helper( m_dxlhs),
+    m_dxlhs( dg::construct<container>(dg::evaluate( one, g)) ), m_dxrhs(m_dxlhs), m_dylhs(m_dxlhs), m_dyrhs( m_dxlhs), m_helper( m_dxlhs),
     m_bdxf(dg::create::dx( g, bcx, dg::centered)),
     m_bdyf(dg::create::dy( g, bcy, dg::centered))
 {

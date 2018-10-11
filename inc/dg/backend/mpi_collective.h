@@ -218,8 +218,7 @@ struct BijectiveComm : public aCommunicator<Vector>
     {
         this->set_local_size( pids.size());
         pids_ = pids;
-        idx_.resize( pids.size());
-        dg::blas1::transfer( pids, idx_);
+        dg::assign( pids, idx_);
         int rank, size;
         MPI_Comm_size( comm, &size);
         MPI_Comm_rank( comm, &rank);
@@ -361,10 +360,9 @@ struct SurjectiveComm : public aCommunicator<Vector>
         assert( buffer_size_ == pidGatherMap.size());
         //the bijectiveComm behaves as if we had given the gather map for the store
         //now gather the localGatherMap from the buffer to the store to get the final gather map
-        Vector localGatherMap_d = dg::transfer<Vector>(localGatherMap);
-        Vector gatherMap_V = bijectiveComm_.global_gather( thrust::raw_pointer_cast(localGatherMap_d.data()));
-        Index gatherMap_I;
-        dg::blas1::transfer(gatherMap_V, gatherMap_I);
+        Vector localGatherMap_d = dg::construct<Vector>( localGatherMap);
+        Vector gatherMap_V = bijectiveComm_.global_gather( localGatherMap_d);
+        Index gatherMap_I = dg::construct<Index>(gatherMap_V);
         gatherMap_ = gatherMap_I;
         store_size_ = gatherMap_.size();
         store_.data().resize( store_size_);
@@ -374,7 +372,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
         sortMap_ = gatherMap_I;
         thrust::sequence( sortMap_.begin(), sortMap_.end());
         thrust::stable_sort_by_key( gatherMap_I.begin(), gatherMap_I.end(), sortMap_.begin());//note: this also sorts the gatherMap
-        dg::blas1::transfer( gatherMap_I, sortedGatherMap_);
+        dg::assign( gatherMap_I, sortedGatherMap_);
         //now we can repeat/invert the sort by a gather/scatter operation with sortMap as map
     }
     unsigned buffer_size_, store_size_;
@@ -488,8 +486,7 @@ struct GeneralComm : public aCommunicator<Vector>
         surjectiveComm_ = SurjectiveComm<Index,Vector>(local_size, localGatherMap, pidGatherMap, comm);
 
         const Index& sortedGatherMap_ = surjectiveComm_.getSortedGatherMap();
-        thrust::host_vector<int> gatherMap;
-        dg::blas1::transfer( sortedGatherMap_, gatherMap);
+        thrust::host_vector<int> gatherMap = dg::construct<thrust::host_vector<int>>( sortedGatherMap_);
         thrust::host_vector<int> one( gatherMap.size(), 1), keys(one), number(one);
         typedef thrust::host_vector<int>::iterator iterator;
         thrust::pair< iterator, iterator> new_end =

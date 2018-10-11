@@ -42,13 +42,11 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
     dg::Grid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
-    Vector w2d;
-    dg::blas1::transfer( dg::create::weights(grid), w2d);
+    Vector w2d = dg::construct<Vector>( dg::create::weights(grid));
 
     //std::cout<<"Evaluate a function on the grid\n";
     t.tic();
-    ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    ArrayVec x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
     t.toc();
     //std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     //std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
@@ -142,7 +140,7 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
+    ArrayVec x_half = dg::construct<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     dg::blas2::gemv( inter, x_half, x); //warm up
     t.tic();
     for( int i=0; i<multi; i++)
@@ -157,8 +155,8 @@ int main()
     std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     //////////////////////these functions are more mean to dot
     std::cout<<"\nGlobal communication\n";
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
-    dg::blas1::transfer( dg::evaluate( right, grid), y);
+    x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
+    y = dg::construct<ArrayVec>( dg::evaluate( right, grid));
     value_type norm=0;
     norm += dg::blas1::dot( x,y);//warm up
     t.tic();

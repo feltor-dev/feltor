@@ -19,7 +19,7 @@ int main()
     double gbytes=(double)grid.size()*sizeof(double)/1e9;
 
     Vector w2d;
-    dg::blas1::transfer( dg::create::weights(grid), w2d);
+    dg::assign( dg::create::weights(grid), w2d);
     Vector v_x = dg::evaluate( dg::CONSTANT(2), grid), w_x(v_x);
     Vector v_y = dg::evaluate( dg::CONSTANT(5), grid), w_y(v_y);
     dg::SparseTensor<Vector> g(grid);
