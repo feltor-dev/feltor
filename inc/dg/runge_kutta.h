@@ -235,6 +235,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
  * are the "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
  * So far we did not implement the use of a mass matrix \c M.
  *
+ * @copydoc hide_SolverType
  * @copydoc hide_ContainerType
  * @ingroup time
  */
@@ -323,7 +324,7 @@ struct ARKStep
     /**
     * @brief Advance one step
     *
-    * @copydoc hide_implicit_explicit
+    * @copydoc hide_explicit_implicit
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)

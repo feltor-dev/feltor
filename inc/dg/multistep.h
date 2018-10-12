@@ -181,6 +181,7 @@ The following code example demonstrates how to implement the method of manufactu
 terms can significantly reduce the required number of time steps. This
 outweighs the increased computational cost of the additional matrix inversions.
 * @copydoc hide_note_multistep
+* @copydoc hide_SolverType
 * @copydoc hide_ContainerType
 * @ingroup time
 */

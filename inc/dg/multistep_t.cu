@@ -153,21 +153,20 @@ int main()
     std::vector<std::string> names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
     for( auto name : names)
     {
+        //![adaptive]
         time = 0., y0 = init;
         dg::Adaptive<dg::ARKStep<dg::DVec>> adapt( y0, name, y0.size(), eps);
-        double time = 0, rtol = 1e-1, atol = 1e-10;
-        //a high rtol will just make it hit the CFL condition and stay there
-        double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol); //maybe just choose a small time
+        double time = 0, rtol = 1e-5, atol = 1e-10;
+        double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol);
         int counter=0;
         while( time < T )
         {
-            std::cout<<std::boolalpha;
-            //std::cout << "Time "<<time<<" step "<<dt<<" success "<<!adapt.hasFailed()<<std::endl;
             if( time + dt > T)
                 dt = T-time;
-            adapt.step( ex, im, time, y0, time, y0, dt, dg::pi_control, dg::l2norm, rtol, atol);
+            adapt.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
             counter ++;
         }
+        //![adaptive]
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
         std::cout << counter <<" steps! ";

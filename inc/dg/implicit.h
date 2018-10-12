@@ -44,20 +44,41 @@ struct TensorTraits< detail::Implicit<M, V> >
 };
 ///@endcond
 
+/*! @class hide_SolverType
+ *
+ * @tparam SolverType
+    The task of this class is to solve the equation \f$ (y+\alpha\hat I(t,y) = \rho\f$
+    for the given implicit part I, parameter alpha, time t and
+    right hand side rho. For example \c dg::DefaultSolver
+    If you write your own class:
+ * it must have a solve method of type:
+    \c void \c solve( real_type alpha, Implicit im, real_type t, ContainerType& y, const ContainerType& rhs);
+ */
+
+/*!@brief Default Solver class for solving \f[ (y+\alpha\hat I(t,y) = \rho\f]
+ *
+ * works only for linear positive definite operators as it uses a conjugate
+ * gradient solver to invert the equation
+ * @copydoc hide_ContainerType
+ * @sa Karniadakis ARKStep
+ */
 template<class ContainerType>
 struct DefaultSolver
 {
-    using real_type = get_value_type<ContainerType>;
+    using real_type = get_value_type<ContainerType>;//!< value type of vectors
+    ///No memory allocation
     DefaultSolver(){}
     /*!
-    * @param max_iter parameter for cg
-    * @param eps  accuracy parameter for cg
+    * @param copyable vector of the size that is later used in \c solve (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c solve method can only be called with vectors of the same size)
+    * @param max_iter maimum iteration number in cg
+    * @param eps accuracy parameter for cg
     */
     DefaultSolver( const ContainerType& copyable, unsigned max_iter, real_type eps):
         m_pcg(copyable, max_iter), m_rhs( copyable), m_eps(eps)
         {}
 
-    //solve y - a I(t,y) = rhs
     template< class Implicit>
     void solve( real_type alpha, Implicit im, real_type t, ContainerType& y, const ContainerType& rhs)
     {
