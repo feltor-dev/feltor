@@ -26,45 +26,56 @@ namespace dg{
 
 
 /**
-* @brief Struct for embedded Runge Kutta explicit time-step with error estimate
+* @brief Struct for Embedded Runge Kutta explicit time-step with error estimate
 * \f[
  \begin{align}
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j \\
-    k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
  \end{align}
 \f]
 
-The coefficients for the Butcher tableau were taken from https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method
-The Prince Dormand method is an embedded Runge Kutta method, i.e. computes a solution together with an error estimate. It is effecitve due to its First Same as Last property.
+The method is defined by its (extended explicit) ButcherTableau, given by
+the coefficients \c a, \c b and \c c,  and \c s is the number
+of stages. The embedding is given by the coefficients \c bt (tilde b).
 
-* @ingroup time
-*
+You can provide your own coefficients or use one of the embedded methods
+in the following table:
+@copydoc hide_explicit_butcher_tableaus
+
+* @note The name of this class is in reminiscence of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/index.html
 * @copydoc hide_ContainerType
+* @ingroup time
 */
 template< class ContainerType>
 struct ERKStep
 {
-    using real_type = get_value_type<ContainerType>;
-    using container = ContainerType;
+    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
     ERKStep(){
     }
+    ///@copydoc RungeKutta::construct()
     ERKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
         { }
+    ///@copydoc RungeKutta::construct()
     void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
         m_rk = tableau;
         m_k.assign(m_rk.num_stages(), copyable);
     }
-    ///@param delta Contains error estimate on output (must have equal sizeas u0)
+    ///@copydoc RungeKutta::step()
+    ///@param delta Contains error estimate on output (must have equal size as \c u0)
     template<class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
-    ///global order of the algorithm
+    ///global order of the method given by the current Butcher Tableau
     unsigned order() const {
         return m_rk.order();
     }
+    ///global order of the embedding given by the current Butcher Tableau
     unsigned embedded_order() const {
         return m_rk.embedded_order();
     }
+    ///number of stages of the method given by the current Butcher Tableau
     unsigned num_stages() const{
         return m_rk.num_stages();
     }
@@ -211,12 +222,38 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     else
         m_k[s-1].swap(m_k[0]);
 }
+
+
+
+
+/*!
+ * @brief Struct for Additive Runge Kutta (semi-implicit) time-step with error estimate
+ * following
+ * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
+ *
+ * Currently, the possible Butcher Tableaus for a fully implicit-explicit scheme
+ * are the "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
+ * So far we did not implement the use of a mass matrix \c M.
+ *
+ * @copydoc hide_ContainerType
+ * @ingroup time
+ */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct ARKStep
 {
-    using real_type = get_value_type<ContainerType>;
-    using container = ContainerType;
+    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
     ARKStep(){ }
+    /*!@brief Construct with given name
+     * @param copyable vector of the size that is later used in \c step (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c step method can only be called with vectors of the same size)
+     * @param name Currently, one of "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
+     * @param ps Parameters that, together with \c copyable as the first parameter,
+     * are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     */
     template<class ...SolverParams>
     ARKStep( const ContainerType& copyable,
              std::string name,
@@ -232,6 +269,8 @@ struct ARKStep
         else
             throw dg::Error( dg::Message()<<"Unknown name");
     }
+
+    ///@copydoc construct()
     template<class ...SolverParams>
     ARKStep( const ContainerType& copyable,
              ConvertsToButcherTableau<real_type> ex_tableau,
@@ -247,6 +286,24 @@ struct ARKStep
     {
         assert( m_rkE.num_stages() == m_rkI.num_stages());
     }
+
+    /*!@brief Construct with two Butcher Tableaus
+     *
+     * The two Butcher Tableaus represent the parameters for the explicit
+     * and implicit parts respectively. If both the explicit and implicit part
+     * of your equations are nontrivial, they must be one of the "ARK-X-X-X" methods
+     * listed in \c ConvertsToButcherTableau. Or you have your own tableaus of
+     * course but both tableaus must have the same number of steps.
+     *
+     * @param copyable vector of the size that is later used in \c step (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c step method can only be called with vectors of the same size)
+     * @param ex_tableau Tableau for the explicit part
+     * @param im_tableau Tableau for the implicit part (must have the same number of stages as \c ex_tableau )
+     * @param ps Parameters that, together with \c copyable as the first parameter,
+     * are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     */
     template<class ...SolverParams>
     void construct( const ContainerType& copyable,
              ConvertsToButcherTableau<real_type> ex_tableau,
@@ -262,15 +319,30 @@ struct ARKStep
         m_kI.assign(m_rkI.num_stages(), copyable);
         m_solver = SolverType( copyable, std::forward<SolverParams>(ps)...);
     }
+
+    /**
+    * @brief Advance one step
+    *
+    * @copydoc hide_implicit_explicit
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
+    * @param u1 (write only) contains result on output (may alias u0)
+    * @param dt timestep
+    * @param delta Contains error estimate on output (must have equal size as \c u0)
+    * @note on return \c ex(t1, u1) will be the last call to \c ex (this is useful if \c Explicit holds state, which is then updated to the current timestep)
+    */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
-    ///global order of the method
+    ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkE.order();
     }
+    ///@copydoc ERKStep::embedded_order()
     unsigned embedded_order() const {
         return m_rkE.order();
     }
+    ///@copydoc ERKStep::num_stages()
     unsigned num_stages() const{
         return m_rkE.num_stages();
     }
@@ -367,26 +439,35 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
 }
 
 /**
-* @brief Struct for Runge-Kutta explicit time-integration, classic formulation
+* @brief Struct for Runge-Kutta fixed-step explicit time-integration
 * \f[
  \begin{align}
-    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j
  \end{align}
 \f]
+
+The method is defined by its (explicit) ButcherTableau, given by
+the coefficients \c a, \c b and \c c,  and \c s is the number
+of stages.
+
+You can provide your own coefficients or use one of our predefined methods:
+@copydoc hide_explicit_butcher_tableaus
+The following code snippet demonstrates how to use the class for the integration of
+the harmonic oscillator:
 
 @snippet runge_kutta_t.cu function
 @snippet runge_kutta_t.cu doxygen
 * @ingroup time
 *
-* Uses only \c dg::blas1::axpby() routine to integrate one step.
-* The coefficients are chosen in the classic form given by Runge and Kutta.
+* @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
 struct RungeKutta
 {
-    using real_type = get_value_type<ContainerType>;
+    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container = ContainerType; //!< the type of the vector class in use
     ///@brief No memory allocation, Call \c construct before using the object
     RungeKutta(){}
     ///@copydoc construct()
@@ -395,9 +476,10 @@ struct RungeKutta
     /**
     * @brief Reserve internal workspace for the integration
     *
-    * @param copyable ContainerType of the size that is used in \c step
-    * @param tableau Name of Butcher Tableau
-    * @note it does not matter what values \c copyable contains, but its size is important
+    * @param copyable vector of the size that is later used in \c step (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c step method can only be called with vectors of the same size)
+    * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
     */
     void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
         m_erk = ERKStep<ContainerType>( copyable, tableau);
@@ -413,15 +495,17 @@ struct RungeKutta
     * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
     * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
+    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     */
     template<class RHS>
     void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt){
         m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
     }
-    ///global order of the method
+    ///@copydoc ERKStep::order
     unsigned order() const {
         return m_erk.order();
     }
+    ///@copydoc ERKStep::num_stages()
     unsigned num_stages() const{
         return m_erk.num_stages();
     }
@@ -434,10 +518,11 @@ struct RungeKutta
 ///@{
 
 /**
- * @brief Integrate differential equation with a stage s Runge-Kutta scheme and a fixed number of steps
+ * @brief Integrate differential equation with an explicit Runge-Kutta scheme and a fixed number of steps
  *
  * @copydoc hide_rhs
  * @copydoc hide_ContainerType
+ * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
  * @param rhs The right-hand-side
  * @param t_begin initial time
  * @param begin initial condition

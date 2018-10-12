@@ -22,37 +22,50 @@ namespace dg{
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
-    Furthermore, the routines %weights(), %inv_weights() and %precond() must be callable
-    and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
+    Furthermore, if the \c DefaultSolver is used, the routines %weights(), %inv_weights() and %precond() must be callable
+    and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient method.
     The return type of these member functions must be useable in blas2 functions together with the ContainerType type.
  * @param ex explic part
  * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
  */
+/*!@class hide_note_multistep
+* @note Uses only \c blas1::axpby routines to integrate one step.
+* @note The difference between a multistep and a single step method like RungeKutta
+* is that the multistep only takes one right-hand-side evaluation per step.
+* This might be advantageous if the right hand side is expensive to evaluate like in
+* partial differential equations. However, it might also happen that the stability
+* region of the one-step method is larger so that a larger timestep can be taken there
+* and on average they take just the same rhs evaluations.
+* @note a disadvantage of multistep is that timestep adaption is not easily done.
+*/
 
 /**
 * @brief Struct for Adams-Bashforth explicit multistep time-integration
-* \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^k b_j f\left(u^{n-j}\right) \f]
+* \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
 *
-* @ingroup time
-*
-* Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f] with
-* coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
-* Uses only \c blas1::axpby routines to integrate one step
-* and only one right-hand-side evaluation per step.
+* with coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
+* @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
+* @ingroup time
 */
 template<class ContainerType>
 struct AdamsBashforth
 {
-    using real_type = get_value_type<ContainerType>;
+    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container = ContainerType; //!< the type of the vector class in use
     ///copydoc RungeKutta::RungeKutta()
     AdamsBashforth(){}
-    ///@copydoc RungeKutta::construct(const ContainerType&)
-    //@param order Order of the method (Currently one of 1, 2, 3, 4 or 5)
+    ///@copydoc AdamsBashforth::construct()
     AdamsBashforth( const ContainerType& copyable, unsigned order){
         construct(copyable, order);
     }
-    ///@copydoc RungeKutta::construct(const ContainerType&)
+    /**
+    * @brief Reserve internal workspace for the integration
+    *
+    * @param copyable ContainerType of the size that is used in \c step
+    * @param order (global) order (= number of steps in the multistep) of the method (Currently, one of 1, 2, 3, 4 or 5)
+    * @note it does not matter what values \c copyable contains, but its size is important
+    */
     void construct(const ContainerType& copyable, unsigned order){
         m_k = order;
         f_.assign( order, copyable);
@@ -156,24 +169,26 @@ void AdamsBashforth<ContainerType>::step( RHS& f, real_type& t, ContainerType& u
     \gamma_0 = \frac{6}{11}
 \f]
 *
-* Uses only one evaluation of the explicit part per step.
-* Uses a conjugate gradient method for the implicit operator (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
+* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
+* Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
 * @note The implicit part equals a third order backward differentiation formula (BDF) https://en.wikipedia.org/wiki/Backward_differentiation_formula
 *
 The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
-@snippet multistep_t.cu function
-In the main function:
-@snippet multistep_t.cu karniadakis
-@note In our experience the implicit treatment of diffusive or hyperdiffusive
+* @snippet multistep_t.cu function
+* In the main function:
+* @snippet multistep_t.cu karniadakis
+* @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
-far outweighs the increased computational cost of the additional matrix inversions.
-* @ingroup time
+outweighs the increased computational cost of the additional matrix inversions.
+* @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
+* @ingroup time
 */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct Karniadakis
 {
-    using real_type = get_value_type<ContainerType>;
+    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     Karniadakis(){}
 
@@ -184,11 +199,12 @@ struct Karniadakis
         init_coeffs();
     }
     /**
-    * @brief Reserve memory for the integration
-    *
-    * @param copyable ContainerType of size which is used in integration (values do not matter, the size is important).
-    * @param max_iter parameter for cg
-    * @param eps  accuracy parameter for cg
+     * @brief Reserve memory for the integration
+     *
+     * @param copyable ContainerType of size which is used in integration (values do not matter, the size is important).
+     * @param ps Parameters that, together with \c copyable as the first parameter,
+     * are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
     */
     template<class ...SolverParams>
     void construct( const ContainerType& copyable, SolverParams&& ...ps){

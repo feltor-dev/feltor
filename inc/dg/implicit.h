@@ -1,8 +1,8 @@
 #pragma once
 #include "cg.h"
 
-///@cond
 namespace dg{
+///@cond
 namespace detail{
 
 //compute: y + alpha f(y,t)
@@ -42,12 +42,17 @@ struct TensorTraits< detail::Implicit<M, V> >
     using value_type = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
+///@endcond
 
 template<class ContainerType>
 struct DefaultSolver
 {
     using real_type = get_value_type<ContainerType>;
     DefaultSolver(){}
+    /*!
+    * @param max_iter parameter for cg
+    * @param eps  accuracy parameter for cg
+    */
     DefaultSolver( const ContainerType& copyable, unsigned max_iter, real_type eps):
         m_pcg(copyable, max_iter), m_rhs( copyable), m_eps(eps)
         {}
@@ -81,4 +86,3 @@ struct DefaultSolver
     real_type m_eps;
 };
 }//namespace dg
-///@endcond

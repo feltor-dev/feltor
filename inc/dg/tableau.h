@@ -965,11 +965,60 @@ ButcherTableau<real_type> tableau( std::string name)
 }//namespace create
 ///@endcond
 
+/*! @class hide_explicit_butcher_tableaus
+ *
+ *    Name  | Identifier | Description
+ *   -------|------------| -----------
+ *   Euler                  | dg::EXPLICIT_EULER_1_1     | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Explicit Euler</a>
+ *   Midpoint-2-2           | dg::MIDPOINT_2_2           | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint method</a>
+ *   Kutta-3-3              | dg::KUTTA_3_3              | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
+ *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods"> "The" Runge-Kutta method</a>
+ *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
+ *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a>
+ *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
+ *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+ *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
+ *   Sayfy_Aburub-6-3-4     | dg::SAYFY_ABURUB_6_3_4     | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy_Aburub_6_3_4</a>
+ *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
+ *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
+ *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a>
+ *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
+ *   Verner-8-5-6           | dg::VERNER_8_5_6           | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
+ *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
+ *   Feagin-17-8-10         | dg::FEAGIN_17_8_10         | <a href="http://sce.uhcl.edu/rungekutta/">Feagin</a> (The RK10(8) method)
+ *
+ */
+
+/*! @class hide_implicit_butcher_tableaus
+ *
+ *    Name  | Identifier | Description
+ *   -------|------------| -----------
+ *   Euler (implicit)     | dg::IMPLICIT_EULER_1_1     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">backward Euler</a>
+ *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-2-1-2</a>
+ *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
+ *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
+ *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+ *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
+ *   Cash-5-2-4           | dg::CASH_5_2_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
+ *   Cash-5-3-4           | dg::CASH_5_3_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
+ *   SDIRK-5-3-4          | dg::SDIRK_5_3_4            |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
+ *   Kvaerno-5-3-4        | dg::KVAERNO_5_3_4          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
+ *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
+ *   Kvaerno-7-4-5        | dg::KVAERNO_7_4_5          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
+ *   ARK-8-4-5 (implicit) | dg::ARK548L2SA_DIRK_8_4_5  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+ *
+*/
+
 /*! @brief Convert identifiers to their corresponding \c dg::ButcherTableau
  *
  * This is a helper class to simplify the interfaces of our timestepper functions and classes.
- * The sole purpose is to implicitly convert certain identifiers to an
- * instance of a ButcherTableau.
+ * The sole purpose is to implicitly convert either a ButcherTableau or one of
+ * the following identifiers to an instance of a ButcherTableau.
+ *
+ * Explicit methods
+ * @copydoc hide_explicit_butcher_tableaus
+ * Implicit methods
+ * @copydoc hide_implicit_butcher_tableaus
  * @param real_type The type of the coefficients in the ButcherTableau
  * @ingroup time
  */
@@ -991,44 +1040,9 @@ struct ConvertsToButcherTableau
     *  @note In some of the links in the Description below you might want to use the search function of your browser to find the indicated method
     *
     * Explicit methods
-    *
-    *    Name  | Identifier | Description
-    *   ------------- | ------| -------
-    *   Euler| dg::EXPLICIT_EULER_1_1 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Explicit Euler</a>
-    *   Midpoint-2-2 | dg::MIDPOINT_2_2 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint method</a>
-    *   Kutta-3-3 | dg::KUTTA_3_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
-    *   Runge-Kutta-4-4| dg::CLASSIC_4_4 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods"> "The" Runge-Kutta method</a>
-    *   Heun-Euler-2-1-2| dg::HEUN_EULER_2_1_2 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
-    *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a>
-    *   ARK-4-2-3 (explicit) | dg::ARK324L2SA_ERK_4_2_3 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
-    *   Zonneveld-5-3-4 | dg::ZONNEVELD_5_3_4 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
-    *   ARK-6-3-4 (explicit) | dg::ARK436L2SA_ERK_6_3_4 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
-    *   Sayfy_Aburub-6-3-4 | dg::SAYFY_ABURUB_6_3_4 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy_Aburub_6_3_4</a>
-    *   Cash_Karp-6-4-5 | dg::CASH_KARP_6_4_5 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
-    *   Fehlberg-6-4-5 | dg::FEHLBERG_6_4_5 | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
-    *   Dormand-Prince-7-4-5 | dg::DORMAND_PRINCE_7_4_5 | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a>
-    *   ARK-8-4-5 (explicit) | dg::ARK548L2SA_ERK_8_4_5 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
-    *   Verner-8-5-6 | dg::VERNER_8_5_6 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
-    *   Fehlberg-13-7-8 | dg::FEHLBERG_13_7_8 | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
-    *   Feagin-17-8-10 | dg::FEAGIN_17_8_10 | <a href="http://sce.uhcl.edu/rungekutta/">Feagin</a> (The RK10(8) method)
-
-    Implicit methods
-    *    Name  | Identifier | Description
-    *   ------------- | ------| -------
-    *   Euler (implicit) | dg::IMPLICIT_EULER_1_1 |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">backward Euler</a>
-    *   SDIRK-2-1-2 | dg::SDIRK_2_1_2 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-2-1-2</a>
-    *   Billington-3-3-2 | dg::BILLINGTON_3_3_2 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
-    *   TRBDF2-3-3-2 | dg::TRBDF2_3_3_2 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
-    *   Kvaerno-4-2-3 | dg::KVAERNO_4_2_3 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
-    *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
-    *   Cash-5-2-4 | dg::CASH_5_2_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
-    *   Cash-5-3-4 | dg::CASH_5_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
-    *   SDIRK-5-3-4 | dg::SDIRK_5_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
-    *   Kvaerno-5-3-4 | dg::KVAERNO_5_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
-    *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
-    *   Kvaerno-7-4-5 | dg::KVAERNO_7_4_5 |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
-    *   ARK-8-4-5 (implicit)  | dg::ARK548L2SA_DIRK_8_4_5  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
-    *
+    * @copydoc hide_explicit_butcher_tableaus
+    * Implicit methods
+    * @copydoc hide_implicit_butcher_tableaus
     * @param name The name of the tableau as stated in the Name column above, as a string, for example "Dormand-Prince-7-4-5"
     */
     ConvertsToButcherTableau( std::string name):m_t( dg::create::tableau<real_type>(name)){}
