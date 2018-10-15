@@ -129,11 +129,11 @@ static inline double OddRoundSumNonnegative(double th, double tl)
     return thdb.d;
 }
 
-#ifdef THREADSAFE
+#ifdef THREADSAFE //MW: we don't define this anywhere?
 #define TSAFE 1
 #define LOCK_PREFIX "lock "
 #else
-#define TSAFE 0
+#define TSAFE 0 //MW: so I guess it's always 0 i.e. false
 #define LOCK_PREFIX
 #endif
 
@@ -141,7 +141,10 @@ static inline double OddRoundSumNonnegative(double th, double tl)
 inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 {
 
-#if defined _MSC_VER && !TSAFE //non-atomic load-ADDC-store
+//msvc doesn't allow inline assembler code
+//If we don't have VCL, then sometimes the assembler code also makes problems
+#if defined (_WITHOUT_VCL || _MSC_VER) && !TSAFE
+//manually compute non-atomic load-ADDC-store
 	int64_t y = memref;
 	memref = y + x;
 	int64_t x63 = (x >> 63) & 1;
