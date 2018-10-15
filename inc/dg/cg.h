@@ -249,35 +249,51 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 
 
 /**
-* @brief Class that stores up to three solutions of iterative methods and
-can be used to get initial guesses based on past solutions
-
+* @brief Extrapolate based on up to three past solutions
+*
+* The intention of this class is to provide an initial guess for iterative solvers
+* based on past solutions:
  \f[ x_{init} = \alpha_0 x_0 + \alpha_{-1}x_{-1} + \alpha_{-2} x_{-2}\f]
  where the indices indicate the current (0) and past (negative) solutions.
+ Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+ The user can choose to provide a time value \c t_i associated with the \c x_i, which
+ are then used to compute the coefficients \c alpha_i (using Lagrange interpolation).
+ Otherwise an equidistant distribution is assumed.
 *
+* @note Since extrapolation with higher order polynomials is so prone to oscillations
+* anything higher than linear rarely leads to anything useful. So best stick to
+* constant or linear extrapolation
 * @copydoc hide_ContainerType
 * @ingroup invert
+* @sa https://en.wikipedia.org/wiki/Extrapolation
 */
 template<class ContainerType>
 struct Extrapolation
 {
     using real_type = get_value_type<ContainerType>;
-    /*! @brief Set extrapolation number without initializing values
-     * @param number number of vectors to use for extrapolation ( 0<=number<=3)
+    /*! @brief Set extrapolation order without initializing values
+     * @param number number of vectors to use for extrapolation.
+         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
      * @attention the update function must be used at least \c number times before the extrapolate function can be called
      */
     Extrapolation( unsigned number = 2){
         set_number(number);
     }
-    /*! @brief Set extrapolation number and initialize values
-     * @param number number of vectors to use for extrapolation ( 0<=number<=3)
-     * @param t_init the times are initialized with this value t_init, t_init -1 , t_init-2
+    /*! @brief Set extrapolation order and initialize values
+     * @param number number of vectors to use for extrapolation.
+         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+     * @param t_init the times are initialized with the values <tt> t_init, t_init-1 , t_init-2 </tt>
      * @param init the vectors are initialized with this value
      */
     Extrapolation( unsigned number, real_type t_init, const ContainerType& init) {
         set_number(number, t_init, init);
     }
-    ///initialize time values with 1
+    /*! @brief Set extrapolation order and initialize values (equidistant)
+     * @param number number of vectors to use for extrapolation.
+         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+     * @param init the vectors are initialized with this value
+     * @note the times are initialized with the values <tt> 0, -1 , -2 </tt>
+     */
     Extrapolation( unsigned number, const ContainerType& init) {
         set_number(number, 0, init);
     }
@@ -302,6 +318,7 @@ struct Extrapolation
         for(unsigned i=0; i<m_t.size(); i++)
             m_t[i] = t_init - (real_type)i;
     }
+    ///@copydoc Extrapolation(unsigned,const ContainerType&)
     void set_number( unsigned number, const ContainerType& init)
     {
         //init times 0, -1, -2
@@ -309,16 +326,16 @@ struct Extrapolation
         for(unsigned i=0; i<m_t.size(); i++)
             m_t[i] = -(real_type)i;
     }
-    ///read the current extrapolation number
+    ///return the current extrapolation number
     unsigned get_number( ) const{
         return m_number;
     }
 
     /**
-    * @brief Extrapolate values (\c number +1 memops)
-    * @param t time to which to extrapolate
+    * @brief Extrapolate value to given time
+    * @param t time to which to extrapolate (must be different from the times used in the update function, else division by zero occurs)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
-    * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
     void extrapolate( real_type t, ContainerType0& new_x) const{
@@ -343,7 +360,14 @@ struct Extrapolation
             }
         }
     }
-    ///Assume that extrapolation time is current head time +1
+
+    /**
+    * @brief Extrapolate value
+    * @param t time to which to extrapolate (must be different from the times used in the update function, else division by zero occurs)
+    * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @note Assumes that extrapolation time equals last inserted time+1
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
     template<class ContainerType0>
     void extrapolate( ContainerType0& new_x) const{
         real_type t = m_t[0] +1.;
@@ -353,9 +377,9 @@ struct Extrapolation
 
     /**
     * @brief insert a new entry, deleting the oldest entry or update existing entry
-    * @param t_new the time for the new head
-    * @param new_entry the new entry ( may alias the tail), replaces value of existing entry if t_new is already there
-    * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
+    * @param t_new the time for the new entry
+    * @param new_entry the new entry ( may alias the tail), replaces value of existing entry if \c t_new already exists
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
     void update( real_type t_new, const ContainerType0& new_entry){
@@ -376,15 +400,20 @@ struct Extrapolation
         m_t[0] = t_new;
         blas1::copy( new_entry, m_x[0]);
     }
-    ///Assume new time as current head +1
+    /**
+    * @brief insert a new entry
+    * @param new_entry the new entry ( may alias the tail)
+    * @note Assumes new time equals last inserted time+1
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
     template<class ContainerType0>
-    void update( const ContainerType0& new_head){
+    void update( const ContainerType0& new_entry){
         real_type t_new = m_t[0] + 1;
-        update( t_new, new_head);
+        update( t_new, new_entry);
     }
 
     /**
-     * @brief return the current head
+     * @brief return the current head (the one most recently inserted)
      * @return current head (undefined if number==0)
      */
     const ContainerType& head()const{
