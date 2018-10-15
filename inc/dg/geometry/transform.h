@@ -8,18 +8,23 @@
 namespace dg
 {
 /**
- * @brief This function pulls back a function defined in some basic coordinates to the curvilinear coordinate system
+ * @brief Pull back a function defined in physical coordinates to the curvilinear (computational) coordinate system
  *
- * e.g. F(x,y) = f(R(x,y), Z(x,y)) in 2d
- * @tparam Functor The binary or ternary function class
- * @param f The function defined in cartesian coordinates
+ * Pullback is equivalent to the following:
+ *
+ * -# generate the list of physical space coordinates (e.g. in 2d \f$ x_i = x(\zeta_i, \eta_i),\ y_i = y(\zeta_i, \eta_i)\f$ for all \c i)
+ * -#  evaluate the given function or functor at these coordinates and store the result in the output vector (e.g. in 2d  \f$ v_i = f(x_i,y_i)\f$ for all \c i)
+ *.
+ * @tparam Functor The binary (for 2d grids) or ternary (for 3d grids) function or functor with signature: <tt>real_type ( real_type x, real_type y) ; real_type ( real_type x, real_type y, real_type z) </tt>
+ * @param f The function defined in physical coordinates
  * @param g a two- or three dimensional Geometry
  * @note Template deduction for the Functor will fail if you overload functions with different
  dimensionality (e.g. real_type sine( real_type x) and real_type sine(real_type x, real_type y) )
  * You will want to rename those uniquely
  *
- * @return A set of points representing F
+ * @return The output vector \c v as a host vector
  * @ingroup pullback
+ * @sa If the function is defined in computational space coordinates, then use \c dg::evaluate
  */
 template< class Functor, class real_type>
 thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry2d<real_type>& g)

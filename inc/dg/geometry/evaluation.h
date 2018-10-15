@@ -50,7 +50,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  * Evaluate is equivalent to the following:
  *
  * -# generate a list of grid coordinates \f$ x_i\f$ representing the given computational space discretization (the grid)
- * -# evaluate the given function or functor at these coordinates and store the result 
+ * -# evaluate the given function or functor at these coordinates and store the result
  *   in the output vector \f$ v_i = f(x_i)\f$ for all \c i
  * .
  * @copydoc hide_code_evaluate1d
@@ -61,6 +61,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  * @return The output vector \c v as a host vector
  * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d() ) to generate the list of grid coordinates
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa \c dg::pullback if you want to evaluate a function in physical space
  */
 template< class UnaryOp,class real_type>
 thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGrid1d<real_type>& g)
@@ -86,7 +87,7 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
  * Evaluate is equivalent to the following:
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the given computational space discretization (the grid)
- * -# evaluate the given function or functor at these coordinates and store the result 
+ * -# evaluate the given function or functor at these coordinates and store the result
  *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \c i
  *.
  * @copydoc hide_code_evaluate2d
@@ -97,6 +98,7 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
  * @return The output vector \c v as a host vector
  * @note Use the elementary function \f$ f(x,y) = x \f$ (\c dg::cooX2d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY2d)
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa \c dg::pullback if you want to evaluate a function in physical space
  */
 template< class BinaryOp, class real_type>
 thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopology2d<real_type>& g)
@@ -129,7 +131,7 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  * Evaluate is equivalent to the following:
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the given computational space discretization (the grid)
- * -# evaluate the given function or functor at these coordinates and store the result 
+ * -# evaluate the given function or functor at these coordinates and store the result
  *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \c i
  *.
  * @copydoc hide_code_evaluate3d
@@ -138,8 +140,9 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  * @param g The 3d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector
- * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d) 
+ * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d)
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa \c dg::pullback if you want to evaluate a function in physical space
  */
 template< class TernaryOp,class real_type>
 thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopology3d<real_type>& g)
