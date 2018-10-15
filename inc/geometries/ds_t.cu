@@ -46,9 +46,74 @@ double deriAdjDIR(double R, double Z, double phi)
     return Z/R/(I_0*I_0+r2)*funcDIR(R,Z,phi) + deriDIR(R,Z,phi);
 }
 
+double dssFuncNEU( double R, double Z, double phi)
+{
+    double r2 = (R-R_0)*(R-R_0)+Z*Z;
+    double bR = Z/sqrt(I_0*I_0+r2),
+           bZ = -(R-R_0)/sqrt(I_0*I_0+r2),
+           bP = I_0/R/sqrt(I_0*I_0+r2);
+    double gradbR = - (R-R_0)/(I_0*I_0+r2);
+    double gradbZ = - Z/(I_0*I_0+r2);
+    double gradbP = - I_0/(R*R)/(I_0*I_0+r2);
+    double f = sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    double dRf = M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    double dZf = M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    double dPf =         sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+    double dRdZf = M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    double dRdPf = M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+    double dZdPf = M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
+    double dRdRf = -M_PI*M_PI/4.*f;
+    double dZdZf = -M_PI*M_PI/4.*f;
+    double dPdPf = -f;
+    return (bR*bR*dRdRf + bZ*bZ*dZdZf + bP*bP*dPdPf)
+            +2.*(bR*bZ*dRdZf + bR*bP*dRdPf + bZ*bP*dZdPf)
+            +dRf*gradbR + dZf*gradbZ + dPf*gradbP;
+}
+double dssFuncDIR( double R, double Z, double phi)
+{
+    double r2 = (R-R_0)*(R-R_0)+Z*Z;
+    double bR = Z/sqrt(I_0*I_0+r2),
+           bZ = -(R-R_0)/sqrt(I_0*I_0+r2),
+           bP = I_0/R/sqrt(I_0*I_0+r2);
+    double gradbR = - (R-R_0)/(I_0*I_0+r2);
+    double gradbZ = - Z/(I_0*I_0+r2);
+    double gradbP = - I_0/(R*R)/(I_0*I_0+r2);
+    double f = cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    double dRf = -M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    double dZf = -M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    double dPf =          cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
+    double dRdZf = M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    double dRdPf = -M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
+    double dZdPf = -M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+    double dRdRf = -M_PI*M_PI/4.*f;
+    double dZdZf = -M_PI*M_PI/4.*f;
+    double dPdPf = -f;
+    return (bR*bR*dRdRf + bZ*bZ*dZdZf + bP*bP*dPdPf)
+            +2.*(bR*bZ*dRdZf + bR*bP*dRdPf + bZ*bP*dZdPf)
+            +dRf*gradbR + dZf*gradbZ + dPf*gradbP;
+}
+
+double laplaceFuncNEU(double R, double Z, double phi)
+{
+    double dssf = dssFuncNEU(R,Z,phi);
+    double dsf  = deriNEU(R,Z,phi);
+    double r2 = (R-R_0)*(R-R_0)+Z*Z;
+    double divb = Z/R/(I_0*I_0+r2);
+    return divb*dsf + dssf;
+}
+double laplaceFuncDIR(double R, double Z, double phi)
+{
+    double dssf = dssFuncDIR(R,Z,phi);
+    double dsf  = deriDIR(R,Z,phi);
+    double r2 = (R-R_0)*(R-R_0)+Z*Z;
+    double divb = Z/R/(I_0*I_0+r2);
+    return divb*dsf + dssf;
+}
+
+
 int main(int argc, char * argv[])
 {
-    std::cout << "First test the cylindrical version\n";
+    std::cout << "This program tests the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
     std::cout << "Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx, my;
     std::cin >> n>> Nx>>Ny>>Nz;
@@ -68,7 +133,8 @@ int main(int argc, char * argv[])
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
     //apply to function
-    dg::DVec function = dg::evaluate( funcNEU, g3d), derivative(function);
+    const dg::DVec function = dg::evaluate( funcNEU, g3d);
+    dg::DVec derivative(function);
     ds.centered( function, derivative);
     //![doxygen]
     std::cout << "TEST NEU Boundary conditions!\n";
@@ -87,9 +153,18 @@ int main(int argc, char * argv[])
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
     ///##########################################################///
+    //std::cout << "TEST DSS derivative!\n";
+    solution = dg::evaluate( dssFuncNEU, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.dss( function, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error dss                 \t"<< sqrt( norm/sol )<<"\n";
+    ///##########################################################///
     ///We unfortunately cannot test convergence of adjoint because
     ///b and therefore bf does not fulfill Neumann boundary conditions
-    std::cout << "TEST ADJOINT derivatives!\n";
+    std::cout << "TEST ADJOINT derivatives (do unfortunately not fulfill Neumann BC!)\n";
     solution = dg::evaluate( deriAdjNEU, g3d);
     sol = dg::blas2::dot( vol3d, solution);
 
@@ -105,13 +180,22 @@ int main(int argc, char * argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+    ///##########################################################///
+    solution = dg::evaluate( laplaceFuncNEU, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.symv( function, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
-    std::cout << "TEST DIR Boundary conditions!\n";
+    std::cout << "Reconstruct parallel derivative!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my);
     ds.construct( dsFA, dg::not_normed, dg::centered);
+    std::cout << "TEST DIR Boundary conditions!\n";
     //apply to function
-    dg::DVec functionDIR = dg::evaluate( funcDIR, g3d);
+    const dg::DVec functionDIR = dg::evaluate( funcDIR, g3d);
     solution = dg::evaluate( deriDIR, g3d);
     sol = dg::blas2::dot( vol3d, solution);
 
@@ -127,6 +211,17 @@ int main(int argc, char * argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+    ///##########################################################///
+    //std::cout << "TEST DSS derivative!\n";
+    solution = dg::evaluate( dssFuncDIR, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.dss( 1., functionDIR,  0., derivative);
+    //ds.forward( functionDIR, derivative);
+    //ds.backward( derivative, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error dss                 \t"<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "TEST ADJOINT derivatives!\n";
@@ -145,13 +240,23 @@ int main(int argc, char * argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+    ///##########################################################///
+    //solution = dg::evaluate( laplaceFuncDIR, g3d);
+    //dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-5);
+    //invert( ds, derivative, solution);
+    //sol = dg::blas2::dot( vol3d, functionDIR);
+
+    ////ds.symv( functionDIR, derivative);
+    //dg::blas1::axpby( 1., functionDIR, -1., derivative);
+    //norm = dg::blas2::dot( derivative, vol3d, derivative);
+    //std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
     dg::GaussianZ modulate(0., M_PI/3., 1);
-    function = dsFA.evaluate( init0, modulate, Nz/2, 2);
-    ds( function, derivative);
+    dg::DVec aligned = dsFA.evaluate( init0, modulate, Nz/2, 2);
+    ds( aligned, derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
 

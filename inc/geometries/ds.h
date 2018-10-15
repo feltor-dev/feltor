@@ -132,7 +132,7 @@ struct DS
     /**
     * @brief forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
+    * forward derivative \f$ g_i = \alpha \frac{1}{h_z}(f_{i+1} - f_{i}) + \beta g_i\f$
     * @copydoc hide_ds_parameters4
     */
     void forward( double alpha, const container& f, double beta, container& g){
@@ -141,7 +141,7 @@ struct DS
     /**
     * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
+    * backward derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i} - f_{i-1}) + \beta g_i \f$
     * @copydoc hide_ds_parameters4
     */
     void backward( double alpha, const container& f, double beta, container& g){
@@ -150,7 +150,7 @@ struct DS
     /**
     * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * centered derivative \f$ g_i = \alpha \frac{1}{2h_z^0}(f_{i+1} - f_{i-1}) + \beta g_i\f$
+    * centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
     * @copydoc hide_ds_parameters4
     */
     void centered( double alpha, const container& f, double beta, container& g){
@@ -159,7 +159,7 @@ struct DS
     /**
     * @brief backward derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * backward derivative \f$ g_i = \frac{1}{2h_z^-}(f_{i} - f_{i-1}) \f$
+    * backward derivative \f$ g_i = \frac{1}{2h_z}(f_{i} - f_{i-1}) \f$
     * @copydoc hide_ds_parameters2
     */
     void backward( const container& f, container& g){
@@ -168,7 +168,7 @@ struct DS
     /**
     * @brief forward derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * forward derivative \f$ g_i = \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * forward derivative \f$ g_i = \frac{1}{h_z}(f_{i+1} - f_{i})\f$
     * @copydoc hide_ds_parameters2
     */
     void forward( const container& f, container& g){
@@ -177,7 +177,7 @@ struct DS
     /**
     * @brief centered derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * centered derivative \f$ g_i = \frac{1}{2h_z^0}(f_{i+1} - f_{i-1})\f$
+    * centered derivative \f$ g_i = \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
     * @copydoc hide_ds_parameters2
     */
     void centered( const container& f, container& g){
@@ -256,17 +256,17 @@ struct DS
     /**
      * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+h_z^0} - \frac{f^0}{h_z^+h_z^-} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^2} - \frac{f^0}{h_z^2} + \frac{f^-}{h_z^2}\right) \f]
      * @copydoc hide_ds_parameters2
      */
     void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+h_z^0} - \frac{f^0}{h_z^+h_z^-} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^2} - \frac{f^0}{h_z^2} + \frac{f^-}{h_z^2}\right) \f]
      * @copydoc hide_ds_parameters4
      */
-    void dss( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
+    void dss( double alpha, const container& f, double beta, container& g){ do_dss( alpha, f, beta, g);}
 
     const container& weights()const {return m_vol3d;}
     const container& inv_weights()const {return m_inv3d;}
@@ -300,24 +300,6 @@ struct DS
 
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
-namespace detail{
-struct ComputeDSS{
-    ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
-    DG_DEVICE
-    void operator()( double& dssf, double fp, double f, double fm, double h_inv) const{
-        dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
-    }
-    private:
-    double m_alpha, m_beta;
-};
-struct ComputeSymv{
-    DG_DEVICE
-    void operator()( double& ssf, double fp, double fm, double h_inv, double vol3d) const{
-        ssf = 1./2.*( fp-fm)*h_inv;
-        ssf = 1./2.*vol3d*ssf*h_inv;
-    }
-};
-}//namespace detail
 
 template<class Geometry, class I, class M, class container>
 void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, container>& fa, dg::norm no, dg::direction dir)
@@ -401,6 +383,24 @@ void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, dou
 
 }
 
+namespace detail{
+struct ComputeDSS{
+    ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dssf, double fp, double f, double fm, double h_inv) const{
+        dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
+    }
+    private:
+    double m_alpha, m_beta;
+};
+struct ComputeSymv{
+    DG_DEVICE
+    void operator()( double& ssf, double fp, double fm, double h_inv, double vol3d) const{
+        ssf = 1./2.*( fp-fm)*h_inv;
+        ssf = 1./2.*vol3d*ssf*h_inv;
+    }
+};
+}//namespace detail
 
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
@@ -409,7 +409,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     {
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dg::blas1::evaluate( detail::ComputeSymv(), m_temp0, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
+        dg::blas1::subroutine( detail::ComputeSymv(), m_temp0, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
         m_fa(einsPlusT,  m_temp0, m_tempP);
         m_fa(einsMinusT, m_temp0, m_tempM);
         dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, m_temp0);
@@ -425,6 +425,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     //     add jump terms
     dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
+    dg::blas1::scal( m_temp, -1.);
 
     if( m_no == dg::normed)
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);
@@ -437,7 +438,7 @@ void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta,
 {
     m_fa(einsPlus,  f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::evaluate( detail::ComputeDSS( alpha, beta),
+    dg::blas1::subroutine( detail::ComputeDSS( alpha, beta),
             dssf, m_tempP, f, m_tempM, m_fa.h_inv());
 }
 ///@endcond
