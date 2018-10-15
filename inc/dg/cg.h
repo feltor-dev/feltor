@@ -332,7 +332,7 @@ struct Extrapolation
                 real_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
                 real_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
                 real_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
-                dg::blas1::subroutine( new_x, dg::equals(), dg::PairSum(),
+                dg::blas1::evaluate( new_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
                  break;
             }

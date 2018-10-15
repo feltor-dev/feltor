@@ -256,7 +256,7 @@ struct Adaptive
               )
     {
         //std::cout << "Try stepsize "<<dt;
-        dg::blas1::evaluate( detail::Tolerance<real_type>( rtol, atol, m_size), u0, m_delta);
+        dg::blas1::subroutine( detail::Tolerance<real_type>( rtol, atol, m_size), u0, m_delta);
         real_type eps0 = norm(m_delta);
         //std::cout << " error "<<eps0;
         dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());

@@ -101,7 +101,7 @@ int main( int argc, char* argv[])
     std::array<double, 3> array_p{ 1,2,3};
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::evaluate( Expression(), u, v, x, array_p);
+        dg::blas1::subroutine( Expression(), u, v, x, array_p);
     t.toc();
     if(rank==0)std::cout<<"SUBroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////

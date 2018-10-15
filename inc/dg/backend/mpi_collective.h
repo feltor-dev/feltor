@@ -361,7 +361,8 @@ struct SurjectiveComm : public aCommunicator<Vector>
         //the bijectiveComm behaves as if we had given the gather map for the store
         //now gather the localGatherMap from the buffer to the store to get the final gather map
         Vector localGatherMap_d = dg::construct<Vector>( localGatherMap);
-        Vector gatherMap_V = bijectiveComm_.global_gather( localGatherMap_d);
+        const typename aCommunicator<Vector>::value_type * v_ptr = thrust::raw_pointer_cast(localGatherMap_d.data());
+        Vector gatherMap_V = bijectiveComm_.global_gather( v_ptr);
         Index gatherMap_I = dg::construct<Index>(gatherMap_V);
         gatherMap_ = gatherMap_I;
         store_size_ = gatherMap_.size();
@@ -469,7 +470,7 @@ struct GeneralComm : public aCommunicator<Vector>
     virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values)const override final {
         surjectiveComm_.global_scatter_reduce( toScatter, thrust::raw_pointer_cast(store_.data().data()));
         typename Vector::pointer values_ptr(values);
-        dg::blas1::detail::doEvaluate_dispatch(
+        dg::blas1::detail::doSubroutine_dispatch(
             get_execution_policy<Vector>(),
             this->local_size(),
             dg::equals(),

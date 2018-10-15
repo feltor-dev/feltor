@@ -62,7 +62,7 @@ template<class ContainerTypeIn, class ContainerTypeOut>
 inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
     if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==(const ContainerTypeIn*)&target)
         return;
-    dg::blas1::evaluate( dg::equals(), target, source );
+    dg::blas1::subroutine( dg::equals(), target, source );
 }
 
 /*! @brief \f$ x = \alpha x\f$
@@ -83,7 +83,7 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
 {
     if( alpha == get_value_type<ContainerType>(1))
         return;
-    dg::blas1::evaluate( dg::Scal<get_value_type<ContainerType>>(alpha), x );
+    dg::blas1::subroutine( dg::Scal<get_value_type<ContainerType>>(alpha), x );
 }
 
 /*! @brief \f$ x = x + \alpha \f$
@@ -104,7 +104,7 @@ inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
 {
     if( alpha == get_value_type<ContainerType>(0))
         return;
-    dg::blas1::evaluate( dg::Plus<get_value_type<ContainerType>>(alpha), x );
+    dg::blas1::subroutine( dg::Plus<get_value_type<ContainerType>>(alpha), x );
 }
 
 /*! @brief \f$ y = \alpha x + \beta y\f$
@@ -134,7 +134,7 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
         dg::blas1::scal( y, (alpha+beta));
         return;
     }
-    dg::blas1::evaluate( dg::Axpby<get_value_type<ContainerType>>(alpha, beta),  x, y);
+    dg::blas1::subroutine( dg::Axpby<get_value_type<ContainerType>>(alpha, beta),  x, y);
 }
 
 /*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
@@ -181,7 +181,7 @@ inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1&
         dg::blas1::axpby( alpha, x, beta+gamma, z);
         return;
     }
-    dg::blas1::evaluate( dg::Axpbypgz<get_value_type<ContainerType>>(alpha, beta, gamma),  x, y, z);
+    dg::blas1::subroutine( dg::Axpbypgz<get_value_type<ContainerType>>(alpha, beta, gamma),  x, y, z);
 }
 
 /*! @brief \f$ z = \alpha x + \beta y\f$
@@ -232,16 +232,16 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         return;
     }
     if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::evaluate( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x2, y );
+        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
         return;
     }
     if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
-        dg::blas1::evaluate( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, y );
+        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, y );
 
         return;
     }
-    dg::blas1::evaluate( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, y );
 }
 
 /*! @brief \f$ y = x_1 x_2 \f$
@@ -290,7 +290,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         dg::blas1::scal(y, beta);
         return;
     }
-    dg::blas1::evaluate( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, x3, y );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, x3, y );
 }
 
 /**
@@ -320,11 +320,11 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
         return;
     }
     if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::evaluate( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha,beta), x2, y );
+        dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
         return;
     }
-    dg::blas1::evaluate( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha, beta), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha, beta), x1, x2, y );
 }
 
 /**
@@ -385,7 +385,7 @@ void pointwiseDot(  get_value_type<ContainerType> alpha, const ContainerType1& x
         pointwiseDot( alpha, x1,y1, gamma, z);
         return;
     }
-    dg::blas1::evaluate( dg::PointwiseDot<get_value_type<ContainerType>>(alpha, beta, gamma), x1, y1, x2, y2, z );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha, beta, gamma), x1, y1, x2, y2, z );
 }
 
 /*! @brief \f$ y = op(x)\f$
@@ -408,7 +408,7 @@ dg::blas1::transform( two, result, dg::EXP<double>());
 template< class ContainerType, class ContainerType1, class UnaryOp>
 inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
 {
-    dg::blas1::evaluate( dg::Evaluate<dg::equals, UnaryOp>(dg::equals(),op), y, x);
+    dg::blas1::subroutine( dg::Evaluate<dg::equals, UnaryOp>(dg::equals(),op), y, x);
 }
 
 /*! @brief \f$ y = f(y, g(x_0,x_1,...)\f$
@@ -421,7 +421,7 @@ double function( double x, double y) {
     return sin(x)*sin(y);
 }
 dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
-dg::blas1::subroutine( result, dg::equals(), function, pi2, pi3);
+dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
 // result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
 @endcode
  * @param y contains result
@@ -437,9 +437,9 @@ dg::blas1::subroutine( result, dg::equals(), function, pi2, pi3);
  *
  */
 template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
-inline void subroutine( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
+inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
 {
-    dg::blas1::evaluate( dg::Evaluate<BinarySubroutine, Functor>(f,g), y, x0, xs...);
+    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, Functor>(f,g), y, x0, xs...);
 }
 
 
@@ -481,7 +481,7 @@ void operator()( double x, double y, double& z){
 }
 };
 dg::DVec two( 100,2), four(100,4);
-dg::blas1::evaluate( Routine(), two, 3., four);
+dg::blas1::subroutine( Routine(), two, 3., four);
 // four[i] now has the value 21 (7*2+3+4)
 @endcode
 
@@ -498,7 +498,7 @@ except the scalar product, which is not trivial parallel.
  * @copydoc hide_ContainerType
  */
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void evaluate( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
+inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
     static_assert( all_true<
             dg::is_vector<ContainerType>::value,
@@ -512,7 +512,7 @@ inline void evaluate( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
             >::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
-    dg::blas1::detail::doEvaluate(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors

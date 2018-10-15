@@ -105,7 +105,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     //2 stage
     if( s>2) {
         tu = DG_FMA( m_rk.c(2),dt, t0);
-        blas1::subroutine( delta, dg::equals(), PairSum(), 1., u0,
+        blas1::evaluate( delta, dg::equals(), PairSum(), 1., u0,
                             dt*m_rk.a(2,0),m_k[0],
                             dt*m_rk.a(2,1),m_k[1]);
         f( tu, delta, m_k[2]);
@@ -113,7 +113,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     //3 stage
     if( s> 3){
         tu = DG_FMA( m_rk.c(3),dt, t0);
-        blas1::subroutine( delta, dg::equals(), PairSum(), 1., u0,
+        blas1::evaluate( delta, dg::equals(), PairSum(), 1., u0,
                              dt*m_rk.a(3,0),m_k[0],
                              dt*m_rk.a(3,1),m_k[1],
                              dt*m_rk.a(3,2),m_k[2]);
@@ -122,7 +122,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     //4 stage
     if( s>4){
         tu = DG_FMA( m_rk.c(4),dt, t0);
-        blas1::subroutine( delta, dg::equals(), PairSum(), 1.        , u0,
+        blas1::evaluate( delta, dg::equals(), PairSum(), 1.        , u0,
                              dt*m_rk.a(4,0),m_k[0],  dt*m_rk.a(4,1),m_k[1],
                              dt*m_rk.a(4,2),m_k[2],  dt*m_rk.a(4,3),m_k[3]);
         f( tu, delta, m_k[4]);
@@ -130,7 +130,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     //5 stage
     if( s>5) {
         tu = DG_FMA( m_rk.c(5),dt, t0);
-        blas1::subroutine( delta, dg::equals(), PairSum(), 1., u0,
+        blas1::evaluate( delta, dg::equals(), PairSum(), 1., u0,
                  dt*m_rk.a(5,0),m_k[0], dt*m_rk.a(5,1),m_k[1],
                  dt*m_rk.a(5,2),m_k[2], dt*m_rk.a(5,3),m_k[3],
                  dt*m_rk.a(5,4),m_k[4]);
@@ -140,7 +140,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     if( s>6)
     {
         tu = DG_FMA( m_rk.c(6),dt, t0);
-        blas1::subroutine( delta, dg::equals(), PairSum(), 1., u0,
+        blas1::evaluate( delta, dg::equals(), PairSum(), 1., u0,
                            dt*m_rk.a(6,0),m_k[0], dt*m_rk.a(6,1),m_k[1],
                            dt*m_rk.a(6,2),m_k[2], dt*m_rk.a(6,3),m_k[3],
                            dt*m_rk.a(6,4),m_k[4], dt*m_rk.a(6,5),m_k[5]);
@@ -159,29 +159,29 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
     {
         //the first is for Euler
         case 1:
-                blas1::evaluate( dg::EmbeddedPairSum(),
+                blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0]); break;
-        case 2: blas1::evaluate( dg::EmbeddedPairSum(),
+        case 2: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
                             dt*m_rk.b(1), dt*m_rk.d(1), m_k[1]); break;
-        case 3: blas1::evaluate( dg::EmbeddedPairSum(),
+        case 3: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
                             dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
                             dt*m_rk.b(2), dt*m_rk.d(2), m_k[2]); break;
-        case 4: blas1::evaluate( dg::EmbeddedPairSum(),
+        case 4: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
                             dt*m_rk.b(1), dt*m_rk.d(1), m_k[1],
                             dt*m_rk.b(2), dt*m_rk.d(2), m_k[2],
                             dt*m_rk.b(3), dt*m_rk.d(3), m_k[3]); break;
-        case 5: blas1::evaluate( dg::EmbeddedPairSum(),
+        case 5: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
@@ -189,7 +189,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
                             dt*m_rk.b(2), dt*m_rk.d(2), m_k[2],
                             dt*m_rk.b(3), dt*m_rk.d(3), m_k[3],
                             dt*m_rk.b(4), dt*m_rk.d(4), m_k[4]); break;
-        case 6: blas1::evaluate( dg::EmbeddedPairSum(),
+        case 6: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
@@ -198,7 +198,7 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
                             dt*m_rk.b(3), dt*m_rk.d(3), m_k[3],
                             dt*m_rk.b(4), dt*m_rk.d(4), m_k[4],
                             dt*m_rk.b(5), dt*m_rk.d(5), m_k[5]); break;
-        default: blas1::evaluate( dg::EmbeddedPairSum(),
+        default: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rk.b(0), dt*m_rk.d(0), m_k[0],
@@ -368,7 +368,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
     im(t0, u0, m_kI[0]);
 
     //1 stage
-    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0,
+    blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
             dt*m_rkE.a(1,0), m_kE[0],
             dt*m_rkI.a(1,0), m_kI[0]);
     tu = DG_FMA( m_rkI.c(1),dt, t0);
@@ -379,7 +379,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
     im(tu, delta, m_kI[1]);
 
     //2 stage
-    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0,
+    blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
              dt*m_rkE.a(2,0), m_kE[0],
              dt*m_rkE.a(2,1), m_kE[1],
              dt*m_rkI.a(2,0), m_kI[0],
@@ -390,7 +390,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
     ex(tu, delta, m_kE[2]);
     im(tu, delta, m_kI[2]);
     //3 stage
-    blas1::subroutine( m_rhs, dg::equals(), PairSum(), 1., u0,
+    blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
              dt*m_rkE.a(3,0), m_kE[0],
              dt*m_rkE.a(3,1), m_kE[1],
              dt*m_rkE.a(3,2), m_kE[2],
@@ -416,7 +416,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
     m_t1 = t1 = tu;
     // do up to 8 stages for ARK-8-4-5
     //Now compute result and error estimate
-    blas1::evaluate( dg::EmbeddedPairSum(),
+    blas1::subroutine( dg::EmbeddedPairSum(),
             u1, delta,
              1., 0., u0,
             dt*m_rkE.b(0), dt*m_rkE.d(0),m_kE[0],

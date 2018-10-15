@@ -148,7 +148,7 @@
 
   /** @class hide_container_geometry
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::construct.
+  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::subroutine() can be converted using \c dg::construct.
   * We assume that \c container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
@@ -168,7 +168,7 @@
   *  - \c dg::MHMatrix with \c dg::MHVec and one of the MPI geometries
   *  - \c dg::MDMatrix with \c dg::MDVec and one of the MPI geometries
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::assign.
+  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::subroutine() can be converted using \c dg::assign.
   * We assume that \c container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
@@ -206,12 +206,12 @@
  *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
  *
  * When dispatching level 1 functions we distinguish between three classes of
- * functions: trivially parallel (\c dg::blas1::evaluate and related \c dg::blas1 functions), global communication
+ * functions: trivially parallel (\c dg::blas1::subroutine and related \c dg::blas1 functions), global communication
  * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv).
  *
  * @subsection dispatch_evaluate The evaluate function
  *
- * The execution of \c dg::blas1::evaluate with a Functor called \c routine
+ * The execution of \c dg::blas1::subroutine with a Functor called \c routine
  * (and all related \c dg::blas1 functions) is equivalent to the following:
  *  -# Assert the following prerequisites:
  *
@@ -225,8 +225,8 @@
  *     are promoted to this type with the same size, communicator and execution policy
  *  -# Check the base class of the tensor_category:
  *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation just loops over all elements in the vectors and applies the \c routine)
- *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dg::blas1::evaluate (and start again at 1)
- *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dg::blas1::evaluate for all elements (and start again at 1)
+ *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dg::blas1::subroutine (and start again at 1)
+ *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dg::blas1::subroutine for all elements (and start again at 1)
  *
  * @subsection dispatch_dot The dot function
  * The execution of \c dg::blas1::dot and \c dg::blas2::dot is equivalent to the following:
@@ -267,7 +267,7 @@
  @endcode
  In an MPI implementation we would simply write \c dg::MDVec instead of \c dg::DVec.
  Let us now assume that we want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
- with the \c dg::blas1::evaluate. The first step is to write a Functor that
+ with the \c dg::blas1::subroutine. The first step is to write a Functor that
  implements this expression
  @code
  struct Expression{
@@ -280,7 +280,7 @@
  Note that we used the Marco \ref DG_DEVICE to enable this code on GPUs.
  The next step is just to apply our struct to the vectors we have.
  @code
- dg::blas1::evaluate( Expression(), v, w);
+ dg::blas1::subroutine( Expression(), v, w);
  @endcode
 
  Now, we want to use an additional parameter in our expresion. Let's assume we have
@@ -300,9 +300,9 @@
     private:
     double m_param;
  };
- dg::blas1::evaluate( Expression(parameter), v, w);
+ dg::blas1::subroutine( Expression(parameter), v, w);
  @endcode
- The other possibility is to extend the paranthesis operator in \c Expression and call \c dg::blas1::evaluate with a scalar
+ The other possibility is to extend the paranthesis operator in \c Expression and call \c dg::blas1::subroutine with a scalar
  @code
  struct Expression{
     DG_DEVICE
@@ -310,7 +310,7 @@
         v = param*v*v + w;
     }
  };
- dg::blas1::evaluate( Expression(), v, w, parameter);
+ dg::blas1::subroutine( Expression(), v, w, parameter);
  @endcode
  The result (and runtime) is the same in both cases. However, the second is more versatile,
  when we use recursion. Consider that \f$ v,\ w\f$ and \f$ p\f$ are now arrays, declared as
@@ -324,7 +324,7 @@
  <tt> array_v[i] </tt> and <tt> array_w[i] </tt>.
  In this case we just call
  @code
- dg::blas1::evaluate( Expression(), array_v, array_w, array_parameter);
+ dg::blas1::subroutine( Expression(), array_v, array_w, array_parameter);
  @endcode
  and use the fact that <tt> std::array </tt> has the \c dg::RecursiveVectorTag.
 

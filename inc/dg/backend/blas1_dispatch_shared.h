@@ -41,7 +41,7 @@ void doTransfer( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Par
 namespace blas1
 {
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void evaluate( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
+inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
 namespace detail
 {
 template< class ContainerType1, class ContainerType2>
@@ -72,7 +72,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
 }
 
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void doEvaluate( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
+inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
 
 //#ifdef DG_DEBUG
@@ -88,7 +88,7 @@ inline void doEvaluate( SharedVectorTag, Subroutine f, ContainerType&& x, Contai
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
-    doEvaluate_dispatch(
+    doSubroutine_dispatch(
             get_execution_policy<vector_type>(),
             get_idx<vector_idx>( std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...).size(),
             f,

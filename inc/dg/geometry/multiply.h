@@ -97,13 +97,13 @@ struct Determinant
  * @param out1 (output) second component (may alias in1)
  * @note Required memops:
          - 6 reads + 2 writes; (-2 reads if aliases are used)
- * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with the appropriate functor
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
 void multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, ContainerType3& out0, ContainerType4& out1)
 {
-    dg::blas1::evaluate( detail::Multiply<get_value_type<ContainerType0>>(),
+    dg::blas1::subroutine( detail::Multiply<get_value_type<ContainerType0>>(),
                          t.value(0,0), t.value(0,1),
                          t.value(1,0), t.value(1,1),
                          in0,  in1,
@@ -123,13 +123,13 @@ void multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in
  * @param out2 (output)  third component  (may alias in2)
  * @note Required memops:
          - 6 reads + 2 writes; (-2 reads if aliases are used)
- * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with the appropriate functor
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class ContainerType5, class ContainerType6>
 void multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerType3& in2, ContainerType4& out0, ContainerType5& out1, ContainerType6& out2)
 {
-    dg::blas1::evaluate( detail::Multiply<get_value_type<ContainerType0>>(),
+    dg::blas1::subroutine( detail::Multiply<get_value_type<ContainerType0>>(),
                          t.value(0,0), t.value(0,1), t.value(0,2),
                          t.value(1,0), t.value(1,1), t.value(1,2),
                          t.value(2,0), t.value(2,1), t.value(2,2),
@@ -147,7 +147,7 @@ template<class ContainerType>
 ContainerType determinant( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
-    dg::blas1::subroutine( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
                            t.value(0,0), t.value(0,1), t.value(0,2),
                            t.value(1,0), t.value(1,1), t.value(1,2),
                            t.value(2,0), t.value(2,1), t.value(2,2));
@@ -164,7 +164,7 @@ template<class ContainerType>
 ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
-    dg::blas1::subroutine( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
                            t.value(0,0), t.value(0,1),
                            t.value(1,0), t.value(1,1));
     return det;
