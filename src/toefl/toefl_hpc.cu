@@ -2,11 +2,10 @@
 #include <iomanip>
 #include <vector>
 
-
-#include "file/nc_utilities.h"
+#include "dg/algorithm.h"
+#include "dg/file/nc_utilities.h"
 
 #include "toeflR.cuh"
-#include "dg/algorithm.h"
 #include "parameters.h"
 
 int main( int argc, char* argv[])

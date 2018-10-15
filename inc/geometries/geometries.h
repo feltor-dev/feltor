@@ -1,4 +1,7 @@
 #pragma once
+#ifndef _INCLUDED_BY_DG_
+#pragma message( "The inclusion of geometries/geometries.h is deprecated. Please use dg/geometries/geometries.h")
+#endif //_INCLUDED_BY_DG_
 
 //include grid generators
 #include "simple_orthogonal.h"
