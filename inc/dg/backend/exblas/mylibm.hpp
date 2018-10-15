@@ -33,7 +33,7 @@ static inline int64_t myllrint(double x) {
 static inline double myrint(double x)
 {
 #ifndef _WITHOUT_VCL
-#if defined __GNUG__ || _MSC_VER
+#if defined( __GNUG__) || defined( _MSC_VER)
     // Workaround gcc bug 51033
     union {
         __m128d v;
@@ -143,7 +143,7 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 
 //msvc doesn't allow inline assembler code
 //If we don't have VCL, then sometimes the assembler code also makes problems
-#if defined (_WITHOUT_VCL || _MSC_VER) && !TSAFE
+#if (defined (_WITHOUT_VCL) || defined(_MSC_VER)) && !TSAFE
 //manually compute non-atomic load-ADDC-store
 	int64_t y = memref;
 	memref = y + x;
