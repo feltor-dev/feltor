@@ -116,6 +116,19 @@ struct DS
      */
     void construct(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
+    /*!@brief Set the norm of the symv member
+     * @param no new norm
+     */
+    void set_norm( dg::norm no) {
+        m_no = no;
+    }
+    /*!@brief Set the direction used in the operator() and symv member
+     * @param dir new direction
+     */
+    void set_direction( dg::direction dir){
+        m_dir = dir;
+    }
+
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
     void set_boundaries( dg::bc bcz, double left, double right){
         m_fa.set_boundaries( bcz, left, right);
@@ -238,11 +251,10 @@ struct DS
 
 
     /**
-     * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$ as a symmetric matrix
+     * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$ as a symmetric negative definit matrix
      *
      * if direction given in constructor is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters2
-     * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
     void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}
     /**
@@ -250,7 +262,6 @@ struct DS
      *
      * if direction given in constructor is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters4
-     * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
     void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
     /**
@@ -409,10 +420,10 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     {
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dg::blas1::subroutine( detail::ComputeSymv(), m_temp0, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
-        m_fa(einsPlusT,  m_temp0, m_tempP);
-        m_fa(einsMinusT, m_temp0, m_tempM);
-        dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, m_temp0);
+        dg::blas1::subroutine( detail::ComputeSymv(), m_temp, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
+        m_fa(einsPlusT,  m_temp, m_tempP);
+        m_fa(einsMinusT, m_temp, m_tempM);
+        dg::blas1::axpby( 1., m_tempM, -1., m_tempP,  m_temp);
     }
     else
     {
@@ -425,7 +436,6 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     //     add jump terms
     dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
-    dg::blas1::scal( m_temp, -1.);
 
     if( m_no == dg::normed)
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);

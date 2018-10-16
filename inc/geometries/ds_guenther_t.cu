@@ -4,6 +4,7 @@
 #include <cusp/csr_matrix.h>
 #include "json/json.h"
 
+#define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "ds.h"
 // #include "draw/host_window.h"
@@ -52,13 +53,8 @@ int main( )
     unsigned mx, my;
     std::cin >> mx >> my;
 
-    std::cout << "Integrate or extrapolate field lines (1/0)?\n";
-    bool integrate;
-    std::cin >> integrate;
-
-
     std::cout << "computing dsDIR" << std::endl;
-    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, mx, my, true, true, integrate);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), rk4eps, mx, my);
 
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( dsFA, dg::not_normed, dg::centered);
 

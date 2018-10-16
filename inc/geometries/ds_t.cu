@@ -7,6 +7,26 @@
 #include "ds.h"
 #include "toroidal.h"
 
+template<class DS, class container>
+struct DSS{
+    DSS( DS& ds):m_ds(ds){}
+    void symv( const container& x, container& y){
+        m_ds.symv( -1., x, 0., y);
+    }
+    const container& weights()const{return m_ds.weights();}
+    const container& inv_weights()const{return m_ds.inv_weights();}
+    const container& precond()const{return m_ds.precond();}
+    private:
+    DS& m_ds;
+};
+namespace dg{
+template< class DS, class container>
+struct TensorTraits< DSS<DS, container> >
+{
+    using value_type = double;
+    using tensor_category = SelfMadeMatrixTag;
+};
+}
 
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
@@ -130,7 +150,7 @@ int main(int argc, char * argv[])
     const dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     //create Fieldaligned object and construct DS from it
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my);
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::normed, dg::centered);
     ///##########################################################///
     //apply to function
     const dg::DVec function = dg::evaluate( funcNEU, g3d);
@@ -184,15 +204,34 @@ int main(int argc, char * argv[])
     solution = dg::evaluate( laplaceFuncNEU, g3d);
     sol = dg::blas2::dot( vol3d, solution);
 
+    ds.set_direction( dg::centered);
     ds.symv( function, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error centered Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    ds.set_direction( dg::forward);
+    ds.symv( function, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error backward Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    ///##########################################################///
+    solution = dg::evaluate( laplaceFuncNEU, g3d);
+    ds.set_norm( dg::not_normed);
+    DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
+    unsigned max_iter;
+    std::cin >> max_iter;
+    dg::Invert<dg::DVec> invert( solution, max_iter, 1e-5);
+    invert( dss, derivative, solution);
+
+    sol = dg::blas2::dot( vol3d, function);
+    dg::blas1::axpby( 1., function, 1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
     std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "Reconstruct parallel derivative!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my);
-    ds.construct( dsFA, dg::not_normed, dg::centered);
+    ds.construct( dsFA, dg::normed, dg::centered);
     std::cout << "TEST DIR Boundary conditions!\n";
     //apply to function
     const dg::DVec functionDIR = dg::evaluate( funcDIR, g3d);
@@ -241,15 +280,30 @@ int main(int argc, char * argv[])
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
     ///##########################################################///
-    //solution = dg::evaluate( laplaceFuncDIR, g3d);
-    //dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-5);
-    //invert( ds, derivative, solution);
-    //sol = dg::blas2::dot( vol3d, functionDIR);
+    solution = dg::evaluate( laplaceFuncDIR, g3d);
+    sol = dg::blas2::dot( vol3d, solution);
+
+    ds.set_direction( dg::centered);
+    ds.symv( functionDIR, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error centered Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    ds.set_direction( dg::forward);
+    ds.symv( functionDIR, derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error backward Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    ///##########################################################///
+    solution = dg::evaluate( laplaceFuncDIR, g3d);
+    ds.set_norm( dg::not_normed);
+    dg::Invert<dg::DVec> invertDIR( solution, max_iter, 1e-5);
+    invertDIR( dss, derivative, solution);
+    sol = dg::blas2::dot( vol3d, functionDIR);
 
     ////ds.symv( functionDIR, derivative);
-    //dg::blas1::axpby( 1., functionDIR, -1., derivative);
-    //norm = dg::blas2::dot( derivative, vol3d, derivative);
-    //std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
+    dg::blas1::axpby( 1., functionDIR, 1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";

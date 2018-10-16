@@ -28,6 +28,7 @@ real_type pid_control( real_type dt_old, real_type eps_0, real_type eps_1, real_
     real_type factor = pow( eps_0, m_k1/(real_type)order)
                      * pow( eps_1, m_k2/(real_type)order)
                      * pow( eps_2, m_k3/(real_type)order);
+    //std::cout <<" control "<< eps_0<<" "<<eps_1<<" "<<eps_2<<" "<<factor<<"\n";
     return dt_old*factor;
 }
 ///\f[ h'= h \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f]
@@ -118,9 +119,10 @@ struct Tolerance
  * of the error of the solution and indicate the order of that error.
  * With the \c ErrorNorm the error estimate can be converted to a scalar that
  * can be compared to given relative and absolute error tolerances \c rtol and \c atol.
- * Based on the comparison the step is either accepted or rejecte. In both cases
+ * Based on the comparison the step is either accepted or rejected. In both cases
  * the \c ControlFunction then comes up with an adapted
- * suggestion for the timestep in the next step.
+ * suggestion for the timestep in the next step, however, if the step was
+ * rejected, we make the stepsize decrease by at least 10\%.
  * For more information on these concepts we recommend
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> of the ARKode library.
  *
@@ -259,23 +261,29 @@ struct Adaptive
         dg::blas1::subroutine( detail::Tolerance<real_type>( rtol, atol, m_size), u0, m_delta);
         real_type eps0 = norm(m_delta);
         //std::cout << " error "<<eps0;
-        dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
-        //std::cout << " new stepsize "<<dt;
         if( eps0 > m_reject_limit || std::isnan( eps0) )
         {
+            real_type dt_old = dt;
+            dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
+            if( fabs( dt) > 0.9*fabs(dt_old))
+                dt = 0.9*dt_old;
+            //0.9*dt_old is a safety limit
+            //that prevents an increase of the timestep in case the stepper fails
             m_failed = true;
             dg::blas1::copy( u0, u1);
             t1 = t0;
-            //std::cout << " Failed ";
+            //std::cout << " Failed! New stepsize: "<<dt;
         }
         else
         {
+            dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
             m_eps2 = m_eps1;
             m_eps1 = eps0;
             dg::blas1::copy( m_next, u1);
             t1 = m_t_next;
             m_failed = false;
             //std::cout << " Success " << t1<<" "<<u1[0]<<" "<<u1[1];
+            //std::cout << " New stepsize "<<dt;
         }
         //std::cout << std::endl;
     }
