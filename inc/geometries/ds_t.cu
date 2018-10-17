@@ -133,15 +133,21 @@ double laplaceFuncDIR(double R, double Z, double phi)
 
 int main(int argc, char * argv[])
 {
-    std::cout << "This program tests the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
-    std::cout << "Type n (3), Nx(20), Ny(20), Nz(20)\n";
+    std::cout << "# This program tests the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
+    std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx, my;
     std::cin >> n>> Nx>>Ny>>Nz;
-    std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    std::cout << "Type mx (10) and my (10)\n";
+    std::cout <<"# You typed\n"
+              <<"n: "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"Nz: "<<Nz<<std::endl;
+    std::cout << "# Type mx (10) and my (10)\n";
     std::cin >> mx>> my;
-    std::cout << "You typed "<<mx<<" "<<my<<std::endl;
-    std::cout << "Create parallel Derivative!\n";
+    std::cout << "# You typed\n"
+              <<"mx: "<<mx<<"\n"
+              <<"my: "<<my<<std::endl;
+    std::cout << "# Create parallel Derivative!\n";
 
     //![doxygen]
     const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU);
@@ -157,21 +163,22 @@ int main(int argc, char * argv[])
     dg::DVec derivative(function);
     ds.centered( function, derivative);
     //![doxygen]
-    std::cout << "TEST NEU Boundary conditions!\n";
+    std::cout << "# TEST NEU Boundary conditions!\n";
+    std::cout << "Neumann: \n";
     dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec vol3d = dg::create::volume( g3d);
     double sol = dg::blas2::dot( vol3d, solution);
     dg::blas1::axpby( 1., solution, -1., derivative);
     double norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error centered derivative \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  centered:               "<< sqrt( norm/sol )<<"\n";
     ds.forward( 1., function, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Forward  Derivative \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  forward:                "<<sqrt( norm/sol)<<"\n";
     ds.backward( 1., function, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  backward:               "<<sqrt( norm/sol)<<"\n";
     ///##########################################################///
     //std::cout << "TEST DSS derivative!\n";
     solution = dg::evaluate( dssFuncNEU, g3d);
@@ -180,26 +187,26 @@ int main(int argc, char * argv[])
     ds.dss( function, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error dss                 \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  dss:                    "<< sqrt( norm/sol )<<"\n";
     ///##########################################################///
     ///We unfortunately cannot test convergence of adjoint because
     ///b and therefore bf does not fulfill Neumann boundary conditions
-    std::cout << "TEST ADJOINT derivatives (do unfortunately not fulfill Neumann BC!)\n";
+    std::cout << "# TEST ADJOINT derivatives (do unfortunately not fulfill Neumann BC!)\n";
     solution = dg::evaluate( deriAdjNEU, g3d);
     sol = dg::blas2::dot( vol3d, solution);
 
     ds.centeredDiv( function, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error centered divergence \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  centeredDivergence:     "<< sqrt( norm/sol )<<"\n";
     ds.forwardDiv( 1., function, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Forward  divergence \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  forwardDivergence:      "<<sqrt( norm/sol)<<"\n";
     ds.backwardDiv( 1., function, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  backwardDivergence:     "<<sqrt( norm/sol)<<"\n";
     ///##########################################################///
     solution = dg::evaluate( laplaceFuncNEU, g3d);
     sol = dg::blas2::dot( vol3d, solution);
@@ -208,12 +215,12 @@ int main(int argc, char * argv[])
     ds.symv( function, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error centered Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  centeredLaplace:        "<< sqrt( norm/sol )<<"\n";
     ds.set_direction( dg::forward);
     ds.symv( function, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error backward Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  symmetricLaplace:       "<< sqrt( norm/sol )<<"\n";
     ///##########################################################///
     solution = dg::evaluate( laplaceFuncNEU, g3d);
     ds.set_norm( dg::not_normed);
@@ -226,13 +233,14 @@ int main(int argc, char * argv[])
     sol = dg::blas2::dot( vol3d, function);
     dg::blas1::axpby( 1., function, 1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  invertedSymmetricLaplace:  "<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
-    std::cout << "Reconstruct parallel derivative!\n";
+    std::cout << "# Reconstruct parallel derivative!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my);
     ds.construct( dsFA, dg::normed, dg::centered);
-    std::cout << "TEST DIR Boundary conditions!\n";
+    std::cout << "# TEST DIR Boundary conditions!\n";
+    std::cout << "Dirichlet: \n";
     //apply to function
     const dg::DVec functionDIR = dg::evaluate( funcDIR, g3d);
     solution = dg::evaluate( deriDIR, g3d);
@@ -241,15 +249,15 @@ int main(int argc, char * argv[])
     ds.centered( functionDIR, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error centered derivative \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  centered:               "<< sqrt( norm/sol )<<"\n";
     ds.forward( 1., functionDIR, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Forward  Derivative \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  forward:                "<<sqrt( norm/sol)<<"\n";
     ds.backward( 1., functionDIR, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Backward Derivative \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  backward:               "<<sqrt( norm/sol)<<"\n";
     ///##########################################################///
     //std::cout << "TEST DSS derivative!\n";
     solution = dg::evaluate( dssFuncDIR, g3d);
@@ -260,25 +268,25 @@ int main(int argc, char * argv[])
     //ds.backward( derivative, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error dss                 \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  dss:                    "<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
-    std::cout << "TEST ADJOINT derivatives!\n";
+    std::cout << "# TEST ADJOINT derivatives!\n";
     solution = dg::evaluate( deriAdjDIR, g3d);
     sol = dg::blas2::dot( vol3d, solution);
 
     ds.centeredDiv( functionDIR, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error centered divergence \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  centeredDivergence:     "<< sqrt( norm/sol )<<"\n";
     ds.forwardDiv( 1., functionDIR, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Forward  divergence \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  forwardDivergence:      "<<sqrt( norm/sol)<<"\n";
     ds.backwardDiv( 1., functionDIR, 0., derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Error Backward divergence \t"<<sqrt( norm/sol)<<"\n";
+    std::cout << "  backwardDivergence:     "<<sqrt( norm/sol)<<"\n";
     ///##########################################################///
     solution = dg::evaluate( laplaceFuncDIR, g3d);
     sol = dg::blas2::dot( vol3d, solution);
@@ -287,12 +295,12 @@ int main(int argc, char * argv[])
     ds.symv( functionDIR, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error centered Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  centeredLaplace:        "<< sqrt( norm/sol )<<"\n";
     ds.set_direction( dg::forward);
     ds.symv( functionDIR, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error backward Laplace    \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  symmetricLaplace:       "<< sqrt( norm/sol )<<"\n";
     ///##########################################################///
     solution = dg::evaluate( laplaceFuncDIR, g3d);
     ds.set_norm( dg::not_normed);
@@ -303,16 +311,16 @@ int main(int argc, char * argv[])
     ////ds.symv( functionDIR, derivative);
     dg::blas1::axpby( 1., functionDIR, 1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "Error Laplace_parallel    \t"<< sqrt( norm/sol )<<"\n";
+    std::cout << "  invertedSymmetricLaplace:  "<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
-    std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
+    std::cout << "# TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
     dg::GaussianZ modulate(0., M_PI/3., 1);
     dg::DVec aligned = dsFA.evaluate( init0, modulate, Nz/2, 2);
     ds( aligned, derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
+    std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
 
     return 0;
 }

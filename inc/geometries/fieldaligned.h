@@ -392,7 +392,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "DS: High order grid gen  took: "<<t.diff()<<"\n";
+    std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
     t.tic();
 #endif //DG_BENCHMARK
     detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
@@ -405,7 +405,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     }
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "DS: Computing all points took: "<<t.diff()<<"\n";
+    std::cout << "# DS: Computing all points took: "<<t.diff()<<"\n";
     t.tic();
 #endif //DG_BENCHMARK
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
@@ -416,7 +416,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     cusp::multiply( projection, minusFine, minus);
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "DS: Multiplication PI    took: "<<t.diff()<<"\n";
+    std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
 #endif //DG_BENCHMARK
     plusT = dg::transpose( plus);
     minusT = dg::transpose( minus);
