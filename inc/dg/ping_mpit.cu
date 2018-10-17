@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     cudaGetDeviceCount(&num_devices);
     if(num_devices == 0)
     {
-        std::cerr << "No CUDA capable devices found"<<std::endl;
+        printf("No CUDA capable devices found\n");
         return -1;
     }
     int device = task % num_devices; //assume # of gpus/node is fixed
