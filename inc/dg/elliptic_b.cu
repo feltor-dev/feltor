@@ -23,7 +23,7 @@ double derivative( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z)
 double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
 double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::PER;
+dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::PER;
 double initial( double x, double y, double z) {return sin(0);}
 
@@ -55,7 +55,6 @@ int main()
     dg::blas2::symv( w3d, b, b);
 
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
-    x = dg::evaluate( initial, grid);
     unsigned num;
     t.tic();
     num = pcg( laplace, x, b, v3d, eps);

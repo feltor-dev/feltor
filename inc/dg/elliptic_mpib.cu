@@ -11,15 +11,17 @@
 #include "geometry/split_and_join.h"
 
 
-const double R_0 = 1000;
+const double R_0 = 10;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
-double fct( double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
+double fct(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
+double derivative( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
+double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
+double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::PER;
+dg::bc bcy = dg::DIR;
+dg::bc bcz = dg::PER;
 double initial( double x, double y, double z) {return sin(0);}
 
 
@@ -46,7 +48,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::aMPIGeometry3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic3d<dg::aMPIGeometry3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
     dg::MDMatrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -56,7 +58,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"Expand right hand side\n";
     const dg::MDVec solution = dg::evaluate ( fct, grid);
     const dg::MDVec deriv = dg::evaluate( derivative, grid);
-    dg::MDVec b = dg::evaluate ( laplace_fct, grid);
+    dg::MDVec b = dg::evaluate ( laplace3d_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
 
@@ -82,7 +84,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "TEST SPLIT SOLUTION\n";
     x = dg::evaluate( initial, grid);
-    b = dg::evaluate ( laplace_fct, grid);
+    b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
     dg::MDVec v2d = dg::create::inv_volume( grid_perp.get());

@@ -2,11 +2,12 @@
 #include <iomanip>
 
 #include <mpi.h>
+#undef DG_BENCHMARK //we don't want output
 #ifdef _OPENMP
 #include <omp.h>
 #endif//_OPENMP
 #include "algorithm.h"
-#include "../geometries/geometries.h"
+#include "geometries/geometries.h"
 
 
 const double lx = 2*M_PI;
@@ -26,9 +27,11 @@ double jacobian( double x, double y, double z)
 
 const double R_0 = 1000;
 double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
 double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
 double initial( double x, double y, double z) {return sin(0);}
+
+double fct3d(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
+double laplace_fct3d( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct3d(x,y,z) + 1./x/x*fct3d(x,y,z);}
 
 typedef dg::MDMatrix Matrix;
 typedef dg::MIDMatrix IMatrix;
@@ -78,10 +81,10 @@ int main(int argc, char* argv[])
     dg::Timer t;
     Vector w3d, lhs, rhs, jac, x, y, z;
     try{
-        w3d = dg::construct<Vector>( dg::create::weights( grid));
-        lhs = dg::construct<Vector>( dg::evaluate ( left, grid));
-        rhs = dg::construct<Vector>( dg::evaluate ( right,grid));
-        jac = dg::construct<Vector>( dg::evaluate ( jacobian,grid));
+        dg::assign( dg::create::weights( grid), w3d);
+        dg::assign( dg::evaluate ( left, grid), lhs);
+        dg::assign( dg::evaluate ( right,grid), rhs);
+        dg::assign( dg::evaluate ( jacobian,grid), jac);
         x = y = z = lhs;
     }
     catch( std::exception& e)
@@ -169,25 +172,45 @@ int main(int argc, char* argv[])
     periods[0] = false, periods[1] = false;
     MPI_Comm commEll;
     MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
-    dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
-    const Vector ellw3d = dg::create::volume(gridEll);
-    const Vector ellv3d = dg::create::inv_volume(gridEll);
-    dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
-    const Vector solution = dg::evaluate ( fct, gridEll);
-    const Vector deriv = dg::evaluate( derivative, gridEll);
-    x = dg::evaluate( initial, gridEll);
-    Vector b = dg::evaluate ( laplace_fct, gridEll);
-    dg::blas2::symv( ellw3d, b, b);
-    dg::CG< Vector > pcg( x, 1000);
-    t.tic();
-    unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
-    t.toc();
-    if(rank==0)std::cout <<" "<< number << " "<<t.diff()/(double)number<<std::flush;
-    dg::blas1::axpby( 1., solution, -1., x);
     exblas::udouble res;
-    res.d = dg::blas2::dot( x, ellw3d, x);
-    if( Nz > 1)
+    if( !(Nz > 2))
     {
+        dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
+        const Vector ellw3d = dg::create::volume(gridEll);
+        const Vector ellv3d = dg::create::inv_volume(gridEll);
+        dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+        const Vector solution = dg::evaluate ( fct, gridEll);
+        x = dg::evaluate( initial, gridEll);
+        Vector b = dg::evaluate ( laplace_fct, gridEll);
+        dg::blas2::symv( ellw3d, b, b);
+        dg::CG< Vector > pcg( x, 1000);
+        t.tic();
+        unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
+        t.toc();
+        if(rank==0)std::cout <<" "<< number << " "<<t.diff()/(double)number<<std::flush;
+        dg::blas1::axpby( 1., solution, -1., x);
+        //for missing DS
+        if(rank==0)std::cout<<" 0.0";
+        res.d = dg::blas2::dot( x, ellw3d, x);
+    }
+    else
+    {
+        //Elliptic3d
+        dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0., 2.*M_PI, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
+        const Vector ellw3d = dg::create::volume(gridEll);
+        const Vector ellv3d = dg::create::inv_volume(gridEll);
+        dg::Elliptic3d<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+        const Vector solution = dg::evaluate ( fct3d, gridEll);
+        x = dg::evaluate( initial, gridEll);
+        Vector b = dg::evaluate ( laplace_fct3d, gridEll);
+        dg::blas2::symv( ellw3d, b, b);
+        dg::CG< Vector > pcg( x, multi);
+        t.tic();
+        unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
+        t.toc();
+        if(rank==0)std::cout <<" "<< number << " "<<t.diff()/(double)number<<std::flush;
+        dg::blas1::axpby( 1., solution, -1., x);
+        res.d = dg::blas2::dot( x, ellw3d, x);
         //Application of ds
         double gpR0  =  10, gpI0=20;
         double inv_aspect_ratio =  0.1;
@@ -210,8 +233,6 @@ int main(int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     }
-    else
-        if(rank==0)std::cout<<" 0.0";
     if(rank==0)std::cout << " "<<res.d<< " "<<res.i;
 
     } catch( std::exception& e) {
