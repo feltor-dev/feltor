@@ -37,7 +37,7 @@ int main(int argc, char * argv[])
 {
     std::cout << "# This program tests the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
-    unsigned n, Nx, Ny, Nz, mx, my;
+    unsigned n, Nx, Ny, Nz, mx, my, max_iter;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout <<"# You typed\n"
               <<"n: "<<n<<"\n"
@@ -49,6 +49,10 @@ int main(int argc, char * argv[])
     std::cout << "# You typed\n"
               <<"mx: "<<mx<<"\n"
               <<"my: "<<my<<std::endl;
+    std::cout << "# Type max iterations (1000) \n";
+    std::cin >> max_iter;
+    std::cout << "# You typed\n"
+              <<"max_iter: "<<max_iter<<"\n";
     std::cout << "# Create parallel Derivative!\n";
 
     //![doxygen]
@@ -59,152 +63,74 @@ int main(int argc, char * argv[])
     //create Fieldaligned object and construct DS from it
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::normed, dg::centered);
+    //![doxygen]
     ///##########################################################///
     //apply to function
     const dg::DVec function = dg::evaluate( dg::geo::FunctionSinNEU(mag), g3d);
     dg::DVec derivative(function);
-    ds.centered( function, derivative);
-    //![doxygen]
+    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
+    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::FunctionSinNEU>(mag), g3d);
+    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::FunctionSinNEU>(mag), g3d);
+    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
+    std::vector<std::pair<std::string, const dg::DVec&>> names{
+         {"forward",sol0}, {"backward",sol0},
+         {"centered",sol0}, {"dss",sol1},
+         {"forwardDiv",sol2}, {"backwardDiv",sol2}, {"centeredDiv",sol2},
+         {"forwardLap",sol3}, {"backwardLap",sol3}, {"centeredLap",sol3}
+    };
     std::cout << "# TEST NEU Boundary conditions!\n";
-    std::cout << "Neumann: \n";
-    dg::DVec solution = dg::evaluate( dg::geo::DsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
+    std::cout << "# TEST ADJOINT derivatives do unfortunately not fulfill Neumann BC!\n";
+    ///##########################################################///
+    std::cout <<"Neumann:\n";
     const dg::DVec vol3d = dg::create::volume( g3d);
-    double sol = dg::blas2::dot( vol3d, solution);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    double norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  centered:               "<< sqrt( norm/sol )<<"\n";
-    ds.forward( 1., function, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  forward:                "<<sqrt( norm/sol)<<"\n";
-    ds.backward( 1., function, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  backward:               "<<sqrt( norm/sol)<<"\n";
+    for( const auto& name :  names)
+    {
+        callDS( ds, name.first, function, derivative);
+        double sol = dg::blas2::dot( vol3d, name.second);
+        dg::blas1::axpby( 1., name.second, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::cout <<"    "<<name.first<<":"
+                  <<std::setw(16-name.first.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
     ///##########################################################///
-    //std::cout << "TEST DSS derivative!\n";
-    solution = dg::evaluate( dg::geo::DssFunction<dg::geo::FunctionSinNEU>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.dss( function, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  dss:                    "<< sqrt( norm/sol )<<"\n";
-    ///##########################################################///
-    ///We unfortunately cannot test convergence of adjoint because
-    ///b and therefore bf does not fulfill Neumann boundary conditions
-    std::cout << "# TEST ADJOINT derivatives (do unfortunately not fulfill Neumann BC!)\n";
-    solution = dg::evaluate( dg::geo::DsDivFunction<dg::geo::FunctionSinNEU>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.centeredDiv( function, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  centeredDivergence:     "<< sqrt( norm/sol )<<"\n";
-    ds.forwardDiv( 1., function, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  forwardDivergence:      "<<sqrt( norm/sol)<<"\n";
-    ds.backwardDiv( 1., function, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  backwardDivergence:     "<<sqrt( norm/sol)<<"\n";
-    ///##########################################################///
-    solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.set_direction( dg::centered);
-    ds.symv( function, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  centeredLaplace:        "<< sqrt( norm/sol )<<"\n";
+    dg::DVec solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
     ds.set_direction( dg::forward);
-    ds.symv( function, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  symmetricLaplace:       "<< sqrt( norm/sol )<<"\n";
-    ///##########################################################///
-    solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
     ds.set_norm( dg::not_normed);
     DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
-    unsigned max_iter;
-    std::cin >> max_iter;
     dg::Invert<dg::DVec> invert( solution, max_iter, 1e-5);
     invert( dss, derivative, solution);
 
-    sol = dg::blas2::dot( vol3d, function);
+    double sol = dg::blas2::dot( vol3d, function);
     dg::blas1::axpby( 1., function, 1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  invertedSymmetricLaplace:  "<< sqrt( norm/sol )<<"\n";
+    double norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "# Reconstruct parallel derivative!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my);
     ds.construct( dsFA, dg::normed, dg::centered);
-    std::cout << "# TEST DIR Boundary conditions!\n";
-    std::cout << "Dirichlet: \n";
-    //apply to function
     const dg::DVec functionDIR = dg::evaluate( dg::geo::FunctionSinDIR(mag), g3d);
-    solution = dg::evaluate( dg::geo::DsFunction<dg::geo::FunctionSinDIR>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.centered( functionDIR, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  centered:               "<< sqrt( norm/sol )<<"\n";
-    ds.forward( 1., functionDIR, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  forward:                "<<sqrt( norm/sol)<<"\n";
-    ds.backward( 1., functionDIR, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  backward:               "<<sqrt( norm/sol)<<"\n";
+    sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::FunctionSinDIR>(mag), g3d);
+    sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::FunctionSinDIR>(mag), g3d);
+    sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::FunctionSinDIR>(mag), g3d);
+    sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinDIR>(mag), g3d);
+    std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
-    //std::cout << "TEST DSS derivative!\n";
-    solution = dg::evaluate( dg::geo::DssFunction<dg::geo::FunctionSinDIR>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.dss( 1., functionDIR,  0., derivative);
-    //ds.forward( functionDIR, derivative);
-    //ds.backward( derivative, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  dss:                    "<< sqrt( norm/sol )<<"\n";
-
-    ///##########################################################///
-    std::cout << "# TEST ADJOINT derivatives!\n";
-    solution = dg::evaluate( dg::geo::DsDivFunction<dg::geo::FunctionSinDIR>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.centeredDiv( functionDIR, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  centeredDivergence:     "<< sqrt( norm/sol )<<"\n";
-    ds.forwardDiv( 1., functionDIR, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  forwardDivergence:      "<<sqrt( norm/sol)<<"\n";
-    ds.backwardDiv( 1., functionDIR, 0., derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    std::cout << "  backwardDivergence:     "<<sqrt( norm/sol)<<"\n";
+    std::cout << "Dirichlet: \n";
+    for( const auto& name :  names)
+    {
+        callDS( ds, name.first, functionDIR, derivative);
+        double sol = dg::blas2::dot( vol3d, name.second);
+        dg::blas1::axpby( 1., name.second, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::cout <<"    "<<name.first<<":"
+                  <<std::setw(16-name.first.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
     ///##########################################################///
     solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinDIR>(mag), g3d);
-    sol = dg::blas2::dot( vol3d, solution);
-
-    ds.set_direction( dg::centered);
-    ds.symv( functionDIR, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  centeredLaplace:        "<< sqrt( norm/sol )<<"\n";
     ds.set_direction( dg::forward);
-    ds.symv( functionDIR, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  symmetricLaplace:       "<< sqrt( norm/sol )<<"\n";
-    ///##########################################################///
-    solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinDIR>(mag), g3d);
     ds.set_norm( dg::not_normed);
     dg::Invert<dg::DVec> invertDIR( solution, max_iter, 1e-5);
     invertDIR( dss, derivative, solution);
@@ -213,7 +139,7 @@ int main(int argc, char * argv[])
     ////ds.symv( functionDIR, derivative);
     dg::blas1::axpby( 1., functionDIR, 1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "  invertedSymmetricLaplace:  "<< sqrt( norm/sol )<<"\n";
+    std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "# TEST FIELDALIGNED EVALUATION of a Gaussian\n";

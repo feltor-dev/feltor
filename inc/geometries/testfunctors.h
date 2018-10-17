@@ -15,7 +15,7 @@ namespace geo
 //For testing purposes only
 ///@addtogroup profiles
 ///@{
-
+/////////////Test functors for DS////////////////////////
 struct FunctionPsi
 {
     FunctionPsi( const TokamakMagneticField& c):c_(c){}
@@ -128,6 +128,7 @@ struct FunctionSinDIR{
     double R_0;
 };
 
+/////With the next functors compute derivatives
 // b \nabla f
 template<class Function>
 struct DsFunction
@@ -202,6 +203,35 @@ struct DsDivDsFunction
     DssFunction<Function> dssf_;
     dg::geo::Divb divb_;
 };
+
+//////////////function to call DS////////////////////
+template<class DS, class container>
+void callDS( DS& ds, std::string name, const container& in, container& out)
+{
+    if( name == "forward") ds.forward( in, out);
+    else if( name == "backward") ds.backward( in, out);
+    else if( name == "centered") ds.centered( in, out);
+    else if( name == "dss") ds.dss( in, out);
+    else if( name == "forwardDiv") ds.forwardDiv( in, out);
+    else if( name == "backwardDiv") ds.backwardDiv( in, out);
+    else if( name == "centeredDiv") ds.centeredDiv( in, out);
+    else if( name == "forwardLap") {
+        ds.set_direction( dg::forward);
+        ds.set_norm( dg::normed);
+        ds.symv( in, out);
+    }
+    else if( name == "backwardLap"){
+        ds.set_direction( dg::backward);
+        ds.set_norm( dg::normed);
+        ds.symv( in, out);
+    }
+    else if( name == "centeredLap"){
+        ds.set_direction( dg::centered);
+        ds.set_norm( dg::normed);
+        ds.symv( in, out);
+    }
+
+}
 
 ///////////////////////////////Functions for 2d grids//////////////////
 
