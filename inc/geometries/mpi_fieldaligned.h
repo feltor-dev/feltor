@@ -164,7 +164,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
-    dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_h_inv);
+    dg::assign( dg::evaluate( dg::zero, grid), m_h_inv);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     int dims[3], periods[3], coords[3];
@@ -174,8 +174,8 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::ClonePtr<aMPIGeometry2d> grid_coarse( grid.perp_grid());
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     m_perp_size = grid_coarse.get().local().size();
-    dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
-    dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
+    dg::assign( dg::pullback(limit, grid_coarse.get()), m_limiter);
+    dg::assign( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
@@ -233,7 +233,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     if(rank==0) std::cout << "DS: Conversion            took: "<<t.diff()<<"\n";
 #endif
     ///%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%//
-    dg::transfer( dg::pullback( vec.z(), grid_coarse.get()), m_h);
+    dg::assign( dg::pullback( vec.z(), grid_coarse.get()), m_h);
     dg::blas1::pointwiseDivide( deltaPhi, m_h, m_h);
 
     dg::split( m_h_inv, m_temp, grid);
