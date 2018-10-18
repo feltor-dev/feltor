@@ -112,14 +112,22 @@ int main(int argc, char * argv[])
     solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinDIR>(mag), g3d);
     ds.set_direction( dg::forward);
     ds.set_norm( dg::not_normed);
-    dg::Invert<dg::DVec> invertDIR( solution, max_iter, 1e-5);
-    invertDIR( dss, derivative, solution);
-    sol = dg::blas2::dot( vol3d, functionDIR);
+    invert( dss, derivative, solution);
+    //invert( ds, derivative, solution);
 
-    ////ds.symv( functionDIR, derivative);
-    dg::blas1::axpby( 1., functionDIR, 1., derivative);
+    sol = dg::blas2::dot( vol3d, function);
+    dg::blas1::axpby( 1., function, 1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
     std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
+
+    ds.set_direction( dg::centered);
+    ds.set_norm( dg::not_normed);
+    invert( dss, derivative, solution);
+    //invert( ds, derivative, solution);
+
+    dg::blas1::axpby( 1., function, 1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "    invCenteredLap:  "<< sqrt( norm/sol )<<"\n";
 
     ///##########################################################///
     std::cout << "# TEST FIELDALIGNED EVALUATION of a Gaussian\n";
