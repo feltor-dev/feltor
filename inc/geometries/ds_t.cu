@@ -1,10 +1,10 @@
 #include <iostream>
 
 #include <cusp/print.h>
+#define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
-#define DG_BENCHMARK
 #include "ds.h"
 #include "toroidal.h"
 
