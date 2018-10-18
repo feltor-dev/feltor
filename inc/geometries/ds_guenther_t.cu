@@ -76,13 +76,22 @@ int main( )
     dg::DVec solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
     ds.set_direction( dg::forward);
     ds.set_norm( dg::not_normed);
-    dg::geo::DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
-    dg::Invert<dg::DVec> invert( solution, max_iter, 1e-5);
-    invert( dss, derivative, solution);
+    dg::Invert<dg::DVec> invert( solution, max_iter, 1e-5, 1);
+    //dg::geo::DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
+    //invert( dss, derivative, solution);
+    invert( ds, derivative, solution);
 
     double sol = dg::blas2::dot( vol3d, function);
-    dg::blas1::axpby( 1., function, 1., derivative);
+    dg::blas1::axpby( 1., function, -1., derivative);
     double norm = dg::blas2::dot( derivative, vol3d, derivative);
     std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
+
+    ds.set_direction( dg::centered);
+    ds.set_norm( dg::not_normed);
+    invert( ds, derivative, solution);
+
+    dg::blas1::axpby( 1., function, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "    invCenteredLap:  "<< sqrt( norm/sol )<<"\n";
     return 0;
 }

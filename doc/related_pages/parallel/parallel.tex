@@ -133,14 +133,18 @@ diffusion operator as
 \end{align}
 which is indeed the parallel part of the full Laplacian $\Delta = \nabla\cdot( \vec{ \hat v} \nabla_\parallel + \nabla_\perp)$.
 $\vec{ \hat v} $ is the unit vector $\vec v/ |\vec v|$.
-The second order derivative $\nabla_\parallel^2$ can be
+
+Note that the second order derivative $\nabla_\parallel^2$ CANNOT be
 discretized using
 \begin{align}
     \frac{\d^2 f}{\d s^2} \rightarrow
-    (v^\varphi)^2 \frac{f_{k+1} - 2f_k + f_{k-1} }{\Delta\varphi^2}
+    (v^\varphi)^2 \frac{f_{k+1} - 2f_k + f_{k-1} }{\Delta\varphi^2} \text{   False Friend!!}
     \label{}
 \end{align}
 where $f_k = f(\vec z_k)$ with $\vec z_k = (R,Z,\varphi_k)$ and $f_{k\pm 1} := f(\Tpm \vec z_k)$.
+The formula is deceptive since it misses the terms stemming from the chain rule:
+ $\nabla_\parallel \bhat \cdot \nabla f =  \bhat\bhat : \nabla\nabla f + (\nabla_\parallel \bhat) \cdot \nabla f$.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Change of coordinates}
 In principle the above considerations hold in any

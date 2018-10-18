@@ -406,33 +406,52 @@ struct ComputeDSS{
 };
 struct ComputeSymv{
     DG_DEVICE
-    void operator()( double& ssf, double fp, double fm, double h_inv, double vol3d) const{
-        ssf = 1./2.*( fp-fm)*h_inv;
-        ssf = 1./2.*vol3d*ssf*h_inv;
+    void operator()( double& fp, double fm, double h_inv, double vol3d) const{
+        fp = ( fp-fm)*h_inv;
+        fp = 0.25*vol3d*fp*h_inv;
+    }
+    DG_DEVICE
+    void operator()( double& fp, double& fm, double f0, double h_inv, double vol3d) const{
+        fp = ( fp-f0)*h_inv;
+        fp = 0.5*vol3d*fp*h_inv;
+        fm = ( f0-fm)*h_inv;
+        fm = 0.5*vol3d*fm*h_inv;
     }
 };
+struct ComputeSymvEnd{
+    DG_DEVICE
+    void operator()( double& fm, double fp, double weights) const{
+        fm = ( fp-fm)/weights;
+    }
+    DG_DEVICE
+    void operator()( double& efm, double fm, double fp, double efp, double weights) const{
+        efm = ( efm- fm + fp -efp)/weights;
+    }
+};
+
 }//namespace detail
 
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
+    m_fa(einsPlus, f, m_tempP);
+    m_fa(einsMinus, f, m_tempM);
     if(m_dir == dg::centered)
     {
-        m_fa(einsPlus, f, m_tempP);
-        m_fa(einsMinus, f, m_tempM);
-        dg::blas1::subroutine( detail::ComputeSymv(), m_temp, m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
-        m_fa(einsPlusT,  m_temp, m_tempP);
-        m_fa(einsMinusT, m_temp, m_tempM);
-        dg::blas1::axpby( 1., m_tempM, -1., m_tempP,  m_temp);
+        dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, m_fa.h_inv(), m_vol3d);
+        m_fa(einsPlusT,  m_tempP, m_temp);
+        m_fa(einsMinusT, m_tempP, m_tempM);
+        dg::blas1::subroutine( detail::ComputeSymvEnd(), m_temp,
+            m_tempM, m_weights_wo_vol);
     }
     else
     {
-        do_forward( 1., f, 0., m_tempP);
-        do_backwardDiv( 1., m_tempP, 0., m_temp, dg::not_normed);
-        do_backward( 1., f, 0., m_tempM);
-        do_forwardDiv( 0.5, m_tempM, 0.5, m_temp, dg::not_normed);
+        dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, f, m_fa.h_inv(), m_vol3d);
+        m_fa(einsPlusT, m_tempP, m_temp0);
+        m_fa(einsMinusT, m_tempM, m_temp);
+        dg::blas1::subroutine( detail::ComputeSymvEnd(), m_temp,
+            m_tempM, m_tempP, m_temp0, m_weights_wo_vol);
     }
-    dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);
     //     add jump terms
     dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
