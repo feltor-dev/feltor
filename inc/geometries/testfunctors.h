@@ -53,6 +53,45 @@ struct FunctionPsi
     TokamakMagneticField c_;
 };
 
+struct FunctionPsi2
+{
+    FunctionPsi2( const TokamakMagneticField& c):R_0(c.R0()), f_(c), c_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_(R,Z,phi)+0.25*(R-R_0)*(R-R_0) +0.25*Z*(R-R_0) ;
+    }
+    double dR( double R, double Z, double phi) const{
+        return f_.dR(R,Z,phi) + 0.5*(R-R_0) + 0.25*Z;
+    }
+    double dRR( double R, double Z, double phi) const{
+        return f_.dRR(R,Z,phi) + 0.5;
+    }
+    double dRZ( double R, double Z, double phi) const{
+        return f_.dRZ(R,Z,phi) + 0.25;
+    }
+    double dZ( double R, double Z, double phi) const{
+        return f_.dZ(R,Z,phi) + 0.25*(R-R_0);
+    }
+    double dZZ( double R, double Z, double phi) const{
+        return f_.dZZ(R,Z,phi);
+    }
+    double dP( double R, double Z, double phi) const{
+        return f_.dP(R,Z,phi);
+    }
+    double dRP( double R, double Z, double phi) const{
+        return f_.dRP(R,Z,phi);
+    }
+    double dZP( double R, double Z, double phi) const{
+        return f_.dZP(R,Z,phi);
+    }
+    double dPP( double R, double Z, double phi) const{
+        return f_.dPP(R,Z,phi);
+    }
+    private:
+    double R_0;
+    FunctionPsi f_;
+    TokamakMagneticField c_;
+};
+
 struct FunctionSinNEU{
     FunctionSinNEU( const TokamakMagneticField& c){
         R_0 = c.R0();
@@ -166,7 +205,7 @@ struct DsDivFunction
 template<class Function>
 struct DssFunction
 {
-    DssFunction( const TokamakMagneticField& c):f_(c_), c_(c),
+    DssFunction( TokamakMagneticField c):f_(c), c_(c),
         bhatR_(c), bhatZ_(c), bhatP_(c),
         gradbhatR_(c), gradbhatZ_(c), gradbhatP_(c){}
     double operator()(double R, double Z, double phi) const {
@@ -232,6 +271,28 @@ void callDS( DS& ds, std::string name, const container& in, container& out)
     }
 
 }
+template<class DS, class container>
+struct DSS{
+    DSS( DS& ds):m_ds(ds){}
+    void symv( const container& x, container& y){
+        m_ds.symv( -1., x, 0., y);
+    }
+    const container& weights()const{return m_ds.weights();}
+    const container& inv_weights()const{return m_ds.inv_weights();}
+    const container& precond()const{return m_ds.precond();}
+    private:
+    DS& m_ds;
+};
+}//namespace geo
+
+template< class DS, class container>
+struct TensorTraits< geo::DSS<DS, container> >
+{
+    using value_type = double;
+    using tensor_category = SelfMadeMatrixTag;
+};
+
+namespace geo{
 
 ///////////////////////////////Functions for 2d grids//////////////////
 

@@ -8,26 +8,6 @@
 #include "ds.h"
 #include "toroidal.h"
 
-template<class DS, class container>
-struct DSS{
-    DSS( DS& ds):m_ds(ds){}
-    void symv( const container& x, container& y){
-        m_ds.symv( -1., x, 0., y);
-    }
-    const container& weights()const{return m_ds.weights();}
-    const container& inv_weights()const{return m_ds.inv_weights();}
-    const container& precond()const{return m_ds.precond();}
-    private:
-    DS& m_ds;
-};
-namespace dg{
-template< class DS, class container>
-struct TensorTraits< DSS<DS, container> >
-{
-    using value_type = double;
-    using tensor_category = SelfMadeMatrixTag;
-};
-}
 
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
@@ -56,7 +36,7 @@ int main(int argc, char * argv[])
     std::cout << "# Create parallel Derivative!\n";
 
     //![doxygen]
-    const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU);
+    const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
     //create magnetic field
     const dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     const dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
@@ -97,7 +77,7 @@ int main(int argc, char * argv[])
     dg::DVec solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionSinNEU>(mag), g3d);
     ds.set_direction( dg::forward);
     ds.set_norm( dg::not_normed);
-    DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
+    dg::geo::DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
     dg::Invert<dg::DVec> invert( solution, max_iter, 1e-5);
     invert( dss, derivative, solution);
 

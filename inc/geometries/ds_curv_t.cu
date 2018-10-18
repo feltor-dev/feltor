@@ -17,7 +17,7 @@
 
 int main(int argc, char * argv[])
 {
-    std::cout << "Start DS test on flux grid!"<<std::endl;
+    std::cout << "# Start DS test on flux grid!"<<std::endl;
     Json::Value js;
     if( argc==1) {
         std::ifstream is("geometry_params_Xpoint.js");
@@ -29,52 +29,72 @@ int main(int argc, char * argv[])
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
-    std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
+    std::cout << "# Type n(3), Nx(8), Ny(80), Nz(20)\n";
     unsigned n,Nx,Ny,Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    std::cout << "Type multipleX (1) and multipleY (100)!\n";
+    std::cout << "# Type multipleX (1) and multipleY (100)!\n";
     unsigned mx, my;
     std::cin >> mx >> my;
+    std::cout <<"# You typed\n"
+              <<"n: "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"Nz: "<<Nz<<"\n"
+              <<"mx: "<<mx<<"\n"
+              <<"my: "<<my<<std::endl;
 
     double psi_0 = -20, psi_1 = -4;
     dg::Timer t;
     t.tic();
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    std::cout << "Constructing Grid..."<<std::endl;
+    std::cout << "# Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU);
-    //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() );
-    std::cout << "Constructing Fieldlines..."<<std::endl;
-    dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my);
+    //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IDMatrix, dg::DVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() );
+    std::cout << "# Constructing Fieldlines..."<<std::endl;
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my);
 
     t.toc();
-    std::cout << "Construction took "<<t.diff()<<"s\n";
-    dg::HVec B = dg::pullback( dg::geo::InvB(mag), g3d), divB(B);
-    dg::HVec lnB = dg::pullback( dg::geo::LnB(mag), g3d), gradB(B);
-    const dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(mag), g3d);
-    dg::HVec ones3d = dg::evaluate( dg::one, g3d);
-    dg::HVec vol3d = dg::create::volume( g3d);
-    dg::blas1::pointwiseDivide( ones3d, B, B);
+    std::cout << "# Construction took "<<t.diff()<<"s\n";
+    ///##########################################################///
+    //apply to function (MIND THE PULLBACK!)
+    const dg::DVec function = dg::pullback( dg::geo::FunctionPsi(mag), g3d);
+    dg::DVec derivative(function);
+    dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::FunctionPsi>(mag), g3d);
+    dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::FunctionPsi>(mag), g3d);
+    dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::FunctionPsi>(mag), g3d);
+    dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
+    std::vector<std::pair<std::string, const dg::DVec&>> names{
+         {"forward",sol0}, {"backward",sol0},
+         {"centered",sol0}, {"dss",sol1},
+         {"forwardDiv",sol2}, {"backwardDiv",sol2}, {"centeredDiv",sol2},
+         {"forwardLap",sol3}, {"backwardLap",sol3}, {"centeredLap",sol3}
+    };
+    ///##########################################################///
+    std::cout << "# TEST Flux (No Boundary conditions)!\n";
+    std::cout <<"Flux:\n";
+    const dg::DVec vol3d = dg::create::volume( g3d);
+    for( const auto& name :  names)
+    {
+        callDS( ds, name.first, function, derivative);
+        double sol = dg::blas2::dot( vol3d, name.second);
+        dg::blas1::axpby( 1., name.second, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::cout <<"    "<<name.first<<":"
+                  <<std::setw(16-name.first.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
+    ///##########################################################///
+    dg::DVec solution = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
+    ds.set_direction( dg::forward);
+    ds.set_norm( dg::not_normed);
+    dg::geo::DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
+    dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-5);
+    invert( dss, derivative, solution);
 
-    const double sol_norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    ds.centeredDiv( 1., ones3d, 0., divB);
-    dg::blas1::axpby( 1., gradLnB, 1, divB);
-    double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "TEST ADJOINT derivatives!\n";
-    std::cout << "Error Centered Divergence of b is "<<norm/sol_norm<<"\n";
-    ds.forwardDiv( 1., ones3d, 0., divB);
-    dg::blas1::axpby( 1., gradLnB, 1, divB);
-    norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Error Forward  Divergence of b is "<<norm/sol_norm<<"\n";
-    ds.backwardDiv( 1., ones3d, 0., divB);
-    dg::blas1::axpby( 1., gradLnB, 1, divB);
-    norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Error Backward Divergence of b is "<<norm/sol_norm<<"\n";
-
-    ds.centered( 1., lnB, 0., gradB);
-    dg::blas1::axpby( 1., gradLnB, -1., gradB);
-    norm = sqrt(dg::blas2::dot(gradB, vol3d, gradB));
-    std::cout << "TEST DIRECT derivatives!\n";
-    std::cout << "rel. error of lnB is    "<<norm/sol_norm<<"\n";
+    double sol = dg::blas2::dot( vol3d, function);
+    dg::blas1::axpby( 1., function, 1., derivative);
+    double norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
 
     return 0;
 }
