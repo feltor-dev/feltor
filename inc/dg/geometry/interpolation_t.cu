@@ -21,7 +21,7 @@ int main()
 
     {
     std::cout << "First test grid set functions: \n";
-    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
+    dg::Grid2d g( -M_PI, 0, -5*M_PI, -4*M_PI, n, Nx, Ny);
     g.display( std::cout);
     g.set(2,2,3);
     g.display( std::cout);
@@ -34,13 +34,15 @@ int main()
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
         for( unsigned j=0; j<g.Nx()*g.n(); j++)
         {
+            //intentionally set values outside the grid domain
             x[i*g.Nx()*g.n() + j] =
-                    g.x0() + (j+0.5)*g.hx()/(double)(g.n());
+                    g.x0() + g.lx() + (j+0.5)*g.hx()/(double)(g.n());
             y[i*g.Nx()*g.n() + j] =
-                    g.y0() + (i+0.5)*g.hy()/(double)(g.n());
+                    g.y0() + 2*g.ly() + (i+0.5)*g.hy()/(double)(g.n());
         }
     //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    Matrix B = dg::create::interpolation( x, y, g);
+    Matrix B = dg::create::interpolation( x, y, g, dg::DIR, dg::DIR);
+    //values outside the grid are mirrored back in
 
     const thrust::host_vector<double> vec = dg::evaluate( function, g);
     thrust::host_vector<double> inter(vec);
@@ -50,7 +52,7 @@ int main()
     Matrix A = dg::create::backscatter( g);
     thrust::host_vector<double> inter1(vec);
     dg::blas2::symv( A, vec, inter1);
-    dg::blas1::axpby( 1., inter1, -1., inter, inter1);
+    dg::blas1::axpby( 1., inter1, +1., inter, inter1);//the mirror makes a sign!!
     double error = dg::blas1::dot( inter1, inter1);
     std::cout << "Error is "<<error<<" (should be small)!\n";
     if( error > 1e-14)
@@ -82,6 +84,7 @@ int main()
     thrust::host_vector<double> yF = dg::create::forward_transform( ys, g);
     for( unsigned i=0; i<x.size(); i++)
     {
+        x[i] -= g.lx(), y[i] -= 2*g.ly();
         double xi = dg::interpolate(x[i],y[i], xF, g);
         double yi = dg::interpolate(x[i],y[i], yF, g);
         if( x[i] - xi > 1e-14)

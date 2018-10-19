@@ -123,22 +123,22 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
 ///@cond
 namespace detail{
 template<class real_type>
-bool mirror_left( real_type& x, real_type x0, bc boundary) {
-    if( x < x0){
-        x = 2.*x0 - x;
-        if( boundary == dg::DIR || boundary == dg::DIR_NEU)
-            return true;
+void mirror( bool& negative, real_type& x, real_type x0, real_type x1, bc boundary) {
+    while( (x<x0) || (x>x1) )
+    {
+        //mirror along boundary as often as necessary
+        //every mirror swaps the sign if Dirichlet
+        if( x < x0){
+            x = 2.*x0 - x;
+            if( boundary == dg::DIR || boundary == dg::DIR_NEU)
+                negative = !negative;//swap sign
+        }
+        if( x > x1){
+            x = 2.*x1 - x;
+            if( boundary == dg::DIR || boundary == dg::NEU_DIR)
+                negative = !negative; //swap sign
+        }
     }
-    return false;
-}
-template<class real_type>
-bool mirror_right( real_type& x, real_type x1, bc boundary) {
-    if( x > x1){
-        x = 2.*x1 - x;
-    if( boundary == dg::DIR || boundary == dg::NEU_DIR)
-        return true;
-    }
-    return false;
 }
 template<class real_type>
 void assert_contains( real_type X, real_type x0, real_type x1, char const * point){
@@ -186,13 +186,11 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         g.shift_topologic( X,Y,X,Y, bcx, bcy);
         //mirror at boundary
         bool negative = false;
-        negative = detail::mirror_left(  X, g.x0(), bcx);
-        negative = detail::mirror_right( X, g.x1(), bcx);
-        negative = detail::mirror_left(  Y, g.y0(), bcy);
-        negative = detail::mirror_right( Y, g.y1(), bcy);
+        detail::mirror( negative, X, g.x0(), g.x1(), bcx);
+        detail::mirror( negative, Y, g.y0(), g.y1(), bcy);
         //assert that point is inside the grid boundaries
-        detail::assert_contains( X, g.x0(), g.x1(), "xi");
-        detail::assert_contains( Y, g.y0(), g.y1(), "yi");
+        //detail::assert_contains( X, g.x0(), g.x1(), "xi");
+        //detail::assert_contains( Y, g.y0(), g.y1(), "yi");
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
@@ -341,16 +339,13 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         real_type X = x[i], Y = y[i], Z = z[i];
         g.shift_topologic( X,Y,Z,X,Y,Z, bcx, bcy, bcz);
         bool negative = false;
-        negative = detail::mirror_left(  X, g.x0(), bcx);
-        negative = detail::mirror_right( X, g.x1(), bcx);
-        negative = detail::mirror_left(  Y, g.y0(), bcy);
-        negative = detail::mirror_right( Y, g.y1(), bcy);
-        negative = detail::mirror_left(  Z, g.z0(), bcz);
-        negative = detail::mirror_right( Z, g.z1(), bcz);
+        detail::mirror( negative, X, g.x0(), g.x1(), bcx);
+        detail::mirror( negative, Y, g.y0(), g.y1(), bcy);
+        detail::mirror( negative, Z, g.z0(), g.z1(), bcz);
         //assert that point is inside the grid boundaries
-        detail::assert_contains( X, g.x0(), g.x1(), "xi");
-        detail::assert_contains( Y, g.y0(), g.y1(), "yi");
-        detail::assert_contains( Z, g.z0(), g.z1(), "zi");
+        //detail::assert_contains( X, g.x0(), g.x1(), "xi");
+        //detail::assert_contains( Y, g.y0(), g.y1(), "yi");
+        //detail::assert_contains( Z, g.z0(), g.z1(), "zi");
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
