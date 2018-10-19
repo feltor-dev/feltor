@@ -20,10 +20,10 @@ int main( )
 {
     std::cout << "# This program tests the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
-    unsigned n, Nx, Ny, Nz, mx, my, max_iter;
+    unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout <<"# You typed\n"
-              <<"n: "<<n<<"\n"
+              <<"n:  "<<n<<"\n"
               <<"Nx: "<<Nx<<"\n"
               <<"Ny: "<<Ny<<"\n"
               <<"Nz: "<<Nz<<std::endl;
@@ -32,10 +32,6 @@ int main( )
     std::cout << "# You typed\n"
               <<"mx: "<<mx<<"\n"
               <<"my: "<<my<<std::endl;
-    std::cout << "# Type max iterations (1000) \n";
-    std::cin >> max_iter;
-    std::cout << "# You typed\n"
-              <<"max_iter: "<<max_iter<<"\n";
     std::cout << "# Create parallel Derivative!\n";
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
@@ -46,12 +42,12 @@ int main( )
 
     ///##########################################################///
     //apply to function
-    const dg::DVec function = dg::evaluate( dg::geo::FunctionPsi(mag), g3d);
+    const dg::DVec function = dg::evaluate( dg::geo::TestFunctionPsi(mag), g3d);
     dg::DVec derivative(function);
-    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::FunctionPsi>(mag), g3d);
-    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::FunctionPsi>(mag), g3d);
-    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::FunctionPsi>(mag), g3d);
-    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
+    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
     std::vector<std::pair<std::string, const dg::DVec&>> names{
          {"forward",sol0}, {"backward",sol0},
          {"centered",sol0}, {"dss",sol1},
@@ -73,25 +69,24 @@ int main( )
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
     ///##########################################################///
-    dg::DVec solution = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
-    ds.set_direction( dg::forward);
-    ds.set_norm( dg::not_normed);
-    dg::Invert<dg::DVec> invert( solution, max_iter, 1e-5, 1);
-    //dg::geo::DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
-    //invert( dss, derivative, solution);
-    invert( ds, derivative, solution);
-
-    double sol = dg::blas2::dot( vol3d, function);
-    dg::blas1::axpby( 1., function, -1., derivative);
-    double norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
-
-    ds.set_direction( dg::centered);
-    ds.set_norm( dg::not_normed);
-    invert( ds, derivative, solution);
-
-    dg::blas1::axpby( 1., function, -1., derivative);
-    norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "    invCenteredLap:  "<< sqrt( norm/sol )<<"\n";
+    std::vector<std::pair<std::string, dg::direction>> namesLap{
+         {"invForwardLap",dg::forward}, {"invBackwardLap",dg::backward}, {"invCenteredLap",dg::centered}
+    };
+    dg::DVec solution = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::Invert<dg::DVec> invert( solution, max_iter, 1e-10);
+    dg::geo::InvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
+        rhs(ds);
+    ds.set_norm( dg::normed);
+    for( auto name : namesLap)
+    {
+        ds.set_direction( name.second);
+        invert( rhs, derivative, solution);
+        dg::blas1::axpby( 1., function, -1., derivative);
+        double sol = dg::blas2::dot( vol3d, function);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::cout <<"    "<<name.first<<":"
+                  <<std::setw(16-name.first.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
     return 0;
 }

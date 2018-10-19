@@ -36,7 +36,7 @@ int main(int argc, char * argv[])
     unsigned mx, my;
     std::cin >> mx >> my;
     std::cout <<"# You typed\n"
-              <<"n: "<<n<<"\n"
+              <<"n:  "<<n<<"\n"
               <<"Nx: "<<Nx<<"\n"
               <<"Ny: "<<Ny<<"\n"
               <<"Nz: "<<Nz<<"\n"
@@ -57,12 +57,12 @@ int main(int argc, char * argv[])
     std::cout << "# Construction took "<<t.diff()<<"s\n";
     ///##########################################################///
     //apply to function (MIND THE PULLBACK!)
-    const dg::DVec function = dg::pullback( dg::geo::FunctionPsi(mag), g3d);
+    const dg::DVec function = dg::pullback( dg::geo::TestFunctionPsi(mag), g3d);
     dg::DVec derivative(function);
-    dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::FunctionPsi>(mag), g3d);
-    dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::FunctionPsi>(mag), g3d);
-    dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::FunctionPsi>(mag), g3d);
-    dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
+    dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
     std::vector<std::pair<std::string, const dg::DVec&>> names{
          {"forward",sol0}, {"backward",sol0},
          {"centered",sol0}, {"dss",sol1},
@@ -76,25 +76,32 @@ int main(int argc, char * argv[])
     for( const auto& name :  names)
     {
         callDS( ds, name.first, function, derivative);
-        double sol = dg::blas2::dot( vol3d, name.second);
         dg::blas1::axpby( 1., name.second, -1., derivative);
+        double sol = dg::blas2::dot( vol3d, name.second);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
         std::cout <<"    "<<name.first<<":"
                   <<std::setw(16-name.first.size())
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
     ///##########################################################///
-    dg::DVec solution = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::FunctionPsi>(mag), g3d);
-    ds.set_direction( dg::forward);
-    ds.set_norm( dg::not_normed);
-    dg::geo::DSS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec> dss( ds);
-    dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-5);
-    invert( dss, derivative, solution);
-
-    double sol = dg::blas2::dot( vol3d, function);
-    dg::blas1::axpby( 1., function, 1., derivative);
-    double norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::cout << "    invForwardLap:   "<< sqrt( norm/sol )<<"\n";
-
+    std::vector<std::pair<std::string, dg::direction>> namesLap{
+         {"invForwardLap",dg::forward}, {"invBackwardLap",dg::backward}, {"invCenteredLap",dg::centered}
+    };
+    dg::DVec solution = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-10);
+    dg::geo::InvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
+        rhs(ds);
+    ds.set_norm( dg::normed);
+    for( auto name : namesLap)
+    {
+        ds.set_direction( name.second);
+        invert( rhs, derivative, solution);
+        dg::blas1::axpby( 1., function, -1., derivative);
+        double sol = dg::blas2::dot( vol3d, function);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::cout <<"    "<<name.first<<":"
+                  <<std::setw(16-name.first.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
     return 0;
 }

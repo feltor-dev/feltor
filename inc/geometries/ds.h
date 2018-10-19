@@ -321,8 +321,8 @@ void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, con
     dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d);
     dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol);
     dg::blas1::transfer( dg::create::inv_volume( fa.grid()), m_inv3d);
-    dg::blas2::transfer( dg::create::jumpX( fa.grid()), m_jumpX);
-    dg::blas2::transfer( dg::create::jumpY( fa.grid()), m_jumpY);
+    dg::blas2::transfer( dg::create::jumpX( fa.grid(), fa.bcx()), m_jumpX);
+    dg::blas2::transfer( dg::create::jumpY( fa.grid(), fa.bcy()), m_jumpY);
     m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;
 }
 
@@ -435,10 +435,11 @@ struct ComputeSymvEnd{
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
-    m_fa(einsPlus, f, m_tempP);
-    m_fa(einsMinus, f, m_tempM);
-    if(m_dir == dg::centered)
+
+    if(m_dir == dg::centered) //does not converge with BC!!
     {
+        m_fa(einsPlus, f, m_tempP);
+        m_fa(einsMinus, f, m_tempM);
         dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, m_fa.h0_inv(), m_vol3d);
         m_fa(einsPlusT,  m_tempP, m_temp);
         m_fa(einsMinusT, m_tempP, m_tempM);
@@ -447,12 +448,16 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     }
     else
     {
-        dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, f, m_fa.hp_inv(), m_fa.hm_inv(), m_vol3d);
+        m_fa(einsPlus, f, m_tempP);
+        m_fa(einsMinus, f, m_tempM);
+        dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, f,
+            m_fa.hp_inv(), m_fa.hm_inv(), m_vol3d);
         m_fa(einsPlusT, m_tempP, m_temp0);
         m_fa(einsMinusT, m_tempM, m_temp);
         dg::blas1::subroutine( detail::ComputeSymvEnd(), m_temp,
             m_tempM, m_tempP, m_temp0, m_weights_wo_vol);
     }
+
     //     add jump terms
     dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);

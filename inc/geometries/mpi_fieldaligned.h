@@ -96,6 +96,12 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         unsigned multiplyX=10, unsigned multiplyY=10,
         double deltaPhi = -1);
 
+    dg::bc bcx()const{
+        return m_bcx;
+    }
+    dg::bc bcy()const{
+        return m_bcy;
+    }
 
     void set_boundaries( dg::bc bcz, double left, double right)
     {
@@ -143,7 +149,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     MPI_Vector<LocalContainer> m_limiter; //2d size
     MPI_Vector<LocalContainer> m_ghostM, m_ghostP; //2d size
     unsigned m_Nz, m_perp_size;
-    dg::bc m_bcz;
+    dg::bc m_bcx, m_bcy, m_bcz;
     std::vector<MPI_Vector<dg::View<const LocalContainer>> > m_f;
     std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
@@ -162,7 +168,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
-    m_Nz=grid.local().Nz(), m_bcz=grid.bcz();
+    m_Nz=grid.local().Nz(), m_bcz=grid.bcz(), m_bcx = bcx, m_bcy = bcy;
     m_g.reset(grid);
     dg::assign( dg::evaluate( dg::zero, grid), m_h_inv);
     if( deltaPhi <=0) deltaPhi = grid.hz();

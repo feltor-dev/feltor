@@ -234,6 +234,13 @@ struct Fieldaligned
         unsigned multiplyX=10, unsigned multiplyY=10,
         double deltaPhi = -1);
 
+    dg::bc bcx()const{
+        return m_bcx;
+    }
+    dg::bc bcy()const{
+        return m_bcy;
+    }
+
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -361,7 +368,7 @@ struct Fieldaligned
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
     unsigned m_Nz, m_perp_size;
-    dg::bc m_bcz;
+    dg::bc m_bcx, m_bcy, m_bcz;
     std::vector<dg::View<const container>> m_f;
     std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
@@ -384,7 +391,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
-    m_Nz=grid.Nz(), m_bcz=grid.bcz();
+    m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
     m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);

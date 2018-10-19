@@ -55,7 +55,7 @@ struct TensorTraits< detail::Implicit<M, V> >
     \c void \c solve( real_type alpha, Implicit im, real_type t, ContainerType& y, const ContainerType& rhs);
  */
 
-/*!@brief Default Solver class for solving \f[ (y+\alpha\hat I(t,y) = \rho\f]
+/*!@brief Default Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
  *
  * works only for linear positive definite operators as it uses a conjugate
  * gradient solver to invert the equation
