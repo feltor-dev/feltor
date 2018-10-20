@@ -18,7 +18,7 @@ const double a  = 1; //small radius
 
 int main( )
 {
-    std::cout << "# This program tests the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
+    std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
     std::cin >> n>> Nx>>Ny>>Nz;
@@ -42,12 +42,12 @@ int main( )
 
     ///##########################################################///
     //apply to function
-    const dg::DVec function = dg::evaluate( dg::geo::TestFunctionPsi(mag), g3d);
+    const dg::DVec function = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
     dg::DVec derivative(function);
-    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
-    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi>(mag), g3d);
-    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi>(mag), g3d);
-    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     std::vector<std::pair<std::string, const dg::DVec&>> names{
          {"forward",sol0}, {"backward",sol0},
          {"centered",sol0}, {"dss",sol1},
@@ -72,7 +72,7 @@ int main( )
     std::vector<std::pair<std::string, dg::direction>> namesLap{
          {"invForwardLap",dg::forward}, {"invBackwardLap",dg::backward}, {"invCenteredLap",dg::centered}
     };
-    dg::DVec solution = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
+    dg::DVec solution = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::Invert<dg::DVec> invert( solution, max_iter, 1e-10);
     dg::geo::TestInvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
         rhs(ds);

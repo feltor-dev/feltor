@@ -8,14 +8,13 @@
 #include "ds.h"
 #include "toroidal.h"
 
-
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
 
 int main(int argc, char * argv[])
 {
-    std::cout << "# This program tests the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
+    std::cout << "# Test the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
     std::cin >> n>> Nx>>Ny>>Nz;

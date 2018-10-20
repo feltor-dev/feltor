@@ -344,17 +344,17 @@ struct Fieldaligned
     ///@brief Inverse distance between the planes \f$ (s^{k}-s^{k-1})^{-1} \f$
     ///@return three-dimensional vector
     const container& hm_inv()const {
-        return m_hm;
+        return m_hm_inv;
     }
     ///@brief Inverse distance between the planes \f$ (s^{k+1}-s^{k})^{-1} \f$
     ///@return three-dimensional vector
     const container& hp_inv()const {
-        return m_hp;
+        return m_hp_inv;
     }
     ///@brief Inverse distance between the planes \f$ (s^{k+1}-s^{k-1})^{-1} \f$
     ///@return three-dimensional vector
     const container& h0_inv()const {
-        return m_h0;
+        return m_h0_inv;
     }
     ///Grid used for construction
     const ProductGeometry& grid()const{return m_g.get();}
@@ -362,8 +362,8 @@ struct Fieldaligned
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
-    container m_h0, m_hm, m_hp; //3d size
-    container m_h; //2d size
+    container m_h0_inv, m_hm_inv, m_hp_inv; //3d size
+    container m_hm, m_hp; //2d size
     container m_left, m_right;      //perp_size
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
@@ -448,21 +448,20 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
-    dg::assign( dg::evaluate( dg::zero, grid), m_h0);
-    m_hp = m_hm = m_h0;
-    container temp;
-    dg::assign( yp_coarse[2], temp); //2d vector
-    dg::split( m_hp, m_temp, grid); //3d vector
+    dg::assign( dg::evaluate( dg::zero, grid), m_h0_inv);
+    m_hp_inv = m_hm_inv = m_h0_inv;
+    dg::assign( yp_coarse[2], m_hp); //2d vector
+    dg::split( m_hp_inv, m_temp, grid); //3d vector
     for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::copy( temp, m_temp[i]);
-    dg::assign( ym_coarse[2], temp); //2d vector
-    dg::split( m_hm, m_temp, grid); //3d vector
+        dg::blas1::copy( m_hp, m_temp[i]);
+    dg::assign( ym_coarse[2], m_hm); //2d vector
+    dg::split( m_hm_inv, m_temp, grid); //3d vector
     for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::copy( temp, m_temp[i]);
-    dg::blas1::axpby( 1., m_hp, -1., m_hm, m_h0);//hm is negative
-    dg::blas1::pointwiseDivide( -1., m_hm, m_hm);
-    dg::blas1::pointwiseDivide( 1., m_hp, m_hp);
-    dg::blas1::pointwiseDivide( 1., m_h0, m_h0);
+        dg::blas1::copy( m_hm, m_temp[i]);
+    dg::blas1::axpby( 1., m_hp_inv, -1., m_hm_inv, m_h0_inv);//hm is negative
+    dg::blas1::pointwiseDivide( -1., m_hm_inv, m_hm_inv);
+    dg::blas1::pointwiseDivide(  1., m_hp_inv, m_hp_inv);
+    dg::blas1::pointwiseDivide(  1., m_h0_inv, m_h0_inv);
 }
 
 template<class G, class I, class container>
@@ -559,7 +558,7 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
             dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
         if( m_bcz == dg::NEU || m_bcz == dg::DIR_NEU)
         {
-            dg::blas1::pointwiseDot( m_right, m_h, m_ghostP);
+            dg::blas1::pointwiseDot( m_right, m_hp, m_ghostP);
             dg::blas1::axpby( 1., m_ghostP, 1., m_f[i0], m_ghostP);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
@@ -588,7 +587,7 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const contai
             dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
         if( m_bcz == dg::NEU || m_bcz == dg::NEU_DIR)
         {
-            dg::blas1::pointwiseDot( m_left, m_h, m_ghostM);
+            dg::blas1::pointwiseDot( m_left, m_hm, m_ghostM);
             dg::blas1::axpby( -1., m_ghostM, 1., m_f[i0], m_ghostM);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fme

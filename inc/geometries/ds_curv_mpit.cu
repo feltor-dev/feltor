@@ -23,8 +23,9 @@ int main(int argc, char * argv[])
     int rank;
     unsigned n, Nx, Ny, Nz, mx[2];
     MPI_Comm comm;
-    dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if(rank==0)std::cout << "# Test DS on flux grid!"<<std::endl;
+    dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     if( rank == 0)
     {
         std::cout << "Type mx (10) and my (10)\n";
@@ -44,7 +45,6 @@ int main(int argc, char * argv[])
         is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
-    if(rank==0)std::cout << "Start DS test on flux grid!"<<std::endl;
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
     dg::Timer t;
     t.tic();

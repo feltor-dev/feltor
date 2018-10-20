@@ -140,8 +140,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     if(rank==0)
 #endif //MPI
     {
-    std::cout << "Norm of b "<<nrmb <<"\n";
-    std::cout << "Residual errors: \n";
+    std::cout << "# Norm of b "<<nrmb <<"\n";
+    std::cout << "# Residual errors: \n";
     }
 #endif //DG_DEBUG
     if( nrmb == 0)
@@ -177,9 +177,9 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     if(rank==0)
 #endif //MPI
     {
-        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+        std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
     }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction))
@@ -203,8 +203,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     if(rank==0)
 #endif //MPI
     {
-    std::cout << "Norm of S b "<<nrmb <<"\n";
-    std::cout << "Residual errors: \n";
+    std::cout << "# Norm of S b "<<nrmb <<"\n";
+    std::cout << "# Residual errors: \n";
     }
 #endif //DG_DEBUG
     if( nrmb == 0)
@@ -231,9 +231,9 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     if(rank==0)
 #endif //MPI
     {
-        std::cout << "Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "(Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+        std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
     }
 #endif //DG_DEBUG
         if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
@@ -607,7 +607,7 @@ struct Invert
 #endif //MPI
         {
             std::cout << "# of cg iterations \t"<< number << "\t";
-            std::cout<< "took \t"<<t.diff()<<"s\n";
+            std::cout << "# took \t"<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
         return number;
