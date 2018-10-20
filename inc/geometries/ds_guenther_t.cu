@@ -1,13 +1,8 @@
 #include <iostream>
 
-#include <cusp/print.h>
-#include <cusp/csr_matrix.h>
-#include "json/json.h"
-
 #define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "ds.h"
-// #include "draw/host_window.h"
 #include "guenther.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"

@@ -20,8 +20,9 @@ int main(int argc, char* argv[])
     int rank;
     unsigned n, Nx, Ny, Nz, mx[2], max_iter = 1e4;
     MPI_Comm comm;
-    dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if(rank==0)std::cout << "# Test the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
+    dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     if( rank == 0)
     {
         std::cout <<"# You typed\n"
