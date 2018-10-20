@@ -61,7 +61,6 @@ struct DS
      * @brief Create the magnetic unit vector field and construct
 
      * @copydoc hide_fieldaligned_physics_parameters
-     * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
      * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
@@ -71,20 +70,19 @@ struct DS
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
-        dg::norm no=dg::normed, dg::direction dir = dg::centered,
+        dg::direction dir = dg::centered,
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
         double deltaPhi=-1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
         m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
-        construct( m_fa, no, dir);
+        construct( m_fa, dir);
     }
     /**
      * @brief Use the given vector field to construct
      *
      * @copydoc hide_fieldaligned_physics_parameters
-     * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
      * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
@@ -94,34 +92,27 @@ struct DS
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
-        dg::norm no=dg::normed, dg::direction dir = dg::centered,
+        dg::direction dir = dg::centered,
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10,
         double deltaPhi=-1)
     {
         m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
-        construct( m_fa, no, dir);
+        construct( m_fa, dir);
     }
     ///@copydoc construct
-    DS(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered)
+    DS(const FA& fieldaligned, dg::direction dir = dg::centered)
     {
-        construct( fieldaligned, no, dir);
+        construct( fieldaligned, dir);
     }
     /**
      * @brief Re-construct from a given \c Fieldaligned object
      *
      * @param fieldaligned this object will be used in all further member calls
-     * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
      */
-    void construct(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered);
+    void construct(const FA& fieldaligned, dg::direction dir = dg::centered);
 
-    /*!@brief Set the norm of the symv member
-     * @param no new norm
-     */
-    void set_norm( dg::norm no) {
-        m_no = no;
-    }
     /*!@brief Set the direction used in the operator() and symv member
      * @param dir new direction
      */
@@ -199,39 +190,39 @@ struct DS
 
     ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
-    ///@note forwardDiv is the negative adjoint of backward
-    void forwardDiv( double alpha, const container& f, double beta, container& g){
-        do_forwardDiv( alpha, f, beta, g, dg::normed);
+    ///@note divForward is the negative adjoint of backward
+    void divForward( double alpha, const container& f, double beta, container& g){
+        do_divForward( alpha, f, beta, g);
     }
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
-    ///@note backwardDiv is the negative adjoint of forward
-    void backwardDiv( double alpha, const container& f, double beta, container& g){
-        do_backwardDiv( alpha, f, beta, g, dg::normed);
+    ///@note divBackward is the negative adjoint of forward
+    void divBackward( double alpha, const container& f, double beta, container& g){
+        do_divBackward( alpha, f, beta, g);
     }
     ///@brief centered divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
-    ///@note centeredDiv is the negative adjoint of centered
-    void centeredDiv(double alpha, const container& f, double beta, container& g){
-        do_centeredDiv( alpha, f, beta, g, dg::normed);
+    ///@note divCentered is the negative adjoint of centered
+    void divCentered(double alpha, const container& f, double beta, container& g){
+        do_divCentered( alpha, f, beta, g);
     }
     ///@brief forward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
-    ///@note forwardDiv is the negative adjoint of backward
-    void forwardDiv(const container& f, container& g){
-        do_forwardDiv( 1.,f,0.,g, dg::normed);
+    ///@note divForward is the negative adjoint of backward
+    void divForward(const container& f, container& g){
+        do_divForward( 1.,f,0.,g);
     }
     ///@brief backward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
-    ///@note backwardDiv is the negative adjoint of forward
-    void backwardDiv(const container& f, container& g){
-        do_backwardDiv( 1.,f,0.,g, dg::normed);
+    ///@note divBackward is the negative adjoint of forward
+    void divBackward(const container& f, container& g){
+        do_divBackward( 1.,f,0.,g);
     }
     ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
-    ///@note centeredDiv is the negative adjoint of centered
-    void centeredDiv(const container& f, container& g){
-        do_centeredDiv( 1.,f,0.,g, dg::normed);
+    ///@note divCentered is the negative adjoint of centered
+    void divCentered(const container& f, container& g){
+        do_divCentered( 1.,f,0.,g);
     }
 
     /**
@@ -240,27 +231,64 @@ struct DS
     * dependent on dir given in constructor redirects to either \c forward(), \c backward() or \c centered()
     * @copydoc hide_ds_parameters2
     */
-    void operator()( const container& f, container& g){operator()(1., f, 0., g);}
+    void operator()( const container& f, container& g){
+        ds( m_dir, 1., f, 0., g);
+    }
     /**
     * @brief Discretizes \f$ g = \alpha \vec v\cdot \nabla f + \beta g \f$
     *
     * dependent on dir given in constructor redirects to either \c forward(), \c backward() or \c centered()
     * @copydoc hide_ds_parameters4
     */
-    void operator()(double alpha, const container& f, double beta, container& g);
+    void operator()(double alpha, const container& f, double beta, container& g){
+        ds(m_dir, alpha, f, beta, g);
+    }
 
+
+    /**
+    * @brief Discretizes \f$ g = \vec v\cdot \nabla f \f$
+    *
+    * @param dir redirects to either \c forward(), \c backward() or \c centered()
+    * @copydoc hide_ds_parameters2
+    */
+    void ds(dg::direction dir,  const container& f, container& g){
+        ds(dir, 1., f, 0., g);
+    }
+    /**
+    * @brief Discretizes \f$ g = \alpha \vec v\cdot \nabla f + \beta g \f$
+    *
+    * @param dir redirects to either \c forward(), \c backward() or \c centered()
+    * @copydoc hide_ds_parameters4
+    */
+    void ds(dg::direction dir, double alpha, const container& f, double beta, container& g);
+    /**
+    * @brief Discretizes \f$ g = \nabla \cdot ( \vec v f) \f$
+    *
+    * @param dir redirects to either \c divForward(), \c divBackward() or \c divCentered()
+    * @copydoc hide_ds_parameters2
+    */
+    void div(dg::direction dir,  const container& f, container& g){
+        div(dir, 1., f, 0., g);
+    }
+    /**
+    * @brief Discretizes \f$ g = \alpha \nabla \cdot( \vec v f) + \beta g \f$
+    *
+    * @param dir redirects to either \c divForward(), \c divBackward() or \c divCentered()
+    * @copydoc hide_ds_parameters4
+    */
+    void div(dg::direction dir, double alpha, const container& f, double beta, container& g);
 
     /**
      * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$ as a symmetric negative definit matrix
      *
-     * if direction given in constructor is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * if direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters2
      */
     void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
-     * if direction given in constructor is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * if direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters4
      */
     void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
@@ -279,9 +307,15 @@ struct DS
      */
     void dss( double alpha, const container& f, double beta, container& g){ do_dss( alpha, f, beta, g);}
 
-    const container& weights()const {return m_vol3d;}
-    const container& inv_weights()const {return m_inv3d;}
-    const container& precond()const {return m_inv3d;}
+    const container& weights()const {
+        return m_vol3d;
+    }
+    const container& inv_weights()const {
+        return m_inv3d;
+    }
+    const container& precond()const {
+        return m_inv3d;
+    }
 
     /**
     * @brief access the underlying Fieldaligned object for evaluate
@@ -293,9 +327,9 @@ struct DS
     void do_forward(double alpha, const container& f, double beta, container& dsf);
     void do_backward(double alpha, const container& f, double beta, container& dsf);
     void do_centered(double alpha, const container& f, double beta, container& dsf);
-    void do_forwardDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
-    void do_backwardDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
-    void do_centeredDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_divForward(double alpha, const container& f, double beta, container& dsf);
+    void do_divBackward(double alpha, const container& f, double beta, container& dsf);
+    void do_divCentered(double alpha, const container& f, double beta, container& dsf);
     void do_symv(double alpha, const container& f, double beta, container& dsf);
     void do_dss(double alpha, const container& f, double beta, container& dsf);
 
@@ -304,7 +338,6 @@ struct DS
     container m_temp;
     container m_tempP, m_temp0, m_tempM;
     container m_vol3d, m_inv3d, m_weights_wo_vol;
-    dg::norm m_no;
     dg::direction m_dir;
     Matrix m_jumpX, m_jumpY;
 };
@@ -313,10 +346,9 @@ struct DS
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, container>& fa, dg::norm no, dg::direction dir)
+void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, container>& fa, dg::direction dir)
 {
     m_fa=fa;
-    m_no=no, m_dir=dir;
 
     dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d);
     dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol);
@@ -327,13 +359,26 @@ void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, con
 }
 
 template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::operator()( double alpha, const container& f, double beta, container& dsf) {
-    if( m_dir == dg::centered)
-        return centered( alpha, f, beta, dsf);
-    else if( m_dir == dg::forward)
-        return forward( alpha, f, beta, dsf);
-    else
-        return backward( alpha, f, beta, dsf);
+inline void DS<G,I,M,container>::ds( dg::direction dir, double alpha, const container& f, double beta, container& dsf) {
+    switch( dir){
+        case dg::centered:
+        return do_centered( alpha, f, beta, dsf);
+        case dg::forward:
+        return do_forward( alpha, f, beta, dsf);
+        case dg::backward:
+        return do_backward( alpha, f, beta, dsf);
+    }
+}
+template<class G, class I, class M, class container>
+inline void DS<G,I,M,container>::div( dg::direction dir, double alpha, const container& f, double beta, container& dsf) {
+    switch( dir){
+        case dg::centered:
+        return do_divCentered( alpha, f, beta, dsf);
+        case dg::forward:
+        return do_divForward( alpha, f, beta, dsf);
+        case dg::backward:
+        return do_divBackward( alpha, f, beta, dsf);
+    }
 }
 
 template<class G, class I, class M, class container>
@@ -359,38 +404,29 @@ void DS<G, I,M,container>::do_centered( double alpha, const container& f, double
     dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.h0_inv(), -alpha, m_tempM, m_fa.h0_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::do_backwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
+void DS<G,I,M,container>::do_divBackward( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
     dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hp_inv(), 0., m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
-    if(no == dg::normed)
-        dg::blas1::pointwiseDot( alpha, m_temp0, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
-    else
-        dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempP, beta, dsf);
+    dg::blas1::pointwiseDot( alpha, m_temp0, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
 }
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_forwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
+void DS<G,I,M,container>::do_divForward( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
     dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hm_inv(),0., m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    if(no == dg::normed)
-        dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_temp0, m_inv3d, beta, dsf);
-    else
-        dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_temp0, beta, dsf);
+    dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_temp0, m_inv3d, beta, dsf);
 }
 template<class G, class I, class M, class container>
-void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
+void DS<G, I,M,container>::do_divCentered( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
     dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.h0_inv(), 0.,m_temp0);
     m_fa(einsPlusT,  m_temp0, m_tempP);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    if(no == dg::normed)
-        dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
-    else
-        dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, dsf);
+    dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
 
 }
 
@@ -461,11 +497,9 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     //     add jump terms
     dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
+    //now volume without weights is missing
 
-    if( m_no == dg::normed)
-        dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);
-    else
-        dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, dsTdsf);
+    dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);
 }
 
 template<class G,class I, class M, class container>

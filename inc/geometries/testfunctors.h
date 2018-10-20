@@ -260,33 +260,30 @@ struct OMDsDivDsFunction
 template<class DS, class container>
 void callDS( DS& ds, std::string name, const container& in, container& out)
 {
-    if( name == "forward") ds.forward( in, out);
-    else if( name == "backward") ds.backward( in, out);
-    else if( name == "centered") ds.centered( in, out);
+    if( name == "forward") ds.ds( dg::forward, in, out);
+    else if( name == "backward") ds.ds(dg::backward, in, out);
+    else if( name == "centered") ds.ds( dg::centered, in, out);
     else if( name == "dss") ds.dss( in, out);
-    else if( name == "forwardDiv") ds.forwardDiv( in, out);
-    else if( name == "backwardDiv") ds.backwardDiv( in, out);
-    else if( name == "centeredDiv") ds.centeredDiv( in, out);
+    else if( name == "forwardDiv") ds.div( dg::forward, in, out);
+    else if( name == "backwardDiv") ds.div( dg::backward, in, out);
+    else if( name == "centeredDiv") ds.div( dg::centered, in, out);
     else if( name == "forwardLap") {
         ds.set_direction( dg::forward);
-        ds.set_norm( dg::normed);
         ds.symv( in, out);
     }
     else if( name == "backwardLap"){
         ds.set_direction( dg::backward);
-        ds.set_norm( dg::normed);
         ds.symv( in, out);
     }
     else if( name == "centeredLap"){
         ds.set_direction( dg::centered);
-        ds.set_norm( dg::normed);
         ds.symv( in, out);
     }
 
 }
 template<class DS, class container>
-struct InvertDS{
-    InvertDS( DS& ds):
+struct TestInvertDS{
+    TestInvertDS( DS& ds):
         m_ds(ds){}
     void symv( const container& x, container& y)
     {
@@ -302,7 +299,7 @@ struct InvertDS{
 };
 }//namespace geo
 template<class DS, class container>
-struct TensorTraits<dg::geo::InvertDS<DS,container>>{
+struct TensorTraits<dg::geo::TestInvertDS<DS,container>>{
     using value_type = double;
     using tensor_category = SelfMadeMatrixTag;
 };

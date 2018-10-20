@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU);
     //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IDMatrix, dg::DVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() );
     std::cout << "# Constructing Fieldlines..."<<std::endl;
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::centered, 1e-8, mx, my);
 
     t.toc();
     std::cout << "# Construction took "<<t.diff()<<"s\n";
@@ -89,9 +89,8 @@ int main(int argc, char * argv[])
     };
     dg::DVec solution = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
     dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-10);
-    dg::geo::InvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
+    dg::geo::TestInvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
         rhs(ds);
-    ds.set_norm( dg::normed);
     for( auto name : namesLap)
     {
         ds.set_direction( name.second);

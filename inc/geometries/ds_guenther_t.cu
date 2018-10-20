@@ -38,7 +38,7 @@ int main( )
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
-        dg::normed, dg::centered, 1e-8, mx, my);
+        dg::centered, 1e-8, mx, my);
 
     ///##########################################################///
     //apply to function
@@ -74,9 +74,8 @@ int main( )
     };
     dg::DVec solution = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi>(mag), g3d);
     dg::Invert<dg::DVec> invert( solution, max_iter, 1e-10);
-    dg::geo::InvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
+    dg::geo::TestInvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
         rhs(ds);
-    ds.set_norm( dg::normed);
     for( auto name : namesLap)
     {
         ds.set_direction( name.second);
