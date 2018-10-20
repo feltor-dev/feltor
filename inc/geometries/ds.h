@@ -40,6 +40,11 @@ namespace geo{
 \f$\Delta_\parallel=-\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
 @snippet ds_t.cu doxygen
+ * @note The parallel Laplacian cannot be inverted as long as there are
+ * closed fieldlines somewhere in the domain (which is virtually always true). There is therefore no norm parameter in the class.
+@attention The \c div and \c symv member functions reliably work only if fieldlines
+do not(!) intersect the boundary and then only if the \c multiplyX and \c multiplyY
+    parameters are sufficiently high
 * @ingroup fieldaligned
 * @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
@@ -279,9 +284,9 @@ struct DS
     void div(dg::direction dir, double alpha, const container& f, double beta, container& g);
 
     /**
-     * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$ as a symmetric negative definit matrix
+     * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$
      *
-     * if direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * If direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters2
      */
     void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}

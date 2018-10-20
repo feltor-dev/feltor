@@ -163,8 +163,8 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
     * @param multiplyX defines the resolution in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
-    * high as possible in given amount of time)
-    * @param multiplyY analogous in Y
+    * high as possible, 10 is a good start)
+    * @param multiplyY analogous to \c multiplyX, applies to y direction
     * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz()==1, then \c deltaPhi is taken instead of \c grid.hz()
     * @note If there is a limiter, the boundary condition on the first/last plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries function.
