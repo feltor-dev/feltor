@@ -254,33 +254,6 @@ struct OMDsDivDsFunction
     DsDivDsFunction<Function> df_;
 };
 
-
-
-//////////////function to call DS////////////////////
-template<class DS, class container>
-void callDS( DS& ds, std::string name, const container& in, container& out)
-{
-    if( name == "forward") ds.ds( dg::forward, in, out);
-    else if( name == "backward") ds.ds(dg::backward, in, out);
-    else if( name == "centered") ds.ds( dg::centered, in, out);
-    else if( name == "dss") ds.dss( in, out);
-    else if( name == "forwardDiv") ds.div( dg::forward, in, out);
-    else if( name == "backwardDiv") ds.div( dg::backward, in, out);
-    else if( name == "centeredDiv") ds.div( dg::centered, in, out);
-    else if( name == "forwardLap") {
-        ds.set_direction( dg::forward);
-        ds.symv( in, out);
-    }
-    else if( name == "backwardLap"){
-        ds.set_direction( dg::backward);
-        ds.symv( in, out);
-    }
-    else if( name == "centeredLap"){
-        ds.set_direction( dg::centered);
-        ds.symv( in, out);
-    }
-
-}
 template<class DS, class container>
 struct TestInvertDS{
     TestInvertDS( DS& ds):
@@ -297,6 +270,69 @@ struct TestInvertDS{
     private:
     DS& m_ds;
 };
+
+//////////////function to call DS////////////////////
+template<class DS, class container>
+void callDS( DS& ds, std::string name, const container& in, container& out,
+const container& divb,
+unsigned max_iter = 1e4, double eps = 1e-6)
+{
+    if( name == "forward") ds.ds( dg::forward, in, out);
+    else if( name == "backward") ds.ds( dg::backward, in, out);
+    else if( name == "centered") ds.ds( dg::centered, in, out);
+    else if( name == "dss") ds.dss( in, out);
+    else if( name == "divForward") ds.div( dg::forward, in, out);
+    else if( name == "divBackward") ds.div( dg::backward, in, out);
+    else if( name == "divCentered") ds.div( dg::centered, in, out);
+    else if( name == "divDirectForward"){
+        ds.ds( dg::forward, in, out);
+        dg::blas1::pointwiseDot( 1., divb, out, 1., out);
+    }
+    else if( name == "divDirectBackward"){
+        ds.ds( dg::backward, in, out);
+        dg::blas1::pointwiseDot( 1., divb, out, 1., out);
+    }
+    else if( name == "divDirectCentered"){
+        ds.ds( dg::centered, in, out);
+        dg::blas1::pointwiseDot( 1., divb, out, 1., out);
+    }
+    else if( name == "forwardLap") {
+        ds.set_direction( dg::forward);
+        ds.symv( in, out);
+    }
+    else if( name == "backwardLap"){
+        ds.set_direction( dg::backward);
+        ds.symv( in, out);
+    }
+    else if( name == "centeredLap"){
+        ds.set_direction( dg::centered);
+        ds.symv( in, out);
+    }
+    else if( name == "directLap") {
+        ds.ds( dg::centered, in, out);
+        dg::blas1::pointwiseDot( divb, out, out);
+        ds.dss( 1., in, 1., out);
+    }
+    else if( name == "invForwardLap"){
+        dg::Invert<container> invert( in, max_iter, eps, 1);
+        ds.set_direction( dg::forward);
+        dg::geo::TestInvertDS< DS, container> rhs(ds);
+        invert( rhs, out, in);
+    }
+    else if( name == "invBackwardLap"){
+        dg::Invert<container> invert( in, max_iter, eps, 1);
+        ds.set_direction( dg::backward);
+        dg::geo::TestInvertDS< DS, container> rhs(ds);
+        invert( rhs, out, in);
+    }
+    else if( name == "invCenteredLap"){
+        dg::Invert<container> invert( in, max_iter, eps, 1);
+        ds.set_direction( dg::centered);
+        dg::geo::TestInvertDS< DS, container> rhs(ds);
+        invert( rhs, out, in);
+    }
+
+}
 }//namespace geo
 template<class DS, class container>
 struct TensorTraits<dg::geo::TestInvertDS<DS,container>>{

@@ -47,87 +47,65 @@ int main(int argc, char* argv[])
     dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::centered);
     ///##########################################################///
-    //apply to function
-    const dg::MDVec functionNEU = dg::evaluate( dg::geo::TestFunctionSin(mag), g3d);
-    const dg::MDVec functionDIR = dg::evaluate( dg::geo::TestFunctionCos(mag), g3d);
-    dg::MDVec derivative(functionNEU);
+    dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionSin(mag), g3d);
+    dg::MDVec derivative(fun);
+    dg::MDVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
     dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionSin>(mag), g3d);
     dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionSin>(mag), g3d);
     dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionSin>(mag), g3d);
     dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    std::vector<std::pair<std::string, const dg::MDVec&>> names{
-         {"forward",sol0}, {"backward",sol0},
-         {"centered",sol0}, {"dss",sol1},
-         {"forwardDiv",sol2}, {"backwardDiv",sol2}, {"centeredDiv",sol2},
-         {"forwardLap",sol3}, {"backwardLap",sol3}, {"centeredLap",sol3}
-    };
-    std::vector<std::pair<std::string, dg::direction>> namesLap{
-         {"invForwardLap",dg::forward}, {"invBackwardLap",dg::backward}, {"invCenteredLap",dg::centered}
+    dg::MDVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    std::vector<std::tuple<std::string, const dg::MDVec&, const dg::MDVec&>> names{
+         {"forward",fun,sol0},          {"backward",fun,sol0},
+         {"centered",fun,sol0},         {"dss",fun,sol1},
+         {"divForward",fun,sol2},       {"divBackward",fun,sol2},
+         {"divCentered",fun,sol2},      {"divDirectForward",fun,sol2},
+         {"divDirectBackward",fun,sol2},{"divDirectCentered",fun,sol2},
+         {"forwardLap",fun,sol3},       {"backwardLap",fun,sol3},
+         {"centeredLap",fun,sol3},      {"directLap",fun,sol3},
+         {"invForwardLap",sol4,fun},    {"invBackwardLap",sol4,fun},
+         {"invCenteredLap",sol4,fun}
     };
     if(rank==0)std::cout << "# TEST NEU Boundary conditions!\n";
     if(rank==0)std::cout << "# TEST ADJOINT derivatives do unfortunately not fulfill Neumann BC!\n";
     ///##########################################################///
     if(rank==0)std::cout <<"Neumann:\n";
     dg::MDVec vol3d = dg::create::volume( g3d);
-    for( const auto& name :  names)
+    for( const auto& tuple :  names)
     {
-        callDS( ds, name.first, functionNEU, derivative);
-        double sol = dg::blas2::dot( vol3d, name.second);
-        dg::blas1::axpby( 1., name.second, -1., derivative);
+        std::string name = std::get<0>(tuple);
+        const dg::MDVec& function = std::get<1>(tuple);
+        const dg::MDVec& solution = std::get<2>(tuple);
+        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        double sol = dg::blas2::dot( vol3d, solution);
+        dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        if(rank==0)std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
-                  <<" "<<sqrt(norm/sol)<<"\n";
-    }
-    ///##########################################################///
-    dg::MDVec solution =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::Invert<dg::MDVec> invert( solution, max_iter, 1e-6, 1);
-    dg::geo::TestInvertDS< dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec>, dg::MDVec>
-        rhs(ds);
-    for( auto name : namesLap)
-    {
-        ds.set_direction( name.second);
-        dg::blas1::scal( derivative, 0);
-        invert( rhs, derivative, solution);
-        dg::blas1::axpby( 1., functionNEU, -1., derivative);
-        double sol = dg::blas2::dot( vol3d, functionNEU);
-        double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        if(rank==0)std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
+        if(rank==0)std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
     ///##########################################################///
     if(rank==0)std::cout << "# Reconstruct parallel derivative!\n";
+    fun = dg::evaluate( dg::geo::TestFunctionCos(mag), g3d);
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
     ds.construct( dsFA, dg::centered);
     sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionCos>(mag), g3d);
     sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionCos>(mag), g3d);
     sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionCos>(mag), g3d);
     sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionCos>(mag), g3d);
+    sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionCos>(mag), g3d);
     if(rank==0)std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
     if(rank==0)std::cout << "Dirichlet: \n";
-    for( const auto& name :  names)
+    for( const auto& tuple :  names)
     {
-        callDS( ds, name.first, functionDIR, derivative);
-        double sol = dg::blas2::dot( vol3d, name.second);
-        dg::blas1::axpby( 1., name.second, -1., derivative);
+        std::string name = std::get<0>(tuple);
+        const dg::MDVec& function = std::get<1>(tuple);
+        const dg::MDVec& solution = std::get<2>(tuple);
+        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        double sol = dg::blas2::dot( vol3d, solution);
+        dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        if(rank==0)std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
-                  <<" "<<sqrt(norm/sol)<<"\n";
-    }
-    ///##########################################################///
-    solution =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionCos>(mag), g3d);
-    for( auto name : namesLap)
-    {
-        ds.set_direction( name.second);
-        invert(rhs, derivative, solution);
-        dg::blas1::axpby( 1., functionDIR, -1., derivative);
-        double sol = dg::blas2::dot( vol3d, functionDIR);
-        double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        if(rank==0)std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
+        if(rank==0)std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
 

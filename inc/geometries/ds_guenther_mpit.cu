@@ -46,52 +46,42 @@ int main(int argc, char * argv[])
         dg::centered, 1e-8, mx[0], mx[1]);
 
     ///##########################################################///
-    //apply to function
-    const dg::MDVec function = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
-    dg::MDVec derivative(function);
+    const dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
+    const dg::MDVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
+    dg::MDVec derivative(fun);
     dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    std::vector<std::pair<std::string, const dg::MDVec&>> names{
-         {"forward",sol0}, {"backward",sol0},
-         {"centered",sol0}, {"dss",sol1},
-         {"forwardDiv",sol2}, {"backwardDiv",sol2}, {"centeredDiv",sol2},
-         {"forwardLap",sol3}, {"backwardLap",sol3}, {"centeredLap",sol3}
+    dg::MDVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    std::vector<std::tuple<std::string, const dg::MDVec&, const dg::MDVec&>> names{
+         {"forward",fun,sol0},          {"backward",fun,sol0},
+         {"centered",fun,sol0},         {"dss",fun,sol1},
+         {"divForward",fun,sol2},       {"divBackward",fun,sol2},
+         {"divCentered",fun,sol2},      {"divDirectForward",fun,sol2},
+         {"divDirectBackward",fun,sol2},{"divDirectCentered",fun,sol2},
+         {"forwardLap",fun,sol3},       {"backwardLap",fun,sol3},
+         {"centeredLap",fun,sol3},      {"directLap",fun,sol3},
+         {"invForwardLap",sol4,fun},    {"invBackwardLap",sol4,fun},
+         {"invCenteredLap",sol4,fun}
     };
     ///##########################################################///
     if(rank==0)std::cout << "# TEST Guenther (No Boundary conditions)!\n";
     if(rank==0)std::cout <<"Guenther:\n";
     const dg::MDVec vol3d = dg::create::volume( g3d);
-    for( const auto& name :  names)
+    for( const auto& tuple :  names)
     {
-        callDS( ds, name.first, function, derivative);
-        double sol = dg::blas2::dot( vol3d, name.second);
-        dg::blas1::axpby( 1., name.second, -1., derivative);
+        std::string name = std::get<0>(tuple);
+        const dg::MDVec& function = std::get<1>(tuple);
+        const dg::MDVec& solution = std::get<2>(tuple);
+        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        double sol = dg::blas2::dot( vol3d, solution);
+        dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        if(rank==0)std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
+        if(rank==0)std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
     ///##########################################################///
-    std::vector<std::pair<std::string, dg::direction>> namesLap{
-         {"invForwardLap",dg::forward}, {"invBackwardLap",dg::backward}, {"invCenteredLap",dg::centered}
-    };
-    dg::MDVec solution = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::Invert<dg::MDVec> invert( solution, max_iter, 1e-10);
-    dg::geo::TestInvertDS< dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec>, dg::MDVec>
-        rhs(ds);
-    for( auto name : namesLap)
-    {
-        ds.set_direction( name.second);
-        invert( rhs, derivative, solution);
-        dg::blas1::axpby( 1., function, -1., derivative);
-        double sol = dg::blas2::dot( vol3d, function);
-        double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        if(rank==0)std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
-                  <<" "<<sqrt(norm/sol)<<"\n";
-    }
     MPI_Finalize();
     return 0;
 }

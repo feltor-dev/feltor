@@ -3,21 +3,17 @@
 #include <cusp/print.h>
 #include "json/json.h"
 
-#include "dg/geometry/functions.h"
-#include "dg/backend/timer.h"
-#include "dg/blas.h"
-#include "dg/functors.h"
-#include "dg/geometry/geometry.h"
-#include "testfunctors.h"
+#include "dg/algorithm.h"
 #include "ds.h"
 #include "solovev.h"
 #include "flux.h"
 #include "toroidal.h"
+#include "testfunctors.h"
 
 
 int main(int argc, char * argv[])
 {
-    std::cout << "# Test DS on flux grid!"<<std::endl;
+    std::cout << "# Test DS on flux grid (No Boundary conditions)!\n";
     Json::Value js;
     if( argc==1) {
         std::ifstream is("geometry_params_Xpoint.js");
@@ -55,51 +51,41 @@ int main(int argc, char * argv[])
     t.toc();
     std::cout << "# Construction took "<<t.diff()<<"s\n";
     ///##########################################################///
-    //apply to function (MIND THE PULLBACK!)
-    const dg::DVec function = dg::pullback( dg::geo::TestFunctionPsi2(mag), g3d);
-    dg::DVec derivative(function);
+    //(MIND THE PULLBACK!)
+    const dg::DVec fun = dg::pullback( dg::geo::TestFunctionPsi2(mag), g3d);
+    const dg::DVec divb = dg::pullback( dg::geo::Divb(mag), g3d);
+    dg::DVec derivative(fun);
     dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    std::vector<std::pair<std::string, const dg::DVec&>> names{
-         {"forward",sol0}, {"backward",sol0},
-         {"centered",sol0}, {"dss",sol1},
-         {"forwardDiv",sol2}, {"backwardDiv",sol2}, {"centeredDiv",sol2},
-         {"forwardLap",sol3}, {"backwardLap",sol3}, {"centeredLap",sol3}
+    dg::DVec sol4 = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    std::vector<std::tuple<std::string, const dg::DVec&, const dg::DVec&>> names{
+         {"forward",fun,sol0},          {"backward",fun,sol0},
+         {"centered",fun,sol0},         {"dss",fun,sol1},
+         {"divForward",fun,sol2},       {"divBackward",fun,sol2},
+         {"divCentered",fun,sol2},      {"divDirectForward",fun,sol2},
+         {"divDirectBackward",fun,sol2},{"divDirectCentered",fun,sol2},
+         {"forwardLap",fun,sol3},       {"backwardLap",fun,sol3},
+         {"centeredLap",fun,sol3},      {"directLap",fun,sol3},
+         {"invForwardLap",sol4,fun},    {"invBackwardLap",sol4,fun},
+         {"invCenteredLap",sol4,fun}
     };
     ///##########################################################///
-    std::cout << "# TEST Flux (No Boundary conditions)!\n";
     std::cout <<"Flux:\n";
     const dg::DVec vol3d = dg::create::volume( g3d);
-    for( const auto& name :  names)
+    for( const auto& tuple :  names)
     {
-        callDS( ds, name.first, function, derivative);
-        dg::blas1::axpby( 1., name.second, -1., derivative);
-        double sol = dg::blas2::dot( vol3d, name.second);
+        std::string name = std::get<0>(tuple);
+        const dg::DVec& function = std::get<1>(tuple);
+        const dg::DVec& solution = std::get<2>(tuple);
+        callDS( ds, name, function, derivative, divb, g3d.size(),1e-8);
+        double sol = dg::blas2::dot( vol3d, solution);
+        dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
+        std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
     ///##########################################################///
-    std::vector<std::pair<std::string, dg::direction>> namesLap{
-         {"invForwardLap",dg::forward}, {"invBackwardLap",dg::backward}, {"invCenteredLap",dg::centered}
-    };
-    dg::DVec solution = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::Invert<dg::DVec> invert( solution, g3d.size(), 1e-10);
-    dg::geo::TestInvertDS< dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>, dg::DVec>
-        rhs(ds);
-    for( auto name : namesLap)
-    {
-        ds.set_direction( name.second);
-        invert( rhs, derivative, solution);
-        dg::blas1::axpby( 1., function, -1., derivative);
-        double sol = dg::blas2::dot( vol3d, function);
-        double norm = dg::blas2::dot( derivative, vol3d, derivative);
-        std::cout <<"    "<<name.first<<":"
-                  <<std::setw(16-name.first.size())
-                  <<" "<<sqrt(norm/sol)<<"\n";
-    }
     return 0;
 }
