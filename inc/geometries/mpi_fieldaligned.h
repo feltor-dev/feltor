@@ -120,9 +120,9 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_temp, m_g.get());
-        dg::blas1::axpby( scal_left, m_temp[0],               0., m_left);
-        dg::blas1::axpby( scal_right, m_temp[m_g.get().local().Nz()], 0., m_left);
+        dg::split( global, m_f, m_g.get());
+        dg::blas1::axpby( scal_left, m_f[0],               0., m_left);
+        dg::blas1::axpby( scal_right, m_f[m_g.get().local().Nz()], 0., m_left);
         m_bcz = bcz;
     }
 

@@ -22,10 +22,15 @@ double r2z( double x, double y, double z) {return (x*x+y*y)*z;}
 
 int main()
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    std::cout << "# Test straight field lines and boundaries in z.\n";
+    std::cout << "# Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
+    std::cout <<"# You typed\n"
+              <<"n:  "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"Nz: "<<Nz<<std::endl;
     dg::CartesianGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU);
     dg::CartesianGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR);
     const dg::DVec w3d = dg::create::volume( g3d);
@@ -33,10 +38,9 @@ int main()
     t.tic();
     dg::geo::BinaryVectorLvl0 vec( dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1));
 
-    dg::geo::DS<dg::CartesianGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), dg::not_normed, dg::centered);
+    dg::geo::DS<dg::CartesianGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), dg::centered);
     t.toc();
-    std::cout << "TEST STRAIGHT FIELD LINES AND BOUNDARIES IN Z\n";
-    std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
+    std::cout << "# Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     dg::DVec constfunc = dg::evaluate( sine, g3d);
@@ -46,19 +50,20 @@ int main()
     ds.set_boundaries( dg::DIR, sin(g3d.z0()),sin(g3d.z1()));
     ds( constfunc, derivative);
     t.toc();
-    std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
+    std::cout << "Straight:\n";
+    std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., constsolution, -1., derivative);
     double norm = dg::blas2::dot( constsolution, w3d, constsolution);
     double diff = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm );
-    std::cout << "DIR const: Relative Difference Is "<< diff<<"\n";
+    std::cout << "    DIR const:   "<< diff<<"\n";
     t.tic();
     ds.set_boundaries( dg::NEU, cos(g3d.z0()),cos(g3d.z1()));
     ds( constfunc, derivative);
     t.toc();
-    std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
+    std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., constsolution, -1., derivative);
     diff = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm );
-    std::cout << "NEU const: Relative Difference Is "<< diff << "\n";
+    std::cout << "    NEU const:   "<< diff << "\n";
 
     t.tic();
     dg::DVec left = dg::evaluate( r2, perp_grid), right(left);
@@ -67,19 +72,19 @@ int main()
     ds.set_boundaries( dg::DIR, left,right);
     ds( function, derivative);
     t.toc();
-    std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
+    std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
     diff = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm );
-    std::cout << "DIR l/r: Relative Difference Is "<< diff << "\n";
+    std::cout << "    DIR l/r:     "<< diff << "\n";
     t.tic();
     dg::DVec global = dg::evaluate( r2z, g3d);
     ds.set_boundaries( dg::DIR, global, sin(g3d.z0())/(g3d.z0()+g3d.hz()/2.), sin(g3d.z1())/(g3d.z1()-g3d.hz()/2.));
     ds( function, derivative);
     t.toc();
-    std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
+    std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
     diff = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm );
-    std::cout << "DIR global: Relative Difference Is "<< diff <<"\n";
+    std::cout << "    DIR global:  "<< diff <<"\n";
 
     return 0;
 }

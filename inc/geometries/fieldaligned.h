@@ -287,9 +287,9 @@ struct Fieldaligned
      */
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_temp, m_g.get());
-        dg::blas1::axpby( scal_left,  m_temp[0],      0, m_left);
-        dg::blas1::axpby( scal_right, m_temp[m_Nz-1], 0, m_right);
+        dg::split( global, m_f, m_g.get());
+        dg::blas1::axpby( scal_left,  m_f[0],      0, m_left);
+        dg::blas1::axpby( scal_right, m_f[m_Nz-1], 0, m_right);
         m_bcz = bcz;
     }
 
