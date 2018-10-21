@@ -5,19 +5,19 @@
 namespace heat{
 struct Parameters
 {
-    unsigned n, Nx, Ny, Nz; 
-    double dt; 
-    unsigned n_out, Nx_out, Ny_out, Nz_out; 
+    unsigned n, Nx, Ny, Nz;
+    double dt;
+    unsigned n_out, Nx_out, Ny_out, Nz_out;
     unsigned itstp, maxout;
-    unsigned p_adv,p_diff,p_diffperp,p_torlim;
-    
-    double nu_perp, nu_parallel;
-    
+    unsigned mx, my;
+    std::string p_diff;
+    double nu_parallel;
+
     double amp, sigma, posX, posY, sigma_z;
-    double k_psi; 
-    
-    double nprofileamp, bgprofamp;
-    enum dg::bc bc;
+    double k_psi;
+
+    double nprofileamp;
+    enum dg::bc bcx, bcy;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
     double eps_time;
     Parameters( const Json::Value& js) {
@@ -30,10 +30,12 @@ struct Parameters
         Nx_out = js["Nx_out"].asUInt();
         Ny_out = js["Ny_out"].asUInt();
         Nz_out = js["Nz_out"].asUInt();
+
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
+        mx = js["mx"].asUInt();
+        my = js["my"].asUInt();
 
-        nu_perp     = js["nu_perp"].asDouble();
         nu_parallel = js["nu_parallel"].asDouble();
         amp = js["amplitude"].asDouble();
         sigma = js["sigma"].asDouble();
@@ -43,23 +45,19 @@ struct Parameters
         k_psi = js["k_psi"].asDouble();
 
         eps_time = js["eps_time"].asDouble();
-        bc = dg::str2bc(js["bc"].asString());
+        bcx = dg::str2bc(js["bcx"].asString());
+        bcy = dg::str2bc(js["bcy"].asString());
         nprofileamp = js["nprofileamp"].asDouble();
-        bgprofamp = js["bgprofamp"].asDouble();
         boxscaleRp = js["boxscaleRp"].asDouble();
         boxscaleRm = js["boxscaleRm"].asDouble();
         boxscaleZp = js["boxscaleZp"].asDouble();
         boxscaleZm = js["boxscaleZm"].asDouble();
-        p_adv       =js["adv"].asUInt();
-        p_diff      =js["diff"].asUInt();
-        p_diffperp  =js["diffperp"].asUInt();
-        p_torlim    =js["torlim"].asUInt();
+        p_diff      =js.get("diff","non-adjoint").asString();
     }
 
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     par. Viscosity:   = "<<nu_parallel<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
@@ -69,7 +67,6 @@ struct Parameters
             << "    sigma_z:      "<<sigma_z<<"\n";
         os << "Profile parameters are: \n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
-            <<"     background profile amplitude: "<<bgprofamp<<"\n"
             <<"     zonal modes                   "<<k_psi<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
@@ -89,20 +86,17 @@ struct Parameters
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Operator parameters are: \n"
-            <<"     p_adv  =              "<<p_adv<<"\n"
-            <<"     p_diff =              "<<p_diff<<"\n"            
-            <<"     p_diffperp =          "<<p_diffperp<<"\n"
-            <<"     p_torlim =            "<<p_torlim<<"\n";           
+            <<"     mx =                  "<<mx<<"\n"
+            <<"     my =                  "<<my<<"\n"
+            <<"     p_diff =              "<<p_diff<<"\n";
         os << "Boundary condition is: \n"
-            <<"     global BC  =              "<<bc2str(bc)<<"\n";
+            <<"     BC X       =              "<<bc2str(bcx)<<"\n"
+            <<"     BC Y       =              "<<bc2str(bcy)<<"\n";
         os << "PCG epsilon for time stepper: \n"
             <<"     eps_time  =              "<<eps_time<<"\n";
-        os << std::flush;//the endl is for the implicit flush 
+        os << std::flush;//the endl is for the implicit flush
     }
 };
 
 }//namespace eule
-
-
-    
 

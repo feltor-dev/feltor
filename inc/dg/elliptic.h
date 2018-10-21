@@ -466,7 +466,7 @@ struct GeneralEllipticSym
     {
     }
     /**
-     * @brief Set x-component of \f$ chi\f$
+     * @brief Set x-component of \f$ \chi\f$
      *
      * @param chi new x-component
      * @tparam ContainerTypes must be usable with \c container in \ref dispatch
@@ -478,7 +478,7 @@ struct GeneralEllipticSym
         ellipticBackward_.set_x( chi);
     }
     /**
-     * @brief Set y-component of \f$ chi\f$
+     * @brief Set y-component of \f$ \chi\f$
      *
      * @param chi new y-component
      * @tparam ContainerTypes must be usable with \c container in \ref dispatch
@@ -490,7 +490,7 @@ struct GeneralEllipticSym
         ellipticBackward_.set_y( chi);
     }
     /**
-     * @brief Set z-component of \f$ chi\f$
+     * @brief Set z-component of \f$ \chi\f$
      *
      * @param chi new z-component
      * @tparam ContainerTypes must be usable with \c container in \ref dispatch
@@ -800,8 +800,12 @@ class Elliptic3d
         construct( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor);
     }
 
-    SparseTensor<container>& chi(){ return m_chi;}
-    const SparseTensor<container>& chi()const { return m_chi;}
+    SparseTensor<container>& chi(){
+        return m_chi;
+    }
+    const SparseTensor<container>& chi()const {
+        return m_chi;
+    }
 
     /**
      * @brief Return the vector missing in the un-normed symmetric matrix

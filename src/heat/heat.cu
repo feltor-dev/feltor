@@ -9,14 +9,14 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 #include "dg/algorithm.h"
-#include "geometries/geometries.h"
+#include "dg/geometries/geometries.h"
 
 #include "parameters.h"
 #include "heat.cuh"
 
 int main( int argc, char* argv[])
 {
-    ////Parameter initialisation ////////////////////////////////////////////
+    //-------Parameter initialisation------------------
     std::stringstream title;
     Json::Value js, gs;
     if( argc == 1)
@@ -40,119 +40,55 @@ int main( int argc, char* argv[])
     }
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
-    /////////glfw initialisation ////////////////////////////////////////////
+    /////////glfw initialisation ////////////////////////////////////////
     std::ifstream is( "window_params.js");
     is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
-    /////////////////////////////////////////////////////////////////////////
-    
+    //////////////////////////////////////////////////////////////////////
+
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a;
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
-     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
+        p.n, p.Nx, p.Ny, p.Nz, p.bcx, p.bcy, dg::PER);
 
-//     dg::DVec w3d_ = dg::create::volume( grid);
-//     dg::DVec v3d_ = dg::create::inv_volume( grid);
-//     dg::DVec x = dg::evaluate( dg::zero, grid);
-//     set up the parallel diffusion
-
-    
-//     dg::GeneralEllipticSym<dg::DMatrix, dg::DVec, dg::DVec> ellipticsym( grid, dg::not_normed, dg::forward);
-//     dg::DVec bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),grid);
-// 
-//     ellipticsym.set_x( bfield);
-//     bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),grid);
-//     ellipticsym.set_y( bfield);
-//     bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),grid);
-//     ellipticsym.set_z( bfield);
-// //     
-//     
-//     double eps =1e-12;   
-//     dg::Invert< dg::DVec> invert( x, w3d_.size(), eps );  
-//     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
-//     const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), grid);
-//     std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dsTds
-//     dg::DVec solution = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
-//     double normf = dg::blas2::dot( w3d_, solution);
-//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-//     double errinvT =dg::blas2::dot( w3d_, x);
-//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
-//     dg::blas1::axpby( 1., solution, +1.,x);
-//     errinvT =dg::blas2::dot( w3d_, x);
-//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
-
-    
-        
-//     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
-//     
-//     std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dsTds
-//     
-//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-//     errinvT =dg::blas2::dot( w3d_, x);
-//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
-//     dg::blas1::axpby( 1., solution, +1.,x);
-//     errinvT =dg::blas2::dot( w3d_, x);
-//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
-// 
-   
-
-    
-    //create RHS     
-    std::cout << "initialize ex" << std::endl;
+    //create RHS
+    std::cout << "Initialize explicit" << std::endl;
     heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,gp); //initialize before im!
-    std::cout << "initialize implicit" << std::endl;
+    std::cout << "Initialize implicit" << std::endl;
     heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p,gp);
 
-    ////////////////////////////////The initial field////////////////////////////////
- //initial perturbation
-//     std::cout << "initialize delta T" << std::endl;
+    //-----------------------------The initial field--------------------
+    //initial perturbation
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
 
-//     dg::CONSTANT init0( 0.);
+    // background profile
+    dg::geo::Nprofile prof(0., p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
+    dg::DVec y0( dg::evaluate( prof, grid)), y1(y0);
 
-    
-    //background profile
-    std::cout << "T background" << std::endl;
-    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
-    std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
-    
-//     //field aligning
-    std::cout << "T aligning" << std::endl;  
-//     dg::CONSTANT gaussianZ( 1.);
+    // field aligning
+    std::cout << "T aligning" << std::endl;
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-    y1[0] = ex.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
+    y1 = ex.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
-    //no field aligning
-//     std::cout << "No T aligning" << std::endl;      
-//     y1[0] = dg::evaluate( init0, grid);
-//        dg::blas1::pointwiseDot(im.damping(),y1[0], y1[0]); //damp with gaussprofdamp
- 
-    dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
-    if (p.bc ==dg::DIR)    {
-    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
-    }
+    dg::blas1::axpby( 1., y1, 1., y0); //initialize y0
 
-//     dg::blas1::pointwiseDot(im.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     std::cout << "Done!\n";
 
-    //////////////////////////////////////////////////////////////////////////////////
-    //Runge Kutta solver
-//     dg::RungeKutta<std::vector<dg::DVec> >  rk( y0, "Runge-Kutta-4-4");
+    //////////////////////////////////////////////////////////////////
     //Adaptive solver
-    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> adaptive(y0, "ARK-4-2-3", grid.size(),p.eps_time);
-    double dt = 1e-5;
-//     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
+    dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
+        y0, "ARK-4-2-3", grid.size(), p.eps_time);
+    double dt_new = p.dt, dt = dt_new;
+//     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(),1e-13);
 //     karniadakis.init( ex, im, y0, p.dt);
 
-     ex.energies( y0);//now energies and potential are at time 0
-   
+    ex.energies( y0);//now energies and potential are at time 0
+
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
@@ -162,48 +98,42 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0;
     unsigned step = 0;
-    
-    const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
+
+    const double heat0 = ex.energy();
+    double E0 = ex.entropy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    dg::DVec T0 = dg::evaluate( dg::one, grid);  
-    dg::DVec T1 = dg::evaluate( dg::one, grid);  
 
-    dg::blas1::axpby( 1., y0[0], 0., T0); //initialize ni
+    dg::DVec T0 = y0, T1(T0);
     dg::DVec w3d =  dg::create::volume(grid);
     double normT0 = dg::blas2::dot(  w3d, T0);
     while ( !glfwWindowShouldClose( w ))
     {
-        dg::blas1::transfer( y0[0], hvisual);
-        if (p.bc ==dg::NEU)    {
-        dg::blas1::transform(hvisual,hvisual , dg::PLUS<>(-1)); //npe = N+1
-        }
+        dg::assign( y0, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        dg::blas1::scal(avisual, 0.);
         for( unsigned k=0; k<p.Nz;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
-//             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+            dg::View<dg::HVec> part( visual.data() + k*size, size);
+            dg::blas1::axpby( 1.0, part, 1.0, avisual);
         }
         dg::blas1::scal(avisual,1./p.Nz);
-        colors.scalemax() = (double)thrust::reduce( avisual.begin(), avisual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = -colors.scalemax();        
-//                 colors.scalemin() =  (double)thrust::reduce( avisual.begin(), avisual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( avisual.begin(),
+                        avisual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() = -colors.scalemax();
         title << std::setprecision(2) << std::scientific;
-        title <<"T-1 / " << colors.scalemax()<<"\t";
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);   
-        
-        title << std::fixed; 
+        title <<"Temperature / " << colors.scalemax()<<"\t";
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+        title << std::fixed;
         title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwPollEvents();
         glfwSwapBuffers( w);
 
-        //step 
+        //step
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
@@ -211,22 +141,30 @@ int main( int argc, char* argv[])
         {
             step++;
             ex.energies( y0); //update energetics
-            std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
-            E1 = ex.energy();
-            diff = (E1 - E0)/p.dt; //
-            double diss = ex.energy_diffusion( );
-            dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
+            std::cout << "(Q_tot-Q_0)/Q_0: "
+                      << (ex.energy()-heat0)/heat0<<"\t";
+            E1 = ex.entropy();
+            diff = (E1 - E0)/dt; //
+            double diss = ex.entropy_diffusion( );
+            dg::blas1::axpby( 1., y0, -1.,T0, T1);
             double err = sqrt(dg::blas2::dot( w3d, T1)/normT0);
-            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << " err =" << err << "\n";
+            std::cout << "(E_tot-E_0)/E_0: "
+                      << (E1-energy0)/energy0<<"\t";
+            std::cout << "Accuracy: "
+                      << 2.*(diff-diss)/(diff+diss)
+                      <<" d E/dt = " << diff
+                      <<" Lambda =" << diss
+                      << " err =" << err << "\n";
             E0 = E1;
             try{
-//                 rk( ex, y0, y1, p.dt);
-                 adaptive.step(ex,im,time,y0,time,y0,dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
-//                 karniadakis( ex, im, y0);
+                dt = dt_new;
+                // rk( ex, y0, y1, p.dt);
+                adaptive.step(ex,im,time,y0,time,y0,dt_new,
+                    dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                // karniadakis( ex, im, y0);
 
               }
-              catch( dg::Fail& fail) { 
+              catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
@@ -234,17 +172,15 @@ int main( int argc, char* argv[])
 
 
         }
-        time += (double)p.itstp*p.dt;
+        time += (double)time;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
     }
-    
+
     glfwTerminate();
-
-
     ////////////////////////////////////////////////////////////////////
 
     return 0;

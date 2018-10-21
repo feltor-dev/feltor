@@ -8,6 +8,7 @@ We do not (yet) follow semantic versioning.
 ### Added
 - new member functions for DS
 - adaptive timesteppers, notably through the dg::Adaptive and dg::ERKStep and dg::ARKStep classes
+- dg::View vector view class usable in dg::blas1 and dg::blas2
 
 ### Changed
 - interface for DS
