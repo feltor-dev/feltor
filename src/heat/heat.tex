@@ -1,0 +1,163 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../../doc/related_pages/header.tex}
+\input{../../doc/related_pages/newcommands.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The heat diffusion project}
+\author{ M.~Wiesenberger and M.~Held}
+\maketitle
+
+\begin{abstract}
+  This is a program for the 3d heat diffusion in arbitrary magnetic field
+  geometry.
+  \end{abstract}
+
+\section{Equations}
+The temperature $T$ follows a non-isotropic heat diffusion equation
+\begin{align}
+\frac{\partial T}{\partial t} = \nu_\perp \Delta_\perp + \nu_\parallel\Delta\parallel T
+\label{}
+\end{align}
+where $\nabla_\parallel = \bhat \cdot\nabla$ and $\nabla_\perp = \nabla - \bhat \nabla_\parallel$ and
+$\bhat$ is the prescribed magnetic field unit vector.
+$\nu_\perp$ and $\nu_\parallel$ are the respective conduction
+coefficients perpendicular and parallel to this field.
+
+
+\subsection{Initialization}
+Initialization of $T$ is a Gaussian in the $\varphi =0$ plane.
+\begin{align}
+    T(x,y,0) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
+    \label{}
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+We then use the fieldline projection to initialize the blob on other planes.
+\subsection{Diagnostics}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid
+\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & Cylindrical 3D & equidistant discretization of $[R_0-a,R_0+a] \times [-a,a] \times [0,2\pi]$, equal number of Gaussian nodes in R and Z, one node in $\varphi$ \\
+$\Delta_\parallel$ & FCI & See the documentation on DS\\
+time &  Adaptive embedded ARK-4-2-3 & $3rd$ order accurate in both
+explicit and implicit parts\\
+\bottomrule
+\end{longtable}
+
+\section{Compilation and useage}
+There are two programs heat.cu and heat\_hpc.cu . Compilation with
+\begin{verbatim}
+make device = <omp or gpu>
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/feltor/src/heat/heat input.json geometry_params.json
+path/to/feltor/src/heat/heat_hpc input.json geometry_params.json output.nc
+\end{verbatim}
+All programs write performance informations to std::cout.
+The first opens a terminal window with life simulation results
+the
+other writes the results to disc. Both programs run on shared memory
+systems.
+
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in x and y \\
+Nx     & integer &20& - &\# grid points in x \\
+Ny     & integer &40& - &\# grid points in y \\
+Nz     & integer &60& - &\# grid points in z \\
+dt     & integer &0.1& - &time step in units of $c_s/\rho_s$ \\
+n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
+Nx\_out & integer &20& - &\# grid points in x in output fields \\
+Ny\_out & integer &40& - &\# grid points in y in output fields \\
+Nz\_out & integer &60& - &\# grid points in z in output fields \\
+itstp  & integer &2  & - &   steps between outputs \\
+maxout & integer &100& - &      \# outputs excluding first \\
+eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
+nu\_perp    & float &0   & - & pependicular viscosity $\nu_\perp$ \\
+nu\_parallel    & float &100   & - & parallel viscosity $\nu_\parallel$ \\
+amplitude  & float &0.1    & - & amplitude $A$ of the blob \\
+sigma      & float &5     & - & blob radius $\sigma$ \\
+sigma\_z   & float &0.025  & - & variance in z in units of $R_0$ \\
+posX       & float &0.8    & - & blob x-position in units of $a$\\
+posY       & float &0    & - & blob y-position in units of $a$\\
+bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+  boxscaleRp & float &  1.05, & - & (a little larger than 1) \\
+  boxscaleRm & float &  1.05, & - & (a little larger than 1) \\
+  boxscaleZp & float &  1.05, & - & (a little larger than 1) \\
+  boxscaleZm & float &  1.15, & - & (a little larger than 1) \\
+  adv        & integer & 3 & - & adj(0), nadj(1), onadj(2),no(3) \\
+  diff       & integer & 0 & - & a(0), na(1), ona(2),d(3), da(4),no(5) \\
+  diffperp   & integer & 1 & - & (lap(0), lap2(1) ) \\
+  torlim     & integer & 0 & - & toroidal limiter (0/1) \\
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
+
+\subsection{Geometry file structure}
+File format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+    A      & float & 1 &  - & Solovev parameter \\
+    R\_0   & float & - & -  & Major radius in $\rho_s$ \\
+    C      & float[12] &  - & - & Solovev coefficients \\
+    elongation & float & 1 & - & Elongation \\
+    triangularity & float & 0 & - & Triangularity \\
+    inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
+    alpha  & float & 0.02 & - & Width of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
+    psip\_min & float & -6 & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
+    psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile} \\
+    psip\_max\_lim & float & 1e10 & - & $\psi_p$ for limiter in DS \\
+    rk4eps & float & 0.01 & - & Accuracy of fieldline integration in DS \\
+\bottomrule
+\end{longtable}
+
+\subsection{Structure of output file}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &     text attribute & 1 & verbose input file as a string \\
+energy\_time     & Dataset & 1 & timesteps at which 1d variables are written \\
+time             & Dataset & 1 & time at which temperature is written \\
+x                & Dataset & 1 & x-coordinate  \\
+y                & Dataset & 1 & y-coordinate \\
+z                & Dataset & 1 & z-coordinate \\
+T                & Dataset & 4 (time, z, y, x) & temperature $T$ \\
+energy           & Dataset & 1 (energy\_time) & total energy integral  \\
+mass             & Dataset & 1 (energy\_time) & mass integral   \\
+dEdt             & Dataset & 1 (energy\_time) & change of energy per time  \\
+dissipation      & Dataset & 1 (energy\_time) & diffusion integrals  \\
+accuracy         & Dataset & 1 (energy\_time) & accuracy in time  \\
+error            & Dataset & 1 (energy\_time) & error \\
+relerror         & Dataset & 1 (energy\_time) & relative error in time \\
+\bottomrule
+\end{longtable}
+
+%..................................................................
+\bibliography{../../doc/related_pages/references}
+%..................................................................
+
+
+\end{document}
