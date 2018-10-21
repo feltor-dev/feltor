@@ -2,7 +2,7 @@
     "n"  : 3,
     "Nx" : 20,
     "Ny" : 40,
-    "Nz" : 20,
+    "Nz" : 60,
     "dt" : 0.001,
     "n_out" : 3,
     "Nx_out" : 20,
@@ -10,6 +10,8 @@
     "Nz_out" : 20,
     "itstp"  : 10,
     "maxout" : 10,
+    "eps_time"   : 1e-12,
+    "rtol"   : 1e-12,
     "nu_perp"     : 0,
     "nu_parallel" : 100,
     "amplitude" : 0.1,
@@ -29,6 +31,5 @@
     "my": 10,
     "diff"       : "non-adjoint",
     "diffperp"   : 1,
-    "torlim"     : 0,
-    "eps_time"   : 1e-12
+    "torlim"     : 0
 }

@@ -32,11 +32,14 @@ struct Implicit
         if (p.p_diff == "adjoint")    {
             m_ds.symv( p.nu_parallel, x, 0., y);
         }
-        if (p.p_diff == "elliptic")    {
+        else if (p.p_diff == "elliptic")    {
             dg::blas2::symv( m_elliptic, x, y);
             dg::blas1::scal( y, -p.nu_parallel ); //laplace is negative
         }
-
+        else
+        {
+            dg::blas1::scal( y,0.);
+        }
     }
     const container& weights(){return m_elliptic.weights();}
     const container& inv_weights(){return m_elliptic.inv_weights();}

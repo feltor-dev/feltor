@@ -211,7 +211,7 @@ int main( int argc, char* argv[])
             try{
 //                 rk.step( ex, time,y0, time,y0, p.dt); //RK stepper
                 dt = dt_new;
-                adaptive.step(ex,diffusion,time,y0,time,y0,dt_new, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                adaptive.step(ex,diffusion,time,y0,time,y0,dt_new, dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                  //karniadakis.step( ex, diffusion, time, y0);  //Karniadakis stepper
               }
               catch( dg::Fail& fail) {

@@ -373,7 +373,8 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
             dt*m_rkI.a(1,0), m_kI[0]);
     tu = DG_FMA( m_rkI.c(1),dt, t0);
     //store solution in delta, init with last solution
-    blas1::copy( u0, delta);
+    //blas1::copy( u0, delta); //if Implicit is zero this leads to unnecessary iterations
+    blas1::copy( m_rhs, delta); //better init with rhs
     m_solver.solve( -dt*m_rkI.a(1,1), im, tu, delta, m_rhs);
     ex(tu, delta, m_kE[1]);
     im(tu, delta, m_kI[1]);
@@ -386,6 +387,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
              dt*m_rkI.a(2,1), m_kI[1]);
     tu = DG_FMA( m_rkI.c(2),dt, t0);
     //just take last solution as init
+    blas1::copy( m_rhs, delta); //better init with rhs
     m_solver.solve( -dt*m_rkI.a(2,2), im, tu, delta, m_rhs);
     ex(tu, delta, m_kE[2]);
     im(tu, delta, m_kI[2]);
@@ -398,6 +400,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
              dt*m_rkI.a(3,1), m_kI[1],
              dt*m_rkI.a(3,2), m_kI[2]);
     tu = DG_FMA( m_rkI.c(3),dt, t0);
+    blas1::copy( m_rhs, delta); //better init with rhs
     m_solver.solve( -dt*m_rkI.a(3,3), im, tu, delta, m_rhs);
     ex(tu, delta, m_kE[3]);
     im(tu, delta, m_kI[3]);
@@ -409,6 +412,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_
             dg::blas1::axpbypgz( dt*m_rkE.a(i,j), m_kE[j],
                                  dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
         tu = DG_FMA( m_rkI.c(i),dt, t0);
+        blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
         ex(tu, delta, m_kE[i]);
         im(tu, delta, m_kI[i]);

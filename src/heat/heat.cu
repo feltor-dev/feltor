@@ -160,7 +160,7 @@ int main( int argc, char* argv[])
                 dt = dt_new;
                 // rk( ex, y0, y1, p.dt);
                 adaptive.step(ex,im,time,y0,time,y0,dt_new,
-                    dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                    dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                 // karniadakis( ex, im, y0);
 
               }

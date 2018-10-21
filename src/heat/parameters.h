@@ -19,7 +19,7 @@ struct Parameters
     double nprofileamp;
     enum dg::bc bcx, bcy;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
-    double eps_time;
+    double eps_time, rtol;
     Parameters( const Json::Value& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
@@ -45,6 +45,7 @@ struct Parameters
         k_psi = js["k_psi"].asDouble();
 
         eps_time = js["eps_time"].asDouble();
+        rtol = js["rtol"].asDouble();
         bcx = dg::str2bc(js["bcx"].asString());
         bcy = dg::str2bc(js["bcy"].asString());
         nprofileamp = js["nprofileamp"].asDouble();
