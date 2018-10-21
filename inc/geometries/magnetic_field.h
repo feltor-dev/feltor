@@ -422,7 +422,7 @@ struct GradBHatR: public aCloneableBinaryFunctor<GradBHatR>
     Divb divb_;
     TokamakMagneticField mag_;
 };
-///@brief \f[ \nabla_\parallel b^\varphi \f]
+///@brief \f[ \nabla_\parallel b^Z \f]
 struct GradBHatZ: public aCloneableBinaryFunctor<GradBHatZ>
 {
     GradBHatZ( const TokamakMagneticField& mag): bhatZ_(mag), divb_(mag), mag_(mag){}
@@ -441,7 +441,7 @@ struct GradBHatZ: public aCloneableBinaryFunctor<GradBHatZ>
     Divb divb_;
     TokamakMagneticField mag_;
 };
-///@brief \f[ \nabla_\parallel b^P \f]
+///@brief \f[ \nabla_\parallel b^\varphi \f]
 struct GradBHatP: public aCloneableBinaryFunctor<GradBHatP>
 {
     GradBHatP( const TokamakMagneticField& mag): bhatP_(mag), divb_(mag), mag_(mag){}

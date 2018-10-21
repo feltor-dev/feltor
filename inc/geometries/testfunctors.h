@@ -16,6 +16,7 @@ namespace geo
 ///@addtogroup profiles
 ///@{
 /////////////Test functors for DS////////////////////////
+//-psi*cos(phi)
 struct TestFunctionPsi
 {
     TestFunctionPsi( const TokamakMagneticField& c):c_(c){}
@@ -53,6 +54,7 @@ struct TestFunctionPsi
     TokamakMagneticField c_;
 };
 
+//-psi*cos(phi) + 0.25*(R-R_0)*(R-R_0) +0.25*Z*(R-R_0) ;
 struct TestFunctionPsi2
 {
     TestFunctionPsi2( const TokamakMagneticField& c):R_0(c.R0()), f_(c), c_(c){}
@@ -92,6 +94,7 @@ struct TestFunctionPsi2
     TokamakMagneticField c_;
 };
 
+// sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
 struct TestFunctionSin{
     TestFunctionSin( const TokamakMagneticField& c){
         R_0 = c.R0();
@@ -129,6 +132,7 @@ struct TestFunctionSin{
     private:
     double R_0;
 };
+// cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
 struct TestFunctionCos{
     TestFunctionCos( const TokamakMagneticField& c){
         R_0 = c.R0();

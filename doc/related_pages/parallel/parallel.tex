@@ -455,10 +455,18 @@ procedures.
 \section{Numerical test programs}
 The essential test programs for the parallel derivative are located in
 \code{
-path/to/feltor/inc/geometries}.
-\code{ ds\_t.cu} and \code{ ds\_mpit.cu} test the cylindrical grid for shared and distributed memory
-systems. \code{ ds\_curv\_t.cu} and \code{ ds\_curv\_mpit.cu} test the implementation
-on a flux-aligned grid.
+path/to/feltor/inc/geometries}. To every test \code{*\_t.cu}
+there is a corresponding distributed memory \code{*\_mpit.cu} program.
+\code{ds\_t.cu} tests the cylindrical grid
+with boundary conditions.
+\code{ds\_guenther\_t.cu} tests the cylindrical grid
+without boundary conditions i.e. no fieldline leaves the domain.
+\code{ds\_curv\_t.cu} tests the implementation
+on a flux-aligned grid again with no fieldline leaving the domain.
+Finally, \code{ds\_straight\_t.cu} tests the implementation of
+completely straight fieldlines and the boundary conditions in the
+parallel direction.
+
 The magnetic field in \textsc{Feltor} is given by
 \begin{align}
   \vec B = \frac{R_0}{R}( I(\psi_p) \hat e_\varphi + \nabla\psi_p \times\hat e_\varphi)
@@ -472,36 +480,66 @@ This gives rise to magnetic field strength and components
   \nabla \cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{RB^2} [B, \psi_p]  
   \label{}
 \end{align}
-where $[.,.]$ is the Poisson bracket.
-\subsection{Cylindrical grid and circular flux surfaces}
+where $[.,.]$ is the Poisson bracket. Note that
+in order to compute analytical testfunctions we use
+\begin{align}
+\nabla_\parallel f = b^R\partial_R f + b^Z\partial_Z f + b^\varphi \partial_\varphi f\\
+\Delta_\parallel f = \nabla\cdot(\bhat\bhat\cdot \nabla f)
+= (\nabla\cdot\bhat) \nabla_\parallel f + (\nabla_\parallel b^j) \partial_j f
++ b^ib^j\partial_i \partial_j f
+\label{}
+\end{align}
+with
+\begin{align}
+\nabla_\parallel b^R &= (\nabla\cdot \bhat) b^R
++ \frac{\psi_Z (\psi_{RZ} - \psi_Z/R) - \psi_{ZZ}\psi_R}{I^2 + (\nabla\psi)^2} \\
+\nabla_\parallel b^Z &= (\nabla\cdot \bhat) b^Z
++ \frac{\psi_R (\psi_{RZ} + \psi_Z/R) - \psi_{RR}\psi_Z}{I^2 + (\nabla\psi)^2} \\
+\nabla_\parallel b^\varphi &= (\nabla\cdot\bhat) b^\varphi
++ \frac{\psi_Z(I_R/R - 2I/R^2) - I_Z\psi_R/R}{I^2 + (\nabla\psi)^2}
+\label{}
+\end{align}
+where we used $\psi_R \equiv \partial \psi_p /\partial R$ and
+$I_R \equiv \partial I(\psi_p) /\partial R$.
+
+\subsection{Cylindrical grid and boundary conditions}
 A very simple non-trivial choice for the poloidal flux is
 \begin{align}
   \psi_p = \frac{1}{2} \left( (R-R_0)^2 + Z^2 \right) \equiv \frac{1}{2} r^2
   \label{eq:circular}
 \end{align}
-for which
-\begin{align}
-  \vec b^p &= \frac{1}{\sqrt{I^2 + r^2}} \begin{pmatrix} Z \\ -(R-R_0)\end{pmatrix} \\
-  b^\varphi &= \frac{1}{\sqrt{I^2 + r^2}} I/R \\
-  \nabla\cdot \bhat &= \frac{Z}{R(I^2 + r^2)}
-  \label{}
-\end{align}
-for the poloidal and toroidal parts of the magnetic unit vector.
 We choose $R_0 = 10$ and $I=20$ in order to keep the q-factor for the $r=1$ flux surface at $2$.
 We set up a domain
 $R\in[R_0-1, R_0+1]$,
 $Z\in[-1,1]$ and
 $\varphi \in [0,2\pi]$ and choose
 \begin{align}
-  f(R,Z,\varphi) = ((R-R_0)^2 + Z^2)\sin(\varphi)\\
-  \bhat \cdot \nabla f= b^\varphi \cos(\varphi)
+  f_N(R,Z,\varphi) = \sin(\pi (R-R_0)/2) \sin(\pi Z /2)\sin(\varphi)\\
+  f_D(R,Z,\varphi) = \cos(\pi (R-R_0)/2) \cos(\pi Z /2)\sin(\varphi)
   \label{}
 \end{align}
-This is advantageous since the solution is correct even if we modify the $\bhat$ field
-to be toroidal on the boundary of the domain in order to avoid boundary conditions.
-Also the function is parabolic, which means that dG polynomials of degree greater than $2$
-should be exact.
+On the chosen domain these functions have Neumann respectively Dirichlet boundary conditions.
+\subsection{The Günther field}
+A simple choice for the flux function that makes fieldlines stay
+inside a square box is
+\begin{align}
+  \psi_p = \cos(\pi (R-R_0)/2) \cos(\pi Z /2)
+\label{}
+\end{align}
+Again, we set up a domain
+$R\in[R_0-1, R_0+1]$,
+$Z\in[-1,1]$ and
+$\varphi \in [0,2\pi]$ and choose
+\begin{align}
+  f_1(R,Z,\varphi) = -\psi_p(R,Z)\cos(\varphi)\\
+  f_2(R,Z,\varphi) = -\psi_p(R,Z)\cos(\varphi) + (R-R_0)^2/4 + Z(R-R_0)/4
+  \label{}
+\end{align}
 \subsection{Curvilinear grid}
+Here we choose the general Solov'ev equilibrium for
+$\psi_p$ and choose to use $f_1$ or $f_2$ again.
+We use the simple orthogonal flux to construct
+grids on the ring bounded by $\psi_p=-20$ and $\psi_p=-4$.
 
 
 
