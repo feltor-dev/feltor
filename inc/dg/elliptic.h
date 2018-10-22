@@ -19,22 +19,26 @@ namespace dg
 {
 
 /**
- * @brief %Operator that acts as a 2d negative elliptic differential operator
+ * @brief A 2d negative elliptic differential operator
  *
  * @ingroup matrixoperators
  *
  * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
- * where \f$ \nabla_\perp \f$ is the perpendicular gradient and \f$\chi\f$ is a spatially dependent function.
+ * where \f$ \nabla_\perp \f$ is the two-dimensional gradient and \f$\chi\f$ is a
+ * (possibly spatially dependent) tensor.
  * In general coordinates that means
  * \f[ -\frac{1}{\sqrt{g}}\left(
- * \partial_x\left(\sqrt{g}\chi \left(g^{xx}\partial_x + g^{xy}\partial_y \right)\right)
- + \partial_y\left(\sqrt{g}\chi \left(g^{yx}\partial_x + g^{yy}\partial_y \right)\right) \right)\f]
- is discretized. Note that the local discontinuous Galerkin discretization adds so-called
- jump terms
+ * \partial_x\left(\sqrt{g}\left(\chi^{xx}\partial_x + \chi^{xy}\partial_y \right)\right)
+ + \partial_y\left(\sqrt{g} \left(\chi^{yx}\partial_x + \chi^{yy}\partial_y \right)\right) \right)\f]
+ is discretized.
+ Per default, \f$ \chi\f$ is the metric tensor but you can set it to any tensor
+ you like (in order for the operator to be invertible \f$\chi\f$ should be
+ symmetric and positive definite though).
+ Note that the local discontinuous Galerkin discretization adds so-called jump terms
  \f[ D^\dagger \chi D + \alpha J \f]
  where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
  (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
- Usually the default \f$ \alpha=1 \f$ is a good choice.
+ Usually, the default \f$ \alpha=1 \f$ is a good choice.
  However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
  \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
  In a time dependent problem the value of \f$\alpha\f$ determines the
@@ -108,7 +112,7 @@ class Elliptic
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
-        dg::assign( dg::evaluate(dg::one, g), m_chi_old);
+        dg::assign( dg::evaluate(dg::one, g), m_sigma);
     }
 
     ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,value_type)
@@ -117,18 +121,41 @@ class Elliptic
     }
 
     /**
-     * @brief Change Chi
+     * @brief Change scalar part in Chi tensor
      *
-     * @param chi The new chi (all elements must be >0)
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * Internally, we split the tensor \f$\chi = \sigma\mathbf{\tau}\f$ into
+     * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
+     * set each part seperately. This functions sets the scalar part.
+     *
+     * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
+     * @tparam ContainerType0 must be usable with \c container in \ref dispatch
      */
     template<class ContainerType0>
-    void set_chi( const ContainerType0& chi)
+    void set_chi( const ContainerType0& sigma)
     {
-        dg::blas1::pointwiseDivide( chi, m_chi_old, m_tempx);
+        dg::blas1::pointwiseDivide( sigma, m_sigma, m_tempx);
+        //update preconditioner
         dg::blas1::pointwiseDivide( m_precond, m_tempx, m_precond);
         dg::tensor::scal( m_chi, m_tempx);
-        dg::blas1::copy( chi, m_chi_old);
+        dg::blas1::copy( sigma, m_sigma);
+    }
+    /**
+     * @brief Change tensor part in Chi tensor
+     *
+     * Internally, we split the tensor \f$\chi = \sigma\mathbf{\tau}\f$ into
+     * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
+     * set each part seperately. This functions sets the tensor part.
+     *
+     * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
+     * @tparam ContainerType0 must be usable in \c dg::assign to \c container
+     * @note the 3d parts in \c tau will be ignored
+     */
+    template<class ContainerType0>
+    void set_chi( const SparseTensor<ContainerType0>& tau)
+    {
+        m_chi = SparseTensor<container>(tau);
+        dg::tensor::scal( m_chi, m_sigma);
+        dg::tensor::scal( m_chi, m_vol);
     }
 
     /**
@@ -152,7 +179,7 @@ class Elliptic
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
      *
-     * Currently returns the inverse weights without volume elment divided by the current \f$ \chi\f$.
+     * Currently returns the inverse weights without volume elment divided by the scalar part of \f$ \chi\f$.
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
      * @return the inverse of \f$\chi\f$.
      */
@@ -237,7 +264,7 @@ class Elliptic
     container m_tempx, m_tempy, m_temp;
     norm m_no;
     SparseTensor<container> m_chi;
-    container m_chi_old, m_vol;
+    container m_sigma, m_vol;
     value_type m_jfactor;
 };
 
@@ -793,6 +820,7 @@ class Elliptic3d
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
+        dg::assign( dg::evaluate(dg::one, g), m_sigma);
     }
 
     ///@copydoc  Elliptic3d::Elliptic3d(const Geometry&,norm,direction,value_type)
@@ -800,11 +828,41 @@ class Elliptic3d
         construct( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor);
     }
 
-    SparseTensor<container>& chi(){
-        return m_chi;
+    /**
+     * @brief Change scalar part in Chi tensor
+     *
+     * Internally, we split the tensor \f$\chi = \sigma\mathbf{\tau}\f$ into
+     * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
+     * set each part seperately. This functions sets the scalar part.
+     *
+     * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
+     * @tparam ContainerType0 must be usable with \c container in \ref dispatch
+     */
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& sigma)
+    {
+        dg::blas1::pointwiseDivide( sigma, m_sigma, m_tempx);
+        //update preconditioner
+        dg::blas1::pointwiseDivide( m_precond, m_tempx, m_precond);
+        dg::tensor::scal( m_chi, m_tempx);
+        dg::blas1::copy( sigma, m_sigma);
     }
-    const SparseTensor<container>& chi()const {
-        return m_chi;
+    /**
+     * @brief Change tensor part in Chi tensor
+     *
+     * Internally, we split the tensor \f$\chi = \sigma\mathbf{\tau}\f$ into
+     * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
+     * set each part seperately. This functions sets the tensor part.
+     *
+     * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
+     * @tparam ContainerType0 must be usable in \c dg::assign to \c container
+     */
+    template<class ContainerType0>
+    void set_chi( const SparseTensor<ContainerType0>& tau)
+    {
+        m_chi = SparseTensor<container>(tau);
+        dg::tensor::scal( m_chi, m_sigma);
+        dg::tensor::scal( m_chi, m_vol);
     }
 
     /**
@@ -915,7 +973,7 @@ class Elliptic3d
     container m_tempx, m_tempy, m_tempz, m_temp;
     norm m_no;
     SparseTensor<container> m_chi;
-    container m_vol;
+    container m_sigma, m_vol;
     value_type m_jfactor;
 };
 ///@cond

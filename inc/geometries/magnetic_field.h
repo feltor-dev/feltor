@@ -125,7 +125,7 @@ struct LnB : public aCloneableBinaryFunctor<LnB>
 };
 
 /**
- * @brief \f[  \frac{\partial |\hat{B}| }{ \partial \hat{R}}  \f]
+ * @brief \f[  \frac{\partial |B| }{ \partial R}  \f]
  *
  \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} =
       -\frac{1}{\hat B \hat R}
@@ -151,7 +151,7 @@ struct BR: public aCloneableBinaryFunctor<BR>
 };
 
 /**
- * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}}  \f]
+ * @brief \f[  \frac{\partial |B| }{ \partial Z}  \f]
  *
   \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} =
      \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+
