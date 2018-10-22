@@ -18,13 +18,13 @@
 \section{Equations}
 The temperature $T$ follows a non-isotropic heat diffusion equation
 \begin{align}
-\frac{\partial T}{\partial t} = \nu_\parallel\Delta\parallel T
+\frac{\partial T}{\partial t} = \nu_\perp \Delta_\perp T + \nu_\parallel\Delta_\parallel T
 \label{eq:temperature}
 \end{align}
-where $\nabla_\parallel = \bhat \cdot\nabla$ and
+where $\nabla_\parallel = \bhat \cdot\nabla$, $\Delta_\perp = \Delta - \Delta_\parallel$ and
 $\bhat$ is the prescribed magnetic field unit vector.
-$\nu_\parallel$ is the respective conduction
-coefficient parallel to this field.
+$\nu_\parallel$ and $\nu_\perp$ are the respective conduction
+coefficients parallel and perpendicular to this field.
 
 
 \subsection{Initialization}
@@ -98,6 +98,7 @@ Input file format: json
   maxout & integer &100& - &      \# outputs excluding first \\
   eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
   nu\_parallel    & float &100   & - & parallel viscosity $\nu_\parallel$ \\
+  nu\_perp    & float &0   & - & perpendicular viscosity $\nu_\perp$ \\
   amplitude  & float &0.1    & - & amplitude $A$ of the blob \\
   sigma      & float &5     & - & blob radius $\sigma$ \\
   sigma\_z   & float &0.025  & - & variance in z in units of $R_0$ \\

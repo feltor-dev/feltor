@@ -11,7 +11,7 @@ struct Parameters
     unsigned itstp, maxout;
     unsigned mx, my;
     std::string p_diff;
-    double nu_parallel;
+    double nu_parallel, nu_perp;
 
     double amp, sigma, posX, posY, sigma_z;
     double k_psi;
@@ -37,6 +37,7 @@ struct Parameters
         my = js["my"].asUInt();
 
         nu_parallel = js["nu_parallel"].asDouble();
+        nu_perp = js["nu_perp"].asDouble();
         amp = js["amplitude"].asDouble();
         sigma = js["sigma"].asDouble();
         posX = js["posX"].asDouble();
@@ -59,7 +60,8 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"     par. Viscosity:   = "<<nu_parallel<<"\n";
+            <<"     par. Viscosity:   = "<<nu_parallel<<"\n"
+            <<"     perp.Viscosity:   = "<<nu_perp<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"

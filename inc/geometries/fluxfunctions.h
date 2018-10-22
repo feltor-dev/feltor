@@ -1,5 +1,6 @@
 #pragma once
 #include "dg/backend/memory.h"
+#include "dg/geometry/geometry.h"
 
 namespace dg
 {
@@ -304,6 +305,64 @@ struct BinaryVectorLvl0
     private:
     ClonePtr<aBinaryFunctor> p_[3];
 };
+
+/*!@brief \f[ \chi^{ij} = b^ib^j\]
+ *
+ * Creates the two times contravariant tensor that,
+ * when applied to a covariant vector, creates a vector
+ * aligned to \c b.
+ *
+ * @param bhat The (unit) vector field \c b to align to
+ * @param g The vector field is pushed unto this grid
+ * @return The tensor \c chi living on the coordinate system given by \c g
+ * @tparam Geometry3d A three-dimensional geometry
+ */
+template<class Geometry3d>
+dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const dg::geo::BinaryVectorLvl0& bhat, const Geometry3d& g)
+{
+    using host_vector = dg::get_host_vector<Geometry3d>;
+    SparseTensor<host_vector> t;
+    std::array<host_vector,3> bt;
+    dg::pushForward( bhat.x(), bhat.y(), bhat.z(), bt[0], bt[1], bt[2], g);
+    std::vector<host_vector> chi(6, dg::evaluate( dg::zero,g));
+    dg::blas1::pointwiseDot( bt[0], bt[0], chi[0]);
+    dg::blas1::pointwiseDot( bt[0], bt[1], chi[1]);
+    dg::blas1::pointwiseDot( bt[0], bt[2], chi[2]);
+    dg::blas1::pointwiseDot( bt[1], bt[1], chi[3]);
+    dg::blas1::pointwiseDot( bt[1], bt[2], chi[4]);
+    dg::blas1::pointwiseDot( bt[2], bt[2], chi[5]);
+    t.idx(0,0) = 0, t.idx(0,1) = t.idx(1,0) = 1,
+        t.idx(0,2) = t.idx(2,0) = 2;
+    t.idx(1,1) = 3, t.idx(1,2) = t.idx(2,1) = 4;
+    t.idx(2,2) = 5;
+    t.values() = chi;
+    return t;
+}
+/*!@brief \f[ \chi^{ij} = g^{ij} - b^ib^j\]
+ *
+ * Creates the two times contravariant tensor that,
+ * when applied to a covariant vector, creates a vector
+ * perpendicular to \c b.
+ *
+ * @param bhat The (unit) vector field \c b
+ * @param g The vector field is pushed unto this grid
+ * @return The tensor \c chi living on the coordinate system given by \c g
+ * @tparam Geometry3d A three-dimensional geometry
+ */
+template<class Geometry3d>
+dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor( const dg::geo::BinaryVectorLvl0& bhat, const Geometry3d& g)
+{
+    using host_vector = dg::get_host_vector<Geometry3d>;
+    dg::SparseTensor<host_vector> t = dg::geo::createAlignmentTensor( bhat, g);
+    dg::SparseTensor<host_vector> m = g.metric();
+    dg::blas1::axpby( 1., m.value(0,0), -1., t.values()[0]);
+    dg::blas1::axpby( 1., m.value(1,0), -1., t.values()[1]);
+    dg::blas1::axpby( 1., m.value(2,0), -1., t.values()[2]);
+    dg::blas1::axpby( 1., m.value(1,1), -1., t.values()[3]);
+    dg::blas1::axpby( 1., m.value(1,2), -1., t.values()[4]);
+    dg::blas1::axpby( 1., m.value(2,2), -1., t.values()[5]);
+    return t;
+}
 
 ///@}
 }//namespace geo

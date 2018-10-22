@@ -17,15 +17,18 @@ struct Implicit
                 dg::geo::solovev::Psip(gp), gp.psipmaxlim),
               dg::forward,
               gp.rk4eps, p.mx, p.my),
-        m_elliptic( g, dg::normed, dg::forward)
+        m_ellipticForward( g, dg::normed, dg::forward),
+        m_ellipticBackward( g, dg::normed, dg::backward),
+        m_ellipticPerp( g, dg::normed, dg::centered)
     {
-        dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-        m_elliptic.set_x(
-          dg::construct<container>(dg::pullback( dg::geo::BFieldR(c),g)));
-        m_elliptic.set_y(
-          dg::construct<container>(dg::pullback( dg::geo::BFieldZ(c),g)));
-        m_elliptic.set_z(
-          dg::construct<container>(dg::pullback( dg::geo::BFieldP(c),g)));
+        auto c = dg::geo::createSolovevField(gp);
+        dg::geo::BinaryVectorLvl0 bhat = dg::geo::createBHat( c);
+        dg::SparseTensor<container> bb, hh;
+        bb = dg::geo::createAlignmentTensor( bhat, g);
+        m_ellipticForward.set_chi( bb);
+        m_ellipticBackward.set_chi( bb);
+        hh = dg::geo::createProjectionTensor( bhat, g);
+        m_ellipticPerp.set_chi( hh);
     }
     void operator()( double t, const container& x, container& y)
     {
@@ -33,21 +36,25 @@ struct Implicit
             m_ds.symv( p.nu_parallel, x, 0., y);
         }
         else if (p.p_diff == "elliptic")    {
-            dg::blas2::symv( m_elliptic, x, y);
-            dg::blas1::scal( y, -p.nu_parallel ); //laplace is negative
+            dg::blas2::symv( m_ellipticForward, x, y);
+            dg::blas2::symv( -0.5*p.nu_parallel, m_ellipticBackward, x, -0.5*p.nu_parallel, y);
+            //laplace is negative
         }
         else
         {
             dg::blas1::scal( y,0.);
         }
+        if( p.nu_perp != 0)
+            dg::blas2::symv( -p.nu_perp, m_ellipticPerp, x, 1., y);
+
     }
-    const container& weights(){return m_elliptic.weights();}
-    const container& inv_weights(){return m_elliptic.inv_weights();}
-    const container& precond(){return m_elliptic.precond();}
+    const container& weights(){return m_ds.weights();}
+    const container& inv_weights(){return m_ds.inv_weights();}
+    const container& precond(){return m_ds.precond();}
   private:
     const heat::Parameters p;
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds;
-    dg::GeneralEllipticSym<Geometry, Matrix, container> m_elliptic;
+    dg::Elliptic3d<Geometry, Matrix, container> m_ellipticForward, m_ellipticBackward, m_ellipticPerp;
 
 };
 
@@ -88,7 +95,7 @@ struct Explicit
 
     const heat::Parameters p;
     double m_heat = 0, m_heat_diff = 0, m_entropy = 0, m_entropy_diff = 0;
-    dg::GeneralEllipticSym<Geometry, Matrix, container> m_elliptic;
+    dg::Elliptic3d<Geometry, Matrix, container> m_ellipticForward, m_ellipticBackward, m_ellipticPerp;
 
 };
 
@@ -99,18 +106,19 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g, heat::
     w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),
     m_ds( dg::geo::createSolovevField(gp), g, p.bcx, p.bcy, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward),
     p(p),
-    m_elliptic( g, dg::normed, dg::forward)
+    m_ellipticForward( g, dg::normed, dg::forward), 
+    m_ellipticBackward(g, dg::normed, dg::backward),
+    m_ellipticPerp(g, dg::normed, dg::centered)
 {
     //----------------------------init fields----------------------
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
+    auto c = dg::geo::createSolovevField(gp);
     dg::assign(  dg::pullback(dg::geo::InvB(c), g), m_invB);
     dg::assign(  dg::pullback(dg::geo::Divb(c), g), m_divb);
-    m_elliptic.set_x(
-        dg::construct<container>(dg::pullback( dg::geo::BFieldR(c),g)));
-    m_elliptic.set_y(
-        dg::construct<container>(dg::pullback( dg::geo::BFieldZ(c),g)));
-    m_elliptic.set_z(
-        dg::construct<container>(dg::pullback( dg::geo::BFieldP(c),g)));
+    dg::geo::BinaryVectorLvl0 bhat = dg::geo::createBHat( c);
+    dg::SparseTensor<container> bb;
+    bb = dg::geo::createAlignmentTensor( bhat, g);
+    m_ellipticForward.set_chi( bb);
+    m_ellipticBackward.set_chi( bb);
 }
 
 template<class G,class I, class M, class V>
@@ -120,6 +128,7 @@ void Explicit<G,I,M,V>::energies( const V& y)
     m_entropy = dg::blas2::dot( y, w3d, y);
     //Compute rhs of energy theorem
     double Dpar [] = {0,0};
+    double Dperp [] = {0,0};
     if (p.p_diff == "adjoint")    {
         m_ds.symv( y, chi);
     }
@@ -129,13 +138,19 @@ void Explicit<G,I,M,V>::energies( const V& y)
         m_ds.dss(1., y, 1., chi);                  // ds^2 T
     }
     else if (p.p_diff == "elliptic")    {
-        dg::blas2::symv(m_elliptic, y, chi);
-        dg::blas1::scal( chi, -1.);
+        dg::blas2::symv(m_ellipticForward, y, chi);
+        dg::blas2::symv(-0.5, m_ellipticBackward, y, -0.5, chi);
     }
     Dpar[0] = p.nu_parallel*dg::blas2::dot(one, w3d, chi);
-    Dpar[1] = p.nu_parallel*dg::blas2::dot(y, w3d, chi);
-    m_heat_diff = Dpar[0];
-    m_entropy_diff = Dpar[1];
+    Dpar[1] = p.nu_parallel*dg::blas2::dot(y,   w3d, chi);
+    if( p.nu_perp != 0)
+    {
+        dg::blas2::symv( -p.nu_perp, m_ellipticPerp, y, 0., chi);
+        Dperp[0] = p.nu_perp*dg::blas2::dot( one, w3d, chi);
+        Dperp[0] = p.nu_perp*dg::blas2::dot( y,   w3d, chi);
+    }
+    m_heat_diff    = Dpar[0] + Dperp[0];
+    m_entropy_diff = Dpar[1] + Dperp[1];
 }
 
 template<class G, class I, class Matrix, class container>
