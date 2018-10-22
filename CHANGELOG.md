@@ -8,14 +8,16 @@ We do not (yet) follow semantic versioning.
 ### Added
 - new member functions for DS
 - adaptive timesteppers, notably through the dg::Adaptive and dg::ERKStep and dg::ARKStep classes
+- dg::ButcherTableau and dg::ConvertsToButcherTableau
 - dg::View vector view class usable in dg::blas1 and dg::blas2
+- introduce dg::assign and dg::construct that replace the dg::blas1::transfer functions and take an additional optional parameter pack
 
 ### Changed
 - interface for DS
 - better test programs ds\_t.cu, ds\_curv\_t.cu and ds\_guenther\_t.cu
   including corresponding \*mpit.cu programs
-- RK now named RungeKutta and order parameter not a template any more
-- AB now named AdamsBashforth and order parameter not a template any more
+- dg::RK now named dg::RungeKutta and stages not a template parameter any more
+- dg::AB now named dg::AdamsBashforth and stages not a template parameter any more
 
 ### Deprecated
 - dg::blas1::transfer
