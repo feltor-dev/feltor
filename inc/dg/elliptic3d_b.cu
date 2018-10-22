@@ -38,7 +38,7 @@ int main()
 
     std::cout << "Create Laplacian\n";
     t.tic();
-    dg::GeneralElliptic<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
     dg::DMatrix DX = dg::create::dx( grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
