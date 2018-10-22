@@ -41,8 +41,8 @@ struct Multiply{
                       value_type in0, value_type in1,
                       value_type& out0, value_type& out1) const
     {
-        value_type tmp0 = t00*in0 + t01*in1;
-        value_type tmp1 = t10*in0 + t11*in1;
+        value_type tmp0 = DG_FMA(t00,in0 , t01*in1);
+        value_type tmp1 = DG_FMA(t10,in0 , t11*in1);
         out1 = tmp1;
         out0 = tmp0;
     }
@@ -53,9 +53,9 @@ struct Multiply{
                       value_type in0, value_type in1, value_type in2,
                       value_type& out0, value_type& out1, value_type& out2) const
     {
-        value_type tmp0 = t00*in0 + t01*in1 + t02*in2;
-        value_type tmp1 = t10*in0 + t11*in1 + t12*in2;
-        value_type tmp2 = t20*in0 + t21*in1 + t22*in2;
+        value_type tmp0 = DG_FMA( t00,in0 , (DG_FMA( t01,in1 , t02*in2)));
+        value_type tmp1 = DG_FMA( t10,in0 , (DG_FMA( t11,in1 , t12*in2)));
+        value_type tmp2 = DG_FMA( t20,in0 , (DG_FMA( t21,in1 , t22*in2)));
         out2 = tmp2;
         out1 = tmp1;
         out0 = tmp0;
@@ -72,7 +72,7 @@ struct Determinant
     value_type operator() ( value_type t00, value_type t01,
                             value_type t10, value_type t11) const
     {
-        return t00*t11 - t10*t01;
+        return DG_FMA( t00,t11 , (-t10*t01));
     }
     DG_DEVICE
     value_type operator() ( value_type t00, value_type t01, value_type t02,
