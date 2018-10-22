@@ -268,6 +268,8 @@ class Elliptic
     value_type m_jfactor;
 };
 
+template <class Geometry, class Matrix, class container>
+using Elliptic2d = Elliptic<Geometry, Matrix, container>;
 
 /**
  * @brief %Operator that acts as a 3d negative elliptic differential operator
@@ -568,164 +570,6 @@ struct GeneralEllipticSym
     container temp_;
 };
 
-//This class should be reviewed ( better use SparseTensor and maybe merge with Elliptic)
-/**
- * @brief %Operator that acts as a 2d negative elliptic differential operator
- *
- * @ingroup matrixoperators
- *
- * The term discretized is
- * \f[ -\nabla \cdot ( \chi \cdot \nabla_\perp ) \f]
- * where \f$\chi\f$ is a symmetric tensor
-  In general that means
- * \f[
- * \begin{align}
- * v^x = \chi^{xx} \partial_x f + \chi^{xy}\partial_y f \\
- * v^y = \chi^{yx} \partial_x f + \chi^{yy}\partial_y f \\
- * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} v^x ) + \partial_y(\sqrt{g} v^y) \right)
- *  \end{align}
- *  \f]
- * @copydoc hide_geometry_matrix_container
- * This class has the \c SelfMadeMatrixTag so it can be used in blas2::symv functions
- * and thus in a conjugate gradient solver.
- * @note The constructors initialize \f$ \chi = I\f$
- * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
- */
-template< class Geometry, class Matrix, class container>
-struct TensorElliptic
-{
-    /**
-     * @brief Construct from Grid
-     * @param g The Grid, boundary conditions are taken from here
-     * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative
-     */
-    TensorElliptic( const Geometry& g, norm no = not_normed, direction dir = forward):
-        TensorElliptic( g, g.bcx(), g.bcy(), no, dir)
-    {
-    }
-    /**
-     * @brief Construct from Grid and bc
-     * @param g The Grid
-     * @param bcx boundary condition in x
-     * @param bcy boundary contition in y
-     * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative
-     */
-    TensorElliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward):
-        no_(no), g_(g)
-    {
-        construct( g, bcx, bcy, dir);
-    }
-
-    /**
-     * @brief Set new components for \f$ chi\f$
-     *
-     * @param chiXX The new xx component
-     * @param chiXY The new xy component
-     * @param chiYY The new yy component
-     * @note Components need to be already transformed into the current coordinate system
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
-     */
-    template<class ContainerType0, class ContainerType1, class ContainerType2>
-    void set( const ContainerType0& chiXX, const ContainerType1& chiXY, const ContainerType2& chiYY)
-    {
-        dg::blas1::pointwiseDot( vol_, chiXX, chixx_);
-        dg::blas1::pointwiseDot( vol_, chiXY, chixy_);
-        dg::blas1::pointwiseDot( vol_, chiYY, chiyy_);
-    }
-
-    /**
-     * @brief Transform components to the current coordinate system
-     * @tparam ChiRR Functor class in Cartesian coordinates R, Z that will be transformed to the curvilinear coordinates given by \c Geometry
-     */
-    template<class ChiRR, class ChiRZ, class ChiZZ>
-    void transform_and_set( const ChiRR& chiRR, const ChiRZ& chiRZ, const ChiZZ& chiZZ)
-    {
-        get_host_vector<Geometry> chiXX, chiXY, chiYY;
-        dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_.get());
-        dg::assign( chiXX, chixx_);
-        dg::assign( chiXY, chixy_);
-        dg::assign( chiYY, chiyy_);
-        set( chixx_, chixy_, chiyy_);
-    }
-
-    ///@copydoc Elliptic::weights()
-    const container& weights()const {return weights_;}
-    ///@copydoc Elliptic::inv_weights()
-    const container& inv_weights()const {return inv_weights_;}
-    ///@copydoc GeneralElliptic::precond()
-    const container& precond()const {return precond_;}
-
-    ///@copydoc Elliptic::symv()
-    template<class ContainerType0, class ContainerType1>
-    void symv( const ContainerType0& x, ContainerType1& y)
-    {
-        //compute gradient
-        dg::blas2::gemv( rightx, x, tempx_); //R_x*f
-        dg::blas2::gemv( righty, x, tempy_); //R_y*f
-
-        //multiply with chi
-        dg::blas1::pointwiseDot( 1., chixx_, tempx_, 1., chixy_, tempy_, 0., gradx_);
-        dg::blas1::pointwiseDot( 1., chixy_, tempx_, 1., chiyy_, tempy_, 0., tempy_);
-
-        //now take divergence
-        dg::blas2::gemv( -1., leftx, gradx_, 0., y);
-        dg::blas2::gemv( -1., lefty, tempy_, 1., y);
-
-        //add jump terms
-        dg::blas2::symv( +1., jumpX, x, 1., y);
-        dg::blas2::symv( +1., jumpY, x, 1., y);
-        if( no_ == normed)
-            dg::blas1::pointwiseDivide( y, vol_,y);
-        if( no_ == not_normed)//multiply weights without volume
-            dg::blas2::symv( weights_wo_vol, y, y);
-    }
-    private:
-    void construct( const Geometry& g, bc bcx, bc bcy, direction dir)
-    {
-        dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), leftx);
-        dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), lefty);
-        dg::blas2::transfer( dg::create::dx( g, bcx, dir), rightx);
-        dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
-        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
-        dg::assign( dg::create::volume(g),        weights_);
-        dg::assign( dg::create::inv_volume(g),    inv_weights_);
-        dg::assign( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
-        dg::assign( dg::evaluate( dg::one, g),    chixx_);
-        dg::assign( dg::evaluate( dg::zero,g),    chixy_);
-        dg::assign( dg::evaluate( dg::one, g),    chiyy_);
-        tempx_ = tempy_ = gradx_ = chixx_;
-        dg::assign( dg::create::weights(g), weights_wo_vol);
-
-        vol_=dg::tensor::volume(g.metric());
-        dg::blas1::pointwiseDot( vol_, chixx_, chixx_);
-        dg::blas1::pointwiseDot( vol_, chixy_, chixy_);
-        dg::blas1::pointwiseDot( vol_, chiyy_, chiyy_);
-    }
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
-    Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    container weights_, inv_weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
-    container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
-    container vol_;
-    norm no_;
-    ClonePtr<Geometry> g_;
-};
-
 /**
  * @brief %Operator that acts as a 3d negative elliptic differential operator
  *
@@ -992,12 +836,6 @@ struct TensorTraits< GeneralElliptic<G, M, V> >
 };
 template< class G, class M, class V>
 struct TensorTraits< GeneralEllipticSym<G, M, V> >
-{
-    using value_type      = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-template< class G, class M, class V>
-struct TensorTraits< TensorElliptic<G, M, V> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

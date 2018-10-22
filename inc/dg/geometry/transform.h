@@ -155,15 +155,13 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  * @param chiRR input RR-component in cylindrical coordinates
  * @param chiRZ input RZ-component in cylindrical coordinates
  * @param chiZZ input ZZ-component in cylindrical coordinates
- * @param chixx xx-component of tensor (gets properly resized)
- * @param chixy xy-component of tensor (gets properly resized)
- * @param chiyy yy-component of tensor (gets properly resized)
+ * @param chi tensor (gets properly resized)
  * @param g The geometry object
  * @ingroup pullback
  */
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry>
 void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const FunctorZZ& chiZZ,
-        container& chixx, container& chixy, container& chiyy,
+        SparseTensor<container>& chi,
         const Geometry& g)
 {
     using host_vec = get_host_vector<Geometry>;
@@ -172,24 +170,26 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
     host_vec chiZZ_ = pullback( chiZZ, g);
 
     const dg::SparseTensor<container> jac = g.jacobian();
-    std::vector<container> values( 3);
-    dg::assign( chiRR_, values[0]);
-    dg::assign( chiRZ_, values[1]);
-    dg::assign( chiZZ_, values[2]);
-    SparseTensor<container> chi;
-    chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;
+    std::vector<container> values( 5);
+    dg::assign( dg::evaluate( dg::zero,g), values[0]);
+    dg::assign( dg::evaluate( dg::one, g), values[1]);
+    dg::assign( chiRR_, values[2]);
+    dg::assign( chiRZ_, values[3]);
+    dg::assign( chiZZ_, values[4]);
+    chi.idx(0,0)=2, chi.idx(0,1)=chi.idx(1,0)=3, chi.idx(1,1)=4;
+    chi.idx(2,0)=chi.idx(2,1)=chi.idx(0,2)=chi.idx(1,2) = 0;
+    chi.idx(2,2)=1;
     chi.values() = values;
     //we do not need 3rd dimension here
 
     container tmp00(jac.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
-    chixx = chixy = chiyy = tmp00; //allocate space
     // multiply Chi*t -> tmp
     dg::tensor::multiply2d( chi, jac.value(0,0), jac.value(1,0), tmp00, tmp10);
     dg::tensor::multiply2d( chi, jac.value(0,1), jac.value(1,1), tmp01, tmp11);
     // multiply tT * tmp -> Chi
     SparseTensor<container> transpose = jac.transpose();
-    dg::tensor::multiply2d( transpose, tmp00, tmp01, chixx, chixy);
-    dg::tensor::multiply2d( transpose, tmp10, tmp11, chixy, chiyy);
+    dg::tensor::multiply2d( transpose, tmp00, tmp01, chi.values()[2], chi.values()[3]);
+    dg::tensor::multiply2d( transpose, tmp10, tmp11, chi.values()[3], chi.values()[4]);
 }
 
 namespace create{

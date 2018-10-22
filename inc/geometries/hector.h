@@ -370,7 +370,7 @@ struct Hector : public aGenerator2d
         double eps = 1e10, eps_old = 2e10;
         dg::geo::CurvilinearGrid2d g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
-        dg::Elliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -382,7 +382,7 @@ struct Hector : public aGenerator2d
             eps = eps_old;
             g2d_.multiplyCellNumbers(2,2);
             if(verbose) std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::Elliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             adapt = dg::pullback(chi, g2d_);
             ellipticD.set_chi( adapt);
             lapu = dg::pullback( lapChiPsi, g2d_);
@@ -411,8 +411,11 @@ struct Hector : public aGenerator2d
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
         dg::geo::CurvilinearGrid2d g2d_old = g2d_;
-        dg::TensorElliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-        ellipticD_old.transform_and_set( chi.xx(), chi.xy(), chi.yy());
+        dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::SparseTensor<container> chi_t;
+        dg::pushForwardPerp( chi.xx(), chi.xy(), chi.yy(), chi_t, g2d_old);
+
+        ellipticD_old.set_chi( chi_t);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
         container lapu = dg::pullback( lapChiPsi, g2d_old);
@@ -423,8 +426,10 @@ struct Hector : public aGenerator2d
             eps = eps_old;
             g2d_.multiplyCellNumbers(2,2);
             if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::TensorElliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-            ellipticD.transform_and_set( chi.xx(), chi.xy(), chi.yy() );
+            dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::pushForwardPerp( chi.xx(), chi.xy(), chi.yy(), chi_t, g2d_);
+
+            ellipticD.set_chi( chi_t );
             lapu = dg::pullback( lapChiPsi, g2d_);
             const container vol2d = dg::create::weights( g2d_);
             const IMatrix Q = dg::create::interpolation( g2d_, g2d_old);
@@ -455,17 +460,12 @@ struct Hector : public aGenerator2d
         dg::blas2::symv( deta, u, u_eta);
 
 
-        thrust::host_vector<double> chi_ZZ, chi_ZE, chi_EE;
-        dg::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
-        container chiZZ, chiZE, chiEE;
-        dg::blas1::transfer( chi_ZZ, chiZZ);
-        dg::blas1::transfer( chi_ZE, chiZE);
-        dg::blas1::transfer( chi_EE, chiEE);
+        dg::SparseTensor<container> chi;
+        dg::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi, g2d_);
 
         //now compute ZetaU and EtaU
         container temp_zeta(u), temp_eta(u);
-        dg::blas1::pointwiseDot( 1. ,chiZE, u_eta, 1., chiZZ, u_zeta, 0., temp_zeta);
-        dg::blas1::pointwiseDot( 1. ,chiEE, u_eta, 1., chiZE, u_zeta, 0., temp_eta);
+        dg::tensor::multiply2d( chi, u_zeta, u_eta, temp_zeta, temp_eta);
         container temp_scalar(u);
         dg::blas1::pointwiseDot( 1., u_eta, temp_eta, 1., u_zeta, temp_zeta, 0., temp_scalar);
         container zetaU=temp_zeta, etaU=temp_eta;
@@ -473,7 +473,7 @@ struct Hector : public aGenerator2d
         dg::blas1::pointwiseDivide(  etaU, temp_scalar,  etaU);
         //now compute etaV and its inverse
         container etaVinv(u_zeta), etaV(etaVinv);
-        dg::blas1::pointwiseDot( etaVinv, chiZZ, etaVinv);
+        dg::blas1::pointwiseDot( etaVinv, chi.value(0,0), etaVinv);
         container perp_vol = dg::tensor::volume(g2d_.metric());
         dg::blas1::pointwiseDot( etaVinv, perp_vol, etaVinv);
         dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
@@ -501,9 +501,9 @@ struct Hector : public aGenerator2d
         //transfer to host
         detail::transform( u_zeta, u_eta, ux_, uy_, g2d_);
         detail::transform( v_zeta, v_eta, vx_, vy_, g2d_);
-        dg::blas1::transfer( etaV, etaV_);
-        dg::blas1::transfer( etaU, etaU_);
-        dg::blas1::transfer( zetaU, zetaU_);
+        dg::assign( etaV, etaV_);
+        dg::assign( etaU, etaU_);
+        dg::assign( zetaU, zetaU_);
     }
     private:
     bool conformal_, orthogonal_;

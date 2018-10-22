@@ -403,6 +403,16 @@ struct BHatP: public aCloneableBinaryFunctor<BHatP>
     InvB invB_;
 };
 
+/**
+ * @brief Magnetic unit vector field (BHatR, BHatZ, BHatP)
+ *
+ * @param mag the tokamak magnetic field
+ * @return the tuple BHatR, BHatZ, BHatP constructed from mag
+ */
+BinaryVectorLvl0 createBHat( const TokamakMagneticField& mag){
+    return BinaryVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
+}
+
 //Necessary to analytically compute Laplacians:
 ///@brief \f[ \nabla_\parallel b^R \f]
 struct GradBHatR: public aCloneableBinaryFunctor<GradBHatR>

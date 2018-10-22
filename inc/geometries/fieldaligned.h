@@ -202,7 +202,7 @@ struct Fieldaligned
         unsigned multiplyX=10, unsigned multiplyY=10,
         double deltaPhi = -1)
     {
-        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
+        dg::geo::BinaryVectorLvl0 bhat( dg::geo::createBHat(vec));
         construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
 
