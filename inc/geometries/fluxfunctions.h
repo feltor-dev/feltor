@@ -356,8 +356,8 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor( const 
     dg::SparseTensor<host_vector> t = dg::geo::createAlignmentTensor( bhat, g);
     dg::SparseTensor<host_vector> m = g.metric();
     dg::blas1::axpby( 1., m.value(0,0), -1., t.values()[0]);
-    dg::blas1::axpby( 1., m.value(1,0), -1., t.values()[1]);
-    dg::blas1::axpby( 1., m.value(2,0), -1., t.values()[2]);
+    dg::blas1::axpby( 1., m.value(0,1), -1., t.values()[1]);
+    dg::blas1::axpby( 1., m.value(0,2), -1., t.values()[2]);
     dg::blas1::axpby( 1., m.value(1,1), -1., t.values()[3]);
     dg::blas1::axpby( 1., m.value(1,2), -1., t.values()[4]);
     dg::blas1::axpby( 1., m.value(2,2), -1., t.values()[5]);

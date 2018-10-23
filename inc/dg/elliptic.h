@@ -271,7 +271,7 @@ class Elliptic
 template <class Geometry, class Matrix, class container>
 using Elliptic2d = Elliptic<Geometry, Matrix, container>;
 
-
+//Elliptic3d is tested in inc/geometries/elliptic3d_t.cu
 /**
  * @brief A 3d negative elliptic differential operator
  *

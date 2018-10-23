@@ -246,6 +246,20 @@ struct DsDivDsFunction
     DssFunction<Function> dssf_;
     dg::geo::Divb divb_;
 };
+
+//positive perp Laplacian \Delta_\perp
+template<class Function>
+struct DPerpFunction
+{
+    DPerpFunction( const TokamakMagneticField& c): f_(c), dsf_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_.dR(R,Z,phi)/R + f_.dRR(R,Z,phi) + f_.dZZ(R,Z,phi) + f_.dPP(R,Z,phi)/R/R - dsf_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    DsDivDsFunction<Function> dsf_;
+};
+
 template<class Function>
 struct OMDsDivDsFunction
 {
@@ -260,12 +274,12 @@ struct OMDsDivDsFunction
 
 template<class DS, class container>
 struct TestInvertDS{
-    TestInvertDS( DS& ds):
-        m_ds(ds){}
+    TestInvertDS( DS& ds, double alpha = -1.):
+        m_ds(ds), m_alpha(alpha){}
     void symv( const container& x, container& y)
     {
         dg::blas2::symv( 1., m_ds, x, 0., y);
-        dg::blas1::axpby( 1., x, -1., y, y);
+        dg::blas1::axpby( 1., x, m_alpha, y, y);
         dg::blas2::symv( m_ds.weights(), y,y);
     }
     const container& weights(){return m_ds.weights();}
@@ -273,6 +287,7 @@ struct TestInvertDS{
     const container& precond(){return m_ds.precond();}
     private:
     DS& m_ds;
+    double m_alpha;
 };
 
 //////////////function to call DS////////////////////
