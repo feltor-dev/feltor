@@ -84,6 +84,47 @@ struct Determinant
               +t02*this->operator()(t10, t11, t20, t21);
     }
 };
+template<class value_type>
+struct InverseMultiply{
+    DG_DEVICE
+    void operator() ( value_type t00, value_type t01,
+                      value_type t10, value_type t11,
+                      value_type in0, value_type in1,
+                      value_type& out0, value_type& out1) const
+    {
+        value_type dett = DG_FMA( t00,t11 , (-t10*t01));
+        value_type tmp0 = DG_FMA( in0,t11 , (-in1*t01));
+        value_type tmp1 = DG_FMA( t00,in1 , (-t10*in0));
+        out1 = tmp1/dett;
+        out0 = tmp0/dett;
+    }
+    DG_DEVICE
+    void operator() ( value_type t00, value_type t01, value_type t02,
+                      value_type t10, value_type t11, value_type t12,
+                      value_type t20, value_type t21, value_type t22,
+                      value_type in0, value_type in1, value_type in2,
+                      value_type& out0, value_type& out1, value_type& out2) const
+    {
+        value_type dett = det( t00,t01,t02, t10,t11,t12, t20,t21,t22);
+
+        value_type tmp0 = det( in0,t01,t02, in1,t11,t12, in2,t21,t22);
+        value_type tmp1 = det( t00,in0,t02, t10,in1,t12, t20,in2,t22);
+        value_type tmp2 = det( t00,t01,in0, t10,t11,in1, t20,t21,in2);
+        out2 = tmp2/dett;
+        out1 = tmp1/dett;
+        out0 = tmp0/dett;
+    }
+    private:
+    DG_DEVICE
+    value_type det( value_type t00, value_type t01, value_type t02,
+                    value_type t10, value_type t11, value_type t12,
+                    value_type t20, value_type t21, value_type t22)const
+    {
+        return t00*DG_FMA(t11, t22, (-t12*t21))
+              -t01*DG_FMA(t10, t22, (-t20*t12))
+              +t02*DG_FMA(t10, t21, (-t20*t11));
+    }
+};
 }//namespace detail
 ///@endcond
 /**
@@ -111,7 +152,7 @@ void multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in
 }
 
 /**
- * @brief Multiply a tensor with a vector in 2d
+ * @brief Multiply a tensor with a vector in 3d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{0,1,2\}\f$
  * @param t input Tensor
@@ -130,6 +171,52 @@ template<class ContainerType0, class ContainerType1, class ContainerType2, class
 void multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerType3& in2, ContainerType4& out0, ContainerType5& out1, ContainerType6& out2)
 {
     dg::blas1::subroutine( detail::Multiply<get_value_type<ContainerType0>>(),
+                         t.value(0,0), t.value(0,1), t.value(0,2),
+                         t.value(1,0), t.value(1,1), t.value(1,2),
+                         t.value(2,0), t.value(2,1), t.value(2,2),
+                         in0, in1, in2,
+                         out0, out1, out2);
+}
+
+/**
+ * @brief Multiply the inverse tensor with a vector in 2d
+ *
+ * Compute \f$ v_j = t^{-1}_{ji}w^i\f$ for \f$ i,j\in \{0,1\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
+ * @param t input Tensor
+ * @param in0 (input) first component    (may alias out0)
+ * @param in1 (input) second component   (may alias out1)
+ * @param out0 (output) first component  (may alias in0)
+ * @param out1 (output) second component (may alias in1)
+ * @copydoc hide_ContainerType
+ */
+template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
+void inv_multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, ContainerType3& out0, ContainerType4& out1)
+{
+    dg::blas1::subroutine( detail::InverseMultiply<get_value_type<ContainerType0>>(),
+                         t.value(0,0), t.value(0,1),
+                         t.value(1,0), t.value(1,1),
+                         in0,  in1,
+                         out0, out1);
+}
+
+/**
+ * @brief Multiply the inverse tensor with a vector in 3d
+ *
+ * Compute \f$ v_j = t^{-1}_{ji}w^i\f$ for \f$ i,j\in \{0,1,2\}\f$
+ * @param t input Tensor
+ * @param in0 (input)  first component  (may alias out0)
+ * @param in1 (input)  second component (may alias out1)
+ * @param in2 (input)  third component  (may alias out2)
+ * @param out0 (output)  first component  (may alias in0)
+ * @param out1 (output)  second component (may alias in1)
+ * @param out2 (output)  third component  (may alias in2)
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
+ * @copydoc hide_ContainerType
+ */
+template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class ContainerType5, class ContainerType6>
+void inv_multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerType3& in2, ContainerType4& out0, ContainerType5& out1, ContainerType6& out2)
+{
+    dg::blas1::subroutine( detail::InverseMultiply<get_value_type<ContainerType0>>(),
                          t.value(0,0), t.value(0,1), t.value(0,2),
                          t.value(1,0), t.value(1,1), t.value(1,2),
                          t.value(2,0), t.value(2,1), t.value(2,2),

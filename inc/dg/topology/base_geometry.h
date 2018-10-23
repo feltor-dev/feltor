@@ -103,7 +103,7 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
         return do_compute_jacobian();
     }
     /**
-    * @brief The Metric tensor of the coordinate system
+    * @brief The (contravariant) metric tensor of the coordinate system
     *
     *  The elements are the contravariant elements (if x,y,z are the coordinates)
     \f[

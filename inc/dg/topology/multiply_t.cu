@@ -46,12 +46,18 @@ int main()
     std::cout << "Multiply T with [8,9]\n";
     dg::tensor::multiply2d(t, eight, nine, work0, work1);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<"] ([86 120])\n";
+    std::cout << "Multiply T^{-1} with [86,120]\n";
+    dg::tensor::inv_multiply2d(t, work0, work1, work0, work1);
+    std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<"] ([8 9])\n";
     dg::tensor::multiply2d(t, inout0, inout1, work0, inout1);
     std::cout << "Result inplace is ["<<work0[0]<<" "<<inout1[0]<<"] ([86 120])\n T is \n";
     t.idx(0,2) = 4; std::swap( t.idx(1,1), t.idx(2,1)); print(t);
     std::cout << "Multiply T with [8,9,2]\n";
     dg::tensor::multiply3d(t, eight, nine,two, work0, work1, work2);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"] ([102 48 76])\n";
+    std::cout << "Multiply T^{-1} with [102,48,76]\n";
+    dg::tensor::inv_multiply3d(t, work0, work1, work2, work0, work1, work2);
+    std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"] ([8 9 2])\n";
     inout0=eight, inout1=nine, inout2=two;
     dg::tensor::multiply3d(t, inout0, inout1, inout2, inout0, inout1, inout2);
     std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<" "<<inout2[0]<<"] ([102 48 76])\n";
