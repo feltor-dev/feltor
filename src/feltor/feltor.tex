@@ -509,7 +509,7 @@ This simplifies the curvature operators to:
 \end{align}
 The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
 However this property has to be checked for a specified coordinate system, since e.g. in cylindrical coordinates \((R,Z,\varphi)\) the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
-\subsubsection{Without approximation}
+\subsubsection{True curvature terms}
 We have
 \begin{align}
 b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
@@ -525,10 +525,10 @@ Let us approximate
 This is in fact a sufficient condition for $\nabla\cdot \vec{ \mathcal K} = 0$.
 We can then explicitly write
 \begin{align}
-\vec K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\bhat^\varphi \frac{1}{B^2}\frac{\partial B}{\partial Z}\\
-\vec K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial \psi}{\partial R}\equiv \bhat^\varphi \frac{1}{B^2}\frac{\partial B}{\partial R}\\
+\vec K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
+\vec K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
 \vec K_{\nabla B}^\varphi &= \frac{1}{B^3R^2}\left(\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
-    \equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
+%\equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
 \label{}
 \end{align}
 and

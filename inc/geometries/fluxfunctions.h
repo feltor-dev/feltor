@@ -6,14 +6,13 @@ namespace dg
 {
 namespace geo
 {
-///@addtogroup fluxfunctions
-///@{
 //
 //In the next round of updates (C++11) we should consider using std::function maybe?
 
 /**
 * @brief This functor represents functions written in cylindrical coordinates
         that are independent of the angle phi
+* @ingroup fluxfunctions
 */
 struct aBinaryFunctor
 {
@@ -68,6 +67,7 @@ struct aBinaryFunctor
 * @brief Intermediate implementation helper class for the clone pattern with CRTP
 
     https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
+* @ingroup fluxfunctions
 */
 template<class Derived>
 struct aCloneableBinaryFunctor : public aBinaryFunctor
@@ -87,6 +87,7 @@ struct aCloneableBinaryFunctor : public aBinaryFunctor
  *
  * @tparam BinaryFunctor must overload the operator() like
  * double operator()(double,double)const;
+* @ingroup fluxfunctions
  */
 template<class BinaryFunctor>
 struct BinaryFunctorAdapter : public aCloneableBinaryFunctor<BinaryFunctorAdapter<BinaryFunctor> >
@@ -104,6 +105,7 @@ struct BinaryFunctorAdapter : public aCloneableBinaryFunctor<BinaryFunctorAdapte
  * @param f const reference to a functor class
  * @return a newly allocated instance of aBinaryFunctor on the heap
  * @note the preferred way is to derive your Functor from aCloneableBinaryFunctor but if you can't or don't want to for whatever reason then use this to make one
+* @ingroup fluxfunctions
  */
 template<class BinaryFunctor>
 aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
@@ -111,6 +113,7 @@ aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFun
 /**
  * @brief The constant functor
  * \f[ f(x,y) = c\f]
+* @ingroup fluxfunctions
  */
 struct Constant: public aCloneableBinaryFunctor<Constant>
 {
@@ -124,6 +127,7 @@ struct Constant: public aCloneableBinaryFunctor<Constant>
 * @brief This struct bundles a function and its first derivatives
 *
 * @snippet hector_t.cu doxygen
+* @ingroup fluxfunctions
 */
 struct BinaryFunctorsLvl1
 {
@@ -170,6 +174,7 @@ struct BinaryFunctorsLvl1
 * @brief This struct bundles a function and its first and second derivatives
 *
 * @snippet hector_t.cu doxygen
+* @ingroup fluxfunctions
 */
 struct BinaryFunctorsLvl2
 {
@@ -214,6 +219,7 @@ struct BinaryFunctorsLvl2
 
 /// A symmetric 2d tensor field and its divergence
 ///@snippet hector_t.cu doxygen
+///@ingroup fluxfunctions
 struct BinarySymmTensorLvl1
 {
     /**
@@ -275,6 +281,7 @@ struct BinarySymmTensorLvl1
 
 /// A vector field with three components that depend only on the first two coordinates
 ///@snippet ds_t.cu doxygen
+///@ingroup fluxfunctions
 struct BinaryVectorLvl0
 {
     BinaryVectorLvl0(){}
@@ -306,7 +313,7 @@ struct BinaryVectorLvl0
     ClonePtr<aBinaryFunctor> p_[3];
 };
 
-/*!@brief \f[ \chi^{ij} = b^ib^j\]
+/*!@brief \f[ \chi^{ij} = b^ib^j\f]
  *
  * Creates the two times contravariant tensor that,
  * when applied to a covariant vector, creates a vector
@@ -316,6 +323,7 @@ struct BinaryVectorLvl0
  * @param g The vector field is pushed unto this grid
  * @return The tensor \c chi living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
+ * @ingroup fluxfunctions
  */
 template<class Geometry3d>
 dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const dg::geo::BinaryVectorLvl0& bhat, const Geometry3d& g)
@@ -338,7 +346,7 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const d
     t.values() = chi;
     return t;
 }
-/*!@brief \f[ \chi^{ij} = g^{ij} - b^ib^j\]
+/*!@brief \f[ \chi^{ij} = g^{ij} - b^ib^j\f]
  *
  * Creates the two times contravariant tensor that,
  * when applied to a covariant vector, creates a vector
@@ -348,6 +356,7 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const d
  * @param g The vector field is pushed unto this grid
  * @return The tensor \c chi living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
+ * @ingroup fluxfunctions
  */
 template<class Geometry3d>
 dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor( const dg::geo::BinaryVectorLvl0& bhat, const Geometry3d& g)

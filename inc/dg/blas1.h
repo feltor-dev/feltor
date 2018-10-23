@@ -545,7 +545,7 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 //    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>(), get_tensor_category<ContainerType2>() );
 }
 
-///Deprecated: Use \c dg::construct<ContainerType>() instead
+///@brief Deprecated: Use \c dg::construct<ContainerType>() instead
 ///@attention This function is deprecated! Please replace with \c dg::construct (data transfer between different devices)
 template<class ContainerType, class from_ContainerType>
 inline ContainerType transfer( const from_ContainerType& from)
@@ -553,6 +553,7 @@ inline ContainerType transfer( const from_ContainerType& from)
     return dg::construct<ContainerType>( from);
 }
 
+///@brief Deprecated: Use \c dg::assign<ContainerType>() instead
 ///@attention This function is deprecated! Please replace with either \c dg::blas1::copy (parallel copy between compatible types) or \c dg::assign (data transfer between devices)"
 template<class from_ContainerType, class ContainerType>
 inline void transfer( const from_ContainerType& from, ContainerType& to)

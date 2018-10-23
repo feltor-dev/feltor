@@ -45,7 +45,7 @@ struct Implicit
         m_dsN(dsN),
         m_dsDIR(dsDIR)
     {
-        dg::transfer( dg::evaluate( dg::zero, g), m_temp);
+        dg::assign( dg::evaluate( dg::zero, g), m_temp);
     }
 
     void operator()( double t, const std::array<std::array<container,2>,2>& y, std::array<std::array<container,2>,2>& yp)
@@ -308,7 +308,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     m_p(p), m_gp(gp), m_evec(5)
 {
     ////////////////////////////init temporaries///////////////////
-    dg::transfer( dg::evaluate( dg::zero, g), m_chi );
+    dg::assign( dg::evaluate( dg::zero, g), m_chi );
     m_omega = m_lambda = m_chi;
     m_phi[0] = m_phi[1] = m_chi;
     m_dxPhi = m_dyPhi = m_npe = m_logn = m_dxN = m_dyN = m_dxU = m_dyU = m_phi;
@@ -325,12 +325,12 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     }
     //////////////////////////////init fields /////////////////////
     dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
-    dg::transfer(  dg::pullback(dg::geo::InvB(mf),      g), m_binv);
-    dg::transfer(  dg::pullback(dg::geo::GradLnB(mf),   g), m_gradlnB);
-    dg::transfer(  dg::pullback(dg::geo::TanhSource(mf.psip(), gp.psipmin, gp.alpha),         g), m_source);
+    dg::assign(  dg::pullback(dg::geo::InvB(mf),      g), m_binv);
+    dg::assign(  dg::pullback(dg::geo::GradLnB(mf),   g), m_gradlnB);
+    dg::assign(  dg::pullback(dg::geo::TanhSource(mf.psip(), gp.psipmin, gp.alpha),         g), m_source);
     ////////////////////////////transform curvature components////////
     dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mf), dg::geo::CurvatureNablaBZ(mf), m_curvX, m_curvY, g);
-    dg::transfer(  dg::pullback(dg::geo::DivCurvatureKappa(mf), g), m_divCurvKappa);
+    dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mf), g), m_divCurvKappa);
     dg::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mf), m_curvKappaX, m_curvKappaY, g);
     if (p.curvmode=="low beta")
     {
@@ -341,14 +341,14 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     dg::blas1::axpby( 1.,m_curvX,1.,m_curvKappaX, m_curvX);
     dg::blas1::axpby( 1.,m_curvY,1.,m_curvKappaY, m_curvY);
     ///////////////////init densities//////////////////////////////
-    dg::transfer( dg::pullback(dg::geo::Nprofile( p.bgprofamp, p.nprofileamp, gp, mf.psip()),g), m_profne);
+    dg::assign( dg::pullback(dg::geo::Nprofile( p.bgprofamp, p.nprofileamp, gp, mf.psip()),g), m_profne);
     /////////////////////init limiter in parallel derivatives/////////
     if (p.pollim==true){
         m_dsN.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
         m_dsDIR.set_boundaries( dg::DIR, 0, 0); //ds psi on limiter
     }
     //////////////////////////////Metric///////////////////////////////
-    dg::transfer( dg::create::volume(g), m_vol3d);
+    dg::assign( dg::create::volume(g), m_vol3d);
     m_metric=g.metric();
     m_perp_vol_inv = dg::tensor::determinant2d(m_metric);
 }
