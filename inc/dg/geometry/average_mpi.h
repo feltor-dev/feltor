@@ -6,7 +6,7 @@
 #include "mpi_weights.h"
 
 /*! @file
-  @brief contains classes for poloidal and toroidal average computations.
+  @brief Classes for poloidal and toroidal average computations.
   */
 namespace dg{
 

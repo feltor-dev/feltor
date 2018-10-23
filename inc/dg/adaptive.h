@@ -394,6 +394,7 @@ int integrateAdaptive(Adaptive& adaptive,
 ///@brief Shortcut for \c dg::integrateAdaptive with an embedded ERK class as timestepper
 ///@snippet adaptive_t.cu function
 ///@snippet adaptive_t.cu doxygen
+///
 ///@param name name of an embedded method that \c ConvertsToButcherTableau
 ///@param rhs The right-hand-side
 ///@copydoc hide_adaptive_params

@@ -14,7 +14,7 @@
 
 
 /**@file
-* @brief contains a matrix type for fast interpolations/projections
+* @brief A matrix type for fast interpolations/projections
 */
 
 namespace dg

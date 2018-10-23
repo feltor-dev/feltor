@@ -37,7 +37,7 @@ int main()
 {
     std::cout << "Program to test correct implementation of adaptive methods in adaptive.h at the example of the damped driven harmonic oscillator. Errors should be small! \n";
     std::cout << std::scientific;
-    //![doxygen]
+    //![doxygen.]
     //... in main
     //set start and end time
     const double t_start = 0., t_end = 1.;
@@ -53,7 +53,7 @@ int main()
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
     std::cout << "With "<<counter<<"\t Dormand Prince steps norm of error is "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
-    //![doxygen]
+    //![doxygen.]
     std::vector<std::string> names{
         "Heun-Euler-2-1-2",
         "Bogacki-Shampine-4-2-3",

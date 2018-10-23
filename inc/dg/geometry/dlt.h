@@ -9,7 +9,7 @@
 
 
 /**@file
-* @brief contains the discrete legendre trafo class
+* @brief The discrete legendre trafo class
 */
 namespace dg{
 

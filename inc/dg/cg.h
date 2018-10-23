@@ -363,7 +363,6 @@ struct Extrapolation
 
     /**
     * @brief Extrapolate value
-    * @param t time to which to extrapolate (must be different from the times used in the update function, else division by zero occurs)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @note Assumes that extrapolation time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch

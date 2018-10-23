@@ -119,6 +119,7 @@ FILE_PATTERNS          = *.h \
 RECURSIVE              = NO
 EXCLUDE                = mylibm.hpp \
                          mylibm.cuh \
+                         config.h \
                          ExSUM.FPE.hpp
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =

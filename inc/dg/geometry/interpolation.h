@@ -11,7 +11,7 @@
 
 /*! @file
 
-  @brief contains 1D, 2D and 3D interpolation matrix creation functions
+  @brief 1D, 2D and 3D interpolation matrix creation functions
   */
 
 namespace dg{

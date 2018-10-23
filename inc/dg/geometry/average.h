@@ -6,7 +6,7 @@
 #include "dg/backend/average_dispatch.h"
 
 /*! @file
-  @brief contains classes for poloidal and toroidal average computations.
+  @brief Classes for poloidal and toroidal average computations.
   */
 namespace dg{
 

@@ -5,7 +5,7 @@
 
 /*! @file
 
-  * @brief contains creation functions for integration weights
+  * @brief Creation functions for integration weights
   * and their inverse on X-point topology
   */
 

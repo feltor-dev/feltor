@@ -4,7 +4,7 @@
 
 /*!@file
 
-  @brief contains creation of projection matrices for X point topology
+  @brief Creation of projection matrices for X point topology
  */
 namespace dg{
 ///@addtogroup interpolation

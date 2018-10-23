@@ -6,7 +6,7 @@
 
 
 /**@file
-* @brief contains MPI weights
+* @brief MPI weights
 */
 namespace dg
 {
