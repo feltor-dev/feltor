@@ -10,24 +10,26 @@ namespace dg
 {
 namespace geo
 {
+/*!@class hide_toroidal_approximation_note
+ @note We implicitly assume the toroidal field line approximation, i.e. all curvature
+ and other perpendicular terms assume that the perpendicular
+ direction lies within the
+ R-Z planes of a cylindrical grid (The plane \f$ \perp \hat e_\varphi\f$ )
+ */
 
 
 ///@addtogroup magnetic
 ///@{
 /**
-* @brief container class of R, psi and Ipol
+* @brief A tokamak field as given by R_0, Psi and Ipol
 
  This is the representation of toroidally axisymmetric magnetic fields that can be modeled in the form
  \f[
- \vec B = \frac{R_0}{R} \left( I(\psi_p) \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
+ \vec B(R,Z,\varphi) = \frac{R_0}{R} \left( I(\psi_p) \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
  \f]
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current
  and \f$ \psi_p\f$ the poloidal flux function.
  @snippet ds_t.cu doxygen
- @note We implicitly also assume the toroidal field line approximation, i.e. all curvature
- and other perpendicular terms created with this field will assume that the perpendicular
- direction lies within the
- R-Z planes of a cylindrical grid (The plane \f$ \perp \hat e_\varphi\f$ )
 */
 struct TokamakMagneticField
 {
@@ -178,6 +180,7 @@ struct BZ: public aCloneableBinaryFunctor<BZ>
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} \f]
  *
     \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
+   @copydoc hide_toroidal_approximation_note
  */
 struct CurvatureNablaBR: public aCloneableBinaryFunctor<CurvatureNablaBR>
 {
@@ -195,6 +198,7 @@ struct CurvatureNablaBR: public aCloneableBinaryFunctor<CurvatureNablaBR>
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B}  \f]
  *
    \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
+   @copydoc hide_toroidal_approximation_note
  */
 struct CurvatureNablaBZ: public aCloneableBinaryFunctor<CurvatureNablaBZ>
 {
@@ -212,6 +216,7 @@ struct CurvatureNablaBZ: public aCloneableBinaryFunctor<CurvatureNablaBZ>
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}}=0 \f]
  *
  \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f]
+   @copydoc hide_toroidal_approximation_note
  */
 struct CurvatureKappaR: public aCloneableBinaryFunctor<CurvatureKappaR>
 {
@@ -228,6 +233,7 @@ struct CurvatureKappaR: public aCloneableBinaryFunctor<CurvatureKappaR>
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
  *
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
+   @copydoc hide_toroidal_approximation_note
  */
 struct CurvatureKappaZ: public aCloneableBinaryFunctor<CurvatureKappaZ>
 {
@@ -244,6 +250,7 @@ struct CurvatureKappaZ: public aCloneableBinaryFunctor<CurvatureKappaZ>
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
 
      \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f]
+   @copydoc hide_toroidal_approximation_note
  */
 struct DivCurvatureKappa: public aCloneableBinaryFunctor<DivCurvatureKappa>
 {
