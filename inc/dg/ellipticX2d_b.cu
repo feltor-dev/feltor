@@ -3,10 +3,10 @@
 
 #include <thrust/device_vector.h>
 #include "backend/timer.h"
-#include "geometry/derivativesX.h"
-#include "geometry/gridX.h"
-#include "geometry/evaluationX.h"
-#include "geometry/base_geometryX.h"
+#include "topology/derivativesX.h"
+#include "topology/gridX.h"
+#include "topology/evaluationX.h"
+#include "topology/base_geometryX.h"
 #include "blas.h"
 #include "elliptic.h"
 #include "cg.h"

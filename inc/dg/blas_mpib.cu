@@ -7,10 +7,10 @@
 #include "backend/timer.h"
 #include "backend/mpi_init.h"
 #include "blas.h"
-#include "geometry/mpi_evaluation.h"
-#include "geometry/mpi_derivatives.h"
-#include "geometry/mpi_weights.h"
-#include "geometry/fast_interpolation.h"
+#include "topology/mpi_evaluation.h"
+#include "topology/mpi_derivatives.h"
+#include "topology/mpi_weights.h"
+#include "topology/fast_interpolation.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

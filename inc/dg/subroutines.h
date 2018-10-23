@@ -1,5 +1,5 @@
 #pragma once
-#include "dg/geometry/functions.h"
+#include "dg/topology/functions.h"
 #include "dg/backend/config.h"
 
 namespace dg{

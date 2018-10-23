@@ -8,7 +8,7 @@
 
 #include "backend/timer.h"
 #include "backend/mpi_init.h"
-#include "geometry/split_and_join.h"
+#include "topology/split_and_join.h"
 
 
 const double R_0 = 10;

@@ -6,9 +6,9 @@
 
 #include "backend/timer.h"
 #include "blas.h"
-#include "geometry/derivatives.h"
-#include "geometry/evaluation.h"
-#include "geometry/fast_interpolation.h"
+#include "topology/derivatives.h"
+#include "topology/evaluation.h"
+#include "topology/fast_interpolation.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

@@ -3,7 +3,7 @@
 
 #include <thrust/device_vector.h>
 #include "backend/timer.h"
-#include "geometry/projection.h"
+#include "topology/projection.h"
 
 #include "blas.h"
 #include "elliptic.h"

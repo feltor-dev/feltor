@@ -3,13 +3,13 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/memory.h"
-#include "geometry/evaluation.h"
-#include "geometry/derivatives.h"
+#include "topology/evaluation.h"
+#include "topology/derivatives.h"
 #ifdef MPI_VERSION
-#include "geometry/mpi_derivatives.h"
-#include "geometry/mpi_evaluation.h"
+#include "topology/mpi_derivatives.h"
+#include "topology/mpi_evaluation.h"
 #endif
-#include "geometry/geometry.h"
+#include "topology/geometry.h"
 
 /*! @file
 

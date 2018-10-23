@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     double solution3d = solution2d*(exp(12.)-exp(10))/2.;
     if(rank==0)std::cout << "Correct square norm is    "<<std::setw(6)<<solution3d<<std::endl;
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
-    if(rank==0)std::cout << "\nFINISHED! Continue with geometry/derivatives_mpit.cu !\n\n";
+    if(rank==0)std::cout << "\nFINISHED! Continue with topology/derivatives_mpit.cu !\n\n";
 
     MPI_Finalize();
     return 0;

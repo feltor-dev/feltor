@@ -6,7 +6,7 @@
 #include <thrust/host_vector.h>
 
 #include "backend/typedefs.h"
-#include "geometry/evaluation.h"
+#include "topology/evaluation.h"
 #include "arakawa.h"
 #include "runge_kutta.h"
 

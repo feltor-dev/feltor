@@ -104,6 +104,6 @@ int main()
     res.d = y[0];
     std::cout << "Result of exp:     "<<res.i<<"\n"
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
-    std::cout << "\nFINISHED! Continue with geometry/derivatives_t.cu !\n\n";
+    std::cout << "\nFINISHED! Continue with topology/derivatives_t.cu !\n\n";
     return 0;
 }

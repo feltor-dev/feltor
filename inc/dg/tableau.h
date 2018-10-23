@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include "geometry/operator.h"
+#include "topology/operator.h"
 
 namespace dg{
 

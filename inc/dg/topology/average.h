@@ -13,7 +13,7 @@ namespace dg{
 /**
  * @brief Class for average computations over a given direction or plane
  *
- * @snippet geometry/average_t.cu doxygen
+ * @snippet topology/average_t.cu doxygen
  * @ingroup utilities
  */
 template< class container>

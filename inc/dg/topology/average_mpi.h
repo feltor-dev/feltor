@@ -13,7 +13,7 @@ namespace dg{
 /**
  * @brief MPI specialized class for average computations
  *
- * @snippet geometry/average_mpit.cu doxygen
+ * @snippet topology/average_mpit.cu doxygen
  * @ingroup utilities
  */
 template< class container>

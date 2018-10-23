@@ -111,6 +111,6 @@ int main()
     dg::blas1::axpby( 1., variation, -1., jac);
     res.d = sqrt( dg::blas2::dot( w2d, jac));
     std::cout << "Variation distance   "<<res.d<<"\t"<<res.i-binary[4]<<std::endl; //don't forget sqrt when comuting errors
-    std::cout << "\nContinue with geometry/average_t.cu !\n\n";
+    std::cout << "\nContinue with topology/average_t.cu !\n\n";
     return 0;
 }

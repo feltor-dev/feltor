@@ -2,13 +2,13 @@
 #define _DG_POISSON_CUH
 
 #include "blas.h"
-#include "geometry/geometry.h"
+#include "topology/geometry.h"
 #include "enums.h"
-#include "geometry/evaluation.h"
-#include "geometry/derivatives.h"
+#include "topology/evaluation.h"
+#include "topology/derivatives.h"
 #ifdef MPI_VERSION
-#include "geometry/mpi_derivatives.h"
-#include "geometry/mpi_evaluation.h"
+#include "topology/mpi_derivatives.h"
+#include "topology/mpi_evaluation.h"
 #endif
 
 /*! @file

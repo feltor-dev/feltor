@@ -1,11 +1,11 @@
 #pragma once
 
-#include "geometry/interpolation.h"
-#include "geometry/projection.h"
+#include "topology/interpolation.h"
+#include "topology/projection.h"
 #include "elliptic.h"
-#include "geometry/refined_grid.h"
+#include "topology/refined_grid.h"
 #ifdef MPI_VERSION
-#include "geometry/mpi_projection.h"
+#include "topology/mpi_projection.h"
 #endif
 
 /*! @file

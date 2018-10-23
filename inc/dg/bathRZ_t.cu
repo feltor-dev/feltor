@@ -3,9 +3,9 @@
 #include <sstream>
 #include "draw/host_window.h"
 #include "dg/backend/typedefs.h"
-#include "dg/geometry/interpolation.h"
-#include "dg/geometry/xspacelib.h"
-#include "dg/geometry/projection.h"
+#include "dg/topology/interpolation.h"
+#include "dg/topology/xspacelib.h"
+#include "dg/topology/projection.h"
 #include "functors.h"
 #include "blas.h"
 

@@ -157,7 +157,7 @@ void assert_contains( real_type X, real_type x0, real_type x1, char const * poin
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the given interpolation points.
  * The given boundary conditions determine how interpolation points outside the grid domain are treated.
- * @snippet geometry/interpolation_t.cu doxygen
+ * @snippet topology/interpolation_t.cu doxygen
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
@@ -307,7 +307,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * The created matrix has \c g.size() columns and \c x.size() rows. It uses
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the given interpolation points.
- * @snippet geometry/interpolation_t.cu doxygen3d
+ * @snippet topology/interpolation_t.cu doxygen3d
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())

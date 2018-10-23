@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <thrust/device_vector.h>
 #include "backend/mpi_init.h"
-#include "geometry/mpi_evaluation.h"
+#include "topology/mpi_evaluation.h"
 #include "blas1.h"
 #include "functors.h"
 
@@ -28,7 +28,7 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/geometry/evaluation_mpit program\n";
+    if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/topology/evaluation_mpit program\n";
     mpi_init2d( dg::PER, dg::PER, comm);
     dg::MPIGrid2d g( 0,1,0,1, 3,120,120, comm);
     {
@@ -95,7 +95,7 @@ int main( int argc, char* argv[])
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     if(rank==0)std::cout << "e^2-7 = " << w3[0].data()[0] <<" (0.389056...)"<< std::endl;
-    if(rank==0)std::cout << "\nFINISHED! Continue with geometry/evaluation_mpit.cu !\n\n";
+    if(rank==0)std::cout << "\nFINISHED! Continue with topology/evaluation_mpit.cu !\n\n";
 
 
 

@@ -6,9 +6,9 @@
 #include <cusp/print.h>
 
 #include "backend/timer.h"
-#include "geometry/evaluation.h"
-#include "geometry/derivatives.h"
-#include "geometry/split_and_join.h"
+#include "topology/evaluation.h"
+#include "topology/derivatives.h"
+#include "topology/split_and_join.h"
 
 #include "cg.h"
 #include "elliptic.h"

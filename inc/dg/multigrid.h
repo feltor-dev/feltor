@@ -2,15 +2,15 @@
 
 #include "backend/exceptions.h"
 #include "backend/memory.h"
-#include "geometry/fast_interpolation.h"
-#include "geometry/interpolation.h"
+#include "topology/fast_interpolation.h"
+#include "topology/interpolation.h"
 #include "blas.h"
 #include "cg.h"
 #ifdef DG_BENCHMARK
 #include "backend/timer.h"
 #endif //DG_BENCHMARK
 #ifdef MPI_VERSION
-#include "geometry/mpi_projection.h"
+#include "topology/mpi_projection.h"
 #endif
 
 namespace dg
