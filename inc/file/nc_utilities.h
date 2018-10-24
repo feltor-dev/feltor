@@ -7,8 +7,8 @@
 #include <netcdf.h>
 #include "thrust/host_vector.h"
 
-#include "dg/geometry/grid.h"
-#include "dg/geometry/evaluation.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/evaluation.h"
 
 /*!@file
  *

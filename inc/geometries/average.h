@@ -1,7 +1,7 @@
 #pragma once
 
 #include <thrust/host_vector.h>
-#include "dg/geometry/weights.h"
+#include "dg/topology/weights.h"
 #include "magnetic_field.h"
 
 /*!@file

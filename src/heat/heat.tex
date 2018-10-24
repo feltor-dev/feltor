@@ -21,8 +21,15 @@ The temperature $T$ follows a non-isotropic heat diffusion equation
 \frac{\partial T}{\partial t} = \nu_\perp \Delta_\perp T + \nu_\parallel\Delta_\parallel T
 \label{eq:temperature}
 \end{align}
-where $\nabla_\parallel = \bhat \cdot\nabla$, $\Delta_\perp = \Delta - \Delta_\parallel$ and
-$\bhat$ is the prescribed magnetic field unit vector.
+with
+\begin{align}
+\Delta_\parallel T &= \nabla\cdot ( \bhat\bhat\cdot\nabla T) \\
+\Delta_\perp T     &= -\nabla\cdot( \bhat\times(\bhat\times \nabla T)) \equiv \nabla\cdot (h \nabla T) \\
+h^{ij} &= g^{ij} - b^ib^j
+\end{align}
+$\bhat = \bhat(\vec x)$ is the prescribed magnetic field unit vector, $g$ is the
+metric and $h$ is the projection
+tensor.
 $\nu_\parallel$ and $\nu_\perp$ are the respective conduction
 coefficients parallel and perpendicular to this field.
 
@@ -96,7 +103,8 @@ Input file format: json
   Nz\_out & integer &60& - &\# grid points in z in output fields \\
   itstp  & integer &2  & - &   steps between outputs \\
   maxout & integer &100& - &      \# outputs excluding first \\
-  eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
+  eps\_time  & float &1e-10   & - & accuracy of implicit solver in time-stepper \\
+  rtol  & float  & 1e-6  & - & desired tolerance of adaptive time-stepper \\
   nu\_parallel    & float &100   & - & parallel viscosity $\nu_\parallel$ \\
   nu\_perp    & float &0   & - & perpendicular viscosity $\nu_\perp$ \\
   amplitude  & float &0.1    & - & amplitude $A$ of the blob \\
@@ -110,6 +118,8 @@ Input file format: json
   boxscaleRm & float &  1.05, & - & (a little larger than 1) \\
   boxscaleZp & float &  1.05, & - & (a little larger than 1) \\
   boxscaleZm & float &  1.15, & - & (a little larger than 1) \\
+  mx     & integer & 10 & - & refinement factor of DS in x \\
+  my     & integer & 10 & - & refinement factor of DS in y \\
   diff       & char & non-adjoint & non-adjoint & adjoint, non-adjoint, elliptic (discretization for $\Delta_\parallel$) \\
 \bottomrule
 \end{longtable}

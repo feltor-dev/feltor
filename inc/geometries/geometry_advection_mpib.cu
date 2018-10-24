@@ -6,7 +6,7 @@
 
 #include "dg/arakawa.h"
 #include "dg/poisson.h"
-#include "dg/geometry/geometry.h"
+#include "dg/topology/geometry.h"
 #include "dg/backend/mpi_init.h"
 #include "dg/backend/timer.h"
 

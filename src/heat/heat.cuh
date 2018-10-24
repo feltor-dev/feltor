@@ -147,7 +147,7 @@ void Explicit<G,I,M,V>::energies( const V& y)
     {
         dg::blas2::symv( -p.nu_perp, m_ellipticPerp, y, 0., chi);
         Dperp[0] = p.nu_perp*dg::blas2::dot( one, w3d, chi);
-        Dperp[0] = p.nu_perp*dg::blas2::dot( y,   w3d, chi);
+        Dperp[1] = p.nu_perp*dg::blas2::dot( y,   w3d, chi);
     }
     m_heat_diff    = Dpar[0] + Dperp[0];
     m_entropy_diff = Dpar[1] + Dperp[1];

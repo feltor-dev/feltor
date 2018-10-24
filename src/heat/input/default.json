@@ -29,7 +29,5 @@
     "boxscaleZm" :  1.15,
     "mx": 10,
     "my": 10,
-    "diff"       : "non-adjoint",
-    "diffperp"   : 1,
-    "torlim"     : 0
+    "diff"       : "non-adjoint"
 }

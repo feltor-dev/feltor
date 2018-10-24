@@ -1,11 +1,11 @@
 #pragma once
 
 #include "dg/blas.h"
-#include "dg/geometry/geometry.h"
-#include "dg/geometry/derivatives.h"
+#include "dg/topology/geometry.h"
+#include "dg/topology/derivatives.h"
 #include "fieldaligned.h"
 #ifdef MPI_VERSION
-#include "dg/geometry/mpi_derivatives.h"
+#include "dg/topology/mpi_derivatives.h"
 #include "mpi_fieldaligned.h"
 #endif //MPI_VERSION
 #include "magnetic_field.h"

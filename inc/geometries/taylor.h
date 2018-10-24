@@ -8,7 +8,7 @@
 
 #include "dg/blas.h"
 
-#include "dg/geometry/functions.h"
+#include "dg/topology/functions.h"
 #include "dg/functors.h"
 #include "solovev_parameters.h"
 #include "magnetic_field.h"

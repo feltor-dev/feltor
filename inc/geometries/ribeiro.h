@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dg/geometry/grid.h"
-#include "dg/geometry/functions.h"
-#include "dg/geometry/interpolation.h"
-#include "dg/geometry/derivatives.h"
-#include "dg/geometry/geometry.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/functions.h"
+#include "dg/topology/interpolation.h"
+#include "dg/topology/derivatives.h"
+#include "dg/topology/geometry.h"
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"

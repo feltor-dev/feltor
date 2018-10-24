@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dg/geometry/gridX.h"
-#include "dg/geometry/evaluationX.h"
-#include "dg/geometry/functions.h"
+#include "dg/topology/gridX.h"
+#include "dg/topology/evaluationX.h"
+#include "dg/topology/functions.h"
 #include "dg/blas1.h"
-#include "dg/geometry/base_geometryX.h"
+#include "dg/topology/base_geometryX.h"
 #include "generatorX.h"
 #include "curvilinear.h"
 

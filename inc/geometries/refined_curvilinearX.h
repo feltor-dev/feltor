@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/geometry/refined_gridX.h"
+#include "dg/topology/refined_gridX.h"
 #include "generatorX.h"
 #include "curvilinear.h"
 
