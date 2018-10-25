@@ -24,6 +24,7 @@ namespace dg
 template<class container>
 struct SparseTensor
 {
+    using container_type = container;
     ///no value is set, Indices default to -1
     SparseTensor( ):m_mat_idx(3,-1) {}
 

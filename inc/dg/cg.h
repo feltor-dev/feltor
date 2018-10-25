@@ -35,7 +35,8 @@ template< class ContainerType>
 class CG
 {
   public:
-    typedef typename TensorTraits<ContainerType>::value_type value_type;//!< value type of the ContainerType class
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
     ///@copydoc construct()
@@ -46,6 +47,9 @@ class CG
     ///@brief Get the current maximum number of iterations
     ///@return the current maximum
     unsigned get_max() const {return max_iter;}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return r;}
 
     /**
      * @brief Allocate memory for the pcg method
@@ -270,7 +274,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 template<class ContainerType>
 struct Extrapolation
 {
-    using real_type = get_value_type<ContainerType>;
+    using value_type = get_value_type<ContainerType>;
+    using container_type = ContainerType;
     /*! @brief Set extrapolation order without initializing values
      * @param number number of vectors to use for extrapolation.
          Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
@@ -285,7 +290,7 @@ struct Extrapolation
      * @param t_init the times are initialized with the values <tt> t_init, t_init-1 , t_init-2 </tt>
      * @param init the vectors are initialized with this value
      */
-    Extrapolation( unsigned number, real_type t_init, const ContainerType& init) {
+    Extrapolation( unsigned number, value_type t_init, const ContainerType& init) {
         set_number(number, t_init, init);
     }
     /*! @brief Set extrapolation order and initialize values (equidistant)
@@ -305,10 +310,10 @@ struct Extrapolation
         m_t.resize( number);
         m_x.resize( number);
         for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = -(real_type)i;
+            m_t[i] = -(value_type)i;
     }
-    ///@copydoc Extrapolation(unsigned,real_type,const ContainerType&)
-    void set_number( unsigned number, real_type t_init, const ContainerType& init)
+    ///@copydoc Extrapolation(unsigned,value_type,const ContainerType&)
+    void set_number( unsigned number, value_type t_init, const ContainerType& init)
     {
         //init times 0, -1, -2
         assert( number <= 3 );
@@ -316,7 +321,7 @@ struct Extrapolation
         m_t.assign( number, t_init);
         m_number = number;
         for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = t_init - (real_type)i;
+            m_t[i] = t_init - (value_type)i;
     }
     ///@copydoc Extrapolation(unsigned,const ContainerType&)
     void set_number( unsigned number, const ContainerType& init)
@@ -324,7 +329,7 @@ struct Extrapolation
         //init times 0, -1, -2
         set_number( number, 1, init);
         for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = -(real_type)i;
+            m_t[i] = -(value_type)i;
     }
     ///return the current extrapolation number
     unsigned get_number( ) const{
@@ -338,7 +343,7 @@ struct Extrapolation
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
-    void extrapolate( real_type t, ContainerType0& new_x) const{
+    void extrapolate( value_type t, ContainerType0& new_x) const{
         switch(m_number)
         {
             case(0):
@@ -346,16 +351,16 @@ struct Extrapolation
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
             case(3): {
-                real_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
-                real_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
-                real_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                value_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
+                value_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
+                value_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
                 dg::blas1::evaluate( new_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
                  break;
             }
             default: {
-                real_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]);
-                real_type f1 = (t-m_t[0])/(m_t[1]-m_t[0]);
+                value_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]);
+                value_type f1 = (t-m_t[0])/(m_t[1]-m_t[0]);
                 dg::blas1::axpby( f0, m_x[0], f1, m_x[1], new_x);
             }
         }
@@ -369,7 +374,7 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void extrapolate( ContainerType0& new_x) const{
-        real_type t = m_t[0] +1.;
+        value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
     }
 
@@ -381,7 +386,7 @@ struct Extrapolation
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
-    void update( real_type t_new, const ContainerType0& new_entry){
+    void update( value_type t_new, const ContainerType0& new_entry){
         if( m_number == 0) return;
         //check if entry is already there to avoid division by zero errors
         for( unsigned i=0; i<m_number; i++)
@@ -407,7 +412,7 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void update( const ContainerType0& new_entry){
-        real_type t_new = m_t[0] + 1;
+        value_type t_new = m_t[0] + 1;
         update( t_new, new_entry);
     }
 
@@ -429,7 +434,7 @@ struct Extrapolation
 
     private:
     unsigned m_number;
-    std::vector<real_type> m_t;
+    std::vector<value_type> m_t;
     std::vector<ContainerType> m_x;
 };
 
@@ -470,6 +475,9 @@ struct Invert
     {
         construct( copyable, max_iter, eps, extrapolationType, multiplyWeights, nrmb_correction);
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return cg.copyable();}
 
     /**
      * @brief Allocate memory

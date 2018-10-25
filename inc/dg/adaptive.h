@@ -21,69 +21,69 @@ get_value_type<ContainerType> l2norm( const ContainerType& x)
     return sqrt( dg::blas1::dot( x,x));
 }
 ///\f[ h'= h \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f]
-template<class real_type>
-real_type pid_control( real_type dt_old, real_type eps_0, real_type eps_1, real_type eps_2, unsigned embedded_order, unsigned order)
+template<class value_type>
+value_type pid_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
-    real_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
-    real_type factor = pow( eps_0, m_k1/(real_type)order)
-                     * pow( eps_1, m_k2/(real_type)order)
-                     * pow( eps_2, m_k3/(real_type)order);
+    value_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
+    value_type factor = pow( eps_0, m_k1/(value_type)order)
+                     * pow( eps_1, m_k2/(value_type)order)
+                     * pow( eps_2, m_k3/(value_type)order);
     //std::cout <<" control "<< eps_0<<" "<<eps_1<<" "<<eps_2<<" "<<factor<<"\n";
     return dt_old*factor;
 }
 ///\f[ h'= h \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f]
-template<class real_type>
-real_type pi_control( real_type dt_old, real_type eps_0, real_type eps_1, real_type eps_2, unsigned embedded_order, unsigned order)
+template<class value_type>
+value_type pi_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
-    real_type m_k1 = -0.8, m_k2 = 0.31;
-    real_type factor = pow( eps_0, m_k1/(real_type)order)
-                     * pow( eps_1, m_k2/(real_type)order);
+    value_type m_k1 = -0.8, m_k2 = 0.31;
+    value_type factor = pow( eps_0, m_k1/(value_type)order)
+                     * pow( eps_1, m_k2/(value_type)order);
     return dt_old*factor;
 }
 ///\f[ h'= h \epsilon_n^{-1/p}\f]
-template<class real_type>
-real_type i_control( real_type dt_old, real_type eps_0, real_type eps_1, real_type eps_2, unsigned embedded_order, unsigned order)
+template<class value_type>
+value_type i_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
-    real_type m_k1 = -1.;
-    real_type factor = pow( eps_0, m_k1/(real_type)order);
+    value_type m_k1 = -1.;
+    value_type factor = pow( eps_0, m_k1/(value_type)order);
     return dt_old*factor;
 }
 ///@}
 
 ///@cond
-template<class real_type>
+template<class value_type>
 struct PIDController
 {
     PIDController( ){}
-    real_type operator()( real_type dt_old, real_type eps_n, real_type eps_n1, real_type eps_n2, unsigned embedded_order, unsigned order)const
+    value_type operator()( value_type dt_old, value_type eps_n, value_type eps_n1, value_type eps_n2, unsigned embedded_order, unsigned order)const
     {
-        real_type factor = pow( eps_n,  m_k1/(real_type)order)
-                         * pow( eps_n1, m_k2/(real_type)order)
-                         * pow( eps_n2, m_k3/(real_type)order);
-        real_type dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) );
+        value_type factor = pow( eps_n,  m_k1/(value_type)order)
+                         * pow( eps_n1, m_k2/(value_type)order)
+                         * pow( eps_n2, m_k3/(value_type)order);
+        value_type dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) );
         return dt_new;
     }
-    void set_lower_limit( real_type lower_limit) {
+    void set_lower_limit( value_type lower_limit) {
         m_lower_limit = lower_limit;
     }
-    void set_upper_limit( real_type upper_limit) {
+    void set_upper_limit( value_type upper_limit) {
         m_upper_limit = upper_limit;
     }
     private:
-    real_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
-    real_type m_lower_limit = 0, m_upper_limit = 1e300;
+    value_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
+    value_type m_lower_limit = 0, m_upper_limit = 1e300;
 };
 namespace detail{
-template<class real_type>
+template<class value_type>
 struct Tolerance
 {
-    Tolerance( real_type rtol, real_type atol, real_type size):m_rtol(rtol*sqrt(size)), m_atol( atol*sqrt(size)){}
+    Tolerance( value_type rtol, value_type atol, value_type size):m_rtol(rtol*sqrt(size)), m_atol( atol*sqrt(size)){}
     DG_DEVICE
-    void operator()( real_type previous, real_type& delta) const{
+    void operator()( value_type previous, value_type& delta) const{
         delta = delta/ ( m_rtol*fabs(previous) + m_atol);
     }
     private:
-    real_type m_rtol, m_atol;
+    value_type m_rtol, m_atol;
 };
 } //namespace detail
 ///@endcond
@@ -98,15 +98,18 @@ struct Tolerance
  * or \b stepper.step( ex, im, t0, u0, t1, u1, dt, delta)
  * depending on whether a purely explicit/implicit or a semi-implicit stepper
  * is used.
- * Here, t0, t1 and dt are of type \b Stepper::real_type, u0,u1 and delta
- * are vector types of type \b Stepper::container& and rhs, ex and im are
+ * Here, t0, t1 and dt are of type \b Stepper::value_type, u0,u1 and delta
+ * are vector types of type \b Stepper::container_type& and rhs, ex and im are
  * functors implementing the equations that are forwarded from the caller.
  * The parameters t1, u1 and delta are output parameters and must be updated by
  * the stepper.
  * The \c Stepper must have a default constructor and a constructor that takes
- * \c Stepper::container& as the first parameter.
+ * \c Stepper::container_type& as the first parameter.
  * Also, it must have the \c order() and \c embedded_order() member functions that
  * return the (global) order of the method and its error estimate.
+  The <tt> const ContainerType& copyable()const; </tt> member must return a container of the size that is later used in \c step
+  (it does not matter what values \c copyable contains, but its size is important;
+  the \c step method can only be called with vectors of this size)
  */
 
 //%%%%%%%%%%%%%%%%%%%Adaptive%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -156,21 +159,17 @@ like in the multistep method.
 template<class Stepper>
 struct Adaptive
 {
-    using container = typename Stepper::container; //!< the type of the vector class in use by \c Stepper
-    using real_type = typename Stepper::real_type; //!< the value type of the time variable defined by \c Stepper (float or double)
-    ///@brief No memory allocation,
-    ///requires \c Stepper to have default constructor
-    Adaptive(){}
+    using stepper_type = Stepper;
+    using container_type = typename Stepper::container_type; //!< the type of the vector class in use by \c Stepper
+    using value_type = typename Stepper::value_type; //!< the value type of the time variable defined by \c Stepper (float or double)
     /*!@brief Allocate workspace and construct stepper
-     * @param copyable vector of the size that is later used in \c step (
-      it does not matter what values \c copyable contains, but its size is important;
-      the \c step method can only be called with vectors of the same size)
-     * @param ps Parameters that, together with \c copyable as the first parameter,
+     * @param ps Parameters that
      * are forwarded to the constructor of \c Stepper
      * @tparam StepperParams Type of parameters (deduced by the compiler)
      */
     template<class ...StepperParams>
-    Adaptive( const container& copyable, StepperParams&& ...ps): m_stepper(copyable, std::forward<StepperParams>(ps)...) , m_next(copyable), m_delta(copyable)
+    Adaptive(StepperParams&& ...ps): m_stepper(std::forward<StepperParams>(ps)...),
+        m_next(m_stepper.copyable()), m_delta(m_stepper.copyable())
     {
         dg::blas1::copy( 1., m_next);
         m_size = dg::blas1::dot( m_next, 1.);
@@ -186,8 +185,8 @@ struct Adaptive
      * Currently, this function won't do much better than if you just choose a
      * smallish number yourself, but it's there for future improvements.
      */
-    template<class Explicit, class ErrorNorm = real_type(const container&)>
-    real_type guess_stepsize( Explicit& ex, real_type t0, const container& u0, enum direction dir, ErrorNorm& norm, real_type rtol, real_type atol);
+    template<class Explicit, class ErrorNorm = value_type(const container_type&)>
+    value_type guess_stepsize( Explicit& ex, value_type t0, const container_type& u0, enum direction dir, ErrorNorm& norm, value_type rtol, value_type atol);
 
     /*!@brief Explicit or Implicit adaptive step
      *
@@ -197,18 +196,18 @@ struct Adaptive
      * @copydoc hide_control_error
      */
     template< class RHS,
-              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned),
-              class ErrorNorm = real_type( const container&)>
+              class ControlFunction = value_type (value_type, value_type, value_type, value_type, unsigned, unsigned),
+              class ErrorNorm = value_type( const container_type&)>
     void step( RHS& rhs,
-              real_type t0,
-              const container& u0,
-              real_type& t1,
-              container& u1,
-              real_type& dt,
+              value_type t0,
+              const container_type& u0,
+              value_type& t1,
+              container_type& u1,
+              value_type& dt,
               ControlFunction& control,
               ErrorNorm& norm,
-              real_type rtol,
-              real_type atol
+              value_type rtol,
+              value_type atol
               )
     {
         m_stepper.step( rhs, t0, u0, m_t_next, m_next, dt, m_delta);
@@ -222,19 +221,19 @@ struct Adaptive
      */
     template< class Explicit,
               class Implicit,
-              class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned),
-              class ErrorNorm = real_type( const container&)>
+              class ControlFunction = value_type (value_type, value_type, value_type, value_type, unsigned, unsigned),
+              class ErrorNorm = value_type( const container_type&)>
     void step( Explicit& ex,
               Implicit& im,
-              real_type t0,
-              const container& u0,
-              real_type& t1,
-              container& u1,
-              real_type& dt,
+              value_type t0,
+              const container_type& u0,
+              value_type& t1,
+              container_type& u1,
+              value_type& dt,
               ControlFunction& control,
               ErrorNorm& norm,
-              real_type rtol,
-              real_type atol)
+              value_type rtol,
+              value_type atol)
     {
         m_stepper.step( ex, im, t0, u0, m_t_next, m_next, dt, m_delta);
         return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
@@ -244,26 +243,26 @@ struct Adaptive
         return m_failed;
     }
     private:
-    template<   class ControlFunction = real_type (real_type, real_type, real_type, real_type, unsigned, unsigned),
-                class ErrorNorm = real_type( const container&)>
-    void update( real_type t0,
-                const container& u0,
-                real_type& t1,
-                container& u1,
-                real_type& dt,
+    template<   class ControlFunction = value_type (value_type, value_type, value_type, value_type, unsigned, unsigned),
+                class ErrorNorm = value_type( const container_type&)>
+    void update( value_type t0,
+                const container_type& u0,
+                value_type& t1,
+                container_type& u1,
+                value_type& dt,
                 ControlFunction& control,
                 ErrorNorm& norm,
-                real_type rtol,
-                real_type atol
+                value_type rtol,
+                value_type atol
               )
     {
         //std::cout << "Try stepsize "<<dt;
-        dg::blas1::subroutine( detail::Tolerance<real_type>( rtol, atol, m_size), u0, m_delta);
-        real_type eps0 = norm(m_delta);
+        dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol, m_size), u0, m_delta);
+        value_type eps0 = norm(m_delta);
         //std::cout << " error "<<eps0;
         if( eps0 > m_reject_limit || std::isnan( eps0) )
         {
-            real_type dt_old = dt;
+            value_type dt_old = dt;
             dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(), m_stepper.order());
             if( fabs( dt) > 0.9*fabs(dt_old))
                 dt = 0.9*dt_old;
@@ -289,18 +288,18 @@ struct Adaptive
     }
     bool m_failed = false;
     Stepper m_stepper;
-    container m_next, m_delta;
-    real_type m_reject_limit = 2;
-    real_type m_size, m_eps1=1, m_eps2=1;
-    real_type m_t_next = 0;
+    container_type m_next, m_delta;
+    value_type m_reject_limit = 2;
+    value_type m_size, m_eps1=1, m_eps2=1;
+    value_type m_t_next = 0;
 };
 template<class Stepper>
 template<class Explicit, class ErrorNorm>
-typename Adaptive<Stepper>::real_type Adaptive<Stepper>::guess_stepsize( Explicit& ex, real_type t0, const container& u0, enum direction dir, ErrorNorm& tol, real_type rtol, real_type atol)
+typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize( Explicit& ex, value_type t0, const container_type& u0, enum direction dir, ErrorNorm& tol, value_type rtol, value_type atol)
 {
-    real_type desired_accuracy = rtol*tol(u0) + atol;
+    value_type desired_accuracy = rtol*tol(u0) + atol;
     ex( t0, u0, m_next);
-    real_type dt = pow(desired_accuracy, 1./(real_type)m_stepper.order())/tol(m_next);
+    value_type dt = pow(desired_accuracy, 1./(value_type)m_stepper.order())/tol(m_next);
     if( dir != forward)
         dt*=-1.;
     return dt;
@@ -333,8 +332,8 @@ typename Adaptive<Stepper>::real_type Adaptive<Stepper>::guess_stepsize( Explici
 
 /*!@class hide_control_error
  *
- * @tparam ControlFunction function or Functor called as dt' = control( dt, eps0, eps1, eps2, order, embedded_order), where all parameters are of type real_type except the last two, which are unsigned
- * @tparam ErrorNorm function or Functor of type real_type( const ContainerType&)
+ * @tparam ControlFunction function or Functor called as dt' = control( dt, eps0, eps1, eps2, order, embedded_order), where all parameters are of type value_type except the last two, which are unsigned
+ * @tparam ErrorNorm function or Functor of type value_type( const ContainerType&)
  */
 
 ///@addtogroup time
@@ -368,8 +367,8 @@ int integrateAdaptive(Adaptive& adaptive,
                       get_value_type<ContainerType> atol=1e-10
                       )
 {
-    using  real_type = get_value_type<ContainerType>;
-    real_type t_current = t0, dt_current = dt;
+    using  value_type = get_value_type<ContainerType>;
+    value_type t_current = t0, dt_current = dt;
     blas1::copy( u0, u1 );
     ContainerType& current(u1);
     if( t1 == t0)
@@ -416,7 +415,7 @@ int integrateERK( std::string name,
                   get_value_type<ContainerType> atol=1e-10
               )
 {
-    dg::Adaptive<dg::ERKStep<ContainerType>> pd( u0, name);
+    dg::Adaptive<dg::ERKStep<ContainerType>> pd( name, u0);
     return integrateAdaptive( pd, rhs, t0, u0, t1, u1, dt, control, norm, rtol, atol);
 }
 ///@}

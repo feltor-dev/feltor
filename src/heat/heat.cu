@@ -82,7 +82,7 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////
     //Adaptive solver
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
-        y0, "ARK-4-2-3", grid.size(), p.eps_time);
+        "ARK-4-2-3", y0, grid.size(), p.eps_time);
     double dt_new = p.dt, dt = dt_new;
 //     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(),1e-13);
 //     karniadakis.init( ex, im, y0, p.dt);

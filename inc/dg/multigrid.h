@@ -38,9 +38,13 @@ namespace dg
 * @sa \c Extrapolation  to generate an initial guess
 *
 */
-template< class Geometry, class Matrix, class container>
+template< class Geometry, class Matrix, class Container>
 struct MultigridCG2d
 {
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     MultigridCG2d(){}
     /**
      * @brief Construct the grids and the interpolation/projection operators
@@ -48,7 +52,7 @@ struct MultigridCG2d
      * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
      * @param stages number of grids in total (The second grid contains half the points of the original grids,
      *   The third grid contains half of the second grid ...). Must be > 1
-     *   @param ps parameters necessary for \c dg::construct to construct a \c container from a \c dg::HVec
+     *   @param ps parameters necessary for \c dg::construct to construct a \c Container from a \c dg::HVec
     */
     template<class ...Params>
     MultigridCG2d( const Geometry& grid, const unsigned stages, Params&& ... ps)
@@ -89,7 +93,7 @@ struct MultigridCG2d
 
         m_x.resize( m_stages);
         for( unsigned u=0; u<m_stages; u++)
-            m_x[u] = dg::construct<container>( dg::evaluate( dg::zero, m_grids[u].get()), std::forward<Params>(ps)...);
+            m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero, m_grids[u].get()), std::forward<Params>(ps)...);
         m_r = m_b = m_x;
         for (unsigned u = 0; u < m_stages; u++)
             m_cg[u].construct(m_x[u], 1);
@@ -97,7 +101,7 @@ struct MultigridCG2d
 
     /*
 	template<class SymmetricOp>
-	std::vector<unsigned> solve( std::vector<SymmetricOp>& op, container& x, const container& b, const double eps)
+	std::vector<unsigned> solve( std::vector<SymmetricOp>& op, Container& x, const Container& b, const double eps)
 	{
         //project initial guess down to coarse grid
         project(x, m_x);
@@ -163,7 +167,7 @@ struct MultigridCG2d
      * - interpolate solution up to next finer grid and repeat until the original grid is reached.
      * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
      * @copydoc hide_symmetric_op
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
      * @param x (read/write) contains initial guess on input and the solution on output
      * @param b The right hand side (will be multiplied by \c weights)
@@ -251,7 +255,7 @@ struct MultigridCG2d
     std::vector<ContainerType0> project( const ContainerType0& src)
     {
         //use the fact that m_x has the correct sizes from the constructor
-        std::vector<container> out( m_x);
+        std::vector<Container> out( m_x);
         project( src, out);
         return out;
 
@@ -340,11 +344,11 @@ private:
 private:
     unsigned m_stages;
     std::vector< dg::ClonePtr< Geometry> > m_grids;
-    std::vector< MultiMatrix<Matrix, container> >  m_inter;
-    std::vector< MultiMatrix<Matrix, container> >  m_interT;
-    std::vector< MultiMatrix<Matrix, container> >  m_project;
-    std::vector< CG<container> > m_cg;
-    std::vector< container> m_x, m_r, m_b;
+    std::vector< MultiMatrix<Matrix, Container> >  m_inter;
+    std::vector< MultiMatrix<Matrix, Container> >  m_interT;
+    std::vector< MultiMatrix<Matrix, Container> >  m_project;
+    std::vector< CG<Container> > m_cg;
+    std::vector< Container> m_x, m_r, m_b;
 
     struct stepinfo
     {

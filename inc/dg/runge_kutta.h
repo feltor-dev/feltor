@@ -50,23 +50,26 @@ in the following table:
 template< class ContainerType>
 struct ERKStep
 {
-    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container = ContainerType; //!< the type of the vector class in use
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     ERKStep(){
     }
     ///@copydoc RungeKutta::construct()
-    ERKStep( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
+    ERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
         { }
     ///@copydoc RungeKutta::construct()
-    void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
+    void construct( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable ){
         m_rk = tableau;
         m_k.assign(m_rk.num_stages(), copyable);
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_k[0];}
     ///@copydoc RungeKutta::step()
     ///@param delta Contains error estimate on output (must have equal size as \c u0)
     template<class RHS>
-    void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///global order of the method given by the current Butcher Tableau
     unsigned order() const {
         return m_rk.order();
@@ -80,19 +83,19 @@ struct ERKStep
         return m_rk.num_stages();
     }
   private:
-    ButcherTableau<real_type> m_rk;
+    ButcherTableau<value_type> m_rk;
     std::vector<ContainerType> m_k;
-    real_type m_t1 = 1e300;//remember the last timestep at which ERK is called
+    value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
 };
 
 template< class ContainerType>
 template< class RHS>
-void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rk.num_stages();
     //this behaviour must be documented
     //0 stage: probe fsal
-    real_type tu = t0;
+    value_type tu = t0;
     if( t0 != m_t1)
         f(t0, u0, m_k[0]); //freshly compute k_0
     //else take from last call
@@ -242,51 +245,49 @@ void ERKStep<ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct ARKStep
 {
-    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container = ContainerType; //!< the type of the vector class in use
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     ARKStep(){ }
     /*!@brief Construct with given name
-     * @param copyable vector of the size that is later used in \c step (
-      it does not matter what values \c copyable contains, but its size is important;
-      the \c step method can only be called with vectors of the same size)
      * @param name Currently, one of "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
-     * @param ps Parameters that, together with \c copyable as the first parameter,
+     * @param ps Parameters that
      * are forwarded to the constructor of \c SolverType
      * @tparam SolverParams Type of parameters (deduced by the compiler)
      */
     template<class ...SolverParams>
-    ARKStep( const ContainerType& copyable,
-             std::string name,
+    ARKStep( std::string name,
              SolverParams&& ...ps
              )
     {
         if( name == "ARK-4-2-3" )
-            construct( copyable, "ARK-4-2-3 (explicit)", "ARK-4-2-3 (implicit)", std::forward<SolverParams>(ps)...);
+            construct( "ARK-4-2-3 (explicit)", "ARK-4-2-3 (implicit)", std::forward<SolverParams>(ps)...);
         else if( name == "ARK-6-3-4" )
-            construct( copyable, "ARK-6-3-4 (explicit)", "ARK-6-3-4 (implicit)", std::forward<SolverParams>(ps)...);
+            construct( "ARK-6-3-4 (explicit)", "ARK-6-3-4 (implicit)", std::forward<SolverParams>(ps)...);
         else if( name == "ARK-8-4-5" )
-            construct( copyable, "ARK-8-4-5 (explicit)", "ARK-8-4-5 (implicit)", std::forward<SolverParams>(ps)...);
+            construct( "ARK-8-4-5 (explicit)", "ARK-8-4-5 (implicit)", std::forward<SolverParams>(ps)...);
         else
             throw dg::Error( dg::Message()<<"Unknown name");
     }
 
     ///@copydoc construct()
     template<class ...SolverParams>
-    ARKStep( const ContainerType& copyable,
-             ConvertsToButcherTableau<real_type> ex_tableau,
-             ConvertsToButcherTableau<real_type> im_tableau,
+    ARKStep( ConvertsToButcherTableau<value_type> ex_tableau,
+             ConvertsToButcherTableau<value_type> im_tableau,
              SolverParams&& ...ps
              ):
-         m_rhs( copyable),
+         m_solver( std::forward<SolverParams>(ps)...),
          m_rkE(ex_tableau),
          m_rkI(im_tableau),
-         m_kE(m_rkE.num_stages(), copyable),
-         m_kI(m_rkI.num_stages(), copyable),
-         m_solver( copyable, std::forward<SolverParams>(ps)...)
+         m_rhs( m_solver.copyable()),
+         m_kE(m_rkE.num_stages(), m_rhs),
+         m_kI(m_rkI.num_stages(), m_rhs)
     {
         assert( m_rkE.num_stages() == m_rkI.num_stages());
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_kE[0];}
 
     /*!@brief Construct with two Butcher Tableaus
      *
@@ -296,29 +297,26 @@ struct ARKStep
      * listed in \c ConvertsToButcherTableau. Or you have your own tableaus of
      * course but both tableaus must have the same number of steps.
      *
-     * @param copyable vector of the size that is later used in \c step (
-      it does not matter what values \c copyable contains, but its size is important;
-      the \c step method can only be called with vectors of the same size)
      * @param ex_tableau Tableau for the explicit part
      * @param im_tableau Tableau for the implicit part (must have the same number of stages as \c ex_tableau )
-     * @param ps Parameters that, together with \c copyable as the first parameter,
+     * @param ps Parameters that
      * are forwarded to the constructor of \c SolverType
      * @tparam SolverParams Type of parameters (deduced by the compiler)
      */
     template<class ...SolverParams>
-    void construct( const ContainerType& copyable,
-             ConvertsToButcherTableau<real_type> ex_tableau,
-             ConvertsToButcherTableau<real_type> im_tableau,
+    void construct(
+             ConvertsToButcherTableau<value_type> ex_tableau,
+             ConvertsToButcherTableau<value_type> im_tableau,
              SolverParams&& ...ps
              )
     {
-        m_rhs = copyable;
         m_rkE = ex_tableau;
         m_rkI = im_tableau;
         assert( m_rkE.num_stages() == m_rkI.num_stages());
-        m_kE.assign(m_rkE.num_stages(), copyable);
-        m_kI.assign(m_rkI.num_stages(), copyable);
-        m_solver = SolverType( copyable, std::forward<SolverParams>(ps)...);
+        m_solver = SolverType( std::forward<SolverParams>(ps)...);
+        m_rhs = m_solver.copyable();
+        m_kE.assign(m_rkE.num_stages(), m_rhs);
+        m_kI.assign(m_rkI.num_stages(), m_rhs);
     }
 
     /**
@@ -334,7 +332,7 @@ struct ARKStep
     * @note on return \c ex(t1, u1) will be the last call to \c ex (this is useful if \c Explicit holds state, which is then updated to the current timestep)
     */
     template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta);
+    void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkE.order();
@@ -348,19 +346,19 @@ struct ARKStep
         return m_rkE.num_stages();
     }
     private:
-    ContainerType m_rhs, m_u1;
-    ButcherTableau<real_type> m_rkE, m_rkI;
-    std::vector<ContainerType> m_kE, m_kI;
     SolverType m_solver;
-    real_type m_t1 = 1e300;
+    ContainerType m_rhs, m_u1;
+    ButcherTableau<value_type> m_rkE, m_rkI;
+    std::vector<ContainerType> m_kE, m_kI;
+    value_type m_t1 = 1e300;
 };
 
 template<class ContainerType, class SolverType>
 template< class Explicit, class Implicit>
-void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt, ContainerType& delta)
+void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rkE.num_stages();
-    real_type tu = t0;
+    value_type tu = t0;
     //0 stage
     //a^E_00 = a^I_00 = 0
     if( t0 != m_t1)
@@ -471,25 +469,28 @@ the harmonic oscillator:
 template<class ContainerType>
 struct RungeKutta
 {
-    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container = ContainerType; //!< the type of the vector class in use
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
     ///@brief No memory allocation, Call \c construct before using the object
     RungeKutta(){}
     ///@copydoc construct()
-    RungeKutta( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau): m_erk( copyable, tableau), m_delta( copyable)
+    RungeKutta( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable): m_erk( tableau, copyable), m_delta( copyable)
         { }
     /**
     * @brief Reserve internal workspace for the integration
     *
+    * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
     * @param copyable vector of the size that is later used in \c step (
      it does not matter what values \c copyable contains, but its size is important;
      the \c step method can only be called with vectors of the same size)
-    * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
     */
-    void construct( const ContainerType& copyable, ConvertsToButcherTableau<real_type> tableau){
-        m_erk = ERKStep<ContainerType>( copyable, tableau);
+    void construct(ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable){
+        m_erk = ERKStep<ContainerType>( tableau, copyable);
         m_delta = copyable;
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_delta;}
     /**
     * @brief Advance one step
     *
@@ -503,7 +504,7 @@ struct RungeKutta
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     */
     template<class RHS>
-    void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt){
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
     }
     ///@copydoc ERKStep::order
@@ -538,12 +539,12 @@ struct RungeKutta
 template< class RHS, class ContainerType>
 void stepperRK(ConvertsToButcherTableau<get_value_type<ContainerType>> tableau, RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, unsigned N )
 {
-    using real_type = get_value_type<ContainerType>;
-    RungeKutta<ContainerType > rk( begin, tableau);
+    using value_type = get_value_type<ContainerType>;
+    RungeKutta<ContainerType > rk( tableau, begin);
     if( t_end == t_begin){ end = begin; return;}
-    const real_type dt = (t_end-t_begin)/(real_type)N;
+    const value_type dt = (t_end-t_begin)/(value_type)N;
     dg::blas1::copy( begin, end);
-    real_type t0 = t_begin;
+    value_type t0 = t_begin;
     for( unsigned i=0; i<N; i++)
         rk.step( rhs, t0, end, t0, end, dt);
 }

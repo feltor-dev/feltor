@@ -22,10 +22,14 @@ namespace dg
  * @ingroup matrixoperators
  * @attention This class is still under construction!
  */
-template < class Geometry,class IMatrix, class Matrix, class container>
+template < class Geometry,class IMatrix, class Matrix, class Container>
 class RefinedElliptic
 {
     public:
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     /**
      * @brief Construct from a coarse and a fine grid
      *
@@ -56,7 +60,7 @@ class RefinedElliptic
      * @brief Change Chi
      *
      * @param chi The new chi
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& chi)
@@ -70,20 +74,20 @@ class RefinedElliptic
      * @brief Returns the inverse weights used to make the matrix normed
      * @return inverse weights
      */
-    const container& inv_weights()const {return inv_weights_;}
-    const container& weights()const {return weights_;}
+    const Container& inv_weights()const {return inv_weights_;}
+    const Container& weights()const {return weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      * @return inverse weights
      */
-    const container& precond()const {return inv_weights_;}
+    const Container& precond()const {return inv_weights_;}
 
     /**
      * @brief Computes the polarisation term
      *
      * @param x left-hand-side
      * @param y result
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y)
@@ -108,7 +112,7 @@ class RefinedElliptic
      * \f[P\sqrt{g} Q \rho\f]
      * @param rhs the original right hand side
      * @param rhs_mod the modified right hand side of the same size (may equal rhs)
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void compute_rhs( const ContainerType0& rhs, ContainerType1& rhs_mod )
@@ -135,10 +139,10 @@ class RefinedElliptic
     }
     norm no_;
     IMatrix P_, Q_, QT_;
-    Elliptic<Geometry, Matrix, container> elliptic_;
-    container temp1_, temp2_;
-    container weights_, inv_weights_;
-    container vol_;
+    Elliptic<Geometry, Matrix, Container> elliptic_;
+    Container temp1_, temp2_;
+    Container weights_, inv_weights_;
+    Container vol_;
 };
 
 

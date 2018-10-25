@@ -116,7 +116,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1, 1., y0); //initialize y0
     ///////////////////TIME STEPPER
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
-        y0, "ARK-4-2-3", grid.size(), p.eps_time);
+        "ARK-4-2-3", y0, grid.size(), p.eps_time);
     double dt = p.dt, dt_new = dt;
     // dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(),1e-13);
      //karniadakis.init( ex, diffusion, 0, y0, p.dt);

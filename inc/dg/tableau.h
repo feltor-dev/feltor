@@ -24,6 +24,7 @@ namespace dg{
  */
 template<class real_type>
 struct ButcherTableau{
+    using value_type = real_type;
     ///No memory allocation
     ButcherTableau(){}
     /*! @brief Construct a classic non-embedded tableau
@@ -1025,6 +1026,7 @@ ButcherTableau<real_type> tableau( std::string name)
 template<class real_type>
 struct ConvertsToButcherTableau
 {
+    using value_type = real_type;
     ///Of course a ButcherTableau converts to a ButcherTableau
     ///Useful if you constructed your very own coefficients
     ConvertsToButcherTableau( ButcherTableau<real_type> tableau): m_t(tableau){}

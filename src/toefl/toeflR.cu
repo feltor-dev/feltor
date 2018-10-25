@@ -66,8 +66,8 @@ int main( int argc, char* argv[])
 
 
     //dg::Karniadakis< std::vector<dg::DVec> > stepper( y0, y0[0].size(), p.eps_time);
-    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( y0, "ARK-4-2-3", y0[0].size(), p.eps_time);
-    //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( y0, "ARK-4-2-3 (explicit)");
+    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
+    //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);

@@ -29,9 +29,13 @@ namespace dg
  * @copydoc hide_geometry_matrix_container
  * @ingroup arakawa
  */
-template< class Geometry, class Matrix, class container >
+template< class Geometry, class Matrix, class Container >
 struct ArakawaX
 {
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     /**
      * @brief Create Arakawa on a grid
      * @param g The grid
@@ -56,7 +60,7 @@ struct ArakawaX
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
      * @note memops: 30
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result);
@@ -64,7 +68,7 @@ struct ArakawaX
      * @brief Change Chi
      *
      * @param new_chi The new chi
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& new_chi) {
@@ -97,7 +101,7 @@ struct ArakawaX
      * in the plane of a 2x1 product space
      * @param phi function
      * @param varphi may equal phi, contains result on output
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void variation( const ContainerType0& phi, ContainerType1& varphi)
@@ -109,25 +113,25 @@ struct ArakawaX
     }
 
   private:
-    container m_dxlhs, m_dxrhs, m_dylhs, m_dyrhs, m_helper;
+    Container m_dxlhs, m_dxrhs, m_dylhs, m_dyrhs, m_helper;
     Matrix m_bdxf, m_bdyf;
-    SparseTensor<container> m_metric;
-    container m_chi, m_inv_perp_vol;
+    SparseTensor<Container> m_metric;
+    Container m_chi, m_inv_perp_vol;
 };
 ///@cond
-template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
+template<class Geometry, class Matrix, class Container>
+ArakawaX<Geometry, Matrix, Container>::ArakawaX( const Geometry& g ):
     ArakawaX( g, g.bcx(), g.bcy()) { }
 
-template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
-    m_dxlhs( dg::construct<container>(dg::evaluate( one, g)) ), m_dxrhs(m_dxlhs), m_dylhs(m_dxlhs), m_dyrhs( m_dxlhs), m_helper( m_dxlhs),
+template<class Geometry, class Matrix, class Container>
+ArakawaX<Geometry, Matrix, Container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
+    m_dxlhs( dg::construct<Container>(dg::evaluate( one, g)) ), m_dxrhs(m_dxlhs), m_dylhs(m_dxlhs), m_dyrhs( m_dxlhs), m_helper( m_dxlhs),
     m_bdxf(dg::create::dx( g, bcx, dg::centered)),
     m_bdyf(dg::create::dy( g, bcy, dg::centered))
 {
     m_metric=g.metric();
     m_chi = dg::tensor::determinant2d(m_metric);
-    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<container>>());
+    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<Container>>());
     m_inv_perp_vol = m_chi;
 }
 
@@ -152,16 +156,16 @@ struct ArakawaFunctor
     }
 };
 
-template< class Geometry, class Matrix, class container>
+template< class Geometry, class Matrix, class Container>
 template<class ContainerType0, class ContainerType1, class ContainerType2>
-void ArakawaX< Geometry, Matrix, container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
+void ArakawaX< Geometry, Matrix, Container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
 {
     //compute derivatives in x-space
     blas2::symv( m_bdxf, lhs, m_dxlhs);
     blas2::symv( m_bdyf, lhs, m_dylhs);
     blas2::symv( m_bdxf, rhs, m_dxrhs);
     blas2::symv( m_bdyf, rhs, result);
-    blas1::subroutine( ArakawaFunctor<get_value_type<container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, result);
+    blas1::subroutine( ArakawaFunctor<get_value_type<Container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, result);
 
     blas2::symv( 1., m_bdxf, m_dylhs, 1., result);
     blas2::symv( 1., m_bdyf, m_dxrhs, 1., result);

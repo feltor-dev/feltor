@@ -131,7 +131,7 @@
   * Any class for which a specialization of \c TensorTraits exists and which fullfills
   * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
   * The \c MatrixType can for example be one of:
-  *  - \c scalar or \c container: Scalars and containers act as diagonal matrices.
+  *  - \c scalar or \c Container: Scalars and containers act as diagonal matrices.
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
@@ -139,7 +139,7 @@
   *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
   *  that have a corresponding member function in the Matrix class (e.g. \c symv( const ContainerType0&, ContainerType1&); ) can be called.
   *  .
-  *  If a \c container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
+  *  If a \c Container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
   */
   /** @class hide_geometry
   * @tparam Geometry
@@ -147,29 +147,29 @@
   */
 
   /** @class hide_container_geometry
-  * @tparam container
+  * @tparam Container
   * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::subroutine() can be converted using \c dg::construct.
-  * We assume that \c container is copyable/assignable and has a swap member function.
+  * We assume that \c Container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
   *  - \c dg::MHVec or \c dg::MDVec when \c Geometry is one of the MPI geometries
   * @tparam Geometry
-  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c container type can be used.
+  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Container type can be used.
   */
 
   /** @class hide_geometry_matrix_container
   * @tparam Geometry
-  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c container types can be used:
+  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
   * @tparam Matrix
-  * A class for which the blas2 functions are callable in connection with the \c container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
+  * A class for which the blas2 functions are callable in connection with the \c Container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
   * The \c Matrix type can be one of:
   *  - \c dg::HMatrix with \c dg::HVec and one of the shared memory geometries
   *  - \c dg::DMatrix with \c dg::DVec and one of the shared memory geometries
   *  - \c dg::MHMatrix with \c dg::MHVec and one of the MPI geometries
   *  - \c dg::MDMatrix with \c dg::MDVec and one of the MPI geometries
-  * @tparam container
+  * @tparam Container
   * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::subroutine() can be converted using \c dg::assign.
-  * We assume that \c container is copyable/assignable and has a swap member function.
+  * We assume that \c Container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
   *  - \c dg::MHVec or \c dg::MDVec when \c Geometry is one of the MPI geometries
@@ -178,10 +178,10 @@
  /** @class hide_symmetric_op
  * @tparam SymmetricOp
  A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
- with the \c container type as argument. Also, The functions \c %inv_weights() and \c %precond()
+ with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
  need to be callable and return inverse weights and the preconditioner for the conjugate
  gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
- @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
+ @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
   and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
   */
 

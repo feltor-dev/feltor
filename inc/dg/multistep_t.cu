@@ -123,7 +123,7 @@ int main()
     for( unsigned s=1; s<6; s++)
     {
         time = 0., y0 = init;
-        dg::AdamsBashforth< dg::DVec > ab( y0,s);
+        dg::AdamsBashforth< dg::DVec > ab( s, y0);
         ab.init( full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
@@ -155,7 +155,7 @@ int main()
     {
         //![adaptive]
         time = 0., y0 = init;
-        dg::Adaptive<dg::ARKStep<dg::DVec>> adapt( y0, name, y0.size(), eps);
+        dg::Adaptive<dg::ARKStep<dg::DVec>> adapt( name, y0, y0.size(), eps);
         double time = 0, rtol = 1e-5, atol = 1e-10;
         double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol);
         int counter=0;

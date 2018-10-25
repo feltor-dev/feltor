@@ -51,22 +51,22 @@ namespace dg{
 template<class ContainerType>
 struct AdamsBashforth
 {
-    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container = ContainerType; //!< the type of the vector class in use
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
     ///copydoc RungeKutta::RungeKutta()
     AdamsBashforth(){}
     ///@copydoc AdamsBashforth::construct()
-    AdamsBashforth( const ContainerType& copyable, unsigned order){
-        construct(copyable, order);
+    AdamsBashforth( unsigned order, const ContainerType& copyable){
+        construct( order, copyable);
     }
     /**
     * @brief Reserve internal workspace for the integration
     *
-    * @param copyable ContainerType of the size that is used in \c step
     * @param order (global) order (= number of steps in the multistep) of the method (Currently, one of 1, 2, 3, 4 or 5)
+    * @param copyable ContainerType of the size that is used in \c step
     * @note it does not matter what values \c copyable contains, but its size is important
     */
-    void construct(const ContainerType& copyable, unsigned order){
+    void construct(unsigned order, const ContainerType& copyable){
         m_k = order;
         f_.assign( order, copyable);
         u_ = copyable;
@@ -80,6 +80,9 @@ struct AdamsBashforth
             default: throw dg::Error(dg::Message()<<"Order not implemented in AdamsBashforth!");
         }
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return u_;}
 
     /**
      * @brief Initialize first step. Call before using the step function.
@@ -95,7 +98,7 @@ struct AdamsBashforth
      * @note the implementation is such that on output the last call to the rhs is at (t0,u0). This might be interesting if the call to the rhs changes its state.
      */
     template< class RHS>
-    void init( RHS& rhs, real_type t0, const ContainerType& u0, real_type dt);
+    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
     /**
     * @brief Advance u0 one timestep
     *
@@ -106,18 +109,18 @@ struct AdamsBashforth
     * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
     */
     template< class RHS>
-    void step( RHS& f, real_type& t, ContainerType& u);
+    void step( RHS& f, value_type& t, ContainerType& u);
   private:
-    real_type tu_, dt_;
+    value_type tu_, dt_;
     std::vector<ContainerType> f_;
     ContainerType u_;
-    std::vector<real_type> m_ab;
+    std::vector<value_type> m_ab;
     unsigned m_k;
 };
 
 template< class ContainerType>
 template< class RHS>
-void AdamsBashforth<ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, real_type dt)
+void AdamsBashforth<ContainerType>::init( RHS& f, value_type t0, const ContainerType& u0, value_type dt)
 {
     tu_ = t0, dt_ = dt;
     f( t0, u0, f_[0]);
@@ -137,7 +140,7 @@ void AdamsBashforth<ContainerType>::init( RHS& f, real_type t0, const ContainerT
 
 template<class ContainerType>
 template< class RHS>
-void AdamsBashforth<ContainerType>::step( RHS& f, real_type& t, ContainerType& u)
+void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& u)
 {
     for( unsigned i=0; i<m_k; i++)
         blas1::axpby( dt_*m_ab[i], f_[i], 1., u_);
@@ -188,31 +191,32 @@ outweighs the increased computational cost of the additional matrix inversions.
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct Karniadakis
 {
-    using real_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container = ContainerType; //!< the type of the vector class in use
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     Karniadakis(){}
 
     ///@copydoc construct()
     template<class ...SolverParams>
-    Karniadakis( const ContainerType& copyable, SolverParams&& ...ps):m_solver( copyable, std::forward<SolverParams>(ps)...){
-        f_.fill(copyable), u_.fill(copyable);
+    Karniadakis( SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...){
+        f_.fill(m_solver.copyable()), u_.fill(m_solver.copyable());
         init_coeffs();
     }
     /**
      * @brief Reserve memory for the integration
      *
-     * @param copyable ContainerType of size which is used in integration (values do not matter, the size is important).
-     * @param ps Parameters that, together with \c copyable as the first parameter,
-     * are forwarded to the constructor of \c SolverType
+     * @param ps Parameters that are forwarded to the constructor of \c SolverType
      * @tparam SolverParams Type of parameters (deduced by the compiler)
     */
     template<class ...SolverParams>
-    void construct( const ContainerType& copyable, SolverParams&& ...ps){
-        f_.fill(copyable), u_.fill(copyable);
-        m_solver = Solver( copyable, std::forward<SolverParams>(ps)...);
+    void construct( SolverParams&& ...ps){
+        m_solver = Solver( std::forward<SolverParams>(ps)...);
+        f_.fill(m_solver.copyable()), u_.fill(m_solver.copyable());
         init_coeffs();
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return u_[0];}
 
     /**
      * @brief Initialize by integrating two timesteps backward in time
@@ -225,7 +229,7 @@ struct Karniadakis
      * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
      */
     template< class Explicit, class Implicit>
-    void init( Explicit& ex, Implicit& im, real_type t0, const ContainerType& u0, real_type dt);
+    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
@@ -236,7 +240,7 @@ struct Karniadakis
      * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
     */
     template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, real_type& t, ContainerType& u);
+    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
 
   private:
     void init_coeffs(){
@@ -247,17 +251,17 @@ struct Karniadakis
         a[1] = -9./11.;     b[1] = -18./11.;
         a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
     }
-    std::array<ContainerType,3> u_, f_;
     SolverType m_solver;
-    real_type t_, dt_;
-    real_type a[3];
-    real_type b[3], g0 = 6./11.;
+    std::array<ContainerType,3> u_, f_;
+    value_type t_, dt_;
+    value_type a[3];
+    value_type b[3], g0 = 6./11.;
 };
 
 ///@cond
 template< class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, real_type t0, const ContainerType& u0, real_type dt)
+void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
 {
     //operator splitting using explicit Euler for both explicit and implicit part
     t_ = t0, dt_ = dt;
@@ -276,7 +280,7 @@ void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, real
 
 template<class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, real_type& t, ContainerType& u)
+void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, value_type& t, ContainerType& u)
 {
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
@@ -288,8 +292,8 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, real
     }
     blas1::axpby( 1., f_[0], 1., u_[0]);
     //compute implicit part
-    real_type alpha[2] = {2., -1.};
-    //real_type alpha[2] = {1., 0.};
+    value_type alpha[2] = {2., -1.};
+    //value_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
     t = t_ = t_+ dt_;
     m_solver.solve( -dt_*g0, diff, t, u, u_[0]);

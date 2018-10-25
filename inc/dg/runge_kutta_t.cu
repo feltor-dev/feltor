@@ -46,7 +46,7 @@ int main()
     const double damping = 0.2, omega_0 = 1.0, omega_drive = 0.9;
     std::array<double,2> u = solution(t_start, damping, omega_0, omega_drive);
     //construct Runge Kutta class
-    dg::RungeKutta<std::array<double,2> >  rk( u, "Runge-Kutta-4-4");
+    dg::RungeKutta<std::array<double,2> >  rk( "Runge-Kutta-4-4", u);
     //construct a functor with the right interface
     using namespace std::placeholders; //for _1, _2, _3
     auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);

@@ -57,11 +57,14 @@ namespace dg
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  *
  */
-template <class Geometry, class Matrix, class container>
+template <class Geometry, class Matrix, class Container>
 class Elliptic
 {
     public:
-    using value_type = get_value_type<container>;
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation, call \c construct before using the object)
     Elliptic(){}
     /**
@@ -128,7 +131,7 @@ class Elliptic
      * set each part seperately. This functions sets the scalar part.
      *
      * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
-     * @tparam ContainerType0 must be usable with \c container in \ref dispatch
+     * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& sigma)
@@ -147,13 +150,13 @@ class Elliptic
      * set each part seperately. This functions sets the tensor part.
      *
      * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
-     * @tparam ContainerType0 must be usable in \c dg::assign to \c container
+     * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
      * @note the 3d parts in \c tau will be ignored
      */
     template<class ContainerType0>
     void set_chi( const SparseTensor<ContainerType0>& tau)
     {
-        m_chi = SparseTensor<container>(tau);
+        m_chi = SparseTensor<Container>(tau);
         dg::tensor::scal( m_chi, m_sigma);
         dg::tensor::scal( m_chi, m_vol);
     }
@@ -164,7 +167,7 @@ class Elliptic
      * i.e. the inverse of the weights() function
      * @return inverse volume form including inverse weights
      */
-    const container& inv_weights()const {
+    const Container& inv_weights()const {
         return m_inv_weights;
     }
     /**
@@ -173,7 +176,7 @@ class Elliptic
      * i.e. the volume form
      * @return volume form including weights
      */
-    const container& weights()const {
+    const Container& weights()const {
         return m_weights;
     }
     /**
@@ -183,7 +186,7 @@ class Elliptic
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
      * @return the inverse of \f$\chi\f$.
      */
-    const container& precond()const {
+    const Container& precond()const {
         return m_precond;
     }
     /**
@@ -206,7 +209,7 @@ class Elliptic
      * @param y result
      * @note memops required:
             - 19 reads + 9 writes
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y){
@@ -219,7 +222,7 @@ class Elliptic
      * @param x left-hand-side
      * @param beta a scalar
      * @param y result
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
@@ -260,16 +263,16 @@ class Elliptic
         return centered;
     }
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
-    container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
-    container m_tempx, m_tempy, m_temp;
+    Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
+    Container m_tempx, m_tempy, m_temp;
     norm m_no;
-    SparseTensor<container> m_chi;
-    container m_sigma, m_vol;
+    SparseTensor<Container> m_chi;
+    Container m_sigma, m_vol;
     value_type m_jfactor;
 };
 
-template <class Geometry, class Matrix, class container>
-using Elliptic2d = Elliptic<Geometry, Matrix, container>;
+template <class Geometry, class Matrix, class Container>
+using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
 
 //Elliptic3d is tested in inc/geometries/elliptic3d_t.cu
 /**
@@ -308,11 +311,14 @@ using Elliptic2d = Elliptic<Geometry, Matrix, container>;
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  *
  */
-template <class Geometry, class Matrix, class container>
+template <class Geometry, class Matrix, class Container>
 class Elliptic3d
 {
     public:
-    using value_type = get_value_type<container>;
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation, call \c construct before using the object)
     Elliptic3d(){}
     /**
@@ -382,7 +388,7 @@ class Elliptic3d
      * set each part seperately. This functions sets the scalar part.
      *
      * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
-     * @tparam ContainerType0 must be usable with \c container in \ref dispatch
+     * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& sigma)
@@ -401,12 +407,12 @@ class Elliptic3d
      * set each part seperately. This functions sets the tensor part.
      *
      * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
-     * @tparam ContainerType0 must be usable in \c dg::assign to \c container
+     * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
      */
     template<class ContainerType0>
     void set_chi( const SparseTensor<ContainerType0>& tau)
     {
-        m_chi = SparseTensor<container>(tau);
+        m_chi = SparseTensor<Container>(tau);
         dg::tensor::scal( m_chi, m_sigma);
         dg::tensor::scal( m_chi, m_vol);
     }
@@ -417,7 +423,7 @@ class Elliptic3d
      * i.e. the inverse of the weights() function
      * @return inverse volume form including inverse weights
      */
-    const container& inv_weights()const {
+    const Container& inv_weights()const {
         return m_inv_weights;
     }
     /**
@@ -426,7 +432,7 @@ class Elliptic3d
      * i.e. the volume form
      * @return volume form including weights
      */
-    const container& weights()const {
+    const Container& weights()const {
         return m_weights;
     }
     /**
@@ -436,7 +442,7 @@ class Elliptic3d
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
      * @return the inverse of \f$\chi\f$.
      */
-    const container& precond()const {
+    const Container& precond()const {
         return m_precond;
     }
     /**
@@ -459,7 +465,7 @@ class Elliptic3d
      * @param y result
      * @note memops required:
             - 19 reads + 9 writes
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y){
@@ -472,7 +478,7 @@ class Elliptic3d
      * @param x left-hand-side
      * @param beta a scalar
      * @param y result
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
@@ -515,11 +521,11 @@ class Elliptic3d
         return centered;
     }
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
-    container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
-    container m_tempx, m_tempy, m_tempz, m_temp;
+    Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
+    Container m_tempx, m_tempy, m_tempz, m_temp;
     norm m_no;
-    SparseTensor<container> m_chi;
-    container m_sigma, m_vol;
+    SparseTensor<Container> m_chi;
+    Container m_sigma, m_vol;
     value_type m_jfactor;
 };
 ///@cond

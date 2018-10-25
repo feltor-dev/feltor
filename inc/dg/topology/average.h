@@ -16,9 +16,10 @@ namespace dg{
  * @snippet topology/average_t.cu doxygen
  * @ingroup utilities
  */
-template< class container>
+template< class ContainerType>
 struct Average
 {
+    using container_type = ContainerType;
     /**
      * @brief Prepare internal workspace
      *
@@ -28,7 +29,7 @@ struct Average
     Average( const aTopology2d& g, enum coo2d direction)
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
-        m_w=dg::construct<container>(dg::create::weights(g, direction));
+        m_w=dg::construct<ContainerType>(dg::create::weights(g, direction));
         m_temp1d = m_temp = m_w;
         m_transpose = false;
         if( direction == coo2d::x)
@@ -44,7 +45,7 @@ struct Average
     ///@copydoc Average()
     Average( const aTopology3d& g, enum coo3d direction)
     {
-        m_w = dg::construct<container>(dg::create::weights(g, direction));
+        m_w = dg::construct<ContainerType>(dg::create::weights(g, direction));
         m_temp1d = m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
@@ -82,7 +83,7 @@ struct Average
      * @param res result Vector (if \c extend==true, \c res must have same size as \c src vector, else it gets properly resized, may alias \c src)
      * @param extend if \c true the average is extended back to the original dimensionality, if \c false, this step is skipped
      */
-    void operator() (const container& src, container& res, bool extend = true)
+    void operator() (const ContainerType& src, ContainerType& res, bool extend = true)
     {
         if( !m_transpose)
         {
@@ -105,7 +106,7 @@ struct Average
 
   private:
     unsigned m_nx, m_ny;
-    container m_w, m_temp, m_temp1d;
+    ContainerType m_w, m_temp, m_temp1d;
     bool m_transpose;
 
 };

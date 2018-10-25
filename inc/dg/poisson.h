@@ -28,9 +28,13 @@ namespace dg
  * @ingroup arakawa
  * @copydoc hide_geometry_matrix_container
  */
-template< class Geometry, class Matrix, class container >
+template< class Geometry, class Matrix, class Container >
 struct Poisson
 {
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     /**
      * @brief Create Poisson on a grid
      * @param g The grid
@@ -63,7 +67,7 @@ struct Poisson
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result);
@@ -71,7 +75,7 @@ struct Poisson
      * @brief Change Chi
      *
      * @param new_chi The new chi
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& new_chi) {
@@ -120,7 +124,7 @@ struct Poisson
      * in the plane of a 2x1 product space
      * @param phi function
      * @param varphi may equal phi, contains result on output
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void variationRHS( const ContainerType0& phi, ContainerType1& varphi)
@@ -132,25 +136,25 @@ struct Poisson
     }
 
   private:
-    container m_dxlhslhs, m_dxrhsrhs, m_dylhslhs, m_dyrhsrhs, m_helper;
+    Container m_dxlhslhs, m_dxrhsrhs, m_dylhslhs, m_dyrhsrhs, m_helper;
     Matrix m_dxlhs, m_dylhs, m_dxrhs, m_dyrhs;
-    SparseTensor<container> m_metric;
-    container m_chi, m_inv_perp_vol;
+    SparseTensor<Container> m_metric;
+    Container m_chi, m_inv_perp_vol;
 };
 
 ///@cond
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g ):
+template< class Geometry, class Matrix, class Container>
+Poisson<Geometry, Matrix, Container>::Poisson( const Geometry& g ):
     Poisson( g, g.bcx(), g.bcy(), g.bcx(), g.bcy()){}
 
-template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g, bc bcx, bc bcy):
+template< class Geometry, class Matrix, class Container>
+Poisson<Geometry, Matrix, Container>::Poisson( const Geometry& g, bc bcx, bc bcy):
     Poisson( g, bcx, bcy, bcx, bcy){}
 
-template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs):
+template< class Geometry, class Matrix, class Container>
+Poisson<Geometry, Matrix, Container>::Poisson(  const Geometry& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs):
     m_dxlhslhs( dg::evaluate( one, g) ), m_dxrhsrhs(m_dxlhslhs), m_dylhslhs(m_dxlhslhs), m_dyrhsrhs( m_dxlhslhs), m_helper( m_dxlhslhs),
     m_dxlhs(dg::create::dx( g, bcxlhs, dg::centered)),
     m_dylhs(dg::create::dy( g, bcylhs, dg::centered)),
@@ -159,13 +163,13 @@ Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc
 {
     m_metric=g.metric();
     m_chi = dg::tensor::determinant2d(m_metric);
-    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<container>>());
+    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<Container>>());
     m_inv_perp_vol = m_chi;
 }
 
-template< class Geometry, class Matrix, class container>
+template< class Geometry, class Matrix, class Container>
 template<class ContainerType0, class ContainerType1, class ContainerType2>
-void Poisson< Geometry, Matrix, container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
+void Poisson< Geometry, Matrix, Container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
 {
     blas2::symv(  m_dxlhs, lhs,  m_dxlhslhs); //dx_lhs lhs
     blas2::symv(  m_dylhs, lhs,  m_dylhslhs); //dy_lhs lhs

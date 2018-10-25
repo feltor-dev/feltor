@@ -9,8 +9,8 @@ namespace detail{
 template< class LinearOp, class ContainerType>
 struct Implicit
 {
-    using real_type = get_value_type<ContainerType>;
-    Implicit( real_type alpha, real_type t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
+    using value_type = get_value_type<ContainerType>;
+    Implicit( value_type alpha, value_type t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
     void symv( const ContainerType& x, ContainerType& y)
     {
         if( alpha_ != 0)
@@ -25,14 +25,14 @@ struct Implicit
             f_(t_,x,y);
         blas1::axpby( 1., x, alpha_, y, y);
     }
-    real_type& alpha( ){  return alpha_;}
-    real_type alpha( ) const  {return alpha_;}
-    real_type& time( ){  return t_;}
-    real_type time( ) const  {return t_;}
+    value_type& alpha( ){  return alpha_;}
+    value_type alpha( ) const  {return alpha_;}
+    value_type& time( ){  return t_;}
+    value_type time( ) const  {return t_;}
   private:
     LinearOp& f_;
-    real_type alpha_;
-    real_type t_;
+    value_type alpha_;
+    value_type t_;
 };
 
 }//namespace detail
@@ -52,7 +52,10 @@ struct TensorTraits< detail::Implicit<M, V> >
     right hand side rho. For example \c dg::DefaultSolver
     If you write your own class:
  * it must have a solve method of type:
-    \c void \c solve( real_type alpha, Implicit im, real_type t, ContainerType& y, const ContainerType& rhs);
+    \c void \c solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs);
+  The <tt> const ContainerType& copyable()const; </tt> member must return a container of the size that is later used in \c solve
+  (it does not matter what values \c copyable contains, but its size is important;
+  the \c solve method will be called with vectors of this size)
  */
 
 /*!@brief Default Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
@@ -65,7 +68,8 @@ struct TensorTraits< detail::Implicit<M, V> >
 template<class ContainerType>
 struct DefaultSolver
 {
-    using real_type = get_value_type<ContainerType>;//!< value type of vectors
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>;//!< value type of vectors
     ///No memory allocation
     DefaultSolver(){}
     /*!
@@ -75,12 +79,15 @@ struct DefaultSolver
     * @param max_iter maimum iteration number in cg
     * @param eps accuracy parameter for cg
     */
-    DefaultSolver( const ContainerType& copyable, unsigned max_iter, real_type eps):
+    DefaultSolver( const ContainerType& copyable, unsigned max_iter, value_type eps):
         m_pcg(copyable, max_iter), m_rhs( copyable), m_eps(eps)
         {}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_rhs;}
 
     template< class Implicit>
-    void solve( real_type alpha, Implicit im, real_type t, ContainerType& y, const ContainerType& rhs)
+    void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
         detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
         blas2::symv( im.weights(), rhs, m_rhs);
@@ -104,6 +111,6 @@ struct DefaultSolver
     private:
     CG< ContainerType> m_pcg;
     ContainerType m_rhs;
-    real_type m_eps;
+    value_type m_eps;
 };
 }//namespace dg
