@@ -813,7 +813,7 @@ INPUT                  = ./backend/exceptions.h \
                          ./backend/tensor_traits_cusp.h \
                          ./backend/tensor_traits_std.h \
                          ./backend/tensor_traits_thrust.h \
-                         ./geometry \
+                         ./topology \
                          .
 
 # This tag can be used to specify the character encoding of the source files

@@ -271,6 +271,8 @@ class Elliptic
     value_type m_jfactor;
 };
 
+///@copydoc Elliptic
+///@ingroup matrixoperators
 template <class Geometry, class Matrix, class Container>
 using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
 

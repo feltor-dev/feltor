@@ -18,18 +18,21 @@ namespace dg{
  *
  * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
- * Can be used by the Invert class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
+ * \f$ \Delta\f$ is a two- or three-dimensional elliptic operator.
+ * Can be used by the CG class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
  @snippet helmholtzg2_b.cu doxygen
- * @copydoc hide_geometry_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
+ * @tparam EllipticType Either dg::Elliptic or dg::Elliptic3d
  */
-template< class Geometry, class Matrix, class container>
-struct Helmholtz
+template<class EllipticType>
+struct GeneralHelmholtz
 {
+    using container_type = typename EllipticType::container_type;
+    using geometry_type = typename EllipticType::geometry_type;
     ///@brief empty object ( no memory allocation)
-    Helmholtz() {}
+    GeneralHelmholtz() {}
     /**
-     * @brief Construct \c Helmholtz operator
+     * @brief Construct
      *
      * @param g The grid to use (boundary conditions are taken from there)
      * @param alpha Scalar in the above formula
@@ -37,12 +40,12 @@ struct Helmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
-    Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
+    GeneralHelmholtz( const geometry_type& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
     {
         construct( g, alpha, dir, jfactor);
     }
     /**
-     * @brief Construct \c Helmholtz operator
+     * @brief Construct
      *
      * @param g The grid to use
      * @param bcx boundary condition in x
@@ -52,19 +55,19 @@ struct Helmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
-    Helmholtz( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
+    GeneralHelmholtz( const geometry_type& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
     {
         construct( g, bcx, bcy, alpha, dir, jfactor);
     }
-    ///@copydoc Helmholtz::Helmholtz(const Geometry&,bc,bc,double,direction,double)
-    void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
+    ///@copydoc GeneralHelmholtz::GeneralHelmholtz(const geometry_type&,bc,bc,double,direction,double)
+    void construct( const geometry_type& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         m_laplaceM.construct( g, bcx, bcy, dg::not_normed, dir, jfactor);
         m_alpha = alpha;
         m_chi = m_laplaceM.weights();
     }
-    ///@copydoc Helmholtz::Helmholtz(const Geometry&,double,direction,double)
-    void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
+    ///@copydoc GeneralHelmholtz::GeneralHelmholtz(const geometry_type&,double,direction,double)
+    void construct( const geometry_type& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         construct( g, g.bcx(), g.bcy(), alpha, dir, jfactor);
     }
@@ -86,15 +89,19 @@ struct Helmholtz
 
     }
     ///@copydoc Elliptic::weights()const
-    const container& weights()const {return m_laplaceM.weights();}
+    const container_type& weights()const {return m_laplaceM.weights();}
     ///@copydoc Elliptic::inv_weights()const
-    const container& inv_weights()const {return m_laplaceM.inv_weights();}
+    const container_type& inv_weights()const {return m_laplaceM.inv_weights();}
     /**
      * @brief Preconditioner to use in conjugate gradient solvers
      *
      * @return inverse weights without volume
      */
-    const container& precond()const {return m_laplaceM.precond();}
+    const container_type& precond()const {return m_laplaceM.precond();}
+    ///Write access to the elliptic class
+    EllipticType& elliptic(){
+        return m_laplaceM;
+    }
     /**
      * @brief Change alpha
      *
@@ -122,16 +129,39 @@ struct Helmholtz
      *
      * @return chi
      */
-    const container& chi() const{return m_chi;}
+    const container_type& chi() const{return m_chi;}
   private:
-    Elliptic<Geometry, Matrix, container> m_laplaceM;
-    container m_chi;
+    EllipticType m_laplaceM;
+    container_type m_chi;
     double m_alpha;
 };
 
-//Consider Deprecated!!
+
 /**
- * @brief Matrix class that represents a more general Helmholtz-type operator
+ * @brief Matrix class that represents a Helmholtz-type operator
+ *
+ * @ingroup matrixoperators
+ *
+ * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
+ * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
+ * Can be used by the CG class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
+ @snippet helmholtzg2_b.cu doxygen
+ * @copydoc hide_geometry_matrix_container
+ * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
+ */
+template<class Geometry, class Matrix, class Container>
+using Helmholtz = GeneralHelmholtz<Elliptic<Geometry, Matrix, Container>>;
+///@copydoc Helmholtz
+///@ingroup matrixoperators
+template<class Geometry, class Matrix, class Container>
+using Helmholtz2d = GeneralHelmholtz<Elliptic<Geometry, Matrix, Container>;
+///@copydoc Helmholtz
+///@ingroup matrixoperators
+template<class Geometry, class Matrix, class Container>
+using Helmholtz3d = GeneralHelmholtz<Elliptic3d<Geometry, Matrix, Container>>;
+
+/**
+ * @brief DEPRECATED, Matrix class that represents a more general Helmholtz-type operator
  *
  * @ingroup matrixoperators
  *
@@ -140,7 +170,7 @@ struct Helmholtz
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
  * @copydoc hide_geometry_matrix_container
- * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
+ * @note The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
  * @attention It is MUCH better to solve the normal \c Helmholtz operator twice,
  * consecutively, than solving the \c Helmholtz2 operator once. The following code snippet shows how to do it:
  @snippet helmholtzg2_b.cu doxygen

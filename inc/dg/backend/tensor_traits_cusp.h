@@ -14,7 +14,8 @@
 
 namespace dg
 {
-///@cond //makes such a long name in class list
+//makes such a long name in class list
+///@cond
 ///@addtogroup dispatch
 ///@{
 template<class T>
