@@ -154,7 +154,7 @@ using Helmholtz = GeneralHelmholtz<Elliptic<Geometry, Matrix, Container>>;
 ///@copydoc Helmholtz
 ///@ingroup matrixoperators
 template<class Geometry, class Matrix, class Container>
-using Helmholtz2d = GeneralHelmholtz<Elliptic<Geometry, Matrix, Container>;
+using Helmholtz2d = GeneralHelmholtz<Elliptic<Geometry, Matrix, Container>>;
 ///@copydoc Helmholtz
 ///@ingroup matrixoperators
 template<class Geometry, class Matrix, class Container>

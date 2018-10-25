@@ -529,7 +529,7 @@ struct BHatP: public aCloneableBinaryFunctor<BHatP>
  * @param mag the tokamak magnetic field
  * @return the tuple BHatR, BHatZ, BHatP constructed from mag
  */
-BinaryVectorLvl0 createBHat( const TokamakMagneticField& mag){
+inline BinaryVectorLvl0 createBHat( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
 }
 /**
@@ -538,7 +538,7 @@ BinaryVectorLvl0 createBHat( const TokamakMagneticField& mag){
  * @param mag the tokamak magnetic field
  * @return the tuple CurvatureNablaBR, CurvatureNablaBZ, Constant(0) constructed from mag
  */
-BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
+inline BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( CurvatureNablaBR(mag), CurvatureNablaBZ(mag), Constant(0));
 }
 /**
@@ -547,7 +547,7 @@ BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
  * @param mag the tokamak magnetic field
  * @return the tuple CurvatureKappaR, CurvatureKappaZ, Constant(0) constructed from mag
  */
-BinaryVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
+inline BinaryVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( CurvatureKappaR(mag), CurvatureKappaZ(mag), Constant(0));
 }
 /**
@@ -556,7 +556,7 @@ BinaryVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
  * @param mag the tokamak magnetic field
  * @return the tuple TrueCurvatureKappaR, TrueCurvatureKappaZ, TrueCurvatureKappaP constructed from mag
  */
-BinaryVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& mag){
+inline BinaryVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( TrueCurvatureKappaR(mag), TrueCurvatureKappaZ(mag), TrueCurvatureKappaP(mag));
 }
 /**
@@ -565,7 +565,7 @@ BinaryVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& mag){
  * @param mag the tokamak magnetic field
  * @return the tuple TrueCurvatureNablaBR, TrueCurvatureNablaBZ, TrueCurvatureNablaBP constructed from mag
  */
-BinaryVectorLvl0 createTrueCurvatureNablaB( const TokamakMagneticField& mag){
+inline BinaryVectorLvl0 createTrueCurvatureNablaB( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( TrueCurvatureNablaBR(mag), TrueCurvatureNablaBZ(mag), TrueCurvatureNablaBP(mag));
 }
 

@@ -99,7 +99,8 @@ struct DSField
     dg::ClonePtr<dg::aGeometry2d> g_;
 };
 
-double ds_norm( const std::array<double,3>& x0){
+template<class real_type>
+real_type ds_norm( const std::array<real_type,3>& x0){
     return sqrt( x0[0]*x0[0] +x0[1]*x0[1] + x0[2]*x0[2]);
 }
 
