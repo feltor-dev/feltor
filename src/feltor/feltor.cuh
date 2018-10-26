@@ -41,9 +41,7 @@ struct Implicit
         m_p(p),
         m_gp(gp),
         m_LaplacianM_perpN  ( g, p.bc, p.bc, dg::normed, dg::centered),
-        m_LaplacianM_perpDIR( g, dg::DIR, dg::DIR, dg::normed, dg::centered),
-        m_dsN(dsN),
-        m_dsDIR(dsDIR)
+        m_LaplacianM_perpDIR( g, dg::DIR, dg::DIR, dg::normed, dg::centered)
     {
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
     }
@@ -62,12 +60,7 @@ struct Implicit
             dg::blas2::gemv( -m_p.nu_perp, m_LaplacianM_perpN,   m_temp, 0., yp[0][i]);
             dg::blas2::gemv( m_LaplacianM_perpDIR, y[1][i],    m_temp);
             dg::blas2::gemv( -m_p.nu_perp, m_LaplacianM_perpDIR, m_temp, 0., yp[1][i]);
-            //parallel diffusion for N and U
-            dg::blas2::symv( m_p.nu_parallel, m_dsN,   y[0][i], 1., yp[0][i]);
-            dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 1., yp[1][i]);
         }
-        //Resistivity is not linear!
-        //dg::blas1::subroutine( AddResistivity( m_p.c, m_p.mu), y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
     }
 
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {
@@ -89,7 +82,6 @@ struct Implicit
     const dg::geo::solovev::Parameters m_gp;
     container m_temp;
     dg::Elliptic<Geometry, Matrix, container> m_LaplacianM_perpN, m_LaplacianM_perpDIR;
-    dg::geo::DS<Geometry, IMatrix, Matrix, container> m_dsN, m_dsDIR;
 };
 
 template< class Geometry, class IMatrix, class Matrix, class container >
@@ -183,27 +175,29 @@ struct Explicit
     }
 
   private:
-    //extrapolates and solves for phi[1], then adds square velocity ( omega)
+    //extrapolates and solves for phi[1],
+    //then adds square velocity ( omega)
     void compute_phi( const std::array<container,2>& densities);
     struct ComputePerp{
         DG_DEVICE
         void operator()(
-                double tilde_N, double dxN, double dyN,
-                double U,       double dxU, double dyU,
-                double dxPhi,   double dyPhi,
+                double tilde_N, double dxN, double dyN, double dzN,
+                double U,       double dxU, double dyU, double dzU,
+                double dxPhi,   double dyPhi, double dzPhi,
                 double binv,    double perp_vol_inv,
-                double curvX,       double curvY,
-                double curvKappaX,  double curvKappaY, double divCurvKappa,
+                double curvX,       double curvY, double curvZ,
+                double curvKappaX,  double curvKappaY, double curvKappaZ,
+                double divCurvKappa,
                 double& dtN, double& dtU,
                 double tau, double mu)
         {
             double N = tilde_N + 1.;
             dtN =
                 -binv*perp_vol_inv*( dxPhi*dyN-dyPhi*dxN)
-                - tau*(curvX*dxN+curvY*dyN)
-                -N*(curvX*dxPhi + curvY*dyPhi)
-                -mu*U*U* ( curvKappaX*dxN + curvKappaY*dyN)
-                -2.*mu*N*U*( curvKappaX*dxU + curvKappaY*dyU)
+                - tau*(curvX*dxN+curvY*dyN + curvZ*dZN)
+                -N*(curvX*dxPhi + curvY*dyPhi + curvZ*dzPhi)
+                -mu*U*U* ( curvKappaX*dxN + curvKappaY*dyN + curvKappaZ*dzN)
+                -2.*mu*N*U*( curvKappaX*dxU + curvKappaY*dyU + curvKappaZ*dzU)
                 -mu*N*U*U*divCurvKappa;
             dtU =
                 -binv*perp_vol_inv*( dxPhi*dyU-dyPhi*dxU)
@@ -257,12 +251,14 @@ struct Explicit
     container m_chi, m_omega, m_lambda;//helper variables
 
     //these should be considered const
-    container m_binv, m_curvX, m_curvY, m_curvKappaX, m_curvKappaY, m_divCurvKappa;
-    container m_gradlnB;
+    std::array<container,3> m_curv, m_curvKappa, m_b_;
+    container m_divCurvKappa;
+    container m_binv, m_gradlnB;
     container m_source, m_profne;
 
-    std::array<container,2> m_phi, m_dxPhi, m_dyPhi;
-    std::array<container,2> m_npe, m_logn, m_dxN, m_dyN, m_dxU, m_dyU;
+    std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
+    std::array<container,2> m_npe, m_logn, m_dxN, m_dyN, m_dzN,
+    std::array<container,2> m_dxU, m_dyU, m_dzU;
 
     //matrices and solvers
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_dsDIR, m_dsN;
@@ -270,14 +266,14 @@ struct Explicit
     //dg::Poisson<    Geometry, Matrix, container> m_poissonN, m_poissonDIR;
     dg::Elliptic<   Geometry, Matrix, container> m_lapperpN, m_lapperpDIR;
     std::vector<container> m_multi_chi;
-    std::vector<dg::Elliptic<Geometry, Matrix, container> > m_multi_pol;
-    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > m_multi_invgammaDIR, m_multi_invgammaN;
+    std::vector<dg::Elliptic3d<Geometry, Matrix, container> > m_multi_pol;
+    std::vector<dg::Helmholtz3d<Geometry,  Matrix, container> > m_multi_invgammaDIR, m_multi_invgammaN;
 
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
     dg::Extrapolation<container> m_old_phi, m_old_psi, m_old_gammaN;
 
     //metric and volume elements
-    container m_vol3d, m_perp_vol_inv;
+    container m_vol3d;
     dg::SparseTensor<container> m_metric;
 
     const feltor::Parameters m_p;
@@ -407,11 +403,13 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::arr
     //Compute Psi
     dg::blas2::symv( m_dxDIR, m_phi[0], m_dxPhi[0]);
     dg::blas2::symv( m_dyDIR, m_phi[0], m_dyPhi[0]);
-    dg::tensor::multiply2d( m_metric, m_dxPhi[0], m_dyPhi[0], m_omega, m_chi);
+    dg::blas2::symv( m_dz, m_phi[0], m_dzPhi[0]);
+    dg::tensor::multiply3d( m_metric, m_dxPhi[0], m_dyPhi[0], m_omega, m_chi);
     dg::blas1::subroutine( ComputePsi(), m_phi[1], m_dxPhi[0], m_dyPhi[0], m_omega, m_chi, m_binv);
     //m_omega now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dxDIR, m_phi[1], m_dxPhi[1]);
     dg::blas2::symv( m_dyDIR, m_phi[1], m_dyPhi[1]);
+    dg::blas2::symv( m_dz   , m_phi[1], m_dzPhi[1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -488,21 +486,24 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
         dg::blas2::gemv( m_dy, y[0][i], m_dyN[i]);
         dg::blas2::gemv( m_dxDIR, y[1][i], m_dxU[i]);
         dg::blas2::gemv( m_dyDIR, y[1][i], m_dyU[i]);
-        dg::blas1::subroutine( ComputePerp(), y[0][i], m_dxN[i], m_dyN[i],
-                                              y[1][i], m_dxU[i], m_dyU[i],
-                                              m_dxPhi[i], m_dyPhi[i],
-                                              m_binv, m_perp_vol_inv,
-                                              m_curvX, m_curvY,
-                                         m_curvKappaX, m_curvKappaY, m_divCurvKappa,
-                                              yp[0][i], yp[1][i],
-                                              m_p.tau[i], m_p.mu[i]);
+        dg::blas2::gemv( m_dz, y[0][i], m_dzN[i]);
+        dg::blas2::gemv( m_dz, y[1][i], m_dzU[i]);
+        dg::blas1::subroutine( ComputePerp(),
+            y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
+            y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
+            m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
+            m_binv, m_vol3d,
+            m_curv[0], m_curv[1], m_curv[2],
+            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
+            m_divCurvKappa, yp[0][i], yp[1][i],
+            m_p.tau[i], m_p.mu[i]);
 
         ///////////parallel dynamics///////////////////////////////
         //Burgers term
         dg::blas1::pointwiseDot(y[1][i], y[1][i], m_omega); //U^2
         m_dsDIR.centered(-0.5, m_omega, 1., yp[1][i]);      //dtU += - 0.5 ds U^2
         //parallel force terms
-        m_dsN.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]); 
+        m_dsN.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
         m_dsDIR.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);        //dtU += - tau/(hat(mu))*ds lnN - 1/(hat(mu))*ds psi
 
         //density convection
@@ -521,6 +522,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     dg::blas1::axpby( 1., m_lambda, 1.0, yp[1][1]);
     //add FLR correction to dtNi
     dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1], m_lapperpN, m_lambda, 1.0, yp[1][1]);
+        //parallel diffusion for N and U
+        dg::blas2::symv( m_p.nu_parallel, m_dsN,   y[0][i], 1., yp[0][i]);
+        dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 1., yp[1][i]);
 
     timer.toc();
     #ifdef MPI_VERSION

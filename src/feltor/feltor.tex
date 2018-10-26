@@ -103,17 +103,24 @@ and with the generalised electric potential
 The perpendicular Poisson bracket, the perpendicular \(\nabla_\perp\) and parallel derivative \(\nabla_\parallel\),
 and the perpendicular \(\Delta_\perp\) and parallel Laplacian \(\Delta_\parallel\) are
 \begin{align}\label{eq:perppoiss}
- \left[f,g\right]_\perp &:= \bhat \cdot \left(\vec{\nabla} f \times \vec\nabla g\right), \\
- \vec \nabla_\perp f &:= -\bhat\times(\bhat \times \vec \nabla f) \\
- \nabla_\parallel f&:= \vec{\hat{b}}\cdot\vec{\nabla} f,  \\
- \Delta_\perp f&:= \nabla_\perp^2 f:= \vec \nabla\cdot (\vec \nabla_\perp f)\\
- \Delta_\parallel f&:= \vec{\nabla} \cdot ( \vec{\hat{b}} \vec{\hat{b}}\cdot\vec{\nabla} f ),
+ \left[f,g\right]_\perp &:= \bhat \cdot \left(\vec{\nabla} f \times \vec\nabla g\right) =
+    b_i \varepsilon^{ijk}\partial_j f\partial_k g/\sqrt{g}, \\
+ \vec \nabla_\perp f &:= \bhat\times(\vec \nabla f\times \bhat ) \equiv
+    h \cdot \nabla f, \quad h^{ij} := g^{ij} - b^ib^j\\
+ \nabla_\parallel f&:= \bhat\cdot\vec{\nabla} f ,\\
+ \Delta_\perp f&:= \nabla_\perp^2 f:= \vec \nabla\cdot (\vec \nabla_\perp f)
+    = \nabla\cdot( h\cdot\nabla f),  \\
+ \Delta_\parallel f&:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f ),
 \end{align}
+with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$,
+$\eps^{ijk}$ the Levi-Civita symbols
 and the curvature operators
 \begin{align}\label{eq:curvopgen}
-  \mathcal K_\kappa(f) &:= \vec{ \mathcal K_\kappa }\cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \kappa)\cdot \vec \nabla f \quad \text{ with } \vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat) \\
+  \mathcal K_\kappa(f) &:= \vec{ \mathcal K_\kappa }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f \\
   \mathcal K_{\nabla B}(f) &:= \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f \\
-  \mathcal{K}(f)&:=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \vec{\hat{b}} \times \vec{\nabla} f}{B} \right) = \mathcal K_\kappa(f) + \mathcal K_{\nabla B}(f).
+  \mathcal{K}(f)&:=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right) = \mathcal K_\kappa(f) + \mathcal K_{\nabla B}(f),\\
+  \vec \nabla \cdot \vec{\mathcal K_\kappa} &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\mathcal K_\kappa(\ln B)
+  ,\quad \vec\nabla\cdot\vec{ \mathcal K} = 0.
 \end{align}
 Explicit expressions of the perpendicular Poisson bracket \( \frac{1}{B}\left[f,g\right]_\perp\), the perpendicular elliptic operator \( \vec{\nabla}\cdot\left(g \vec{\nabla}_\perp f\right)\),
 the parallel derivative \(\nabla_\parallel\) and the parallel Laplacian \(\Delta_\parallel\) and  the curvature operators \(\mathcal{K}(f)\),
@@ -139,10 +146,10 @@ The dissipative terms can be decomposed into perpendicular and parallel componen
 \end{align}
 For numerical stabilisation we choose:
 \begin{align}
-\Lambda_{n_e,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel n_e\right) &
- \Lambda_{N_i,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel N_i\right) \\
-  \Lambda_{u_e,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel u_e\right) &
- \Lambda_{U_i,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel U_i\right) 
+\Lambda_{n_e,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\bhat \nabla_\parallel n_e\right) &
+ \Lambda_{N_i,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\bhat \nabla_\parallel N_i\right) \\
+  \Lambda_{u_e,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\bhat \nabla_\parallel u_e\right) &
+ \Lambda_{U_i,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\bhat \nabla_\parallel U_i\right) 
 \end{align}
 Similarly for the perpendicular dissipation we apply hyperviscous terms of second order.
 \begin{align}\label{eq:perpdiffNT}
@@ -195,6 +202,7 @@ For the densities we can choose between Neumann and Dirichlet boundaries
 \begin{align}
 n_e = N_i = 1, \text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla N_i = 0
 \end{align}
+where $\hat n$ is the normal vector to the boundary.
 
 We initialize the parallel velocitiy to zero
 \begin{align}
@@ -355,13 +363,13 @@ equations simplify of vanish.
 \subsection{The toroidal field}\label{sec:toroidal}
 One choice is a purely toroidal magnetic field of the form %($I(\psi)=\psi=1$) 
 \begin{align}
-  \vec B(R) := \frac{R_0}{R}\vec{ \hat e_\varphi}
+  \vec B(R) := \frac{R_0}{R} \ehat_\varphi
   \label{}
 \end{align}
-We then have $\bhat = \vec{\hat e_\varphi}$ and $\vec\kappa = -\frac{1}{R}\vec{ \hat e_R}$. The curvature operators simplify to
+We then have $\bhat = \ehat_\varphi$ and $\vec\kappa = -\frac{1}{R}\ehat_R$. The curvature operators simplify to
 \begin{align}
-  \vec{ \mathcal K_\kappa} &= \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \vec{\hat e_Z} \\
-\vec{ \mathcal K} &= -\frac{2}{R_0}\vec{\hat e_Z}
+  \vec{ \mathcal K_\kappa} &= \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z \\
+\vec{ \mathcal K} &= -\frac{2}{R_0}\ehat_Z
   \label{}
 \end{align}
 We have
@@ -369,7 +377,6 @@ We have
 \begin{align}
     [f, g]_\perp &= (\partial_R f\partial_Z g - \partial_R g\partial_Z f) \equiv [f, g]_{RZ}, \\
     \nabla \cdot(\nabla_\perp f) &= \frac{1}{R}\partial_R\left(R\partial_R f\right) + \partial_Z^2f
-    %\mathcal{K}_{\nabla B}(f) &:= \frac{1}{B}\hat e_\varphi\times \nabla \ln B\cdot\nabla f = \frac{1}{B}[\ln B, f]_{RZ}.
     \label{}
 \end{align}
 \end{subequations}
@@ -381,13 +388,13 @@ lead to the familiar slab geometry.
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
 In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be rewritten to
 \begin{align}
- \vec{B} &= \frac{R_0I(\psi)}{R} \vec{\hat{e}}_{\varphi} + \frac{R_0}{R}\left[\frac{\partial \psi}{\partial Z} \vec{\hat{e}}_R 
-         -  \frac{\partial \psi}{\partial R} \vec{\hat{e}}_Z\right] ,
+ \vec{B} &= \frac{R_0I(\psi)}{R} \ehat_{\varphi} + \frac{R_0}{R}\left[\frac{\partial \psi}{\partial Z} \ehat_R 
+         -  \frac{\partial \psi}{\partial R} \ehat_Z\right] ,
 \end{align}
 which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
-For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\vec{\hat{e}}_R - \frac{\partial \psi}{\partial R}\vec{\hat{e}}_Z\right)
-\) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \vec{\hat{e}}_{\varphi}\).
-The unit vectors are denoted by \(\vec{\hat{e}}_{R}\), \(\vec{\hat{e}}_{Z}\), \(\vec{\hat{e}}_{\varphi}\). Note that $B^R=B_R$ and $B^Z=B_Z$ whereas
+For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
+\) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
+The unit vectors are denoted by \(\ehat_{R}\), \(\ehat_{Z}\), \(\ehat_{\varphi}\). Note that $B^R=B_R$ and $B^Z=B_Z$ whereas
 $B^\varphi = R_0I/R^2$ and $B_\varphi=R_0I$ (contra- and covariant components of $\vec B$).
 By construction we have $\partial_\varphi B = 0$ with
 \begin{align}
@@ -401,27 +408,25 @@ Furthermore, we have
 \end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-First, we normalise our variables according to \( R = \rho_s \hat{R} \), \( Z = \rho_s \hat{Z} \), \( \psi_p = \psi_{p0} \hat{\psi_p}\), \( p =  \frac{\psi_{p0}^2}{\mu_0 \rho_s^4}\hat{p}= p_0 \hat{p} \), \( I = \frac{\psi_{p0}}{\rho_s} \hat{I} = I_0 \hat{I} \),
- \(j_\varphi = \frac{\psi_{p0}}{\rho_s^3 \mu_0} \hat{I} = j_{\varphi 0} \hat{j}_\varphi \) and rewrite the GSEin normalised form:
+Let us state the Grad-Shafranov equation
 \begin{align}\label{eq:GSEdimless}
- \hat{\Delta}^*_\perp  \hat{\psi}_p &= -\hat{R}^2 \frac{d \hat{p}}{d  \hat{\psi}_p } - \hat{I} \frac{d \hat{I}}{d  \hat{\psi}_p }\equiv - \hat{R} \hat{j}_\varphi.
+ \Delta^*_\perp  \psi_p &= -R^2 \frac{d p}{d  \psi_p } - I \frac{d I}{d  \psi_p }\equiv - R j_\varphi.
 \end{align}
-% The Solov'ev assumptions are
-% \begin{align}
-%  C&=(1-A)/\hat{R}_0^3 = -\frac{d \hat{p}}{d  \hat{\psi}_p }, & A/\hat{R}_0 &= -\hat{I} \frac{d \hat{I}}{d  \hat{\psi}_p },
-% \end{align}
-% where \(A\) and \(C\) are two constants.
-The Solov'ev assumptions consist of \(A/\hat{R}_0 = -\hat{I} \frac{d \hat{I}}{d  \hat{\psi}_p }\) and \((1-A)/\hat{R}_0^3 = -\frac{d \hat{p}}{d  \hat{\psi}_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
-By integration over \(\hat{\psi}_p\) we find
+Note that $R$ and $Z$ are normalized
+with $\rho_s$, $\psi_p$ with $\psi_{p0}$, $p$ with
+$p_0 := \psi_{p0}^2/\mu_0\rho_s^4$, $I$ with $I_0:=\psi_{p0}/\rho_s$,
+and $j_\varphi$ with $\j_{\varphi 0} = \psi_{p0}/\rho_s^3\mu_0$.
+The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0^3 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
+By integration over \(\psi_p\) we find
 \begin{align}\label{eq:solovevassumption}
- \hat{p}(\hat{\psi}_p) &= (A-1)\hat{\psi}_p/\hat{R}_0^3,  &
- \hat{I}(\hat{\psi}_p) &= \sqrt{-2 A \hat{\psi}_p/\hat{R}_0 + 1}, &
- \hat{j}_\varphi &= \left[(A-1)\hat{R} - A \hat{R}_0^2 / \hat{R}\right]/\hat{R}_0^3.
+ p(\psi_p) &= (A-1)\psi_p/R_0^3,  &
+ I(\psi_p) &= \sqrt{-2 A \psi_p/R_0 + 1}, &
+ j_\varphi &= \left[(A-1)R - A R_0^2 / R\right]/R_0^3.
 \end{align}
-Now, we introduce another normalisation  \(\bar{R} = \frac{\hat{R}}{\hat{R}_0}\) and \(\bar{Z} = \frac{\hat{Z}}{\hat{R}_0}\)
+Now, we introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
 and solve Equations~\eqref{eq:GSEdimless} and~\eqref{eq:solovevassumption} to obtain
 \begin{align}
- \hat{\psi}_p (\hat{R},\hat{Z}) &= \hat{R}_0 \left[ \frac{1}{8}\bar{R}^4 + A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}} 
+ \psi_p (R,Z) &= R_0 \left[ \frac{1}{8}\bar{R}^4 + A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}} 
    - \frac{1}{8}\bar{R}^4\right) + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],
 \end{align}
 with
@@ -464,19 +469,19 @@ equation) we make simplifications to the curvature operator for the Solov'ev equ
 that in \textsc{feltor} it is possible in principle to relieve this approximation.
 
 \subsubsection{Toroidal field line approximation}\label{sec:torfieldlineapprox}
-The toroidal field line approximation applies \(\vec{\hat{b}}\approx \vec{\hat{e}}_\varphi\) to all perpendicular operators (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
-but retains the full expression for the magnetic field unit vector \(\vec{\hat{b}}\)
+The toroidal field line approximation applies \(\bhat\approx \ehat_\varphi\) to all perpendicular operators (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
+but retains the full expression for the magnetic field unit vector \(\bhat\)
 for parallel operators (\(\nabla_\parallel\) and \(\Delta_\parallel\)).
 Hence the curvature reduces in cylindrical coordinates \((R,Z,\varphi)\) to
 % In low beta plasmas \(\beta\ll1\) the curvature (Equation~\eqref{eq:kappagen}) reduces to:
 \begin{align}\label{eq:kappalowbeta}
- \vec{\kappa} &\approx \vec{\hat{e}}_\varphi \times \left(\vec{\nabla} \times \vec{\hat{e}}_\varphi \right) = -  \frac{1}{R} \vec{\hat{e}}_R.
+ \nabla\times\bhat &\approx -  \frac{1}{R} \ehat_Z.
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \vec{\hat{e}}_Z , &
-\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\vec{\hat e_R} +\frac{1}{B^2} \frac{\partial B}{\partial R}\vec{\hat e_Z} &
-%\vec{\hat e }_\varphi \times \vec{\nabla} B, &
+\vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \ehat_Z , &
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+%\ehat_\varphi \times \vec{\nabla} B, &
 \vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{\kappa} ,
 %\\
 %\mathcal{K}_{\kappa}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
@@ -490,7 +495,9 @@ and
 This results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\), which is an important property for energetic consistency.
 
 \subsubsection{Low beta approximation}\label{sec:lowbetaapprox}
-In this approximation we further approximate the curvature operator $\mathcal K_\kappa$.
+In this approximation we approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$.
+  with
+  $\vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
 \(\beta = \frac{P}{B^2/(2 \mu_0) } \)
 we can rewrite the curvature to
@@ -508,44 +515,38 @@ This simplifies the curvature operators to:
  \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
 \end{align}
 The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
-However this property has to be checked for a specified coordinate system, since e.g. in cylindrical coordinates \((R,Z,\varphi)\) the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
+The divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
 \subsubsection{True curvature terms}
-We have
+Without any approximations we have
 \begin{align}
 b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
 b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad 
-b^\varphi = -{\frac{I}{R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2}
+b^\varphi = \frac{I}{R}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \\
+\vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ}
 \label{}
 \end{align}
-Let us approximate
-\begin{align}
-\bhat\times\kappa \approx \nabla\times\bhat
-\label{}
-\end{align}
-This is in fact a sufficient condition for $\nabla\cdot \vec{ \mathcal K} = 0$.
 We can then explicitly write
 \begin{align}
-\vec K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
-\vec K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
-\vec K_{\nabla B}^\varphi &= \frac{1}{B^3R^2}\left(\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
+K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
+K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
+K_{\nabla B}^\varphi &= \frac{1}{B^3R^2}\left(\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
 %\equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
 \label{}
 \end{align}
 and
 \begin{align}
-\vec K_\kappa^R &= \frac{R_0 }{B^2R}\left( \frac{\partial I}{\partial Z} -\frac{I}{B}\frac{\partial B}{\partial Z}\right) \\
-\vec K_\kappa^Z &= \frac{R_0 }{B^2R} \left( \frac{I}{B}\frac{\partial B}{\partial R} - \frac{\partial I}{\partial R} \right)\\
-\vec K_\kappa^\varphi &= \frac{1}{B^2R^2}\left(
+K_\kappa^R &= \frac{R_0 }{RB^2}\left( \frac{\partial I}{\partial Z} -\frac{I}{B}\frac{\partial B}{\partial Z}\right) \\
+K_\kappa^Z &= \frac{R_0 }{RB^2} \left( \frac{I}{B}\frac{\partial B}{\partial R} - \frac{\partial I}{\partial R} \right)\\
+K_\kappa^\varphi &= \frac{1}{R^2B^2}\left(
 + \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
 + \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
 -\frac{1}{R}\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
 - \frac{\partial^2 \psi}{\partial Z^2}
 \right) \\
-\nabla\cdot\vec{\mathcal K_\kappa} &= -\nabla\cdot\vec{\mathcal K_{\nabla B}}= -\vec{\mathcal K_\kappa}\cdot \nabla\ln B
+\vec\nabla\cdot\vec{\mathcal K_\kappa} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}= -\vec{\mathcal K_\kappa}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
 %contravariant phi component
 \label{}
 \end{align}
-
 Furthermore, we write
 \begin{align}
 (\nabla_\perp f)^i = (g^{ij}-b^ib^j)\partial_j f =: h^{ij}\partial_j f
