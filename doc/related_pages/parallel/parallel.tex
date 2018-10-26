@@ -451,11 +451,10 @@ Note here that Eq.~\eqref{eq:interpolation} applies for the required interpolati
 procedures.
 
 
-
-\section{Numerical test programs}
-The essential test programs for the parallel derivative are located in
-\code{
-path/to/feltor/inc/geometries}. To every test \code{*\_t.cu}
+\section{Numerical tests}
+The test programs for the parallel derivative are located in
+\code{path/to/feltor/inc/geometries}.
+To every shared memory test \code{*\_t.cu}
 there is a corresponding distributed memory \code{*\_mpit.cu} program.
 \code{ds\_t.cu} tests the cylindrical grid
 with boundary conditions.
@@ -483,8 +482,8 @@ This gives rise to magnetic field strength and components
 where $[.,.]$ is the Poisson bracket. Note that
 in order to compute analytical testfunctions we use
 \begin{align}
-\nabla_\parallel f = b^R\partial_R f + b^Z\partial_Z f + b^\varphi \partial_\varphi f\\
-\Delta_\parallel f = \nabla\cdot(\bhat\bhat\cdot \nabla f)
+\nabla_\parallel f &= b^R\partial_R f + b^Z\partial_Z f + b^\varphi \partial_\varphi f\\
+\Delta_\parallel f &= \nabla\cdot(\bhat\bhat\cdot \nabla f)
 = (\nabla\cdot\bhat) \nabla_\parallel f + (\nabla_\parallel b^j) \partial_j f
 + b^ib^j\partial_i \partial_j f
 \label{}
@@ -519,7 +518,7 @@ $\varphi \in [0,2\pi]$ and choose
   \label{}
 \end{align}
 On the chosen domain these functions have Neumann respectively Dirichlet boundary conditions.
-\subsection{The Günther field}
+\subsection{The G\"unther field}
 A simple choice for the flux function that makes fieldlines stay
 inside a square box is
 \begin{align}

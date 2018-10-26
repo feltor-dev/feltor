@@ -305,15 +305,15 @@ unsigned max_iter = 1e4, double eps = 1e-6)
     else if( name == "divCentered") ds.div( dg::centered, in, out);
     else if( name == "divDirectForward"){
         ds.ds( dg::forward, in, out);
-        dg::blas1::pointwiseDot( 1., divb, out, 1., out);
+        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
     }
     else if( name == "divDirectBackward"){
         ds.ds( dg::backward, in, out);
-        dg::blas1::pointwiseDot( 1., divb, out, 1., out);
+        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
     }
     else if( name == "divDirectCentered"){
         ds.ds( dg::centered, in, out);
-        dg::blas1::pointwiseDot( 1., divb, out, 1., out);
+        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
     }
     else if( name == "forwardLap") {
         ds.set_direction( dg::forward);

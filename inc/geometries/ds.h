@@ -440,7 +440,7 @@ struct ComputeDSS{
     ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
     DG_DEVICE
     void operator()( double& dssf, double fp, double f, double fm, double hp_inv, double h0_inv, double hm_inv) const{
-        dssf = m_alpha*( 2.*fp*hp_inv*h0_inv - 2.*f*hp_inv*hm_inv + 2*fm*hm_inv*h0_inv);
+        dssf = m_alpha*( 2.*fp*hp_inv*h0_inv - 2.*f*hp_inv*hm_inv + 2*fm*hm_inv*h0_inv) + m_beta*dssf;
         //dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
     }
     private:
