@@ -163,35 +163,48 @@ struct Explicit
     //extrapolates and solves for phi[1],
     //then adds square velocity ( omega)
     void compute_phi( const std::array<container,2>& densities);
-    struct ComputePerp{
+    struct ComputePerpDrifts{
+        ComputePerpDrifts( double mu, double tau):m_mu(mu), m_tau(tau){}
         DG_DEVICE
         void operator()(
-                double tilde_N, double dxN, double dyN, double dzN,
-                double U,       double dxU, double dyU, double dzU,
-                double dxPhi,   double dyPhi, double dzPhi,
-                double binv,    double perp_vol_inv,
-                double curvX,       double curvY, double curvZ,
-                double curvKappaX,  double curvKappaY, double curvKappaZ,
+                double tilde_N, double d0N, double d1N, double d2N,
+                double U,       double d0U, double d1U, double d2U,
+                double d0P, double d1P, double d2P,
+                double b_0,         double b_1,         double b_2,
+                double curv0,       double curv1,       double curv2,
+                double curvKappa0,  double curvKappa1,  double curvKappa2,
                 double divCurvKappa,
-                double& dtN, double& dtU,
-                double tau, double mu)
+                double& dtN, double& dtU
+            )
         {
             double N = tilde_N + 1.;
+            double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
+            double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
+            double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
+            double KU = curv0*d0U+curv1*d1U+curv2*d2U;
+            double KN = curv0*d0N+curv1*d1N+curv2*d2N;
+            double KP = curv0*d0P+curv1*d1P+curv2*d2P;
             dtN =
-                -binv*perp_vol_inv*( dxPhi*dyN-dyPhi*dxN)
-                - tau*(curvX*dxN+curvY*dyN + curvZ*dZN)
-                -N*(curvX*dxPhi + curvY*dyPhi + curvZ*dzPhi)
-                -mu*U*U* ( curvKappaX*dxN + curvKappaY*dyN + curvKappaZ*dzN)
-                -2.*mu*N*U*( curvKappaX*dxU + curvKappaY*dyU + curvKappaZ*dzU)
-                -mu*N*U*U*divCurvKappa;
+                -b_0*( d1P*d2N-d2P*d1N)
+                -b_1*( d2P*d0N-d0P*d2N)
+                -b_2*( d0P*d1N-d1P*d0N) //ExB drift
+                -m_tau*( KN)
+                -N*(     KP)
+                -m_mu*U*U* (   KappaN )
+                -2.*m_mu*N*U*( KappaU )
+                -m_mu*N*U*U*divCurvKappa;
             dtU =
-                -binv*perp_vol_inv*( dxPhi*dyU-dyPhi*dxU)
-                -U*(curvKappaX*dxPhi + curvKappaY*dyPhi)
-                -tau*( curvX*dxU + curvY*dyU)
-                -tau*U*divCurvKappa
-                -(2.*tau + mu*U*U)*( curvKappaX*dxU + curvKappaY*dyU)
-                - 2.*tau*U*( curvKappaX*dxN + curvKappaY*dyN)/N;
+                -b_0*( d1P*d2U-d2P*d1U)
+                -b_1*( d2P*d0U-d0P*d2U)
+                -b_2*( d0P*d1U-d1P*d0U)
+                -U*KappaP
+                -m_tau* KU
+                -m_tau*U*divCurvKappa
+                -(2.*m_tau + m_mu*U*U)*( KappaU )
+                - 2.*m_tau*U*( KappaN )/N;
         }
+        private:
+        double m_mu, m_tau;
     };
     struct ComputeChi{
         DG_DEVICE
@@ -201,18 +214,21 @@ struct Explicit
     };
     struct ComputePsi{
         DG_DEVICE
-        void operator()( double& GammaPhi, double dxPhi, double dyPhi, double& GdxPhi, double GdyPhi, double binv) const{
+        void operator()( double& GammaPhi, double dxPhi, double dyPhi, double dzPhi, double& GdxPhi, double GdyPhi, double GdzPhi, double binv) const{
             //u_E^2
-            GdxPhi   = (dxPhi*GdxPhi + dyPhi*GdyPhi)*binv*binv;
+            GdxPhi   = (dxPhi*GdxPhi + dyPhi*GdyPhi + dzPhi*GdzPhi)*binv*binv;
             //Psi
             GammaPhi = GammaPhi - 0.5*GdxPhi;
         }
     };
     struct ComputeDiss{
+        ComputeDiss( double mu, double tau):m_mu(mu), m_tau(tau){}
         DG_DEVICE
         void operator()( double& energy, double logN, double phi, double U, double mu, double tau) const{
             energy = tau*(1.+logN) + phi + 0.5*mu*U*U;
         }
+        private:
+        double m_mu, m_tau;
     };
     struct ComputeLogN{
         DG_DEVICE
@@ -272,14 +288,13 @@ struct Explicit
 ///@cond
 template<class Grid, class IMatrix, class Matrix, class container>
 Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Parameters p, dg::geo::solovev::Parameters gp):
-    m_dsDIR( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, p.multiplyX, p.multiplyY, true, true,  true, 2.*M_PI/(double)p.Nz ),
-    m_dsN( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, p.multiplyX, p.multiplyY, true, true,  true, 2.*M_PI/(double)p.Nz),
-    //////////the poisson operators ////////////////////////////////////////
+    m_dsDIR( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz ),
+    m_dsN( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz),
+    /////////the poisson operators ////////////////////////////////////////
     m_dx( dg::create::dx( g, p.bc) ), m_dxDIR( dg::create::dx( g, dg::DIR) ),
     m_dy( dg::create::dy( g, p.bc) ), m_dyDIR( dg::create::dy( g, dg::DIR) ),
-    //poissonN(  g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
-    //poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
-    //////////the elliptic and Helmholtz operators//////////////////////////
+    m_dz( dg::create::dz( g, dg::PER) ),
+    /////////the elliptic and Helmholtz operators//////////////////////////
     m_lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     m_lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
     m_multigrid( g, m_p.stages),
@@ -379,8 +394,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const contain
     if (m_p.tau[1] == 0.) {
         dg::blas1::copy( src, target); //  ne-1 = N_i -1
     }
-    else {
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_invgammaN, target, src, m_p.eps_gamma);  //=ne-1 = Gamma (ni-1)
+    else {  //ne-1 = Gamma (ni-1)
+        std::vector<unsigned> number = m_multigrid.direct_solve(
+            m_multi_invgammaN, target, src, m_p.eps_gamma);
         if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_gamma);
     }
@@ -397,39 +413,51 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::arr
     m_multigrid.project( m_chi, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_pol[u].set_chi( m_multi_chi[u]);
+
     //Now, compute right hand side
     if (m_p.tau[1] == 0.) {
-        dg::blas1::axpby( 1., y[1], -1., y[0], m_chi); //chi = N_i - n_e
-    } else { //solve for Gamma N_i
+        //compute N_i - n_e
+        dg::blas1::axpby( 1., y[1], -1., y[0], m_chi);
+    }
+    else
+    {
+        //compute Gamma N_i - n_e
         m_old_gammaN.extrapolate( m_chi);
-        std::vector<unsigned> numberG = m_multigrid.direct_solve( m_multi_invgammaN, m_chi, y[1], m_p.eps_gamma);
+        std::vector<unsigned> numberG = m_multigrid.direct_solve(
+            m_multi_invgammaN, m_chi, y[1], m_p.eps_gamma);
         m_old_gammaN.update( m_chi);
         if(  numberG[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
-        dg::blas1::axpby( -1., y[0], 1., m_chi, m_chi); //chi= Gamma N_i - n_e
+        dg::blas1::axpby( -1., y[0], 1., m_chi, m_chi);
     }
-    //Invert polarisation
+    //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( m_phi[0]);
-    std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_pol, m_phi[0], m_chi, m_p.eps_pol);
+    std::vector<unsigned> number = m_multigrid.direct_solve(
+        m_multi_pol, m_phi[0], m_chi, m_p.eps_pol);
     m_old_phi.update( m_phi[0]);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol);
+    //---------------------------------------------------------//
     //Solve for Gamma Phi
     if (m_p.tau[1] == 0.) {
         dg::blas1::copy( m_phi[0], m_phi[1]);
     } else {
         m_old_psi.extrapolate( m_phi[1]);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_invgammaDIR, m_phi[1], m_phi[0], m_p.eps_gamma);
+        std::vector<unsigned> number = m_multigrid.direct_solve(
+            m_multi_invgammaDIR, m_phi[1], m_phi[0], m_p.eps_gamma);
         m_old_psi.update( m_phi[1]);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
     }
-    //Compute Psi
+    //-------Compute Psi and derivatives
     dg::blas2::symv( m_dxDIR, m_phi[0], m_dxPhi[0]);
     dg::blas2::symv( m_dyDIR, m_phi[0], m_dyPhi[0]);
-    dg::blas2::symv( m_dz, m_phi[0], m_dzPhi[0]);
-    dg::tensor::multiply3d( m_metric, m_dxPhi[0], m_dyPhi[0], m_omega, m_chi);
-    dg::blas1::subroutine( ComputePsi(), m_phi[1], m_dxPhi[0], m_dyPhi[0], m_omega, m_chi, m_binv);
+    dg::blas2::symv( m_dz,    m_phi[0], m_dzPhi[0]);
+    dg::tensor::multiply3d( m_metric,
+        m_dxPhi[0], m_dyPhi[0], m_dzPhi[0], m_omega, m_chi, m_lambda);
+    dg::blas1::subroutine( ComputePsi(),
+        m_phi[1], m_dxPhi[0], m_dyPhi[0], m_dzPhi[0],
+        m_omega, m_chi, m_lambda, m_binv);
     //m_omega now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dxDIR, m_phi[1], m_dxPhi[1]);
     dg::blas2::symv( m_dyDIR, m_phi[1], m_dyPhi[1]);
@@ -447,8 +475,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     dg::Timer timer;
     timer.tic();
 
-    compute_phi( y[0]); //Set phi[0], phi[1], m_dxPhi, m_dyPhi, and m_omega (u_E^2)
-    dg::blas1::subroutine( ComputeLogN(), y[0], m_npe, m_logn); //Transform n-1 to n and n to logn
+    //Set phi[0], phi[1], m_dxPhi, m_dyPhi, and m_omega (u_E^2)
+    compute_phi( y[0]);
+    //Transform n-1 to n and n to logn
+    dg::blas1::subroutine( ComputeLogN(), y[0], m_npe, m_logn);
 
     ////////////////////ENERGETICS///////////////////////////////////////
     double z[2]    = {-1.0,1.0};
@@ -476,7 +506,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     for( unsigned i=0; i<2;i++)
     {
 
-        dg::blas1::subroutine( ComputeDiss(), m_chi, m_logn[i], m_phi[i], y[1][i], m_p.mu[i], m_p.tau[i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
+        dg::blas1::subroutine( ComputeDiss(m_p.mu[i], m_p.tau[i]), m_chi, m_logn[i], m_phi[i], y[1][i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
         //Compute parallel dissipation for N
         dg::blas2::symv(m_p.nu_parallel, m_dsN, y[0][i], 0.,  m_lambda); //lambda = nu_parallel Delta_s N
 
@@ -491,7 +521,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
         dg::blas2::gemv( m_lapperpN, m_lambda, m_omega);//Delta^2 N
         Dperp[i] = -z[i]* m_p.nu_perp*dg::blas2::dot(m_chi, m_vol3d, m_omega);
 
-
         dg::blas1::pointwiseDot( m_npe[i], y[1][i], m_omega); // omega = N U
         //Compute parallel dissipation for U
         dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 0., m_lambda);//lambda = nu_parallel Delta_s U
@@ -505,50 +534,58 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     ///////////////////////////////////EQUATIONS///////////////////////////////
     for( unsigned i=0; i<2; i++)
     {
-        ////////////////////perpendicular dynamics///////////////////////////////
+        ////////////////////perpendicular dynamics////////////////////////
         dg::blas2::gemv( m_dx, y[0][i], m_dxN[i]);
         dg::blas2::gemv( m_dy, y[0][i], m_dyN[i]);
         dg::blas2::gemv( m_dxDIR, y[1][i], m_dxU[i]);
         dg::blas2::gemv( m_dyDIR, y[1][i], m_dyU[i]);
         dg::blas2::gemv( m_dz, y[0][i], m_dzN[i]);
         dg::blas2::gemv( m_dz, y[1][i], m_dzU[i]);
-        dg::blas1::subroutine( ComputePerp(),
+        dg::blas1::subroutine( ComputePerpDrifts(m_p.mu[i], m_p.tau[i]),
+            //species depdendent
             y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
             y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
             m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
-            m_binv, m_vol3d,
+            //magnetic parameters
+            m_binv, m_b[0], m_b[1], m_b[2],
             m_curv[0], m_curv[1], m_curv[2],
             m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-            m_divCurvKappa, yp[0][i], yp[1][i],
-            m_p.tau[i], m_p.mu[i]);
+            m_divCurvKappa, yp[0][i], yp[1][i]
+        );
 
         ///////////parallel dynamics///////////////////////////////
+        //velocity
         //Burgers term
         dg::blas1::pointwiseDot(y[1][i], y[1][i], m_omega); //U^2
-        m_dsDIR.centered(-0.5, m_omega, 1., yp[1][i]);      //dtU += - 0.5 ds U^2
+        m_dsDIR.centered(-0.5, m_omega, 1., yp[1][i]); //dtU += -0.5 ds U^2
         //parallel force terms
         m_dsN.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
         m_dsDIR.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);        //dtU += - tau/(hat(mu))*ds lnN - 1/(hat(mu))*ds psi
 
-        //density convection
+        //density
         dg::blas1::pointwiseDot(m_npe[i], y[1][i], m_chi);   // NU
         m_dsDIR.centered(-1., m_chi, 1., yp[0][i]);          // dtU += - ds NU
         dg::blas1::pointwiseDot(+1., m_chi, m_gradlnB, 1., yp[0][i]);// dtU += U N ds ln B
-        //Alternative: direct with adjoint derivative
-        //m_dsDIR.centeredDiv(-1, chi, 1., yp[i]);     // dtN+= - ds^dagger U N
+        //direct parallel diffusion for N and U
+        dsN.ds( dg::centered, y[0][i], m_chi);
+        dg::blas1::pointwiseDot( -m_p.nu_parallel, gradlnB, m_chi, 1., yp[0][i]);
+        dsN.dss( m_p.nu_parallel, y[0][i], 1., yp[0][i]);
+
+        dsDIR.ds( dg::centered, y[1][i], m_chi);
+        dg::blas1::pointwiseDot( -m_p.nu_parallel, gradlnB, m_chi, 1., yp[1][i]);
+        dsDIR.dss( m_p.nu_parallel, y[1][i], 1., yp[1][i]);
 
     }
     //Add Resistivity
-    dg::blas1::subroutine( AddResistivity( m_p.c, m_p.mu), y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
+    dg::blas1::subroutine( AddResistivity( m_p.c, m_p.mu),
+        y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
     //Add particle source to dtN
-    dg::blas1::subroutine( ComputeSource(), m_lambda, y[0][0], m_profne, m_source, m_p.omega_source);
+    dg::blas1::subroutine( ComputeSource(),
+        m_lambda, y[0][0], m_profne, m_source, m_p.omega_source);
     dg::blas1::axpby( 1., m_lambda, 1.0, yp[0][0]);
     dg::blas1::axpby( 1., m_lambda, 1.0, yp[1][1]);
     //add FLR correction to dtNi
     dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1], m_lapperpN, m_lambda, 1.0, yp[1][1]);
-        //parallel diffusion for N and U
-        dg::blas2::symv( m_p.nu_parallel, m_dsN,   y[0][i], 1., yp[0][i]);
-        dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 1., yp[1][i]);
 
     timer.toc();
     #ifdef MPI_VERSION

@@ -403,7 +403,7 @@ By construction we have $\partial_\varphi B = 0$ with
 \end{align}
 Furthermore, we have
 \begin{align}
-  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ}.
+  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat.
     \label{}
 \end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -464,9 +464,8 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
 The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field. It allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
 field reversed configurations and low and high beta tokamak equilbria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
 
-However, for numerical reasons (probably accelerates the inversion of the elliptic
-equation) we make simplifications to the curvature operator for the Solov'ev equilibrium. Note
-that in \textsc{feltor} it is possible in principle to relieve this approximation.
+However, we allow to make simplifications to the curvature operator
+for the Solov'ev equilibrium.
 
 \subsubsection{Toroidal field line approximation}\label{sec:torfieldlineapprox}
 The toroidal field line approximation applies \(\bhat\approx \ehat_\varphi\) to all perpendicular operators (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
@@ -565,18 +564,17 @@ Finally, we have
 \end{align}
 where $[f,g]_{ij} = \partial_i f\partial_jg - \partial_j f\partial_i g$.
 \section{Numerical methods}
-discontinuous Galerkin on structured grid 
+discontinuous Galerkin on structured grid
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
 \begin{longtable}{ll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
-    coordinate system & Cylindrical 3D & equidistant discretization of $[0,l_R] \times [0,l_Z] \times [0,2\pi]$, equal number of Gaussian nodes in R and Z \\
+    coordinate system & Cylindrical 3D & equidistant discretization of $[0,l_R] \times [0,l_Z] \times [0,2\pi]$, equal number of Gaussian nodes in R and Z, in $\varphi$ equidistant \\
 matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-\ExB advection & Poisson & \\
 Parallel derivative & refined  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
 Parallel diffusion & refined FCI & cf.~\cite{Held2016,Stegmeir2017} \\
-curvature terms & direct & cf. curvature approximations \\
-time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+drift terms & direct & cf. curvature approximations \\
+time & Adaptive ARKode stepper & $3rd$ order explicit, diffusion $3rd$ order implicit \\
 \bottomrule
 \end{longtable}
 
@@ -591,18 +589,21 @@ n      & integer & 3 & - &\# Gaussian nodes in R and Z \\
 Nx     & integer &52& - &\# grid points in R \\
 Ny     & integer &52& - &\# grid points in Z \\
 Nz     & integer &16& - &\# grid points in $\varphi$ \\
-dt     & integer &1e-2& - &time step in units of $c_s/\rho_s$ \\
-compressionX & integer & 2 & 1 & compression factor of output in X \\
-compressionY & integer & 2 & 1 & compression factor of output in Y \\
-itstp  & integer &2  & - &   steps between outputs \\
-maxout & integer &10& - &      \# outputs excluding first \\
+dt     & integer &1e-2& - &initial time step in units of $c_s/\rho_s$ \\
+compressionX & integer & 2 & 1 & output contains n*Nx/compressionX points in x,
+    has to divde Nx evenly\\
+compressionY & integer & 2 & 1 & output contains n*Ny/compressionY points in y,
+    has to divde Ny evenly\\
+itstp  & integer & 2  & - & steps between outputs \\
+maxout & integer & 10 & - & \# outputs excluding first \\
 eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
 jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
 eps\_gamma & float &1e-6    & - & accuracy of $\Gamma_1$  \\
-eps\_time  & float &1e-9   & - & accuracy of implicit time-stepper \\
-stages     & integer & 3 & 3 & \# stages in multigrid  \\
-multiplyX     & integer & 10 & 10 & Grid refinement in DS in X-direction\\
-multiplyY     & integer & 10 & 10 & Grid refinement in DS in Y-direction\\
+eps\_time  & float &1e-9   & - & accuracy of solver for implicit part in time-stepper \\
+rtol  & float &1e-6   & - &tolerance of adaptive time-stepper \\
+stages      & integer & 3 & 3 & \# stages in multigrid  \\
+mx     & integer & 10 & 10 & refinement factor in DS in X-direction\\
+my     & integer & 10 & 10 & refinement factor in DS in Y-direction\\
 mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
@@ -614,9 +615,10 @@ posX       & float &0.3    & - & blob x-position in units of $a$\\
 posY       & float &0.0    & - & blob y-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
-    nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
+nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
-bc  & char & "DIR"      & - & GLOBAL perp BC for parallel derivative (one of  DIR, NEU) \\
+bcx     & char & "DIR"      & - & perpendicular BC for parallel derivative \\
+bcy     & char & "DIR"      & - & perpendicular BC for parallel derivative \\
     source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:electron_source} \\
 boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
 boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\

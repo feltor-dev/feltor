@@ -4,13 +4,9 @@
 #include "json/json.h"
 
 namespace feltor{
-/**
- * @brief Provide a mapping between input file and named parameters
- */
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-
     double dt;
     unsigned cx, cy;
     unsigned itstp;
