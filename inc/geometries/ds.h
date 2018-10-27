@@ -43,7 +43,7 @@ in arbitrary coordinates
  * @note The parallel Laplacian cannot be inverted as long as there are
  * closed fieldlines somewhere in the domain (which is virtually always true). There is therefore no norm parameter in the class.
 @attention The \c div and \c symv member functions reliably work only if fieldlines
-do not(!) intersect the boundary and then only if the \c multiplyX and \c multiplyY
+do not(!) intersect the boundary and then only if the \c mx and \c my
     parameters are sufficiently high
 * @ingroup fieldaligned
 * @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
@@ -77,12 +77,10 @@ struct DS
         Limiter limit = FullLimiter(),
         dg::direction dir = dg::centered,
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        double deltaPhi=-1)
+        unsigned mx=10, unsigned my=10,
+        double deltaPhi=-1):
+        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir)
     {
-        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
-        construct( m_fa, dir);
     }
     /**
      * @brief Use the given vector field to construct
@@ -99,16 +97,10 @@ struct DS
         Limiter limit = FullLimiter(),
         dg::direction dir = dg::centered,
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        double deltaPhi=-1)
+        unsigned mx=10, unsigned my=10,
+        double deltaPhi=-1):
+        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir)
     {
-        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
-        construct( m_fa, dir);
-    }
-    ///@copydoc construct
-    DS(const FA& fieldaligned, dg::direction dir = dg::centered)
-    {
-        construct( fieldaligned, dir);
     }
     /**
      * @brief Re-construct from a given \c Fieldaligned object
@@ -116,7 +108,18 @@ struct DS
      * @param fieldaligned this object will be used in all further member calls
      * @param dir indicate the direction in the bracket operator and in symv
      */
-    void construct(const FA& fieldaligned, dg::direction dir = dg::centered);
+    DS( FA fieldaligned, dg::direction dir = dg::centered);
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = DS( std::forward<Params>( ps)...);
+    }
 
     /*!@brief Set the direction used in the operator() and symv member
      * @param dir new direction
@@ -351,13 +354,11 @@ struct DS
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, container>& fa, dg::direction dir)
+DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::direction dir): m_fa(fa)
 {
-    m_fa=fa;
-
-    dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d);
-    dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol);
-    dg::blas1::transfer( dg::create::inv_volume( fa.grid()), m_inv3d);
+    dg::assign( dg::create::volume(     fa.grid()), m_vol3d);
+    dg::assign( dg::create::weights(    fa.grid()), m_weights_wo_vol);
+    dg::assign( dg::create::inv_volume( fa.grid()), m_inv3d);
     dg::blas2::transfer( dg::create::jumpX( fa.grid(), fa.bcx()), m_jumpX);
     dg::blas2::transfer( dg::create::jumpY( fa.grid(), fa.bcy()), m_jumpY);
     m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;

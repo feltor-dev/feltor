@@ -163,9 +163,9 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
     */
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
-    * @param multiplyX defines the resolution in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
+    * @param mx refinement factor in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
     * high as possible, 10 is a good start)
-    * @param multiplyY analogous to \c multiplyX, applies to y direction
+    * @param my analogous to \c mx, applies to y direction
     * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz()==1, then \c deltaPhi is taken instead of \c grid.hz()
     * @note If there is a limiter, the boundary condition on the first/last plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries function.
@@ -200,11 +200,11 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        double deltaPhi = -1)
+        unsigned mx=10, unsigned my=10,
+        double deltaPhi = -1):
+            Fieldaligned( dg::geo::createBHat(vec),
+                grid, bcx, bcy, limit, eps, mx, my, deltaPhi)
     {
-        dg::geo::BinaryVectorLvl0 bhat( dg::geo::createBHat(vec));
-        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
 
     ///@brief Construct from a vector field and a grid
@@ -217,23 +217,19 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        double deltaPhi = -1)
-    {
-        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
-    }
-    ///@brief Construct from a field and a grid
-    ///@copydoc hide_fieldaligned_physics_parameters
-    ///@copydoc hide_fieldaligned_numerics_parameters
-    template <class Limiter>
-    void construct(const dg::geo::BinaryVectorLvl0& vec,
-        const ProductGeometry& grid,
-        dg::bc bcx = dg::NEU,
-        dg::bc bcy = dg::NEU,
-        Limiter limit = FullLimiter(),
-        double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
+        unsigned mx=10, unsigned my=10,
         double deltaPhi = -1);
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = Fieldaligned( std::forward<Params>( ps)...);
+    }
 
     dg::bc bcx()const{
         return m_bcx;
@@ -382,7 +378,7 @@ struct Fieldaligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-void Fieldaligned<Geometry, IMatrix, container>::construct(
+Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, double deltaPhi)

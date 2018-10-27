@@ -68,11 +68,11 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        double deltaPhi = -1)
+        unsigned mx=10, unsigned my=10,
+        double deltaPhi = -1):
+            Fieldaligned( dg::geo::createBHat(vec),
+                grid, bcx, bcy, limit, eps, mx, my, deltaPhi)
     {
-        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
     }
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
@@ -81,20 +81,14 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        double deltaPhi = -1)
-    {
-        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, deltaPhi);
-    }
-    template <class Limiter>
-    void construct(const dg::geo::BinaryVectorLvl0& vec,
-        const ProductMPIGeometry& grid,
-        dg::bc bcx = dg::NEU,
-        dg::bc bcy = dg::NEU,
-        Limiter limit = FullLimiter(),
-        double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
+        unsigned mx=10, unsigned my=10,
         double deltaPhi = -1);
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = Fieldaligned( std::forward<Params>( ps)...);
+    }
 
     dg::bc bcx()const{
         return m_bcx;
@@ -166,7 +160,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
 template <class Limiter>
-void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
+Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::Fieldaligned(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, double deltaPhi)
