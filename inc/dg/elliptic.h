@@ -65,27 +65,23 @@ class Elliptic
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = get_value_type<Container>;
-    ///@brief empty object ( no memory allocation, call \c construct before using the object)
+    ///@brief empty object ( no memory allocation)
     Elliptic(){}
     /**
      * @brief Construct from Grid
      *
      * @param g The Grid, boundary conditions are taken from here
-     * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative
-
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
+    Elliptic( const Geometry& g, norm no = not_normed,
+        direction dir = forward, value_type jfactor=1.):
+        Elliptic( g, g.bcx(), g.bcy(), no, dir, jfactor)
     {
-        construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
-    }
-
-    ///@copydoc Elliptic::construct()
-    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
-    {
-        construct( g, bcx, bcy, no, dir, jfactor);
     }
 
     /**
@@ -93,11 +89,16 @@ class Elliptic
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
-     * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
-     * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @note chi is assumed 1 per default
      */
-    void construct( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
+    Elliptic( const Geometry& g, bc bcx, bc bcy,
+        norm no = not_normed, direction dir = forward,
+        value_type jfactor=1.)
     {
         m_no=no, m_jfactor=jfactor;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
@@ -118,21 +119,20 @@ class Elliptic
         dg::assign( dg::evaluate(dg::one, g), m_sigma);
     }
 
-    ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,value_type)
-    void construct( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor = 1.){
-        construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = Elliptic( std::forward<Params>( ps)...);
     }
 
-    /**
-     * @brief Change scalar part in Chi tensor
-     *
-     * Internally, we split the tensor \f$\chi = \sigma\mathbf{\tau}\f$ into
-     * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
-     * set each part seperately. This functions sets the scalar part.
-     *
-     * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
-     * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
-     */
+    ///@copydoc Elliptic3d::set_chi(const ContainerType0&)
     template<class ContainerType0>
     void set_chi( const ContainerType0& sigma)
     {
@@ -143,14 +143,7 @@ class Elliptic
         dg::blas1::copy( sigma, m_sigma);
     }
     /**
-     * @brief Change tensor part in Chi tensor
-     *
-     * Internally, we split the tensor \f$\chi = \sigma\mathbf{\tau}\f$ into
-     * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
-     * set each part seperately. This functions sets the tensor part.
-     *
-     * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
-     * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
+     * @copydoc Elliptic3d::set_chi(const SparseTensor<ContainerType0>&)
      * @note the 3d parts in \c tau will be ignored
      */
     template<class ContainerType0>
@@ -190,25 +183,22 @@ class Elliptic
         return m_precond;
     }
     /**
-     * @brief Set the currently used jfactor
-     *
+     * @brief Set the currently used jfactor (\f$ \alpha \f$)
      * @param new_jfactor The new scale factor for jump terms
      */
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     /**
-     * @brief Get the currently used jfactor
-     *
+     * @brief Get the currently used jfactor (\f$ \alpha \f$)
      * @return  The current scale factor for jump terms
      */
     value_type get_jfactor() const {return m_jfactor;}
 
     /**
-     * @brief Computes the polarisation term
+     * @brief Compute elliptic term and store in output
      *
+     * i.e. \c y=M*x
      * @param x left-hand-side
      * @param y result
-     * @note memops required:
-            - 19 reads + 9 writes
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
@@ -216,8 +206,9 @@ class Elliptic
         symv( 1, x, 0, y);
     }
     /**
-     * @brief Computes the polarisation term
+     * @brief Compute elliptic term and add to output
      *
+     * i.e. \c y=alpha*M*x+beta*y
      * @param alpha a scalar
      * @param x left-hand-side
      * @param beta a scalar
@@ -321,27 +312,23 @@ class Elliptic3d
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = get_value_type<Container>;
-    ///@brief empty object ( no memory allocation, call \c construct before using the object)
+    ///@brief empty object ( no memory allocation)
     Elliptic3d(){}
     /**
      * @brief Construct from Grid
      *
-     * @param g The Grid, boundary conditions are taken from here
-     * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative
-
+     * @param g The Grid; boundary conditions are taken from here
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
+     * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
+    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.):
+        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor)
     {
-        construct( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor);
-    }
-
-    ///@copydoc Elliptic3d::construct()
-    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
-    {
-        construct( g, bcx, bcy, no, dir, jfactor);
     }
 
     /**
@@ -350,19 +337,23 @@ class Elliptic3d
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param bcz boundary contition in z
-     * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
-     * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
+     * the direction of the z derivative is always \c dg::centered
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @note chi is assumed 1 per default
      */
-    void construct( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
+    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
     {
         m_no=no, m_jfactor=jfactor;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
-        dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dir)), m_leftz);
+        dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
-        dg::blas2::transfer( dg::create::dz( g, bcz, dir), m_rightz);
+        dg::blas2::transfer( dg::create::dz( g, bcz, dg::centered), m_rightz);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
 
@@ -376,10 +367,12 @@ class Elliptic3d
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
         dg::assign( dg::evaluate(dg::one, g), m_sigma);
     }
-
-    ///@copydoc  Elliptic3d::Elliptic3d(const Geometry&,norm,direction,value_type)
-    void construct( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor = 1.){
-        construct( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor);
+    ///@copydoc Elliptic::construct()
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = Elliptic3d( std::forward<Params>( ps)...);
     }
 
     /**
@@ -419,69 +412,29 @@ class Elliptic3d
         dg::tensor::scal( m_chi, m_vol);
     }
 
-    /**
-     * @brief Return the vector missing in the un-normed symmetric matrix
-     *
-     * i.e. the inverse of the weights() function
-     * @return inverse volume form including inverse weights
-     */
+    ///@copydoc Elliptic::inv_weights()
     const Container& inv_weights()const {
         return m_inv_weights;
     }
-    /**
-     * @brief Return the vector making the matrix symmetric
-     *
-     * i.e. the volume form
-     * @return volume form including weights
-     */
+    ///@copydoc Elliptic::weights()
     const Container& weights()const {
         return m_weights;
     }
-    /**
-     * @brief Return the default preconditioner to use in conjugate gradient
-     *
-     * Currently returns the inverse weights without volume elment divided by the current \f$ \chi\f$.
-     * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
-     * @return the inverse of \f$\chi\f$.
-     */
+    ///@copydoc Elliptic::precond()
     const Container& precond()const {
         return m_precond;
     }
-    /**
-     * @brief Set the currently used jfactor
-     *
-     * @param new_jfactor The new scale factor for jump terms
-     */
+    ///@copydoc Elliptic::set_jfactor()
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
-    /**
-     * @brief Get the currently used jfactor
-     *
-     * @return  The current scale factor for jump terms
-     */
+    ///@copydoc Elliptic::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
 
-    /**
-     * @brief Computes the polarisation term
-     *
-     * @param x left-hand-side
-     * @param y result
-     * @note memops required:
-            - 19 reads + 9 writes
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
+    ///@copydoc Elliptic::symv(const ContainerType0&,ContainerType1&)
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y){
         symv( 1, x, 0, y);
     }
-    /**
-     * @brief Computes the polarisation term
-     *
-     * @param alpha a scalar
-     * @param x left-hand-side
-     * @param beta a scalar
-     * @param y result
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
+    ///@copydoc Elliptic::symv(value_type,const ContainerType0&,value_type,ContainerType1&)
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
     {

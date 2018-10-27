@@ -29,8 +29,14 @@ struct GeneralHelmholtz
 {
     using container_type = typename EllipticType::container_type;
     using geometry_type = typename EllipticType::geometry_type;
+    using value_type = typename EllipticType::value_type;
     ///@brief empty object ( no memory allocation)
     GeneralHelmholtz() {}
+    GeneralHelmholtz( value_type alpha, EllipticType elliptic):
+        m_alpha(alpha), m_laplaceM(elliptic),
+        m_chi( m_laplaceM.weights())
+    {
+    }
     /**
      * @brief Construct
      *
@@ -40,9 +46,9 @@ struct GeneralHelmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
-    GeneralHelmholtz( const geometry_type& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
+    GeneralHelmholtz( const geometry_type& g, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
+        GeneralHelmholtz( g, g.bcx(), g.bcy(), alpha, dir, jfactor)
     {
-        construct( g, alpha, dir, jfactor);
     }
     /**
      * @brief Construct
@@ -55,21 +61,23 @@ struct GeneralHelmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
-    GeneralHelmholtz( const geometry_type& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
+    GeneralHelmholtz( const geometry_type& g, bc bcx, bc bcy, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
+        m_laplaceM( g, bcx, bcy, dg::not_normed, dir, jfactor),
+        m_chi( m_laplaceM.weights()),
+        m_alpha(alpha)
     {
-        construct( g, bcx, bcy, alpha, dir, jfactor);
     }
-    ///@copydoc GeneralHelmholtz::GeneralHelmholtz(const geometry_type&,bc,bc,double,direction,double)
-    void construct( const geometry_type& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
     {
-        m_laplaceM.construct( g, bcx, bcy, dg::not_normed, dir, jfactor);
-        m_alpha = alpha;
-        m_chi = m_laplaceM.weights();
-    }
-    ///@copydoc GeneralHelmholtz::GeneralHelmholtz(const geometry_type&,double,direction,double)
-    void construct( const geometry_type& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
-    {
-        construct( g, g.bcx(), g.bcy(), alpha, dir, jfactor);
+        //construct and swap
+        *this = GeneralHelmholtz( std::forward<Params>( ps)...);
     }
     /**
      * @brief apply operator
@@ -78,7 +86,7 @@ struct GeneralHelmholtz
      * \f[ y = W( \chi + \alpha\Delta) x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c container_type in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y)
@@ -107,13 +115,13 @@ struct GeneralHelmholtz
      *
      * @return reference to alpha
      */
-    double& alpha( ){  return m_alpha;}
+    value_type& alpha( ){  return m_alpha;}
     /**
      * @brief Access alpha
      *
      * @return alpha
      */
-    double alpha( ) const  {return m_alpha;}
+    value_type alpha( ) const  {return m_alpha;}
     /**
      * @brief Set Chi in the above formula
      *
@@ -133,7 +141,7 @@ struct GeneralHelmholtz
   private:
     EllipticType m_laplaceM;
     container_type m_chi;
-    double m_alpha;
+    value_type m_alpha;
 };
 
 
@@ -175,9 +183,13 @@ using Helmholtz3d = GeneralHelmholtz<Elliptic3d<Geometry, Matrix, Container>>;
  * consecutively, than solving the \c Helmholtz2 operator once. The following code snippet shows how to do it:
  @snippet helmholtzg2_b.cu doxygen
  */
-template< class Geometry, class Matrix, class container>
+template< class Geometry, class Matrix, class Container>
 struct Helmholtz2
 {
+    using container_type = Container;
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation)
     Helmholtz2() {}
     /**
@@ -189,7 +201,7 @@ struct Helmholtz2
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz2( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
+    Helmholtz2( const Geometry& g, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.)
     {
         construct( g, alpha, dir, jfactor);
     }
@@ -204,20 +216,20 @@ struct Helmholtz2
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz2( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
+    Helmholtz2( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.)
     {
               construct( g, bcx, bcy, alpha, dir, jfactor);
     }
-    ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,bc,bc,double,direction,double)
-    void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
+    ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,bc,bc,value_type,direction,value_type)
+    void construct( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1, direction dir = dg::forward, value_type jfactor = 1.)
     {
         laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
         dg::assign( dg::evaluate( dg::one, g), temp1_);
         dg::assign( dg::evaluate( dg::one, g), temp2_);
         alpha_ = alpha;
     }
-    ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,double,direction,double)
-    void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
+    ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,value_type,direction,value_type)
+    void construct( const Geometry& g, value_type alpha = 1, direction dir = dg::forward, value_type jfactor = 1.)
     {
         construct( g, g.bcx(), g.bcy(), alpha, dir, jfactor);
     }
@@ -230,7 +242,7 @@ struct Helmholtz2
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv(const container& x, container& y)
+    void symv(const Container& x, Container& y)
     {
         if( alpha_ != 0)
         {
@@ -244,45 +256,45 @@ struct Helmholtz2
         blas2::symv( laplaceM_.weights(), y, y);//Helmholtz is never normed
     }
     ///@copydoc Elliptic::weights()const
-    const container& weights()const {return laplaceM_.weights();}
+    const Container& weights()const {return laplaceM_.weights();}
     ///@copydoc Elliptic::inv_weights()const
-    const container& inv_weights()const {return laplaceM_.inv_weights();}
+    const Container& inv_weights()const {return laplaceM_.inv_weights();}
     /**
      * @brief Preconditioner to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
      * @return the inverse weights without volume
      */
-    const container& precond()const {return laplaceM_.precond();}
+    const Container& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
      * @return reference to alpha
      */
-    double& alpha( ){  return alpha_;}
+    value_type& alpha( ){  return alpha_;}
     /**
      * @brief Access alpha
      *
      * @return alpha
      */
-    double alpha( ) const  {return alpha_;}
+    value_type alpha( ) const  {return alpha_;}
     /**
      * @brief Set Chi in the above formula
      *
      * @param chi new container
      */
-    void set_chi( const container& chi) {chi_=chi; }
+    void set_chi( const Container& chi) {chi_=chi; }
     /**
      * @brief Access chi
      *
      * @return chi
      */
-    const container& chi()const {return chi_;}
+    const Container& chi()const {return chi_;}
   private:
-    Elliptic<Geometry, Matrix, container> laplaceM_;
-    container temp1_, temp2_;
-    container chi_;
-    double alpha_;
+    Elliptic<Geometry, Matrix, Container> laplaceM_;
+    Container temp1_, temp2_;
+    Container chi_;
+    value_type alpha_;
 };
 ///@cond
 template< class G, class M, class V>

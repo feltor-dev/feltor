@@ -103,11 +103,10 @@ struct Tolerance
  * functors implementing the equations that are forwarded from the caller.
  * The parameters t1, u1 and delta are output parameters and must be updated by
  * the stepper.
- * The \c Stepper must have a default constructor and a constructor that takes
- * \c Stepper::container_type& as the first parameter.
- * Also, it must have the \c order() and \c embedded_order() member functions that
+ * The \c Stepper must have the \c order() and \c embedded_order() member functions that
  * return the (global) order of the method and its error estimate.
-  The <tt> const ContainerType& copyable()const; </tt> member must return a container of the size that is later used in \c step
+  The <tt> const ContainerType& copyable()const; </tt> member must return
+  a container of the size that is later used in \c step
   (it does not matter what values \c copyable contains, but its size is important;
   the \c step method can only be called with vectors of this size)
  */
@@ -163,9 +162,10 @@ struct Adaptive
     using container_type = typename Stepper::container_type; //!< the type of the vector class in use by \c Stepper
     using value_type = typename Stepper::value_type; //!< the value type of the time variable defined by \c Stepper (float or double)
     /*!@brief Allocate workspace and construct stepper
-     * @param ps Parameters that
-     * are forwarded to the constructor of \c Stepper
+     * @param ps All parameters are forwarded to the constructor of \c Stepper
      * @tparam StepperParams Type of parameters (deduced by the compiler)
+     * @note The workspace for Adaptive is constructed from the \c copyable member
+     * of Stepper
      */
     template<class ...StepperParams>
     Adaptive(StepperParams&& ...ps): m_stepper(std::forward<StepperParams>(ps)...),
@@ -415,7 +415,8 @@ int integrateERK( std::string name,
                   get_value_type<ContainerType> atol=1e-10
               )
 {
-    dg::Adaptive<dg::ERKStep<ContainerType>> pd( name, u0);
+    dg::ERKStep<ContainerType> erk(name,u0);
+    dg::Adaptive<dg::ERKStep<ContainerType>> pd( erk);
     return integrateAdaptive( pd, rhs, t0, u0, t1, u1, dt, control, norm, rtol, atol);
 }
 ///@}
