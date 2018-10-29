@@ -22,7 +22,7 @@ struct Parameters
     unsigned itstp; //!< \# of steps between outputs
     unsigned maxout; //!< \# of outputs excluding first
 
-    double eps_pol;  //!< accuracy of polarization 
+    double eps_pol;  //!< accuracy of polarization
     double jfactor; //jump factor € [1,0.01]
     double eps_gamma; //!< accuracy of gamma operator
     double eps_time;//!< accuracy of implicit timestep
@@ -45,7 +45,7 @@ struct Parameters
     double sigma_z; //!< parallel blob width in units of pi
     double k_psi; //!< mode number
 
-    double omega_source; //!< source amplitude 
+    double omega_source; //!< source amplitude
     double nprofileamp; //!< amplitude of profile
     double bgprofamp; //!< background profile amplitude
     double boxscaleRp; //!< box can be larger
@@ -110,11 +110,6 @@ struct Parameters
         initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
     }
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"

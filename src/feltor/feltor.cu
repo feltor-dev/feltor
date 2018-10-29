@@ -110,10 +110,6 @@ int main( int argc, char* argv[])
     dg::blas1::copy( 0., y0[1][0]); //set Ue = 0
     dg::blas1::copy( 0., y0[1][0]); //set Ui = 0
 
-    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2> > karniadakis( y0, y0[0][0].size(), p.eps_time);
-    std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( explicitPart, implicitPart, 0., y0, p.dt);
-    std::cout << "Done!\n";
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
@@ -137,6 +133,8 @@ int main( int argc, char* argv[])
     dg::blas2::transfer( dg::create::interpolation( Xprobe, Zprobe, Phiprobe, grid, dg::NEU), probeinterp);
     dg::DVec probevalue(1,0.);
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
+    dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
+        "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -252,7 +250,8 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis.step( explicitPart, implicitPart, time, y0);}
+            try{ adaptive.step( explicitPart, implicitPart, time, y0, time, y0,
+                dt, dg::pid_control, dg::l2norm, p.rtol, 1e-10);}
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
