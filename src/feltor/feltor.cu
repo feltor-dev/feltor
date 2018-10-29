@@ -245,9 +245,7 @@ int main( int argc, char* argv[])
         glfwSwapBuffers( w);
 
         //step
-#ifdef DG_BENCHMARK
         t.tic();
-#endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
             try{ adaptive.step( explicitPart, implicitPart, time, y0, time, y0,
@@ -275,11 +273,9 @@ int main( int argc, char* argv[])
             E0 = E1;
 
         }
-#ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
-#endif//DG_BENCHMARK
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////

@@ -43,9 +43,9 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p, gp); //initialize before im!
     std::cout << "Constructing Implicit...\n";
-    feltor::Implicit< dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    feltor::Implicit< dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -128,7 +128,7 @@ int main( int argc, char* argv[])
     std::map<std::string, int> id0d;
     std::map<std::string, double> v0d;
     std::string names0d [] = {"energy", "mass", "Se", "Si", "Uperp", "Upare",
-        "Upari", "dissipation", "dEdt", "accuracy", "Ne_p", "phi_p"};
+    "aligned", "Upari", "dissipation", "dEdt", "accuracy", "Ne_p", "phi_p"};
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     for( auto name : names0d)
@@ -153,14 +153,14 @@ int main( int argc, char* argv[])
     //since v4d takes references we don't need to update those later
     for( unsigned i=0; i<4; i++)
         v4d[names4d[i]] = y0[i];
-    v4d["potential"] = feltor.potential()[0];
+    v4d["potential"] = ex.potential()[0];
     for( auto name : names4d)
     {
         dg::blas2::symv( project, v4d[name], transferD);
         dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
     }
-    dg::blas2::symv( project, feltor.potential()[0], transferD);
+    dg::blas2::symv( project, ex.potential()[0], transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, id4d["potential"], start, count, transferH.data() );
     double time = 0, dt = p.dt;
@@ -169,17 +169,19 @@ int main( int argc, char* argv[])
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0;
+    double energy0 = ex.energy(), mass0 = ex.mass(), E0 = energy0;
     v0d["energy"] = energy0;
     v0d["mass"] = mass0;
     v0d["dEdt"] = v0d["diss"] = v0d["accuracy"] = 0;
-    std::vector<double> evec = feltor.energy_vector();
+    std::vector<double> evec = ex.energy_vector();
     v0d["Se"] = evec[0], v0d["Si"] = evec[1], v0d["Uperp"] = evec[2];
     v0d["Uperp"] = evec[3], v0d["Upare"] = evec[4];
+    v0d["aligned"] = ex.aligned();
     dg::blas2::gemv(probeinterp,y0[0],probevalue);
+    v0d["aligned"] = ex.aligned();
     //probe
     v0d["Ne_p"] = probevalue[0] ;
-    dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+    dg::blas2::gemv(probeinterp,ex.potential()[0],probevalue);
     v0d["phi_p"] = probevalue[0] ;
     for( auto name : names0d)
         err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, &v0d[name]);
@@ -194,15 +196,13 @@ int main( int argc, char* argv[])
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
-#ifdef DG_BENCHMARK
         dg::Timer ti;
         ti.tic();
-#endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
             double dt_current = dt;
-            try{ adaptive.step( explicitPart, implicitPart, time, y0,
-                time, y0, dt, dg::pid_control, dg::l2norm, p.rtol, 1e-10);}
+            try{ adaptive.step( ex, im, time, y0, time, y0, dt,
+                    dg::pid_control, dg::l2norm, p.rtol, 1e-10);}
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -211,19 +211,19 @@ int main( int argc, char* argv[])
             }
             step++;
 
-            v0d["mass"] = feltor.mass();
-            v0d["energy"] = feltor.energy();
-            v0d["diss"] = feltor.energy_diffusion();
+            v0d["mass"] = ex.mass();
+            v0d["energy"] = ex.energy();
+            v0d["diss"] = ex.energy_diffusion();
             v0d["dEdt"] = (v0d["energy"] - E0)/dt_current;
             E0 = v0d["energy"];
             v0d["accuracy"] = 2.*fabs( (v0d["dEdt"] - v0d["diss"])/(
                                         v0d["dEdt"] + v0d["diss"]));
-            evec = feltor.energy_vector();
+            evec = ex.energy_vector();
             v0d["Se"] = evec[0], v0d["Si"] = evec[1], v0d["Uperp"] = evec[2];
             v0d["Uperp"] = evec[3], v0d["Upare"] = evec[4];
             dg::blas2::gemv(probeinterp, y0[0], probevalue);
             v0d["Ne_p"] = probevalue[0] ;
-            dg::blas2::gemv(probeinterp, feltor.potential()[0], probevalue);
+            dg::blas2::gemv(probeinterp, ex.potential()[0], probevalue);
             v0d["phi_p"] =probevalue[0] ;
 
             err = nc_open(argv[3], NC_WRITE, &ncid);
@@ -239,12 +239,10 @@ int main( int argc, char* argv[])
             err = nc_close(ncid);
 
         }
-#ifdef DG_BENCHMARK
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s";
         ti.tic();
-#endif//DG_BENCHMARK
         //////////////////////////write fields////////////////////////
         start[0] = i;
         err = nc_open(argv[3], NC_WRITE, &ncid);
@@ -256,10 +254,8 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
         }
         err = nc_close(ncid);
-#ifdef DG_BENCHMARK
         ti.toc();
         std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
-#endif//DG_BENCHMARK
     }
     t.toc();
     unsigned hour = (unsigned)floor(t.diff()/3600);

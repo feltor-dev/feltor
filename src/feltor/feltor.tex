@@ -194,13 +194,13 @@ Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity g
 by the particle source (cf.~Section~\ref{sec:conservation}).
 
 \subsection{Boundary and Initial conditions}
-We apply Dirichlet boundary conditions to the parallel velocity and potential
+We choose boundary conditions seperately on input for the variables
+$n_e$, $u_e$ and $\phi$. The boundary condition for $N_i$, $U_i$ and
+$\psi$ are equal to $n_e$, $u_e$ and $\phi$ respecitively.
+Typically,
 \begin{align}
-u_e = U_i = \phi = \psi = 0
-\end{align}
-For the densities we can choose between Neumann and Dirichlet boundaries
-\begin{align}
-n_e = N_i = 1, \text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla N_i = 0
+n_e = 1, \quad u_e = \phi = 0
+\text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla u_e = 0
 \end{align}
 where $\hat n$ is the normal vector to the boundary.
 
@@ -617,20 +617,22 @@ sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
-bcx     & char & "DIR"      & - & perpendicular BC for parallel derivative \\
-bcy     & char & "DIR"      & - & perpendicular BC for parallel derivative \\
-    source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:electron_source} \\
+bc & dict & & & Dictionary of boundary conditions \ldots\\
+\qquad density  & char[2] & {DIR,DIR} &  & boundary conditions in x and y for $n_e$ and $N_i$\\
+\qquad velocity  & char[2] & {DIR,DIR} &  & boundary conditions in x and y for $u_e$ and $U_i$\\
+\qquad potential  & char[2] & {DIR,DIR} &  & boundary conditions in x and y for $\phi$ and $\psi$\\
+source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:electron_source} \\
 boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
 boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
 boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
 boxscaleZm  & float & 1.2     & 1.05 & $Z_-$ a little larger than 1 \\
-pollim    & bool & false     & false & poloidal limiter (true/false) \\
 initni    & string & "turbulence"     & "blob"  & initial condition for ion gyro-centre density "zonal",
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
 initphi   & string & "zero"  & "zero" & initial condition in phi "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity \\
-curvmode  & string & "low beta"  & "toroidal"& curvature approximation ("low beta", "true", "toroidal") \\
+curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal approx", "toroidal": truely toroidal field
+(all geometry parameters will be ignored, except R\_0)) \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -652,7 +654,6 @@ File format: json
     alpha  & float & 0.02 & - & Width of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
     psip\_min & float & -6 & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
     psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile} \\
-    psip\_max\_lim & float & 1e10 & - & $\psi_p$ for limiter in DS \\
     rk4eps & float & 0.01 & - & Accuracy of fieldline integration in DS \\
 \bottomrule
 \end{longtable}

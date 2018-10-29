@@ -25,19 +25,22 @@ template<class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
 
-    Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp, dg::geo::DS<Geometry, IMatrix, Matrix, container> dsN, dg::geo::DS<Geometry, IMatrix, Matrix,  container> dsDIR):
+    Implicit( const Geometry& g, feltor::Parameters p,
+        dg::geo::solovev::Parameters gp):
         m_p(p),
         m_gp(gp),
-        m_lapM_perpN  ( g, p.bc, p.bc, dg::normed, dg::centered),
-        m_lapM_perpD( g, dg::DIR, dg::DIR, dg::normed, dg::centered)
+        m_lapM_perpN( g, p.bc["density"][0], p.bc["density"][1], dg::normed, dg::centered),
+        m_lapM_perpU( g, p.bc["velocity"][0], p.bc["velocity"][1], dg::normed, dg::centered)
     {
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
         //set perpendicular projection tensor h
-        const dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+        dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+        if( p.curvmode == "toroidal")
+            mag = dg::geo::createToroidalField( gp.R_0);
         const dg::geo::BinaryVectorLvl0 bhat = dg::geo::createBHat(mag);
         dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor( bhat, g3d);
         m_lapM_perpN.set_chi( hh);
-        m_lapM_perpD.set_chi( hh);
+        m_lapM_perpU.set_chi( hh);
     }
 
     void operator()( double t, const std::array<std::array<container,2>,2>& y, std::array<std::array<container,2>,2>& yp)
@@ -50,32 +53,28 @@ struct Implicit
         for( unsigned i=0; i<2; i++)
         {
             //perpendicular hyperdiffusion for N and U
-            dg::blas2::gemv( m_lapM_perpN, y[0][i],      m_temp);
-            dg::blas2::gemv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[0][i]);
-            dg::blas2::gemv( m_lapM_perpD, y[1][i],      m_temp);
-            dg::blas2::gemv( -m_p.nu_perp, m_lapM_perpD, m_temp, 0., yp[1][i]);
+            dg::blas2::symv( m_lapM_perpN, y[0][i],      m_temp);
+            dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[0][i]);
+            dg::blas2::symv( m_lapM_perpU, y[1][i],      m_temp);
+            dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., yp[1][i]);
         }
     }
 
-    dg::Elliptic3d<Geometry, Matrix, container>& laplacianM() {
-        return m_lapM_perpD;
-    }
-
     const container& weights() const{
-        return m_lapM_perpD.weights();
+        return m_lapM_perpU.weights();
     }
     const container& inv_weights() const {
-        return m_lapM_perpD.inv_weights();
+        return m_lapM_perpU.inv_weights();
     }
     const container& precond() const {
-        return m_lapM_perpD.precond();
+        return m_lapM_perpU.precond();
     }
 
   private:
     const feltor::Parameters m_p;
     const dg::geo::solovev::Parameters m_gp;
     container m_temp;
-    dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN, m_lapM_perpD;
+    dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN, m_lapM_perpU;
 };
 
 template< class Geometry, class IMatrix, class Matrix, class container >
@@ -83,13 +82,6 @@ struct Explicit
 {
     Explicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp);
 
-
-    dg::geo::DS<Geometry, IMatrix, Matrix, container>& ds(){
-        return m_dsN;
-    }
-    dg::geo::DS<Geometry, IMatrix, Matrix, container>& dsDIR(){
-        return m_dsDIR;
-    }
 
     //potential[0]: electron potential, potential[1]: ion potential
     const std::array<container,2>& potential( ) const {
@@ -155,7 +147,7 @@ struct Explicit
 \f]
      * @return energy loss by parallel electron diffusion
      */
-    double fieldalignment() const {
+    double aligned() const {
         return m_aligned;
     }
 
@@ -257,17 +249,17 @@ struct Explicit
     container m_binv, m_gradlnB;
     container m_source, m_profne;
 
-    std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
-    std::array<container,2> m_npe, m_logn, m_dxN, m_dyN, m_dzN,
-    std::array<container,2> m_dxU, m_dyU, m_dzU;
+    std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi, m_dsPhi;
+    std::array<container,2> m_npe, m_logn, m_dxN, m_dyN, m_dzN, m_dsN,
+    std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU;
 
     //matrices and solvers
-    dg::geo::DS<Geometry, IMatrix, Matrix, container> m_dsDIR, m_dsN;
-    Matrix m_dx, m_dxDIR, m_dy, m_dyDIR, m_dz;
-    dg::Elliptic3d<   Geometry, Matrix, container> m_lapperpN, m_lapperpDIR;
+    dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds_P, m_ds_N, m_ds_U;
+    Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
+    dg::Elliptic3d<   Geometry, Matrix, container> m_lapperpN, m_lapperpP;
     std::vector<container> m_multi_chi;
     std::vector<dg::Elliptic3d< Geometry, Matrix, container> > m_multi_pol;
-    std::vector<dg::Helmholtz3d<Geometry, Matrix, container> > m_multi_invgammaDIR,
+    std::vector<dg::Helmholtz3d<Geometry, Matrix, container> > m_multi_invgammaP,
         m_multi_invgammaN;
 
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
@@ -288,15 +280,19 @@ struct Explicit
 ///@cond
 template<class Grid, class IMatrix, class Matrix, class container>
 Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Parameters p, dg::geo::solovev::Parameters gp):
-    m_dsDIR( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz ),
-    m_dsN( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz),
     /////////the poisson operators ////////////////////////////////////////
-    m_dx( dg::create::dx( g, p.bc) ), m_dxDIR( dg::create::dx( g, dg::DIR) ),
-    m_dy( dg::create::dy( g, p.bc) ), m_dyDIR( dg::create::dy( g, dg::DIR) ),
+    m_dx_N( dg::create::dx( g, p.bc["density"][0]) ),
+    m_dx_U( dg::create::dx( g, p.bc["velocity"][0]) ),
+    m_dx_P( dg::create::dx( g, p.bc["potential"][0]) ),
+    m_dy_N( dg::create::dy( g, p.bc["density"][1]) ),
+    m_dy_U( dg::create::dy( g, p.bc["velocity"][1]) ),
+    m_dy_P( dg::create::dy( g, p.bc["potential"][1]) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     /////////the elliptic and Helmholtz operators//////////////////////////
-    m_lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
-    m_lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
+    m_lapperpN ( g, p.bc["density"][0], p.bc["density"][1],  dg::normed,
+        dg::centered),
+    m_lapperpU ( g, p.bc["velocity"][0],p.bc["velocity"][1], dg::normed,
+        dg::centered),
     m_multigrid( g, m_p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( 2, dg::evaluate( dg::zero, g)),
@@ -315,8 +311,10 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     dg::assign(  dg::pullback(dg::geo::TanhSource(mag.psip(), gp.psipmin, gp.alpha),         g), m_source);
     ////////////////////////////transform curvature components////////
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    if( p.curvmode == "toroidal")
+        mag = dg::geo::createToroidalField(gp);
     const dg::geo::BinaryVectorLvl0 bhat, curvNabla, curvKappa;
-    if( p.curvmode == "true")
+    if( p.curvmode == "true" || p.curvmode == "toroidal")
     {
         bhat = dg::geo::createBHat(mag);
         curvNabla = dg::geo::createTrueCurvatureNablaB(mag);
@@ -330,7 +328,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
         curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag);
         dg::assign(  dg::pullback(dg::zero, g), m_divCurvKappa);
     }
-    else if( p.curvmode == "toroidal")
+    else if( p.curvmode == "toroidal approx")
     {
         bhat = dg:geo::createEPhi();
         curvNabla = dg::geo::createCurvatureNablaB(mag);
@@ -350,14 +348,17 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
         m_curv[0], m_curv[1], m_curv[2], g);
     dg::pushForwardPerp(curvKappa.x(), curvKappa.y(), curvKappa.z(),
         m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
-    if (p.curvmode=="low beta")
-    {
-        dg::blas1::copy( m_curvX, m_curvKappaX);
-        dg::blas1::copy( m_curvY, m_curvKappaY);
-        dg::blas1::scal( m_divCurvKappa, 0.);
-    }
     dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
-    //////////////////////////////init elliptic and helmholtz operators////////////
+    m_ds_U.construct( mag, g, g.bc["velocity"][0], g.bc["velocity"][1],
+        dg::geo::NoLimiter(), dg::forward, gp.rk4eps, p.mx, p.my,
+        2.*M_PI/(double)p.Nz ),
+    m_ds_N.construct( mag, g, g.bc["density"][0], g.bc["density"][1],
+        dg::geo::NoLimiter(), dg::forward, gp.rk4eps, p.mx, p.my,
+        2.*M_PI/(double)p.Nz),
+    m_ds_P.construct( mag, g, g.bc["potential"][0], g.bc["potential"][1],
+        dg::geo::NoLimiter(), dg::forward, gp.rk4eps, p.mx, p.my,
+        2.*M_PI/(double)p.Nz),
+    //////////////////////////////init elliptic and helmholtz operators/////////
     m_multi_chi = m_multigrid.project( m_chi);
     m_multi_pol.resize(m_p.stages);
     m_multi_invgammaDIR.resize(m_p.stages);
@@ -366,24 +367,25 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     {
         dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor(
             bhat, m_multigrid.grids()[u].get());
-        m_multi_pol[u].construct(           m_multigrid.grids()[u].get(),
-            dg::DIR, dg::DIR, dg::not_normed, dg::centered, m_p.jfactor);
+        m_multi_pol[u].construct(        m_multigrid.grids()[u].get(),
+            p.bc["potential"][0], p.bc["potential"][1], dg::not_normed,
+            dg::centered, m_p.jfactor);
         m_multi_pol[u].set_chi( hh);
-        m_multi_invgammaDIR[u].construct(   m_multigrid.grids()[u].get(),
-            dg::DIR, dg::DIR, -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
-        m_multi_invgammaDIR[u].elliptic().set_chi( hh);
-        m_multi_invgammaN[u].construct(     m_multigrid.grids()[u].get(),
-            g.bcx(), g.bcy(), -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
+        m_multi_invgammaP[u].construct(  m_multigrid.grids()[u].get(),
+            p.bc["potential"][0], p.bc["potential"][1],
+            -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
+        m_multi_invgammaP[u].elliptic().set_chi( hh);
+        m_multi_invgammaN[u].construct(  m_multigrid.grids()[u].get(),
+            p.bc["density"][0], p.bc["density"][1],
+            -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
         m_multi_invgammaN[u].elliptic().set_chi( hh);
     }
+    dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor( bhat, grid);
+    m_lapperpN.set_chi( hh);
+    m_lapperpU.set_chi( hh);
     ///////////////////init densities//////////////////////////////
     dg::assign( dg::pullback(dg::geo::Nprofile(
         p.bgprofamp, p.nprofileamp, gp, mag.psip()),g), m_profne);
-    /////////////////////init limiter in parallel derivatives/////////
-    if (p.pollim==true){
-        m_dsN.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
-        m_dsDIR.set_boundaries( dg::DIR, 0, 0); //ds psi on limiter
-    }
     //////////////////////////////Metric///////////////////////////////
     dg::assign( dg::create::volume(g), m_vol3d);
 }
@@ -403,7 +405,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const contain
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::array<container,2>& y)
+void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( double time, const std::array<container,2>& y)
 {
     //y[0]:= n_e - 1
     //y[1]:= N_i - 1
@@ -422,19 +424,19 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::arr
     else
     {
         //compute Gamma N_i - n_e
-        m_old_gammaN.extrapolate( m_chi);
+        m_old_gammaN.extrapolate( time, m_chi);
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_chi, y[1], m_p.eps_gamma);
-        m_old_gammaN.update( m_chi);
+        m_old_gammaN.update( time, m_chi);
         if(  numberG[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
         dg::blas1::axpby( -1., y[0], 1., m_chi, m_chi);
     }
     //----------Invert polarisation----------------------------//
-    m_old_phi.extrapolate( m_phi[0]);
+    m_old_phi.extrapolate( time, m_phi[0]);
     std::vector<unsigned> number = m_multigrid.direct_solve(
         m_multi_pol, m_phi[0], m_chi, m_p.eps_pol);
-    m_old_phi.update( m_phi[0]);
+    m_old_phi.update( time, m_phi[0]);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol);
     //---------------------------------------------------------//
@@ -442,26 +444,26 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::arr
     if (m_p.tau[1] == 0.) {
         dg::blas1::copy( m_phi[0], m_phi[1]);
     } else {
-        m_old_psi.extrapolate( m_phi[1]);
+        m_old_psi.extrapolate( time, m_phi[1]);
         std::vector<unsigned> number = m_multigrid.direct_solve(
-            m_multi_invgammaDIR, m_phi[1], m_phi[0], m_p.eps_gamma);
-        m_old_psi.update( m_phi[1]);
+            m_multi_invgammaP, m_phi[1], m_phi[0], m_p.eps_gamma);
+        m_old_psi.update( time, m_phi[1]);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
     }
     //-------Compute Psi and derivatives
-    dg::blas2::symv( m_dxDIR, m_phi[0], m_dxPhi[0]);
-    dg::blas2::symv( m_dyDIR, m_phi[0], m_dyPhi[0]);
-    dg::blas2::symv( m_dz,    m_phi[0], m_dzPhi[0]);
+    dg::blas2::symv( m_dx_P, m_phi[0], m_dxPhi[0]);
+    dg::blas2::symv( m_dy_P, m_phi[0], m_dyPhi[0]);
+    dg::blas2::symv( m_dz  , m_phi[0], m_dzPhi[0]);
     dg::tensor::multiply3d( m_metric,
         m_dxPhi[0], m_dyPhi[0], m_dzPhi[0], m_omega, m_chi, m_lambda);
     dg::blas1::subroutine( ComputePsi(),
         m_phi[1], m_dxPhi[0], m_dyPhi[0], m_dzPhi[0],
         m_omega, m_chi, m_lambda, m_binv);
     //m_omega now contains u_E^2; also update derivatives
-    dg::blas2::symv( m_dxDIR, m_phi[1], m_dxPhi[1]);
-    dg::blas2::symv( m_dyDIR, m_phi[1], m_dyPhi[1]);
-    dg::blas2::symv( m_dz   , m_phi[1], m_dzPhi[1]);
+    dg::blas2::symv( m_dx_P, m_phi[1], m_dxPhi[1]);
+    dg::blas2::symv( m_dy_P, m_phi[1], m_dyPhi[1]);
+    dg::blas2::symv( m_dz  , m_phi[1], m_dzPhi[1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -479,13 +481,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     compute_phi( y[0]);
     //Transform n-1 to n and n to logn
     dg::blas1::subroutine( ComputeLogN(), y[0], m_npe, m_logn);
-
     ////////////////////ENERGETICS///////////////////////////////////////
     double z[2]    = {-1.0,1.0};
     double S[2]    = {0.0, 0.0};
     double Tpar[2] = {0.0, 0.0};
-    double Dpar[4]  = {0.0, 0.0,0.0,0.0};
-    double Dperp[4] = {0.0, 0.0,0.0,0.0};
 
     m_mass = dg::blas1::dot( m_vol3d, y[0][0]);
     //compute energies
@@ -498,49 +497,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     double Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( m_npe[1], m_vol3d, m_omega);   //= 0.5 mu_i N_i u_E^2
     m_energy = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1];
     m_evec[0] = S[0], m_evec[1] = S[1], m_evec[2] = Tperp, m_evec[3] = Tpar[0], m_evec[4] = Tpar[1];
-    /////////////////ENERGY DISSIPATION TERMS//////////////////////////////
-    // resistive energy (quadratic current)
-    dg::blas1::pointwiseDot(1., m_npe[0], y[1][1], -1., m_npe[0], y[1][0], 0., m_omega); // omega = n_e (U_i - u_e)
-    double Dres = -m_p.c*dg::blas2::dot(m_omega, m_vol3d, m_omega); //- C*(N_e (U_i - U_e))^2
-    // energy dissipation through diffusion
-    for( unsigned i=0; i<2;i++)
-    {
 
-        dg::blas1::subroutine( ComputeDiss(m_p.mu[i], m_p.tau[i]), m_chi, m_logn[i], m_phi[i], y[1][i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
-        //Compute parallel dissipation for N
-        dg::blas2::symv(m_p.nu_parallel, m_dsN, y[0][i], 0.,  m_lambda); //lambda = nu_parallel Delta_s N
-
-        Dpar[i] = z[i]*dg::blas2::dot(m_chi, m_vol3d, m_lambda); //Z*(tau (1+lnN )+psi + 0.5 mu U^2) nu_parallel *(Delta_s N)
-        if( i==0) //only electrons
-        {
-            dg::blas1::transform( m_logn[i],m_omega, dg::PLUS<>(+1)); //omega = (1+lnN)
-            m_aligned = dg::blas2::dot( m_omega, m_vol3d, m_lambda); //(1+lnN)*Delta_s N
-        }
-        //Compute perp dissipation for N
-        dg::blas2::gemv( m_lapperpN, y[0][i], m_lambda);
-        dg::blas2::gemv( m_lapperpN, m_lambda, m_omega);//Delta^2 N
-        Dperp[i] = -z[i]* m_p.nu_perp*dg::blas2::dot(m_chi, m_vol3d, m_omega);
-
-        dg::blas1::pointwiseDot( m_npe[i], y[1][i], m_omega); // omega = N U
-        //Compute parallel dissipation for U
-        dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 0., m_lambda);//lambda = nu_parallel Delta_s U
-        Dpar[i+2] = z[i]*m_p.mu[i]*dg::blas2::dot(m_omega, m_vol3d, m_lambda);      //Z*mu*N*U nu_parallel *( Delta_s U)
-        //Compute perp dissipation  for U
-        dg::blas2::gemv( m_lapperpDIR, y[1][i], m_lambda);
-        dg::blas2::gemv( m_lapperpDIR, m_lambda,m_chi);//Delta^2 U
-        Dperp[i+2] = -z[i]*m_p.mu[i]*m_p.nu_perp* dg::blas2::dot(m_omega, m_vol3d, m_chi);
-    }
-    m_ediff = Dres + Dpar[0]+Dperp[0]+Dpar[1]+Dperp[1]+Dpar[2]+Dperp[2]+Dpar[3]+Dperp[3];
     ///////////////////////////////////EQUATIONS///////////////////////////////
     for( unsigned i=0; i<2; i++)
     {
         ////////////////////perpendicular dynamics////////////////////////
-        dg::blas2::gemv( m_dx, y[0][i], m_dxN[i]);
-        dg::blas2::gemv( m_dy, y[0][i], m_dyN[i]);
-        dg::blas2::gemv( m_dxDIR, y[1][i], m_dxU[i]);
-        dg::blas2::gemv( m_dyDIR, y[1][i], m_dyU[i]);
-        dg::blas2::gemv( m_dz, y[0][i], m_dzN[i]);
-        dg::blas2::gemv( m_dz, y[1][i], m_dzU[i]);
+        dg::blas2::gemv( m_dx_N, y[0][i], m_dxN[i]);
+        dg::blas2::gemv( m_dy_N, y[0][i], m_dyN[i]);
+        dg::blas2::gemv( m_dx_U, y[1][i], m_dxU[i]);
+        dg::blas2::gemv( m_dy_U, y[1][i], m_dyU[i]);
+        dg::blas2::gemv( m_dz,  y[0][i], m_dzN[i]);
+        dg::blas2::gemv( m_dz,  y[1][i], m_dzU[i]);
         dg::blas1::subroutine( ComputePerpDrifts(m_p.mu[i], m_p.tau[i]),
             //species depdendent
             y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
@@ -557,23 +524,25 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
         //velocity
         //Burgers term
         dg::blas1::pointwiseDot(y[1][i], y[1][i], m_omega); //U^2
-        m_dsDIR.centered(-0.5, m_omega, 1., yp[1][i]); //dtU += -0.5 ds U^2
+        m_ds_U.centered(-0.5, m_omega, 1., yp[1][i]); //dtU += -0.5 ds U^2
         //parallel force terms
-        m_dsN.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
-        m_dsDIR.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);        //dtU += - tau/(hat(mu))*ds lnN - 1/(hat(mu))*ds psi
+        m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
+        m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);        //dtU += - tau/(hat(mu))*ds lnN - 1/(hat(mu))*ds psi
 
         //density
-        dg::blas1::pointwiseDot(m_npe[i], y[1][i], m_chi);   // NU
-        m_dsDIR.centered(-1., m_chi, 1., yp[0][i]);          // dtU += - ds NU
-        dg::blas1::pointwiseDot(+1., m_chi, m_gradlnB, 1., yp[0][i]);// dtU += U N ds ln B
-        //direct parallel diffusion for N and U
-        dsN.ds( dg::centered, y[0][i], m_chi);
-        dg::blas1::pointwiseDot( -m_p.nu_parallel, gradlnB, m_chi, 1., yp[0][i]);
-        dsN.dss( m_p.nu_parallel, y[0][i], 1., yp[0][i]);
+        m_ds_P.centered( m_phi[i], m_dsPhi[i]);
+        m_ds_N.centered( y[0][i], m_dsN[i]);
+        m_ds_U.centered( y[1][i], m_dsU[i]);
+        dg::blas1::pointwiseDot(-1., m_dsN[i], y[1][i], 1.,
+            -1., y[0][i], m_dsU[i], yp[0][i] );   // dsN*U + N* dsU
+        dg::blas1::pointwiseDot( 1., y[0][i],y[1][i],m_gradlnB, 1., yp[0][i]);// dtN += U N ds ln B
 
-        dsDIR.ds( dg::centered, y[1][i], m_chi);
-        dg::blas1::pointwiseDot( -m_p.nu_parallel, gradlnB, m_chi, 1., yp[1][i]);
-        dsDIR.dss( m_p.nu_parallel, y[1][i], 1., yp[1][i]);
+        //direct parallel diffusion for N and U
+        m_ds_N.dss( y[0][i], m_dsN[i]);
+        m_ds_U.dss( y[1][i], m_dsU[i]);
+        dg::blas1::axpby( m_p.nu_parallel, m_dsN[i], 1., yp[0][i]);
+        dg::blas1::axpby( m_p.nu_parallel, m_dsU[i], 1., yp[1][i]);
+        dg::blas1::pointwiseDot( -m_p.nu_parallel, gradlnB, m_dsN[i],                  -m_p.nu_parallel, gradlnB, m_dsU[i], 1., yp[1][i]);
 
     }
     //Add Resistivity
@@ -586,6 +555,39 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     dg::blas1::axpby( 1., m_lambda, 1.0, yp[1][1]);
     //add FLR correction to dtNi
     dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1], m_lapperpN, m_lambda, 1.0, yp[1][1]);
+    /////////////////ENERGY DISSIPATION TERMS//////////////////////////////
+    double Dpar[4]  = {0.0, 0.0,0.0,0.0};
+    double Dperp[4] = {0.0, 0.0,0.0,0.0};
+    // resistive energy (quadratic current)
+    dg::blas1::pointwiseDot(1., m_npe[0], y[1][1], -1., m_npe[0], y[1][0], 0., m_omega); // omega = n_e (U_i - u_e)
+    double Dres = -m_p.c*dg::blas2::dot(m_omega, m_vol3d, m_omega); //- C*(N_e (U_i - U_e))^2
+    // energy dissipation through diffusion
+    for( unsigned i=0; i<2;i++)
+    {
+
+        dg::blas1::subroutine( ComputeDiss(m_p.mu[i], m_p.tau[i]),
+            m_chi, m_logn[i], m_phi[i], y[1][i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
+        //Compute parallel dissipation for N
+        Dpar[i] = z[i]*p.nu_parallel*dg::blas2::dot(m_chi, m_vol3d, m_dsN[i]); //Z*(tau (1+lnN )+psi + 0.5 mu U^2) nu_parallel *(Delta_s N)
+        if( i==0) //only electrons
+        {
+            dg::blas1::transform( m_logn[i],m_omega, dg::PLUS<>(+1)); //omega = (1+lnN)
+            m_aligned = dg::blas2::dot( m_omega, m_vol3d, m_dsN[i]); //(1+lnN)*Delta_s N
+        }
+        //Compute perp dissipation for N
+        dg::blas2::gemv( m_lapperpN, y[0][i], m_lambda);
+        dg::blas2::gemv( m_lapperpN, m_lambda, m_omega);//Delta^2 N
+        Dperp[i] = -z[i]* m_p.nu_perp*dg::blas2::dot(m_chi, m_vol3d, m_omega);
+
+        dg::blas1::pointwiseDot( m_npe[i], y[1][i], m_omega); // omega = N U
+        //Compute parallel dissipation for U
+        Dpar[i+2] = z[i]*m_p.mu[i]*m_p.nu_parallel*dg::blas2::dot(m_omega, m_vol3d, m_dsU[i]);      //Z*mu*N*U nu_parallel *( Delta_s U)
+        //Compute perp dissipation  for U
+        dg::blas2::gemv( m_lapperpU, y[1][i], m_lambda);
+        dg::blas2::gemv( m_lapperpU, m_lambda,m_chi);//Delta^2 U
+        Dperp[i+2] = -z[i]*m_p.mu[i]*m_p.nu_perp* dg::blas2::dot(m_omega, m_vol3d, m_chi);
+    }
+    m_ediff = Dres + Dpar[0]+Dperp[0]+Dpar[1]+Dperp[1]+Dpar[2]+Dperp[2]+Dpar[3]+Dperp[3];
 
     timer.toc();
     #ifdef MPI_VERSION

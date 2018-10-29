@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <string>
 #include "dg/enums.h"
 #include "json/json.h"
@@ -44,8 +45,7 @@ struct Parameters
     double boxscaleZp;
     double boxscaleZm;
 
-    enum dg::bc bc;
-    bool pollim;
+    std::map<std::string, std::array<enum dg::bc,2>> bc;
     std::string initni, initphi, curvmode;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
@@ -84,7 +84,12 @@ struct Parameters
         k_psi       = js["k_psi"].asDouble();
         omega_source = js["source"].asDouble();
 
-        bc          = dg::str2bc(js["bc"].asString());
+        bc["density"][0] = dg::str2bc(js["bc"]["density"][0].asString());
+        bc["density"][1] = dg::str2bc(js["bc"]["density"][1].asString());
+        bc["velocity"][0] = dg::str2bc(js["bc"]["velocity"][0].asString());
+        bc["velocity"][1] = dg::str2bc(js["bc"]["velocity"][1].asString());
+        bc["potential"][0] = dg::str2bc(js["bc"]["potential"][0].asString());
+        bc["potential"][1] = dg::str2bc(js["bc"]["potential"][1].asString());
         nprofileamp = js["nprofileamp"].asDouble();
         bgprofamp   = js["bgprofamp"].asDouble();
 
@@ -93,7 +98,6 @@ struct Parameters
         boxscaleZp  = js.get("boxscaleZp",1.05).asDouble();
         boxscaleZm  = js.get("boxscaleZm",1.05).asDouble();
 
-        pollim      = js.get( "pollim", "false").asBool();
         initni      = js.get( "initni", "blob").asString();
         initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
@@ -141,7 +145,6 @@ struct Parameters
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Boundary condition is: \n"
             <<"     global BC             =              "<<dg::bc2str(bc)<<"\n"
-            <<"     Poloidal limiter      =              "<<std::boolalpha<<pollim<<"\n"
             <<"     init N_i              =              "<<initni<<"\n"
             <<"     init Phi              =              "<<initphi<<"\n"
             <<"     curvature mode        =              "<<curvmode<<"\n";
