@@ -9,65 +9,56 @@ namespace feltor{
  */
 struct Parameters
 {
-    unsigned n; //!< \# of polynomial coefficients in R and Z
-    unsigned Nx; //!< \# of cells in x -direction
-    unsigned Ny; //!< \# of cells in y -direction
-    unsigned Nz; //!< \# of cells in z -direction
+    unsigned n, Nx, Ny, Nz;
 
-    double dt;  //!< timestep
-    unsigned n_out;  //!< \# of polynomial coefficients in output file
-    unsigned Nx_out;  //!< \# of cells in x-direction in output file
-    unsigned Ny_out; //!< \# of cells in y-direction in output file
-    unsigned Nz_out; //!< \# of cells in z-direction in output file
-    unsigned itstp; //!< \# of steps between outputs
-    unsigned maxout; //!< \# of outputs excluding first
+    double dt;
+    unsigned cx, cy;
+    unsigned itstp;
+    unsigned maxout;
 
-    double eps_pol;  //!< accuracy of polarization
-    double jfactor; //jump factor € [1,0.01]
-    double eps_gamma; //!< accuracy of gamma operator
-    double eps_time;//!< accuracy of implicit timestep
-    double eps_hat;//!< 1
-    unsigned stages; //!< # of stages in multigrid
-    unsigned multiplyX; //!< grid refinement factor for DS
-    unsigned multiplyY; //!< grid refinement factor for DS
+    double eps_pol;
+    double jfactor;
+    double eps_gamma;
+    double eps_time;
+    double rtol;
+    double eps_hat;
+    unsigned stages;
+    unsigned mx;
+    unsigned my;
 
-    std::array<double,2> mu; //!< mu[0] = mu_e, m[1] = mu_i
-    std::array<double,2> tau; //!< tau[0] = -1, tau[1] = tau_i
+    std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
+    std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
 
-    double nu_perp;  //!< perpendicular diffusion
-    double nu_parallel;  //!< parallel diffusion
-    double c; //!< parallel resistivity
+    double nu_perp;
+    double nu_parallel;
+    double c;
 
-    double amp;  //!< blob amplitude
-    double sigma; //!< perpendicular blob width
-    double posX;  //!< perpendicular position relative to box width
-    double posY; //!< perpendicular position relative to box height
-    double sigma_z; //!< parallel blob width in units of pi
-    double k_psi; //!< mode number
+    double amp;
+    double sigma;
+    double posX;
+    double posY;
+    double sigma_z;
+    double k_psi;
 
-    double omega_source; //!< source amplitude
-    double nprofileamp; //!< amplitude of profile
-    double bgprofamp; //!< background profile amplitude
-    double boxscaleRp; //!< box can be larger
-    double boxscaleRm;//!< box can be larger
-    double boxscaleZp;//!< box can be larger
-    double boxscaleZm;//!< box can be larger
+    double omega_source;
+    double nprofileamp;
+    double bgprofamp;
+    double boxscaleRp;
+    double boxscaleRm;
+    double boxscaleZp;
+    double boxscaleZm;
 
-    enum dg::bc bc; //!< global perpendicular boundary condition
-    bool pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
-    std::string initni; //!< "blob" = blob simulations (several rounds fieldaligned), "straight blob" = straight blob simulation( 1 round fieldaligned), "turbulence" = turbulence simulations ( 1 round fieldaligned),
-    std::string initphi; //!< "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity
-    std::string curvmode; //!< "low beta", "toroidal" toroidal field line approximation
+    enum dg::bc bc;
+    bool pollim;
+    std::string initni, initphi, curvmode;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
         Ny      = js["Ny"].asUInt();
         Nz      = js["Nz"].asUInt();
         dt      = js["dt"].asDouble();
-        n_out   = js["n_out"].asUInt();
-        Nx_out  = js["Nx_out"].asUInt();
-        Ny_out  = js["Ny_out"].asUInt();
-        Nz_out  = js["Nz_out"].asUInt();
+        cx      = js.get("compressionX",1).asUInt();
+        cy      = js.get("compressionY",1).asUInt();
         itstp   = js["itstp"].asUInt();
         maxout  = js["maxout"].asUInt();
 
@@ -75,10 +66,11 @@ struct Parameters
         jfactor     = js["jumpfactor"].asDouble();
         eps_gamma   = js["eps_gamma"].asDouble();
         eps_time    = js["eps_time"].asDouble();
+        rtol        = js["rtol"].asDouble();
         eps_hat     = 1.;
         stages      = js.get( "stages", 3).asUInt();
-        multiplyX   = js.get( "multiplyX", 10).asUInt();
-        multiplyY   = js.get( "multiplyY", 10).asUInt();
+        mx          = js.get( "multiplyX", 10).asUInt();
+        my          = js.get( "multiplyY", 10).asUInt();
 
         mu[0]       = js["mu"].asDouble();
         mu[1]       = +1.;

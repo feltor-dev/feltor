@@ -6,11 +6,9 @@
 
 namespace feltor
 {
-///@addtogroup solver
-///@{
 //Resistivity (consistent density dependency, parallel momentum conserving, quadratic current energy conservation dependency)
 struct AddResistivity{
-    AddResistivity( double C, std::array<double,2> mu): m_C(C), m_mu(mu){
+    ddResistivity( double C, std::array<double,2> mu): m_C(C), m_mu(mu){
     }
     DG_DEVICE
     void operator()( double tilde_ne, double tilde_ni, double ue, double ui, double& dtUe, double& dtUi) const{
@@ -23,16 +21,6 @@ struct AddResistivity{
     std::array<double,2> m_mu;
 };
 
-/**
- * @brief Implicit (perpendicular diffusive) terms for Explicit solver
- *
- \f[
-    \begin{align}
-     -\nu_\perp\Delta_\perp^2 N \\
-    \frac{C}{\mu} (U_e - U_i) - \nu_\perp\Delta_\perp^2 U
-    \end{align}
-\f]
- */
 template<class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
@@ -40,10 +28,16 @@ struct Implicit
     Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp, dg::geo::DS<Geometry, IMatrix, Matrix, container> dsN, dg::geo::DS<Geometry, IMatrix, Matrix,  container> dsDIR):
         m_p(p),
         m_gp(gp),
-        m_LaplacianM_perpN  ( g, p.bc, p.bc, dg::normed, dg::centered),
-        m_LaplacianM_perpDIR( g, dg::DIR, dg::DIR, dg::normed, dg::centered)
+        m_lapM_perpN  ( g, p.bc, p.bc, dg::normed, dg::centered),
+        m_lapM_perpD( g, dg::DIR, dg::DIR, dg::normed, dg::centered)
     {
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
+        //set perpendicular projection tensor h
+        const dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+        const dg::geo::BinaryVectorLvl0 bhat = dg::geo::createBHat(mag);
+        dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor( bhat, g3d);
+        m_lapM_perpN.set_chi( hh);
+        m_lapM_perpD.set_chi( hh);
     }
 
     void operator()( double t, const std::array<std::array<container,2>,2>& y, std::array<std::array<container,2>,2>& yp)
@@ -56,32 +50,32 @@ struct Implicit
         for( unsigned i=0; i<2; i++)
         {
             //perpendicular hyperdiffusion for N and U
-            dg::blas2::gemv( m_LaplacianM_perpN,   y[0][i],    m_temp);
-            dg::blas2::gemv( -m_p.nu_perp, m_LaplacianM_perpN,   m_temp, 0., yp[0][i]);
-            dg::blas2::gemv( m_LaplacianM_perpDIR, y[1][i],    m_temp);
-            dg::blas2::gemv( -m_p.nu_perp, m_LaplacianM_perpDIR, m_temp, 0., yp[1][i]);
+            dg::blas2::gemv( m_lapM_perpN, y[0][i],      m_temp);
+            dg::blas2::gemv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[0][i]);
+            dg::blas2::gemv( m_lapM_perpD, y[1][i],      m_temp);
+            dg::blas2::gemv( -m_p.nu_perp, m_lapM_perpD, m_temp, 0., yp[1][i]);
         }
     }
 
-    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {
-        return m_LaplacianM_perpDIR;
+    dg::Elliptic3d<Geometry, Matrix, container>& laplacianM() {
+        return m_lapM_perpD;
     }
 
     const container& weights() const{
-        return m_LaplacianM_perpDIR.weights();
+        return m_lapM_perpD.weights();
     }
     const container& inv_weights() const {
-        return m_LaplacianM_perpDIR.inv_weights();
+        return m_lapM_perpD.inv_weights();
     }
     const container& precond() const {
-        return m_LaplacianM_perpDIR.precond();
+        return m_lapM_perpD.precond();
     }
 
   private:
     const feltor::Parameters m_p;
     const dg::geo::solovev::Parameters m_gp;
     container m_temp;
-    dg::Elliptic<Geometry, Matrix, container> m_LaplacianM_perpN, m_LaplacianM_perpDIR;
+    dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN, m_lapM_perpD;
 };
 
 template< class Geometry, class IMatrix, class Matrix, class container >
@@ -97,11 +91,7 @@ struct Explicit
         return m_dsDIR;
     }
 
-    /**
-     * @brief Returns phi and psi that belong to the last solve of the polarization equation
-     *
-     * @return phi[0] is the electron and phi[1] the generalized ion potential
-     */
+    //potential[0]: electron potential, potential[1]: ion potential
     const std::array<container,2>& potential( ) const {
         return m_phi;
     }
@@ -139,12 +129,7 @@ struct Explicit
         return m_energy;
     }
 
-    /**
-     * @brief Individual energies
-     *
-     * @return individual energy terms in total energy
-     E[0]=S_e, E[1] = S_i, E[2] = U_E, E[3] = T_pare, E[4] = T_pari
-     */
+    //E[0]=S_e, E[1] = S_i, E[2] = U_E, E[3] = T_pare, E[4] = T_pari
     std::vector<double> energy_vector( ) const{
         return m_evec;
     }
@@ -251,7 +236,7 @@ struct Explicit
     container m_chi, m_omega, m_lambda;//helper variables
 
     //these should be considered const
-    std::array<container,3> m_curv, m_curvKappa, m_b_;
+    std::array<container,3> m_curv, m_curvKappa, m_b;
     container m_divCurvKappa;
     container m_binv, m_gradlnB;
     container m_source, m_profne;
@@ -262,12 +247,12 @@ struct Explicit
 
     //matrices and solvers
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_dsDIR, m_dsN;
-    Matrix m_dx, m_dxDIR, m_dy, m_dyDIR;
-    //dg::Poisson<    Geometry, Matrix, container> m_poissonN, m_poissonDIR;
-    dg::Elliptic<   Geometry, Matrix, container> m_lapperpN, m_lapperpDIR;
+    Matrix m_dx, m_dxDIR, m_dy, m_dyDIR, m_dz;
+    dg::Elliptic3d<   Geometry, Matrix, container> m_lapperpN, m_lapperpDIR;
     std::vector<container> m_multi_chi;
-    std::vector<dg::Elliptic3d<Geometry, Matrix, container> > m_multi_pol;
-    std::vector<dg::Helmholtz3d<Geometry,  Matrix, container> > m_multi_invgammaDIR, m_multi_invgammaN;
+    std::vector<dg::Elliptic3d< Geometry, Matrix, container> > m_multi_pol;
+    std::vector<dg::Helmholtz3d<Geometry, Matrix, container> > m_multi_invgammaDIR,
+        m_multi_invgammaN;
 
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
     dg::Extrapolation<container> m_old_phi, m_old_psi, m_old_gammaN;
@@ -307,7 +292,56 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     dg::assign( dg::evaluate( dg::zero, g), m_chi );
     m_omega = m_lambda = m_chi;
     m_phi[0] = m_phi[1] = m_chi;
-    m_dxPhi = m_dyPhi = m_npe = m_logn = m_dxN = m_dyN = m_dxU = m_dyU = m_phi;
+    m_dxPhi = m_dyPhi = m_dzPhi = m_npe = m_logn = m_dxN = m_dyN = m_dzN = m_phi;
+    m_dxU = m_dyU = m_dzU = m_phi;
+    //////////////////////////////init fields /////////////////////
+    dg::assign(  dg::pullback(dg::geo::InvB(mag),      g), m_binv);
+    dg::assign(  dg::pullback(dg::geo::GradLnB(mag),   g), m_gradlnB);
+    dg::assign(  dg::pullback(dg::geo::TanhSource(mag.psip(), gp.psipmin, gp.alpha),         g), m_source);
+    ////////////////////////////transform curvature components////////
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    const dg::geo::BinaryVectorLvl0 bhat, curvNabla, curvKappa;
+    if( p.curvmode == "true")
+    {
+        bhat = dg::geo::createBHat(mag);
+        curvNabla = dg::geo::createTrueCurvatureNablaB(mag);
+        curvKappa = dg::geo::createTrueCurvatureKappa(mag);
+        dg::assign(  dg::pullback(dg::geo::TrueDivCurvatureKappa(mag), g),
+            m_divCurvKappa);
+    }
+    else if( p.curvmode == "low beta")
+    {
+        bhat = dg:geo::createEPhi();
+        curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag);
+        dg::assign(  dg::pullback(dg::zero, g), m_divCurvKappa);
+    }
+    else if( p.curvmode == "toroidal")
+    {
+        bhat = dg:geo::createEPhi();
+        curvNabla = dg::geo::createCurvatureNablaB(mag);
+        curvKappa = dg::geo::createCurvatureKappa(mag);
+        dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag), g),
+            m_divCurvKappa);
+    }
+    dg::pushForwardPerp(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
+    m_metric = g.metric();
+    dg::tensor::inv_multiply3d( m_metric, m_b[0], m_b[1], m_b[2],
+                                          m_b[0], m_b[1], m_b[2]);
+    container vol = dg::tensor::volume(m_metric);
+    dg::blas1::pointwiseDivide( m_binv, vol, vol); //1/vol/B
+    for( int i=0; i<3; i++)
+        dg::blas1::pointwiseDot( vol, m_b[i], m_b[i]); //b_i/vol/B
+    dg::pushForwardPerp(curvNabla.x(), curvNabla.y(), curvNabla.z(),
+        m_curv[0], m_curv[1], m_curv[2], g);
+    dg::pushForwardPerp(curvKappa.x(), curvKappa.y(), curvKappa.z(),
+        m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
+    if (p.curvmode=="low beta")
+    {
+        dg::blas1::copy( m_curvX, m_curvKappaX);
+        dg::blas1::copy( m_curvY, m_curvKappaY);
+        dg::blas1::scal( m_divCurvKappa, 0.);
+    }
+    dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
     //////////////////////////////init elliptic and helmholtz operators////////////
     m_multi_chi = m_multigrid.project( m_chi);
     m_multi_pol.resize(m_p.stages);
@@ -315,29 +349,21 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     m_multi_invgammaN.resize(m_p.stages);
     for( unsigned u=0; u<m_p.stages; u++)
     {
-        m_multi_pol[u].construct(           m_multigrid.grids()[u].get(), dg::DIR, dg::DIR, dg::not_normed, dg::centered, m_p.jfactor);
-        m_multi_invgammaDIR[u].construct(   m_multigrid.grids()[u].get(), dg::DIR, dg::DIR, -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
-        m_multi_invgammaN[u].construct(     m_multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
+        dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor(
+            bhat, m_multigrid.grids()[u].get());
+        m_multi_pol[u].construct(           m_multigrid.grids()[u].get(),
+            dg::DIR, dg::DIR, dg::not_normed, dg::centered, m_p.jfactor);
+        m_multi_pol[u].set_chi( hh);
+        m_multi_invgammaDIR[u].construct(   m_multigrid.grids()[u].get(),
+            dg::DIR, dg::DIR, -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
+        m_multi_invgammaDIR[u].elliptic().set_chi( hh);
+        m_multi_invgammaN[u].construct(     m_multigrid.grids()[u].get(),
+            g.bcx(), g.bcy(), -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
+        m_multi_invgammaN[u].elliptic().set_chi( hh);
     }
-    //////////////////////////////init fields /////////////////////
-    dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
-    dg::assign(  dg::pullback(dg::geo::InvB(mf),      g), m_binv);
-    dg::assign(  dg::pullback(dg::geo::GradLnB(mf),   g), m_gradlnB);
-    dg::assign(  dg::pullback(dg::geo::TanhSource(mf.psip(), gp.psipmin, gp.alpha),         g), m_source);
-    ////////////////////////////transform curvature components////////
-    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mf), dg::geo::CurvatureNablaBZ(mf), m_curvX, m_curvY, g);
-    dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mf), g), m_divCurvKappa);
-    dg::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mf), m_curvKappaX, m_curvKappaY, g);
-    if (p.curvmode=="low beta")
-    {
-        dg::blas1::copy( m_curvX, m_curvKappaX);
-        dg::blas1::copy( m_curvY, m_curvKappaY);
-        dg::blas1::scal( m_divCurvKappa, 0.);
-    }
-    dg::blas1::axpby( 1.,m_curvX,1.,m_curvKappaX, m_curvX);
-    dg::blas1::axpby( 1.,m_curvY,1.,m_curvKappaY, m_curvY);
     ///////////////////init densities//////////////////////////////
-    dg::assign( dg::pullback(dg::geo::Nprofile( p.bgprofamp, p.nprofileamp, gp, mf.psip()),g), m_profne);
+    dg::assign( dg::pullback(dg::geo::Nprofile(
+        p.bgprofamp, p.nprofileamp, gp, mag.psip()),g), m_profne);
     /////////////////////init limiter in parallel derivatives/////////
     if (p.pollim==true){
         m_dsN.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
@@ -345,8 +371,6 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     }
     //////////////////////////////Metric///////////////////////////////
     dg::assign( dg::create::volume(g), m_vol3d);
-    m_metric=g.metric();
-    m_perp_vol_inv = dg::tensor::determinant2d(m_metric);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -535,5 +559,4 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     std::cout << "One rhs took "<<timer.diff()<<"s\n";
 }
 
-///@endcond
 } //namespace feltor

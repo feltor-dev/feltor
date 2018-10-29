@@ -592,10 +592,8 @@ Nx     & integer &52& - &\# grid points in R \\
 Ny     & integer &52& - &\# grid points in Z \\
 Nz     & integer &16& - &\# grid points in $\varphi$ \\
 dt     & integer &1e-2& - &time step in units of $c_s/\rho_s$ \\
-n\_out  & integer &3  & - &\# Gaussian nodes in R and Z in output \\
-Nx\_out & integer &52& - &\# grid points in R in output fields \\
-Ny\_out & integer &52& - &\# grid points in Z in output fields \\
-Nz\_out & integer &16& - &\# grid points in $\varphi$ \\
+compressionX & integer & 2 & 1 & compression factor of output in X \\
+compressionY & integer & 2 & 1 & compression factor of output in Y \\
 itstp  & integer &2  & - &   steps between outputs \\
 maxout & integer &10& - &      \# outputs excluding first \\
 eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
@@ -625,9 +623,12 @@ boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
 boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
 boxscaleZm  & float & 1.2     & 1.05 & $Z_-$ a little larger than 1 \\
 pollim    & bool & false     & false & poloidal limiter (true/false) \\
-initni    & string & ``turbulence''     & ``blob''  & initial condition for ion gyro-centre density (``blob'', ``straight blob'',  ``turbulence'', ``zonal'' \\
-initphi   & string & ``zero''  & ``zero'' & init. phi cond. (``zero'', ``balance'')\\
-curvmode  & string & ``low beta''  & ``toroidal''& curvature approximation (``low beta'',  ``toroidal'') \\
+initni    & string & "turbulence"     & "blob"  & initial condition for ion gyro-centre density "zonal",
+    "blob" = blob simulations (several rounds fieldaligned),
+    "straight blob" = straight blob simulation( 1 round fieldaligned),
+    "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
+initphi   & string & "zero"  & "zero" & initial condition in phi "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity \\
+curvmode  & string & "low beta"  & "toroidal"& curvature approximation ("low beta", "true", "toroidal") \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and

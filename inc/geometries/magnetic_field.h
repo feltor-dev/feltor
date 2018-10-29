@@ -533,10 +533,17 @@ inline BinaryVectorLvl0 createBHat( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
 }
 /**
+ * @brief Unit vector field (0, 0, 1)
+ * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1)
+ */
+inline BinaryVectorLvl0 createEPhi( ){
+    return BinaryVectorLvl0( Constant(0), Constant(0), Constant(1));
+}
+/**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
  *
  * @param mag the tokamak magnetic field
- * @return the tuple CurvatureNablaBR, CurvatureNablaBZ, Constant(0) constructed from mag
+ * @return the tuple CurvatureNablaBR, CurvatureNablaBZ, dg::geo::Constant(0) constructed from mag
  */
 inline BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( CurvatureNablaBR(mag), CurvatureNablaBZ(mag), Constant(0));
@@ -545,7 +552,7 @@ inline BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
  * @brief Approximate curvature vector field (CurvatureKappaR, CurvatureKappaZ, Constant(0))
  *
  * @param mag the tokamak magnetic field
- * @return the tuple CurvatureKappaR, CurvatureKappaZ, Constant(0) constructed from mag
+ * @return the tuple CurvatureKappaR, CurvatureKappaZ, dg::geo::Constant(0) constructed from mag
  */
 inline BinaryVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
     return BinaryVectorLvl0( CurvatureKappaR(mag), CurvatureKappaZ(mag), Constant(0));

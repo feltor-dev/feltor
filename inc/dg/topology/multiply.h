@@ -243,9 +243,9 @@ ContainerType determinant( const SparseTensor<ContainerType>& t)
 
 /**
 * @brief Compute the minor determinant of a tensor
-* @copydoc hide_ContainerType
 * @param t the input tensor
 * @return the upper left minor determinant of t (\f$ t_{00}t_{01}-t_{10}t_{11}\f$)
+* @copydoc hide_ContainerType
 */
 template<class ContainerType>
 ContainerType determinant2d( const SparseTensor<ContainerType>& t)
@@ -266,9 +266,9 @@ ContainerType determinant2d( const SparseTensor<ContainerType>& t)
     dg::blas1::transform(vol, vol, dg::INVERT<>());
     dg::blas1::transform(vol, vol, dg::SQRT<>());
     @endcode
- * @copydoc hide_ContainerType
  * @param t the input tensor
  * @return the inverse square root of the determinant of \c t
+ * @copydoc hide_ContainerType
  */
 template<class ContainerType>
 ContainerType volume( const SparseTensor<ContainerType>& t)
@@ -287,9 +287,9 @@ ContainerType volume( const SparseTensor<ContainerType>& t)
     dg::blas1::transform(vol, vol, dg::INVERT<>());
     dg::blas1::transform(vol, vol, dg::SQRT<>());
     @endcode
- * @copydoc hide_ContainerType
  * @param t the input tensor
  * @return the inverse square root of the determinant of \c t
+ * @copydoc hide_ContainerType
  */
 template<class ContainerType>
 ContainerType volume2d( const SparseTensor<ContainerType>& t)
