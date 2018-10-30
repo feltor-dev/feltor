@@ -5,7 +5,7 @@
 #include <sstream>
 #include <cmath>
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 #include "feltor.cuh"
 
 int main( int argc, char* argv[])
@@ -38,8 +38,10 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a;
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);
-    dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n p.Nx/p.compressionX, p.Ny/p.compressionY, p.Nz, p.bcx, p.bcy, dg::PER);
+    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
+        p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
+    dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
+        p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
@@ -57,19 +59,23 @@ int main( int argc, char* argv[])
     {
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
         if( p.initni == "blob")
-            helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
+            helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+                (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
         if( p.initni == "straight blob")
-            helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
+            helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+                (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
     }
     else if( p.initni == "turbulence")
     {
-        dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-        helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
+        helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+            (unsigned)p.Nz/2, 1);
     }
     else if( p.initni == "zonal")
     {
         dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
-        helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+            (unsigned)p.Nz/2, 1);
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
@@ -83,7 +89,7 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(damping,y0[0][1], y0[0][1]);
     }
     std::cout << "intiialize ne" << std::endl;
-    if( p.initphi == "zero")  explicitPart.initializene( y0[0][1], y0[0][0]);
+    if( p.initphi == "zero")  ex.initializene( y0[0][1], y0[0][0]);
     else if( p.initphi == "balance") dg::blas1::copy( y0[0][1], y0[0][0]); //set n_e = N_i
     else
         std::cerr <<"WARNING: Unknown initial condition for phi!\n";
@@ -101,9 +107,9 @@ int main( int argc, char* argv[])
     {
         err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
         dg::geo::TokamakMagneticField c=dg::geo::createSolovevField(gp);
-        dg::geo::FieldR fieldR(c);
-        dg::geo::FieldZ fieldZ(c);
-        dg::geo::FieldP fieldP(c);
+        dg::geo::BFieldR fieldR(c);
+        dg::geo::BFieldZ fieldZ(c);
+        dg::geo::BFieldP fieldP(c);
 
         dg::HVec vecR = dg::evaluate( fieldR, grid_out);
         dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
@@ -134,21 +140,24 @@ int main( int argc, char* argv[])
     err = nc_enddef(ncid);
     ////////////map quantities to output/////////////////
     //since values take references we don't need to update those later
-    std::map<std::string, const DVec& > v4d;
-    for( unsigned i=0; i<4; i++)
-        v4d[names4d[i]] = y0[i];
-    v4d["potential"] = ex.potential()[0];
-    const feltor::Quantities& q = ex.quantities();
-    double energy0 = q.energy(), mass0 = q.mass(), E0 = energy0;
-    double dEdt = 0, accuracy = 0;
-    std::map<std::string, const double&> v0d{
-        {"energy", q.energy}, {"ediff", q.ediff},
-        {"mass", q.mass}, {"diff", q.diff},
-        {"Se", q.S[0]}, {"Si", q.S[1]}, {"Uperp", q.Tperp},
-        {"Upare", q.Tpar[0]}, {"Upari", q.Tpar[1]},
-        {"dEdt", dEdt}, {"accuracy", accuracy},
-        {"aligned", q.aligned}
+    std::map<std::string, const dg::DVec* > v4d;
+    for( unsigned i=0; i<2; i++)
+    {
+        v4d[names4d[  i]] = &(y0[0][i]);
+        v4d[names4d[2+i]] = &(y0[1][i]);
     }
+    v4d["potential"] = &ex.potential()[0];
+    const feltor::Quantities& q = ex.quantities();
+    double energy0 = q.energy, mass0 = q.mass, E0 = energy0;
+    double dEdt = 0, accuracy = 0;
+    std::map<std::string, const double*> v0d{
+        {"energy", &q.energy}, {"ediff", &q.ediff},
+        {"mass", &q.mass}, {"diff", &q.diff},
+        {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
+        {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
+        {"dEdt", &dEdt}, {"accuracy", &accuracy},
+        {"aligned", &q.aligned}
+    };
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
@@ -159,7 +168,7 @@ int main( int argc, char* argv[])
     dg::IDMatrix project = dg::create::projection( grid_out, grid);
     for( auto name : names4d)
     {
-        dg::blas2::symv( project, v4d[name], transferD);
+        dg::blas2::symv( project, *v4d[name], transferD);
         dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
     }
@@ -169,7 +178,7 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     for( auto name : names0d)
-        err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, &v0d[name]);
+        err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -196,25 +205,28 @@ int main( int argc, char* argv[])
             }
             step++;
 
-            dEdt = (v0d["energy"] - E0)/dt_current;
-            E0 = v0d["energy"];
-            accuracy = 2.*fabs( (dEdt - v0d["ediff"])/( dEdt + v0d["ediff"]));
+            dEdt = (*v0d["energy"] - E0)/dt_current;
+            E0 = *v0d["energy"];
+            accuracy = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
             err = nc_open(argv[3], NC_WRITE, &ncid);
             Estart[0] = step;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             for( auto name : names0d)
-                err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, &v0d[name]);
+                err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
 
-            std::cout << "(m_tot-m_0)/m_0: "<< (v0d["mass"]-mass0)/mass0<<"\t";
-            std::cout << "(E_tot-E_0)/E_0: "<< (v0d["energy"]-energy0)/energy0<<"\t";
-            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << v0d["ediff"]
-                      <<" -> Accuracy: "<< accuracy << "\n";
+            std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
+            std::cout << "(E_tot-E_0)/E_0: "<< (*v0d["energy"]-energy0)/energy0<<"\t";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = "
+                      << *v0d["ediff"] <<" -> Accuracy: "
+                      << accuracy << "\n";
             err = nc_close(ncid);
 
         }
         ti.toc();
-        std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
-        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s";
+        std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout
+                  << " at time "<<time;
+        std::cout << "\n\t Average time for one step: "
+                  << ti.diff()/(double)p.itstp<<"s";
         ti.tic();
         //////////////////////////write fields////////////////////////
         start[0] = i;
@@ -222,7 +234,7 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         for( auto name : names4d)
         {
-            dg::blas2::symv( project, v4d[name], transferD);
+            dg::blas2::symv( project, *v4d[name], transferD);
             dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
         }

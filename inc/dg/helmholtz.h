@@ -134,7 +134,6 @@ struct GeneralHelmholtz
     }
     /**
      * @brief Access chi
-     *
      * @return chi
      */
     const container_type& chi() const{return m_chi;}
@@ -297,6 +296,12 @@ struct Helmholtz2
     value_type alpha_;
 };
 ///@cond
+template< class E>
+struct TensorTraits< GeneralHelmholtz<E> >
+{
+    using value_type  = get_value_type<typename E::value_type>;
+    using tensor_category = SelfMadeMatrixTag;
+};
 template< class G, class M, class V>
 struct TensorTraits< Helmholtz<G, M, V> >
 {

@@ -8,6 +8,7 @@ namespace feltor{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
+    unsigned n_out, Nx_out, Ny_out, Nz_out;
     double dt;
     unsigned cx, cy;
     unsigned itstp;
@@ -45,7 +46,7 @@ struct Parameters
     double boxscaleZp;
     double boxscaleZm;
 
-    std::map<std::string, std::array<enum dg::bc,2>> bc;
+    enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initni, initphi, curvmode;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
@@ -55,6 +56,7 @@ struct Parameters
         dt      = js["dt"].asDouble();
         cx      = js.get("compressionX",1).asUInt();
         cy      = js.get("compressionY",1).asUInt();
+        n_out = n, Nx_out = Nx/cx, Ny_out = Ny/cy, Nz_out = Nz;
         itstp   = js["itstp"].asUInt();
         maxout  = js["maxout"].asUInt();
 
@@ -84,12 +86,12 @@ struct Parameters
         k_psi       = js["k_psi"].asDouble();
         omega_source = js["source"].asDouble();
 
-        bc["density"][0] = dg::str2bc(js["bc"]["density"][0].asString());
-        bc["density"][1] = dg::str2bc(js["bc"]["density"][1].asString());
-        bc["velocity"][0] = dg::str2bc(js["bc"]["velocity"][0].asString());
-        bc["velocity"][1] = dg::str2bc(js["bc"]["velocity"][1].asString());
-        bc["potential"][0] = dg::str2bc(js["bc"]["potential"][0].asString());
-        bc["potential"][1] = dg::str2bc(js["bc"]["potential"][1].asString());
+        bcxN = dg::str2bc(js["bc"]["density"][0].asString());
+        bcyN = dg::str2bc(js["bc"]["density"][1].asString());
+        bcxU = dg::str2bc(js["bc"]["velocity"][0].asString());
+        bcyU = dg::str2bc(js["bc"]["velocity"][1].asString());
+        bcxP = dg::str2bc(js["bc"]["potential"][0].asString());
+        bcyP = dg::str2bc(js["bc"]["potential"][1].asString());
         nprofileamp = js["nprofileamp"].asDouble();
         bgprofamp   = js["bgprofamp"].asDouble();
 
@@ -144,10 +146,15 @@ struct Parameters
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Boundary condition is: \n"
-            <<"     global BC             =              "<<dg::bc2str(bc)<<"\n"
-            <<"     init N_i              =              "<<initni<<"\n"
-            <<"     init Phi              =              "<<initphi<<"\n"
-            <<"     curvature mode        =              "<<curvmode<<"\n";
+            <<"     bc density x   = "<<dg::bc2str(bcxN)<<"\n"
+            <<"     bc density y   = "<<dg::bc2str(bcyN)<<"\n"
+            <<"     bc velocity x  = "<<dg::bc2str(bcxU)<<"\n"
+            <<"     bc velocity y  = "<<dg::bc2str(bcyU)<<"\n"
+            <<"     bc potential x = "<<dg::bc2str(bcxP)<<"\n"
+            <<"     bc potential y = "<<dg::bc2str(bcyP)<<"\n"
+            <<"     init N_i       = "<<initni<<"\n"
+            <<"     init Phi       = "<<initphi<<"\n"
+            <<"     curvature mode = "<<curvmode<<"\n";
         os << std::flush;
     }
 };
