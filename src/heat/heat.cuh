@@ -11,7 +11,7 @@ template< class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
     Implicit( const Geometry& g, Parameters p, dg::geo::solovev::Parameters gp):
-        p(p),
+        m_p(p),
         m_ds(dg::geo::createSolovevField( gp), g, p.bcx, p.bcy,
               dg::geo::PsiLimiter(
                 dg::geo::solovev::Psip(gp), gp.psipmaxlim),
@@ -32,27 +32,27 @@ struct Implicit
     }
     void operator()( double t, const container& x, container& y)
     {
-        if (p.p_diff == "adjoint")    {
-            m_ds.symv( p.nu_parallel, x, 0., y);
+        if (m_p.p_diff == "adjoint")    {
+            m_ds.symv( m_p.nu_parallel, x, 0., y);
         }
-        else if (p.p_diff == "elliptic")    {
+        else if (m_p.p_diff == "elliptic")    {
             dg::blas2::symv( m_ellipticForward, x, y);
-            dg::blas2::symv( -0.5*p.nu_parallel, m_ellipticBackward, x, -0.5*p.nu_parallel, y);
+            dg::blas2::symv( -0.5*m_p.nu_parallel, m_ellipticBackward, x, -0.5*m_p.nu_parallel, y);
             //laplace is negative
         }
         else
         {
             dg::blas1::scal( y,0.);
         }
-        if( p.nu_perp != 0)
-            dg::blas2::symv( -p.nu_perp, m_ellipticPerp, x, 1., y);
+        if( m_p.nu_perp != 0)
+            dg::blas2::symv( -m_p.nu_perp, m_ellipticPerp, x, 1., y);
 
     }
     const container& weights(){return m_ds.weights();}
     const container& inv_weights(){return m_ds.inv_weights();}
     const container& precond(){return m_ds.precond();}
   private:
-    const heat::Parameters p;
+    const heat::Parameters m_p;
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds;
     dg::Elliptic3d<Geometry, Matrix, container> m_ellipticForward, m_ellipticBackward, m_ellipticPerp;
 
@@ -90,7 +90,7 @@ struct Explicit
     //matrices and solvers
     dg::geo::DS<Geometry,IMatrix,Matrix,container> m_ds;
 
-    const heat::Parameters p;
+    const heat::Parameters m_p;
     Quantities m_q;
     dg::Elliptic3d<Geometry, Matrix, container> m_ellipticForward, m_ellipticBackward, m_ellipticPerp;
 
@@ -102,7 +102,7 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g, heat::
     one( dg::evaluate( dg::one, g)),
     w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),
     m_ds( dg::geo::createSolovevField(gp), g, p.bcx, p.bcy, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward),
-    p(p),
+    m_p(p),
     m_ellipticForward( g, dg::normed, dg::forward),
     m_ellipticBackward(g, dg::normed, dg::backward),
     m_ellipticPerp(g, dg::normed, dg::centered)
@@ -126,25 +126,25 @@ void Explicit<G,I,M,V>::energies( const V& y)
     m_q.energy  = dg::blas2::dot( one, w3d, y);
     m_q.entropy = 0.5*dg::blas2::dot( y, w3d, y);
     //Compute rhs of energy theorem
-    if (p.p_diff == "adjoint")    {
+    if (m_p.p_diff == "adjoint")    {
         m_ds.symv( y, chi);
     }
-    else if (p.p_diff == "non-adjoint")    {
+    else if (m_p.p_diff == "non-adjoint")    {
         m_ds.ds( dg::centered, y, chi);
         dg::blas1::pointwiseDot(m_divb, chi, chi); // (Div b) ds T
         m_ds.dss(1., y, 1., chi);                  // ds^2 T
     }
-    else if (p.p_diff == "elliptic")    {
+    else if (m_p.p_diff == "elliptic")    {
         dg::blas2::symv(m_ellipticForward, y, chi);
         dg::blas2::symv(-0.5, m_ellipticBackward, y, -0.5, chi);
     }
-    m_q.Dpar[0] = p.nu_parallel*dg::blas2::dot(one, w3d, chi);
-    m_q.Dpar[1] = p.nu_parallel*dg::blas2::dot(y,   w3d, chi);
-    if( p.nu_perp != 0)
+    m_q.Dpar[0] = m_p.nu_parallel*dg::blas2::dot(one, w3d, chi);
+    m_q.Dpar[1] = m_p.nu_parallel*dg::blas2::dot(y,   w3d, chi);
+    if( m_p.nu_perp != 0)
     {
         dg::blas2::symv( -1., m_ellipticPerp, y, 0., chi);
-        m_q.Dperp[0] = p.nu_perp*dg::blas2::dot( one, w3d, chi);
-        m_q.Dperp[1] = p.nu_perp*dg::blas2::dot( y,   w3d, chi);
+        m_q.Dperp[0] = m_p.nu_perp*dg::blas2::dot( one, w3d, chi);
+        m_q.Dperp[1] = m_p.nu_perp*dg::blas2::dot( y,   w3d, chi);
     }
     m_q.energy_diffusion  = m_q.Dpar[0] + m_q.Dperp[0];
     m_q.entropy_diffusion = m_q.Dpar[1] + m_q.Dperp[1];
@@ -158,10 +158,10 @@ void Explicit<G,I,Matrix,container>::operator()( double tt, const container& y, 
     t.tic();
     dg::blas1::scal(yp, 0.);
     //-----------------------parallel dissi------------------------
-    if (p.p_diff == "non-adjoint")    {
-        m_ds.dss(p.nu_parallel, y, 1., yp);  // ds^2 T
+    if (m_p.p_diff == "non-adjoint")    {
+        m_ds.dss(m_p.nu_parallel, y, 1., yp);  // ds^2 T
         m_ds.ds( dg::centered, y, lambda);   // (Div b) ds T
-        dg::blas1::pointwiseDot( p.nu_parallel, m_divb, lambda, 1., yp);
+        dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, lambda, 1., yp);
     }
     t.toc();
 #ifdef MPI_VERSION

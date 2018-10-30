@@ -133,7 +133,7 @@ int main( int argc, char* argv[])
             }
             //try{ stepper.step( ex, im, time, y0);}
             try{
-                //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.hasFailed()<<"\n";
+                //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
                 stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
                 //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
             }

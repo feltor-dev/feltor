@@ -239,7 +239,7 @@ struct Adaptive
         return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
     }
     ///Return true if the last stepsize in step was rejected
-    bool hasFailed() const {
+    bool failed() const {
         return m_failed;
     }
     private:

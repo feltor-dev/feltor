@@ -70,7 +70,7 @@
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
- *     @defgroup geometry Geometric grids and operations
+ *     @defgroup geometry Geometric grids and tensor operations
  *
  *         These routines form the heart of our geometry free numerical algorithms.
  *         They are called by our geometric operators like the Poisson bracket.

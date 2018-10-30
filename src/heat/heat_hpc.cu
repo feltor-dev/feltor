@@ -212,16 +212,22 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-//                 rk.step( ex, time,y0, time,y0, p.dt); //RK stepper
-                dt = dt_new;
-                adaptive.step(ex,diffusion,time,y0,time,y0,dt_new, dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                 //karniadakis.step( ex, diffusion, time, y0);  //Karniadakis stepper
-              }
-              catch( dg::Fail& fail) {
+                do
+                {
+                    dt = dt_new;
+                    adaptive.step(ex,diffusion,time,y0,time,y0,dt_new,
+                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                    if( adaptive.failed())
+                        std::cout << "Step Failed! REPEAT!\n";
+                 }
+                 while( adaptive.failed());
+            }
+            catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 err = nc_close(ncid);
-                return -1;}
+                return -1;
+            }
             step++;
             ex.energies(y0);//advance potential and energies
             Estart[0] = step;

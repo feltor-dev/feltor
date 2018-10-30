@@ -40,14 +40,14 @@ int main(int argc, char * argv[])
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::centered);
     //![doxygen]
     ///##########################################################///
-    dg::DVec fun = dg::evaluate( dg::geo::TestFunctionSin(mag), g3d);
+    dg::DVec fun = dg::pullback( dg::geo::TestFunctionSin(mag), g3d);
     dg::DVec derivative(fun);
-    dg::DVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
-    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::DVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    dg::DVec divb = dg::pullback( dg::geo::Divb(mag), g3d);
+    dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    dg::DVec sol4 = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
     std::vector<std::tuple<std::string, const dg::DVec&, const dg::DVec&>> names{
          {"forward",fun,sol0},          {"backward",fun,sol0},
          {"centered",fun,sol0},         {"dss",fun,sol1},

@@ -40,13 +40,6 @@ int main( int argc, char* argv[])
     }
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
-    /////////glfw initialisation ////////////////////////////////////////
-    std::ifstream is( "window_params.js");
-    is >> js;
-    is.close();
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
-    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
-    //////////////////////////////////////////////////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
@@ -61,6 +54,13 @@ int main( int argc, char* argv[])
     heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,gp); //initialize before im!
     std::cout << "Initialize implicit" << std::endl;
     heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p,gp);
+    /////////glfw initialisation ////////////////////////////////////////
+    std::ifstream is( "window_params.js");
+    is >> js;
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    //////////////////////////////////////////////////////////////////////
 
     //-----------------------------The initial field--------------------
     //initial perturbation
@@ -84,8 +84,6 @@ int main( int argc, char* argv[])
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
         "ARK-4-2-3", y0, grid.size(), p.eps_time);
     double dt_new = p.dt, dt = dt_new;
-//     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(),1e-13);
-//     karniadakis.init( ex, im, y0, p.dt);
 
     ex.energies( y0);//now energies and potential are at time 0
 
@@ -157,25 +155,30 @@ int main( int argc, char* argv[])
                       << " err =" << err << "\n";
             E0 = E1;
             try{
-                dt = dt_new;
-                // rk( ex, y0, y1, p.dt);
-                adaptive.step(ex,im,time,y0,time,y0,dt_new,
-                    dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                // karniadakis( ex, im, y0);
+                do
+                {
+                    dt = dt_new;
+                    adaptive.step(ex,im,time,y0,time,y0,dt_new,
+                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                    if( adaptive.failed())
+                        std::cout << "Step Failed! REPEAT!\n";
+                }
+                while( adaptive.failed());
 
-              }
-              catch( dg::Fail& fail) {
+            }
+            catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
-                break;}
+                break;
+            }
 
 
         }
         time += (double)time;
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "\n\t Step "<<step;
+        std::cout << "\n\t Step "<<step << " at time\t"<<time<<"\n";
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
     }
