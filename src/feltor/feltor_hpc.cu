@@ -122,25 +122,33 @@ int main( int argc, char* argv[])
     //field IDs
     std::string names4d [] = {"electrons", "ions", "Ue", "Ui", "potential"};
     std::map<std::string, int> id4d;
-    std::map<std::string, const DVec& > v4d;
     for( auto name : names4d)
         err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids, &id4d[name]);
     std::map<std::string, int> id0d;
-    std::map<std::string, double> v0d;
-    std::string names0d [] = {"energy", "mass", "Se", "Si", "Uperp", "Upare",
-    "aligned", "Upari", "dissipation", "dEdt", "accuracy", "Ne_p", "phi_p"};
+    std::string names0d [] = {"energy", "ediff", "mass", "diff", "Se", "Si",
+        "Uperp", "Upare", "Upari", "dEdt", "accuracy", "aligned"};
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     for( auto name : names0d)
         err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &EtimeID, &id0d[name]);
     err = nc_enddef(ncid);
-    ///////////////////////////////////PROBE//////////////////////////////
-    const dg::HVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
-    const dg::HVec Zprobe(1,0.);
-    const dg::HVec Phiprobe(1,M_PI);
-    dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe, Zprobe, Phiprobe,
-        grid));
-    dg::DVec probevalue(1,0.);
+    ////////////map quantities to output/////////////////
+    //since values take references we don't need to update those later
+    std::map<std::string, const DVec& > v4d;
+    for( unsigned i=0; i<4; i++)
+        v4d[names4d[i]] = y0[i];
+    v4d["potential"] = ex.potential()[0];
+    const feltor::Quantities& q = ex.quantities();
+    double energy0 = q.energy(), mass0 = q.mass(), E0 = energy0;
+    double dEdt = 0, accuracy = 0;
+    std::map<std::string, const double&> v0d{
+        {"energy", q.energy}, {"ediff", q.ediff},
+        {"mass", q.mass}, {"diff", q.diff},
+        {"Se", q.S[0]}, {"Si", q.S[1]}, {"Uperp", q.Tperp},
+        {"Upare", q.Tpar[0]}, {"Upari", q.Tpar[1]},
+        {"dEdt", dEdt}, {"accuracy", accuracy},
+        {"aligned", q.aligned}
+    }
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
@@ -150,39 +158,17 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::IDMatrix project = dg::create::projection( grid_out, grid);
-    //since v4d takes references we don't need to update those later
-    for( unsigned i=0; i<4; i++)
-        v4d[names4d[i]] = y0[i];
-    v4d["potential"] = ex.potential()[0];
     for( auto name : names4d)
     {
         dg::blas2::symv( project, v4d[name], transferD);
         dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
     }
-    dg::blas2::symv( project, ex.potential()[0], transferD);
-    dg::blas1::transfer( transferD, transferH);
-    err = nc_put_vara_double( ncid, id4d["potential"], start, count, transferH.data() );
     double time = 0, dt = p.dt;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
-
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    double energy0 = ex.energy(), mass0 = ex.mass(), E0 = energy0;
-    v0d["energy"] = energy0;
-    v0d["mass"] = mass0;
-    v0d["dEdt"] = v0d["diss"] = v0d["accuracy"] = 0;
-    std::vector<double> evec = ex.energy_vector();
-    v0d["Se"] = evec[0], v0d["Si"] = evec[1], v0d["Uperp"] = evec[2];
-    v0d["Uperp"] = evec[3], v0d["Upare"] = evec[4];
-    v0d["aligned"] = ex.aligned();
-    dg::blas2::gemv(probeinterp,y0[0],probevalue);
-    v0d["aligned"] = ex.aligned();
-    //probe
-    v0d["Ne_p"] = probevalue[0] ;
-    dg::blas2::gemv(probeinterp,ex.potential()[0],probevalue);
-    v0d["phi_p"] = probevalue[0] ;
     for( auto name : names0d)
         err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, &v0d[name]);
     err = nc_close(ncid);
@@ -211,21 +197,9 @@ int main( int argc, char* argv[])
             }
             step++;
 
-            v0d["mass"] = ex.mass();
-            v0d["energy"] = ex.energy();
-            v0d["diss"] = ex.energy_diffusion();
-            v0d["dEdt"] = (v0d["energy"] - E0)/dt_current;
+            dEdt = (v0d["energy"] - E0)/dt_current;
             E0 = v0d["energy"];
-            v0d["accuracy"] = 2.*fabs( (v0d["dEdt"] - v0d["diss"])/(
-                                        v0d["dEdt"] + v0d["diss"]));
-            evec = ex.energy_vector();
-            v0d["Se"] = evec[0], v0d["Si"] = evec[1], v0d["Uperp"] = evec[2];
-            v0d["Uperp"] = evec[3], v0d["Upare"] = evec[4];
-            dg::blas2::gemv(probeinterp, y0[0], probevalue);
-            v0d["Ne_p"] = probevalue[0] ;
-            dg::blas2::gemv(probeinterp, ex.potential()[0], probevalue);
-            v0d["phi_p"] =probevalue[0] ;
-
+            accuracy = 2.*fabs( (dEdt - v0d["ediff"])/( dEdt + v0d["ediff"]));
             err = nc_open(argv[3], NC_WRITE, &ncid);
             Estart[0] = step;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
@@ -234,8 +208,8 @@ int main( int argc, char* argv[])
 
             std::cout << "(m_tot-m_0)/m_0: "<< (v0d["mass"]-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (v0d["energy"]-energy0)/energy0<<"\t";
-            std::cout <<" d E/dt = " << v0d["dEdt"] <<" Lambda = " << v0d["diss"]
-                      <<" -> Accuracy: "<< v0d["accuracy"] << "\n";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << v0d["ediff"]
+                      <<" -> Accuracy: "<< accuracy << "\n";
             err = nc_close(ncid);
 
         }

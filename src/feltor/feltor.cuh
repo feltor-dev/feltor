@@ -77,78 +77,33 @@ struct Implicit
     dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN, m_lapM_perpU;
 };
 
+struct Quantities
+{
+    double mass = 0, diff = 0; //mass and mass diffusion
+    double energy = 0, ediff = 0; //total energy and energy diffusion
+    double S[2] = {0,0}, Tpar[2] = {0,0}, Tperp = 0; //entropy parallel and perp energies
+    double Dres = 0, Dpar[4] = {0,0,0,0}, Dperp[4] = {0,0,0,0}; //resisitive and diffusive terms
+    double aligned = 0; //alignment parameter
+};
+
 template< class Geometry, class IMatrix, class Matrix, class container >
 struct Explicit
 {
     Explicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp);
 
-
     //potential[0]: electron potential, potential[1]: ion potential
     const std::array<container,2>& potential( ) const {
         return m_phi;
     }
-    /**
-     * @brief Given N_i-1 initialize N_e -1 such that phi=0
-     *
-     * @param y N_i -1
-     * @param target N_e -1
-     */
-    void initializene( const container& y, container& target);
+    //Given N_i-1 initialize n_e-1 sucht that phi=0
+    void initializene( const container& ni, container& ne);
 
     ///@param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := U_e, y[3] := U_i
-    void operator()( double t, const std::array<std::array<container,2>,2>& y, std::array<std::array<container,2>,2>& yp);
+    void operator()( double t, const std::array<std::array<container,2>,2>& y,
+        std::array<std::array<container,2>,2>& yp);
 
-    /**
-     * @brief \f[ M := \int_V (n_e-1) dV \f]
-     *
-     * @return mass of plasma contained in volume
-     * @note call energies() before use
-     */
-    double mass( ) const {
-        return m_mass;
-    }
-    /**
-     * @brief
-     \f[
-\begin{align}
- E = \partial_t \sum_z \int_V d^3x \left[\frac{1}{2}m NU^2 + \frac{(\nabla_\perp A_\parallel)^2}{2\mu_0} + \frac{1}{2}mN\left(\frac{\nabla_\perp\phi}{B}\right)^2 + T N\ln(N)\right]
-\end{align}
-\f]
-
-     * @return Total energy contained in volume
-     */
-    double energy( ) const {
-        return m_energy;
-    }
-
-    //E[0]=S_e, E[1] = S_i, E[2] = U_E, E[3] = T_pare, E[4] = T_pari
-    std::vector<double> energy_vector( ) const{
-        return m_evec;
-    }
-    /**
-     * @brief
-     \f[
-     \begin{align}
-\sum_z \int_V d^3 x \left[ T(1+\ln N)\Lambda_N + q\psi\Lambda_N + N U\Lambda_U + \frac{1}{2}mU^2\Lambda_N \right] ,
-\end{align}
-\f]
-     * @return Total energy diffusion
-     */
-    double energy_diffusion( )const{
-        return m_ediff;
-    }
-
-    /**
-     * @brief
-     \f[
-     \begin{align}
-\int_V d^3 x \left[ (1+\ln N)\Delta_\parallel N \right] = - \int_V d^3x \frac{(\nabla_\parallel N)^2}{N} ,
-\end{align}
-\f]
-     * @return energy loss by parallel electron diffusion
-     */
-    double aligned() const {
-        return m_aligned;
+    const Quantities& quantities( ) const{
+        return m_q;
     }
 
   private:
@@ -271,9 +226,8 @@ struct Explicit
 
     const feltor::Parameters m_p;
     const dg::geo::solovev::Parameters m_gp;
+    Quantities m_q;
 
-    double m_mass, m_energy, m_ediff, m_aligned;
-    std::vector<double> m_evec;
 };
 ///@}
 
@@ -483,21 +437,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     dg::blas1::subroutine( ComputeLogN(), y[0], m_npe, m_logn);
     ////////////////////ENERGETICS///////////////////////////////////////
     double z[2]    = {-1.0,1.0};
-    double S[2]    = {0.0, 0.0};
-    double Tpar[2] = {0.0, 0.0};
 
-    m_mass = dg::blas1::dot( m_vol3d, y[0][0]);
+    m_q.mass = dg::blas1::dot( m_vol3d, y[0][0]);
     //compute energies
     for(unsigned i=0; i<2; i++)
     {
-        S[i]    = z[i]*m_p.tau[i]*dg::blas2::dot( m_logn[i], m_vol3d, m_npe[i]);
+        m_q.S[i]    = z[i]*m_p.tau[i]*dg::blas2::dot( m_logn[i], m_vol3d, m_npe[i]);
         dg::blas1::pointwiseDot( y[1][i], y[1][i], m_chi); //U^2
-        Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot( m_npe[i], m_vol3d, m_chi);
+        m_q.Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot( m_npe[i], m_vol3d, m_chi);
     }
-    double Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( m_npe[1], m_vol3d, m_omega);   //= 0.5 mu_i N_i u_E^2
-    m_energy = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1];
-    m_evec[0] = S[0], m_evec[1] = S[1], m_evec[2] = Tperp, m_evec[3] = Tpar[0], m_evec[4] = Tpar[1];
-
+    m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( m_npe[1], m_vol3d, m_omega);   //= 0.5 mu_i N_i u_E^2
+    m_q.energy = m_q.S[0] + m_q.S[1]  + m_q.Tperp + m_q.Tpar[0] + m_q.Tpar[1];
     ///////////////////////////////////EQUATIONS///////////////////////////////
     for( unsigned i=0; i<2; i++)
     {
@@ -556,11 +506,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
     //add FLR correction to dtNi
     dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1], m_lapperpN, m_lambda, 1.0, yp[1][1]);
     /////////////////ENERGY DISSIPATION TERMS//////////////////////////////
-    double Dpar[4]  = {0.0, 0.0,0.0,0.0};
-    double Dperp[4] = {0.0, 0.0,0.0,0.0};
-    // resistive energy (quadratic current)
-    dg::blas1::pointwiseDot(1., m_npe[0], y[1][1], -1., m_npe[0], y[1][0], 0., m_omega); // omega = n_e (U_i - u_e)
-    double Dres = -m_p.c*dg::blas2::dot(m_omega, m_vol3d, m_omega); //- C*(N_e (U_i - U_e))^2
     // energy dissipation through diffusion
     for( unsigned i=0; i<2;i++)
     {
@@ -568,26 +513,33 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
         dg::blas1::subroutine( ComputeDiss(m_p.mu[i], m_p.tau[i]),
             m_chi, m_logn[i], m_phi[i], y[1][i]); //chi = tau(1+lnN) + phi + 0.5 mu U^2
         //Compute parallel dissipation for N
-        Dpar[i] = z[i]*p.nu_parallel*dg::blas2::dot(m_chi, m_vol3d, m_dsN[i]); //Z*(tau (1+lnN )+psi + 0.5 mu U^2) nu_parallel *(Delta_s N)
+        m_q.Dpar[i] = z[i]*p.nu_parallel*dg::blas2::dot(m_chi, m_vol3d, m_dsN[i]);
+                //Z*(tau (1+lnN )+psi + 0.5 mu U^2) nu_parallel *(Delta_s N)
         if( i==0) //only electrons
         {
             dg::blas1::transform( m_logn[i],m_omega, dg::PLUS<>(+1)); //omega = (1+lnN)
-            m_aligned = dg::blas2::dot( m_omega, m_vol3d, m_dsN[i]); //(1+lnN)*Delta_s N
+            m_q.aligned = dg::blas2::dot( m_omega, m_vol3d, m_dsN[i]); //(1+lnN)*Delta_s N
         }
         //Compute perp dissipation for N
         dg::blas2::gemv( m_lapperpN, y[0][i], m_lambda);
         dg::blas2::gemv( m_lapperpN, m_lambda, m_omega);//Delta^2 N
-        Dperp[i] = -z[i]* m_p.nu_perp*dg::blas2::dot(m_chi, m_vol3d, m_omega);
+        m_q.Dperp[i] = -z[i]* m_p.nu_perp*dg::blas2::dot(m_chi, m_vol3d, m_omega);
 
         dg::blas1::pointwiseDot( m_npe[i], y[1][i], m_omega); // omega = N U
         //Compute parallel dissipation for U
-        Dpar[i+2] = z[i]*m_p.mu[i]*m_p.nu_parallel*dg::blas2::dot(m_omega, m_vol3d, m_dsU[i]);      //Z*mu*N*U nu_parallel *( Delta_s U)
+        m_q.Dpar[i+2] = z[i]*m_p.mu[i]*m_p.nu_parallel*dg::blas2::dot(m_omega, m_vol3d, m_dsU[i]);      //Z*mu*N*U nu_parallel *( Delta_s U)
         //Compute perp dissipation  for U
         dg::blas2::gemv( m_lapperpU, y[1][i], m_lambda);
         dg::blas2::gemv( m_lapperpU, m_lambda,m_chi);//Delta^2 U
-        Dperp[i+2] = -z[i]*m_p.mu[i]*m_p.nu_perp* dg::blas2::dot(m_omega, m_vol3d, m_chi);
+        m_q.Dperp[i+2] = -z[i]*m_p.mu[i]*m_p.nu_perp
+            *dg::blas2::dot(m_omega, m_vol3d, m_chi);
     }
-    m_ediff = Dres + Dpar[0]+Dperp[0]+Dpar[1]+Dperp[1]+Dpar[2]+Dperp[2]+Dpar[3]+Dperp[3];
+    // resistive energy (quadratic current)
+    dg::blas1::pointwiseDot(1., m_npe[0], y[1][1], -1., m_npe[0], y[1][0],
+        0., m_omega); // omega = n_e (U_i - u_e)
+    m_q.Dres = -m_p.c*dg::blas2::dot(m_omega, m_vol3d, m_omega); //- C*(N_e (U_i - U_e))^2
+    m_q.ediff = m_q.Dres + m_q.Dpar[0]+m_q.Dperp[0]+m_q.Dpar[1]+m_q.Dperp[1]
+        +m_q.Dpar[2]+m_q.Dperp[2]+m_q.Dpar[3]+m_q.Dperp[3];
 
     timer.toc();
     #ifdef MPI_VERSION

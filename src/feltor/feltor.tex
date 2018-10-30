@@ -317,7 +317,7 @@ together with
     -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \nabla_\perp^2
   \end{align}
-The energy theorem reads
+The energy theorem reads $\partial_t \mathcal E = \Lambda$
 \begin{align}
   \mathcal{E}= \int  d\vec{x} & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}+  \frac{1}{2} \mu_i N_i u_E^2 +\frac{1}{2} z_e\mu_e  n_e u_e^2 +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
   \Lambda =  \int d\vec{x} & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
@@ -338,9 +338,9 @@ obtain a right handed system. The parametric representation in Cartesian \((x,y,
 Covariant
 basis vectors and metric tensor:
 \begin{align}
- \vec{e}_R      &= (\sin{(\varphi)} ,   \cos{(\varphi)},0)^T, &
- \vec{e}_Z      &= ( 0 ,0 ,1 )^T, &
- \vec{e}_{\varphi} &= R ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
+ \ehat_R      &= (\sin{(\varphi)} ,   \cos{(\varphi)},0)^T, &
+ \ehat_Z      &= ( 0 ,0 ,1 )^T, &
+ \ehat_{\varphi} &= R ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
 \\
  g &= \begin{pmatrix}
   1 & 0 & 0 \\
@@ -660,6 +660,31 @@ File format: json
 The default value is taken if the value name is not found in the input file. If there is no default and
 the value is not found,
 the program exits with an error message.
+
+\subsection{Output}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &     text attribute & 1 & verbose input file as a string \\
+geomfile   &     text attribute & 1 & verbose geometry input file as a string \\
+energy\_time     & Dataset & 1 & timesteps at which 1d variables are written \\
+time             & Dataset & 1 & time at which temperature is written \\
+x                & Dataset & 1 & x-coordinate  \\
+y                & Dataset & 1 & y-coordinate \\
+z                & Dataset & 1 & z-coordinate \\
+T                & Dataset & 4 (time, z, y, x) & temperature $T$ \\
+energy           & Dataset & 1 (energy\_time) & total energy integral  \\
+mass             & Dataset & 1 (energy\_time) & mass integral $\int\dV (n_e-1)$   \\
+dEdt             & Dataset & 1 (energy\_time) & change of energy per time  \\
+dissipation      & Dataset & 1 (energy\_time) & diffusion integrals  \\
+accuracy         & Dataset & 1 (energy\_time) & accuracy in time  \\
+aligned          & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV (1+\ln n_e)\Delta_\parallel n_e =  -\int\dV (\nabla_\parallel n_e)^2 /n_e$\\
+\bottomrule
+\end{longtable}
 
 
 %..................................................................
