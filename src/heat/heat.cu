@@ -99,8 +99,8 @@ int main( int argc, char* argv[])
     double time = 0;
     unsigned step = 0;
 
-    const double heat0 = ex.energy();
-    double E0 = ex.entropy(), energy0 = E0, E1 = 0, diff = 0;
+    const double heat0 = ex.quantities().energy;
+    double E0 = ex.quantities().entropy, energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
 
@@ -142,16 +142,16 @@ int main( int argc, char* argv[])
             step++;
             ex.energies( y0); //update energetics
             std::cout << "(Q_tot-Q_0)/Q_0: "
-                      << (ex.energy()-heat0)/heat0<<"\t";
-            E1 = ex.entropy();
+                      << (ex.quantities().energy-heat0)/heat0<<"\t";
+            E1 = ex.quantities().entropy;
             diff = (E1 - E0)/dt; //
-            double diss = ex.entropy_diffusion( );
+            double diss = ex.quantities().entropy_diffusion;
             dg::blas1::axpby( 1., y0, -1.,T0, T1);
             double err = sqrt(dg::blas2::dot( w3d, T1)/normT0);
             std::cout << "(E_tot-E_0)/E_0: "
                       << (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "
-                      << 2.*(diff-diss)/(diff+diss)
+                      << 2.*fabs((diff-diss)/(diff+diss))
                       <<" d E/dt = " << diff
                       <<" Lambda =" << diss
                       << " err =" << err << "\n";

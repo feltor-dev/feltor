@@ -6,8 +6,9 @@ namespace heat{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-    double dt;
     unsigned n_out, Nx_out, Ny_out, Nz_out;
+    unsigned cx, cy;
+    double dt;
     unsigned itstp, maxout;
     unsigned mx, my;
     std::string p_diff;
@@ -26,10 +27,9 @@ struct Parameters
         Ny = js["Ny"].asUInt();
         Nz = js["Nz"].asUInt();
         dt = js["dt"].asDouble();
-        n_out  = js["n_out"].asUInt();
-        Nx_out = js["Nx_out"].asUInt();
-        Ny_out = js["Ny_out"].asUInt();
-        Nz_out = js["Nz_out"].asUInt();
+        cx = js.get("cx", 1).asUInt();
+        cy = js.get("cy", 1).asUInt();
+        n_out = n, Nx_out = Nx/cx, Ny_out = Ny/cy, Nz_out = Nz;
 
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();

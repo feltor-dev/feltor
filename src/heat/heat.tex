@@ -46,7 +46,10 @@ We then use the fieldline projection to initialize the blob on other planes.
 \subsection{Diagnostics}
 Integrating Eq.~\eqref{eq:temperature} over the volume yields
 \begin{align}
- \frac{\partial}{\partial t} \int T \dV = \nu_\parallel \int \dA\cdot \bhat \nabla_\parallel T
+ \frac{\partial}{\partial t} \int T \dV &=
+    \int \dV ( \nu_\perp \Delta_\perp + \nu_\parallel \Delta_\parallel T) \\
+ \frac{\partial}{\partial t} \int T^2/2 \dV &=
+    \int \dV ( \nu_\perp T\Delta_\perp T + \nu_\parallel T\Delta_\parallel T)
 \label{}
 \end{align}
 \section{Numerical methods}
@@ -97,10 +100,10 @@ Input file format: json
   Ny     & integer &40& - &\# grid points in y \\
   Nz     & integer &60& - &\# grid points in z \\
   dt     & integer &0.001& - &initial time step\\
-  n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
-  Nx\_out & integer &20& - &\# grid points in x in output fields \\
-  Ny\_out & integer &40& - &\# grid points in y in output fields \\
-  Nz\_out & integer &60& - &\# grid points in z in output fields \\
+  cx & integer & 2 & 1 & output contains n*Nx/cx points in x,
+    has to divde Nx evenly\\
+  cy & integer & 2 & 1 & output contains n*Ny/cy points in y,
+    has to divde Ny evenly\\
   itstp  & integer &2  & - &   steps between outputs \\
   maxout & integer &100& - &      \# outputs excluding first \\
   eps\_time  & float &1e-10   & - & accuracy of implicit solver in time-stepper \\
@@ -166,6 +169,7 @@ y                & Dataset & 1 & y-coordinate \\
 z                & Dataset & 1 & z-coordinate \\
 T                & Dataset & 4 (time, z, y, x) & temperature $T$ \\
 energy           & Dataset & 1 (energy\_time) & total energy integral  \\
+entropy          & Dataset & 1 (energy\_time) & total entropy integral  \\
 mass             & Dataset & 1 (energy\_time) & mass integral   \\
 dEdt             & Dataset & 1 (energy\_time) & change of energy per time  \\
 dissipation      & Dataset & 1 (energy\_time) & diffusion integrals  \\
