@@ -176,11 +176,11 @@ struct Adaptive
     }
     /*!@brief Guess an initial stepsize
      *
-     * If you have wondered what stepsize you should choose in the u0ning,
+     * If you have wondered what stepsize you should choose in the beginning,
      * don't freak out about it. Really, the initial stepsize is not that
      * important, the stepper does not even have to succeed. Usually the
      * control function will very(!) quickly adapt the stepsize in just one or
-     * two steps (even if it's several orders of magnitude off in the u0ning).
+     * two steps (even if it's several orders of magnitude off in the beginning).
      *
      * Currently, this function won't do much better than if you just choose a
      * smallish number yourself, but it's there for future improvements.
