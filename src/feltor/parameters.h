@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <array>
 #include <string>
 #include "dg/enums.h"
 #include "json/json.h"
@@ -21,30 +22,25 @@ struct Parameters
     double rtol;
     double eps_hat;
     unsigned stages;
-    unsigned mx;
-    unsigned my;
+    unsigned mx, my;
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
 
-    double nu_perp;
-    double nu_parallel;
+    double nu_perp, nu_parallel;
     double c;
 
     double amp;
     double sigma;
-    double posX;
-    double posY;
+    double posX, posY;
     double sigma_z;
     double k_psi;
 
     double omega_source;
     double nprofileamp;
     double bgprofamp;
-    double boxscaleRp;
-    double boxscaleRm;
-    double boxscaleZp;
-    double boxscaleZm;
+    double boxscaleRm, boxscaleRp;
+    double boxscaleZm, boxscaleZp;
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initni, initphi, curvmode;
@@ -54,14 +50,14 @@ struct Parameters
         Ny      = js["Ny"].asUInt();
         Nz      = js["Nz"].asUInt();
         dt      = js["dt"].asDouble();
-        cx      = js.get("compressionX",1).asUInt();
-        cy      = js.get("compressionY",1).asUInt();
+        cx      = js.get("cx",1).asUInt();
+        cy      = js.get("cy",1).asUInt();
         n_out = n, Nx_out = Nx/cx, Ny_out = Ny/cy, Nz_out = Nz;
         itstp   = js["itstp"].asUInt();
         maxout  = js["maxout"].asUInt();
 
         eps_pol     = js["eps_pol"].asDouble();
-        jfactor     = js["jumpfactor"].asDouble();
+        jfactor     = js.get("jumpfactor",1).asDouble();
         eps_gamma   = js["eps_gamma"].asDouble();
         eps_time    = js["eps_time"].asDouble();
         rtol        = js["rtol"].asDouble();
@@ -84,6 +80,9 @@ struct Parameters
         posY        = js["posY"].asDouble();
         sigma_z     = js["sigma_z"].asDouble();
         k_psi       = js["k_psi"].asDouble();
+
+        nprofileamp  = js["nprofileamp"].asDouble();
+        bgprofamp    = js["bgprofamp"].asDouble();
         omega_source = js["source"].asDouble();
 
         bcxN = dg::str2bc(js["bc"]["density"][0].asString());
@@ -92,8 +91,6 @@ struct Parameters
         bcyU = dg::str2bc(js["bc"]["velocity"][1].asString());
         bcxP = dg::str2bc(js["bc"]["potential"][0].asString());
         bcyP = dg::str2bc(js["bc"]["potential"][1].asString());
-        nprofileamp = js["nprofileamp"].asDouble();
-        bgprofamp   = js["bgprofamp"].asDouble();
 
         boxscaleRp  = js.get("boxscaleRp",1.05).asDouble();
         boxscaleRm  = js.get("boxscaleRm",1.05).asDouble();

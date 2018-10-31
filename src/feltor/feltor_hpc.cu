@@ -45,9 +45,11 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p, gp); //initialize before im!
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+        feltor( grid, p, gp); //initialize before im!
     std::cout << "Constructing Implicit...\n";
-    feltor::Implicit< dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, gp);
+    feltor::Implicit< dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec >
+        im( grid, p, gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -59,22 +61,22 @@ int main( int argc, char* argv[])
     {
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
         if( p.initni == "blob")
-            helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+            helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
                 (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
         if( p.initni == "straight blob")
-            helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+            helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
                 (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
     }
     else if( p.initni == "turbulence")
     {
         dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
-        helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+        helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
             (unsigned)p.Nz/2, 1);
     }
     else if( p.initni == "zonal")
     {
         dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
-        helper = ex.ds().fieldaligned().evaluate( init0, gaussianZ,
+        helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
             (unsigned)p.Nz/2, 1);
     }
     else
@@ -89,14 +91,13 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(damping,y0[0][1], y0[0][1]);
     }
     std::cout << "intiialize ne" << std::endl;
-    if( p.initphi == "zero")  ex.initializene( y0[0][1], y0[0][0]);
+    if( p.initphi == "zero")  feltor.initializene( y0[0][1], y0[0][0]);
     else if( p.initphi == "balance") dg::blas1::copy( y0[0][1], y0[0][0]); //set n_e = N_i
     else
         std::cerr <<"WARNING: Unknown initial condition for phi!\n";
-    std::cout << "Done!\n";
 
     dg::blas1::copy( 0., y0[1][0]); //set Ue = 0
-    dg::blas1::copy( 0., y0[1][0]); //set Ui = 0
+    dg::blas1::copy( 0., y0[1][1]); //set Ui = 0
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -146,9 +147,8 @@ int main( int argc, char* argv[])
         v4d[names4d[  i]] = &(y0[0][i]);
         v4d[names4d[2+i]] = &(y0[1][i]);
     }
-    v4d["potential"] = &ex.potential()[0];
-    const feltor::Quantities& q = ex.quantities();
-    double energy0 = q.energy, mass0 = q.mass, E0 = energy0;
+    v4d["potential"] = &feltor.potential()[0];
+    const feltor::Quantities& q = feltor.quantities();
     double dEdt = 0, accuracy = 0;
     std::map<std::string, const double*> v0d{
         {"energy", &q.energy}, {"ediff", &q.ediff},
@@ -159,7 +159,14 @@ int main( int argc, char* argv[])
         {"aligned", &q.aligned}
     };
     ///////////////////////////////////first output/////////////////////////
+    double time = 0, dt_new = p.dt, dt = 0;
     std::cout << "First output ... \n";
+    //first, update quantities in feltor
+    {
+        std::array<std::array<dg::DVec,2>,2> y1(y0);
+        feltor( time, y0, y1);
+    }
+    double energy0 = q.energy, mass0 = q.mass, E0 = energy0;
     size_t start[4] = {0, 0, 0, 0};
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(),
         grid_out.n()*grid_out.Nx()};
@@ -172,7 +179,6 @@ int main( int argc, char* argv[])
         dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
     }
-    double time = 0, dt = p.dt;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
     size_t Estart[] = {0};
@@ -194,9 +200,16 @@ int main( int argc, char* argv[])
         ti.tic();
         for( unsigned j=0; j<p.itstp; j++)
         {
-            double dt_current = dt;
-            try{ adaptive.step( ex, im, time, y0, time, y0, dt,
-                    dg::pid_control, dg::l2norm, p.rtol, 1e-10);}
+            try{
+                do
+                {
+                    dt = dt_new;
+                    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
+                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                    if( adaptive.failed())
+                        std::cout << "FAILED STEP! REPEAT!\n";
+                }while ( adaptive.failed());
+            }
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -205,7 +218,7 @@ int main( int argc, char* argv[])
             }
             step++;
 
-            dEdt = (*v0d["energy"] - E0)/dt_current;
+            dEdt = (*v0d["energy"] - E0)/dt;
             E0 = *v0d["energy"];
             accuracy = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
             err = nc_open(argv[3], NC_WRITE, &ncid);
@@ -214,6 +227,7 @@ int main( int argc, char* argv[])
             for( auto name : names0d)
                 err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
 
+            q.display(std::cout);
             std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (*v0d["energy"]-energy0)/energy0<<"\t";
             std::cout <<" d E/dt = " << dEdt <<" Lambda = "

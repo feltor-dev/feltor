@@ -590,16 +590,16 @@ Nx     & integer &52& - &\# grid points in R \\
 Ny     & integer &52& - &\# grid points in Z \\
 Nz     & integer &16& - &\# grid points in $\varphi$ \\
 dt     & integer &1e-2& - &initial time step in units of $c_s/\rho_s$ \\
-compressionX & integer & 2 & 1 & output contains n*Nx/compressionX points in x,
+cx & integer & 2 & 1 & output contains n*Nx/cx points in x,
     has to divde Nx evenly\\
-compressionY & integer & 2 & 1 & output contains n*Ny/compressionY points in y,
+cy & integer & 2 & 1 & output contains n*Ny/cy points in y,
     has to divde Ny evenly\\
-itstp  & integer & 2  & - & steps between outputs \\
-maxout & integer & 10 & - & \# outputs excluding first \\
-eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
-jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
-eps\_gamma & float &1e-6    & - & accuracy of $\Gamma_1$  \\
-eps\_time  & float &1e-9   & - & accuracy of solver for implicit part in time-stepper \\
+itstp       & integer & 2  & - & steps between outputs \\
+maxout      & integer & 10 & - & \# outputs excluding first \\
+eps\_pol    & float & 1e-5  & - &  accuracy of polarisation solver \\
+jumpfactor  & float & 1 & 1 &   jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
+eps\_gamma  & float & 1e-6  & - & accuracy of $\Gamma_1$  \\
+eps\_time   & float & 1e-9  & - & accuracy of solver for implicit part in time-stepper \\
 rtol  & float &1e-6   & - &tolerance of adaptive time-stepper \\
 stages      & integer & 3 & 3 & \# stages in multigrid  \\
 mx     & integer & 10 & 10 & refinement factor in DS in X-direction\\
@@ -618,9 +618,9 @@ k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
 bc & dict & & & Dictionary of boundary conditions \ldots\\
-\qquad density  & char[2] & {DIR,DIR} &  & boundary conditions in x and y for $n_e$ and $N_i$\\
-\qquad velocity  & char[2] & {DIR,DIR} &  & boundary conditions in x and y for $u_e$ and $U_i$\\
-\qquad potential  & char[2] & {DIR,DIR} &  & boundary conditions in x and y for $\phi$ and $\psi$\\
+\qquad density  & char[2] & {DIR,DIR} & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
+\qquad velocity  & char[2] & {DIR,DIR} & - & boundary conditions in x and y for $u_e$ and $U_i$\\
+\qquad potential  & char[2] & {DIR,DIR} & - & boundary conditions in x and y for $\phi$ and $\psi$\\
 source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:electron_source} \\
 boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
 boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\

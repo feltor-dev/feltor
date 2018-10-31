@@ -8,9 +8,11 @@ namespace feltor
 {
 
 namespace routines{
-//Resistivity (consistent density dependency, parallel momentum conserving, quadratic current energy conservation dependency)
+//Resistivity (consistent density dependency,
+//parallel momentum conserving, quadratic current energy conservation dependency)
 struct AddResistivity{
-    AddResistivity( double C, std::array<double,2> mu): m_C(C), m_mu(mu){
+    AddResistivity( double C, std::array<double,2> mu): m_C(C){
+        m_mu[0] = mu[0], m_mu[1] = mu[1];
     }
     DG_DEVICE
     void operator()( double tilde_ne, double tilde_ni, double ue,
@@ -21,7 +23,7 @@ struct AddResistivity{
     }
     private:
     double m_C;
-    std::array<double,2> m_mu;
+    double m_mu[2];
 };
 struct ComputePerpDrifts{
     ComputePerpDrifts( double mu, double tau):m_mu(mu), m_tau(tau){}
@@ -178,6 +180,19 @@ struct Quantities
     //resisitive and diffusive terms
     double Dres = 0, Dpar[4] = {0,0,0,0}, Dperp[4] = {0,0,0,0};
     double aligned = 0; //alignment parameter
+    void display( std::ostream& os = std::cout ) const
+    {
+        os << "Quantities: \n"
+           << "    Mass: "<<std::setw(11)<< mass  <<" Mass diffusion   "<<diff<<"\n"
+           << "  Energy: "<<std::setw(11)<<energy <<" Energy diffusion "<<ediff<<"\n"
+           << "       S: ["<<S[0]<<", "<<S[1]<<"]\n"
+           << "   Tperp: "<<Tperp<<"\n"
+           << "    Tpar: ["<<Tpar[0]<<", "<<Tpar[1]<<"]\n"
+           << "    Dres: "<<Dres<<"\n"
+           << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"\n"
+           << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"\n"
+           << " aligned: "<<aligned;
+    }
 };
 
 template< class Geometry, class IMatrix, class Matrix, class container >
@@ -226,7 +241,7 @@ struct Explicit
         dg::geo::solovev::Parameters);
 
     container m_UE2;
-    container m_temp0, m_temp1;//helper variables
+    container m_temp0, m_temp1, m_temp2;//helper variables
 
     //these should be considered const
     std::array<container,3> m_curv, m_curvKappa, m_b;
@@ -310,12 +325,20 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
     auto bhat = dg::geo::createBHat(dg::geo::createSolovevField(gp));
     if( p.curvmode == "toroidal")
         bhat = dg::geo::createEPhi();
-    m_ds_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-        dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz ),
     m_ds_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-        dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz),
-    m_ds_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-        dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz),
+        dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+    if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
+        m_ds_U.construct( m_ds_N);
+    else
+        m_ds_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
+            dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+    if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
+        m_ds_P.construct( m_ds_N);
+    else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
+        m_ds_P.construct( m_ds_U);
+    else
+        m_ds_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
+            dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
 
     //else we take EPhi except for the true curvmode
     bhat = dg::geo::createEPhi();
@@ -383,7 +406,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
 {
     ////////////////////////////init temporaries///////////////////
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_UE2 = m_temp1 = m_temp0;
+    m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_npe = m_logn = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
@@ -581,29 +604,29 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     double z[2] = {-1.0,1.0};
     for( unsigned i=0; i<2;i++)
     {
-        //Compute parallel dissipation for N
-        //Z*(tau (1+lnN )+psi + 0.5 mu U^2) * nu_parallel *(Delta_s N)
-        dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i],
-                m_p.tau[i]),
-                m_temp0, m_logn[i], m_phi[i], y[1][i]);
+        //Compute dissipation for N
+        // Z*(tau (1+lnN )+psi + 0.5 mu U^2)
+        dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i], m_p.tau[i]),
+                m_temp2, m_logn[i], m_phi[i], y[1][i]);
+        // perp dissipation for N: -nu_perp Delta_p**2 N
+        dg::blas2::gemv( m_lapperpN, y[0][i], m_temp1);
+        dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
+        m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
+            m_temp2, m_vol3d, m_temp0);
+        // parallel dissipation for N: nu_parallel *(Delta_s N)
         m_q.Dpar[i] = z[i]*m_p.nu_parallel*dg::blas2::dot(
-                        m_temp0, m_vol3d, m_dsN[i]);
+                        m_temp2, m_vol3d, m_dsN[i]);
         //Compute parallel dissipation for U
         //Z*mu*N*U nu_parallel *( Delta_s U)
-        dg::blas1::pointwiseDot( m_npe[i], y[1][i], m_temp0); // N U
-        m_q.Dpar[i+2] = z[i]*m_p.mu[i]*m_p.nu_parallel*dg::blas2::dot(
-                        m_temp0, m_vol3d, m_dsU[i]);
-
-        //Compute perp dissipation for N
-        dg::blas2::gemv( m_lapperpN, y[0][i], m_temp1);
-        dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);//Delta^2 N
-        m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
-            m_temp0, m_vol3d, m_temp0);
-        //Compute perp dissipation  for U
+        dg::blas1::pointwiseDot( z[i]*m_p.mu[i], m_npe[i], y[1][i], 0, m_temp2);
+        // perp dissipation for U: -nu_perp Delta_p**2 U
         dg::blas2::gemv( m_lapperpU, y[1][i], m_temp1);
-        dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);//Delta^2 U
-        m_q.Dperp[i+2] = -z[i]*m_p.mu[i]*m_p.nu_perp
-            *dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
+        dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
+        m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
+            m_temp2, m_vol3d, m_temp0);
+        // parallel dissipation for U: nu_parallel *(Delta_s U)
+        m_q.Dpar[i+2] = m_p.nu_parallel*dg::blas2::dot(
+            m_temp2, m_vol3d, m_dsU[i]);
     }
     // resistive energy (quadratic current): -C (n_e (U_i-u_e))**2
     dg::blas1::pointwiseDot(1., m_npe[0], y[1][1], -1., m_npe[0], y[1][0],
@@ -650,13 +673,16 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     compute_dissipation( t, y);
 
     //Add particle source to dtNe
-    dg::blas1::subroutine( routines::ComputeSource(),
-        m_temp1, y[0][0], m_profne, m_source, m_p.omega_source);
-    dg::blas1::axpby( 1., m_temp1, 1.0, yp[0][0]);
-    //add FLR correction to dtNi
-    dg::blas1::axpby( 1., m_temp1, 1.0, yp[1][1]);
-    dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1],
-        m_lapperpN, m_temp1, 1.0, yp[1][1]);
+    if( m_p.omega_source != 0)
+    {
+        dg::blas1::subroutine( routines::ComputeSource(),
+            m_temp1, y[0][0], m_profne, m_source, m_p.omega_source);
+        dg::blas1::axpby( 1., m_temp1, 1.0, yp[0][0]);
+        //add FLR correction to dtNi
+        dg::blas1::axpby( 1., m_temp1, 1.0, yp[1][1]);
+        dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1],
+            m_lapperpN, m_temp1, 1.0, yp[1][1]);
+    }
     timer.toc();
     #ifdef MPI_VERSION
         int rank;
