@@ -81,13 +81,14 @@ int main( int argc, char* argv[])
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
-    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background ion profile
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
     dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation
     dg::blas1::plus(y0[0][1], -1); //initialize ni-1
     if( p.initni == "turbulence" || p.initni == "zonal") //Cut initialization outside separatrix
     {
-        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
+        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(
+            dg::geo::solovev::Psip(gp), gp), grid);
         dg::blas1::pointwiseDot(damping,y0[0][1], y0[0][1]);
     }
     std::cout << "intiialize ne" << std::endl;
@@ -149,7 +150,7 @@ int main( int argc, char* argv[])
     }
     v4d["potential"] = &feltor.potential()[0];
     const feltor::Quantities& q = feltor.quantities();
-    double dEdt = 0, accuracy = 0;
+    double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
     std::map<std::string, const double*> v0d{
         {"energy", &q.energy}, {"ediff", &q.ediff},
         {"mass", &q.mass}, {"diff", &q.diff},
@@ -166,7 +167,7 @@ int main( int argc, char* argv[])
         std::array<std::array<dg::DVec,2>,2> y1(y0);
         feltor( time, y0, y1);
     }
-    double energy0 = q.energy, mass0 = q.mass, E0 = energy0;
+    double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
     size_t start[4] = {0, 0, 0, 0};
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(),
         grid_out.n()*grid_out.Nx()};
@@ -193,6 +194,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     t.tic();
     unsigned step = 0;
+    q.display(std::cout);
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
@@ -218,9 +220,10 @@ int main( int argc, char* argv[])
             }
             step++;
 
-            dEdt = (*v0d["energy"] - E0)/dt;
-            E0 = *v0d["energy"];
-            accuracy = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
+            dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
+            E0 = *v0d["energy"], M0 = *v0d["mass"];
+            accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
+            accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
             err = nc_open(argv[3], NC_WRITE, &ncid);
             Estart[0] = step;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
@@ -230,9 +233,12 @@ int main( int argc, char* argv[])
             q.display(std::cout);
             std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (*v0d["energy"]-energy0)/energy0<<"\t";
-            std::cout <<" d E/dt = " << dEdt <<" Lambda = "
-                      << *v0d["ediff"] <<" -> Accuracy: "
-                      << accuracy << "\n";
+            std::cout <<" d E/dt = " << dEdt
+                      <<" Lambda = " << *v0d["ediff"]
+                      <<" -> Accuracy: " << accuracy << "\n";
+            std::cout <<" d M/dt = " << dMdt
+                      <<" Lambda = " << *v0d["diff"]
+                      <<" -> Accuracy: " << accuracyM << "\n";
             err = nc_close(ncid);
 
         }

@@ -189,8 +189,8 @@ struct Quantities
            << "   Tperp: "<<Tperp<<"\n"
            << "    Tpar: ["<<Tpar[0]<<", "<<Tpar[1]<<"]\n"
            << "    Dres: "<<Dres<<"\n"
-           << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"\n"
-           << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"\n"
+           << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"]\n"
+           << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"]\n"
            << " aligned: "<<aligned;
     }
 };
@@ -599,7 +599,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     //alignement: (1+lnN)*Delta_s N
     dg::blas1::transform( m_logn[0],m_temp1, dg::PLUS<>(+1));
     m_q.aligned = dg::blas2::dot( m_temp1, m_vol3d, m_dsN[0]);
-    /////////////////ENERGY DISSIPATION TERMS//////////////////////////////
+    /////////////////DISSIPATION TERMS//////////////////////////////
+    m_q.diff = m_p.nu_parallel*dg::blas1::dot( m_vol3d, m_dsN[0]);
     // energy dissipation through diffusion
     double z[2] = {-1.0,1.0};
     for( unsigned i=0; i<2;i++)
@@ -613,6 +614,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
         m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
             m_temp2, m_vol3d, m_temp0);
+        if( i==0)
+            m_q.diff += -m_p.nu_perp*dg::blas1::dot( m_vol3d, m_temp0);
         // parallel dissipation for N: nu_parallel *(Delta_s N)
         m_q.Dpar[i] = z[i]*m_p.nu_parallel*dg::blas2::dot(
                         m_temp2, m_vol3d, m_dsN[i]);

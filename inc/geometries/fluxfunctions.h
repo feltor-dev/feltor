@@ -6,13 +6,16 @@ namespace dg
 {
 namespace geo
 {
-//
-//In the next round of updates (C++11) we should consider using std::function maybe?
 
 /**
-* @brief This functor represents functions written in cylindrical coordinates
-        that are independent of the angle phi
+* @brief Represent functions written in cylindrical coordinates
+        that are independent of the angle phi serving as both 2d and 3d functions
+
+* The rational is that these functors can serve as both 2d and 3d functors
+* where the 3d functor trivially redirects to the 2d version.
+* This behaviour is injected into all classes that derive from this class
 * @ingroup fluxfunctions
+* @sa \c aCloneableBinaryFunctor
 */
 struct aBinaryFunctor
 {
@@ -67,6 +70,7 @@ struct aBinaryFunctor
 * @brief Intermediate implementation helper class for the clone pattern with CRTP
 
     https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
+  The intention is to inject the clone function into all classes that derive from it
 * @ingroup fluxfunctions
 */
 template<class Derived>
