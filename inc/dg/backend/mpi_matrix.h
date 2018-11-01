@@ -235,7 +235,7 @@ struct MPIDistMat
     */
     template< class OtherMatrix, class OtherCollective>
     MPIDistMat( const MPIDistMat<OtherMatrix, OtherCollective>& src):
-        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c.get().allocate_buffer()), m_dist(src.get_dist()) { }
+        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c->allocate_buffer()), m_dist(src.get_dist()) { }
     /**
     * @brief Access to the local matrix
     *
@@ -247,7 +247,7 @@ struct MPIDistMat
     *
     * @return Reference to the collective object
     */
-    const Collective& collective() const{return m_c.get();}
+    const Collective& collective() const{return *m_c;}
 
     enum dist_type get_dist() const {return m_dist;}
     void set_dist(enum dist_type dist){m_dist=dist;}
@@ -256,7 +256,7 @@ struct MPIDistMat
     void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( m_c.buffer_size() == 0) //no communication needed
+        if( m_c->buffer_size() == 0) //no communication needed
         {
             dg::blas2::symv( alpha, m_m, x.data(), beta, y.data());
             return;
@@ -265,25 +265,25 @@ struct MPIDistMat
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
+        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         using value_type = get_value_type<typename Collective::container_type>;
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-            m_c.global_gather( x_ptr, m_buffer.data());
+            m_c->global_gather( x_ptr, m_buffer.data());
             dg::blas2::symv( alpha, m_m, m_buffer.data(), beta, y.data());
         }
         if( m_dist == col_dist){
             dg::blas2::symv( alpha, m_m, x.data(), beta, m_buffer.data());
             value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-            m_c.get().global_scatter_reduce( m_buffer.data(), y_ptr);
+            m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
         }
     }
     template<class ContainerType1, class ContainerType2>
     void symv( const ContainerType1& x, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( m_c.get().buffer_size() == 0) //no communication needed
+        if( m_c->buffer_size() == 0) //no communication needed
         {
             dg::blas2::symv( m_m, x.data(), y.data());
             return;
@@ -292,18 +292,18 @@ struct MPIDistMat
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
+        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         using value_type = get_value_type<typename Collective::container_type>;
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-            m_c.get().global_gather( x_ptr, m_buffer.data());
+            m_c->global_gather( x_ptr, m_buffer.data());
             dg::blas2::symv( m_m, m_buffer.data(), y.data());
         }
         if( m_dist == col_dist){
             dg::blas2::symv( m_m, x.data(), m_buffer.data());
             value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-            m_c.get().global_scatter_reduce( m_buffer.data(), y_ptr);
+            m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
         }
     }
 

@@ -81,17 +81,17 @@ struct DSField
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double R = y[0], Z = y[1];
-        g_.get().shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
-        if( !g_.get().contains( R, Z))
+        g_->shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
+        if( !g_->contains( R, Z))
         {
             yp[0] = yp[1] = 0; //Let's hope this never happens?
         }
         else
         {
             //else interpolate
-            yp[0] = interpolate( R, Z, dzetadphi_, g_.get());
-            yp[1] = interpolate( R, Z, detadphi_,  g_.get());
-            yp[2] = interpolate( R, Z, dsdphi_,    g_.get());
+            yp[0] = interpolate( R, Z, dzetadphi_, *g_);
+            yp[1] = interpolate( R, Z, detadphi_,  *g_);
+            yp[2] = interpolate( R, Z, dsdphi_,    *g_);
         }
     }
     private:
@@ -284,7 +284,7 @@ struct Fieldaligned
      */
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_f, m_g.get());
+        dg::split( global, m_f, *m_g);
         dg::blas1::axpby( scal_left,  m_f[0],      0, m_left);
         dg::blas1::axpby( scal_right, m_f[m_Nz-1], 0, m_right);
         m_bcz = bcz;
@@ -354,7 +354,7 @@ struct Fieldaligned
         return m_h0_inv;
     }
     ///Grid used for construction
-    const ProductGeometry& grid()const{return m_g.get();}
+    const ProductGeometry& grid()const{return *m_g;}
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -395,9 +395,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    m_perp_size = grid_coarse.get().size();
-    dg::assign( dg::pullback(limit, grid_coarse.get()), m_limiter);
-    dg::assign( dg::evaluate(zero, grid_coarse.get()), m_left);
+    m_perp_size = grid_coarse->size();
+    dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
+    dg::assign( dg::evaluate(zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
@@ -406,16 +406,16 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 #endif //DG_BENCHMARK
     std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
-    dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
+    grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
+    dg::Grid2d grid_fine( *grid_coarse );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
     t.toc();
     std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
     t.tic();
 #endif //DG_BENCHMARK
-    detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse, yp_coarse, ym_coarse, deltaPhi, eps);
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, *grid_coarse);  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;
     for( int i=0; i<2; i++) //only R and Z get interpolated
@@ -429,9 +429,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     t.tic();
 #endif //DG_BENCHMARK
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), bcx, bcy), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), bcx, bcy), minus, minusT;
-    dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid_coarse, bcx, bcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid_coarse, bcx, bcy), minus, minusT;
+    dg::IHMatrix projection = dg::create::projection( *grid_coarse, grid_fine);
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
 #ifdef DG_BENCHMARK
@@ -467,13 +467,13 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
-    assert( p0 < m_g.get().Nz());
-    const dg::ClonePtr<aGeometry2d> g2d = m_g.get().perp_grid();
-    container init2d = dg::pullback( binary, g2d.get());
-    container zero2d = dg::evaluate( dg::zero, g2d.get());
+    assert( p0 < m_g->Nz());
+    const dg::ClonePtr<aGeometry2d> g2d = m_g->perp_grid();
+    container init2d = dg::pullback( binary, *g2d);
+    container zero2d = dg::evaluate( dg::zero, *g2d);
 
     container temp(init2d), tempP(init2d), tempM(init2d);
-    container vec3d = dg::evaluate( dg::zero, m_g.get());
+    container vec3d = dg::evaluate( dg::zero, *m_g);
     std::vector<container>  plus2d(m_Nz, zero2d), minus2d(plus2d), result(plus2d);
     unsigned turns = rounds;
     if( turns ==0) turns++;
@@ -491,8 +491,8 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
                 dg::blas2::symv( m_minus, tempM, temp);
                 temp.swap( tempM);
             }
-            dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_g->hz() ) );
             dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
             dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
         }
@@ -538,8 +538,8 @@ void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const co
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const container& f, container& fpe)
 {
-    dg::split( f, m_f, m_g.get());
-    dg::split( fpe, m_temp, m_g.get());
+    dg::split( f, m_f, *m_g);
+    dg::split( fpe, m_temp, *m_g);
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -567,8 +567,8 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const container& f, container& fme)
 {
-    dg::split( f, m_f, m_g.get());
-    dg::split( fme, m_temp, m_g.get());
+    dg::split( f, m_f, *m_g);
+    dg::split( fme, m_temp, *m_g);
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {

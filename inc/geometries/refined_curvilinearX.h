@@ -44,7 +44,7 @@ struct RealCurvilinearRefinedProductGridX3d : public dg::aRealGeometryX3d<real_t
         constructParallel(Nz);
     }
 
-    const aRealGeneratorX2d<real_type> & generator() const{return handle_.get();}
+    const aRealGeneratorX2d<real_type> & generator() const{return *handle_;}
     virtual RealCurvilinearRefinedProductGridX3d* clone()const override final{return new RealCurvilinearRefinedProductGridX3d(*this);}
     private:
     //construct phi and lift rest to 3d
@@ -73,7 +73,7 @@ struct RealCurvilinearRefinedProductGridX3d : public dg::aRealGeometryX3d<real_t
     {
         std::vector<thrust::host_vector<real_type> > w(2),abs(2);
         GridX2d g( this->x0(),this->x1(),this->y0(),this->y1(),fx,fy,n,Nx,Ny,this->bcx(),this->bcy());
-        ref_.get().generate(g,w[0],w[1],abs[0],abs[1]);
+        ref_->generate(g,w[0],w[1],abs[0],abs[1]);
         thrust::host_vector<real_type> x_vec(this->n()*this->Nx()), y_vec(this->n()*this->Ny());
         for( unsigned i=0; i<x_vec.size(); i++)
         {
@@ -87,7 +87,7 @@ struct RealCurvilinearRefinedProductGridX3d : public dg::aRealGeometryX3d<real_t
         }
         jac_ = SparseTensor< thrust::host_vector<real_type>>( x_vec);//unit tensor
         jac_.values().resize( 6);
-        handle_.get().generate( x_vec, y_vec, this->n()*this->outer_Ny(), this->n()*(this->inner_Ny()+this->outer_Ny()), map_[0], map_[1], jac_.values()[0], jac_.values()[1], jac_.values()[2], jac_.values()[3]);
+        handle_->generate( x_vec, y_vec, this->n()*this->outer_Ny(), this->n()*(this->inner_Ny()+this->outer_Ny()), map_[0], map_[1], jac_.values()[0], jac_.values()[1], jac_.values()[2], jac_.values()[3]);
         //multiply by weights
         dg::blas1::pointwiseDot( jac_.values()[0], w[0], jac_.values()[0]);
         dg::blas1::pointwiseDot( jac_.values()[1], w[0], jac_.values()[1]);
@@ -100,7 +100,7 @@ struct RealCurvilinearRefinedProductGridX3d : public dg::aRealGeometryX3d<real_t
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const override final
     {
-        return detail::square( jac_, map_[0], handle_.get().isOrthogonal());
+        return detail::square( jac_, map_[0], handle_->isOrthogonal());
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
     std::vector<thrust::host_vector<real_type> > map_;
@@ -135,12 +135,12 @@ struct RealCurvilinearRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
         construct( fx,fy,n,Nx,Ny);
     }
 
-    const aRealGeneratorX2d<real_type>& generator() const{return handle_.get();}
+    const aRealGeneratorX2d<real_type>& generator() const{return *handle_;}
     virtual RealCurvilinearRefinedGridX2d* clone()const override final{return new RealCurvilinearRefinedGridX2d(*this);}
     private:
     void construct(real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny)
     {
-        RealCurvilinearRefinedProductGridX3d<real_type> g( ref_.get(), handle_.get(),fx,fy,n,Nx,Ny,1,this->bcx(), this->bcy());
+        RealCurvilinearRefinedProductGridX3d<real_type> g( *ref_, *handle_,fx,fy,n,Nx,Ny,1,this->bcx(), this->bcy());
         map_=g.map();
         jac_=g.jacobian();
         metric_=g.metric();

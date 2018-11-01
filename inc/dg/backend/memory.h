@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 namespace dg
 {
 
@@ -7,102 +9,106 @@ namespace dg
 /*!@brief a manager class that invokes the \c clone() method on the managed ptr when copied
 *
 *When copied invokes a deep copy using the \c clone() method.
-* This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable.
-@tparam cloneable a type that may be uncopyable/unassignable but provides the \c clone() method with signature
- -  \c cloneable* \c clone() \c const;
+* This class is most useful when a class needs to hold a polymorphic, Cloneable oject as a variable.
+@tparam Cloneable a type that may be uncopyable/unassignable but provides the \c clone() method with signature
+ -  \c Cloneable* \c clone() \c const;
 @ingroup lowlevel
 */
-template<class cloneable>
+template<class Cloneable>
 struct ClonePtr
 {
     ///init an empty ClonePtr
-    ClonePtr():ptr_(nullptr){}
+    ClonePtr( std::nullptr_t value = nullptr):m_ptr(nullptr){}
     /**
     * @brief take ownership of the pointer
     * @param ptr a pointer to object to manage
     */
-    ClonePtr( cloneable* ptr): ptr_(ptr){}
+    ClonePtr( Cloneable* ptr): m_ptr(ptr){}
 
     /**
     * @brief clone the given value and manage
     * @param src an object to clone
     */
-    ClonePtr( const cloneable& src): ptr_(src.clone()){}
+    ClonePtr( const Cloneable& src): m_ptr(src.clone()){}
 
+    /**
+    * @brief deep copy the given handle using the \c clone() method of \c Cloneable
+    * @param src an oject to copy, clones the contained object if not empty
+    */
+    ClonePtr( const ClonePtr& src):m_ptr(nullptr)
+    {
+        if( src )
+            m_ptr.reset( src.m_ptr->clone()); //deep copy
+    }
+    /**
+    * @brief deep copy the given handle using the \c clone() method of \c Cloneable
+    * @param src an oject to copy and swap
+    */
+    ClonePtr& operator=( const ClonePtr& src)
+    {
+        //copy and swap, also implements move assignment
+        ClonePtr tmp(src);
+        swap( *this, tmp );
+        return *this;
+    }
     /**
      * @brief Steal resources (move construct)
      * @param src an object to steal pointer from
      */
-    ClonePtr( ClonePtr&& src) : ptr_( src.ptr_) //steal resource
+    ClonePtr( ClonePtr&& src) noexcept : m_ptr( nullptr)
     {
-        src.ptr_ = nullptr; //repair
+        swap( *this, src); //steal resource
     }
-    /**
-    * @brief deep copy the given handle using the \c clone() method of \c cloneable
-    * @param src an oject to copy, clones the contained object if not empty
-    */
-    ClonePtr( const ClonePtr& src):ptr_(nullptr) {
-        if(src.ptr_!=nullptr) ptr_ = src.ptr_->clone(); //deep copy
-    }
-    /**
-    * @brief deep copy the given handle using the \c clone() method of \c cloneable
-    * @param src an oject to copy and swap
-    */
-    ClonePtr& operator=( ClonePtr src) { //copy and swap, also implements move assignment
+    ClonePtr& operator=( ClonePtr&& src) noexcept
+    {
         swap( *this, src );
         return *this;
     }
-    ///delete managed pointer if not nullptr
-    ~ClonePtr(){ clear();}
     /**
     * @brief swap the managed pointers
     * @param first first instance
     * @param second second instance
     */
-    friend void swap( ClonePtr& first, ClonePtr& second){ //make std::swap work (ADL)
-        using std::swap;
-        swap(first.ptr_,second.ptr_);
+    friend void swap( ClonePtr& first, ClonePtr& second)
+    {
+        std::swap(first.m_ptr,second.m_ptr);
     }
-
-    ///delete managed pointer if not nullptr
-    void clear(){
-        if(ptr_!=nullptr) delete ptr_;
-        ptr_=nullptr;
-    }
-
-    /**
-    * @brief Get a constant reference to the object on the heap
-    * @return a reference to the cloneable object
-    * @note undefined if the ClonePtr manages a nullptr pointer
-    */
-    const cloneable& get()const {return *ptr_;}
-
-
-    /**
-    * @brief Non constant access to the object on the heap
-    * @return a non-const reference to the cloneable object
-    * @note undefined if the ClonePtr manages a nullptr pointer
-    */
-    cloneable& get() {return *ptr_;}
 
     /**
     * @brief Take the ownership of the given pointer and delete the currently held one if non-empty
     * @param ptr a pointer to an object to manage
     */
-    void reset( cloneable* ptr){
-        ClonePtr tmp(ptr);
-        *this=tmp;
+    void reset( Cloneable* ptr){
+        m_ptr.reset( ptr);
     }
+    void reset( std::nullptr_t p = nullptr) noexcept { m_ptr.reset( p);}
+    Cloneable* release() noexcept { m_ptr.release();}
     /**
     * @brief Clone the given object and replace the currently held one
-    * @param src a cloneable object
+    * @param src a Cloneable object
     */
-    void reset( const cloneable& src){
+    void reset( const Cloneable& src){
         ClonePtr tmp(src);
         *this=tmp;
     }
+
+    /**
+    * @brief Get a constant reference to the object on the heap
+    * @return a reference to the Cloneable object
+    * @note undefined if the ClonePtr manages a nullptr pointer
+    */
+    Cloneable * const  get() {return m_ptr.get();}
+    const Cloneable* const get() const {return m_ptr.get();}
+
+    Cloneable& operator*() { return *m_ptr;}
+    const Cloneable& operator*() const { return *m_ptr;}
+    Cloneable* const operator->() { return m_ptr.operator->();}
+    const Cloneable* const operator->()const { return m_ptr.operator->();}
+    operator bool() const{ return (bool)m_ptr;}
+
+
     private:
-    cloneable* ptr_;
+    std::unique_ptr<Cloneable> m_ptr;
 };
 
 //Memory buffer class: data can be written even if the object is const

@@ -161,8 +161,8 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     multi_gamma1.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
-        multi_gamma1[u].construct( multigrid.grids()[u].get(), -0.5*p.tau, dg::centered);
+        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
+        multi_gamma1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered);
     }
 }
 

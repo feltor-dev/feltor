@@ -28,8 +28,8 @@ struct Iris : public aCloneableBinaryFunctor<Iris>
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > psipmax_) return 0.;
-        if( psip_.get()(R,Z) < psipmin_) return 0.;
+        if( (*psip_)(R,Z) > psipmax_) return 0.;
+        if( (*psip_)(R,Z) < psipmin_) return 0.;
         return 1.;
     }
     ClonePtr<aBinaryFunctor> psip_;
@@ -49,7 +49,7 @@ struct Pupil : public aCloneableBinaryFunctor<Pupil>
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > psipmaxcut_) return 0.;
+        if( (*psip_)(R,Z) > psipmaxcut_) return 0.;
         return 1.;
     }
     ClonePtr<aBinaryFunctor> psip_;
@@ -69,8 +69,8 @@ struct PsiPupil : public aCloneableBinaryFunctor<PsiPupil>
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > psipmax_) return psipmax_;
-        return  psip_.get()(R,Z);
+        if( (*psip_)(R,Z) > psipmax_) return psipmax_;
+        return  (*psip_)(R,Z);
     }
     double psipmax_;
     ClonePtr<aBinaryFunctor> psip_;
@@ -91,7 +91,7 @@ struct PsiLimiter : public aCloneableBinaryFunctor<PsiLimiter>
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > psipmaxlim_) return 1.;
+        if( (*psip_)(R,Z) > psipmaxlim_) return 1.;
         return 0.;
     }
     double psipmaxlim_;
@@ -119,9 +119,9 @@ struct GaussianDamping : public aCloneableBinaryFunctor<GaussianDamping>
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
-        if( psip_.get()(R,Z) < psipmaxcut_) return 1.;
-        return exp( -( psip_.get()(R,Z)-psipmaxcut_)*( psip_.get()(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
+        if( (*psip_)(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
+        if( (*psip_)(R,Z) < psipmaxcut_) return 1.;
+        return exp( -( (*psip_)(R,Z)-psipmaxcut_)*( (*psip_)(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
     }
     ClonePtr<aBinaryFunctor> psip_;
     double psipmaxcut_, alpha_;
@@ -146,9 +146,9 @@ struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > psipmax_ ) return 0.;
-        if( psip_.get()(R,Z) < (psipmax_-4.*alpha_)) return 1.;
-        return exp( -( psip_.get()(R,Z)-(psipmax_-4.*alpha_))*( psip_.get()(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
+        if( (*psip_)(R,Z) > psipmax_ ) return 0.;
+        if( (*psip_)(R,Z) < (psipmax_-4.*alpha_)) return 1.;
+        return exp( -( (*psip_)(R,Z)-(psipmax_-4.*alpha_))*( (*psip_)(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
     }
     ClonePtr<aBinaryFunctor> psip_;
     double psipmax_, alpha_;
@@ -174,9 +174,9 @@ struct GaussianProfXDamping : public aCloneableBinaryFunctor<GaussianProfXDampin
     private:
     double do_compute(double R, double Z)const
     {
-        if( psip_.get()(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
-        if( psip_.get()(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
-        return exp( -( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
+        if( (*psip_)(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
+        if( (*psip_)(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
+        return exp( -( (*psip_)(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( (*psip_)(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
     dg::geo::solovev::Parameters gp_;
     ClonePtr<aBinaryFunctor> psip_;
@@ -194,7 +194,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
     private:
     double do_compute(double R, double Z)const
     {
-        return 0.5*(1.+tanh(-(psip_.get()(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
+        return 0.5*(1.+tanh(-((*psip_)(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     double psipmin_, alpha_;
     ClonePtr<aBinaryFunctor> psip_;
@@ -210,8 +210,8 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
 //     private:
 //     double do_compute(double R, double Z)
 //     {
-//         if( psip_.get()(R,Z) < (gp_.psipmin)) return p_.nprofileamp+p_.bgprofamp;
-//         if( psip_.get()(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-psip_.get()(R,Z))*(p_.nprofileamp/gp_.psipmin);
+//         if( (*psip_)(R,Z) < (gp_.psipmin)) return p_.nprofileamp+p_.bgprofamp;
+//         if( (*psip_)(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-(*psip_)(R,Z))*(p_.nprofileamp/gp_.psipmin);
 //         return p_.bgprofamp;
 //     }
 //     eule::Parameters p_;
@@ -236,8 +236,8 @@ struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
     private:
     double do_compute(double R, double Z)const
     {
-        if (psip_.get()(R,Z)<gp_.psipmax) return bgamp +(psip_.get()(R,Z)/psip_.get()(gp_.R_0,0.0)*namp);
-	if( psip_.get()(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
+        if ((*psip_)(R,Z)<gp_.psipmax) return bgamp +((*psip_)(R,Z)/(*psip_)(gp_.R_0,0.0)*namp);
+	if( (*psip_)(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
         return bgamp;
     }
     double bgamp, namp;
@@ -262,8 +262,8 @@ struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
     private:
     double do_compute(double R, double Z)const
     {
-      if (psip_.get()(R,Z)<gp_.psipmax)
-          return (amp_*fabs(cos(2.*M_PI*psip_.get()(R,Z)*k_)));
+      if ((*psip_)(R,Z)<gp_.psipmax)
+          return (amp_*fabs(cos(2.*M_PI*(*psip_)(R,Z)*k_)));
       return 0.;
 
     }

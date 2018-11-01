@@ -42,18 +42,18 @@ int main()
     {
         std::cout << "Test correct behaviour of handle: cat and mouse\n";
         dg::ClonePtr<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
-        dg::ClonePtr<aAnimal> h2(h1.get()); //reference constructor
+        dg::ClonePtr<aAnimal> h2(*h1); //reference constructor
         aAnimal* ptr = new Cat();
         h0.reset(ptr); //pointer reset
-        h1.reset( h2.get()); //reference reset
-        h1.get()=h2.get();//reference test
-        std::swap(h1,h0); //swap test
-        h0.get().speak();
-        h1.get().speak();
-        h2.get().speak();
+        h1.reset( *h2); //reference reset
+        *h1=*h2;//reference test
+        using std::swap;
+        swap(h1,h0); //swap test
+        h0->speak();
+        h1->speak();
+        h2->speak();
         h1 = h0;
-        h1.get().speak();
-        h1.clear();
+        h1->speak();
     }
     {
         std::cout << "Test correct behaviour of buffer class with mouse\n";

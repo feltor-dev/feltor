@@ -166,11 +166,11 @@ struct BinaryFunctorsLvl1
         p_[2].reset(fy);
     }
     /// \f$ f \f$
-    const aBinaryFunctor& f()const{return p_[0].get();}
+    const aBinaryFunctor& f()const{return *p_[0];}
     /// \f$ \partial f / \partial x \f$
-    const aBinaryFunctor& dfx()const{return p_[1].get();}
+    const aBinaryFunctor& dfx()const{return *p_[1];}
     /// \f$ \partial f / \partial y\f$
-    const aBinaryFunctor& dfy()const{return p_[2].get();}
+    const aBinaryFunctor& dfy()const{return *p_[2];}
     private:
     ClonePtr<aBinaryFunctor> p_[3];
 };
@@ -270,15 +270,15 @@ struct BinarySymmTensorLvl1
         p_[4].reset( divChiY);
     }
     ///xy component \f$ \chi^{xx}\f$
-    const aBinaryFunctor& xx()const{return p_[0].get();}
+    const aBinaryFunctor& xx()const{return *p_[0];}
     ///xy component \f$ \chi^{xy}\f$
-    const aBinaryFunctor& xy()const{return p_[1].get();}
+    const aBinaryFunctor& xy()const{return *p_[1];}
     ///yy component \f$ \chi^{yy}\f$
-    const aBinaryFunctor& yy()const{return p_[2].get();}
+    const aBinaryFunctor& yy()const{return *p_[2];}
      /// \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
-    const aBinaryFunctor& divX()const{return p_[3].get();}
+    const aBinaryFunctor& divX()const{return *p_[3];}
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
-    const aBinaryFunctor& divY()const{return p_[4].get();}
+    const aBinaryFunctor& divY()const{return *p_[4];}
     private:
     ClonePtr<aBinaryFunctor> p_[5];
 };
@@ -308,11 +308,11 @@ struct BinaryVectorLvl0
         p_[2].reset(v_z);
     }
     /// x-component of the vector
-    const aBinaryFunctor& x()const{return p_[0].get();}
+    const aBinaryFunctor& x()const{return *p_[0];}
     /// y-component of the vector
-    const aBinaryFunctor& y()const{return p_[1].get();}
+    const aBinaryFunctor& y()const{return *p_[1];}
     /// z-component of the vector
-    const aBinaryFunctor& z()const{return p_[2].get();}
+    const aBinaryFunctor& z()const{return *p_[2];}
     private:
     ClonePtr<aBinaryFunctor> p_[3];
 };

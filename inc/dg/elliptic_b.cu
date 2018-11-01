@@ -83,15 +83,15 @@ int main()
     b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aGeometry2d> grid_perp = grid.perp_grid();
-    dg::DVec v2d = dg::create::inv_volume( grid_perp.get());
-    dg::DVec w2d = dg::create::volume( grid_perp.get());
+    dg::DVec v2d = dg::create::inv_volume( *grid_perp);
+    dg::DVec w2d = dg::create::volume( *grid_perp);
     dg::DVec g_parallel = grid.metric().value(2,2);
     dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
     dg::DVec chi = dg::evaluate( dg::one, grid);
     dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split(
-            grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(grid_perp.get(), dg::not_normed, dg::centered));
+            grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(*grid_perp, dg::not_normed, dg::centered));
     // create split  vectors and solve
     std::vector<dg::View<dg::DVec>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());

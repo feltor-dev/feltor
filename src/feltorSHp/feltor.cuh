@@ -166,9 +166,9 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     multi_invgamma2.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct(       multigrid.grids()[u].get(), g.bcx(), g.bcy(), dg::not_normed, dg::centered, 1.0);
-        multi_invgamma1[u].construct( multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
-        multi_invgamma2[u].construct( multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_pol[u].construct(       multigrid.grid(u), g.bcx(), g.bcy(), dg::not_normed, dg::centered, 1.0);
+        multi_invgamma1[u].construct( multigrid.grid(u), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_invgamma2[u].construct( multigrid.grid(u), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
     dg::blas1::pointwiseDivide(one,binv,B2);
     dg::blas1::pointwiseDivide(B2,binv,B2);    

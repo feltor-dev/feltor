@@ -47,7 +47,7 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
         constructParallel(Nz);
     }
 
-    const aRealGeneratorX2d<real_type> & generator() const{return handle_.get();}
+    const aRealGeneratorX2d<real_type> & generator() const{return *handle_;}
     virtual RealCurvilinearProductGridX3d* clone()const{return new RealCurvilinearProductGridX3d(*this);}
     private:
     //construct phi and lift rest to 3d
@@ -80,7 +80,7 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
         thrust::host_vector<real_type> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         jac_ = SparseTensor< thrust::host_vector<real_type>>( x_vec);//unit tensor
         jac_.values().resize( 6);
-        handle_.get().generate( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), map_[0], map_[1], jac_.values()[2], jac_.values()[3], jac_.values()[4], jac_.values()[5]);
+        handle_->generate( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), map_[0], map_[1], jac_.values()[2], jac_.values()[3], jac_.values()[4], jac_.values()[5]);
         jac_.idx(0,0) = 2, jac_.idx(0,1) = 3, jac_.idx(1,0)=4, jac_.idx(1,1) = 5;
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
@@ -88,7 +88,7 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const override final
     {
-        return detail::square( jac_, map_[0], handle_.get().isOrthogonal());
+        return detail::square( jac_, map_[0], handle_->isOrthogonal());
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
     std::vector<thrust::host_vector<real_type> > map_;
@@ -119,12 +119,12 @@ struct RealCurvilinearGridX2d : public dg::aRealGeometryX2d<real_type>
         construct(fx,fy, n,Nx,Ny);
     }
 
-    const aRealGeneratorX2d<real_type>& generator() const{return handle_.get();}
+    const aRealGeneratorX2d<real_type>& generator() const{return *handle_;}
     virtual RealCurvilinearGridX2d* clone()const{return new RealCurvilinearGridX2d(*this);}
     private:
     void construct( real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny)
     {
-        RealCurvilinearProductGridX3d<real_type> g( handle_.get(),fx,fy,n,Nx,Ny,1,this->bcx());
+        RealCurvilinearProductGridX3d<real_type> g( *handle_,fx,fy,n,Nx,Ny,1,this->bcx());
         map_=g.map();
         jac_=g.jacobian();
         metric_=g.metric();

@@ -314,8 +314,8 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
         RealGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
         RealGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
         thrust::host_vector<real_type> wx, ax, wy, ay;
-        refX_.get().generate( gx, wx, ax);
-        refY_.get().generate( gy, wy, ay);
+        refX_->generate( gx, wx, ax);
+        refY_->generate( gy, wy, ay);
         w_[0].resize(this->size()), w_[1].resize(this->size());
         a_[0].resize(this->size()), a_[1].resize(this->size());
         //now make product space
@@ -329,7 +329,7 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
             }
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)override final{
-        aRealTopology2d<real_type>::do_set(new_n,refX_.get().N_new(new_Nx,this->bcx()),refY_.get().N_new(new_Ny, this->bcy()));
+        aRealTopology2d<real_type>::do_set(new_n,refX_->N_new(new_Nx,this->bcx()),refY_->N_new(new_Ny, this->bcy()));
         construct_weights_and_abscissas(new_n,new_Nx,new_Ny);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
@@ -376,9 +376,9 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
         RealGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
         RealGrid1d<real_type> gz( this->y0(), this->y1(), 1, Nz, this->bcz());
         thrust::host_vector<real_type> w[3], a[3];
-        refX_.get().generate( gx, w[0], a[0]);
-        refY_.get().generate( gy, w[1], a[1]);
-        refZ_.get().generate( gz, w[2], a[2]);
+        refX_->generate( gx, w[0], a[0]);
+        refY_->generate( gy, w[1], a[1]);
+        refZ_->generate( gz, w[2], a[2]);
         w_[0].resize(this->size()), w_[1].resize(this->size()), w_[2].resize(this->size());
         a_[0].resize(this->size()), a_[1].resize(this->size()), a_[2].resize(this->size());
         //now make product space
@@ -395,7 +395,7 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
             }
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final{
-        aRealTopology3d<real_type>::do_set(new_n,refX_.get().N_new(new_Nx, this->bcx()),refY_.get().N_new(new_Ny,this->bcy()), refZ_.get().N_new(new_Nz,this->bcz()));
+        aRealTopology3d<real_type>::do_set(new_n,refX_->N_new(new_Nx, this->bcx()),refY_->N_new(new_Ny,this->bcy()), refZ_->N_new(new_Nz,this->bcz()));
         construct_weights_and_abscissas(new_n, new_Nx, new_Ny, new_Nz);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {

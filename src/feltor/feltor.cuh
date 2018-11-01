@@ -372,15 +372,15 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
     for( unsigned u=0; u<p.stages; u++)
     {
         dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor(
-            bhat, m_multigrid.grids()[u].get());
-        m_multi_pol[u].construct( m_multigrid.grids()[u].get(),
+            bhat, m_multigrid.grid(u));
+        m_multi_pol[u].construct( m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, dg::not_normed,
             dg::centered, p.jfactor);
         m_multi_pol[u].set_chi( hh);
-        m_multi_invgammaP[u].construct(  m_multigrid.grids()[u].get(),
+        m_multi_invgammaP[u].construct(  m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
         m_multi_invgammaP[u].elliptic().set_chi( hh);
-        m_multi_invgammaN[u].construct(  m_multigrid.grids()[u].get(),
+        m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
             p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
         m_multi_invgammaN[u].elliptic().set_chi( hh);
     }

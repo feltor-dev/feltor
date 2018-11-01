@@ -378,7 +378,7 @@ struct PsipSep
 {
     PsipSep( const aBinaryFunctor& psi): psip_(psi), Z_(0){}
     void set_Z( double z){ Z_=z;}
-    double operator()(double R) { return psip_.get()(R, Z_);}
+    double operator()(double R) { return (*psip_)(R, Z_);}
     private:
     ClonePtr<aBinaryFunctor> psip_;
     double Z_;

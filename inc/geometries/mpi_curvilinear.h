@@ -40,11 +40,11 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
     explicit RealCurvilinearMPIGrid2d( const RealCurvilinearProductMPIGrid3d<real_type>& g);
 
     ///read access to the generator
-    const aRealGenerator2d<real_type>& generator() const{return handle_.get();}
+    const aRealGenerator2d<real_type>& generator() const{return *handle_;}
     virtual RealCurvilinearMPIGrid2d* clone()const override final{return new RealCurvilinearMPIGrid2d(*this);}
     virtual RealCurvilinearGrid2d<real_type>* global_geometry()const override final{
         return new RealCurvilinearGrid2d<real_type>(
-                handle_.get(),
+                *handle_,
                 global().n(), global().Nx(), global().Ny(),
                 global().bcx(), global().bcy());
     }
@@ -55,7 +55,7 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final
     {
         dg::aRealMPITopology2d<real_type>::do_set(new_n, new_Nx, new_Ny);
-        RealCurvilinearGrid2d<real_type> g( handle_.get(), new_n, new_Nx, new_Ny);
+        RealCurvilinearGrid2d<real_type> g( *handle_, new_n, new_Nx, new_Ny);
         divide_and_conquer(g);//distribute to processes
     }
     void divide_and_conquer(const RealCurvilinearGrid2d<real_type>& g_)
@@ -116,11 +116,11 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
 
 
     ///read access to the generator
-    const aRealGenerator2d<real_type>& generator() const{return handle_.get();}
+    const aRealGenerator2d<real_type>& generator() const{return *handle_;}
     virtual RealCurvilinearProductMPIGrid3d* clone()const{return new RealCurvilinearProductMPIGrid3d(*this);}
     virtual RealCurvilinearProductGrid3d<real_type>* global_geometry()const{
         return new RealCurvilinearProductGrid3d<real_type>(
-                handle_.get(),
+                *handle_,
                 global().n(), global().Nx(), global().Ny(), global().Nz(),
                 global().bcx(), global().bcy(), global().bcz());
     }
@@ -134,7 +134,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
         dg::aRealMPITopology3d<real_type>::do_set(new_n, new_Nx, new_Ny, new_Nz);
         if( !( new_n == this->n() && new_Nx == global().Nx() && new_Ny == global().Ny() ) )
         {
-            RealCurvilinearMPIGrid2d<real_type> g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), this->get_perp_comm());
+            RealCurvilinearMPIGrid2d<real_type> g( *handle_,new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), this->get_perp_comm());
             constructPerp( g);
         }
         constructParallel(this->local().Nz());
@@ -174,7 +174,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
         return jac_;
     }
     virtual SparseTensor<host_vector> do_compute_metric( ) const override final{
-        return detail::square( jac_, map_[0], handle_.get().isOrthogonal());
+        return detail::square( jac_, map_[0], handle_->isOrthogonal());
     }
     virtual std::vector<host_vector > do_compute_map()const override final{return map_;}
     dg::SparseTensor<host_vector > jac_;

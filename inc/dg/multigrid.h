@@ -74,8 +74,8 @@ struct MultigridCG2d
 		for(unsigned u=1; u<stages; u++)
         {
             m_grids[u] = m_grids[u-1]; // deep copy
-            m_grids[u].get().multiplyCellNumbers(0.5, 0.5);
-            //m_grids[u].get().display();
+            m_grids[u]->multiplyCellNumbers(0.5, 0.5);
+            //m_grids[u]->display();
         }
 
 		m_inter.resize(stages-1);
@@ -86,14 +86,14 @@ struct MultigridCG2d
         {
             // Projecting from one grid to the next is the same as
             // projecting from the original grid to the coarse grids
-            m_project[u].construct( dg::create::fast_projection(m_grids[u].get(), 2, 2, dg::normed), std::forward<Params>(ps)...);
-            m_inter[u].construct( dg::create::fast_interpolation(m_grids[u+1].get(), 2, 2), std::forward<Params>(ps)...);
-            m_interT[u].construct( dg::create::fast_projection(m_grids[u].get(), 2, 2, dg::not_normed), std::forward<Params>(ps)...);
+            m_project[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, dg::normed), std::forward<Params>(ps)...);
+            m_inter[u].construct( dg::create::fast_interpolation(*m_grids[u+1], 2, 2), std::forward<Params>(ps)...);
+            m_interT[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, dg::not_normed), std::forward<Params>(ps)...);
         }
 
         m_x.resize( m_stages);
         for( unsigned u=0; u<m_stages; u++)
-            m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero, m_grids[u].get()), std::forward<Params>(ps)...);
+            m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero, *m_grids[u]), std::forward<Params>(ps)...);
         m_r = m_b = m_x;
         for (unsigned u = 0; u < m_stages; u++)
             m_cg[u].construct(m_x[u], 1);
@@ -197,7 +197,7 @@ struct MultigridCG2d
 #ifdef DG_BENCHMARK
             t.tic();
 #endif //DG_BENCHMARK
-            m_cg[u].set_max(m_grids[u].get().size());
+            m_cg[u].set_max(m_grids[u]->size());
             number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
@@ -217,7 +217,7 @@ struct MultigridCG2d
 
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
-        m_cg[0].set_max(m_grids[0].get().size());
+        m_cg[0].set_max(m_grids[0]->size());
         number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(), op[0].inv_weights(), eps);
 #ifdef DG_BENCHMARK
         t.toc();
@@ -260,11 +260,16 @@ struct MultigridCG2d
         return out;
 
     }
-    ///@return number of stages
+    ///@return number of stages (same as \c num_stages)
     unsigned stages()const{return m_stages;}
+    ///@return number of stages (same as \c stages)
+    unsigned num_stages()const{return m_stages;}
 
     ///observe the grids at all stages
-    const std::vector<dg::ClonePtr< Geometry > > grids()const { return m_grids; }
+    ///@param stage must fulfill \c 0<stage<stages()
+    const Geometry& grid( unsigned stage) const {
+        return *(m_grids[stage]);
+    }
 
 
     ///After a call to a solution method returns the maximum number of iterations allowed at stage  0

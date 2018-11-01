@@ -4,11 +4,7 @@
 #include <mpi.h>
 #include "json/json.h"
 
-#include "dg/arakawa.h"
-#include "dg/poisson.h"
-#include "dg/topology/geometry.h"
-#include "dg/backend/mpi_init.h"
-#include "dg/backend/timer.h"
+#include "dg/algorithm.h"
 
 #include "solovev.h"
 #include "testfunctors.h"

@@ -87,15 +87,15 @@ int main( int argc, char* argv[])
     b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
-    dg::MDVec v2d = dg::create::inv_volume( grid_perp.get());
-    dg::MDVec w2d = dg::create::volume( grid_perp.get());
+    dg::MDVec v2d = dg::create::inv_volume( *grid_perp);
+    dg::MDVec w2d = dg::create::volume( *grid_perp);
     dg::MDVec g_parallel = grid.metric().value(2,2);
     dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
     dg::MDVec chi = dg::evaluate( dg::one, grid);
     dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split(
-            grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
+            grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(*grid_perp, dg::not_normed, dg::centered));
     // create split  vectors and solve
     std::vector<dg::MPI_Vector<dg::View<dg::DVec>>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());

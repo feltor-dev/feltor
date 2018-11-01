@@ -16,6 +16,8 @@ We do not (yet) follow semantic versioning.
 - introduce dg::assign and dg::construct that replace the dg::blas1::transfer functions and take an additional optional parameter pack
 
 ### Changed
+- Rewrite dg::ClonePtr as a pointer class
+- Change grids method interface of Multigrid to grid(unsigned)
 - pushForwardPerp for tensors uses SparseTensor as output argument
 - interface for DS
 - better test programs ds\_t.cu, ds\_curv\_t.cu and ds\_guenther\_t.cu

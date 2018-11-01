@@ -297,10 +297,10 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg:
     multi_invgammaN.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct(           multigrid.grids()[u].get(), dg::DIR, dg::DIR, dg::not_normed, dg::centered, p.jfactor);
-        multi_maxwell[u].construct(       multigrid.grids()[u].get(), dg::DIR, dg::DIR, 1., dg::centered);
-        multi_invgammaDIR[u].construct(   multigrid.grids()[u].get(), dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered);
-        multi_invgammaN[u].construct(     multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_pol[u].construct(           multigrid.grid(u), dg::DIR, dg::DIR, dg::not_normed, dg::centered, p.jfactor);
+        multi_maxwell[u].construct(       multigrid.grid(u), dg::DIR, dg::DIR, 1., dg::centered);
+        multi_invgammaDIR[u].construct(   multigrid.grid(u), dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_invgammaN[u].construct(     multigrid.grid(u), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
     //////////////////////////////init fields /////////////////////
     dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
