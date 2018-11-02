@@ -41,7 +41,7 @@ typedef dg::geo::solovev::Parameters Parameters; //!< bring Parameters into the 
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
  * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
-struct Psip : public aCloneableBinaryFunctor<Psip>
+struct Psip : public aCloneableCylindricalFunctor<Psip>
 { /**
      * @brief Construct from given geometric parameters
      *
@@ -80,7 +80,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
  * @brief \f[\psi_R\f]
  * @attention When the taylor field is used we need the boost library for special functions
  */
-struct PsipR: public aCloneableBinaryFunctor<PsipR>
+struct PsipR: public aCloneableCylindricalFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
     PsipR( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
@@ -118,7 +118,7 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
  */
-struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
+struct PsipRR: public aCloneableCylindricalFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
     PsipRR( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
@@ -151,7 +151,7 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  */
-struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
+struct PsipZ: public aCloneableCylindricalFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
     PsipZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
@@ -182,7 +182,7 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
  */
-struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
+struct PsipZZ: public aCloneableCylindricalFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
     PsipZZ( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
@@ -211,7 +211,7 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f]
  */
-struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
+struct PsipRZ: public aCloneableCylindricalFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
     PsipRZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
@@ -249,7 +249,7 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
  *
    \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f]
  */
-struct Ipol: public aCloneableBinaryFunctor<Ipol>
+struct Ipol: public aCloneableCylindricalFunctor<Ipol>
 {
     ///@copydoc Psip::Psip()
     Ipol(  solovev::Parameters gp ): c12_(gp.c[11]), psip_(gp) { }
@@ -265,7 +265,7 @@ struct Ipol: public aCloneableBinaryFunctor<Ipol>
 /**
  * @brief \f[\hat I_R\f]
  */
-struct IpolR: public aCloneableBinaryFunctor<IpolR>
+struct IpolR: public aCloneableCylindricalFunctor<IpolR>
 {
     ///@copydoc Psip::Psip()
     IpolR(  solovev::Parameters gp ): c12_(gp.c[11]), psipR_(gp) { }
@@ -280,7 +280,7 @@ struct IpolR: public aCloneableBinaryFunctor<IpolR>
 /**
  * @brief \f[\hat I_Z\f]
  */
-struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
+struct IpolZ: public aCloneableCylindricalFunctor<IpolZ>
 {
     ///@copydoc Psip::Psip()
     IpolZ(  solovev::Parameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
@@ -293,14 +293,14 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-static inline BinaryFunctorsLvl2 createPsip( solovev::Parameters gp)
+static inline CylindricalFunctorsLvl2 createPsip( solovev::Parameters gp)
 {
-    BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
+    CylindricalFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
     return psip;
 }
-static inline BinaryFunctorsLvl1 createIpol( solovev::Parameters gp)
+static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
-    BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
+    CylindricalFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
 static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)

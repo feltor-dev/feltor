@@ -26,7 +26,7 @@ namespace detail
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
 template<class real_type>
-void computeX_rzy( const BinaryFunctorsLvl1& psi,
+void computeX_rzy( const CylindricalFunctorsLvl1& psi,
         const thrust::host_vector<real_type>& y_vec,
         const unsigned nodeX0, const unsigned nodeX1,
         thrust::host_vector<real_type>& r, //output r - values
@@ -123,11 +123,11 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
     ///psi_0 must be the closed surface, 0 the separatrix
-    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0,
+    SimpleOrthogonalX( const CylindricalFunctorsLvl2& psi, double psi_0,
             double xX, double yX, double x0, double y0, int firstline =0): psi_(psi)
     {
         firstline_ = firstline;
-        orthogonal::detail::Fpsi fpsi(psi_, BinarySymmTensorLvl1(), x0, y0, firstline);
+        orthogonal::detail::Fpsi fpsi(psi_, CylindricalSymmTensorLvl1(), x0, y0, firstline);
         double R0, Z0;
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
@@ -153,7 +153,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::computeX_rzy( psi_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        dg::geo::orthogonal::detail::Nemov nemov(psi_, BinarySymmTensorLvl1(), f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov nemov(psi_, CylindricalSymmTensorLvl1(), f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -173,7 +173,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
     double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
     double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
     int firstline_;
@@ -199,7 +199,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @param firstline =0 means conformal, =1 means equalarc discretization of the separatrix
      * @param verbose if true the integrators will write additional information to \c std::cout
      */
-    SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+    SeparatrixOrthogonal( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
         psi_(psi), chi_(chi),
         sep_( psi, chi, xX, yX, x0, y0, firstline, verbose), m_verbose( verbose)
@@ -338,8 +338,8 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     double R0_[2], Z0_[2];
     double f0_, psi_0_;
     int firstline_;
-    BinaryFunctorsLvl2 psi_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
     bool m_verbose;
 };

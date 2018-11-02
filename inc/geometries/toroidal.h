@@ -12,18 +12,18 @@ namespace toroidal{
  * @brief constant \f$\psi_p = 1\f$
  * @return
  */
-static inline BinaryFunctorsLvl2 createPsip( )
+static inline CylindricalFunctorsLvl2 createPsip( )
 {
-    BinaryFunctorsLvl2 psip( new Constant(1), new Constant(0), new Constant(0),new Constant(0), new Constant(0), new Constant(0));
+    CylindricalFunctorsLvl2 psip( new Constant(1), new Constant(0), new Constant(0),new Constant(0), new Constant(0), new Constant(0));
     return psip;
 }
 /**
  * @brief constant \f$ I = 1\f$
  * @return
  */
-static inline BinaryFunctorsLvl1 createIpol( )
+static inline CylindricalFunctorsLvl1 createIpol( )
 {
-    BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
+    CylindricalFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
     return ipol;
 }
 
@@ -48,7 +48,7 @@ namespace circular{
  * @brief \f[ \psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right) \f]
  * gives circular flux surfaces
  */
-struct Psip : public aCloneableBinaryFunctor<Psip>
+struct Psip : public aCloneableCylindricalFunctor<Psip>
 { /**
      * @brief Construct from major radius
      * @param R0 the major radius
@@ -62,7 +62,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
     double m_R0;
 };
 /// @brief \f[ R-R_0 \f]
-struct PsipR : public aCloneableBinaryFunctor<PsipR>
+struct PsipR : public aCloneableCylindricalFunctor<PsipR>
 { /**
      * @brief Construct from major radius
      * @param R0 the major radius
@@ -76,7 +76,7 @@ struct PsipR : public aCloneableBinaryFunctor<PsipR>
     double m_R0;
 };
 ///@brief \f[ Z \f]
-struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
+struct PsipZ : public aCloneableCylindricalFunctor<PsipZ>
 {
   private:
     double do_compute(double R, double Z) const
@@ -89,18 +89,18 @@ struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
  * @brief circular \f$\psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right)\f$
  * @return
  */
-static inline BinaryFunctorsLvl2 createPsip( double R0 )
+static inline CylindricalFunctorsLvl2 createPsip( double R0 )
 {
-    BinaryFunctorsLvl2 psip( new Psip(R0), new PsipR(R0), new PsipZ(),new Constant(1), new Constant(0), new Constant(1));
+    CylindricalFunctorsLvl2 psip( new Psip(R0), new PsipR(R0), new PsipZ(),new Constant(1), new Constant(0), new Constant(1));
     return psip;
 }
 /**
  * @brief constant \f$ I = I_0\f$
  * @return
  */
-static inline BinaryFunctorsLvl1 createIpol( double I0 )
+static inline CylindricalFunctorsLvl1 createIpol( double I0 )
 {
-    BinaryFunctorsLvl1 ipol( new Constant(I0), new Constant(0), new Constant(0));
+    CylindricalFunctorsLvl1 ipol( new Constant(I0), new Constant(0), new Constant(0));
     return ipol;
 }
 ///@}

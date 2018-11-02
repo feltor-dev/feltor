@@ -75,7 +75,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     {
     }
     template <class Limiter>
-    Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
+    Fieldaligned(const dg::geo::CylindricalVectorLvl0& vec,
         const ProductMPIGeometry& grid,
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
@@ -161,7 +161,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
 template <class Limiter>
 Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::Fieldaligned(
-    const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid,
+    const dg::geo::CylindricalVectorLvl0& vec, const MPIGeometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, double deltaPhi)
 {

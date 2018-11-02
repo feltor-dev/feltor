@@ -46,7 +46,7 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
+    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
@@ -57,14 +57,14 @@ struct DSFieldCylindrical
     }
 
     private:
-    dg::geo::BinaryVectorLvl0 v_;
+    dg::geo::CylindricalVectorLvl0 v_;
     dg::Grid2d m_b;
 };
 
 struct DSField
 {
     //z component of v may not vanish
-    DSField( const dg::geo::BinaryVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
+    DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
     {
         thrust::host_vector<double> v_zeta, v_eta;
         dg::pushForwardPerp( v.x(), v.y(), v_zeta, v_eta, g);
@@ -106,7 +106,7 @@ real_type ds_norm( const std::array<real_type,3>& x0){
 
 //used in constructor of Fieldaligned
 template<class real_type>
-void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
+void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     const dg::aRealGeometry2d<real_type>& grid_field,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp,
@@ -211,7 +211,7 @@ struct Fieldaligned
     ///@copydoc hide_fieldaligned_physics_parameters
     ///@copydoc hide_fieldaligned_numerics_parameters
     template <class Limiter>
-    Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
+    Fieldaligned(const dg::geo::CylindricalVectorLvl0& vec,
         const ProductGeometry& grid,
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
@@ -379,7 +379,7 @@ struct Fieldaligned
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
 Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
-    const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid,
+    const dg::geo::CylindricalVectorLvl0& vec, const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, double deltaPhi)
 {

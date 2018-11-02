@@ -125,9 +125,9 @@ int main( int argc, char* argv[])
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
     std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
 
     double R0 = gp.R_0, Z0 = 0;

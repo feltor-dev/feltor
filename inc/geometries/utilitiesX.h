@@ -17,7 +17,7 @@ namespace geo
  * @param Z_X start value on input, X-point on output
  * @ingroup misc_geo
  */
-static inline void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     dg::geo::HessianRZtau hessianRZtau(  psi);
     std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
@@ -35,7 +35,7 @@ static inline void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, doubl
 
 ///@cond
 namespace detail{
-struct Monitor : public aCloneableBinaryFunctor<Monitor>
+struct Monitor : public aCloneableCylindricalFunctor<Monitor>
 {
     //computes a + eps * b
     Monitor( double value, double eps_value, double R_X, double Z_X, double sigmaR, double sigmaZ):
@@ -50,7 +50,7 @@ struct Monitor : public aCloneableBinaryFunctor<Monitor>
     dg::Cauchy m_cauchy;
 
 };
-struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
+struct DivMonitor : public aCloneableCylindricalFunctor<DivMonitor>
 {
     //computes a*epsX + b*epsY
     DivMonitor( double valueX, double valueY, double R_X, double Z_X, double sigmaR, double sigmaZ):
@@ -80,7 +80,7 @@ struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
  *
  * @return a metric tensor and its derivatives
  */
-static inline BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
+static inline CylindricalSymmTensorLvl1 make_Xbump_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -97,7 +97,7 @@ static inline BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2&
     detail::Monitor yy(1, gyy-1, x,y, radiusX, radiusY);
     detail::DivMonitor divX(gxx-1, gxy, x,y, radiusX, radiusY);
     detail::DivMonitor divY(gxy, gyy-1, x,y, radiusX, radiusY);
-    BinarySymmTensorLvl1 chi( xx, xy, yy, divX, divY);
+    CylindricalSymmTensorLvl1 chi( xx, xy, yy, divX, divY);
     //double laplace = psi.dfxx()(x,y)*chi.xx()(x,y)+2.*psi.dfxy()(x,y)*chi.xy()(x,y)+psi.dfyy()(x,y)*chi.yy()(x,y)
     //        + chi.divX()(x,y)*psi.dfx()(x,y) + chi.divY()(x,y)*psi.dfy()(x,y);
     //std::cout << "Laplace at X-point "<<laplace<<std::endl;
@@ -114,7 +114,7 @@ static inline BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2&
  *
  * @return a metric tensor and its derivatives
  */
-static inline BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline CylindricalSymmTensorLvl1 make_Xconst_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -131,7 +131,7 @@ static inline BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2
     Constant yy(gyy);
     Constant divX(0);
     Constant divY(0);
-    BinarySymmTensorLvl1 chi( xx, xy, yy, divX, divY);
+    CylindricalSymmTensorLvl1 chi( xx, xy, yy, divX, divY);
     //std::cout << "px  "<<psi.dfx()(x,y)<<" py "<<psi.dfy()(x,y)<<std::endl;
     //std::cout << "gxx "<<chi.xx()(x,y)<<" gxy "<< chi.xy()(x,y)<<" gyy "<<chi.yy()(x,y)<<std::endl;
     //std::cout << "pxx "<<psixx<<" pxy "<< psixy<<" pyy "<<psiyy<<std::endl;
@@ -152,7 +152,7 @@ namespace detail
  */
 struct XCross
 {
-    XCross( const BinaryFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
+    XCross( const CylindricalFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
     {
         R_X_ = R_X, Z_X_ = Z_X;
         //std::cout << "X-point set at "<<R_X_<<" "<<Z_X_<<"\n";
@@ -205,7 +205,7 @@ struct XCross
     private:
     int quad_;
     dg::geo::FieldRZtau fieldRZtau_;
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     double R_X_, Z_X_;
     double R_i[4], Z_i[4];
     double dist_;
@@ -376,11 +376,11 @@ double construct_psi_values( XFieldFinv fpsiMinv,
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
 struct PsipSep
 {
-    PsipSep( const aBinaryFunctor& psi): psip_(psi), Z_(0){}
+    PsipSep( const aCylindricalFunctor& psi): psip_(psi), Z_(0){}
     void set_Z( double z){ Z_=z;}
     double operator()(double R) { return (*psip_)(R, Z_);}
     private:
-    ClonePtr<aBinaryFunctor> psip_;
+    ClonePtr<aCylindricalFunctor> psip_;
     double Z_;
 };
 
@@ -389,7 +389,7 @@ struct PsipSep
 //good as it can, i.e. until machine precision is reached (like FpsiX just for separatrix)
 struct SeparatriX
 {
-    SeparatriX( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline, bool verbose=false):
+    SeparatriX( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline, bool verbose=false):
         mode_(firstline),
         fieldRZYequi_(psi, chi), fieldRZYTequi_(psi, x0, y0, chi), fieldRZYZequi_(psi, chi),
         fieldRZYconf_(psi, chi), fieldRZYTconf_(psi, x0, y0, chi), fieldRZYZconf_(psi, chi), m_verbose( verbose)
@@ -587,7 +587,7 @@ namespace detail
 struct InitialX
 {
 
-    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX, bool verbose = false):
+    InitialX( const CylindricalFunctorsLvl1& psi, double xX, double yX, bool verbose = false):
         psip_(psi), fieldRZtau_(psi),
         xpointer_(psi, xX, yX, 1e-4), m_verbose( verbose)
     {
@@ -680,7 +680,7 @@ struct InitialX
 
 
     private:
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     const dg::geo::FieldRZtau fieldRZtau_;
     dg::geo::detail::XCross xpointer_;
     double R_i_[4], Z_i_[4];

@@ -30,7 +30,7 @@ struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double x0, double y0, int firstline):
+    Fpsi( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTensorLvl1& chi, double x0, double y0, int firstline):
         psip_(psi), fieldRZYTconf_(psi, x0, y0, chi),fieldRZYTequl_(psi, x0, y0, chi), fieldRZtau_(psi, chi)
     {
         X_init = x0, Y_init = y0;
@@ -87,8 +87,8 @@ struct Fpsi
     private:
     int firstline_;
     double X_init, Y_init;
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
     dg::geo::ribeiro::FieldRZYT fieldRZYTconf_;
     dg::geo::equalarc::FieldRZYT fieldRZYTequl_;
     dg::geo::FieldRZtau fieldRZtau_;
@@ -98,7 +98,7 @@ struct Fpsi
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
 template<class real_type>
-void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi,
+void compute_rzy( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTensorLvl1& chi,
         const thrust::host_vector<real_type>& y_vec,
         thrust::host_vector<real_type>& r,
         thrust::host_vector<real_type>& z,
@@ -149,7 +149,7 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
 //and provides the Nemov algorithm for orthogonal grid
 struct Nemov
 {
-    Nemov( const BinaryFunctorsLvl2 psi, const BinarySymmTensorLvl1& chi, double f0, int mode):
+    Nemov( const CylindricalFunctorsLvl2 psi, const CylindricalSymmTensorLvl1& chi, double f0, int mode):
         f0_(f0), mode_(mode),
         psip_(psi), chi_(chi), lapPsi_(psi,chi) { }
     void initialize(
@@ -204,8 +204,8 @@ struct Nemov
     private:
     double f0_;
     int mode_;
-    BinaryFunctorsLvl2 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psip_;
+    CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::LaplaceChiPsi lapPsi_;
 };
 
@@ -290,7 +290,7 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, BinarySymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
     {
         m_orthogonal = true;
     }
@@ -305,7 +305,7 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
         psi_(psi), chi_(chi)
     {
         assert( psi_1 != psi_0);
@@ -359,8 +359,8 @@ struct SimpleOrthogonal : public aGenerator2d
             etaY[idx] = +h[idx]*(chiRR*psipR + chiRZ*psipZ);
         }
     }
-    BinaryFunctorsLvl2 psi_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalSymmTensorLvl1 chi_;
     double f0_, lz_, R0_, Z0_;
     int firstline_;
     bool m_orthogonal;

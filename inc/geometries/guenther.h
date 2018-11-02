@@ -31,7 +31,7 @@ namespace guenther
 /**
  * @brief \f[\cos(\pi(R-R_0)/2)\cos(\pi Z/2)\f]
  */
-struct Psip : public aCloneableBinaryFunctor<Psip>
+struct Psip : public aCloneableCylindricalFunctor<Psip>
 {
     Psip(double R_0 ):   R_0(R_0) {}
   private:
@@ -44,7 +44,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
 /**
  * @brief \f[-\pi\sin(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
  */
-struct PsipR : public aCloneableBinaryFunctor<PsipR>
+struct PsipR : public aCloneableCylindricalFunctor<PsipR>
 {
     PsipR(double R_0 ):   R_0(R_0) {}
   private:
@@ -57,7 +57,7 @@ struct PsipR : public aCloneableBinaryFunctor<PsipR>
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipRR : public aCloneableBinaryFunctor<PsipRR>
+struct PsipRR : public aCloneableCylindricalFunctor<PsipRR>
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
   private:
@@ -70,7 +70,7 @@ struct PsipRR : public aCloneableBinaryFunctor<PsipRR>
 /**
  * @brief \f[-\pi\cos(\pi(R-R_0)/2)\sin(\pi Z/2)/2\f]
  */
-struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
+struct PsipZ : public aCloneableCylindricalFunctor<PsipZ>
 
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
@@ -84,7 +84,7 @@ struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
+struct PsipZZ : public aCloneableCylindricalFunctor<PsipZZ>
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
   private:
@@ -97,7 +97,7 @@ struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
 /**
  * @brief \f[ \pi^2\sin(\pi(R-R_0)/2)\sin(\pi Z/2)/4\f]
  */
-struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
+struct PsipRZ : public aCloneableCylindricalFunctor<PsipRZ>
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
   private:
@@ -111,7 +111,7 @@ struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
 /**
  * @brief \f[ I_0\f]
  */
-struct Ipol : public aCloneableBinaryFunctor<Ipol>
+struct Ipol : public aCloneableCylindricalFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
     private:
@@ -121,7 +121,7 @@ struct Ipol : public aCloneableBinaryFunctor<Ipol>
 /**
  * @brief \f[0\f]
  */
-struct IpolR : public aCloneableBinaryFunctor<IpolR>
+struct IpolR : public aCloneableCylindricalFunctor<IpolR>
 {
     IpolR(  ) {}
     private:
@@ -130,21 +130,21 @@ struct IpolR : public aCloneableBinaryFunctor<IpolR>
 /**
  * @brief \f[0\f]
  */
-struct IpolZ : public aCloneableBinaryFunctor<IpolZ>
+struct IpolZ : public aCloneableCylindricalFunctor<IpolZ>
 {
     IpolZ(  ) {}
     private:
     double do_compute(double R, double Z) const { return 0; }
 };
 
-static inline BinaryFunctorsLvl2 createPsip( double R_0)
+static inline CylindricalFunctorsLvl2 createPsip( double R_0)
 {
-    BinaryFunctorsLvl2 psip( new Psip(R_0), new PsipR(R_0), new PsipZ(R_0),new PsipRR(R_0), new PsipRZ(R_0), new PsipZZ(R_0));
+    CylindricalFunctorsLvl2 psip( new Psip(R_0), new PsipR(R_0), new PsipZ(R_0),new PsipRR(R_0), new PsipRZ(R_0), new PsipZZ(R_0));
     return psip;
 }
-static inline BinaryFunctorsLvl1 createIpol( double I_0)
+static inline CylindricalFunctorsLvl1 createIpol( double I_0)
 {
-    BinaryFunctorsLvl1 ipol( new Ipol(I_0), new IpolR(), new IpolZ());
+    CylindricalFunctorsLvl1 ipol( new Ipol(I_0), new IpolR(), new IpolZ());
     return ipol;
 }
 static inline TokamakMagneticField createMagField( double R_0, double I_0)

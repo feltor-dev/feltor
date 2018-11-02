@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip(gp);
+    dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip(gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;

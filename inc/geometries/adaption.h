@@ -15,9 +15,9 @@ namespace geo
 ///@cond
 namespace detail{
 
-struct LaplaceAdaptPsi: public aCloneableBinaryFunctor<LaplaceAdaptPsi>
+struct LaplaceAdaptPsi: public aCloneableCylindricalFunctor<LaplaceAdaptPsi>
 {
-    LaplaceAdaptPsi( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& chi) : psi_(psi), chi_(chi){}
+    LaplaceAdaptPsi( const CylindricalFunctorsLvl2& psi, const CylindricalFunctorsLvl1& chi) : psi_(psi), chi_(chi){}
     private:
     double do_compute(double x, double y)const
     {
@@ -25,13 +25,13 @@ struct LaplaceAdaptPsi: public aCloneableBinaryFunctor<LaplaceAdaptPsi>
                 psi_.dfy()(x,y)*chi_.dfy()(x,y) +
                 chi_.f()(x,y)*( psi_.dfxx()(x,y) + psi_.dfyy()(x,y));
     }
-    BinaryFunctorsLvl2 psi_;
-    BinaryFunctorsLvl1 chi_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl1 chi_;
 };
 
-struct LaplaceChiPsi: public aCloneableBinaryFunctor<LaplaceChiPsi>
+struct LaplaceChiPsi: public aCloneableCylindricalFunctor<LaplaceChiPsi>
 {
-    LaplaceChiPsi( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi):
+    LaplaceChiPsi( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi):
         psi_(psi), chi_(chi){}
     private:
     double do_compute(double x, double y)const
@@ -40,16 +40,16 @@ struct LaplaceChiPsi: public aCloneableBinaryFunctor<LaplaceChiPsi>
             + chi_.divX()(x,y)*psi_.dfx()(x,y) + chi_.divY()(x,y)*psi_.dfy()(x,y);
     }
 
-    BinaryFunctorsLvl2 psi_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
-struct LaplacePsi: public aCloneableBinaryFunctor<LaplacePsi>
+struct LaplacePsi: public aCloneableCylindricalFunctor<LaplacePsi>
 {
-    LaplacePsi( const BinaryFunctorsLvl2& psi): psi_(psi){}
+    LaplacePsi( const CylindricalFunctorsLvl2& psi): psi_(psi){}
     private:
     double do_compute(double x, double y)const{return psi_.dfxx()(x,y)+psi_.dfyy()(x,y);}
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
 };
 
 }//namespace detail
@@ -62,30 +62,30 @@ struct LaplacePsi: public aCloneableBinaryFunctor<LaplacePsi>
  * @brief  A weight function for the Hector algorithm
  *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
  */
-struct NablaPsiInv: public aCloneableBinaryFunctor<NablaPsiInv>
+struct NablaPsiInv: public aCloneableCylindricalFunctor<NablaPsiInv>
 {
     /**
      * @brief Construct with function container
      *
      * @param psi \f$ \psi(x,y)\f$ and its first derivatives
      */
-    NablaPsiInv( const BinaryFunctorsLvl1& psi): psi_(psi){}
+    NablaPsiInv( const CylindricalFunctorsLvl1& psi): psi_(psi){}
     private:
     virtual double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         return 1./sqrt(psiX*psiX+psiY*psiY);
     }
-    BinaryFunctorsLvl1 psi_;
+    CylindricalFunctorsLvl1 psi_;
 };
 
 /**
  * @brief Derivative of the weight function
  *\f[\partial_x|\nabla\psi|^{-1} \f]
  */
-struct NablaPsiInvX: public aCloneableBinaryFunctor<NablaPsiInvX>
+struct NablaPsiInvX: public aCloneableCylindricalFunctor<NablaPsiInvX>
 {
-    NablaPsiInvX( const BinaryFunctorsLvl2& psi):psi_(psi) {}
+    NablaPsiInvX( const CylindricalFunctorsLvl2& psi):psi_(psi) {}
     private:
     virtual double do_compute(double x, double y)const
     {
@@ -95,16 +95,16 @@ struct NablaPsiInvX: public aCloneableBinaryFunctor<NablaPsiInvX>
         return -(psiX*psiXX+psiY*psiXY)/psip/psip/psip;
     }
 
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
 };
 
 /**
  * @brief Derivative of the weight function
  *\f[ \partial_y|\nabla\psi|^{-1} \f]
  */
-struct NablaPsiInvY: public aCloneableBinaryFunctor<NablaPsiInvY>
+struct NablaPsiInvY: public aCloneableCylindricalFunctor<NablaPsiInvY>
 {
-    NablaPsiInvY( const BinaryFunctorsLvl2& psi):psi_(psi) {}
+    NablaPsiInvY( const CylindricalFunctorsLvl2& psi):psi_(psi) {}
     private:
     double do_compute(double x, double y)const
     {
@@ -114,15 +114,15 @@ struct NablaPsiInvY: public aCloneableBinaryFunctor<NablaPsiInvY>
         return -(psiX*psiXY+psiY*psiYY)/psip/psip/psip;
     }
 
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
 };
 
 /**
  * @brief A container class that contains all NablaPsiInv functors
  */
-static inline BinaryFunctorsLvl1 make_NablaPsiInvCollective( const BinaryFunctorsLvl2& psi)
+static inline CylindricalFunctorsLvl1 make_NablaPsiInvCollective( const CylindricalFunctorsLvl2& psi)
 {
-    BinaryFunctorsLvl1 temp( new NablaPsiInv(psi), new NablaPsiInvX(psi), new NablaPsiInvY( psi));
+    CylindricalFunctorsLvl1 temp( new NablaPsiInv(psi), new NablaPsiInvX(psi), new NablaPsiInvY( psi));
     return temp;
 }
 
@@ -135,9 +135,9 @@ static inline BinaryFunctorsLvl1 make_NablaPsiInvCollective( const BinaryFunctor
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-struct Liseikin_XX: public aCloneableBinaryFunctor<Liseikin_XX>
+struct Liseikin_XX: public aCloneableCylindricalFunctor<Liseikin_XX>
 {
-    Liseikin_XX(const BinaryFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    Liseikin_XX(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
     private:
     double do_compute(double x, double y)const
     {
@@ -148,7 +148,7 @@ struct Liseikin_XX: public aCloneableBinaryFunctor<Liseikin_XX>
     }
 
     double k_, eps_;
-    BinaryFunctorsLvl1 psi_;
+    CylindricalFunctorsLvl1 psi_;
 };
 
 /**
@@ -158,9 +158,9 @@ struct Liseikin_XX: public aCloneableBinaryFunctor<Liseikin_XX>
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-struct Liseikin_XY: public aCloneableBinaryFunctor<Liseikin_XY>
+struct Liseikin_XY: public aCloneableCylindricalFunctor<Liseikin_XY>
 {
-    Liseikin_XY(const BinaryFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    Liseikin_XY(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
     private:
     double do_compute(double x, double y)const
     {
@@ -171,7 +171,7 @@ struct Liseikin_XY: public aCloneableBinaryFunctor<Liseikin_XY>
     }
 
     double k_, eps_;
-    BinaryFunctorsLvl1 psi_;
+    CylindricalFunctorsLvl1 psi_;
 };
 
 /**
@@ -181,9 +181,9 @@ struct Liseikin_XY: public aCloneableBinaryFunctor<Liseikin_XY>
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-struct Liseikin_YY: public aCloneableBinaryFunctor<Liseikin_YY>
+struct Liseikin_YY: public aCloneableCylindricalFunctor<Liseikin_YY>
 {
-    Liseikin_YY(const BinaryFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    Liseikin_YY(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
     private:
     double do_compute(double x, double y)const
     {
@@ -194,16 +194,16 @@ struct Liseikin_YY: public aCloneableBinaryFunctor<Liseikin_YY>
     }
 
     double k_, eps_;
-    BinaryFunctorsLvl1 psi_;
+    CylindricalFunctorsLvl1 psi_;
 };
 
 /**
  * @brief The x-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f]
  */
-struct DivLiseikinX: public aCloneableBinaryFunctor<DivLiseikinX>
+struct DivLiseikinX: public aCloneableCylindricalFunctor<DivLiseikinX>
 {
-    DivLiseikinX(const BinaryFunctorsLvl2& psi, double k, double eps): k_(k), eps_(eps), psi_(psi){}
+    DivLiseikinX(const CylindricalFunctorsLvl2& psi, double k, double eps): k_(k), eps_(eps), psi_(psi){}
     private:
     double do_compute(double x, double y)const
     {
@@ -221,16 +221,16 @@ struct DivLiseikinX: public aCloneableBinaryFunctor<DivLiseikinX>
     }
 
     double k_, eps_;
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
 };
 
 /**
  * @brief The y-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f]
  */
-struct DivLiseikinY : public aCloneableBinaryFunctor<DivLiseikinY>
+struct DivLiseikinY : public aCloneableCylindricalFunctor<DivLiseikinY>
 {
-    DivLiseikinY(const BinaryFunctorsLvl2& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    DivLiseikinY(const CylindricalFunctorsLvl2& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
     private:
     double do_compute(double x, double y)const
     {
@@ -248,12 +248,12 @@ struct DivLiseikinY : public aCloneableBinaryFunctor<DivLiseikinY>
     }
 
     double k_, eps_;
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
 };
 
-static inline BinarySymmTensorLvl1 make_LiseikinCollective( const BinaryFunctorsLvl2& psi, double k, double eps)
+static inline CylindricalSymmTensorLvl1 make_LiseikinCollective( const CylindricalFunctorsLvl2& psi, double k, double eps)
 {
-    BinarySymmTensorLvl1 temp( new Liseikin_XX(psi,k,eps), new Liseikin_XY(psi,k,eps), new Liseikin_YY(psi,k,eps), new DivLiseikinX(psi,k,eps), new DivLiseikinY(psi,k,eps));
+    CylindricalSymmTensorLvl1 temp( new Liseikin_XX(psi,k,eps), new Liseikin_XY(psi,k,eps), new Liseikin_YY(psi,k,eps), new DivLiseikinX(psi,k,eps), new DivLiseikinY(psi,k,eps));
     return temp;
 }
 ///@}

@@ -284,7 +284,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     if( p.curvmode == "toroidal")
         mag = dg::geo::createToroidalField(gp.R_0);
-    dg::geo::BinaryVectorLvl0 curvNabla, curvKappa;
+    dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
     if( p.curvmode == "true" || p.curvmode == "toroidal")
     {
         curvNabla = dg::geo::createTrueCurvatureNablaB(mag);

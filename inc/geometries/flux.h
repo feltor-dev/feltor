@@ -29,7 +29,7 @@ struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
+    Fpsi( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
         psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip),m_verbose(verbose)
     {
         X_init = x0, Y_init = y0;
@@ -111,7 +111,7 @@ struct Fpsi
 
     private:
     double X_init, Y_init;
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     dg::geo::flux::FieldRZYT fieldRZYT_;
     dg::geo::FieldRZtau fieldRZtau_;
     bool m_verbose;
@@ -143,7 +143,7 @@ struct FluxGenerator : public aGenerator2d
      * @param verbose if true the integrators will write additional information to \c std::cout
      * @note If \c mode==1 then this class does the same as the \c RibeiroFluxGenerator
      */
-    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
+    FluxGenerator( const CylindricalFunctorsLvl2& psi, const CylindricalFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
         psi_(psi), ipol_(ipol), mode_(mode), m_verbose( verbose)
     {
         psi0_ = psi_0, psi1_ = psi_1;
@@ -209,8 +209,8 @@ struct FluxGenerator : public aGenerator2d
             }
         }
     }
-    BinaryFunctorsLvl2 psi_;
-    BinaryFunctorsLvl1 ipol_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl1 ipol_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
     bool m_verbose;
@@ -233,7 +233,7 @@ struct RibeiroFluxGenerator : public aGenerator2d
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @param verbose if true the integrators will write additional information to \c std::cout
      */
-    RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
+    RibeiroFluxGenerator( const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
         psip_(psi), mode_(mode), m_verbose(verbose)
     {
         psi0_ = psi_0, psi1_ = psi_1;
@@ -288,7 +288,7 @@ struct RibeiroFluxGenerator : public aGenerator2d
             }
         }
     }
-    BinaryFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl2 psip_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
     bool m_verbose;

@@ -35,8 +35,8 @@ struct TokamakMagneticField
 {
     ///as long as the field stays empty the access functions are undefined
     TokamakMagneticField(){}
-    TokamakMagneticField( double R0, const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): R0_(R0), psip_(psip), ipol_(ipol){}
-    void set( double R0, const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol)
+    TokamakMagneticField( double R0, const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol): R0_(R0), psip_(psip), ipol_(ipol){}
+    void set( double R0, const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol)
     {
         R0_=R0;
         psip_=psip;
@@ -45,36 +45,36 @@ struct TokamakMagneticField
     /// \f$ R_0 \f$
     double R0()const {return R0_;}
     /// \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psip()const{return psip_.f();}
+    const aCylindricalFunctor& psip()const{return psip_.f();}
     /// \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipR()const{return psip_.dfx();}
+    const aCylindricalFunctor& psipR()const{return psip_.dfx();}
     /// \f$ \partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipZ()const{return psip_.dfy();}
+    const aCylindricalFunctor& psipZ()const{return psip_.dfy();}
     /// \f$ \partial_R\partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipRR()const{return psip_.dfxx();}
+    const aCylindricalFunctor& psipRR()const{return psip_.dfxx();}
     /// \f$ \partial_R\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipRZ()const{return psip_.dfxy();}
+    const aCylindricalFunctor& psipRZ()const{return psip_.dfxy();}
     /// \f$ \partial_Z\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipZZ()const{return psip_.dfyy();}
+    const aCylindricalFunctor& psipZZ()const{return psip_.dfyy();}
     /// \f$ I(\psi_p) \f$ the current
-    const aBinaryFunctor& ipol()const{return ipol_.f();}
+    const aCylindricalFunctor& ipol()const{return ipol_.f();}
     /// \f$ \partial_R I(\psi_p) \f$
-    const aBinaryFunctor& ipolR()const{return ipol_.dfx();}
+    const aCylindricalFunctor& ipolR()const{return ipol_.dfx();}
     /// \f$ \partial_Z I(\psi_p) \f$
-    const aBinaryFunctor& ipolZ()const{return ipol_.dfy();}
+    const aCylindricalFunctor& ipolZ()const{return ipol_.dfy();}
 
-    const BinaryFunctorsLvl2& get_psip() const{return psip_;}
-    const BinaryFunctorsLvl1& get_ipol() const{return ipol_;}
+    const CylindricalFunctorsLvl2& get_psip() const{return psip_;}
+    const CylindricalFunctorsLvl1& get_ipol() const{return ipol_;}
 
     private:
     double R0_;
-    BinaryFunctorsLvl2 psip_;
-    BinaryFunctorsLvl1 ipol_;
+    CylindricalFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl1 ipol_;
 };
 
 
 ///@brief \f$   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f$
-struct Bmodule : public aCloneableBinaryFunctor<Bmodule>
+struct Bmodule : public aCloneableCylindricalFunctor<Bmodule>
 {
     Bmodule( const TokamakMagneticField& mag): mag_(mag)  { }
   private:
@@ -93,7 +93,7 @@ struct Bmodule : public aCloneableBinaryFunctor<Bmodule>
         \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
         + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f$
  */
-struct InvB : public aCloneableBinaryFunctor<InvB>
+struct InvB : public aCloneableCylindricalFunctor<InvB>
 {
     InvB(  const TokamakMagneticField& mag): mag_(mag){ }
   private:
@@ -112,7 +112,7 @@ struct InvB : public aCloneableBinaryFunctor<InvB>
           \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
           + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2} \right] } \f$
  */
-struct LnB : public aCloneableBinaryFunctor<LnB>
+struct LnB : public aCloneableCylindricalFunctor<LnB>
 {
     LnB(const TokamakMagneticField& mag): mag_(mag) { }
   private:
@@ -134,7 +134,7 @@ struct LnB : public aCloneableBinaryFunctor<LnB>
       + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)\left( \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\right)}
       {\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f$
  */
-struct BR: public aCloneableBinaryFunctor<BR>
+struct BR: public aCloneableCylindricalFunctor<BR>
 {
     BR(const TokamakMagneticField& mag): invB_(mag), mag_(mag) { }
   private:
@@ -158,7 +158,7 @@ struct BR: public aCloneableBinaryFunctor<BR>
      \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
           + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2} \right)}{\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f$
  */
-struct BZ: public aCloneableBinaryFunctor<BZ>
+struct BZ: public aCloneableCylindricalFunctor<BZ>
 {
     BZ(const TokamakMagneticField& mag ): mag_(mag), invB_(mag) { }
   private:
@@ -178,7 +178,7 @@ struct BZ: public aCloneableBinaryFunctor<BZ>
 ///
 /// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f$
 ///@copydoc hide_toroidal_approximation_note
-struct CurvatureNablaBR: public aCloneableBinaryFunctor<CurvatureNablaBR>
+struct CurvatureNablaBR: public aCloneableCylindricalFunctor<CurvatureNablaBR>
 {
     CurvatureNablaBR(const TokamakMagneticField& mag): invB_(mag), bZ_(mag) { }
     private:
@@ -194,7 +194,7 @@ struct CurvatureNablaBR: public aCloneableBinaryFunctor<CurvatureNablaBR>
 ///
 /// \f$  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f$
 ///@copydoc hide_toroidal_approximation_note
-struct CurvatureNablaBZ: public aCloneableBinaryFunctor<CurvatureNablaBZ>
+struct CurvatureNablaBZ: public aCloneableCylindricalFunctor<CurvatureNablaBZ>
 {
     CurvatureNablaBZ( const TokamakMagneticField& mag): invB_(mag), bR_(mag) { }
     private:
@@ -210,7 +210,7 @@ struct CurvatureNablaBZ: public aCloneableBinaryFunctor<CurvatureNablaBZ>
 ///
 /// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f$
 ///@copydoc hide_toroidal_approximation_note
-struct CurvatureKappaR: public aCloneableBinaryFunctor<CurvatureKappaR>
+struct CurvatureKappaR: public aCloneableCylindricalFunctor<CurvatureKappaR>
 {
     CurvatureKappaR( ){ }
     CurvatureKappaR( const TokamakMagneticField& mag){ }
@@ -225,7 +225,7 @@ struct CurvatureKappaR: public aCloneableBinaryFunctor<CurvatureKappaR>
 ///
 /// \f$  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f$
 ///@copydoc hide_toroidal_approximation_note
-struct CurvatureKappaZ: public aCloneableBinaryFunctor<CurvatureKappaZ>
+struct CurvatureKappaZ: public aCloneableCylindricalFunctor<CurvatureKappaZ>
 {
     CurvatureKappaZ( const TokamakMagneticField& mag): invB_(mag) { }
     private:
@@ -240,7 +240,7 @@ struct CurvatureKappaZ: public aCloneableBinaryFunctor<CurvatureKappaZ>
 ///
 ///  \f$  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f$
 ///@copydoc hide_toroidal_approximation_note
-struct DivCurvatureKappa: public aCloneableBinaryFunctor<DivCurvatureKappa>
+struct DivCurvatureKappa: public aCloneableCylindricalFunctor<DivCurvatureKappa>
 {
     DivCurvatureKappa( const TokamakMagneticField& mag): invB_(mag), bZ_(mag){ }
     private:
@@ -255,7 +255,7 @@ struct DivCurvatureKappa: public aCloneableBinaryFunctor<DivCurvatureKappa>
 ///
 ///  \f$  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\nabla B}  = -\frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f$
 ///@copydoc hide_toroidal_approximation_note
-struct DivCurvatureNablaB: public aCloneableBinaryFunctor<DivCurvatureNablaB>
+struct DivCurvatureNablaB: public aCloneableCylindricalFunctor<DivCurvatureNablaB>
 {
     DivCurvatureNablaB( const TokamakMagneticField& mag): div_(mag){ }
     private:
@@ -268,7 +268,7 @@ struct DivCurvatureNablaB: public aCloneableBinaryFunctor<DivCurvatureNablaB>
 ///@brief True \f$ \mathcal{K}^{R}_{\nabla B} \f$
 ///
 /// \f$ \mathcal{K}^R_{\nabla B} =-\frac{R_0I}{ B^3R}  \frac{\partial B}{\partial Z}  \f$
-struct TrueCurvatureNablaBR: public aCloneableBinaryFunctor<TrueCurvatureNablaBR>
+struct TrueCurvatureNablaBR: public aCloneableCylindricalFunctor<TrueCurvatureNablaBR>
 {
     TrueCurvatureNablaBR(const TokamakMagneticField& mag): R0_(mag.R0()), c_(mag), invB_(mag), bZ_(mag) { }
     private:
@@ -286,7 +286,7 @@ struct TrueCurvatureNablaBR: public aCloneableBinaryFunctor<TrueCurvatureNablaBR
 ///@brief True \f$ \mathcal{K}^{Z}_{\nabla B} \f$
 ///
 /// \f$ \mathcal{K}^Z_{\nabla B} =\frac{R_0I}{ B^3R}  \frac{\partial B}{\partial R}  \f$
-struct TrueCurvatureNablaBZ: public aCloneableBinaryFunctor<TrueCurvatureNablaBZ>
+struct TrueCurvatureNablaBZ: public aCloneableCylindricalFunctor<TrueCurvatureNablaBZ>
 {
     TrueCurvatureNablaBZ(const TokamakMagneticField& mag): R0_(mag.R0()), c_(mag), invB_(mag), bR_(mag) { }
     private:
@@ -304,7 +304,7 @@ struct TrueCurvatureNablaBZ: public aCloneableBinaryFunctor<TrueCurvatureNablaBZ
 ///@brief True \f$ \mathcal{K}^{\varphi}_{\nabla B} \f$
 ///
 /// \f$ \mathcal{K}^\varphi_{\nabla B} =\frac{1}{ B^3R^2}\left( \frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R} \right) \f$
-struct TrueCurvatureNablaBP: public aCloneableBinaryFunctor<TrueCurvatureNablaBP>
+struct TrueCurvatureNablaBP: public aCloneableCylindricalFunctor<TrueCurvatureNablaBP>
 {
     TrueCurvatureNablaBP(const TokamakMagneticField& mag): c_(mag), invB_(mag),bR_(mag), bZ_(mag) { }
     private:
@@ -320,7 +320,7 @@ struct TrueCurvatureNablaBP: public aCloneableBinaryFunctor<TrueCurvatureNablaBP
 };
 
 ///@brief True \f$ \mathcal{K}^R_{\vec{\kappa}} \f$
-struct TrueCurvatureKappaR: public aCloneableBinaryFunctor<TrueCurvatureKappaR>
+struct TrueCurvatureKappaR: public aCloneableCylindricalFunctor<TrueCurvatureKappaR>
 {
     TrueCurvatureKappaR( const TokamakMagneticField& mag):c_(mag), invB_(mag), bZ_(mag){ }
     private:
@@ -335,7 +335,7 @@ struct TrueCurvatureKappaR: public aCloneableBinaryFunctor<TrueCurvatureKappaR>
 };
 
 ///@brief True \f$ \mathcal{K}^Z_{\vec{\kappa}} \f$
-struct TrueCurvatureKappaZ: public aCloneableBinaryFunctor<TrueCurvatureKappaZ>
+struct TrueCurvatureKappaZ: public aCloneableCylindricalFunctor<TrueCurvatureKappaZ>
 {
     TrueCurvatureKappaZ( const TokamakMagneticField& mag):c_(mag), invB_(mag), bR_(mag){ }
     private:
@@ -349,7 +349,7 @@ struct TrueCurvatureKappaZ: public aCloneableBinaryFunctor<TrueCurvatureKappaZ>
     BR bR_;
 };
 ///@brief True \f$ \mathcal{K}^\varphi_{\vec{\kappa}} \f$
-struct TrueCurvatureKappaP: public aCloneableBinaryFunctor<TrueCurvatureKappaP>
+struct TrueCurvatureKappaP: public aCloneableCylindricalFunctor<TrueCurvatureKappaP>
 {
     TrueCurvatureKappaP( const TokamakMagneticField& mag):c_(mag), invB_(mag), bR_(mag), bZ_(mag){ }
     private:
@@ -367,7 +367,7 @@ struct TrueCurvatureKappaP: public aCloneableBinaryFunctor<TrueCurvatureKappaP>
 };
 
 ///@brief True \f$  \vec{\nabla}\cdot \mathcal{K}_{\vec{\kappa}}  \f$
-struct TrueDivCurvatureKappa: public aCloneableBinaryFunctor<TrueDivCurvatureKappa>
+struct TrueDivCurvatureKappa: public aCloneableCylindricalFunctor<TrueDivCurvatureKappa>
 {
     TrueDivCurvatureKappa( const TokamakMagneticField& mag): curvR_(mag), curvZ_(mag), invB_(mag), bR_(mag), bZ_(mag){}
     private:
@@ -384,7 +384,7 @@ struct TrueDivCurvatureKappa: public aCloneableBinaryFunctor<TrueDivCurvatureKap
 };
 
 ///@brief True \f$  \vec{\nabla}\cdot \mathcal{K}_{\nabla B}  \f$
-struct TrueDivCurvatureNablaB: public aCloneableBinaryFunctor<TrueDivCurvatureNablaB>
+struct TrueDivCurvatureNablaB: public aCloneableCylindricalFunctor<TrueDivCurvatureNablaB>
 {
     TrueDivCurvatureNablaB( const TokamakMagneticField& mag): div_(mag){}
     private:
@@ -399,7 +399,7 @@ struct TrueDivCurvatureNablaB: public aCloneableBinaryFunctor<TrueDivCurvatureNa
  *
  *    \f$  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f$
  */
-struct GradLnB: public aCloneableBinaryFunctor<GradLnB>
+struct GradLnB: public aCloneableCylindricalFunctor<GradLnB>
 {
     GradLnB( const TokamakMagneticField& mag): mag_(mag), invB_(mag), bR_(mag), bZ_(mag) { }
     private:
@@ -419,7 +419,7 @@ struct GradLnB: public aCloneableBinaryFunctor<GradLnB>
  * \f$  \nabla\cdot \vec b = -\nabla_\parallel \ln B \f$
  * @sa \c GradLnB
  */
-struct Divb: public aCloneableBinaryFunctor<GradLnB>
+struct Divb: public aCloneableCylindricalFunctor<GradLnB>
 {
     Divb( const TokamakMagneticField& mag): m_gradLnB(mag) { }
     private:
@@ -431,7 +431,7 @@ struct Divb: public aCloneableBinaryFunctor<GradLnB>
 };
 
 ///@brief \f$ B^\varphi = R_0I/R^2\f$
-struct BFieldP: public aCloneableBinaryFunctor<BFieldP>
+struct BFieldP: public aCloneableCylindricalFunctor<BFieldP>
 {
     BFieldP( const TokamakMagneticField& mag): mag_(mag){}
     private:
@@ -444,7 +444,7 @@ struct BFieldP: public aCloneableBinaryFunctor<BFieldP>
 };
 
 ///@brief \f$ B^R = R_0\psi_Z /R\f$
-struct BFieldR: public aCloneableBinaryFunctor<BFieldR>
+struct BFieldR: public aCloneableCylindricalFunctor<BFieldR>
 {
     BFieldR( const TokamakMagneticField& mag): mag_(mag){}
     private:
@@ -457,7 +457,7 @@ struct BFieldR: public aCloneableBinaryFunctor<BFieldR>
 };
 
 ///@brief \f$ B^Z = -R_0\psi_R /R\f$
-struct BFieldZ: public aCloneableBinaryFunctor<BFieldZ>
+struct BFieldZ: public aCloneableCylindricalFunctor<BFieldZ>
 {
     BFieldZ( const TokamakMagneticField& mag): mag_(mag){}
     private:
@@ -469,7 +469,7 @@ struct BFieldZ: public aCloneableBinaryFunctor<BFieldZ>
 };
 
 ///@brief \f$  B^{\theta} = B^R\partial_R\theta + B^Z\partial_Z\theta\f$
-struct BFieldT: public aCloneableBinaryFunctor<BFieldT>
+struct BFieldT: public aCloneableCylindricalFunctor<BFieldT>
 {
     BFieldT( const TokamakMagneticField& mag):  R_0_(mag.R0()), fieldR_(mag), fieldZ_(mag){}
     private:
@@ -484,7 +484,7 @@ struct BFieldT: public aCloneableBinaryFunctor<BFieldT>
 };
 
 ///@brief \f$ b^R = B^R/|B|\f$
-struct BHatR: public aCloneableBinaryFunctor<BHatR>
+struct BHatR: public aCloneableCylindricalFunctor<BHatR>
 {
     BHatR( const TokamakMagneticField& mag): mag_(mag), invB_(mag){ }
     private:
@@ -498,7 +498,7 @@ struct BHatR: public aCloneableBinaryFunctor<BHatR>
 };
 
 ///@brief \f$ b^Z = B^Z/|B|\f$
-struct BHatZ: public aCloneableBinaryFunctor<BHatZ>
+struct BHatZ: public aCloneableCylindricalFunctor<BHatZ>
 {
     BHatZ( const TokamakMagneticField& mag): mag_(mag), invB_(mag){ }
     private:
@@ -511,7 +511,7 @@ struct BHatZ: public aCloneableBinaryFunctor<BHatZ>
 };
 
 ///@brief \f$ b^\varphi = B^\varphi/|B|\f$
-struct BHatP: public aCloneableBinaryFunctor<BHatP>
+struct BHatP: public aCloneableCylindricalFunctor<BHatP>
 {
     BHatP( const TokamakMagneticField& mag): mag_(mag), invB_(mag){ }
     private:
@@ -529,15 +529,15 @@ struct BHatP: public aCloneableBinaryFunctor<BHatP>
  * @param mag the tokamak magnetic field
  * @return the tuple BHatR, BHatZ, BHatP constructed from mag
  */
-inline BinaryVectorLvl0 createBHat( const TokamakMagneticField& mag){
-    return BinaryVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
+inline CylindricalVectorLvl0 createBHat( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
 }
 /**
  * @brief Unit vector field (0, 0, 1)
  * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1)
  */
-inline BinaryVectorLvl0 createEPhi( ){
-    return BinaryVectorLvl0( Constant(0), Constant(0), Constant(1));
+inline CylindricalVectorLvl0 createEPhi( ){
+    return CylindricalVectorLvl0( Constant(0), Constant(0), Constant(1));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
@@ -545,8 +545,8 @@ inline BinaryVectorLvl0 createEPhi( ){
  * @param mag the tokamak magnetic field
  * @return the tuple CurvatureNablaBR, CurvatureNablaBZ, dg::geo::Constant(0) constructed from mag
  */
-inline BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
-    return BinaryVectorLvl0( CurvatureNablaBR(mag), CurvatureNablaBZ(mag), Constant(0));
+inline CylindricalVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl0( CurvatureNablaBR(mag), CurvatureNablaBZ(mag), Constant(0));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureKappaR, CurvatureKappaZ, Constant(0))
@@ -554,8 +554,8 @@ inline BinaryVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
  * @param mag the tokamak magnetic field
  * @return the tuple CurvatureKappaR, CurvatureKappaZ, dg::geo::Constant(0) constructed from mag
  */
-inline BinaryVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
-    return BinaryVectorLvl0( CurvatureKappaR(mag), CurvatureKappaZ(mag), Constant(0));
+inline CylindricalVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl0( CurvatureKappaR(mag), CurvatureKappaZ(mag), Constant(0));
 }
 /**
  * @brief True curvature vector field (TrueCurvatureKappaR, TrueCurvatureKappaZ, TrueCurvatureKappaP)
@@ -563,8 +563,8 @@ inline BinaryVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
  * @param mag the tokamak magnetic field
  * @return the tuple TrueCurvatureKappaR, TrueCurvatureKappaZ, TrueCurvatureKappaP constructed from mag
  */
-inline BinaryVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& mag){
-    return BinaryVectorLvl0( TrueCurvatureKappaR(mag), TrueCurvatureKappaZ(mag), TrueCurvatureKappaP(mag));
+inline CylindricalVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl0( TrueCurvatureKappaR(mag), TrueCurvatureKappaZ(mag), TrueCurvatureKappaP(mag));
 }
 /**
  * @brief True curvature vector field (TrueCurvatureNablaBR, TrueCurvatureNablaBZ, TrueCurvatureNablaBP)
@@ -572,13 +572,13 @@ inline BinaryVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& ma
  * @param mag the tokamak magnetic field
  * @return the tuple TrueCurvatureNablaBR, TrueCurvatureNablaBZ, TrueCurvatureNablaBP constructed from mag
  */
-inline BinaryVectorLvl0 createTrueCurvatureNablaB( const TokamakMagneticField& mag){
-    return BinaryVectorLvl0( TrueCurvatureNablaBR(mag), TrueCurvatureNablaBZ(mag), TrueCurvatureNablaBP(mag));
+inline CylindricalVectorLvl0 createTrueCurvatureNablaB( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl0( TrueCurvatureNablaBR(mag), TrueCurvatureNablaBZ(mag), TrueCurvatureNablaBP(mag));
 }
 
 //Necessary to analytically compute Laplacians:
 ///@brief \f$ \nabla_\parallel b^R \f$
-struct GradBHatR: public aCloneableBinaryFunctor<GradBHatR>
+struct GradBHatR: public aCloneableCylindricalFunctor<GradBHatR>
 {
     GradBHatR( const TokamakMagneticField& mag): bhatR_(mag), divb_(mag), mag_(mag){}
     private:
@@ -596,7 +596,7 @@ struct GradBHatR: public aCloneableBinaryFunctor<GradBHatR>
     TokamakMagneticField mag_;
 };
 ///@brief \f$ \nabla_\parallel b^Z \f$
-struct GradBHatZ: public aCloneableBinaryFunctor<GradBHatZ>
+struct GradBHatZ: public aCloneableCylindricalFunctor<GradBHatZ>
 {
     GradBHatZ( const TokamakMagneticField& mag): bhatZ_(mag), divb_(mag), mag_(mag){}
     private:
@@ -615,7 +615,7 @@ struct GradBHatZ: public aCloneableBinaryFunctor<GradBHatZ>
     TokamakMagneticField mag_;
 };
 ///@brief \f$ \nabla_\parallel b^\varphi \f$
-struct GradBHatP: public aCloneableBinaryFunctor<GradBHatP>
+struct GradBHatP: public aCloneableCylindricalFunctor<GradBHatP>
 {
     GradBHatP( const TokamakMagneticField& mag): bhatP_(mag), divb_(mag), mag_(mag){}
     private:

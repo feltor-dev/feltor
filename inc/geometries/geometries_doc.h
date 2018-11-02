@@ -8,7 +8,7 @@
  * @defgroup grids 2. New geometric grids
  * @defgroup fluxfunctions 3. New functors based on the magnetic field geometry
 
- All functors in this section model two or three-dimensional functions, i.e. they all overload the operator() like \c aBinaryFunctor
+ All functors in this section model two or three-dimensional functions, i.e. they all overload the operator() like \c aCylindricalFunctor
  * @{
       @defgroup geom 3.1 New flux functions and derivatives
       @{

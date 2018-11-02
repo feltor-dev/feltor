@@ -25,7 +25,7 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct FpsiX
 {
-    FpsiX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0):
+    FpsiX( const CylindricalFunctorsLvl1& psi, double xX, double yX, double x0, double y0):
         initX_(psi, xX, yX), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi)
     { }
     //for a given psi finds the four starting points for the integration in y direction on the perpendicular lines through the X-point
@@ -171,7 +171,7 @@ struct FpsiX
 //This struct computes -2pi/f with a fixed number of steps for all psi
 struct XFieldFinv
 {
-    XFieldFinv( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
+    XFieldFinv( const CylindricalFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
         fpsi_(psi, xX, yX, x0, y0), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi) , N_steps(N_steps)
             { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
@@ -242,7 +242,7 @@ struct XFieldFinv
  */
 struct RibeiroX : public aGeneratorX2d
 {
-    RibeiroX( const BinaryFunctorsLvl2& psi, double psi_0, double fx,
+    RibeiroX( const CylindricalFunctorsLvl2& psi, double psi_0, double fx,
             double xX, double yX, double x0, double y0):
         psi_(psi), fpsi_(psi, xX, yX, x0,y0), fpsiMinv_(psi, xX, yX, x0,y0, 500)
     {
@@ -301,7 +301,7 @@ struct RibeiroX : public aGeneratorX2d
     virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
     virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
     dg::geo::ribeiro::detail::FpsiX fpsi_;
     dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_;
     double zeta0_, zeta1_;

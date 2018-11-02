@@ -36,7 +36,7 @@ int main()
     const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::geo::BinaryVectorLvl0 vec( dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1));
+    dg::geo::CylindricalVectorLvl0 vec( dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1));
 
     dg::geo::DS<dg::CartesianGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), dg::centered);
     t.toc();

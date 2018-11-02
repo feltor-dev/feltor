@@ -91,7 +91,7 @@ struct DS
      * @sa \c Fieldaligned
      */
     template<class Limiter>
-    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid,
+    DS(const dg::geo::CylindricalVectorLvl0& vec, const ProductGeometry& grid,
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),

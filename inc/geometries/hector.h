@@ -228,7 +228,7 @@ struct Hector : public aGenerator2d
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
-    Hector( const BinaryFunctorsLvl2& psi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
+    Hector( const CylindricalFunctorsLvl2& psi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
         g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
@@ -259,7 +259,7 @@ struct Hector : public aGenerator2d
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
-    Hector( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
+    Hector( const CylindricalFunctorsLvl2& psi, const CylindricalFunctorsLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
         g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         dg::geo::detail::LaplaceAdaptPsi lapAdaPsi( psi, chi);
@@ -292,7 +292,7 @@ struct Hector : public aGenerator2d
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
-    Hector( const BinaryFunctorsLvl2& psi,const BinarySymmTensorLvl1& chi,
+    Hector( const CylindricalFunctorsLvl2& psi,const CylindricalSymmTensorLvl1& chi,
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
         g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
@@ -364,7 +364,7 @@ struct Hector : public aGenerator2d
         //std::cout << "Error in u is "<<eps<<std::endl;
     }
 
-    container construct_grid_and_u( const aBinaryFunctor& chi, const aBinaryFunctor& lapChiPsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose)
+    container construct_grid_and_u( const aCylindricalFunctor& chi, const aCylindricalFunctor& lapChiPsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose)
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
@@ -404,8 +404,8 @@ struct Hector : public aGenerator2d
         return u;
     }
 
-    container construct_grid_and_u( const BinaryFunctorsLvl2& psi,
-            const BinarySymmTensorLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u, bool verbose )
+    container construct_grid_and_u( const CylindricalFunctorsLvl2& psi,
+            const CylindricalSymmTensorLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u, bool verbose )
     {
         dg::geo::detail::LaplaceChiPsi lapChiPsi( psi, chi);
         //first find u( \zeta, \eta)
@@ -449,7 +449,7 @@ struct Hector : public aGenerator2d
         return u;
     }
 
-    void construct(const container& u, double psi0, double psi1, const aBinaryFunctor& chi_XX, const aBinaryFunctor& chi_XY, const aBinaryFunctor& chi_YY)
+    void construct(const container& u, double psi0, double psi1, const aCylindricalFunctor& chi_XX, const aCylindricalFunctor& chi_XY, const aCylindricalFunctor& chi_YY)
     {
         //now compute u_zeta and u_eta
         Matrix dzeta = dg::create::dx( g2d_, dg::DIR);

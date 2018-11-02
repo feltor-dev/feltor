@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
         is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
-    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
+    dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     if(rank==0)std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;

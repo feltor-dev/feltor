@@ -18,7 +18,7 @@ namespace flux{
  */
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
+    FieldRZYT( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -34,12 +34,12 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    BinaryFunctorsLvl1 psip_, ipol_;
+    CylindricalFunctorsLvl1 psip_, ipol_;
 };
 
 struct FieldRZYZ
 {
-    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
+    FieldRZYZ( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -52,7 +52,7 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    BinaryFunctorsLvl1 psip_, ipol_;
+    CylindricalFunctorsLvl1 psip_, ipol_;
 };
 
 /**
@@ -62,7 +62,7 @@ struct FieldRZYZ
  */
 struct FieldRZY
 {
-    FieldRZY( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), psip_(psip), ipol_(ipol){}
+    FieldRZY( const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol): f_(1.), psip_(psip), ipol_(ipol){}
     void set_f(double f){ f_ = f;}
     void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
@@ -74,7 +74,7 @@ struct FieldRZY
     }
   private:
     double f_;
-    BinaryFunctorsLvl1 psip_,ipol_;
+    CylindricalFunctorsLvl1 psip_,ipol_;
 };
 
 /**
@@ -90,7 +90,7 @@ struct FieldRZY
  */
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY(const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), f_prime_(1), psip_(psip), ipol_(ipol){}
+    FieldRZYRYZY(const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol): f_(1.), f_prime_(1), psip_(psip), ipol_(ipol){}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
@@ -124,8 +124,8 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    BinaryFunctorsLvl2 psip_;
-    BinaryFunctorsLvl1 ipol_;
+    CylindricalFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl1 ipol_;
 };
 
 }//namespace flux
@@ -133,7 +133,7 @@ namespace ribeiro{
 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
+    FieldRZYT( const CylindricalFunctorsLvl1& psip, double R0, double Z0, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -154,13 +154,13 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 struct FieldRZYZ
 {
-    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): psip_(psip), chi_(chi){}
+    FieldRZYZ( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -178,13 +178,13 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 struct FieldRZY
 {
-    FieldRZY( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
+    FieldRZY( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
     void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
@@ -203,14 +203,14 @@ struct FieldRZY
     }
   private:
     double f_;
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( const BinaryFunctorsLvl2& psip):psip_(psip){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( const CylindricalFunctorsLvl2& psip):psip_(psip){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
@@ -239,7 +239,7 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    BinaryFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl2 psip_;
 };
 }//namespace ribeiro
 namespace equalarc{
@@ -247,7 +247,7 @@ namespace equalarc{
 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
+    FieldRZYT( const CylindricalFunctorsLvl1& psip, double R0, double Z0, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -268,13 +268,13 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 struct FieldRZYZ
 {
-    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): psip_(psip), chi_(chi){}
+    FieldRZYZ( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -292,13 +292,13 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 struct FieldRZY
 {
-    FieldRZY( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
+    FieldRZY( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
     void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
@@ -317,14 +317,14 @@ struct FieldRZY
     }
   private:
     double f_;
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( const BinaryFunctorsLvl2& psip):  psip_(psip){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( const CylindricalFunctorsLvl2& psip):  psip_(psip){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
@@ -355,14 +355,14 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    BinaryFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl2 psip_;
 };
 
 }//namespace equalarc
 
 struct FieldRZtau
 {
-    FieldRZtau(const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1()): psip_(psip), chi_(chi){}
+    FieldRZtau(const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1()): psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -374,13 +374,13 @@ struct FieldRZtau
         yp[1] =  (chiRZ*psipR + chiZZ*psipZ)/psip2;
     }
   private:
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
 };
 
 struct HessianRZtau
 {
-    HessianRZtau( const BinaryFunctorsLvl2& psip): norm_(false), quad_(1), psip_(psip){}
+    HessianRZtau( const CylindricalFunctorsLvl2& psip): norm_(false), quad_(1), psip_(psip){}
     // if true goes into positive Z - direction and X else
     void set_quadrant( int quadrant) {quad_ = quadrant;}
     void set_norm( bool normed) {norm_ = normed;}
@@ -430,12 +430,12 @@ struct HessianRZtau
   private:
     bool norm_;
     int quad_;
-    BinaryFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl2 psip_;
 };
 
 struct MinimalCurve
 {
-    MinimalCurve(const BinaryFunctorsLvl1& psip): norm_(false),
+    MinimalCurve(const CylindricalFunctorsLvl1& psip): norm_(false),
         psip_(psip){}
     void set_norm( bool normed) {norm_ = normed;}
     void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
@@ -467,7 +467,7 @@ struct MinimalCurve
     }
   private:
     bool norm_;
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
 };
 ////////////////////////////////////////////////////////////////////////////////
 

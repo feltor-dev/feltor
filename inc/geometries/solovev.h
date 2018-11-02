@@ -57,7 +57,7 @@ namespace solovev
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  *
  */
-struct Psip: public aCloneableBinaryFunctor<Psip>
+struct Psip: public aCloneableCylindricalFunctor<Psip>
 {
     /**
      * @brief Construct from given geometric parameters
@@ -135,7 +135,7 @@ struct Psip: public aCloneableBinaryFunctor<Psip>
       \ln{(\bar{R}   )})\Bigg\} \f]
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */
-struct PsipR: public aCloneableBinaryFunctor<PsipR>
+struct PsipR: public aCloneableCylindricalFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
     PsipR( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
@@ -176,7 +176,7 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
       + c_7 (-165 \bar{R}^4 +2160 \bar{R}^2  \bar{Z}^2-640  \bar{Z}^4-450 \bar{R}^4  \ln{(\bar{R}   )}+2160 \bar{R}^2  \bar{Z}^2
       \ln{(\bar{R}   )}-240  \bar{Z}^4 \ln{(\bar{R}   )})\Bigg\}\f]
  */
-struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
+struct PsipRR: public aCloneableCylindricalFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
     PsipRR( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
@@ -212,7 +212,7 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
       +c_7 (150 \bar{R}^4  \bar{Z}-560 \bar{R}^2  \bar{Z}^3+48
       \bar{Z}^5+360 \bar{R}^4  \bar{Z} \ln{(\bar{R}   )}-480 \bar{R}^2  \bar{Z}^3 \ln{(\bar{R}   )})\Bigg\} \f]
  */
-struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
+struct PsipZ: public aCloneableCylindricalFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
     PsipZ( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
@@ -250,7 +250,7 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
       +c_7 (150 \bar{R}^4 -1680 \bar{R}^2  \bar{Z}^2+240  \bar{Z}^4+360 \bar{R}^4
       \ln{(\bar{R}   )}-1440 \bar{R}^2  \bar{Z}^2 \ln{(\bar{R}   )})\Bigg\} \f]
  */
-struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
+struct PsipZZ: public aCloneableCylindricalFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
     PsipZZ( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
@@ -280,7 +280,7 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
       +c_7(960 \bar{R}^3  \bar{Z}-1600 \bar{R}  \bar{Z}^3+1440 \bar{R}^3  \bar{Z} \ln{(\bar{R}
       )}-960 \bar{R}  \bar{Z}^3 \ln{(\bar{R}   )})\Bigg\} \f]
  */
-struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
+struct PsipRZ: public aCloneableCylindricalFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
     PsipRZ( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
@@ -306,7 +306,7 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 
     \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f]
  */
-struct Ipol: public aCloneableBinaryFunctor<Ipol>
+struct Ipol: public aCloneableCylindricalFunctor<Ipol>
 {
     ///@copydoc Psip::Psip()
     Ipol(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
@@ -322,7 +322,7 @@ struct Ipol: public aCloneableBinaryFunctor<Ipol>
 /**
  * @brief \f[\hat I_R\f]
  */
-struct IpolR: public aCloneableBinaryFunctor<IpolR>
+struct IpolR: public aCloneableCylindricalFunctor<IpolR>
 {
     ///@copydoc Psip::Psip()
     IpolR(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
@@ -338,7 +338,7 @@ struct IpolR: public aCloneableBinaryFunctor<IpolR>
 /**
  * @brief \f[\hat I_Z\f]
  */
-struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
+struct IpolZ: public aCloneableCylindricalFunctor<IpolZ>
 {
     ///@copydoc Psip::Psip()
     IpolZ(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
@@ -352,14 +352,14 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-static inline dg::geo::BinaryFunctorsLvl2 createPsip( Parameters gp)
+static inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp)
 {
-    BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
+    CylindricalFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
     return psip;
 }
-static inline dg::geo::BinaryFunctorsLvl1 createIpol( Parameters gp)
+static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
 {
-    BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
+    CylindricalFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
 
@@ -373,7 +373,7 @@ static inline dg::geo::TokamakMagneticField createMagField( Parameters gp)
 namespace mod
 {
 
-struct Psip: public aCloneableBinaryFunctor<Psip>
+struct Psip: public aCloneableCylindricalFunctor<Psip>
 {
     Psip( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -399,7 +399,7 @@ struct Psip: public aCloneableBinaryFunctor<Psip>
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipR: public aCloneableBinaryFunctor<PsipR>
+struct PsipR: public aCloneableCylindricalFunctor<PsipR>
 {
     PsipR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -427,7 +427,7 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
+struct PsipZ: public aCloneableCylindricalFunctor<PsipZ>
 {
     PsipZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -456,7 +456,7 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
     dg::Cauchy cauchy_;
 };
 
-struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
+struct PsipZZ: public aCloneableCylindricalFunctor<PsipZZ>
 {
     PsipZZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -485,7 +485,7 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
+struct PsipRR: public aCloneableCylindricalFunctor<PsipRR>
 {
     PsipRR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -514,7 +514,7 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
+struct PsipRZ: public aCloneableCylindricalFunctor<PsipRZ>
 {
     PsipRZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)

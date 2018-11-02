@@ -22,7 +22,7 @@ struct Implicit
         m_ellipticPerp( g, dg::normed, dg::centered)
     {
         auto c = dg::geo::createSolovevField(gp);
-        dg::geo::BinaryVectorLvl0 bhat = dg::geo::createBHat( c);
+        dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( c);
         dg::SparseTensor<container> bb, hh;
         bb = dg::geo::createAlignmentTensor( bhat, g);
         m_ellipticForward.set_chi( bb);
@@ -111,7 +111,7 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g, heat::
     auto c = dg::geo::createSolovevField(gp);
     dg::assign(  dg::pullback(dg::geo::InvB(c), g), m_invB);
     dg::assign(  dg::pullback(dg::geo::Divb(c), g), m_divb);
-    dg::geo::BinaryVectorLvl0 bhat = dg::geo::createBHat( c);
+    dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( c);
     dg::SparseTensor<container> bb, hh;
     bb = dg::geo::createAlignmentTensor( bhat, g);
     m_ellipticForward.set_chi( bb);

@@ -15,9 +15,9 @@ namespace geo
 * where the 3d functor trivially redirects to the 2d version.
 * This behaviour is injected into all classes that derive from this class
 * @ingroup fluxfunctions
-* @sa \c aCloneableBinaryFunctor
+* @sa \c aCloneableCylindricalFunctor
 */
-struct aBinaryFunctor
+struct aCylindricalFunctor
 {
     /**
     * @brief The function value
@@ -50,18 +50,18 @@ struct aBinaryFunctor
     *
     * @return a functor on the heap
     */
-    virtual aBinaryFunctor* clone()const=0;
-    virtual ~aBinaryFunctor(){}
+    virtual aCylindricalFunctor* clone()const=0;
+    virtual ~aCylindricalFunctor(){}
     protected:
-    aBinaryFunctor(){}
+    aCylindricalFunctor(){}
     /**
     * @brief We do not allow object slicing so the copy is protected
     */
-    aBinaryFunctor(const aBinaryFunctor&){}
+    aCylindricalFunctor(const aCylindricalFunctor&){}
     /**
     * @brief We do not allow object slicing so the assignment is protected
     */
-    aBinaryFunctor& operator=(const aBinaryFunctor&){return *this;}
+    aCylindricalFunctor& operator=(const aCylindricalFunctor&){return *this;}
     private:
     virtual double do_compute(double R, double Z) const=0;
 };
@@ -74,14 +74,14 @@ struct aBinaryFunctor
 * @ingroup fluxfunctions
 */
 template<class Derived>
-struct aCloneableBinaryFunctor : public aBinaryFunctor
+struct aCloneableCylindricalFunctor : public aCylindricalFunctor
 {
     /**
     * @brief Returns a copy of the functor dynamically allocated on the heap
     *
     * @return new copy of the functor
     */
-    virtual aBinaryFunctor* clone() const
+    virtual aCylindricalFunctor* clone() const
     {
         return new Derived(static_cast<Derived const &>(*this));
     }
@@ -94,32 +94,32 @@ struct aCloneableBinaryFunctor : public aBinaryFunctor
 * @ingroup fluxfunctions
  */
 template<class BinaryFunctor>
-struct BinaryFunctorAdapter : public aCloneableBinaryFunctor<BinaryFunctorAdapter<BinaryFunctor> >
+struct CylindricalFunctorAdapter : public aCloneableCylindricalFunctor<CylindricalFunctorAdapter<BinaryFunctor> >
 {
-    BinaryFunctorAdapter( const BinaryFunctor& f):f_(f){}
+    CylindricalFunctorAdapter( const BinaryFunctor& f):f_(f){}
     private:
     double do_compute(double x, double y)const{return f_(x,y);}
     BinaryFunctor f_;
 };
 /**
- * @brief Use this function when you want to convert any Functor to aBinaryFunctor
+ * @brief Use this function when you want to convert any Functor to aCylindricalFunctor
  *
  * @tparam BinaryFunctor must overload the operator() like
  * double operator()(double,double)const;
  * @param f const reference to a functor class
- * @return a newly allocated instance of aBinaryFunctor on the heap
- * @note the preferred way is to derive your Functor from aCloneableBinaryFunctor but if you can't or don't want to for whatever reason then use this to make one
+ * @return a newly allocated instance of aCylindricalFunctor on the heap
+ * @note the preferred way is to derive your Functor from aCloneableCylindricalFunctor but if you can't or don't want to for whatever reason then use this to make one
 * @ingroup fluxfunctions
  */
 template<class BinaryFunctor>
-aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
+aCylindricalFunctor* make_aCylindricalFunctor(const BinaryFunctor& f){return new CylindricalFunctorAdapter<BinaryFunctor>(f);}
 
 /**
  * @brief The constant functor
  * \f[ f(x,y) = c\f]
 * @ingroup fluxfunctions
  */
-struct Constant: public aCloneableBinaryFunctor<Constant>
+struct Constant: public aCloneableCylindricalFunctor<Constant>
 {
     Constant(double c):c_(c){}
     private:
@@ -133,10 +133,10 @@ struct Constant: public aCloneableBinaryFunctor<Constant>
 * @snippet hector_t.cu doxygen
 * @ingroup fluxfunctions
 */
-struct BinaryFunctorsLvl1
+struct CylindricalFunctorsLvl1
 {
     ///the access functions are undefined as long as the class remains empty
-    BinaryFunctorsLvl1(){}
+    CylindricalFunctorsLvl1(){}
     /**
     * @brief Take ownership of newly allocated functors
     *
@@ -144,35 +144,35 @@ struct BinaryFunctorsLvl1
     * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
     * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
     */
-    BinaryFunctorsLvl1(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy) {
+    CylindricalFunctorsLvl1(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy) {
         reset(f,fx,fy);
     }
     ///clone given functors
-    BinaryFunctorsLvl1( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy) {
+    CylindricalFunctorsLvl1( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy) {
         reset(f,fx,fy);
     }
     ///Take ownership of given pointers
-    void reset(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy)
+    void reset(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy)
     {
         p_[0].reset(f);
         p_[1].reset(fx);
         p_[2].reset(fy);
     }
     ///clone given references
-    void reset( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy)
+    void reset( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy)
     {
         p_[0].reset(f);
         p_[1].reset(fx);
         p_[2].reset(fy);
     }
     /// \f$ f \f$
-    const aBinaryFunctor& f()const{return *p_[0];}
+    const aCylindricalFunctor& f()const{return *p_[0];}
     /// \f$ \partial f / \partial x \f$
-    const aBinaryFunctor& dfx()const{return *p_[1];}
+    const aCylindricalFunctor& dfx()const{return *p_[1];}
     /// \f$ \partial f / \partial y\f$
-    const aBinaryFunctor& dfy()const{return *p_[2];}
+    const aCylindricalFunctor& dfy()const{return *p_[2];}
     private:
-    ClonePtr<aBinaryFunctor> p_[3];
+    ClonePtr<aCylindricalFunctor> p_[3];
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
@@ -180,56 +180,56 @@ struct BinaryFunctorsLvl1
 * @snippet hector_t.cu doxygen
 * @ingroup fluxfunctions
 */
-struct BinaryFunctorsLvl2
+struct CylindricalFunctorsLvl2
 {
     ///the access functions are undefined as long as the class remains empty
-    BinaryFunctorsLvl2(){}
+    CylindricalFunctorsLvl2(){}
     /**
-    * @copydoc BinaryFunctorsLvl1::BinaryFunctorsLvl1(aBinaryFunctor*,aBinaryFunctor*,aBinaryFunctor*)
+    * @copydoc CylindricalFunctorsLvl1::CylindricalFunctorsLvl1(aCylindricalFunctor*,aCylindricalFunctor*,aCylindricalFunctor*)
     * @param fxx \f$ \partial^2 f / \partial x^2\f$ second derivative in first coordinate
     * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative
     * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate
     */
-    BinaryFunctorsLvl2(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy,  aBinaryFunctor* fxx,  aBinaryFunctor* fxy,  aBinaryFunctor* fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
+    CylindricalFunctorsLvl2(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy,  aCylindricalFunctor* fxx,  aCylindricalFunctor* fxy,  aCylindricalFunctor* fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
     { }
     ///clone given Functors
-    BinaryFunctorsLvl2( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
+    CylindricalFunctorsLvl2( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy, const aCylindricalFunctor& fxx, const aCylindricalFunctor& fxy, const aCylindricalFunctor& fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
     { }
     ///Take ownership of given pointers
-    void reset(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy,  aBinaryFunctor* fxx,  aBinaryFunctor* fxy,  aBinaryFunctor* fyy){
+    void reset(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy,  aCylindricalFunctor* fxx,  aCylindricalFunctor* fxy,  aCylindricalFunctor* fyy){
         f0.reset(f,fx,fy), f1.reset(fxx,fxy,fyy);
     }
     ///clone given pointers
-    void reset( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy){
+    void reset( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy, const aCylindricalFunctor& fxx, const aCylindricalFunctor& fxy, const aCylindricalFunctor& fyy){
         f0.reset(f,fx,fy), f1.reset(fxx,fxy,fyy);
     }
     ///type conversion: Lvl2 can also be used as Lvl1
-    operator BinaryFunctorsLvl1 ()const {return f0;}
+    operator CylindricalFunctorsLvl1 ()const {return f0;}
     /// \f$ f \f$
-    const aBinaryFunctor& f()const{return f0.f();}
+    const aCylindricalFunctor& f()const{return f0.f();}
     /// \f$ \partial f / \partial x \f$
-    const aBinaryFunctor& dfx()const{return f0.dfx();}
+    const aCylindricalFunctor& dfx()const{return f0.dfx();}
     /// \f$ \partial f / \partial y\f$
-    const aBinaryFunctor& dfy()const{return f0.dfy();}
+    const aCylindricalFunctor& dfy()const{return f0.dfy();}
     /// \f$ \partial^2f/\partial x^2\f$
-    const aBinaryFunctor& dfxx()const{return f1.f();}
+    const aCylindricalFunctor& dfxx()const{return f1.f();}
     /// \f$ \partial^2 f / \partial x \partial y\f$
-    const aBinaryFunctor& dfxy()const{return f1.dfx();}
+    const aCylindricalFunctor& dfxy()const{return f1.dfx();}
     /// \f$ \partial^2f/\partial y^2\f$
-    const aBinaryFunctor& dfyy()const{return f1.dfy();}
+    const aCylindricalFunctor& dfyy()const{return f1.dfy();}
     private:
-    BinaryFunctorsLvl1 f0,f1;
+    CylindricalFunctorsLvl1 f0,f1;
 };
 
 /// A symmetric 2d tensor field and its divergence
 ///@snippet hector_t.cu doxygen
 ///@ingroup fluxfunctions
-struct BinarySymmTensorLvl1
+struct CylindricalSymmTensorLvl1
 {
     /**
      * @brief Initialize with the identity tensor
      */
-    BinarySymmTensorLvl1( ){
+    CylindricalSymmTensorLvl1( ){
         reset( Constant(1), Constant(0), Constant(1), Constant(0), Constant(0));
     }
     /**
@@ -242,17 +242,17 @@ struct BinarySymmTensorLvl1
      * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
      * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     */
-    BinarySymmTensorLvl1(  aBinaryFunctor* chi_xx,  aBinaryFunctor* chi_xy,  aBinaryFunctor* chi_yy,  aBinaryFunctor* divChiX,  aBinaryFunctor* divChiY)
+    CylindricalSymmTensorLvl1(  aCylindricalFunctor* chi_xx,  aCylindricalFunctor* chi_xy,  aCylindricalFunctor* chi_yy,  aCylindricalFunctor* divChiX,  aCylindricalFunctor* divChiY)
     {
         reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
     }
     ///clone given functors
-    BinarySymmTensorLvl1( const aBinaryFunctor& chi_xx, const aBinaryFunctor& chi_xy, const aBinaryFunctor& chi_yy, const aBinaryFunctor& divChiX, const aBinaryFunctor& divChiY)
+    CylindricalSymmTensorLvl1( const aCylindricalFunctor& chi_xx, const aCylindricalFunctor& chi_xy, const aCylindricalFunctor& chi_yy, const aCylindricalFunctor& divChiX, const aCylindricalFunctor& divChiY)
     {
         reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
     }
     ///Take ownership of pointers and release any  currently held ones
-    void reset(  aBinaryFunctor* chi_xx,  aBinaryFunctor* chi_xy,  aBinaryFunctor* chi_yy,  aBinaryFunctor* divChiX,  aBinaryFunctor* divChiY)
+    void reset(  aCylindricalFunctor* chi_xx,  aCylindricalFunctor* chi_xy,  aCylindricalFunctor* chi_yy,  aCylindricalFunctor* divChiX,  aCylindricalFunctor* divChiY)
     {
         p_[0].reset( chi_xx);
         p_[1].reset( chi_xy);
@@ -261,7 +261,7 @@ struct BinarySymmTensorLvl1
         p_[4].reset( divChiY);
     }
     ///clone given references
-    void reset( const aBinaryFunctor& chi_xx, const aBinaryFunctor& chi_xy, const aBinaryFunctor& chi_yy, const aBinaryFunctor& divChiX, const aBinaryFunctor& divChiY)
+    void reset( const aCylindricalFunctor& chi_xx, const aCylindricalFunctor& chi_xy, const aCylindricalFunctor& chi_yy, const aCylindricalFunctor& divChiX, const aCylindricalFunctor& divChiY)
     {
         p_[0].reset( chi_xx);
         p_[1].reset( chi_xy);
@@ -270,51 +270,51 @@ struct BinarySymmTensorLvl1
         p_[4].reset( divChiY);
     }
     ///xy component \f$ \chi^{xx}\f$
-    const aBinaryFunctor& xx()const{return *p_[0];}
+    const aCylindricalFunctor& xx()const{return *p_[0];}
     ///xy component \f$ \chi^{xy}\f$
-    const aBinaryFunctor& xy()const{return *p_[1];}
+    const aCylindricalFunctor& xy()const{return *p_[1];}
     ///yy component \f$ \chi^{yy}\f$
-    const aBinaryFunctor& yy()const{return *p_[2];}
+    const aCylindricalFunctor& yy()const{return *p_[2];}
      /// \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
-    const aBinaryFunctor& divX()const{return *p_[3];}
+    const aCylindricalFunctor& divX()const{return *p_[3];}
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
-    const aBinaryFunctor& divY()const{return *p_[4];}
+    const aCylindricalFunctor& divY()const{return *p_[4];}
     private:
-    ClonePtr<aBinaryFunctor> p_[5];
+    ClonePtr<aCylindricalFunctor> p_[5];
 };
 
 /// A vector field with three components that depend only on the first two coordinates
 ///@snippet ds_t.cu doxygen
 ///@ingroup fluxfunctions
-struct BinaryVectorLvl0
+struct CylindricalVectorLvl0
 {
-    BinaryVectorLvl0(){}
+    CylindricalVectorLvl0(){}
     ///Take ownership of given pointers
-    BinaryVectorLvl0(  aBinaryFunctor* v_x,  aBinaryFunctor* v_y,  aBinaryFunctor* v_z) { reset(v_x,v_y,v_z); }
+    CylindricalVectorLvl0(  aCylindricalFunctor* v_x,  aCylindricalFunctor* v_y,  aCylindricalFunctor* v_z) { reset(v_x,v_y,v_z); }
     ///clone given references
-    BinaryVectorLvl0( const aBinaryFunctor& v_x, const aBinaryFunctor& v_y, const aBinaryFunctor& v_z) { reset(v_x,v_y,v_z); }
+    CylindricalVectorLvl0( const aCylindricalFunctor& v_x, const aCylindricalFunctor& v_y, const aCylindricalFunctor& v_z) { reset(v_x,v_y,v_z); }
     ///Take ownership of given pointers and release any currently held ones
-    void reset(  aBinaryFunctor* v_x,  aBinaryFunctor* v_y,  aBinaryFunctor* v_z)
+    void reset(  aCylindricalFunctor* v_x,  aCylindricalFunctor* v_y,  aCylindricalFunctor* v_z)
     {
         p_[0].reset(v_x);
         p_[1].reset(v_y);
         p_[2].reset(v_z);
     }
     ///clone given references
-    void reset( const aBinaryFunctor& v_x, const aBinaryFunctor& v_y, const aBinaryFunctor& v_z)
+    void reset( const aCylindricalFunctor& v_x, const aCylindricalFunctor& v_y, const aCylindricalFunctor& v_z)
     {
         p_[0].reset(v_x);
         p_[1].reset(v_y);
         p_[2].reset(v_z);
     }
     /// x-component of the vector
-    const aBinaryFunctor& x()const{return *p_[0];}
+    const aCylindricalFunctor& x()const{return *p_[0];}
     /// y-component of the vector
-    const aBinaryFunctor& y()const{return *p_[1];}
+    const aCylindricalFunctor& y()const{return *p_[1];}
     /// z-component of the vector
-    const aBinaryFunctor& z()const{return *p_[2];}
+    const aCylindricalFunctor& z()const{return *p_[2];}
     private:
-    ClonePtr<aBinaryFunctor> p_[3];
+    ClonePtr<aCylindricalFunctor> p_[3];
 };
 
 /*!@brief \f[ \chi^{ij} = b^ib^j\f]
@@ -330,7 +330,7 @@ struct BinaryVectorLvl0
  * @ingroup fluxfunctions
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const dg::geo::BinaryVectorLvl0& bhat, const Geometry3d& g)
+dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
     using host_vector = dg::get_host_vector<Geometry3d>;
     SparseTensor<host_vector> t;
@@ -363,7 +363,7 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const d
  * @ingroup fluxfunctions
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor( const dg::geo::BinaryVectorLvl0& bhat, const Geometry3d& g)
+dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor( const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
     using host_vector = dg::get_host_vector<Geometry3d>;
     dg::SparseTensor<host_vector> t = dg::geo::createAlignmentTensor( bhat, g);

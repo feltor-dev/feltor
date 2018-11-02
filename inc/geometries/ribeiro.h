@@ -27,7 +27,7 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
 {
-    Fpsi( const BinaryFunctorsLvl1& psi, double x0, double y0, int mode, bool verbose = false):
+    Fpsi( const CylindricalFunctorsLvl1& psi, double x0, double y0, int mode, bool verbose = false):
         psip_(psi), fieldRZYTribeiro_(psi,x0, y0),fieldRZYTequalarc_(psi, x0, y0), fieldRZtau_(psi), mode_(mode), m_verbose(verbose)
     {
         R_init = x0; Z_init = y0;
@@ -152,7 +152,7 @@ struct Fpsi
 
     private:
     double R_init, Z_init;
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     dg::geo::ribeiro::FieldRZYT fieldRZYTribeiro_;
     dg::geo::equalarc::FieldRZYT fieldRZYTequalarc_;
     dg::geo::FieldRZtau fieldRZtau_;
@@ -163,7 +163,7 @@ struct Fpsi
 //This struct computes -2pi/f with a fixed number of steps for all psi
 struct FieldFinv
 {
-    FieldFinv( const BinaryFunctorsLvl1& psi, double x0, double y0, unsigned N_steps, int mode):
+    FieldFinv( const CylindricalFunctorsLvl1& psi, double x0, double y0, unsigned N_steps, int mode):
         fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
     void operator()(double t, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
@@ -203,7 +203,7 @@ struct Ribeiro : public aGenerator2d
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @param verbose if true the integrators will write additional information to \c std::cout
      */
-    Ribeiro( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode = 0, bool verbose = false):
+    Ribeiro( const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode = 0, bool verbose = false):
         psi_(psi), mode_(mode), m_verbose(verbose)
     {
         assert( psi_1 != psi_0);
@@ -266,7 +266,7 @@ struct Ribeiro : public aGenerator2d
             }
         }
     }
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
     double lx_, x0_, y0_, psi0_, psi1_;
     int mode_; //0 = ribeiro, 1 = equalarc
     bool m_verbose;
