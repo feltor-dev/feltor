@@ -295,12 +295,12 @@ struct IpolZ: public aCloneableCylindricalFunctor<IpolZ>
 
 static inline CylindricalFunctorsLvl2 createPsip( solovev::Parameters gp)
 {
-    CylindricalFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
+    CylindricalFunctorsLvl2 psip( Psip(gp), PsipR(gp), PsipZ(gp),PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
     return psip;
 }
 static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
-    CylindricalFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
+    CylindricalFunctorsLvl1 ipol( Ipol(gp), IpolR(gp), IpolZ(gp));
     return ipol;
 }
 static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)

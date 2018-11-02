@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include "dg/backend/memory.h"
 #include "dg/topology/geometry.h"
 
@@ -65,6 +66,27 @@ struct aCylindricalFunctor
     private:
     virtual double do_compute(double R, double Z) const=0;
 };
+
+/*! @brief Any 2d functor can be a Cylindrical functor
+ */
+template<class real_type>
+struct RealCylindricalFunctor
+{
+    RealCylindricalFunctor(){}
+    template<class BinaryFunctor>
+    RealCylindricalFunctor( BinaryFunctor f):
+        m_f(f) {}
+    real_type operator()( real_type R, real_type Z) const{
+        return m_f(R,Z);
+    }
+    real_type operator()( real_type R, real_type Z, real_type P) const{
+        return m_f(R,Z);
+    }
+    private:
+    std::function<real_type(real_type,real_type)> m_f;
+};
+
+using CylindricalFunctor = RealCylindricalFunctor<double>;
 
 /**
 * @brief Intermediate implementation helper class for the clone pattern with CRTP
@@ -138,41 +160,30 @@ struct CylindricalFunctorsLvl1
     ///the access functions are undefined as long as the class remains empty
     CylindricalFunctorsLvl1(){}
     /**
-    * @brief Take ownership of newly allocated functors
+    * @brief Construct with given functors
     *
     * @param f \f$ f(x,y)\f$ the function in some coordinates (x,y)
     * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
     * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
     */
-    CylindricalFunctorsLvl1(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy) {
-        reset(f,fx,fy);
+    CylindricalFunctorsLvl1(  CylindricalFunctor f,  CylindricalFunctor fx,
+        CylindricalFunctor fy) : p_{{ f, fx, fy}} {
     }
-    ///clone given functors
-    CylindricalFunctorsLvl1( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy) {
-        reset(f,fx,fy);
-    }
-    ///Take ownership of given pointers
-    void reset(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy)
+    ///copy given functors
+    void reset( CylindricalFunctor f, CylindricalFunctor fx, CylindricalFunctor fy)
     {
-        p_[0].reset(f);
-        p_[1].reset(fx);
-        p_[2].reset(fy);
-    }
-    ///clone given references
-    void reset( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy)
-    {
-        p_[0].reset(f);
-        p_[1].reset(fx);
-        p_[2].reset(fy);
+        p_[0] = f;
+        p_[1] = fx;
+        p_[2] = fy;
     }
     /// \f$ f \f$
-    const aCylindricalFunctor& f()const{return *p_[0];}
+    const CylindricalFunctor& f()const{return p_[0];}
     /// \f$ \partial f / \partial x \f$
-    const aCylindricalFunctor& dfx()const{return *p_[1];}
+    const CylindricalFunctor& dfx()const{return p_[1];}
     /// \f$ \partial f / \partial y\f$
-    const aCylindricalFunctor& dfy()const{return *p_[2];}
+    const CylindricalFunctor& dfy()const{return p_[2];}
     private:
-    ClonePtr<aCylindricalFunctor> p_[3];
+    std::array<CylindricalFunctor,3> p_;
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
@@ -185,38 +196,37 @@ struct CylindricalFunctorsLvl2
     ///the access functions are undefined as long as the class remains empty
     CylindricalFunctorsLvl2(){}
     /**
-    * @copydoc CylindricalFunctorsLvl1::CylindricalFunctorsLvl1(aCylindricalFunctor*,aCylindricalFunctor*,aCylindricalFunctor*)
+    * @copydoc CylindricalFunctorsLvl1::CylindricalFunctorsLvl1(CylindricalFunctor,CylindricalFunctor,CylindricalFunctor)
     * @param fxx \f$ \partial^2 f / \partial x^2\f$ second derivative in first coordinate
     * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative
     * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate
     */
-    CylindricalFunctorsLvl2(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy,  aCylindricalFunctor* fxx,  aCylindricalFunctor* fxy,  aCylindricalFunctor* fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
+    CylindricalFunctorsLvl2(  CylindricalFunctor f,  CylindricalFunctor fx,
+        CylindricalFunctor fy,   CylindricalFunctor fxx,
+        CylindricalFunctor fxy,  CylindricalFunctor fyy):
+        f0(f,fx,fy), f1(fxx,fxy,fyy)
     { }
-    ///clone given Functors
-    CylindricalFunctorsLvl2( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy, const aCylindricalFunctor& fxx, const aCylindricalFunctor& fxy, const aCylindricalFunctor& fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
-    { }
-    ///Take ownership of given pointers
-    void reset(  aCylindricalFunctor* f,  aCylindricalFunctor* fx,  aCylindricalFunctor* fy,  aCylindricalFunctor* fxx,  aCylindricalFunctor* fxy,  aCylindricalFunctor* fyy){
-        f0.reset(f,fx,fy), f1.reset(fxx,fxy,fyy);
-    }
-    ///clone given pointers
-    void reset( const aCylindricalFunctor& f, const aCylindricalFunctor& fx, const aCylindricalFunctor& fy, const aCylindricalFunctor& fxx, const aCylindricalFunctor& fxy, const aCylindricalFunctor& fyy){
-        f0.reset(f,fx,fy), f1.reset(fxx,fxy,fyy);
+    ///Replace with given Functors
+    void reset( CylindricalFunctor f, CylindricalFunctor fx,
+        CylindricalFunctor fy, CylindricalFunctor fxx,
+        CylindricalFunctor fxy, CylindricalFunctor fyy)
+    {
+        f0.reset( f,fx,fy), f1.reset(fxx,fxy,fyy);
     }
     ///type conversion: Lvl2 can also be used as Lvl1
     operator CylindricalFunctorsLvl1 ()const {return f0;}
     /// \f$ f \f$
-    const aCylindricalFunctor& f()const{return f0.f();}
+    const CylindricalFunctor& f()const{return f0.f();}
     /// \f$ \partial f / \partial x \f$
-    const aCylindricalFunctor& dfx()const{return f0.dfx();}
+    const CylindricalFunctor& dfx()const{return f0.dfx();}
     /// \f$ \partial f / \partial y\f$
-    const aCylindricalFunctor& dfy()const{return f0.dfy();}
+    const CylindricalFunctor& dfy()const{return f0.dfy();}
     /// \f$ \partial^2f/\partial x^2\f$
-    const aCylindricalFunctor& dfxx()const{return f1.f();}
+    const CylindricalFunctor& dfxx()const{return f1.f();}
     /// \f$ \partial^2 f / \partial x \partial y\f$
-    const aCylindricalFunctor& dfxy()const{return f1.dfx();}
+    const CylindricalFunctor& dfxy()const{return f1.dfx();}
     /// \f$ \partial^2f/\partial y^2\f$
-    const aCylindricalFunctor& dfyy()const{return f1.dfy();}
+    const CylindricalFunctor& dfyy()const{return f1.dfy();}
     private:
     CylindricalFunctorsLvl1 f0,f1;
 };
@@ -233,7 +243,7 @@ struct CylindricalSymmTensorLvl1
         reset( Constant(1), Constant(0), Constant(1), Constant(0), Constant(0));
     }
     /**
-     * @brief Take ownership of newly allocated functors
+     * @brief Copy given functors
      *
      * let's assume the tensor is called \f$ \chi \f$ (chi)
      * @param chi_xx contravariant xx component \f$ \chi^{xx}\f$
@@ -242,45 +252,35 @@ struct CylindricalSymmTensorLvl1
      * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
      * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     */
-    CylindricalSymmTensorLvl1(  aCylindricalFunctor* chi_xx,  aCylindricalFunctor* chi_xy,  aCylindricalFunctor* chi_yy,  aCylindricalFunctor* divChiX,  aCylindricalFunctor* divChiY)
+    CylindricalSymmTensorLvl1(  CylindricalFunctor chi_xx,
+        CylindricalFunctor chi_xy,   CylindricalFunctor chi_yy,
+        CylindricalFunctor divChiX,  CylindricalFunctor divChiY) :
+        p_{{ chi_xx,chi_xy,chi_yy,divChiX,divChiY}}
     {
-        reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
     }
-    ///clone given functors
-    CylindricalSymmTensorLvl1( const aCylindricalFunctor& chi_xx, const aCylindricalFunctor& chi_xy, const aCylindricalFunctor& chi_yy, const aCylindricalFunctor& divChiX, const aCylindricalFunctor& divChiY)
+    ///replace with given functors
+    void reset( CylindricalFunctor chi_xx, CylindricalFunctor chi_xy,
+        CylindricalFunctor chi_yy, CylindricalFunctor divChiX,
+        CylindricalFunctor divChiY)
     {
-        reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
-    }
-    ///Take ownership of pointers and release any  currently held ones
-    void reset(  aCylindricalFunctor* chi_xx,  aCylindricalFunctor* chi_xy,  aCylindricalFunctor* chi_yy,  aCylindricalFunctor* divChiX,  aCylindricalFunctor* divChiY)
-    {
-        p_[0].reset( chi_xx);
-        p_[1].reset( chi_xy);
-        p_[2].reset( chi_yy);
-        p_[3].reset( divChiX);
-        p_[4].reset( divChiY);
-    }
-    ///clone given references
-    void reset( const aCylindricalFunctor& chi_xx, const aCylindricalFunctor& chi_xy, const aCylindricalFunctor& chi_yy, const aCylindricalFunctor& divChiX, const aCylindricalFunctor& divChiY)
-    {
-        p_[0].reset( chi_xx);
-        p_[1].reset( chi_xy);
-        p_[2].reset( chi_yy);
-        p_[3].reset( divChiX);
-        p_[4].reset( divChiY);
+        p_[0] = chi_xx;
+        p_[1] = chi_xy;
+        p_[2] = chi_yy;
+        p_[3] = divChiX;
+        p_[4] = divChiY;
     }
     ///xy component \f$ \chi^{xx}\f$
-    const aCylindricalFunctor& xx()const{return *p_[0];}
+    const CylindricalFunctor& xx()const{return p_[0];}
     ///xy component \f$ \chi^{xy}\f$
-    const aCylindricalFunctor& xy()const{return *p_[1];}
+    const CylindricalFunctor& xy()const{return p_[1];}
     ///yy component \f$ \chi^{yy}\f$
-    const aCylindricalFunctor& yy()const{return *p_[2];}
+    const CylindricalFunctor& yy()const{return p_[2];}
      /// \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
-    const aCylindricalFunctor& divX()const{return *p_[3];}
+    const CylindricalFunctor& divX()const{return p_[3];}
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
-    const aCylindricalFunctor& divY()const{return *p_[4];}
+    const CylindricalFunctor& divY()const{return p_[4];}
     private:
-    ClonePtr<aCylindricalFunctor> p_[5];
+    std::array<CylindricalFunctor,5> p_;
 };
 
 /// A vector field with three components that depend only on the first two coordinates
@@ -289,32 +289,26 @@ struct CylindricalSymmTensorLvl1
 struct CylindricalVectorLvl0
 {
     CylindricalVectorLvl0(){}
-    ///Take ownership of given pointers
-    CylindricalVectorLvl0(  aCylindricalFunctor* v_x,  aCylindricalFunctor* v_y,  aCylindricalFunctor* v_z) { reset(v_x,v_y,v_z); }
-    ///clone given references
-    CylindricalVectorLvl0( const aCylindricalFunctor& v_x, const aCylindricalFunctor& v_y, const aCylindricalFunctor& v_z) { reset(v_x,v_y,v_z); }
-    ///Take ownership of given pointers and release any currently held ones
-    void reset(  aCylindricalFunctor* v_x,  aCylindricalFunctor* v_y,  aCylindricalFunctor* v_z)
+    ///Copy given Functors
+    CylindricalVectorLvl0(  CylindricalFunctor v_x,
+        CylindricalFunctor v_y,
+        CylindricalFunctor v_z): p_{{v_x, v_y, v_z}}{}
+    ///replace with given functors
+    void reset(  CylindricalFunctor v_x,  CylindricalFunctor v_y,
+        CylindricalFunctor v_z)
     {
-        p_[0].reset(v_x);
-        p_[1].reset(v_y);
-        p_[2].reset(v_z);
-    }
-    ///clone given references
-    void reset( const aCylindricalFunctor& v_x, const aCylindricalFunctor& v_y, const aCylindricalFunctor& v_z)
-    {
-        p_[0].reset(v_x);
-        p_[1].reset(v_y);
-        p_[2].reset(v_z);
+        p_[0] = v_x;
+        p_[1] = v_y;
+        p_[2] = v_z;
     }
     /// x-component of the vector
-    const aCylindricalFunctor& x()const{return *p_[0];}
+    const CylindricalFunctor& x()const{return p_[0];}
     /// y-component of the vector
-    const aCylindricalFunctor& y()const{return *p_[1];}
+    const CylindricalFunctor& y()const{return p_[1];}
     /// z-component of the vector
-    const aCylindricalFunctor& z()const{return *p_[2];}
+    const CylindricalFunctor& z()const{return p_[2];}
     private:
-    ClonePtr<aCylindricalFunctor> p_[3];
+    std::array<CylindricalFunctor,3> p_;
 };
 
 /*!@brief \f[ \chi^{ij} = b^ib^j\f]
@@ -330,7 +324,8 @@ struct CylindricalVectorLvl0
  * @ingroup fluxfunctions
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
+dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
+    const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
     using host_vector = dg::get_host_vector<Geometry3d>;
     SparseTensor<host_vector> t;
@@ -363,7 +358,8 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor( const d
  * @ingroup fluxfunctions
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor( const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
+dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor(
+    const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
     using host_vector = dg::get_host_vector<Geometry3d>;
     dg::SparseTensor<host_vector> t = dg::geo::createAlignmentTensor( bhat, g);

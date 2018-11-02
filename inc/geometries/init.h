@@ -23,16 +23,16 @@ namespace geo
  */
 struct Iris : public aCloneableCylindricalFunctor<Iris>
 {
-    Iris( const aCylindricalFunctor& psi, double psi_min, double psi_max ):
+    Iris( const CylindricalFunctor& psi, double psi_min, double psi_max ):
         psip_(psi), psipmin_(psi_min), psipmax_(psi_max) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > psipmax_) return 0.;
-        if( (*psip_)(R,Z) < psipmin_) return 0.;
+        if( psip_(R,Z) > psipmax_) return 0.;
+        if( psip_(R,Z) < psipmin_) return 0.;
         return 1.;
     }
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
     double psipmin_, psipmax_;
 };
 /**
@@ -44,15 +44,15 @@ struct Iris : public aCloneableCylindricalFunctor<Iris>
  */
 struct Pupil : public aCloneableCylindricalFunctor<Pupil>
 {
-    Pupil( const aCylindricalFunctor& psi, double psipmaxcut):
+    Pupil( const CylindricalFunctor& psi, double psipmaxcut):
         psip_(psi), psipmaxcut_(psipmaxcut) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > psipmaxcut_) return 0.;
+        if( psip_(R,Z) > psipmaxcut_) return 0.;
         return 1.;
     }
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
     double psipmaxcut_;
 };
 /**
@@ -64,16 +64,16 @@ struct Pupil : public aCloneableCylindricalFunctor<Pupil>
  */
 struct PsiPupil : public aCloneableCylindricalFunctor<PsiPupil>
 {
-    PsiPupil(const aCylindricalFunctor& psi, double psipmax):
+    PsiPupil(const CylindricalFunctor& psi, double psipmax):
         psipmax_(psipmax), psip_(psi) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > psipmax_) return psipmax_;
-        return  (*psip_)(R,Z);
+        if( psip_(R,Z) > psipmax_) return psipmax_;
+        return  psip_(R,Z);
     }
     double psipmax_;
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
 };
 /**
  * @brief Sets values to one outside psipmaxcut, zero else
@@ -85,17 +85,17 @@ struct PsiPupil : public aCloneableCylindricalFunctor<PsiPupil>
  */
 struct PsiLimiter : public aCloneableCylindricalFunctor<PsiLimiter>
 {
-    PsiLimiter( const aCylindricalFunctor& psi, double psipmaxlim):
+    PsiLimiter( const CylindricalFunctor& psi, double psipmaxlim):
         psipmaxlim_(psipmaxlim), psip_(psi) { }
 
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > psipmaxlim_) return 1.;
+        if( psip_(R,Z) > psipmaxlim_) return 1.;
         return 0.;
     }
     double psipmaxlim_;
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
 };
 
 
@@ -114,16 +114,16 @@ struct PsiLimiter : public aCloneableCylindricalFunctor<PsiLimiter>
  */
 struct GaussianDamping : public aCloneableCylindricalFunctor<GaussianDamping>
 {
-    GaussianDamping( const aCylindricalFunctor& psi, double psipmaxcut, double alpha):
+    GaussianDamping( const CylindricalFunctor& psi, double psipmaxcut, double alpha):
         psip_(psi), psipmaxcut_(psipmaxcut), alpha_(alpha) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
-        if( (*psip_)(R,Z) < psipmaxcut_) return 1.;
-        return exp( -( (*psip_)(R,Z)-psipmaxcut_)*( (*psip_)(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
+        if( psip_(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
+        if( psip_(R,Z) < psipmaxcut_) return 1.;
+        return exp( -( psip_(R,Z)-psipmaxcut_)*( psip_(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
     }
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
     double psipmaxcut_, alpha_;
 };
 
@@ -141,16 +141,16 @@ struct GaussianDamping : public aCloneableCylindricalFunctor<GaussianDamping>
  */
 struct GaussianProfDamping : public aCloneableCylindricalFunctor<GaussianProfDamping>
 {
-    GaussianProfDamping( const aCylindricalFunctor& psi, double psipmax, double alpha):
+    GaussianProfDamping( const CylindricalFunctor& psi, double psipmax, double alpha):
         psip_(psi), psipmax_(psipmax), alpha_(alpha) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > psipmax_ ) return 0.;
-        if( (*psip_)(R,Z) < (psipmax_-4.*alpha_)) return 1.;
-        return exp( -( (*psip_)(R,Z)-(psipmax_-4.*alpha_))*( (*psip_)(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
+        if( psip_(R,Z) > psipmax_ ) return 0.;
+        if( psip_(R,Z) < (psipmax_-4.*alpha_)) return 1.;
+        return exp( -( psip_(R,Z)-(psipmax_-4.*alpha_))*( psip_(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
     }
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
     double psipmax_, alpha_;
 };
 /**
@@ -168,18 +168,18 @@ struct GaussianProfDamping : public aCloneableCylindricalFunctor<GaussianProfDam
  */
 struct GaussianProfXDamping : public aCloneableCylindricalFunctor<GaussianProfXDamping>
 {
-    GaussianProfXDamping( const aCylindricalFunctor& psi, dg::geo::solovev::Parameters gp):
+    GaussianProfXDamping( const CylindricalFunctor& psi, dg::geo::solovev::Parameters gp):
         gp_(gp),
         psip_(psi) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if( (*psip_)(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
-        if( (*psip_)(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
-        return exp( -( (*psip_)(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( (*psip_)(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
+        if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
+        if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
+        return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
     dg::geo::solovev::Parameters gp_;
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
 };
 
 /**
@@ -189,15 +189,15 @@ struct GaussianProfXDamping : public aCloneableCylindricalFunctor<GaussianProfXD
  */
 struct TanhSource : public aCloneableCylindricalFunctor<TanhSource>
 {
-    TanhSource(const aCylindricalFunctor& psi, double psipmin, double alpha):
+    TanhSource(const CylindricalFunctor& psi, double psipmin, double alpha):
             psipmin_(psipmin), alpha_(alpha), psip_(psi) { }
     private:
     double do_compute(double R, double Z)const
     {
-        return 0.5*(1.+tanh(-((*psip_)(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
+        return 0.5*(1.+tanh(-(psip_(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     double psipmin_, alpha_;
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
 };
 
 // struct Gradient : public aCloneableCylindricalFunctor<Gradient>
@@ -210,13 +210,13 @@ struct TanhSource : public aCloneableCylindricalFunctor<TanhSource>
 //     private:
 //     double do_compute(double R, double Z)
 //     {
-//         if( (*psip_)(R,Z) < (gp_.psipmin)) return p_.nprofileamp+p_.bgprofamp;
-//         if( (*psip_)(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-(*psip_)(R,Z))*(p_.nprofileamp/gp_.psipmin);
+//         if( psip_(R,Z) < (gp_.psipmin)) return p_.nprofileamp+p_.bgprofamp;
+//         if( psip_(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-psip_(R,Z))*(p_.nprofileamp/gp_.psipmin);
 //         return p_.bgprofamp;
 //     }
 //     eule::Parameters p_;
 //     Parameters gp_;
-//     ClonePtr<aCylindricalFunctor> psip_;
+//     CylindricalFunctor psip_;
 // };
 
 /**
@@ -229,20 +229,20 @@ struct TanhSource : public aCloneableCylindricalFunctor<TanhSource>
  */
 struct Nprofile : public aCloneableCylindricalFunctor<Nprofile>
 {
-     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::Parameters gp, const aCylindricalFunctor& psi):
+     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::Parameters gp, const CylindricalFunctor& psi):
          bgamp(bgprofamp), namp( peakamp),
          gp_(gp),
          psip_(psi) { }
     private:
     double do_compute(double R, double Z)const
     {
-        if ((*psip_)(R,Z)<gp_.psipmax) return bgamp +((*psip_)(R,Z)/(*psip_)(gp_.R_0,0.0)*namp);
-	if( (*psip_)(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
+        if (psip_(R,Z)<gp_.psipmax) return bgamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*namp);
+	if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
         return bgamp;
     }
     double bgamp, namp;
     dg::geo::solovev::Parameters gp_;
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
 };
 
 /**
@@ -255,21 +255,21 @@ struct Nprofile : public aCloneableCylindricalFunctor<Nprofile>
  */
 struct ZonalFlow : public aCloneableCylindricalFunctor<ZonalFlow>
 {
-    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::Parameters gp, const aCylindricalFunctor& psi):
+    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::Parameters gp, const CylindricalFunctor& psi):
         amp_(amplitude), k_(k_psi),
         gp_(gp),
         psip_(psi) { }
     private:
     double do_compute(double R, double Z)const
     {
-      if ((*psip_)(R,Z)<gp_.psipmax)
-          return (amp_*fabs(cos(2.*M_PI*(*psip_)(R,Z)*k_)));
+      if (psip_(R,Z)<gp_.psipmax)
+          return (amp_*fabs(cos(2.*M_PI*psip_(R,Z)*k_)));
       return 0.;
 
     }
     double amp_, k_;
     dg::geo::solovev::Parameters gp_;
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
 };
 
 

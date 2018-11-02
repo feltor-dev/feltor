@@ -14,7 +14,7 @@ namespace toroidal{
  */
 static inline CylindricalFunctorsLvl2 createPsip( )
 {
-    CylindricalFunctorsLvl2 psip( new Constant(1), new Constant(0), new Constant(0),new Constant(0), new Constant(0), new Constant(0));
+    CylindricalFunctorsLvl2 psip( Constant(1), Constant(0), Constant(0),Constant(0), Constant(0), Constant(0));
     return psip;
 }
 /**
@@ -23,7 +23,7 @@ static inline CylindricalFunctorsLvl2 createPsip( )
  */
 static inline CylindricalFunctorsLvl1 createIpol( )
 {
-    CylindricalFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
+    CylindricalFunctorsLvl1 ipol( Constant(1), Constant(0), Constant(0));
     return ipol;
 }
 
@@ -91,8 +91,8 @@ struct PsipZ : public aCloneableCylindricalFunctor<PsipZ>
  */
 static inline CylindricalFunctorsLvl2 createPsip( double R0 )
 {
-    CylindricalFunctorsLvl2 psip( new Psip(R0), new PsipR(R0), new PsipZ(),new Constant(1), new Constant(0), new Constant(1));
-    return psip;
+    return CylindricalFunctorsLvl2( Psip(R0), PsipR(R0), PsipZ(),
+        Constant(1), Constant(0), Constant(1));
 }
 /**
  * @brief constant \f$ I = I_0\f$
@@ -100,7 +100,7 @@ static inline CylindricalFunctorsLvl2 createPsip( double R0 )
  */
 static inline CylindricalFunctorsLvl1 createIpol( double I0 )
 {
-    CylindricalFunctorsLvl1 ipol( new Constant(I0), new Constant(0), new Constant(0));
+    CylindricalFunctorsLvl1 ipol( Constant(I0), Constant(0), Constant(0));
     return ipol;
 }
 ///@}

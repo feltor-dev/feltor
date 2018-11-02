@@ -139,12 +139,12 @@ struct IpolZ : public aCloneableCylindricalFunctor<IpolZ>
 
 static inline CylindricalFunctorsLvl2 createPsip( double R_0)
 {
-    CylindricalFunctorsLvl2 psip( new Psip(R_0), new PsipR(R_0), new PsipZ(R_0),new PsipRR(R_0), new PsipRZ(R_0), new PsipZZ(R_0));
+    CylindricalFunctorsLvl2 psip( Psip(R_0), PsipR(R_0), PsipZ(R_0),PsipRR(R_0), PsipRZ(R_0), PsipZZ(R_0));
     return psip;
 }
 static inline CylindricalFunctorsLvl1 createIpol( double I_0)
 {
-    CylindricalFunctorsLvl1 ipol( new Ipol(I_0), new IpolR(), new IpolZ());
+    CylindricalFunctorsLvl1 ipol( Ipol(I_0), IpolR(), IpolZ());
     return ipol;
 }
 static inline TokamakMagneticField createMagField( double R_0, double I_0)

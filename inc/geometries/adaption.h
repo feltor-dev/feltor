@@ -122,7 +122,7 @@ struct NablaPsiInvY: public aCloneableCylindricalFunctor<NablaPsiInvY>
  */
 static inline CylindricalFunctorsLvl1 make_NablaPsiInvCollective( const CylindricalFunctorsLvl2& psi)
 {
-    CylindricalFunctorsLvl1 temp( new NablaPsiInv(psi), new NablaPsiInvX(psi), new NablaPsiInvY( psi));
+    CylindricalFunctorsLvl1 temp( NablaPsiInv(psi), NablaPsiInvX(psi), NablaPsiInvY( psi));
     return temp;
 }
 
@@ -253,7 +253,7 @@ struct DivLiseikinY : public aCloneableCylindricalFunctor<DivLiseikinY>
 
 static inline CylindricalSymmTensorLvl1 make_LiseikinCollective( const CylindricalFunctorsLvl2& psi, double k, double eps)
 {
-    CylindricalSymmTensorLvl1 temp( new Liseikin_XX(psi,k,eps), new Liseikin_XY(psi,k,eps), new Liseikin_YY(psi,k,eps), new DivLiseikinX(psi,k,eps), new DivLiseikinY(psi,k,eps));
+    CylindricalSymmTensorLvl1 temp( Liseikin_XX(psi,k,eps), Liseikin_XY(psi,k,eps), Liseikin_YY(psi,k,eps), DivLiseikinX(psi,k,eps), DivLiseikinY(psi,k,eps));
     return temp;
 }
 ///@}

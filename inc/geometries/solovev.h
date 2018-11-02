@@ -354,13 +354,12 @@ struct IpolZ: public aCloneableCylindricalFunctor<IpolZ>
 
 static inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp)
 {
-    CylindricalFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
-    return psip;
+    return CylindricalFunctorsLvl2( Psip(gp), PsipR(gp), PsipZ(gp),
+        PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
 }
 static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
 {
-    CylindricalFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
-    return ipol;
+    return CylindricalFunctorsLvl1( Ipol(gp), IpolR(gp), IpolZ(gp));
 }
 
 static inline dg::geo::TokamakMagneticField createMagField( Parameters gp)

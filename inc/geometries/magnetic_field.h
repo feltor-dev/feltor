@@ -45,23 +45,23 @@ struct TokamakMagneticField
     /// \f$ R_0 \f$
     double R0()const {return R0_;}
     /// \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aCylindricalFunctor& psip()const{return psip_.f();}
+    const CylindricalFunctor& psip()const{return psip_.f();}
     /// \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aCylindricalFunctor& psipR()const{return psip_.dfx();}
+    const CylindricalFunctor& psipR()const{return psip_.dfx();}
     /// \f$ \partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aCylindricalFunctor& psipZ()const{return psip_.dfy();}
+    const CylindricalFunctor& psipZ()const{return psip_.dfy();}
     /// \f$ \partial_R\partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aCylindricalFunctor& psipRR()const{return psip_.dfxx();}
+    const CylindricalFunctor& psipRR()const{return psip_.dfxx();}
     /// \f$ \partial_R\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aCylindricalFunctor& psipRZ()const{return psip_.dfxy();}
+    const CylindricalFunctor& psipRZ()const{return psip_.dfxy();}
     /// \f$ \partial_Z\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aCylindricalFunctor& psipZZ()const{return psip_.dfyy();}
+    const CylindricalFunctor& psipZZ()const{return psip_.dfyy();}
     /// \f$ I(\psi_p) \f$ the current
-    const aCylindricalFunctor& ipol()const{return ipol_.f();}
+    const CylindricalFunctor& ipol()const{return ipol_.f();}
     /// \f$ \partial_R I(\psi_p) \f$
-    const aCylindricalFunctor& ipolR()const{return ipol_.dfx();}
+    const CylindricalFunctor& ipolR()const{return ipol_.dfx();}
     /// \f$ \partial_Z I(\psi_p) \f$
-    const aCylindricalFunctor& ipolZ()const{return ipol_.dfy();}
+    const CylindricalFunctor& ipolZ()const{return ipol_.dfy();}
 
     const CylindricalFunctorsLvl2& get_psip() const{return psip_;}
     const CylindricalFunctorsLvl1& get_ipol() const{return ipol_;}
