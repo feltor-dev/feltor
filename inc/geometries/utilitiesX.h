@@ -376,11 +376,11 @@ double construct_psi_values( XFieldFinv fpsiMinv,
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
 struct PsipSep
 {
-    PsipSep( const aCylindricalFunctor& psi): psip_(psi), Z_(0){}
+    PsipSep( const CylindricalFunctor& psi): psip_(psi), Z_(0){}
     void set_Z( double z){ Z_=z;}
-    double operator()(double R) { return (*psip_)(R, Z_);}
+    double operator()(double R) { return psip_(R, Z_);}
     private:
-    ClonePtr<aCylindricalFunctor> psip_;
+    CylindricalFunctor psip_;
     double Z_;
 };
 

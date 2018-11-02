@@ -81,7 +81,8 @@ int main( int argc, char* argv[])
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
-    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background ion profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp,
+        dg::geo::solovev::Psip(gp)); //initial background ion profile
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
     dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation
     dg::blas1::plus(y0[0][1], -1); //initialize ni-1
@@ -89,11 +90,13 @@ int main( int argc, char* argv[])
     {
         dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(
             dg::geo::solovev::Psip(gp), gp), grid);
-        dg::blas1::pointwiseDot(damping,y0[0][1], y0[0][1]);
+        dg::blas1::pointwiseDot(damping, y0[0][1], y0[0][1]);
     }
-    std::cout << "intiialize ne" << std::endl;
-    if( p.initphi == "zero")  feltor.initializene( y0[0][1], y0[0][0]);
-    else if( p.initphi == "balance") dg::blas1::copy( y0[0][1], y0[0][0]); //set n_e = N_i
+    std::cout << "initialize ne" << std::endl;
+    if( p.initphi == "zero")
+        feltor.initializene( y0[0][1], y0[0][0]);
+    else if( p.initphi == "balance")
+        dg::blas1::copy( y0[0][1], y0[0][0]); //set n_e = N_i
     else
         std::cerr <<"WARNING: Unknown initial condition for phi!\n";
 
@@ -141,7 +144,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &EtimeID, &id0d[name]);
     err = nc_enddef(ncid);
     ////////////map quantities to output/////////////////
-    //since values take references we don't need to update those later
+    //since values take pointers we don't need to update those later
     std::map<std::string, const dg::DVec* > v4d;
     for( unsigned i=0; i<2; i++)
     {
@@ -150,6 +153,7 @@ int main( int argc, char* argv[])
     }
     v4d["potential"] = &feltor.potential()[0];
     const feltor::Quantities& q = feltor.quantities();
+    q.display(std::cout);
     double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
     std::map<std::string, const double*> v0d{
         {"energy", &q.energy}, {"ediff", &q.ediff},

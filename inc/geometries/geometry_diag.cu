@@ -163,17 +163,14 @@ int main( int argc, char* argv[])
     std::cout << "psipRR( 1-de,ke)       "<<c.psipRR()(R_H,Z_H)+N3*c.psipZ()(R_H,Z_H)<<"\n";
 
 
-    //dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    //dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     dg::HVec hvisual;
     //allocate mem for visual
     dg::HVec visual;
     std::map< std::string, std::function<double(double,double)>> map{
-        //{"Psip", c.psip()},
-        //{"Ipol", c.ipol()},
+        {"Psip", c.psip()},
+        {"Ipol", c.ipol()},
         {"Bmodule", dg::geo::Bmodule(c)},
         {"InvB", dg::geo::InvB(c)},
         {"LnB", dg::geo::LnB(c)},
@@ -213,7 +210,11 @@ int main( int argc, char* argv[])
         {"ZonalFlow", dg::geo::ZonalFlow(p.amp, p.k_psi, gp, c.psip())},
         {"PsiLimiter", dg::geo::PsiLimiter(c.psip(), gp.psipmaxlim)},
         {"Nprofile", dg::geo::Nprofile(p.bgprofamp, p.nprofileamp, gp, c.psip())},
-        {"TanhSource", dg::geo::TanhSource(c.psip(), gp.psipmin, gp.alpha)}
+        {"TanhSource", dg::geo::TanhSource(c.psip(), gp.psipmin, gp.alpha)},
+        ////
+        {"BathRZ", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,5., p.amp)},
+        {"Gaussian3d", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
+            M_PI, p.sigma, p.sigma, p.sigma, p.amp)}
     };
     //Compute flux average
     dg::geo::Alpha alpha(c); // = B^phi / |nabla psip |
@@ -266,9 +267,9 @@ int main( int argc, char* argv[])
     dg::HVec vecZ = dg::evaluate( dg::geo::BFieldZ(c), grid3d);
     dg::HVec vecP = dg::evaluate( dg::geo::BFieldP(c), grid3d);
     int vecID[3];
-    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
-    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
-    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
+    err = nc_def_var( ncid, "B_R", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
+    err = nc_def_var( ncid, "B_Z", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
+    err = nc_def_var( ncid, "B_P", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, vecID[0], vecR.data());
     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
