@@ -6,9 +6,9 @@ namespace dg
 {
 
 //there is probably a better class in boost...
-/*!@brief a manager class that invokes the \c clone() method on the managed ptr when copied
+/*!@brief Manager class that invokes the \c clone() method on the managed ptr when copied
 *
-*When copied invokes a deep copy using the \c clone() method.
+* When copied invokes a deep copy using the \c clone() method.
 * This class is most useful when a class needs to hold a polymorphic, Cloneable oject as a variable.
 @tparam Cloneable a type that may be uncopyable/unassignable but provides the \c clone() method with signature
  -  \c Cloneable* \c clone() \c const;
@@ -29,24 +29,20 @@ struct ClonePtr
     * @brief clone the given value and manage
     * @param src an object to clone
     */
-    ClonePtr( const Cloneable& src): m_ptr(src.clone()){}
+    ClonePtr( const Cloneable& src) : m_ptr( src.clone() ) { }
 
     /**
     * @brief deep copy the given handle using the \c clone() method of \c Cloneable
     * @param src an oject to copy, clones the contained object if not empty
     */
-    ClonePtr( const ClonePtr& src):m_ptr(nullptr)
-    {
-        if( src )
-            m_ptr.reset( src.m_ptr->clone()); //deep copy
-    }
+    ClonePtr( const ClonePtr& src) : m_ptr( src.m_ptr->clone() ) { }
     /**
     * @brief deep copy the given handle using the \c clone() method of \c Cloneable
     * @param src an oject to copy and swap
     */
     ClonePtr& operator=( const ClonePtr& src)
     {
-        //copy and swap, also implements move assignment
+        //copy and swap
         ClonePtr tmp(src);
         swap( *this, tmp );
         return *this;
@@ -59,6 +55,10 @@ struct ClonePtr
     {
         swap( *this, src); //steal resource
     }
+    /**
+     * @brief Steal resources (move assignment)
+     * @param src an object to steal pointer from
+     */
     ClonePtr& operator=( ClonePtr&& src) noexcept
     {
         swap( *this, src );
@@ -66,6 +66,14 @@ struct ClonePtr
     }
     /**
     * @brief swap the managed pointers
+    *
+    * This follows the discussion in
+    * https://stackoverflow.com/questions/5695548/public-friend-swap-member-function
+    * Use like
+    * @code
+    * using std::swap;
+    * swap( cloneptr1, cloneptr2);
+    * @endcode
     * @param first first instance
     * @param second second instance
     */
@@ -75,13 +83,16 @@ struct ClonePtr
     }
 
     /**
-    * @brief Take the ownership of the given pointer and delete the currently held one if non-empty
-    * @param ptr a pointer to an object to manage
+    * @brief Replace the managed object
+    *
+    * Take the ownership of the given pointer and delete the currently
+    * held one if non-empty
+    * @param ptr a pointer to a new object to manage
     */
     void reset( Cloneable* ptr){
         m_ptr.reset( ptr);
     }
-    void reset( std::nullptr_t p = nullptr) noexcept { m_ptr.reset( p);}
+    ///Releases ownership of managed object, \c get() returns \c nullptr after call
     Cloneable* release() noexcept { m_ptr.release();}
     /**
     * @brief Clone the given object and replace the currently held one
@@ -89,22 +100,30 @@ struct ClonePtr
     */
     void reset( const Cloneable& src){
         ClonePtr tmp(src);
-        *this=tmp;
+        swap(*this, tmp);
     }
 
     /**
-    * @brief Get a constant reference to the object on the heap
-    * @return a reference to the Cloneable object
-    * @note undefined if the ClonePtr manages a nullptr pointer
+    * @brief Get a pointer to the object on the heap
+    * @return a pointer to the Cloneable object or \nullptr if no object owned
     */
-    Cloneable * const  get() {return m_ptr.get();}
-    const Cloneable* const get() const {return m_ptr.get();}
+    Cloneable * get() {return m_ptr.get();}
+    /**
+    * @brief Get a constant pointer to the object on the heap
+    * @return a pointer to the Cloneable object or \nullptr if no object owned
+    */
+    const Cloneable* get() const {return m_ptr.get();}
 
+    ///Dereference pointer to owned object, i.e. \c *get()
     Cloneable& operator*() { return *m_ptr;}
+    ///Dereference pointer to owned object, i.e. \c *get()
     const Cloneable& operator*() const { return *m_ptr;}
-    Cloneable* const operator->() { return m_ptr.operator->();}
-    const Cloneable* const operator->()const { return m_ptr.operator->();}
-    operator bool() const{ return (bool)m_ptr;}
+    ///Dereference pointer to owned object, i.e. \c get()
+    Cloneable* operator->() { return m_ptr.operator->();}
+    ///Dereference pointer to owned object, i.e. \c get()
+    const Cloneable* operator->()const { return m_ptr.operator->();}
+    ///\c true if \c *this owns an object, \c false else
+    explicit operator bool() const{ return (bool)m_ptr;}
 
 
     private:
