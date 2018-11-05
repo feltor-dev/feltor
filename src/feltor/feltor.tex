@@ -262,8 +262,10 @@ we get the vorticity conservation
 \subsubsection{Energy theorem}
 The terms of the energy theorem are derived to
 \begin{align}
-  \mathcal{E}= \int  d\vec{x} & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
-  \Lambda =  \int d\vec{x} & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
+  \mathcal{E}= \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
+  \mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
+  (T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) + \vec v_C' m NU^2 + \bhat UNT \right], \\
+  \Lambda =  \int \dV & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
   \nonumber\\ &
 +\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
 \nonumber \\ &
@@ -317,10 +319,12 @@ together with
     -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \nabla_\perp^2
   \end{align}
-The energy theorem reads $\partial_t \mathcal E = \Lambda$
+The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$
 \begin{align}
-  \mathcal{E}= \int  d\vec{x} & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}+  \frac{1}{2} \mu_i N_i u_E^2 +\frac{1}{2} z_e\mu_e  n_e u_e^2 +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
-  \Lambda =  \int d\vec{x} & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
+  \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}+  \frac{1}{2} \mu_i N_i u_E^2 +\frac{1}{2} z_e\mu_e  n_e u_e^2 +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
+  \mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
+  (z\tau N\ln N + \frac{1}{2}z\mu NU^2 + \psi N \right) + \vec v_C' z\mu NU^2 + \bhat UNT \right], \\
+  \Lambda =  \int \dV & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
   \nonumber\\ &
 +z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
 \nonumber \\ &

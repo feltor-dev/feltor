@@ -153,7 +153,6 @@ int main( int argc, char* argv[])
     }
     v4d["potential"] = &feltor.potential()[0];
     const feltor::Quantities& q = feltor.quantities();
-    q.display(std::cout);
     double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
     std::map<std::string, const double*> v0d{
         {"energy", &q.energy}, {"ediff", &q.ediff},
@@ -171,6 +170,7 @@ int main( int argc, char* argv[])
         std::array<std::array<dg::DVec,2>,2> y1(y0);
         feltor( time, y0, y1);
     }
+    q.display(std::cout);
     double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
     size_t start[4] = {0, 0, 0, 0};
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(),
