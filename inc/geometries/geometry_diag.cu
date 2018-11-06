@@ -64,6 +64,18 @@ struct Parameters
     }
 };
 
+struct IPhi
+{
+    IPhi( dg::geo::solovev::Parameters gp): R_0(gp.R_0), A(gp.A){}
+    double operator()(double R, double Z, double phi)const
+    {
+        //one 1/R is to convert to a contravariant component
+        return ((A-1.)*R - A*R_0*R_0/R)/R_0/R_0/R_0/R;
+    }
+    private:
+    double R_0, A;
+};
+
 int main( int argc, char* argv[])
 {
     if( !(argc == 4 || argc == 3))
@@ -162,7 +174,6 @@ int main( int argc, char* argv[])
     std::cout << "psipZZ( 1-e,0)         "<<c.psipZZ()(gp.R_0-gp.a,0.)+N2*c.psipR()(gp.R_0-gp.a,0)<<"\n";
     std::cout << "psipRR( 1-de,ke)       "<<c.psipRR()(R_H,Z_H)+N3*c.psipZ()(R_H,Z_H)<<"\n";
 
-
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     dg::HVec hvisual;
@@ -238,7 +249,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
     err = file::define_dimension( ncid,"psi", &dim1d_ids[0], grid1d);
-    dg::Grid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+    dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     err = file::define_dimensions( ncid, &dim3d_ids[0], grid3d);
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
@@ -277,7 +288,50 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);
+    std::cout << "TEST ACCURACY OF CURVATURES (values must be close to 0!)\n";
+    dg::geo::CylindricalVectorLvl0 bhat_ = dg::geo::createBHat( c);
+    dg::geo::CylindricalVectorLvl0 curvB_ = dg::geo::createTrueCurvatureNablaB( c);
+    dg::geo::CylindricalVectorLvl0 curvK_ = dg::geo::createTrueCurvatureKappa( c);
+    std::array<dg::HVec, 3> bhat, curvB, curvK;
+    dg::pushForward( bhat_.x(), bhat_.y(), bhat_.z(),
+            bhat[0], bhat[1], bhat[2], grid3d);
+    std::array<dg::HVec, 3> bhat_covariant(bhat);
+    dg::tensor::inv_multiply3d( grid3d.metric(), bhat[0], bhat[1], bhat[2],
+            bhat_covariant[0], bhat_covariant[1], bhat_covariant[2]);
+    dg::HVec normb( bhat[0]), one3d = dg::evaluate( dg::one, grid3d);
+    dg::blas1::pointwiseDot( 1., bhat[0], bhat_covariant[0],
+                             1., bhat[1], bhat_covariant[1],
+                             0., normb);
+    dg::blas1::pointwiseDot( 1., bhat[2], bhat_covariant[2],
+                             1., normb);
+    dg::blas1::axpby( 1., one3d, -1, normb);
+    double error = sqrt(dg::blas1::dot( normb, normb));
+    std::cout << "Error in norm b == 1 :  "<<error<<std::endl;
 
+    dg::pushForward( curvB_.x(), curvB_.y(), curvB_.z(),
+            curvB[0], curvB[1], curvB[2], grid3d);
+    dg::pushForward( curvK_.x(), curvK_.y(), curvK_.z(),
+            curvK[0], curvK[1], curvK[2], grid3d);
+    dg::blas1::axpby( 1., curvK, -1., curvB);
+    dg::HVec Bmodule = dg::pullback( dg::geo::Bmodule(c), grid3d);
+    dg::blas1::pointwiseDot( Bmodule, Bmodule, Bmodule);
+    for( int i=0; i<3; i++)
+        dg::blas1::pointwiseDot( Bmodule, curvB[i], curvB[i]);
+    dg::HVec R = dg::pullback( dg::cooX3d, grid3d);
+    dg::HVec IR =  dg::pullback( c.ipolR(), grid3d);
+    dg::blas1::pointwiseDivide( gp.R_0, IR, R, 0., IR);
+    dg::HVec IZ =  dg::pullback( c.ipolZ(), grid3d);
+    dg::blas1::pointwiseDivide( gp.R_0, IZ, R, 0., IZ);
+    dg::HVec IP =  dg::pullback( IPhi( gp), grid3d);
+    dg::blas1::pointwiseDivide( gp.R_0, IP, R, 0., IP);
+    dg::blas1::axpby( 1., IZ, -1., curvB[0]);
+    dg::blas1::axpby( 1., IR, +1., curvB[1]);
+    dg::blas1::axpby( 1., IP, -1., curvB[2]);
+    for( int i=0; i<3; i++)
+    {
+        error = sqrt(dg::blas1::dot( curvB[i], curvB[i] ) );
+        std::cout << "Error in curv "<<i<<" :   "<<error<<"\n";
+    }
 
     return 0;
 }

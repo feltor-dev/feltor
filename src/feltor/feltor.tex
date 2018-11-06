@@ -64,12 +64,13 @@ with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$, and
 $\eps^{ijk}$ the Levi-Civita symbols.
 Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
-    Note that we have (with $\nabla\cdot \vec B  =0$)
+    Note that we have
 \begin{align}
     \vec \nabla \cdot \vec{\mathcal K_\kappa}
-    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\mathcal K_\kappa(\ln B), \\
+    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_\kappa}\cdot\nabla\ln B, \\
     \vec\nabla\cdot\vec{ \mathcal K} &= 0, \\
-    \vec\nabla\cdot \bhat &= - \nabla_\parallel \ln B  . 
+    \vec{ \mathcal K_\kappa} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B).
+    \label{eq:curl_curvature}
 \end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Coordinate system}\label{sec:cylmetric}
@@ -115,8 +116,8 @@ We have
 \begin{align}
     [f, g]_\perp &= (\partial_R f\partial_Z g - \partial_R g\partial_Z f) \equiv [f, g]_{RZ}, \\
     \nabla \cdot(\nabla_\perp f) &= \frac{1}{R}\partial_R\left(R\partial_R f\right) + \partial_Z^2f \\
-    \nabla\cdot\vec{\mathcal K_{\kappa}}= 0\\
-    \nabla_\parallel \ln B = 0
+    \nabla\cdot\vec{\mathcal K_{\kappa}}&= 0\\
+    \nabla_\parallel \ln B &= 0
     \label{}
 \end{align}
 \end{subequations}
@@ -206,9 +207,13 @@ By construction we have $\partial_\varphi B = 0$ with
 \end{align}
 Furthermore, we have
 \begin{align}
-  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat.
+  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat,\\
+    \vec\nabla\times \vec B = \frac{R_0}{R}\left[ I_Z \ehat_R - I_R\ehat_Z + j_\varphi\ehat_\varphi  \right].
     \label{}
 \end{align}
+The latter together with Eq.~\eqref{eq:curl_curvature}
+can be used as a consistency test for the correct implementation of the
+curvature operators (remember to convert $j_\varphi/R$ to get the contravariant component).
 We allow various simplifications to the curvature operator
 for the Solov'ev equilibrium.
 
@@ -293,23 +298,6 @@ K_\kappa^\varphi &= \frac{1}{R^2B^2}\left(
 %contravariant phi component
 \label{}
 \end{align}
-%Furthermore, we write
-%\begin{align}
-%(\nabla_\perp f)^i = (g^{ij}-b^ib^j)\partial_j f =: h^{ij}\partial_j f
-%\label{}
-%\end{align}
-%where we defined the projection tensor $h$, which is positive semi-definite.
-%Finally, we have
-%\begin{align}
-%[f,g]_\perp := \bhat \cdot(\nabla f\times\nabla g) =
-% \frac{1}{\sqrt{g}}\left(
-% b_R [f,g]_{Z\varphi}
-% + b_Z [f,g]_{\varphi R} 
-% + b_\varphi [f,g]_{RZ}
-% \right)
-%\label{}
-%\end{align}
-%where $[f,g]_{ij} = \partial_i f\partial_jg - \partial_j f\partial_i g$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model}
@@ -396,7 +384,7 @@ The electric potential \(\phi\) is computed by the polarisation equation
 \end{align}
 and with the generalised electric potential
 \begin{align}
-  \psi_i&:= \Gamma_{1,i} \phi - \frac{m u_E^2}{2 q}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2
+  \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i u_E^2}{2 q}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2
 \end{align}
 \subsection{Parallel Resistivity, diffusion, profiles and particle sources}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
@@ -545,6 +533,7 @@ The terms of the energy theorem are derived to
 \end{align}
 The energy consists of the Helmholtz free energy density for electrons and ions, the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
 In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dimensionless form}
 We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyrofrequency $\Omega_0 = eB_0/m_i$.
 The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
