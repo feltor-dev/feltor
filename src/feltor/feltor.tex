@@ -357,7 +357,7 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
 %      +\frac{  t_e u_e }{e }  \mathcal{K}\left( \ln n_e \right)
 %       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)
 %       +\frac{e}{m_e}   \eta_{\parallel} J_\parallel
-    +\Lambda_{u_e} + R_{e, \eta_\parallel},  \\
+    + R_{e, \eta_\parallel}+\Lambda_{u_e} ,  \\
 \frac{\partial}{\partial t}    U_i
       =&
       - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp}
@@ -375,7 +375,7 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
 %      -\frac{  T_i U_i }{e }  \mathcal{K}\left( \ln N_i \right)
 %       -\left(\frac{2  T_i  }{e} + \frac{m_i  U_i^2}{2 e} \right) \mathcal{K} \left(U_i\right)
 %       -\frac{e}{m_i}   \eta_{\parallel} J_\parallel
-           +\Lambda_{U_i} + R_{i,\eta_\parallel} .
+         + R_{i,\eta_\parallel}  +\Lambda_{U_i}  .
 \end{align}
 The electric potential \(\phi\) is computed by the polarisation equation
 \begin{align}
@@ -385,6 +385,30 @@ The electric potential \(\phi\) is computed by the polarisation equation
 and with the generalised electric potential
 \begin{align}
   \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i u_E^2}{2 q}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2
+\end{align}
+
+\subsection{Conservative form}
+Note that the continuity and momentum conservation equations can be
+written in the form
+\begin{align}
+\frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat\right)\right) = \Lambda_N + S_N \\
+mN \frac{\partial}{\partial t} U &+ mN \left(
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat
+    \right)\cdot \vec\nabla U  \nonumber \\
+    &+ \vec \nabla \cdot ( 2mNU \vec v_\kappa)
+    + mNU\mathcal K_\kappa(\phi)
+    + mNU\vec v_\kappa \cdot \nabla \ln B \nonumber\\
+    &= -T \nabla_\parallel N -qN\nabla_\parallel \psi + mN R_\eta + mN\Lambda_U
+\label{}
+\end{align}
+with the velocities
+\begin{align}
+\vec v_E := \frac{\bhat\times\nabla\phi}{B},\quad
+\vec v_C := \frac{T+mU^2}{q}\vec{\mathcal K_\kappa},\quad
+\vec v_\kappa := \frac{T}{q}\vec{\mathcal K_\kappa},\quad
+\vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
+\label{}
 \end{align}
 \subsection{Parallel Resistivity, diffusion, profiles and particle sources}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
@@ -520,11 +544,14 @@ we get the vorticity conservation
 \end{align}
 
 \subsubsection{Energy theorem}
-The terms of the energy theorem are derived to
+The terms of the energy theorem are derived to (if either $\psi$ or
+$\nabla\psi$ vanishes  at the boundary)
 \begin{align}
-  \mathcal{E}= \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
-  \mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
-  (T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) + \vec v_C' m NU^2 + \bhat UNT \right], \\
+  \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
+  \mathcal S = \sum_s \int \vec{\dA} \cdot &\left[ \left(
+  U\bhat + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
+  \left(T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) \right. \nonumber\\
+  & \left . + \vec v_\kappa m NU^2  + \bhat UNT\right], \\
   \Lambda =  \int \dV & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
   \nonumber\\ &
 +\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
