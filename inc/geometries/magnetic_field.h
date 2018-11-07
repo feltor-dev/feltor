@@ -311,7 +311,7 @@ struct TrueCurvatureNablaBP: public aCloneableCylindricalFunctor<TrueCurvatureNa
     double do_compute( double R, double Z) const
     {
         double invB = invB_(R,Z);
-        return invB*invB*invB/R/R*(c_.psipZ()(R,Z)*bZ_(R,Z) + c_.psipR()(R,Z)*bR_(R,Z));
+        return c_.R0()*invB*invB*invB/R/R*(c_.psipZ()(R,Z)*bZ_(R,Z) + c_.psipR()(R,Z)*bR_(R,Z));
     }
     TokamakMagneticField c_;
     InvB invB_;
@@ -356,9 +356,9 @@ struct TrueCurvatureKappaP: public aCloneableCylindricalFunctor<TrueCurvatureKap
     double do_compute( double R, double Z) const
     {
         double invB = invB_(R,Z);
-        return invB*invB/R/R*(
+        return c_.R0()*invB*invB/R/R*(
             + invB*c_.psipZ()(R,Z)*bZ_(R,Z) + invB *c_.psipR()(R,Z)*bR_(R,Z)
-            + c_.psipR()(R,Z)/R/R/R - c_.psipRR()(R,Z)/R/R - c_.psipZZ()(R,Z));
+            + c_.psipR()(R,Z)/R - c_.psipRR()(R,Z) - c_.psipZZ()(R,Z));
     }
     TokamakMagneticField c_;
     InvB invB_;
@@ -369,15 +369,15 @@ struct TrueCurvatureKappaP: public aCloneableCylindricalFunctor<TrueCurvatureKap
 ///@brief True \f$  \vec{\nabla}\cdot \mathcal{K}_{\vec{\kappa}}  \f$
 struct TrueDivCurvatureKappa: public aCloneableCylindricalFunctor<TrueDivCurvatureKappa>
 {
-    TrueDivCurvatureKappa( const TokamakMagneticField& mag): curvR_(mag), curvZ_(mag), invB_(mag), bR_(mag), bZ_(mag){}
+    TrueDivCurvatureKappa( const TokamakMagneticField& mag): c_(mag), invB_(mag), bR_(mag), bZ_(mag){}
     private:
     double do_compute( double R, double Z) const
     {
-        double invB = invB_(R,Z);
         return -invB*(curvR_(R,Z)*bR_(R,Z) + curvZ_(R,Z)*bZ_(R,Z));
+        double invB = invB_(R,Z);
+        return c_.R0()*invB*invB*invB/R*( c_.ipolR()(R,Z)*bZ_(R,Z) - c_.ipolZ()(R,Z)*bR_(R,Z) );
     }
-    TrueCurvatureKappaR curvR_;
-    TrueCurvatureKappaZ curvZ_;
+    TokamakMagneticField c_;
     InvB invB_;
     BR bR_;
     BZ bZ_;

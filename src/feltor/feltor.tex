@@ -139,8 +139,9 @@ For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \fr
 
 Let us state the Grad-Shafranov equation
 \begin{align}\label{eq:GSEdimless}
- \Delta^*_\perp  \psi_p &= -R^2 \frac{d p}{d  \psi_p } - I \frac{d I}{d  \psi_p }\equiv - R j_\varphi.
+ -\Delta^*_\perp  \psi_p &= R^2 \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p }\equiv R j_\varphi.
 \end{align}
+with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
 Note that $R$ and $Z$ are normalized
 with $\rho_s$, $\psi_p$ with $\psi_{p0}$, $p$ with
 $p_0 := \psi_{p0}^2/\mu_0\rho_s^4$, $I$ with $I_0:=\psi_{p0}/\rho_s$,
@@ -208,12 +209,12 @@ By construction we have $\partial_\varphi B = 0$ with
 Furthermore, we have
 \begin{align}
   \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat,\\
-    \vec\nabla\times \vec B = \frac{R_0}{R}\left[ I_Z \ehat_R - I_R\ehat_Z + j_\varphi\ehat_\varphi  \right].
+    \vec\nabla\times \vec B = \frac{R_0}{R}\left[ I_Z \ehat_R - I_R\ehat_Z + Rj_\varphi\ehat_\varphi  \right].
     \label{}
 \end{align}
 The latter together with Eq.~\eqref{eq:curl_curvature}
 can be used as a consistency test for the correct implementation of the
-curvature operators (remember to convert $j_\varphi/R$ to get the contravariant component).
+curvature operators (remember to convert $Rj_\varphi \rightarrow j_\varphi$ to get the contravariant component).
 We allow various simplifications to the curvature operator
 for the Solov'ev equilibrium.
 
@@ -280,21 +281,24 @@ We can then explicitly write
 \begin{align}
 K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
 K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
-K_{\nabla B}^\varphi &= \frac{1}{B^3R^2}\left(\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z} + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
+K_{\nabla B}^\varphi &= \frac{R_0}{B^3R^2}\left(
+      \frac{\partial \psi}{\partial Z} \frac{\partial B}{\partial Z}
+    + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
 %\equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
 \label{}
 \end{align}
 and
 \begin{align}
-K_\kappa^R &= \frac{R_0 }{RB^2}\left( \frac{\partial I}{\partial Z} -\frac{I}{B}\frac{\partial B}{\partial Z}\right) \\
-K_\kappa^Z &= \frac{R_0 }{RB^2} \left( \frac{I}{B}\frac{\partial B}{\partial R} - \frac{\partial I}{\partial R} \right)\\
-K_\kappa^\varphi &= \frac{1}{R^2B^2}\left(
+K_\kappa^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
+K_\kappa^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
+K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
 + \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
 + \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
--\frac{1}{R}\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
+-R\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
 - \frac{\partial^2 \psi}{\partial Z^2}
 \right) \\
-\vec\nabla\cdot\vec{\mathcal K_\kappa} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}= -\vec{\mathcal K_\kappa}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
+\vec\nabla\cdot\vec{\mathcal K_\kappa} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}=
+    -\vec{\mathcal K_\kappa}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
 %contravariant phi component
 \label{}
 \end{align}
