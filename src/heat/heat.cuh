@@ -10,19 +10,16 @@ namespace heat
 template< class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
-    Implicit( const Geometry& g, Parameters p, dg::geo::solovev::Parameters gp):
+    Implicit( const Geometry& g, Parameters p,
+        dg::geo::TokamakMagneticField mag):
         m_p(p),
-        m_ds(dg::geo::createSolovevField( gp), g, p.bcx, p.bcy,
-              dg::geo::PsiLimiter(
-                dg::geo::solovev::Psip(gp), gp.psipmaxlim),
-              dg::forward,
-              gp.rk4eps, p.mx, p.my),
+        m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
+              p.rk4eps, p.mx, p.my),
         m_ellipticForward( g, dg::normed, dg::forward),
         m_ellipticBackward( g, dg::normed, dg::backward),
         m_ellipticPerp( g, dg::normed, dg::centered)
     {
-        auto c = dg::geo::createSolovevField(gp);
-        dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( c);
+        dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( mag);
         dg::SparseTensor<container> bb, hh;
         bb = dg::geo::createAlignmentTensor( bhat, g);
         m_ellipticForward.set_chi( bb);
@@ -70,7 +67,7 @@ struct Explicit
 {
     Explicit( const Geometry& grid,
               heat::Parameters p,
-              dg::geo::solovev::Parameters gp);
+              dg::geo::TokamakMagneticField mag);
 
     const dg::geo::DS<Geometry,IMatrix,Matrix,container>& ds(){
         return m_ds;
@@ -86,6 +83,9 @@ struct Explicit
 //     ,pupil;
     const container  one;
     const container w3d, v3d;
+#ifdef DG_MANUFACTURED
+    const container m_R, m_Z, m_P;//coordinates
+#endif //DG_MANUFACTURED
 
     //matrices and solvers
     dg::geo::DS<Geometry,IMatrix,Matrix,container> m_ds;
@@ -97,21 +97,27 @@ struct Explicit
 };
 
 template<class Geometry, class IMatrix, class Matrix, class container>
-Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g, heat::Parameters p, dg::geo::solovev::Parameters gp):
+Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g,
+    heat::Parameters p, dg::geo::TokamakMagneticField mag):
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi),
     one( dg::evaluate( dg::one, g)),
     w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),
-    m_ds( dg::geo::createSolovevField(gp), g, p.bcx, p.bcy, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::forward),
+#ifdef DG_MANUFACTURED
+    m_R( dg::pullback( dg::cooX3d, g)),
+    m_Z( dg::pullback( dg::cooY3d, g)),
+    m_P( dg::pullback( dg::cooZ3d, g)),
+#endif //DG_MANUFACTURED
+    m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
+          p.rk4eps, p.mx, p.my),
     m_p(p),
     m_ellipticForward( g, dg::normed, dg::forward),
     m_ellipticBackward(g, dg::normed, dg::backward),
     m_ellipticPerp(g, dg::normed, dg::centered)
 {
     //----------------------------init fields----------------------
-    auto c = dg::geo::createSolovevField(gp);
-    dg::assign(  dg::pullback(dg::geo::InvB(c), g), m_invB);
-    dg::assign(  dg::pullback(dg::geo::Divb(c), g), m_divb);
-    dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( c);
+    dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_invB);
+    dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
+    dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( mag);
     dg::SparseTensor<container> bb, hh;
     bb = dg::geo::createAlignmentTensor( bhat, g);
     m_ellipticForward.set_chi( bb);
@@ -163,6 +169,10 @@ void Explicit<G,I,Matrix,container>::operator()( double tt, const container& y, 
         m_ds.ds( dg::centered, y, lambda);   // (Div b) ds T
         dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, lambda, 1., yp);
     }
+#ifdef DG_MANUFACTURED
+    dg::blas1::evaluate( yp, dg::plus_equals(),
+        Source( m_p.nu_perp, m_p.nu_parallel), m_R, m_Z, m_P, tt)
+#endif //DG_MANUFACTURED
     t.toc();
 #ifdef MPI_VERSION
     int rank;

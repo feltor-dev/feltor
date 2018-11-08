@@ -43,7 +43,7 @@ struct Parameters
     double boxscaleZm, boxscaleZp;
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
-    std::string initni, initphi, curvmode;
+    std::string initni, initphi, curvmode, equilibrium;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
@@ -100,6 +100,7 @@ struct Parameters
         initni      = js.get( "initni", "blob").asString();
         initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
+        equilibrium = js.get( "equilibrium", "solovev").asString();
     }
     void display( std::ostream& os = std::cout ) const
     {

@@ -23,12 +23,11 @@ namespace dg
 ///@{
 
 /**
- * @brief Functor for the absolute maximum
+ * @brief Absolute maximum
  * \f[ f(x,y) = \max(|x|,|y|)\f]
  *
- * @tparam T value-type
  */
-template <class T = double>
+template <class T>
 struct AbsMax
 {
     /**
@@ -40,7 +39,7 @@ struct AbsMax
      * @return absolute maximum
      */
 DG_DEVICE
-    T operator() (const T& x, const T& y) const
+    T operator() ( T x, T y) const
     {
         T absx = x>0 ? x : -x;
         T absy = y>0 ? y : -y;
@@ -48,10 +47,8 @@ DG_DEVICE
     }
 };
 /**
- * @brief Functor for the absolute maximum
+ * @brief Absolute minimum
  * \f[ f(x,y) = \min(|x|,|y|)\f]
- *
- * @tparam T value-type
  */
 template <class T = double>
 struct AbsMin
@@ -65,7 +62,7 @@ struct AbsMin
      * @return absolute minimum
      */
 DG_DEVICE
-    T operator() (const T& x, const T& y) const
+    T operator() (T x, T y) const
     {
         T absx = x<0 ? -x : x;
         T absy = y<0 ? -y : y;
@@ -293,21 +290,20 @@ struct GaussianX
      */
     GaussianX( double x0, double sigma_x, double amp)
         :x00(x0), sigma_x(sigma_x), amplitude(amp){}
-    /**
-     * @brief Return the value of the gaussian
-     *
-     * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2})}
-       \f]
-     * @param x x - coordinate
-     * @param y y - coordinate
-     *
-     * @return gaussian
-     */
+    DG_DEVICE
+    double operator()(double x) const
+    {
+        return  amplitude* exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x ));
+    }
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude* exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x ));
+        return this->operator()(x);
+    }
+    DG_DEVICE
+    double operator()(double x, double y, double z) const
+    {
+        return this->operator()(x);
     }
   private:
     double  x00, sigma_x, amplitude;
@@ -526,18 +522,12 @@ struct SinX
      * @param kx  kx
      */
     SinX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
-    /**
-     * @brief Return profile
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-
-     * @return \f$ f(x,y)\f$
-     */
     DG_DEVICE
-    double operator()( double x, double y)const{ return bamp_+amp_*sin(x*kx_);}
+    double operator()( double x)const{ return bamp_+amp_*sin(x*kx_);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x,y);}
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
     double amp_,bamp_,kx_;
 };
@@ -594,8 +584,8 @@ struct CosY
     double amp_,bamp_,ky_;
 };
 /**
- * @brief Functor for a sin prof in x and y-direction
- * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
+ * @brief Inverse cosh profile
+ * \f[ f(x,y) =A/\cosh^2(k_x x) \f]
  */
 struct InvCoshXsq
 {
@@ -606,21 +596,18 @@ struct InvCoshXsq
      * @param kx  kx
      */
     InvCoshXsq( double amp, double kx):amp_(amp), kx_(kx){}
-    /**
-     * @brief Return profile
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     * @return \f$ f(x,y)\f$
-     */
     DG_DEVICE
-    double operator()( double x, double y)const{ return amp_/cosh(x*kx_)/cosh(x*kx_);}
+    double operator()( double x)const{ return amp_/cosh(x*kx_)/cosh(x*kx_);}
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
     double amp_,kx_;
 };
 /**
- * @brief Functor for a sin prof in x-direction
- * \f[ f(x,y) = B + A(1-\sin(k_xx )) \f]
+ * @brief Sin prof in x-direction
+ * \f[ f(x) = f(x,y) = f(x,y,z) = B + A(1 - \sin(k_xx )) \f]
  */
 struct SinProfX
 {
@@ -632,22 +619,18 @@ struct SinProfX
      * @param kx  kx
      */
     SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
-    /**
-     * @brief Return profile
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-
-     * @return \f$ f(x,y)\f$
-     */
     DG_DEVICE
-    double operator()( double x, double y)const{ return bamp_+amp_*(1.-sin(x*kx_));}
+    double operator()( double x)const{ return bamp_+amp_*(1.-sin(x*kx_));}
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
     double amp_,bamp_,kx_;
 };
 /**
- * @brief Functor for a exp prof in x-direction
- * \f[ f(x,y) = B + A\exp(-x/L_n) \f]
+ * @brief Exp prof in x-direction
+ * \f[ f(x) = f(x,y) = f(x,y,z) = B + A\exp(-x/L_n) \f]
  */
 struct ExpProfX
 {
@@ -659,22 +642,18 @@ struct ExpProfX
      * @param ln  ln
      */
     ExpProfX( double amp, double bamp, double ln):amp_(amp), bamp_(bamp),ln_(ln){}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-
-     * @return result
-     */
     DG_DEVICE
-    double operator()( double x, double y)const{ return bamp_+amp_*exp(-x/ln_);}
+    double operator()( double x)const{ return bamp_+amp_*exp(-x/ln_);}
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
     double amp_,bamp_,ln_;
 };
 /**
- * @brief Functor for a linear polynomial in x-direction
- * \f[ f(x,y) = ax+b \f]
+ * @brief A linear function in x-direction
+ * \f[ f(x) = f(x,y) = f(x,y,z) = ax+b \f]
  */
 struct LinearX
 {
@@ -684,43 +663,19 @@ struct LinearX
      * @param a linear coefficient
      * @param b constant coefficient
      */
-     LinearX( double a, double b):a_(a), b_(b){}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     * @param z z - coordinate
-
-     * @return result
-     */
-   DG_DEVICE
-   double operator()( double x, double y, double z)const { return a_*x+b_;}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-
-     * @return result
-     */
-   DG_DEVICE
-   double operator()( double x, double y)const{ return a_*x+b_;}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-
-     * @return result
-     */
-   DG_DEVICE
-   double operator()(double x)const{ return a_*x+b_;}
+    LinearX( double a, double b):a_(a), b_(b){}
+    DG_DEVICE
+    double operator()(double x)const{ return a_*x+b_;}
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
    private:
     double a_,b_;
 };
 /**
  * @brief Functor for a linear polynomial in y-direction
- * \f[ f(x,y) = ay+b \f]
+ * \f[ f(x,y) = f(x,y,z) = ay+b \f]
  */
 struct LinearY
 {
@@ -731,32 +686,15 @@ struct LinearY
      * @param b constant coefficient
      */
     LinearY( double a, double b):a_(a), b_(b){}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     * @param z z - coordinate
-
-     * @return result
-     */
     DG_DEVICE
     double operator()( double x, double y, double z)const { return a_*y+b_;}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-
-     * @return result
-     */
     DG_DEVICE
     double operator()( double x, double y)const{ return a_*y+b_;}
   private:
     double a_,b_;
 };
 /**
- * @brief Functor for a linear polynomial in z-direction
+ * @brief A linear function in z-direction
  * \f[ f(x,y,z) = az+b \f]
  */
 struct LinearZ
@@ -768,15 +706,6 @@ struct LinearZ
      * @param b constant coefficient
      */
     LinearZ( double a, double b):a_(a), b_(b){}
-    /**
-     * @brief Return linear polynomial in x
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     * @param z z - coordinate
-
-     * @return result
-     */
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return a_*z+b_;}
   private:
@@ -785,8 +714,8 @@ struct LinearZ
 
 
 /**
- * @brief Functor for a step function using tanh
- * \f[ f(x,y) = 0.5 profamp(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
+ * @brief Step function using tanh
+ * \f[ f(x) = 0.5 profamp(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
  */
 struct TanhProfX {
     /**
@@ -799,20 +728,15 @@ struct TanhProfX {
      * @param profamp profile amplitude
      */
     TanhProfX(double xb, double width, int sign,double bgamp, double profamp) : xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
-    /**
-     * @brief Return left side step function
-     *
-     * @param x x - coordianate
-     * @param y y - coordianate
-
-
-     * @return result
-     */
     DG_DEVICE
-    double operator() (double x, double y)const
+    double operator() (double x)const
     {
         return profa_*0.5*(1.+s_*tanh((x-xb_)/w_))+bga_;
     }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
     double xb_;
     double w_;
@@ -1358,8 +1282,8 @@ struct PLUS
      *
      * @return  x + value
      */
-        DG_DEVICE
-        T operator()( T x)const{ return x + x_;}
+    DG_DEVICE
+    T operator()( T x)const{ return x + x_;}
     private:
     T x_;
 };

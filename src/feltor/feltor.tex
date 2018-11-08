@@ -466,16 +466,16 @@ and a density profile as
 \end{align}
 We then define the particle source for electrons as
 \begin{align}
-  S_{n_e}(R,Z) = s\begin{cases}
-    \Theta(R,Z)(N_{prof}(R,Z) - n_e(R,Z)) &\text{ if } n_e(R,Z)<N_{prof}(R,Z)\\
-    0 &\text{ else}
-  \end{cases}
+  S_{n_e}(R,Z) = s%\begin{cases}
+    \Theta(R,Z)(N_{prof}(R,Z) - n_e(R,Z))% &\text{ if } n_e(R,Z)<N_{prof}(R,Z)\\
+    %0 &\text{ else}
+  %\end{cases}
   \label{eq:electron_source}
 \end{align}
 where $s$ is the source strength parameter.
 For ions we use
 \begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2\right) n_e
   \label{eq:ion_source}
 \end{align}
 Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
@@ -691,7 +691,9 @@ initni    & string & "turbulence"     & "blob"  & initial condition for ion gyro
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
 initphi   & string & "zero"  & "zero" & initial condition in phi "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity \\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal approx", "toroidal": truely toroidal field
+curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx \\
+equilibrium & string & "solovev"  & "solovev" & type of magnetic field
+equilibrium, one of "solovev", "toroidal", or "circular"
 (all geometry parameters will be ignored, except R\_0)) \\
 \bottomrule
 \end{longtable}
@@ -742,7 +744,7 @@ mass             & Dataset & 1 (energy\_time) & mass integral $\int\dV (n_e-1)$ 
 dEdt             & Dataset & 1 (energy\_time) & change of energy per time  \\
 dissipation      & Dataset & 1 (energy\_time) & diffusion integrals  \\
 accuracy         & Dataset & 1 (energy\_time) & accuracy in time  \\
-aligned          & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV (1+\ln n_e)\Delta_\parallel n_e =  -\int\dV (\nabla_\parallel n_e)^2 /n_e$\\
+aligned          & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Delta_\parallel n_e =  -\int\dV (\nabla_\parallel n_e)^2 /n_e$\\
 \bottomrule
 \end{longtable}
 

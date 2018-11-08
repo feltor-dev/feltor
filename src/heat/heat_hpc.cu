@@ -99,9 +99,10 @@ int main( int argc, char* argv[])
     }
     // /////////////////////create RHS
     std::cout << "Constructing Feltor...\n";
-    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,gp); //initialize before diffusion!
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,mag); //initialize before diffusion!
     std::cout << "initialize implicit" << std::endl;
-    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > diffusion( grid, p,gp);
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > diffusion( grid, p,mag);
     std::cout << "Done!\n";
 
     //////////////////The initial field/////////////////////////////////
@@ -109,7 +110,7 @@ int main( int argc, char* argv[])
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
 
     //background profile
-    dg::geo::Nprofile prof(0, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(0, p.nprofileamp, gp, mag.psip()); //initial background profile
     dg::DVec y0(dg::evaluate( prof, grid)), y1(y0);
     //field aligning
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);

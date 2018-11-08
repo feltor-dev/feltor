@@ -81,8 +81,7 @@ int main( int argc, char* argv[])
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
-    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp,
-        dg::geo::solovev::Psip(gp)); //initial background ion profile
+    dg::geo::Nprofile prof( mag.psip(), mag.R0(), 0., p.bgprofamp, p.nprofileamp); //initial background ion profile
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
     dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation
     dg::blas1::plus(y0[0][1], -1); //initialize ni-1

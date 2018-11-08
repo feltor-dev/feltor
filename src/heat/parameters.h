@@ -20,7 +20,7 @@ struct Parameters
     double nprofileamp;
     enum dg::bc bcx, bcy;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
-    double eps_time, rtol;
+    double eps_time, rtol, rk4eps;
     Parameters( const Json::Value& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
@@ -35,6 +35,7 @@ struct Parameters
         maxout = js["maxout"].asUInt();
         mx = js["mx"].asUInt();
         my = js["my"].asUInt();
+        rk4eps = js.get("rk4eps", 1e-5).asDouble();
 
         nu_parallel = js["nu_parallel"].asDouble();
         nu_perp = js["nu_perp"].asDouble();

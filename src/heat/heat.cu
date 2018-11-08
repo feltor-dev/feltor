@@ -51,9 +51,10 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "Initialize explicit" << std::endl;
-    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,gp); //initialize before im!
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p,mag); //initialize before im!
     std::cout << "Initialize implicit" << std::endl;
-    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p,gp);
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
     /////////glfw initialisation ////////////////////////////////////////
     std::ifstream is( "window_params.js");
     is >> js;
@@ -67,7 +68,7 @@ int main( int argc, char* argv[])
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
 
     // background profile
-    dg::geo::Nprofile prof(0., p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(0., p.nprofileamp, gp, mag.psip()); //initial background profile
     dg::DVec y0( dg::evaluate( prof, grid)), y1(y0);
 
     // field aligning

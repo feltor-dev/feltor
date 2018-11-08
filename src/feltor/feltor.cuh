@@ -107,10 +107,7 @@ struct ComputeSource{
     void operator()( double& result, double tilde_n, double profne,
         double source, double omega_source) const{
         double temp = omega_source*source*(profne - (tilde_n+1.));
-        if ( temp > 0 )
-            result = temp;
-        else
-            result = 0.;
+        result = temp;
     }
 };
 }//namespace routines
@@ -121,15 +118,15 @@ struct Implicit
 {
 
     Implicit( const Geometry& g, feltor::Parameters p,
-            dg::geo::solovev::Parameters gp):
-        m_p(p), m_gp(gp),
+            dg::geo::TokamakMagneticField mag):
+        m_p(p),
         m_lapM_perpN( g, p.bcxN,p.bcyN,dg::PER, dg::normed, dg::centered),
         m_lapM_perpU( g, p.bcxU,p.bcyU,dg::PER, dg::normed, dg::centered)
     {
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
         auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
         if( p.curvmode == "true")
-            bhat = dg::geo::createBHat(dg::geo::createSolovevField(gp));
+            bhat = dg::geo::createBHat(mag);
         dg::SparseTensor<dg::DVec> hh
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
@@ -166,7 +163,6 @@ struct Implicit
 
   private:
     const feltor::Parameters m_p;
-    const dg::geo::solovev::Parameters m_gp;
     container m_temp;
     dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN, m_lapM_perpU;
 };
@@ -199,7 +195,7 @@ template< class Geometry, class IMatrix, class Matrix, class container >
 struct Explicit
 {
     Explicit( const Geometry& g, feltor::Parameters p,
-        dg::geo::solovev::Parameters gp);
+        dg::geo::TokamakMagneticField mag);
 
     //potential[0]: electron potential, potential[1]: ion potential
     const std::array<container,2>& potential( ) const {
@@ -271,21 +267,17 @@ struct Explicit
     dg::SparseTensor<container> m_metric;
 
     const feltor::Parameters m_p;
-    const dg::geo::solovev::Parameters m_gp;
     Quantities m_q;
 
 };
 
 template<class Grid, class IMatrix, class Matrix, class container>
 void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
-    const Grid& g, feltor::Parameters p, dg::geo::solovev::Parameters gp)
+    const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     //due to the various approximations bhat and mag not always correspond
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    if( p.curvmode == "toroidal")
-        mag = dg::geo::createToroidalField(gp.R_0);
     dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
-    if( p.curvmode == "true" || p.curvmode == "toroidal")
+    if( p.curvmode == "true" )
     {
         curvNabla = dg::geo::createTrueCurvatureNablaB(mag);
         curvKappa = dg::geo::createTrueCurvatureKappa(mag);
@@ -297,7 +289,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
         curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag);
         dg::assign( dg::evaluate(dg::zero, g), m_divCurvKappa);
     }
-    else if( p.curvmode == "toroidal approx")
+    else if( p.curvmode == "toroidal")
     {
         curvNabla = dg::geo::createCurvatureNablaB(mag);
         curvKappa = dg::geo::createCurvatureKappa(mag);
@@ -319,31 +311,29 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
 }
 template<class Grid, class IMatrix, class Matrix, class container>
 void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
-    const Grid& g, feltor::Parameters p, dg::geo::solovev::Parameters gp)
+    const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     //in DS we take the true bhat
-    auto bhat = dg::geo::createBHat(dg::geo::createSolovevField(gp));
-    if( p.curvmode == "toroidal")
-        bhat = dg::geo::createEPhi();
+    auto bhat = dg::geo::createBHat( mag);
     m_ds_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-        dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+        dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
     if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
         m_ds_U.construct( m_ds_N);
     else
         m_ds_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-            dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+            dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
     if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
         m_ds_P.construct( m_ds_N);
     else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
         m_ds_P.construct( m_ds_U);
     else
         m_ds_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-            dg::forward, gp.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+            dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
 
-    //else we take EPhi except for the true curvmode
+    // in Poisson we take EPhi except for the true curvmode
     bhat = dg::geo::createEPhi();
     if( p.curvmode == "true")
-        bhat = dg::geo::createBHat(dg::geo::createSolovevField(gp));
+        bhat = dg::geo::createBHat(mag);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
     m_metric = g.metric();
     dg::tensor::inv_multiply3d( m_metric, m_b[0], m_b[1], m_b[2],
@@ -359,12 +349,12 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
 }
 template<class Grid, class IMatrix, class Matrix, class container>
 void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
-    const Grid& g, feltor::Parameters p, dg::geo::solovev::Parameters gp)
+    const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     /////////////////////////init elliptic and helmholtz operators/////////
     auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
     if( p.curvmode == "true")
-        bhat = dg::geo::createBHat(dg::geo::createSolovevField(gp));
+        bhat = dg::geo::createBHat( mag);
     m_multi_chi = m_multigrid.project( m_temp0);
     m_multi_pol.resize(p.stages);
     m_multi_invgammaP.resize(p.stages);
@@ -387,7 +377,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
 }
 template<class Grid, class IMatrix, class Matrix, class container>
 Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
-    feltor::Parameters p, dg::geo::solovev::Parameters gp):
+    feltor::Parameters p, dg::geo::TokamakMagneticField mag):
     /////////the poisson operators ////////////////////////////////////////
     m_dx_N( dg::create::dx( g, p.bcxN) ),
     m_dx_U( dg::create::dx( g, p.bcxU) ),
@@ -402,7 +392,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi),
-    m_p(p), m_gp(gp)
+    m_p(p)
 {
     ////////////////////////////init temporaries///////////////////
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
@@ -410,9 +400,9 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_npe = m_logn = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
-    construct_mag( g, p, gp);
-    construct_bhat( g, p, gp);
-    construct_invert( g, p, gp);
+    construct_mag( g, p, mag);
+    construct_bhat( g, p, mag);
+    construct_invert( g, p, mag);
     //////////////////////////////Metric///////////////////////////////
     dg::assign( dg::create::volume(g), m_vol3d);
 }
@@ -596,9 +586,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     double t,
     const std::array<std::array<container,2>,2>& y)
 {
-    //alignement: (1+lnN)*Delta_s N
-    dg::blas1::transform( m_logn[0],m_temp1, dg::PLUS<>(+1));
-    m_q.aligned = dg::blas2::dot( m_temp1, m_vol3d, m_dsN[0]);
+    //alignement: lnN * Delta_s N
+    m_q.aligned = dg::blas2::dot( m_logn[0], m_vol3d, m_dsN[0]);
     /////////////////DISSIPATION TERMS//////////////////////////////
     m_q.diff = m_p.nu_parallel*dg::blas1::dot( m_vol3d, m_dsN[0]);
     // energy dissipation through diffusion

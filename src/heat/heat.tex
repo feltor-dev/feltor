@@ -123,6 +123,7 @@ Input file format: json
   boxscaleZm & float &  1.15, & - & (a little larger than 1) \\
   mx     & integer & 10 & - & refinement factor of DS in x \\
   my     & integer & 10 & - & refinement factor of DS in y \\
+  rk4eps & float & 0.01 & 1e-5 & Accuracy of fieldline integration in DS \\
   diff       & char & non-adjoint & non-adjoint & adjoint, non-adjoint, elliptic (discretization for $\Delta_\parallel$) \\
 \bottomrule
 \end{longtable}
@@ -148,7 +149,6 @@ File format: json
     psip\_min & float & -6 & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
     psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile} \\
     psip\_max\_lim & float & 1e10 & - & $\psi_p$ for limiter in DS \\
-    rk4eps & float & 0.01 & - & Accuracy of fieldline integration in DS \\
 \bottomrule
 \end{longtable}
 

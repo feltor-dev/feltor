@@ -373,7 +373,6 @@ struct TrueDivCurvatureKappa: public aCloneableCylindricalFunctor<TrueDivCurvatu
     private:
     double do_compute( double R, double Z) const
     {
-        return -invB*(curvR_(R,Z)*bR_(R,Z) + curvZ_(R,Z)*bZ_(R,Z));
         double invB = invB_(R,Z);
         return c_.R0()*invB*invB*invB/R*( c_.ipolR()(R,Z)*bZ_(R,Z) - c_.ipolZ()(R,Z)*bR_(R,Z) );
     }
