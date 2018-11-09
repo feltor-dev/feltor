@@ -33,8 +33,8 @@ we can define various differential operations.
     b_i \varepsilon^{ijk}\partial_j f\partial_k g/\sqrt{g}$  \\
     Projection Tensor&
     $h $ & $h^{ij} := g^{ij} - b^ib^j $\\
-    Alignment Tensor&
-    $t $ & $ t^{ij} := b^ib^j$\\
+    %Alignment Tensor&
+    %$t $ & $ t^{ij} := b^ib^j$\\
     perpendicular Gradient&
     $\vec \nabla_\perp $&
     $ \vec \nabla_\perp f := \bhat\times(\vec \nabla f\times \bhat ) \equiv
@@ -414,7 +414,7 @@ with the velocities
 \vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
 \label{}
 \end{align}
-\subsection{Parallel Resistivity, diffusion, profiles and particle sources}\label{sec:dissres}
+\subsection{Parallel Resistivity, diffusion, profiles}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
 The parallel Spitzer resistivity
 \begin{align}
@@ -448,46 +448,25 @@ Similarly for the perpendicular dissipation we apply hyperviscous terms of secon
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
-The idea for the source terms $S$ is to fix a profile in the core of our domain
-where our model does not apply.
-Let us define an approximate Heaviside function with the help of the flux function $\psi_p$ (defined later in Section~\ref{sec:magnetic})
-\begin{align}
-  \Theta(R,Z) := \frac{1}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
-  \label{eq:source_profile}
-\end{align}
-with a (small) width parameter $\alpha$
-and a density profile as
-\begin{align}
-  N_{prof}(R,Z)=\begin{cases}
-    N_{bg} + N_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
-    N_{bg} \text{ else }
-  \end{cases}
-  \label{eq:density_profile}
-\end{align}
-We then define the particle source for electrons as
-\begin{align}
-  S_{n_e}(R,Z) = s%\begin{cases}
-    \Theta(R,Z)(N_{prof}(R,Z) - n_e(R,Z))% &\text{ if } n_e(R,Z)<N_{prof}(R,Z)\\
-    %0 &\text{ else}
-  %\end{cases}
-  \label{eq:electron_source}
-\end{align}
-where $s$ is the source strength parameter.
-For ions we use
-\begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2\right) n_e
-  \label{eq:ion_source}
-\end{align}
-Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
-by the particle source (cf.~Section~\ref{sec:conservation}).
-
 \subsection{Boundary and Initial conditions}
+We define the simulation box as
+$[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
+where we define
+\begin{align}
+    R_{\min}&=R_0-\varepsilon^{R-}a\quad
+    &&R_{\max}=R_0+\varepsilon^{R+}a\\
+    Z_{\min}&=-\varepsilon^{Z-}ae\quad
+    &&Z_{\max}=\varepsilon^{Z+}ae
+\end{align}
+where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
+the $\varepsilon$ are free parameters to be specified by the user.
+
 We choose boundary conditions seperately on input for the variables
 $n_e$, $u_e$ and $\phi$. The boundary condition for $N_i$, $U_i$ and
 $\psi$ are equal to $n_e$, $u_e$ and $\phi$ respecitively.
 Typically,
 \begin{align}
-n_e = 1, \quad u_e = \phi = 0
+n_e = n_0, \quad u_e = \phi = 0
 \text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla u_e = 0
 \end{align}
 where $\hat n$ is the normal vector to the boundary.
@@ -503,28 +482,77 @@ We have two possibilities to initialize the densities
   \label{}
 \end{align}
 In the first case the potential $\phi= 0$ while in the second case
-the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i ~ \Delta \phi$.
-We start with initializing in an $R$-$Z$ plane
+the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
+
+We start with initializing a flux-aligned profile
 \begin{align}
-  N_i(R,Z,\varphi)= N_{prof}(R,Z)
-  \label{}
+    n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
 \end{align}
-We then add one of the following initial perturbations to the ion gyrocenter density
+consisting of a symmetric background profile $n_{prof}(R,Z)$ and a perturbation
+$\tilde n(R,Z,\varphi)$.
+\subsubsection{Background profile}
+Let us define an approximate Heaviside function
+\begin{align}
+  \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x}{ \alpha} \right) \right)
+  \label{eq:source_profile}
+\end{align}
+with a (small) width parameter $\alpha$
+and a flux-aligned density profile as
+\begin{align}
+  n_{prof}(R,Z)=
+      \left(n_0 + \triangle n_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)}\right) \Theta( -\psi_p) \Theta(Z-Z_X)
+  \label{eq:density_profile}
+\end{align}
+If the magnetic field is toroidal the 
+The second Heaviside is multiplied only if the equilibrium has an X-point.
+
+
 \subsubsection{Blob and Straight blob}
 We initialize a blob in the R-Z plane
 \begin{align}
-  N_{blob}(R,Z) = \triangle n \exp\left( \frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+  n_{blob}(R,Z,0) = \triangle n \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
   \label{}
 \end{align}
-Then, we use fieldline integration to transform this blob to all other poloidal planes. In this way the parallel derivative $\nabla_\parallel N$ is zero in the beginning.
+Then, we use fieldline integration modulated by 
+\begin{align}
+  m_{blob}(\varphi) = \exp\left( -\frac{\varphi^2 }{\pi^2\sigma_z^2} \right)
+  \label{}
+\end{align}
+to transform this blob to all other poloidal
+planes.
 We either follow fieldlines around the torus several times (``blob'') or only once
 (``straight blob'').
 \subsubsection{Turbulent bath}
 We can initialize the R-Z plane with a turbulent bath with a certain amplitude.
 Again, we transform this to all poloidal planes along the magnetic field lines.
 \subsubsection{Zonal flows}
-We can initialize the R-Z plane with zonal flows of amplitude $A$ and wavelength $k_\psi$ aligned with the magnetic flux surfaces.
-Again, we transform this to all poloidal planes along the magnetic field lines.
+We can initialize the R-Z plane with zonal flows of amplitude $A$ and
+wavelength $k_\psi$ aligned with the magnetic flux surfaces.
+\begin{align}
+    n_{zonal}(R,Z,\varphi) = A |\sin (2\pi k_\psi \psi_p)|
+\end{align}
+
+\subsection{Particles sources}
+The idea for the source terms $S$ is to keep the profile in the core of our domain
+where our model does not apply.
+We then define the particle source for electrons as
+\begin{align}
+  S_{n_e}(R,Z,\varphi, t) = \omega_s
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( - \psi_p(R,Z) + \psi_{p,\min} ),
+  \label{eq:electron_source}
+\end{align} 
+with $\psi_{p,\min}<0$
+where $\omega_s$ is the source strength parameter. This will result in exponential adaption of the core
+density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
+For ions we use
+\begin{align}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2\right) S_{n_e}
+  \label{eq:ion_source}
+\end{align}
+Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
+by the particle source (cf.~Section~\ref{sec:conservation}). $S_{n_e}$ needs to be smooth
+so that $\nabla_\perp^2 S_{n_e}$ is well defined.
+
 
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
@@ -681,11 +709,11 @@ bc & dict & & & Dictionary of boundary conditions \ldots\\
 \qquad density  & char[2] & {DIR,DIR} & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & {DIR,DIR} & - & boundary conditions in x and y for $u_e$ and $U_i$\\
 \qquad potential  & char[2] & {DIR,DIR} & - & boundary conditions in x and y for $\phi$ and $\psi$\\
-source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:electron_source} \\
-boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
-boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
-boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
-boxscaleZm  & float & 1.2     & 1.05 & $Z_-$ a little larger than 1 \\
+source  & float & 0     & - & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
+    boxscaleRp  & float & 1.1     & 1.05 & $\varepsilon^{R+}$ scale right boundary in units of $a$\\
+    boxscaleRm  & float & 1.1     & 1.05 & $\varepsilon^{R-}$ scale left boundary in units of $a$ \\
+    boxscaleZp  & float & 1.1     & 1.05 & $\varepsilon^{Z+}$ scale upper boundary in units of $ae$ \\
+    boxscaleZm  & float & 1.2     & 1.05 & $\varepsilon^{Z-}$ scale lower boundary in units of $ae$ \\
 initni    & string & "turbulence"     & "blob"  & initial condition for ion gyro-centre density "zonal",
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
@@ -694,7 +722,7 @@ initphi   & string & "zero"  & "zero" & initial condition in phi "zero" = 0 elec
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx \\
 equilibrium & string & "solovev"  & "solovev" & type of magnetic field
 equilibrium, one of "solovev", "toroidal", or "circular"
-(all geometry parameters will be ignored, except R\_0)) \\
+(all geometry parameters will be ignored, except major and minor radius and elongation)) \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -710,13 +738,11 @@ File format: json
     A      & float & 1 &  - & Solovev parameter \\
     R\_0   & float & - & -  & Major radius in $\rho_s$ \\
     C      & float[12] &  - & - & Solovev coefficients \\
-    elongation & float & 1 & - & Elongation \\
+    elongation    & float & 1 & - & Elongation \\
     triangularity & float & 0 & - & Triangularity \\
     inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
-    alpha  & float & 0.02 & - & Width of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
-    psip\_min & float & -6 & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
-    psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile} \\
-    rk4eps & float & 0.01 & - & Accuracy of fieldline integration in DS \\
+    alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
+    psip\_min & float  & -6   & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
