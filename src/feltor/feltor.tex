@@ -72,6 +72,13 @@ depend on the choice of the magnetic field and the underlying coordinate system.
     \vec{ \mathcal K_\kappa} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B).
     \label{eq:curl_curvature}
 \end{align}
+Note that in any arbitrary coordinate system we have
+\begin{align}
+(\vec \nabla f)^i = g^{ij}\partial_j f ~, \quad
+\vec \nabla \cdot \vec v = \frac{1}{\sqrt{g}}\partial_i \left(\sqrt{g} v^i\right) ~, \quad
+(\vec v \times \vec w)^i = \frac{1}{\sqrt{g}}\varepsilon^{ijk} v_jw_k ~.
+%\label{}
+\end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Coordinate system}\label{sec:cylmetric}
 We employ cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
@@ -99,31 +106,6 @@ basis vectors and metric tensor:
 \end{align}
 With the help of the metric elements we get a well behaved volume element \(\sqrt{g} = R\). However, we have a coordinate singularity at \(R=0\).
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
-\subsection{The toroidal field}\label{sec:toroidal}
-A simple choice is a purely toroidal magnetic field of the form %($I(\psi)=\psi=1$) 
-\begin{align}
-  \vec B(R) := \frac{R_0}{R} \ehat_\varphi
-  \label{}
-\end{align}
-We then have $\bhat = \ehat_\varphi$ and $\nabla\times\bhat = -1/R\ehat_Z$. The curvature operators simplify to
-\begin{align}
-  \vec{ \mathcal K_\kappa} &= \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z \\
-\vec{ \mathcal K} &= -\frac{2}{R_0}\ehat_Z
-  \label{}
-\end{align}
-We have
-\begin{subequations}
-\begin{align}
-    [f, g]_\perp &= (\partial_R f\partial_Z g - \partial_R g\partial_Z f) \equiv [f, g]_{RZ}, \\
-    \nabla \cdot(\nabla_\perp f) &= \frac{1}{R}\partial_R\left(R\partial_R f\right) + \partial_Z^2f \\
-    \nabla\cdot\vec{\mathcal K_{\kappa}}&= 0\\
-    \nabla_\parallel \ln B &= 0
-    \label{}
-\end{align}
-\end{subequations}
-Also note that the identification of $x:=R-R_0$ and the transition to
-Cartesian coordinates while straightening the field lines for large $R_0$
-lead to the familiar slab geometry.
 
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
 In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be written as
@@ -135,6 +117,10 @@ which can obviously not be manipulated to be in Clebsch form. Hence we are deali
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
 %The unit vectors are denoted by \(\ehat_{R}\), \(\ehat_{Z}\), \(\ehat_{\varphi}\).
+Note that with $\psi_p = I(\psi_p) \equiv 1$ we recover a purely toroidal field.
+With a subsequent identification of $x:=R-R_0$ and the transition to
+Cartesian coordinates while straightening the field lines for large $R_0$
+we recover the familiar slab geometry.
 
 
 Let us state the Grad-Shafranov equation
@@ -221,14 +207,21 @@ for the Solov'ev equilibrium.
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsubsection{Toroidal field line approximation}\label{sec:torfieldlineapprox}
-The toroidal field line approximation applies \(\bhat\approx \ehat_\varphi\) to all perpendicular operators (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
+The toroidal field line approximation applies \(\bhat\approx \ehat_\varphi\) to all perpendicular operators
+(e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
 but retains the full expression for the magnetic field unit vector \(\bhat\)
 for parallel operators (\(\nabla_\parallel\) and \(\Delta_\parallel\)).
-Hence the curvature reduces in cylindrical coordinates \((R,Z,\varphi)\) to
-% In low beta plasmas \(\beta\ll1\) the curvature (Equation~\eqref{eq:kappagen}) reduces to:
-\begin{align}\label{eq:kappalowbeta}
- \nabla\times\bhat &\approx -  \frac{1}{R} \ehat_Z.
+In cylindrical coordinates that is
+\begin{align}
+[f,g]_\perp \equiv [f,g]_{RZ} &= \frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
+\nabla_\perp f &= \partial_R f \ehat_R + \partial_Z f \ehat_Z \\
+\Delta_\perp f &= \frac{1}{R}\partial_R \left( R \partial_R f\right) + \partial_Z(\partial_Z f)
+\label{}
 \end{align}
+The curl of $\bhat$ reduces to
+%\begin{align}
+ $\nabla\times\bhat \approx -  \frac{1}{R} \ehat_Z$.
+%end{align}
 This simplifies the curvature operators to:
 \begin{align}
 \vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \ehat_Z , &
@@ -244,10 +237,28 @@ and
 \begin{align}
  \vec{\nabla} \cdot \vec{\mathcal{K}}_{\kappa} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z}.
 \end{align}
-This results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\), which is an important property for energetic consistency.
+which, results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
+
+Note that in an actual toroidal field we have
+\begin{align}
+  \vec B(R) := \frac{R_0}{R} \ehat_\varphi
+  \label{}
+\end{align}
+We then have $\bhat = \ehat_\varphi$ and the curvature operators further
+simplify to
+\begin{align}
+  \vec{ \mathcal K_\kappa} = \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z =
+\vec{ \mathcal K}/2\\
+  \nabla\cdot\vec{\mathcal K_{\kappa}}=
+    \nabla_\parallel \ln B = 0
+    \label{}
+\end{align}
 
 \subsubsection{Low beta approximation}\label{sec:lowbetaapprox}
-In this approximation we approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$.
+In this approximation we apply the toroidal field line approximation
+as in Section
+\ref{sec:torfieldlineapprox}
+but approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$.
   with
   $\vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
@@ -257,7 +268,7 @@ we can rewrite the curvature to
  \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
 \end{align}
 In low beta plasmas \(\beta\ll1\) the curvature reduces to:
-\begin{align}\label{eq:kappalowbeta}
+\begin{align}
  \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
 \end{align}
 This simplifies the curvature operators to:
@@ -267,8 +278,8 @@ This simplifies the curvature operators to:
  \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
 \end{align}
 The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
-The divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
-\subsubsection{True curvature terms}
+In general, the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
+\subsubsection{True perpendicular terms}
 Without any approximations we have
 \begin{align}
 b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
@@ -277,6 +288,7 @@ b^\varphi = \frac{I}{R}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \\
 \vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ}
 \label{}
 \end{align}
+We then need to take the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
 We can then explicitly write
 \begin{align}
 K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
@@ -473,24 +485,15 @@ where $\hat n$ is the normal vector to the boundary.
 
 We initialize the parallel velocitiy to zero
 \begin{align}
-  u_e = U_i = 0
+  u_e(R,Z,\varphi,0) = U_i(R,Z,\varphi,0) = 0
   \label{}
 \end{align}
-We have two possibilities to initialize the densities
-\begin{align}
-  n_e = \Gamma_{1,i} N_i \text{ or } n_e = N_i
-  \label{}
-\end{align}
-In the first case the potential $\phi= 0$ while in the second case
-the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
-
-We start with initializing a flux-aligned profile
-\begin{align}
+and initialize the electron density with
+\begin{align} \label{eq:initial_ne}
     n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
 \end{align}
 consisting of a symmetric background profile $n_{prof}(R,Z)$ and a perturbation
 $\tilde n(R,Z,\varphi)$.
-\subsubsection{Background profile}
 Let us define an approximate Heaviside function
 \begin{align}
   \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x}{ \alpha} \right) \right)
@@ -500,17 +503,25 @@ with a (small) width parameter $\alpha$
 and a flux-aligned density profile as
 \begin{align}
   n_{prof}(R,Z)=
-      \left(n_0 + \triangle n_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)}\right) \Theta( -\psi_p) \Theta(Z-Z_X)
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta( -\psi_p) \Theta(Z-Z_X)} {\psi_p(R_0, 0)}
   \label{eq:density_profile}
 \end{align}
-If the magnetic field is toroidal the 
-The second Heaviside is multiplied only if the equilibrium has an X-point.
+The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
+X-point and avoids a profile in the private flux region.
 
+We have two possibilities to initialize the ion density
+\begin{align}
+  N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = n_e
+  \label{}
+\end{align}
+In the first case the potential $\phi= 0$ while in the second case
+the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
+We can choose between several initial conditions for $\tilde n$:
 
 \subsubsection{Blob and Straight blob}
 We initialize a blob in the R-Z plane
 \begin{align}
-  n_{blob}(R,Z,0) = \triangle n \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+  \tilde n_{blob}(R,Z,0) = \triangle n \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
   \label{}
 \end{align}
 Then, we use fieldline integration modulated by 
@@ -529,13 +540,13 @@ Again, we transform this to all poloidal planes along the magnetic field lines.
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \begin{align}
-    n_{zonal}(R,Z,\varphi) = A |\sin (2\pi k_\psi \psi_p)|
+    \tilde n_{zonal}(R,Z,\varphi) = A |\sin (2\pi k_\psi \psi_p)|
 \end{align}
 
 \subsection{Particles sources}
-The idea for the source terms $S$ is to keep the profile in the core of our domain
-where our model does not apply.
-We then define the particle source for electrons as
+The idea for the source terms $S$ is to fix the profile $n_{prof}$ in the
+core of our domain, where our model does not apply.
+We thus define a particle source for electrons as
 \begin{align}
   S_{n_e}(R,Z,\varphi, t) = \omega_s
     (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( - \psi_p(R,Z) + \psi_{p,\min} ),
@@ -562,8 +573,9 @@ Integrating the density equation we directly get
 \end{align}
 \subsubsection{Charge/vorticity conservation}
 Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
+and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
 \begin{align}
-  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) =  - \int d\vec{x} (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i} + S_{n_e} - \Gamma_{1,i}S_{N_i})
+  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) =  - \int d\vec{x} (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i})
 \end{align}
 Note that if the integrand on the left hand side is interpreted as the \ExB vorticity
 density
@@ -576,8 +588,9 @@ we get the vorticity conservation
 \end{align}
 
 \subsubsection{Energy theorem}
-The terms of the energy theorem are derived to (if either $\psi$ or
-$\nabla\psi$ vanishes  at the boundary)
+The terms of the energy theorem $\partial_t \mathcal E + \mathcal S =
+\Lambda$ are derived to (if either $\psi$ or $\nabla\psi$ vanishes at the
+boundary)
 \begin{align}
   \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
   \mathcal S = \sum_s \int \vec{\dA} \cdot &\left[ \left(
@@ -665,6 +678,11 @@ drift terms & direct & cf. curvature approximations \\
 time & Adaptive ARKode stepper & $3rd$ order explicit, diffusion $3rd$ order implicit \\
 \bottomrule
 \end{longtable}
+\section{Input/Output}
+The programs \texttt{feltor\_hpc.cu} and \texttt{feltor\_mpi.cu}
+expect two input files. One for the physical and numerical parameters
+of the model equations and one that describes the Solov'ev equilibrium.
+Both will write results into an output file.
 
 \subsection{Input file structure}
 Input file format: json
@@ -692,7 +710,7 @@ rtol  & float &1e-6   & - &tolerance of adaptive time-stepper \\
 stages      & integer & 3 & 3 & \# stages in multigrid  \\
 mx     & integer & 10 & 10 & refinement factor in DS in X-direction\\
 my     & integer & 10 & 10 & refinement factor in DS in Y-direction\\
-mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
+mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i$. One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
@@ -714,15 +732,13 @@ source  & float & 0     & - & profile source rate $\omega_s$ in Eq.~\eqref{eq:el
     boxscaleRm  & float & 1.1     & 1.05 & $\varepsilon^{R-}$ scale left boundary in units of $a$ \\
     boxscaleZp  & float & 1.1     & 1.05 & $\varepsilon^{Z+}$ scale upper boundary in units of $ae$ \\
     boxscaleZm  & float & 1.2     & 1.05 & $\varepsilon^{Z-}$ scale lower boundary in units of $ae$ \\
-initni    & string & "turbulence"     & "blob"  & initial condition for ion gyro-centre density "zonal",
+initne    & string & "turbulence"     & "blob"  & initial condition for the
+perturbation $\tilde n$ in \eqref{eq:initial_ne} "zonal",
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
 initphi   & string & "zero"  & "zero" & initial condition in phi "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity \\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx \\
-equilibrium & string & "solovev"  & "solovev" & type of magnetic field
-equilibrium, one of "solovev", "toroidal", or "circular"
-(all geometry parameters will be ignored, except major and minor radius and elongation)) \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and

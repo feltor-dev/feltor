@@ -43,7 +43,7 @@ struct Parameters
     double boxscaleZm, boxscaleZp;
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
-    std::string initni, initphi, curvmode, equilibrium;
+    std::string initne, initphi, curvmode;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
@@ -97,10 +97,9 @@ struct Parameters
         boxscaleZp  = js.get("boxscaleZp",1.05).asDouble();
         boxscaleZm  = js.get("boxscaleZm",1.05).asDouble();
 
-        initni      = js.get( "initni", "blob").asString();
+        initne      = js.get( "initne", "blob").asString();
         initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
-        equilibrium = js.get( "equilibrium", "solovev").asString();
     }
     void display( std::ostream& os = std::cout ) const
     {
@@ -150,7 +149,7 @@ struct Parameters
             <<"     bc velocity y  = "<<dg::bc2str(bcyU)<<"\n"
             <<"     bc potential x = "<<dg::bc2str(bcxP)<<"\n"
             <<"     bc potential y = "<<dg::bc2str(bcyP)<<"\n"
-            <<"     init N_i       = "<<initni<<"\n"
+            <<"     init n_e       = "<<initne<<"\n"
             <<"     init Phi       = "<<initphi<<"\n"
             <<"     curvature mode = "<<curvmode<<"\n";
         os << std::flush;

@@ -53,42 +53,40 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    std::array<std::array<dg::DVec,2>,2> y0;
     dg::DVec helper(dg::evaluate(dg::zero,grid));
     //perturbation
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
-    if( p.initni == "blob" || p.initni == "straight blob")
+    if( p.initne == "blob" || p.initne == "straight blob")
     {
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-        if( p.initni == "blob")
+        if( p.initne == "blob")
             helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
                 (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
-        if( p.initni == "straight blob")
+        if( p.initne == "straight blob")
             helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
                 (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
     }
-    else if( p.initni == "turbulence")
+    else if( p.initne == "turbulence")
     {
         dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
         helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
             (unsigned)p.Nz/2, 1);
     }
-    else if( p.initni == "zonal")
+    else if( p.initne == "zonal")
     {
         dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
-        helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
-            (unsigned)p.Nz/2, 1);
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
     dg::geo::Nprofile prof( mag.psip(), mag.R0(), 0., p.bgprofamp, p.nprofileamp); //initial background ion profile
+    std::array<std::array<dg::DVec,2>,2> y0;
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
     dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation
     dg::blas1::plus(y0[0][1], -1); //initialize ni-1
-    if( p.initni == "turbulence" || p.initni == "zonal") //Cut initialization outside separatrix
+    if( p.initne == "turbulence" || p.initne == "zonal") //Cut initialization outside separatrix
     {
         dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(
-            dg::geo::solovev::Psip(gp), gp), grid);
+            mag.psip(), gp), grid);
         dg::blas1::pointwiseDot(damping, y0[0][1], y0[0][1]);
     }
     std::cout << "initialize ne" << std::endl;
@@ -101,6 +99,22 @@ int main( int argc, char* argv[])
 
     dg::blas1::copy( 0., y0[1][0]); //set Ue = 0
     dg::blas1::copy( 0., y0[1][1]); //set Ui = 0
+    ////////////map quantities to output/////////////////
+    //since we map pointers we don't need to update those later
+    std::map<std::string, const dg::DVec* > v4d;
+    v4d["electrons"] = &y0[0][0], v4d["ions"] = &y0[0][1];
+    v4d["Ue"] = &y0[1][0],        v4d["Ui"] = &y0[1][1];
+    v4d["potential"] = &feltor.potential()[0];
+    const feltor::Quantities& q = feltor.quantities();
+    double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
+    std::map<std::string, const double*> v0d{
+        {"energy", &q.energy}, {"ediff", &q.ediff},
+        {"mass", &q.mass}, {"diff", &q.diff},
+        {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
+        {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
+        {"dEdt", &dEdt}, {"accuracy", &accuracy},
+        {"aligned", &q.aligned}
+    };
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -110,10 +124,9 @@ int main( int argc, char* argv[])
     int dim_ids[4], tvarID;
     {
         err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-        dg::geo::TokamakMagneticField c=dg::geo::createSolovevField(gp);
-        dg::geo::BFieldR fieldR(c);
-        dg::geo::BFieldZ fieldZ(c);
-        dg::geo::BFieldP fieldP(c);
+        dg::geo::BFieldR fieldR(mag);
+        dg::geo::BFieldZ fieldZ(mag);
+        dg::geo::BFieldP fieldP(mag);
 
         dg::HVec vecR = dg::evaluate( fieldR, grid_out);
         dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
@@ -130,37 +143,14 @@ int main( int argc, char* argv[])
     }
 
     //field IDs
-    std::string names4d [] = {"electrons", "ions", "Ue", "Ui", "potential"};
-    std::map<std::string, int> id4d;
-    for( auto name : names4d)
-        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids, &id4d[name]);
-    std::map<std::string, int> id0d;
-    std::string names0d [] = {"energy", "ediff", "mass", "diff", "Se", "Si",
-        "Uperp", "Upare", "Upari", "dEdt", "accuracy", "aligned"};
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    for( auto name : names0d)
-        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &EtimeID, &id0d[name]);
+    std::map<std::string, int> id0d, id4d;
+    for( auto pair : v0d)
+        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 1, &EtimeID, &id0d[pair.first]);
+    for( auto pair : v4d)
+        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 4, dim_ids, &id4d[pair.first]);
     err = nc_enddef(ncid);
-    ////////////map quantities to output/////////////////
-    //since values take pointers we don't need to update those later
-    std::map<std::string, const dg::DVec* > v4d;
-    for( unsigned i=0; i<2; i++)
-    {
-        v4d[names4d[  i]] = &(y0[0][i]);
-        v4d[names4d[2+i]] = &(y0[1][i]);
-    }
-    v4d["potential"] = &feltor.potential()[0];
-    const feltor::Quantities& q = feltor.quantities();
-    double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
-    std::map<std::string, const double*> v0d{
-        {"energy", &q.energy}, {"ediff", &q.ediff},
-        {"mass", &q.mass}, {"diff", &q.diff},
-        {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
-        {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
-        {"dEdt", &dEdt}, {"accuracy", &accuracy},
-        {"aligned", &q.aligned}
-    };
     ///////////////////////////////////first output/////////////////////////
     double time = 0, dt_new = p.dt, dt = 0;
     std::cout << "First output ... \n";
@@ -177,18 +167,18 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::IDMatrix project = dg::create::projection( grid_out, grid);
-    for( auto name : names4d)
+    for( auto pair : v4d)
     {
-        dg::blas2::symv( project, *v4d[name], transferD);
+        dg::blas2::symv( project, pair.second, transferD);
         dg::assign( transferD, transferH);
-        err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, id4d[pair.first], start, count, transferH.data() );
     }
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    for( auto name : names0d)
-        err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
+    for( auto pair : v0d)
+        err = nc_put_vara_double( ncid, id0d[pair.first], Estart, Ecount, pair.second);
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -230,8 +220,8 @@ int main( int argc, char* argv[])
             err = nc_open(argv[3], NC_WRITE, &ncid);
             Estart[0] = step;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-            for( auto name : names0d)
-                err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
+            for( auto pair : v0d)
+                err = nc_put_vara_double( ncid, id0d[pair.first], Estart, Ecount, pair.second);
 
             q.display(std::cout);
             std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
@@ -255,11 +245,11 @@ int main( int argc, char* argv[])
         start[0] = i;
         err = nc_open(argv[3], NC_WRITE, &ncid);
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        for( auto name : names4d)
+        for( auto pair : v4d)
         {
-            dg::blas2::symv( project, *v4d[name], transferD);
+            dg::blas2::symv( project, pair.second, transferD);
             dg::assign( transferD, transferH);
-            err = nc_put_vara_double( ncid, id4d[name], start, count, transferH.data() );
+            err = nc_put_vara_double( ncid, id4d[pair.first], start, count, transferH.data() );
         }
         err = nc_close(ncid);
         ti.toc();
