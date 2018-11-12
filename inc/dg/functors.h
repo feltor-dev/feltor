@@ -27,7 +27,7 @@ namespace dg
  * \f[ f(x,y) = \max(|x|,|y|)\f]
  *
  */
-template <class T>
+template <class T = double>
 struct AbsMax
 {
     /**
