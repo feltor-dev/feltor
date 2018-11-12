@@ -17,61 +17,64 @@ namespace geo
 /**
  * @brief Returns zero outside psipmax and inside psipmin, otherwise 1
      \f[ \begin{cases}
-        1  \text{ if } \psi_{p,min} < \psi_p < \psi_{p,max}\\
+        1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
         0  \text{ else}
      \end{cases}\f]
  */
-struct Iris
+struct Iris : public aCloneableCylindricalFunctor<Iris>
 {
-    Iris( double psi_min, double psi_max ):
-        m_psipmin(psi_min), m_psipmax(psi_max) { }
-    DG_DEVICE
-    double operator()(double psip ) const
+    Iris( CylindricalFunctor psi, double psi_min, double psi_max ):
+        psip_(psi), psipmin_(psi_min), psipmax_(psi_max) { }
+    private:
+    double do_compute(double R, double Z)const
     {
-        if( psip > m_psipmax) return 0.;
-        if( psip < m_psipmin) return 0.;
+        double psip = psip_(R,Z);
+        if( psip > psipmax_) return 0.;
+        if( psip < psipmin_) return 0.;
         return 1.;
     }
-    private:
-    double m_psipmin, m_psipmax;
+    CylindricalFunctor psip_;
+    double psipmin_, psipmax_;
 };
 /**
  * @brief Returns zero outside psipmaxcut otherwise 1
      \f[ \begin{cases}
-        0  \text{ if } \psi_p > \psi_{p,maxcut} \\
+        0  \text{ if } \psi_p(R,Z) > \psi_{p,maxcut} \\
         1  \text{ else}
      \end{cases}\f]
  */
-struct Pupil
+struct Pupil : public aCloneableCylindricalFunctor<Pupil>
 {
-    Pupil( double psipmaxcut): m_psipmaxcut(psipmaxcut) { }
-DG_DEVICE
-    double operator()(double psip)const
+    Pupil( CylindricalFunctor psi, double psipmaxcut):
+        psip_(psi), psipmaxcut_(psipmaxcut) { }
+    private:
+    double do_compute(double R, double Z)const
     {
-        if( psip > m_psipmaxcut) return 0.;
+        if( psip_(R,Z) > psipmaxcut_) return 0.;
         return 1.;
     }
-    private:
-    double m_psipmaxcut;
+    CylindricalFunctor psip_;
+    double psipmaxcut_;
 };
 /**
  * @brief Returns psi inside psipmax and psipmax outside psipmax
      \f[ \begin{cases}
-        \psi_{p,max}  \text{ if } \psi_p > \psi_{p,max} \\
-        \psi_p \text{ else}
+        \psi_{p,max}  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
+        \psi_p(R,Z) \text{ else}
      \end{cases}\f]
  */
-struct PsiPupil
+struct PsiPupil : public aCloneableCylindricalFunctor<PsiPupil>
 {
-    PsiPupil( double psipmax): m_psipmax(psipmax) { }
-DG_DEVICE
-    double operator()(double psip)const
+    PsiPupil(CylindricalFunctor psi, double psipmax):
+        psipmax_(psipmax), psip_(psi) { }
+    private:
+    double do_compute(double R, double Z)const
     {
         if( psip_(R,Z) > psipmax_) return psipmax_;
         return  psip_(R,Z);
     }
-    private:
     double psipmax_;
+    CylindricalFunctor psip_;
 };
 /**
  * @brief Sets values to one outside psipmaxcut, zero else
@@ -81,20 +84,41 @@ DG_DEVICE
      \end{cases}\f]
  *
  */
-struct PsiLimiter
+struct PsiLimiter : public aCloneableCylindricalFunctor<PsiLimiter>
 {
-    PsiLimiter(double psipmaxlim):
+    PsiLimiter( CylindricalFunctor psi, double psipmaxlim):
         psipmaxlim_(psipmaxlim), psip_(psi) { }
 
-    double operator()(double psip)const
+    private:
+    double do_compute(double R, double Z)const
     {
         if( psip_(R,Z) > psipmaxlim_) return 1.;
         return 0.;
     }
-    private:
     double psipmaxlim_;
+    CylindricalFunctor psip_;
 };
 
+/*!@brief Cut everything below X-point
+ \f[ \begin{cases}
+ 1 \text{ if } Z > Z_X \\
+ 0 \text{ else }
+ \end{cases}
+ */
+struct ZCutter
+{
+    ZCutter(double ZX): Z_X(ZX){}
+    double operator()(double R, double Z) const {
+        if( Z> Z_X)
+            return 1;
+        return 0;
+    }
+    double operator()(double R, double Z, double phi) const{
+        return this->operator()(R,Z);
+    }
+    private:
+    double Z_X;
+};
 
 
 /**
@@ -109,18 +133,20 @@ struct PsiLimiter
    \f]
  *
  */
-struct GaussianDamping
+struct GaussianDamping : public aCloneableCylindricalFunctor<GaussianDamping>
 {
-    GaussianDamping( double psipmaxcut, double alpha):
-        psip_(psi), psipmaxcut_(psipmaxcut), alpha_(alpha) { }
-    double operator()(double psip)const
-    {
-        if( psip_(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
-        if( psip_(R,Z) < psipmaxcut_) return 1.;
-        return exp( -( psip_(R,Z)-psipmaxcut_)*( psip_(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
-    }
+    GaussianDamping( CylindricalFunctor psi, double psipmaxcut, double alpha):
+        m_psip(psi), m_psipmaxcut(psipmaxcut), m_alpha(alpha) { }
     private:
-    double psipmaxcut_, alpha_;
+    double do_compute(double R, double Z)const
+    {
+        double psip = m_psip(R,Z);
+        if( psip > m_psipmaxcut + 4.*m_alpha) return 0.;
+        if( psip < m_psipmaxcut) return 1.;
+        return exp( -( psip-m_psipmaxcut)*( psip-m_psipmaxcut)/2./m_alpha/m_alpha);
+    }
+    CylindricalFunctor m_psip;
+    double m_psipmaxcut, m_alpha;
 };
 
 /**
@@ -135,113 +161,135 @@ struct GaussianDamping
    \f]
  *
  */
-struct GaussianProfDamping
+struct GaussianProfDamping : public aCloneableCylindricalFunctor<GaussianProfDamping>
 {
-    GaussianProfDamping( double psipmax, double alpha):
-        psip_(psi), psipmax_(psipmax), alpha_(alpha) { }
-    double operator()(double psip)const
-    {
-        if( psip_(R,Z) > psipmax_ ) return 0.;
-        if( psip_(R,Z) < (psipmax_-4.*alpha_)) return 1.;
-        return exp( -( psip_(R,Z)-(psipmax_-4.*alpha_))*( psip_(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
-    }
+    GaussianProfDamping( CylindricalFunctor psi, double psipmax, double alpha):
+        m_damp( psi, psipmax-4*alpha, alpha) { }
     private:
-    double psipmax_, alpha_;
+    double do_compute(double R, double Z)const
+    {
+        return m_damp(R,Z);
+    }
+    GaussianDamping m_damp;
 };
+
 /**
  * @brief Damps the inner boundary in a zone
- * from psipmax to psipmax+ 4*alpha with a normal distribution
+ * from psipmax to psipmax- 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
  * Additionally cuts if Z < Z_xpoint
      \f[ \begin{cases}
  1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha) \\
  0 \text{ if } \psi_p(R,Z) > \psi_{p,max} || Z < -1.1\varepsilon a  \\
- \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right), \text{ else}
+ \exp\left( - \frac{(\psi_p - \psi_{p,max} + 4\alpha)^2}{2\alpha^2}\right), \text{ else}
  \end{cases}
    \f]
  *
  */
-struct GaussianProfXDamping
+struct GaussianProfXDamping : public aCloneableCylindricalFunctor<GaussianProfXDamping>
 {
-    GaussianProfXDamping( dg::geo::solovev::Parameters gp):
-        gp_(gp),
-        psip_(psi) { }
-    double operator()(double psip)const
-    {
-        if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a)
-            return 0.;
-        if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha))
-            return 1.;
-        return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*(
-            psip_(R,Z) -(gp_.psipmax-4.*gp_.alpha) )/2./gp_.alpha/gp_.alpha);
-    }
+    GaussianProfXDamping( CylindricalFunctor psi, dg::geo::solovev::Parameters gp):
+        m_cut ( gp.elongation*gp.a), m_damp( psi, gp.psipmax-4*gp.alpha, gp.alpha) { }
     private:
-    dg::geo::solovev::Parameters gp_;
+    double do_compute(double R, double Z)const
+    {
+        return m_damp(R,Z)*m_cut(R,Z);
+    }
+    ZCutter m_cut;
+    GaussianDamping m_damp;
 };
 
 /**
- * @brief A tanh profile shifted to \f$ \psi_{p,min}-3\alpha\f$
- \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p - \psi_{p,min} + 3\alpha}{\alpha}\right)\right) \f]
+ * @brief
+ * A tanh profile shifted to \f$ \psi_{p,max}-3\alpha\f$
+ \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,max} + 3\alpha}{\alpha}\right)\right) \f]
+
+ Similar to GaussianProfDamping is zero outside given \c psipmax and
+ one inside of it.
  */
-struct TanhSource
+struct TanhDamping : public aCloneableCylindricalFunctor<TanhDamping>
 {
-    TanhSource( double psipmin, double alpha):
-            psipmin_(psipmin), alpha_(alpha), psip_(psi) { }
-DG_DEVICE
-    double operator()(double psip)const
-    {
-        return 0.5*(1.+tanh(-(psip -psipmin_ + 3.*alpha_)/alpha_) );
-    }
+    TanhDamping(CylindricalFunctor psi, double psipmax, double alpha):
+            m_psipmin(psipmax), m_alpha(alpha), m_psip(psi) { }
     private:
-    double psipmin_, alpha_;
+    double do_compute(double R, double Z)const
+    {
+        return 0.5*(1.+tanh(-(m_psip(R,Z)-m_psipmin + 3.*m_alpha)/m_alpha) );
+    }
+    double m_psipmin, m_alpha;
+    CylindricalFunctor m_psip;
+};
+/**
+ * @brief
+ * A tanh profile shifted to \f$ \psi_{p,max}-3\alpha\f$, 0 if below X-point
+ \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,max} + 3\alpha}{\alpha}\right)\right)\\
+ 0 \text{if} Z < -1.1\varepsilon a \f]
+
+ Similar to GaussianProfDamping is zero outside given \c psipmax and
+ one inside of it.
+ */
+struct TanhXDamping : public aCloneableCylindricalFunctor<TanhXDamping>
+{
+    TanhXDamping(CylindricalFunctor psi, dg::geo::solovev::Parameters gp):
+            m_source(psi, gp.psipmax, gp.alpha), m_cut( gp.elongation*gp.a) { }
+    private:
+    double do_compute(double R, double Z)const
+    {
+        return m_source(R,Z)*m_cut(R,Z);
+    }
+    TanhDamping m_source;
+    ZCutter m_cut;
 };
 
 /**
- * @brief Returns density profile with variable peak amplitude and background amplitude
+ * @brief Density profile with variable peak amplitude and background amplitude
+ *\f[ N(R,Z)=\begin{cases}
+ A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
+ A_{bg} \text{ else }
+ \end{cases}
+\f]
+ */
+struct Nprofile : public aCloneableCylindricalFunctor<Nprofile>
+{
+    Nprofile( CylindricalFunctor psi, double R_0, double psipmax, double bgprofamp, double peakamp):
+         m_bgamp(bgprofamp), m_namp( peakamp), m_norm( psi(R_0, 0.)), m_psipmax(psipmax),
+         m_psip(psi) {
+         }
+    private:
+    double do_compute(double R, double Z)const
+    {
+        double psip = m_psip(R,Z);
+        if (psip<m_psipmax)
+            return m_bgamp +(psip/m_norm*m_namp);
+        return m_bgamp;
+    }
+    double m_bgamp, m_namp, m_norm, m_psipmax;
+    CylindricalFunctor m_psip;
+};
+
+/**
+ * @brief Zonal flow field
      \f[ N(R,Z)=\begin{cases}
-    A \frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < 0 \\
+    A |\sin(2\pi k_\psi \psi_p(R,Z) )| \text{ if }\psi_p(R,Z) < \psi_{p,max} \\
     0 \text{ else }
  \end{cases}
    \f]
  */
-struct Nprofile
+struct ZonalFlow : public aCloneableCylindricalFunctor<ZonalFlow>
 {
-    Nprofile( double amp, double psip0):
-        m_amp( amp), m_normalize( psip0) { }
-    DG_DEVICE
-    double operator()(double psip)const
-    {
-        if ( psip < 0)
-            return m_amp*m_psip/m_normalize;
-        else
-            return 0;
-    }
+    ZonalFlow( CylindricalFunctor psi,  double psipmax, double amplitude, double k_psi):
+        m_amp(amplitude), m_k(k_psi), m_psipmax(psipmax),
+        m_psip(psi) { }
     private:
-    double m_amp, m_nomalize;
-};
-
-/**
- * @brief returns zonal flow field
-     \f[ N(R,Z)=\begin{cases}
-    A |\sin( 2\pi k_\psi\psi_p )| \text{ if }\psi_p < 0 \\
-    0 \text{ else }
- \end{cases}
-   \f]
- */
-struct ZonalFlow
-{
-    ZonalFlow( double amp, double k_psi):
-        m_amp(amp), m_k(k_psi)
-        { }
-    DG_DEVICE
-    double operator( )( double psip) const
+    double do_compute(double R, double Z)const
     {
-        if ( psip < 0)
-            return m_amp*fabs( sin(2.*M_PI*psip*m_k) );
+        double psip = m_psip(R,Z);
+        if (psip<m_psipmax)
+            return (m_amp*fabs(sin(2.*M_PI*psip*m_k)));
         return 0.;
     }
-    private:
-    double m_amp, m_k;
+    double m_amp, m_k, m_psipmax;
+    CylindricalFunctor m_psip;
 };
 
 

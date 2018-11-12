@@ -22,17 +22,6 @@
 #include "file/nc_utilities.h"
 
 
-struct ZCutter
-{
-    ZCutter(double ZX): Z_X(ZX){}
-    double operator()(double R, double Z) const {
-        if( Z> Z_X)
-            return 1;
-        return 0;
-    }
-    private:
-    double Z_X;
-};
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
 //typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
@@ -208,7 +197,7 @@ int main( int argc, char* argv[])
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
 
     dg::HVec cutter = dg::pullback( iris, g2d), vol_cut( cutter);
-    ZCutter cut(Z_X);
+    dg::geo::ZCutter cut(Z_X);
     dg::HVec zcutter = dg::pullback( cut, g2d);
     w2d = dg::create::weights( g2d);//make weights w/o refined weights
     dg::blas1::pointwiseDot(cutter, w2d, vol_cut);

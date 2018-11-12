@@ -46,11 +46,11 @@ struct Parameters
         elongation=js["elongation"].asDouble();
         triangularity=js["triangularity"].asDouble();
         alpha=js["alpha"].asDouble();
-        rk4eps=js["rk4eps"].asDouble();
-        psipmin= js["psip_min"].asDouble();
-        psipmax= js["psip_max"].asDouble();
-        psipmaxcut= js["psip_max_cut"].asDouble();
-        psipmaxlim= js["psip_max_lim"].asDouble();
+        rk4eps=js.get("rk4eps",1e-5).asDouble();
+        psipmin= js.get("psip_min",0).asDouble();
+        psipmax= js.get("psip_max",0).asDouble();
+        psipmaxcut= js.get("psip_max_cut",0).asDouble();
+        psipmaxlim= js.get("psip_max_lim",1e10).asDouble();
         qampl = js.get("qampl", 1.).asDouble();
         equilibrium = js.get( "equilibrium", "solovev").asString();
     }
