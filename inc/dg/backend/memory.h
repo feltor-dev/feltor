@@ -105,12 +105,12 @@ struct ClonePtr
 
     /**
     * @brief Get a pointer to the object on the heap
-    * @return a pointer to the Cloneable object or \nullptr if no object owned
+    * @return a pointer to the Cloneable object or \c nullptr if no object owned
     */
     Cloneable * get() {return m_ptr.get();}
     /**
     * @brief Get a constant pointer to the object on the heap
-    * @return a pointer to the Cloneable object or \nullptr if no object owned
+    * @return a pointer to the Cloneable object or \c nullptr if no object owned
     */
     const Cloneable* get() const {return m_ptr.get();}
 

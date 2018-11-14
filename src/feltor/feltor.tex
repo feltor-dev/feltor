@@ -513,14 +513,15 @@ consisting of a toroidally symmetric background profile $n_{prof}(R,Z)$ and a pe
 $\tilde n(R,Z,\varphi)$.
 Let us define an approximate Heaviside function
 \begin{align}
-  H(x) \approx \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x-3\alpha}{ \alpha} \right) \right)
+  \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x-3\alpha}{ \alpha} \right) \right) \quad \Theta(x) \approx H(x)
   \label{eq:heaviside_profile}
 \end{align}
-with a (small) width parameter $\alpha$
-and a flux-aligned density profile as
+where $H(x)$ is the actual Heaviside function and
+$\alpha$ is a (small) width parameter.
+We can then define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{prof}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta( -\psi_p(R,Z)) H(Z-Z_X)} {\psi_p(R_0, 0)}
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z)}{\psi_p(R_0, 0)} \Theta( -\psi_p(R,Z)) H(Z-Z_X)
 \end{align}
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
 X-point and avoids a profile in the private flux region.
@@ -557,7 +558,7 @@ We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \begin{align} \label{eq:initial_zonal_flow}
     \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
-\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}\Theta(-\psi_p)H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta(-\psi_p)H(Z-Z_X)
 \end{align}
 
 \subsection{Particle sources} \label{sec:sources}

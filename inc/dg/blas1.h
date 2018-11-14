@@ -411,7 +411,7 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
     dg::blas1::subroutine( dg::Evaluate<dg::equals, UnaryOp>(dg::equals(),op), y, x);
 }
 
-/*! @brief \f$ y = f(y, g(x_0,x_1,...)\f$
+/*! @brief \f$ f(y, g(x_0,x_1,...))\f$
  *
  * This routine elementwise evaluates \f[ f(y_i , g(x_{0i}, x_{1i}, ...)) \f]
  * @copydoc hide_iterations
@@ -422,16 +422,16 @@ double function( double x, double y) {
 }
 dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-// result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
+// result[i] =  sin(M_PI/2.)*sin(3*M_PI/2.)
 @endcode
  * @param y contains result
- * @param f The subroutine
+ * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals
  * @param g The functor to evaluate
  * @param x0 first input
  * @param xs more input
  * @note all aliases allowed
- * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type_y&, value_type_g) i.e. it writes into the first and reads from its second argument
- * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
+ * @tparam BinarySubroutine Functor with signature: <tt> void operator()( value_type_y&, value_type_g) </tt> i.e. it writes into the first and reads from its (first and) second argument
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @note Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_ContainerType
  *

@@ -274,7 +274,7 @@ struct Gaussian3d
 
 };
 /**
- * @brief Functor returning a gaussian in x-direction
+ * @brief A Gaussian in x-direction
  * \f[
    f(x,y) = Ae^{-\frac{(x-x_0)^2}{2\sigma_x^2} }
    \f]
@@ -282,7 +282,7 @@ struct Gaussian3d
 struct GaussianX
 {
     /**
-     * @brief Functor returning a gaussian in x
+     * @brief A Gaussian in x
      *
      * @param x0 x-center-coordinate
      * @param sigma_x x - variance
@@ -310,7 +310,7 @@ struct GaussianX
 
 };
 /**
- * @brief Functor returning a gaussian in y-direction
+ * @brief A Gaussian in y-direction
  * \f[
    f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}}
    \f]
@@ -347,7 +347,7 @@ struct GaussianY
 
 };
 /**
- * @brief Functor returning a gaussian in z-direction
+ * @brief A Gaussian in z-direction
  * \f[
    f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}}
    \f]
@@ -400,7 +400,7 @@ struct GaussianZ
 
 };
 /**
- * @brief Functor for Island
+ * @brief Island function
  * \f[ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f]
  */
 struct IslandXY
@@ -425,7 +425,7 @@ struct IslandXY
     double lambda_,eps_;
 };
 /**
- * @brief Functor for a sin prof in x and y-direction
+ * @brief A sin prof in x and y-direction
  * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
  */
 struct SinXSinY
@@ -453,7 +453,7 @@ struct SinXSinY
     double amp_,bamp_,kx_,ky_;
 };
 /**
- * @brief Functor for a cos prof in x and y-direction
+ * @brief A cos prof in x and y-direction
  * \f[ f(x,y) =B+ A \cos(k_x x) \cos(k_y y) \f]
  */
 struct CosXCosY
@@ -481,7 +481,7 @@ struct CosXCosY
     double amp_,bamp_,kx_,ky_;
 };
 /**
- * @brief Functor for a sin prof in x- and and cos prof in  y-direction
+ * @brief A sin prof in x- and cos prof in  y-direction
  * \f[ f(x,y) =B+ A \sin(k_x x) \cos(k_y y) \f]
  */
 struct SinXCosY
@@ -509,8 +509,8 @@ struct SinXCosY
     double amp_,bamp_,kx_,ky_;
 };
 /**
- * @brief Functor for a sin prof in x-direction
- * \f[ f(x,y) =B+ A \sin(k_x x) \f]
+ * @brief A sin prof in x-direction
+ * \f[ f(x) = f(x,y) = f(x,y,z) =B+ A \sin(k_x x) \f]
  */
 struct SinX
 {
@@ -532,7 +532,7 @@ struct SinX
     double amp_,bamp_,kx_;
 };
 /**
- * @brief Functor for a sin prof in y-direction
+ * @brief A sin prof in y-direction
  * \f[ f(x,y) =B+ A \sin(k_y y) \f]
  */
 struct SinY
@@ -545,20 +545,13 @@ struct SinY
      * @param ky  ky
      */
     SinY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
-    /**
-     * @brief Return profile
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     * @return \f$ f(x,y)\f$
-     */
     DG_DEVICE
     double operator()( double x, double y)const{ return bamp_+amp_*sin(y*ky_);}
   private:
     double amp_,bamp_,ky_;
 };
 /**
- * @brief Functor for a sin prof in x-direction
+ * @brief A sin prof in x-direction
  * \f[ f(x,y) =B+ A \cos(k_y y) \f]
  */
 struct CosY
@@ -571,13 +564,6 @@ struct CosY
      * @param ky  ky
      */
     CosY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
-    /**
-     * @brief Return profile
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     * @return \f$ f(x,y)\f$
-     */
     DG_DEVICE
     double operator()( double x, double y)const{ return bamp_+amp_*cos(y*ky_);}
   private:
@@ -674,7 +660,7 @@ struct LinearX
     double a_,b_;
 };
 /**
- * @brief Functor for a linear polynomial in y-direction
+ * @brief A linear polynomial in y-direction
  * \f[ f(x,y) = f(x,y,z) = ay+b \f]
  */
 struct LinearY
@@ -712,22 +698,124 @@ struct LinearZ
     double a_,b_;
 };
 
+/**
+ * @brief Zero outside psimax and inside psimin, otherwise 1
+     \f[ \begin{cases}
+        1  \text{ if } \psi_{\min} < \psi < \psi_{\max}\\
+        0  \text{ else}
+     \end{cases}\f]
+ */
+struct Iris
+{
+    Iris( double psi_min, double psi_max ):
+        m_psimin(psi_min), m_psimax(psi_max) { }
+    double operator()(double psi)const
+    {
+        if( psi > m_psimax) return 0.;
+        if( psi < m_psimin) return 0.;
+        return 1.;
+    }
+    private:
+    double m_psimin, m_psimax;
+};
+/**
+ * @brief Zero outside psimax, otherwise 1
+     \f[ \begin{cases}
+        0  \text{ if } \psi > \psi_{\max} \\
+        1  \text{ else}
+     \end{cases}\f]
+ */
+struct Pupil
+{
+    Pupil( double psimax):
+        psimax_(psimax) { }
+    double operator()(double psi)const
+    {
+        if( psi > psimax_) return 0.;
+        return 1.;
+    }
+    private:
+    double psimax_;
+};
+/**
+ * @brief Psi inside psimax and psimax outside psimax
+     \f[ \begin{cases}
+        \psi_{\max}  \text{ if } \psi > \psi_{\max} \\
+        \psi \text{ else}
+     \end{cases}\f]
+ */
+struct PsiPupil
+{
+    PsiPupil(double psimax):
+        psimax_(psimax){ }
+    double operator()(double psi)const
+    {
+        if( psi > psimax_) return psimax_;
+        return  psi;
+    }
+    private:
+    double psimax_;
+};
+/**
+ * @brief Zero up to psimax, then one
+     \f[ \begin{cases}
+        1  \text{ if } \psi > \psi_{\max} \\
+        0  \text{ else}
+     \end{cases}\f]
+ */
+struct Heaviside
+{
+    Heaviside( double psimax):
+        psimax_(psimax){ }
+
+    double operator()(double psi)const
+    {
+        if( psi > psimax_) return 1.;
+        return 0.;
+    }
+    private:
+    double psimax_;
+};
 
 /**
+ * @brief One up to \c psimax, then a Gaussian down to zero
+     \f[ \begin{cases}
+ 1 \text{ if } \psi < \psi_{\max}\\
+ 0 \text{ if } \psi > (\psi_{\max} + 4\alpha) \\
+ \exp\left( - \frac{(\psi - \psi_{\max})^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
+ */
+struct GaussianDamping
+{
+    GaussianDamping( double psimax, double alpha):
+        m_psimax(psimax), m_alpha(alpha) { }
+    double operator()(double psi)const
+    {
+        if( psi > m_psimax + 4.*m_alpha) return 0.;
+        if( psi < m_psimax) return 1.;
+        return exp( -( psi-m_psimax)*( psi-m_psimax)/2./m_alpha/m_alpha);
+    }
+    private:
+    double m_psimax, m_alpha;
+};
+/**
  * @brief Step function using tanh
- * \f[ f(x) = 0.5 profamp(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
+ * \f[ f(x) = B + 0.5 A(1+ \text{sign} \tanh((x-x_b)/\alpha ) ) \f]
  */
 struct TanhProfX {
     /**
      * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
-     * @param width damping width
+     * @param width damping width \c alpha
      * @param sign sign of the Tanh, defines the damping direction
-     * @param bgamp background amplitude
-     * @param profamp profile amplitude
+     * @param bgamp background amplitude \c B
+     * @param profamp profile amplitude \c A
      */
-    TanhProfX(double xb, double width, int sign,double bgamp, double profamp) : xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
+    TanhProfX(double xb, double width, int sign =1,double bgamp = 0.,
+        double profamp = 1.) :
+        xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
     DG_DEVICE
     double operator() (double x)const
     {
@@ -744,394 +832,7 @@ struct TanhProfX {
     double bga_;
     double profa_;
 };
-/**
- * @brief Functor returning a Lamb dipole
- \f[ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
-         0 \text{ else}
-         \end{cases}
- \f]
 
- with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$
- \theta = \arctan_2( (y-y_), (x-x_0))\f$,
- \f$J_0, J_1\f$ are
- Bessel functions of the first kind of order 0 and 1 and
- \f$\lambda = \gamma/R\f$ with \f$ \gamma = 3.83170597020751231561\f$
- */
-struct Lamb
-{
-    /**
-     * @brief Functor returning a Lamb-dipole
-     *
-     * @param x0 x-center-coordinate
-     * @param y0 y-center-coordinate
-     * @param R radius of the dipole
-     * @param U  speed of the dipole
-     */
-    Lamb(  double x0, double y0, double R, double U):R_(R), U_(U), x0_(x0), y0_(y0)
-    {
-        gamma_ = 3.83170597020751231561;
-        lambda_ = gamma_/R;
-#ifdef _MSC_VER
-		j_ = _j0(gamma_);
-#else
-        j_ = j0( gamma_);
-#endif
-        //std::cout << r_ <<u_<<x0_<<y0_<<lambda_<<gamma_<<j_<<std::endl;
-    }
-    /**
-     * @brief Return the value of the dipole
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     *
-     * @return Lamb
-     */
-    DG_DEVICE
-    double operator() (double x, double y)const
-    {
-        double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
-        double theta = atan2( (y-y0_),(x-x0_));
-
-        if( radius <= R_)
-#ifdef _MSC_VER
-			return 2.*lambda_*U_*_j1(lambda_*radius)/j_*cos( theta);
-#else
-            return 2.*lambda_*U_*j1( lambda_*radius)/j_*cos( theta);
-#endif
-        return 0;
-    }
-    /**
-     * @brief The total enstrophy of the dipole
-     *
-     * Analytic formula. True for periodic and dirichlet boundary conditions.
-     * @return enstrophy \f$ \pi U^2\gamma^2\f$
-
-     */
-    double enstrophy( ) { return M_PI*U_*U_*gamma_*gamma_;}
-
-    /**
-     * @brief The total energy of the dipole
-     *
-     * Analytic formula. True for periodic and dirichlet boundary conditions.
-     * @return  energy \f$ 2\pi R^2U^2\f$
-     */
-    double energy() { return 2.*M_PI*R_*R_*U_*U_;}
-  private:
-    double R_, U_, x0_, y0_, lambda_, gamma_, j_;
-};
-
-/**
- * @brief Return a 2d vortex function
-       \f[f(x,y) =\begin{cases}
-       \frac{u_d}{1.2965125} \left(
-       r\left(1+\frac{\beta_i^2}{g_i^2}\right)
-       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
-      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
-      \end{cases}
-      \f]
-
-     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
- with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ \theta = \arctan_2( (y-y_), (x-x_0))\f$,
-        \f$ g_0 = 3.831896621 \f$,
-        \f$ g_1 = -3.832353624 \f$,
-        \f$ g_2 = 7.016\f$,
-        \f$ \beta_0 = 0.03827327723\f$,
-        \f$ \beta_1 = 0.07071067810 \f$,
-        \f$ \beta_2 = 0.07071067810 \f$
-        \f$ K_1\f$ is the modified and \f$ J_1\f$ the Bessel function
- */
-struct Vortex
-{
-    /**
-     * @brief
-     *
-     * @param x0 X position
-     * @param y0 Y position
-     * @param state mode 0,1, or 2
-     * @param R characteristic radius of dipole
-     * @param u_dipole u_drift/u_dipole = \f$ u_d\f$
-     * @param kz multiply by \f$ \cos(k_z z) \f$ in three dimensions
-     */
-    Vortex( double x0, double y0, unsigned state,
-          double R,  double u_dipole, double kz = 0):
-        x0_(x0), y0_(y0), s_(state),  R_(R), u_d( u_dipole), kz_(kz){
-        g_[0] = 3.831896621;
-        g_[1] = -3.832353624;
-        g_[2] = 7.016;
-        b_[0] = 0.03827327723;
-        b_[1] = 0.07071067810 ;
-        b_[2] = 0.07071067810 ;
-    }
-    /**
-     * @brief Evaluate the vortex
-     *
-       \f[f(x,y) =\begin{cases}
-       \frac{u_d}{1.2965125} \left(
-       r\left(1+\frac{\beta_i^2}{g_i^2}\right)
-       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
-      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
-      \end{cases}
-      \f]
-     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
-     * @param x value
-     * @param y value
-     *
-     * @return the above function value
-     */
-    DG_DEVICE
-    double operator()( double x, double y)const
-    {
-        double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
-        double theta = atan2( y-y0_, x-x0_);
-        double beta = b_[s_];
-        double norm = 1.2965125;
-
-        if( r/R_<=1.)
-            return u_d*(
-                      r *( 1 +beta*beta/g_[s_]/g_[s_] )
-#ifdef _MSC_VER
-                    - R_*  beta*beta/g_[s_]/g_[s_] *_j1(g_[s_]*r/R_)/_j1(g_[s_])
-#else
-				    - R_ * beta*beta/g_[s_]/g_[s_] * j1(g_[s_]*r/R_)/ j1(g_[s_])
-#endif
-                    )*cos(theta)/norm;
-        return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
-    }
-    /**
-     * @brief Evaluate the vortex modulated by a sine wave in z
-     *
-       \f[f(x,y,z) =\cos(k_z z)\begin{cases}
-       \frac{u_d}{1.2965125} \left(
-       r\left(1+\frac{\beta_i^2}{g_i^2}\right)
-       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
-      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
-      \end{cases}
-      \f]
-     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
-     * @param x value
-     * @param y value
-     * @param z value
-     *
-     * @return the above function value
-     */
-    DG_DEVICE
-    double operator()( double x, double y, double z)const
-    {
-        return this->operator()(x,y)*cos(kz_*z);
-    }
-    private:
-    // Returns the modified Bessel function K1(x) for positive real x.
-    DG_DEVICE
-    double bessk1(double x)const
-    {
-        double y,ans;
-        if (x <= 2.0)
-        {
-            y=x*x/4.0;
-            ans = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144 +
-                       y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1 +
-                       y*(-0.110404e-2+y*(-0.4686e-4)))))));
-        }
-        else
-        {
-            y=2.0/x;
-            ans = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619 +
-                      y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2 +
-                      y*(0.325614e-2+y*(-0.68245e-3)))))));
-        }
-        return ans;
-    }
-    //Returns the modified Bessel function I1(x) for any real x.
-    DG_DEVICE
-    double bessi1(double x) const
-    {
-        double ax,ans;
-        double y;
-        if ((ax=fabs(x)) < 3.75)
-        {
-            y=x/3.75;
-            y*=y;
-            ans = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934 +
-                       y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3))))));
-        }
-        else
-        {
-            y=3.75/ax;
-            ans = 0.2282967e-1+y*(-0.2895312e-1+y*(0.1787654e-1 -
-                      y*0.420059e-2)); ans=0.39894228+y*(-0.3988024e-1+
-                      y*(-0.362018e-2 +y*(0.163801e-2+y*(-0.1031555e-1+y*ans))));
-            ans *= (exp(ax)/sqrt(ax));
-        }
-        return x < 0.0 ? -ans : ans;
-    }
-    double x0_, y0_;
-    unsigned s_;
-    double R_, b_[3], u_d;
-    double g_[3];
-    double kz_;
-};
-
-/**
-* @brief Makes a random bath in the RZ plane
-*
-\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
-\f]
-* with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
-        k:=\sqrt{k_R^2 + k_Z^2} \\
-        k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
-        k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
-        k_0:=2 \pi L_E / N_k\\
-        N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
-        E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
-        \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
-        \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
-        \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
-        \f]
-* where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,  \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude.
-*/
-struct BathRZ{
-      /**
-     * @brief Functor returning a random field in the RZ-plane or in the first RZ-plane
-     *
-     * @param N_kR Number of Fourier modes in R direction
-     * @param N_kZ Number of Fourier modes in Z direction
-     * @param R_min Minimal R (in units of rho_s)
-     * @param Z_min Minimal Z (in units of rho_s)
-     * @param gamma exponent in the energy function \f$E_k\f$ (typically around 30)
-     * @param L_E is the typical eddysize (typically around 5)
-     * @param amp Amplitude
-     */
-    BathRZ( unsigned N_kR, unsigned N_kZ, double R_min, double Z_min, double gamma, double L_E, double amp) :
-        N_kR_(N_kR), N_kZ_(N_kZ),
-        R_min_(R_min), Z_min_(Z_min),
-        gamma_(gamma), L_E_(L_E) , amp_(amp),
-        kvec( N_kR_*N_kZ_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
-        normal1(kvec), normal2(kvec), alpha(kvec), theta(kvec)
-    {
-        double N_kR2=(double)(N_kR_*N_kR_);
-        double N_kZ2=(double)(N_kZ_*N_kZ_);
-        double N_k= sqrt(N_kR2+N_kZ2);
-
-        norm_=sqrt(2./(double)N_kR_/(double)N_kZ_);
-        double tpi=2.*M_PI, tpi2=tpi*tpi;
-        double k0= tpi*L_E_/N_k;
-        double N_kRh = N_kR_/2.;
-        double N_kZh = N_kZ_/2.;
-
-        thrust::random::minstd_rand generator;
-        thrust::random::normal_distribution<double> ndistribution;
-        thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
-        for (unsigned j=1;j<=N_kZ_;j++)
-        {
-            double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);
-            for (unsigned i=1;i<=N_kR_;i++)
-            {
-                double kR2=tpi2*(i-N_kRh)*(i-N_kRh)/(N_kR2);
-                int z=(j-1)*(N_kR_)+(i-1);
-                kvec[z]= sqrt(kR2 + kZ2);  //radial k number
-                sqEkvec[z]=pow(kvec[z]*4.*k0/(kvec[z]+k0)/(kvec[z]+k0),gamma_/2.); //Energie in k space with max at 1.
-                unif1[z]=cos(udistribution(generator));
-                unif2[z]=sin(udistribution(generator));
-                normal1[z]=ndistribution(generator);
-                normal2[z]=ndistribution(generator);
-                alpha[z]=sqrt(normal1[z]*normal1[z]+normal2[z]*normal2[z]);
-                theta[z]=atan2(normal2[z],normal1[z]);
-            }
-        }
-
-    }
-    /**
-     * @brief Return the value of the Bath
-     *
-       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
-       \f]
-     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
-                k:=\sqrt{k_R^2 + k_Z^2} \\
-                k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
-                k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
-                k_0:=2 \pi L_E / N_k\\
-                N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
-                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
-                \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
-                \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
-                \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
-                \f]
-     * where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,
-     * \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude
-     * @param R R - coordinate
-     * @param Z Z - coordinate
-     *
-     * @return the above function value
-     */
-    double operator()(double R, double Z)const
-    {
-        double f, kappa, RR, ZZ;
-        RR=R-R_min_;
-        ZZ=Z-Z_min_;
-        f=0.;
-        for (unsigned j=0;j<N_kZ_;j++)
-        {
-            for (unsigned i=0;i<N_kR_;i++)
-            {
-                int z=j*N_kR_+i;
-                kappa= RR*unif1[z]+ZZ*unif2[z];
-                f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
-            }
-        }
-        return amp_*norm_*f;
-    }
-    /**
-     * @brief Return the value of the Bath
-     *
-       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
-       \f]
-     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
-                k:=\sqrt{k_R^2 + k_Z^2} \\
-                k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
-                k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
-                k_0:=2 \pi L_E / N_k\\
-                N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
-                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
-                \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
-                \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
-                \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
-                \f]
-     * where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,
-     * \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude
-     *
-     * @param R R - coordinate
-     * @param Z Z - coordinate
-     * @param phi phi - coordinate
-     *
-     * @return the above function value
-     */
-    double operator()(double R, double Z, double phi)const {
-        double f, kappa;
-        double  RR, ZZ;
-        RR=R-R_min_;
-        ZZ=Z-Z_min_;
-        f=0;
-        for (unsigned j=0;j<N_kZ_;j++)
-        {
-            for (unsigned i=0;i<N_kR_;i++)
-            {
-                int z=(j)*(N_kR_)+(i);
-                kappa= RR*unif1[z]+ZZ*unif2[z];
-                f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
-            }
-        }
-        return amp_*norm_*f;
-    }
-  private:
-    unsigned N_kR_,N_kZ_;
-    double R_min_, Z_min_;
-    double gamma_, L_E_;
-    double amp_;
-    double norm_;
-    std::vector<double> kvec;
-    std::vector<double> sqEkvec;
-    std::vector<double> unif1, unif2, normal1,normal2,alpha,theta;
-};
 /**
  * @brief Exponential \f[ f(x) = A \exp(\lambda x)\f]
  *
@@ -1463,6 +1164,395 @@ struct ZERO
 };
 
 /**
+ * @brief Functor returning a Lamb dipole
+ \f[ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
+         0 \text{ else}
+         \end{cases}
+ \f]
+
+ with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$
+ \theta = \arctan_2( (y-y_), (x-x_0))\f$,
+ \f$J_0, J_1\f$ are
+ Bessel functions of the first kind of order 0 and 1 and
+ \f$\lambda = \gamma/R\f$ with \f$ \gamma = 3.83170597020751231561\f$
+ */
+struct Lamb
+{
+    /**
+     * @brief Functor returning a Lamb-dipole
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param R radius of the dipole
+     * @param U  speed of the dipole
+     */
+    Lamb(  double x0, double y0, double R, double U):R_(R), U_(U), x0_(x0), y0_(y0)
+    {
+        gamma_ = 3.83170597020751231561;
+        lambda_ = gamma_/R;
+#ifdef _MSC_VER
+		j_ = _j0(gamma_);
+#else
+        j_ = j0( gamma_);
+#endif
+        //std::cout << r_ <<u_<<x0_<<y0_<<lambda_<<gamma_<<j_<<std::endl;
+    }
+    /**
+     * @brief Return the value of the dipole
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return Lamb
+     */
+    DG_DEVICE
+    double operator() (double x, double y)const
+    {
+        double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
+        double theta = atan2( (y-y0_),(x-x0_));
+
+        if( radius <= R_)
+#ifdef _MSC_VER
+			return 2.*lambda_*U_*_j1(lambda_*radius)/j_*cos( theta);
+#else
+            return 2.*lambda_*U_*j1( lambda_*radius)/j_*cos( theta);
+#endif
+        return 0;
+    }
+    /**
+     * @brief The total enstrophy of the dipole
+     *
+     * Analytic formula. True for periodic and dirichlet boundary conditions.
+     * @return enstrophy \f$ \pi U^2\gamma^2\f$
+
+     */
+    double enstrophy( ) const { return M_PI*U_*U_*gamma_*gamma_;}
+
+    /**
+     * @brief The total energy of the dipole
+     *
+     * Analytic formula. True for periodic and dirichlet boundary conditions.
+     * @return  energy \f$ 2\pi R^2U^2\f$
+     */
+    double energy() const { return 2.*M_PI*R_*R_*U_*U_;}
+  private:
+    double R_, U_, x0_, y0_, lambda_, gamma_, j_;
+};
+
+/**
+ * @brief Return a 2d vortex function
+       \f[f(x,y) =\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right)
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
+      \end{cases}
+      \f]
+
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
+ with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ \theta = \arctan_2( (y-y_), (x-x_0))\f$,
+        \f$ g_0 = 3.831896621 \f$,
+        \f$ g_1 = -3.832353624 \f$,
+        \f$ g_2 = 7.016\f$,
+        \f$ \beta_0 = 0.03827327723\f$,
+        \f$ \beta_1 = 0.07071067810 \f$,
+        \f$ \beta_2 = 0.07071067810 \f$
+        \f$ K_1\f$ is the modified and \f$ J_1\f$ the Bessel function
+ */
+struct Vortex
+{
+    /**
+     * @brief
+     *
+     * @param x0 X position
+     * @param y0 Y position
+     * @param state mode 0,1, or 2
+     * @param R characteristic radius of dipole
+     * @param u_dipole u_drift/u_dipole = \f$ u_d\f$
+     * @param kz multiply by \f$ \cos(k_z z) \f$ in three dimensions
+     */
+    Vortex( double x0, double y0, unsigned state,
+          double R,  double u_dipole, double kz = 0):
+        x0_(x0), y0_(y0), s_(state),  R_(R), u_d( u_dipole), kz_(kz){
+        g_[0] = 3.831896621;
+        g_[1] = -3.832353624;
+        g_[2] = 7.016;
+        b_[0] = 0.03827327723;
+        b_[1] = 0.07071067810 ;
+        b_[2] = 0.07071067810 ;
+    }
+    /**
+     * @brief Evaluate the vortex
+     *
+       \f[f(x,y) =\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right)
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
+      \end{cases}
+      \f]
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
+     * @param x value
+     * @param y value
+     *
+     * @return the above function value
+     */
+    DG_DEVICE
+    double operator()( double x, double y)const
+    {
+        double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
+        double theta = atan2( y-y0_, x-x0_);
+        double beta = b_[s_];
+        double norm = 1.2965125;
+
+        if( r/R_<=1.)
+            return u_d*(
+                      r *( 1 +beta*beta/g_[s_]/g_[s_] )
+#ifdef _MSC_VER
+                    - R_*  beta*beta/g_[s_]/g_[s_] *_j1(g_[s_]*r/R_)/_j1(g_[s_])
+#else
+				    - R_ * beta*beta/g_[s_]/g_[s_] * j1(g_[s_]*r/R_)/ j1(g_[s_])
+#endif
+                    )*cos(theta)/norm;
+        return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
+    }
+    /**
+     * @brief Evaluate the vortex modulated by a sine wave in z
+     *
+       \f[f(x,y,z) =\cos(k_z z)\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right)
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
+      \end{cases}
+      \f]
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
+     * @param x value
+     * @param y value
+     * @param z value
+     *
+     * @return the above function value
+     */
+    DG_DEVICE
+    double operator()( double x, double y, double z)const
+    {
+        return this->operator()(x,y)*cos(kz_*z);
+    }
+    private:
+    // Returns the modified Bessel function K1(x) for positive real x.
+    DG_DEVICE
+    double bessk1(double x)const
+    {
+        double y,ans;
+        if (x <= 2.0)
+        {
+            y=x*x/4.0;
+            ans = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144 +
+                       y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1 +
+                       y*(-0.110404e-2+y*(-0.4686e-4)))))));
+        }
+        else
+        {
+            y=2.0/x;
+            ans = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619 +
+                      y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2 +
+                      y*(0.325614e-2+y*(-0.68245e-3)))))));
+        }
+        return ans;
+    }
+    //Returns the modified Bessel function I1(x) for any real x.
+    DG_DEVICE
+    double bessi1(double x) const
+    {
+        double ax,ans;
+        double y;
+        if ((ax=fabs(x)) < 3.75)
+        {
+            y=x/3.75;
+            y*=y;
+            ans = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934 +
+                       y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3))))));
+        }
+        else
+        {
+            y=3.75/ax;
+            ans = 0.2282967e-1+y*(-0.2895312e-1+y*(0.1787654e-1 -
+                      y*0.420059e-2)); ans=0.39894228+y*(-0.3988024e-1+
+                      y*(-0.362018e-2 +y*(0.163801e-2+y*(-0.1031555e-1+y*ans))));
+            ans *= (exp(ax)/sqrt(ax));
+        }
+        return x < 0.0 ? -ans : ans;
+    }
+    double x0_, y0_;
+    unsigned s_;
+    double R_, b_[3], u_d;
+    double g_[3];
+    double kz_;
+};
+
+/**
+* @brief Makes a random bath in the RZ plane
+*
+\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
+\f]
+* with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
+        k:=\sqrt{k_R^2 + k_Z^2} \\
+        k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
+        k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
+        k_0:=2 \pi L_E / N_k\\
+        N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
+        E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
+        \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
+        \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
+        \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
+        \f]
+* where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,  \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude.
+*/
+struct BathRZ{
+      /**
+     * @brief Functor returning a random field in the RZ-plane or in the first RZ-plane
+     *
+     * @param N_kR Number of Fourier modes in R direction
+     * @param N_kZ Number of Fourier modes in Z direction
+     * @param R_min Minimal R (in units of rho_s)
+     * @param Z_min Minimal Z (in units of rho_s)
+     * @param gamma exponent in the energy function \f$E_k\f$ (typically around 30)
+     * @param L_E is the typical eddysize (typically around 5)
+     * @param amp Amplitude
+     */
+    BathRZ( unsigned N_kR, unsigned N_kZ, double R_min, double Z_min, double gamma, double L_E, double amp) :
+        N_kR_(N_kR), N_kZ_(N_kZ),
+        R_min_(R_min), Z_min_(Z_min),
+        gamma_(gamma), L_E_(L_E) , amp_(amp),
+        kvec( N_kR_*N_kZ_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
+        normal1(kvec), normal2(kvec), alpha(kvec), theta(kvec)
+    {
+        double N_kR2=(double)(N_kR_*N_kR_);
+        double N_kZ2=(double)(N_kZ_*N_kZ_);
+        double N_k= sqrt(N_kR2+N_kZ2);
+
+        norm_=sqrt(2./(double)N_kR_/(double)N_kZ_);
+        double tpi=2.*M_PI, tpi2=tpi*tpi;
+        double k0= tpi*L_E_/N_k;
+        double N_kRh = N_kR_/2.;
+        double N_kZh = N_kZ_/2.;
+
+        thrust::random::minstd_rand generator;
+        thrust::random::normal_distribution<double> ndistribution;
+        thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
+        for (unsigned j=1;j<=N_kZ_;j++)
+        {
+            double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);
+            for (unsigned i=1;i<=N_kR_;i++)
+            {
+                double kR2=tpi2*(i-N_kRh)*(i-N_kRh)/(N_kR2);
+                int z=(j-1)*(N_kR_)+(i-1);
+                kvec[z]= sqrt(kR2 + kZ2);  //radial k number
+                sqEkvec[z]=pow(kvec[z]*4.*k0/(kvec[z]+k0)/(kvec[z]+k0),gamma_/2.); //Energie in k space with max at 1.
+                unif1[z]=cos(udistribution(generator));
+                unif2[z]=sin(udistribution(generator));
+                normal1[z]=ndistribution(generator);
+                normal2[z]=ndistribution(generator);
+                alpha[z]=sqrt(normal1[z]*normal1[z]+normal2[z]*normal2[z]);
+                theta[z]=atan2(normal2[z],normal1[z]);
+            }
+        }
+
+    }
+    /**
+     * @brief Return the value of the Bath
+     *
+       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
+       \f]
+     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
+                k:=\sqrt{k_R^2 + k_Z^2} \\
+                k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
+                k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
+                k_0:=2 \pi L_E / N_k\\
+                N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
+                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
+                \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
+                \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
+                \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
+                \f]
+     * where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,
+     * \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude
+     * @param R R - coordinate
+     * @param Z Z - coordinate
+     *
+     * @return the above function value
+     */
+    double operator()(double R, double Z)const
+    {
+        double f, kappa, RR, ZZ;
+        RR=R-R_min_;
+        ZZ=Z-Z_min_;
+        f=0.;
+        for (unsigned j=0;j<N_kZ_;j++)
+        {
+            for (unsigned i=0;i<N_kR_;i++)
+            {
+                int z=j*N_kR_+i;
+                kappa= RR*unif1[z]+ZZ*unif2[z];
+                f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
+            }
+        }
+        return amp_*norm_*f;
+    }
+    /**
+     * @brief Return the value of the Bath
+     *
+       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
+       \f]
+     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
+                k:=\sqrt{k_R^2 + k_Z^2} \\
+                k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
+                k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
+                k_0:=2 \pi L_E / N_k\\
+                N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
+                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\
+                \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
+                \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
+                \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
+                \f]
+     * where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,
+     * \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude
+     *
+     * @param R R - coordinate
+     * @param Z Z - coordinate
+     * @param phi phi - coordinate
+     *
+     * @return the above function value
+     */
+    double operator()(double R, double Z, double phi)const {
+        double f, kappa;
+        double  RR, ZZ;
+        RR=R-R_min_;
+        ZZ=Z-Z_min_;
+        f=0;
+        for (unsigned j=0;j<N_kZ_;j++)
+        {
+            for (unsigned i=0;i<N_kR_;i++)
+            {
+                int z=(j)*(N_kR_)+(i);
+                kappa= RR*unif1[z]+ZZ*unif2[z];
+                f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
+            }
+        }
+        return amp_*norm_*f;
+    }
+  private:
+    unsigned N_kR_,N_kZ_;
+    double R_min_, Z_min_;
+    double gamma_, L_E_;
+    double amp_;
+    double norm_;
+    std::vector<double> kvec;
+    std::vector<double> sqEkvec;
+    std::vector<double> unif1, unif2, normal1,normal2,alpha,theta;
+};
+
+/**
  * @brief Compute a histogram on a 1D grid
  * @tparam container
  */
@@ -1506,7 +1596,6 @@ struct Histogram
      *
      * @return
      */
-    DG_DEVICE
     double operator()(double x)const
     {
         unsigned bin = floor((x-g1d_.x0())/binwidth_+0.5);
@@ -1570,7 +1659,6 @@ struct Histogram2D
      *
      * @return
      */
-    DG_DEVICE
     double operator()(double x, double y)const
     {
         unsigned binx = floor((x-g2d_.x0())/binwidthx_+0.5) ;
