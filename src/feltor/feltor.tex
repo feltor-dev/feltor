@@ -513,23 +513,21 @@ consisting of a toroidally symmetric background profile $n_{prof}(R,Z)$ and a pe
 $\tilde n(R,Z,\varphi)$.
 Let us define an approximate Heaviside function
 \begin{align}
-  \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x}{ \alpha} \right) \right)
-  \label{eq:source_profile}
+  H(x) \approx \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x-3\alpha}{ \alpha} \right) \right)
+  \label{eq:heaviside_profile}
 \end{align}
 with a (small) width parameter $\alpha$
 and a flux-aligned density profile as
-\begin{align}
+\begin{align} \label{eq:density_profile}
   n_{prof}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta( -\psi_p) \Theta(Z-Z_X)} {\psi_p(R_0, 0)}
-  \label{eq:density_profile}
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta( -\psi_p(R,Z)) H(Z-Z_X)} {\psi_p(R_0, 0)}
 \end{align}
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
 X-point and avoids a profile in the private flux region.
 
 We have two possibilities to initialize the ion density
-\begin{align}
+\begin{align} \label{eq:initphi}
   N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = n_e
-  \label{eq:initphi}
 \end{align}
 In the first case the potential $\phi= 0$ while in the second case
 the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
@@ -537,39 +535,41 @@ We can choose between several initial conditions for $\tilde n$:
 
 \subsubsection{Blob and Straight blob}
 We initialize a blob in the R-Z plane
-\begin{align}
+\begin{align} \label{eq:initial_blob}
   \tilde n_{blob}(R,Z,0) = \triangle n \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
-  \label{}
 \end{align}
 Then, we use fieldline integration modulated by 
 \begin{align}
   m_{blob}(\varphi) = \exp\left( -\frac{\varphi^2 }{\pi^2\sigma_z^2} \right)
-  \label{}
 \end{align}
 to transform this blob to all other poloidal
 planes.
 We either follow fieldlines around the torus several times (``blob'') or only once
 (``straight blob'').
 \subsubsection{Turbulent bath}
-We can initialize the R-Z plane with a turbulent bath with a certain amplitude.
-Again, we transform this to all poloidal planes along the magnetic field lines.
+We can initialize the R-Z plane with a turbulent bath with a certain amplitude $A$.
+Again, we transform this to all poloidal planes along the magnetic field lines and multiply the bath with
+\begin{align} \label{eq:initial_turbulent}
+\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta(-\psi_p)H(Z-Z_X)
+\end{align}
 \subsubsection{Zonal flows}
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
-\begin{align}
-    \tilde n_{zonal}(R,Z,\varphi) = A |\sin (2\pi k_\psi \psi_p)|
+\begin{align} \label{eq:initial_zonal_flow}
+    \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
+\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}\Theta(-\psi_p)H(Z-Z_X)
 \end{align}
 
-\subsection{Particles sources}
+\subsection{Particle sources} \label{sec:sources}
 The idea for the source terms $S$ is to fix the profile $n_{prof}$ in the
 core of our domain, where our model does not apply.
 We thus define a particle source for electrons as
-\begin{align}
-  S_{n_e}(R,Z,\varphi, t) = \omega_s
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( - \psi_p(R,Z) + \psi_{p,\min} ),
-  \label{eq:electron_source}
-\end{align} 
-with $\psi_{p,\min}<0$
+\begin{align} \label{eq:electron_source}
+  S_{n_e}(R,Z,\varphi, t) &= \omega_s
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{\max} -\rho(R,Z)) H(Z-Z_X) \\
+    \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},
+\end{align}
+with $0 < \rho_{\min}<1$
 where $\omega_s$ is the source strength parameter. This will result in exponential adaption of the core
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 For ions we use
@@ -585,13 +585,13 @@ so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
 Integrating the density equation we directly get
-\begin{align}
+\begin{align} \label{eq:mass_conservation}
   \frac{\partial}{\partial t} \int d\vec{x} n_e =  - \int d\vec{x} (\Lambda_{n_e}+S_{n_e})
 \end{align}
 \subsubsection{Charge/vorticity conservation}
 Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
 and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
-\begin{align}
+\begin{align} \label{eq:charge_conservation}
   \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) =  - \int d\vec{x} (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i})
 \end{align}
 Note that if the integrand on the left hand side is interpreted as the \ExB vorticity
@@ -599,16 +599,15 @@ density
 $\zeta := \nabla\cdot( N_i\nabla_\perp/\Omega_i B)$
 and if we further assume that $\Gamma_{1,i} \Lambda_{N_i} \equiv \Lambda_{\Gamma_{1,i}N_i}$, and insert the ion source term~\eqref{eq:ion_source}
 we get the vorticity conservation
-\begin{align}
+\begin{align} \label{eq:vorticity_conservation}
   \frac{\partial}{\partial t} \int d\vec{x} \zeta =  - \int d\vec{x}\Lambda_{\zeta}
-  \label{}
 \end{align}
 
 \subsubsection{Energy theorem}
 The terms of the energy theorem $\partial_t \mathcal E + \mathcal S =
 \Lambda$ are derived to (if either $\psi$ or $\nabla\psi$ vanishes at the
 boundary)
-\begin{align}
+\begin{align} \label{eq:energy_conservation}
   \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+
   \frac{(\nabla_\perp A_\parallel)^2}{2\mu_0} +  \frac{1}{2} m_i N_i u_E^2
   +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
@@ -747,7 +746,7 @@ beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx \\
+curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
 bc & dict & & & Dictionary of boundary conditions \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\
@@ -756,10 +755,10 @@ bc & dict & & & Dictionary of boundary conditions \ldots\\
     boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon^{R-}, \varepsilon^{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
     boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon^{Z-}, \varepsilon^{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
 initne    & string & "turbulence"     & "blob"  & initial condition for the
-perturbation $\tilde n$ in \eqref{eq:initial_ne} "zonal",
+perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial_zonal_flow}),
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
-    "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
+    "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})\\
 initphi   & string & "zero"  & "zero" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" = 0
 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity
 \\
@@ -772,8 +771,8 @@ k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
 source  & float & 0     & - & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
-alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
-rho\_psip & float  & -6   & - & Source region in Eq.~\eqref{eq:source_profile} \\
+alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} \\
+rho\_max & float  & -6   & - & Source region boundary $\rho_{\max}$ in Eq.~\eqref{eq:electron_source} \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -787,7 +786,7 @@ File format: json
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
     A      & float & 1 &  - & Solovev parameter \\
-    R\_0   & float & - & -  & Major radius in $\rho_s$ \\
+    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ \\
     C      & float[12] &  - & - & Solovev coefficients \\
     elongation    & float & 1 & - & Elongation \\
     triangularity & float & 0 & - & Triangularity \\
@@ -808,18 +807,33 @@ Output file format: netcdf-4/hdf5
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &     text attribute & 1 & verbose input file as a string \\
 geomfile   &     text attribute & 1 & verbose geometry input file as a string \\
-energy\_time     & Dataset & 1 & timesteps at which 1d variables are written \\
-time             & Dataset & 1 & time at which temperature is written \\
-x                & Dataset & 1 & x-coordinate  \\
-y                & Dataset & 1 & y-coordinate \\
-z                & Dataset & 1 & z-coordinate \\
-T                & Dataset & 4 (time, z, y, x) & temperature $T$ \\
-energy           & Dataset & 1 (energy\_time) & total energy integral  \\
-mass             & Dataset & 1 (energy\_time) & mass integral $\int\dV (n_e-1)$   \\
-dEdt             & Dataset & 1 (energy\_time) & change of energy per time  \\
-dissipation      & Dataset & 1 (energy\_time) & diffusion integrals  \\
-accuracy         & Dataset & 1 (energy\_time) & accuracy in time  \\
-aligned          & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Delta_\parallel n_e =  -\int\dV (\nabla_\parallel n_e)^2 /n_e$\\
+energy\_time     & Dataset & 1 & timesteps at which 1d variables are written (size: itstp$\cdot$maxout$+1$ \\
+time             & Dataset & 1 & time at which fields are written (size: maxout$+1$ \\
+x                & Dataset & 1 & R-coordinate (computational space, size: $nN_x$)\\
+y                & Dataset & 1 & Z-coordinate (computational space, size: $nN_y$)\\
+z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
+x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
+y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
+z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+electrons        & Dataset & 4 (time, z, y, x) & electron density $n_e$ \\
+ions             & Dataset & 4 (time, z, y, x) & ion density $N_i$ \\
+Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
+Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
+potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
+induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
+mass      & Dataset & 1 (energy\_time) & total mass integral Eq.~\eqref{eq:mass_conservation} \\
+diff      & Dataset & 1 (energy\_time) & total mass integral diffusion Eq.~\eqref{eq:mass_conservation} \\
+energy    & Dataset & 1 (energy\_time) & total energy integral Eq.~\eqref{eq:energy_conservation} \\
+ediff     & Dataset & 1 (energy\_time) & total energy integral diffusion Eq.~\eqref{eq:energy_conservation} \\
+Se        & Dataset & 1 (energy\_time) & total electron entropy integral Eq.~\eqref{eq:energy_conservation} \\
+Si        & Dataset & 1 (energy\_time) & total ion entropy integral Eq.~\eqref{eq:energy_conservation} \\
+Upare        & Dataset & 1 (energy\_time) & total electron parallel energy integral Eq.~\eqref{eq:energy_conservation} \\
+Upari        & Dataset & 1 (energy\_time) & total ion parallel energy integral Eq.~\eqref{eq:energy_conservation} \\
+Uperp     & Dataset & 1 (energy\_time) & total perpendicular energy integral Eq.~\eqref{eq:energy_conservation} \\
+Apar     & Dataset & 1 (energy\_time) & total magnetic energy integral Eq.~\eqref{eq:energy_conservation} \\
+dEdt      & Dataset & 1 (energy\_time) & change of energy per time  \\
+accuracy  & Dataset & 1 (energy\_time) & accuracy in time  \\
+aligned   & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Delta_\parallel n_e =  -\int\dV (\nabla_\parallel n_e)^2 /n_e$\\
 \bottomrule
 \end{longtable}
 
