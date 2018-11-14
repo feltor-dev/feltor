@@ -47,13 +47,13 @@ struct TensorTraits< detail::Implicit<M, V> >
 /*! @class hide_SolverType
  *
  * @tparam SolverType
-    The task of this class is to solve the equation \f$ (y+\alpha\hat I(t,y) = \rho\f$
+    The task of this class is to solve the equation \f$ (y+\alpha\hat I(t,y)) = \rho\f$
     for the given implicit part I, parameter alpha, time t and
     right hand side rho. For example \c dg::DefaultSolver
     If you write your own class:
  * it must have a solve method of type:
     \c void \c solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs);
-  The <tt> const ContainerType& copyable()const; </tt> member must return a container of the size that is later used in \c solve
+  The <tt> const ContainerType& copyable() const; </tt> member must return a container of the size that is later used in \c solve
   (it does not matter what values \c copyable contains, but its size is important;
   the \c solve method will be called with vectors of this size)
  */

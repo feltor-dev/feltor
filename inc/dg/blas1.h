@@ -422,7 +422,7 @@ double function( double x, double y) {
 }
 dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-// result[i] =  sin(M_PI/2.)*sin(3*M_PI/2.)
+// result[i] = sin(M_PI/2.)*sin(3*M_PI/2.) = -1
 @endcode
  * @param y contains result
  * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals

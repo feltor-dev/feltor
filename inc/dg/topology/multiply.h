@@ -136,8 +136,6 @@ struct InverseMultiply{
  * @param in1 (input) second component   (may alias out1)
  * @param out0 (output) first component  (may alias in0)
  * @param out1 (output) second component (may alias in1)
- * @note Required memops:
-         - 6 reads + 2 writes; (-2 reads if aliases are used)
  * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
@@ -162,8 +160,6 @@ void multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in
  * @param out0 (output)  first component  (may alias in0)
  * @param out1 (output)  second component (may alias in1)
  * @param out2 (output)  third component  (may alias in2)
- * @note Required memops:
-         - 6 reads + 2 writes; (-2 reads if aliases are used)
  * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
