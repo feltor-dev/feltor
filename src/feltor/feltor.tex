@@ -11,7 +11,8 @@
 \maketitle
 
 \begin{abstract}
-This is a program for global 3d isothermal electrostatic full-F gyro-fluid simulations.
+The full-F electromagnetic model in toroidal geoemtry (\textsc{Feltor}).
+This is a program for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -21,6 +22,9 @@ system $\vec x :=\{x_0, x_1, x_2\}$, metric
 tensor $g_{ij}$ and volume element $\sqrt{g} := \sqrt{\det g}$.
 Given a vector field $\vec B(\vec x)$ with unit vector $\bhat := \vec B/B$
 we can define various differential operations.
+Let us further assume that $\bhat$ is perturbed by the parallel
+vector potential $A_\parallel$ via
+$\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
 %\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
@@ -39,16 +43,10 @@ we can define various differential operations.
     $\vec \nabla_\perp $&
     $ \vec \nabla_\perp f := \bhat\times(\vec \nabla f\times \bhat ) \equiv
     h \cdot \nabla f$ \\
-    Parallel derivative&
-    $\nabla_\parallel $&
-    $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
     Perpendicular Laplacian&
     $\Delta_\perp $&
     $ \nabla_\perp^2 f:= \vec \nabla\cdot (\vec \nabla_\perp f)
     = \nabla\cdot( h\cdot\nabla f)$  \\
-    Parallel Laplacian&
-    $\Delta_\parallel $&
-    $\Delta_\parallel f:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f )$\\
     Curl-b Curvature &
     $\mathcal K_\kappa$ &
     $\mathcal K_\kappa(f) := \vec{ \mathcal K_\kappa }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\
@@ -58,6 +56,15 @@ we can define various differential operations.
     Curvature &
     $\mathcal K$ &
     $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right) = \mathcal K_\kappa(f) + \mathcal K_{\nabla B}(f)$,\\
+    Parallel derivative&
+    $\nabla_\parallel $&
+    $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
+    Perturbed parallel Derivative&
+    $\bar\nabla_\parallel$ &
+    $\bar\nabla_\parallel f := (\bhat + \tilde{\vec b })\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_\kappa(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
+    Parallel Laplacian&
+    $\Delta_\parallel $&
+    $\Delta_\parallel f:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f )$\\
 \bottomrule
 \end{longtable}
 with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$, and 
@@ -72,6 +79,11 @@ depend on the choice of the magnetic field and the underlying coordinate system.
     \vec{ \mathcal K_\kappa} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B).
     \label{eq:curl_curvature}
 \end{align}
+and
+\begin{align}
+\bar\nabla_\parallel \ln B &= \nabla_\parallel \ln B - A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K_\kappa}} + \mathcal K_{\nabla B}(A_\parallel) = -\vec\nabla\cdot(\bhat + \tilde{\vec b})
+\end{align}
+The last equality holds if $\vec\nabla\cdot \vec B = 0$.
 Note that in any arbitrary coordinate system we have
 \begin{align}
 (\vec \nabla f)^i = g^{ij}\partial_j f ~, \quad
@@ -79,6 +91,7 @@ Note that in any arbitrary coordinate system we have
 (\vec v \times \vec w)^i = \frac{1}{\sqrt{g}}\varepsilon^{ijk} v_jw_k ~.
 %\label{}
 \end{align}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Coordinate system}\label{sec:cylmetric}
 We employ cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
@@ -289,7 +302,7 @@ b^\varphi = \frac{I}{R}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \\
 \label{}
 \end{align}
 We then need to take the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
-We can then explicitly write
+We can explicitly write
 \begin{align}
 K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
 K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
@@ -331,8 +344,8 @@ The continuity equations for the electron density \(n_e\) and  ion gyro-centre d
 \begin{align}
  \frac{\partial}{\partial t}n_e =&
  - \frac{1}{B}\left[\phi,  n_e \right]_{\perp}
- -  {\nabla}_{\parallel}( n_e u_e)
- + n_e u_e   {\nabla}_{\parallel} \ln{(B)}
+ -  \bar{\nabla}_{\parallel}( n_e u_e)
+ + n_e u_e   \bar{\nabla}_{\parallel} \ln{(B)}
 + \frac{t_e }{e }  \mathcal{K} \left( n_e\right)
 \nonumber  \\ &
 -   n_e \mathcal{K}(\phi)
@@ -343,8 +356,8 @@ The continuity equations for the electron density \(n_e\) and  ion gyro-centre d
    + \Lambda_{n_e} + S_{n_e},\\
 \frac{\partial}{\partial t}N_i =&
  - \frac{1}{B}\left[\psi_i,  N_i \right]_{\perp}
- - {\nabla}_{\parallel}(N_i U_i)
- + N_i U_i   {\nabla}_{\parallel} \ln{(B)}
+ - \bar{\nabla}_{\parallel}(N_i U_i)
+ + N_i U_i   \bar {\nabla}_{\parallel} \ln{(B)}
 - \frac{T_i }{e }  \mathcal{K} \left( N_i\right)
 \nonumber  \\ &
 -   N_i \mathcal{K}(\psi)
@@ -356,12 +369,12 @@ The continuity equations for the electron density \(n_e\) and  ion gyro-centre d
 \end{align}
 The evolution equation for the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
 \begin{align}
-\frac{\partial}{\partial t}  u_e
+\frac{\partial}{\partial t}\left(  u_e -\frac{e}{m_e} A_\parallel\right)
       =&
       - \frac{1 }{ B} \left[ \phi, u_e  \right]_{\perp}
-      +  \frac{e}{m_e}   \nabla_\parallel \phi
-      -   \frac{1}{2}   \nabla_\parallel u_e^2
-      - \frac{t_e}{m_e } \nabla_\parallel \ln  n_e
+      +  \frac{e}{m_e}   \bar \nabla_\parallel \phi
+      -   \frac{1}{2}   \bar \nabla_\parallel u_e^2
+      - \frac{t_e}{m_e } \bar \nabla_\parallel \ln  n_e
      - u_e   \mathcal{K}_{\kappa} \left( \phi  \right)
      + \frac{t_e}{e} \mathcal{K}\left(  u_e \right)
      \nonumber  \\    &
@@ -374,12 +387,12 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
 %       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)
 %       +\frac{e}{m_e}   \eta_{\parallel} J_\parallel
     + R_{e, \eta_\parallel}+\Lambda_{u_e} ,  \\
-\frac{\partial}{\partial t}    U_i
+\frac{\partial}{\partial t}   \left( U_i + \frac{e}{m_i} A_\parallel\right)
       =&
       - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp}
-      -  \frac{e}{m_i}   \nabla_\parallel \psi_i
-      -     \frac{1}{2}  \nabla_\parallel U_i^2
-      - \frac{T_i}{m_i } \nabla_\parallel \ln  N_i
+      -  \frac{e}{m_i}   \bar \nabla_\parallel \psi_i
+      -     \frac{1}{2}  \bar \nabla_\parallel U_i^2
+      - \frac{T_i}{m_i } \bar \nabla_\parallel \ln  N_i
      -  U_i  \mathcal{K}_{\kappa} \left( \psi_i  \right)
      - \frac{T_i}{e} \mathcal{K}\left(  U_i \right)
      \nonumber  \\    &
@@ -393,12 +406,14 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
 %       -\frac{e}{m_i}   \eta_{\parallel} J_\parallel
          + R_{i,\eta_\parallel}  +\Lambda_{U_i}  .
 \end{align}
-The electric potential \(\phi\) is computed by the polarisation equation
+The electric potential \(\phi\) and parallel magnetic vector potential are
+computed by the polarisation and induction equations
 \begin{align}
-  n_e -\Gamma_{1,i} N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right),
+  n_e -\Gamma_{1,i} N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right), \\
+  -\frac{1}{\mu_0} \Delta_\perp A_\parallel &= -en_e u_e + eN_i U_i
   \label{eq:polarisation_dimensional}
 \end{align}
-and with the generalised electric potential
+with the generalised electric potential
 \begin{align}
   \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i u_E^2}{2 q}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2
 \end{align}
@@ -408,14 +423,14 @@ Note that the continuity and momentum conservation equations can be
 written in the form
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat\right)\right) = \Lambda_N + S_N \\
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat + U\tilde{\vec b}\right)\right) = \Lambda_N + S_N \\
 mN \frac{\partial}{\partial t} U &+ mN \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat + U\tilde{\vec b}
     \right)\cdot \vec\nabla U  \nonumber \\
     &+ \vec \nabla \cdot ( 2mNU \vec v_\kappa)
     + mNU\mathcal K_\kappa(\phi)
     + mNU\vec v_\kappa \cdot \nabla \ln B \nonumber\\
-    &= -T \nabla_\parallel N -qN\nabla_\parallel \psi + mN R_\eta + mN\Lambda_U
+    &= -T \bar \nabla_\parallel N -qN ( \bar \nabla_\parallel \psi + \partial_t A_\parallel) + mN R_\eta + mN\Lambda_U
 \label{}
 \end{align}
 with the velocities
@@ -466,9 +481,10 @@ $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
 \begin{align}
     R_{\min}&=R_0-\varepsilon^{R-}a\quad
-    &&R_{\max}=R_0+\varepsilon^{R+}a\\
+    &&R_{\max}=R_0+\varepsilon^{R+}a\nonumber\\
     Z_{\min}&=-\varepsilon^{Z-}ae\quad
     &&Z_{\max}=\varepsilon^{Z+}ae
+    \label{eq:box}
 \end{align}
 where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.
@@ -488,11 +504,12 @@ We initialize the parallel velocitiy to zero
   u_e(R,Z,\varphi,0) = U_i(R,Z,\varphi,0) = 0
   \label{}
 \end{align}
+which in turn initializes $A_\parallel = w_e=W_i = 0$
 and initialize the electron density with
 \begin{align} \label{eq:initial_ne}
     n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
 \end{align}
-consisting of a symmetric background profile $n_{prof}(R,Z)$ and a perturbation
+consisting of a toroidally symmetric background profile $n_{prof}(R,Z)$ and a perturbation
 $\tilde n(R,Z,\varphi)$.
 Let us define an approximate Heaviside function
 \begin{align}
@@ -512,7 +529,7 @@ X-point and avoids a profile in the private flux region.
 We have two possibilities to initialize the ion density
 \begin{align}
   N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = n_e
-  \label{}
+  \label{eq:initphi}
 \end{align}
 In the first case the potential $\phi= 0$ while in the second case
 the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
@@ -592,11 +609,13 @@ The terms of the energy theorem $\partial_t \mathcal E + \mathcal S =
 \Lambda$ are derived to (if either $\psi$ or $\nabla\psi$ vanishes at the
 boundary)
 \begin{align}
-  \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
+  \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+
+  \frac{(\nabla_\perp A_\parallel)^2}{2\mu_0} +  \frac{1}{2} m_i N_i u_E^2
+  +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
   \mathcal S = \sum_s \int \vec{\dA} \cdot &\left[ \left(
-  U\bhat + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
+  U(\bhat+\tilde{\vec b}) + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
   \left(T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) \right. \nonumber\\
-  & \left . + \vec v_\kappa m NU^2  + \bhat UNT\right], \\
+  & \left . + \vec v_\kappa m NU^2  + (\bhat + \tilde{\vec b}) UNT\right], \\
   \Lambda =  \int \dV & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
   \nonumber\\ &
 +\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
@@ -609,9 +628,14 @@ In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 \subsection{Dimensionless form}
 We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyrofrequency $\Omega_0 = eB_0/m_i$.
 The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
-Furthermore, we introduce the dimensionless parameters
+The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with 
+$\hat A_\parallel = \beta \rho_s B_0$ (this particular choice for $\hat
+A_\parallel$ allows to easily recover the electrostatic limit $\beta = 0$ but
+note that $\beta$ now appears in the definition of $\bar \nabla_\parallel$).
+We introduce the dimensionless parameters
 \begin{align}
-  \tau_a = \frac{T_a}{z_aT_e} \text{ and } \mu_a = \frac{m_a}{z_am_i}
+  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and } 
+  \beta:=\frac{\mu_0 n_0 T_e}{B_0^2}
   \label{}
 \end{align}
 where $a\in\{e,i\}$ is the species label and $z$ is the charge number. Finally, we define
@@ -624,39 +648,46 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
     \begin{align}
     \frac{\partial}{\partial t} N =&
         - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
-        - \nabla_\parallel \left( NU\right)
-        + NU\nabla_\parallel\ln(B)
+        - \bar \nabla_\parallel \left( NU\right)
+        + NU\bar \nabla_\parallel\ln(B)
         - \tau \mathcal K(N) \nonumber \\&
         - N \mathcal K(\psi)
         -\mu \mathcal K_\kappa(NU^2)
         -\mu NU^2\nabla\cdot \vec{ \mathcal K_\kappa}
         - \nu_\perp\Delta_\perp^2 N + \nu_\parallel \Delta_\parallel N + S_N, \\
-    \frac{\partial}{\partial t} U =&
+    \frac{\partial}{\partial t} W =&
         - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
-        - \frac{1}{\mu} \nabla_\parallel \psi% \nonumber\\
-        - \frac{1}{2}\nabla_\parallel U^2
-        -\frac{\tau}{\mu} \nabla_\parallel \ln N
+        - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
+        - \frac{1}{2}\bar \nabla_\parallel U^2
+        -\frac{\tau}{\mu} \bar \nabla_\parallel \ln N
         - U\mathcal K_\kappa(\psi)
         - \tau \mathcal K(U)
         -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
         - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
         -2\tau U\mathcal K_\kappa(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
-        - \nu_\perp\Delta_\perp^2 U + \nu_\parallel \Delta_\parallel U ,
-        \label{eq:EgyrofluidU}
+        - \nu_\perp\Delta_\perp^2 W + \nu_\parallel \Delta_\parallel U ,
+        \label{eq:EgyrofluidU} \\
+        W&:= \left( U + \frac{\beta}{\mu}A_\parallel\right)
     \end{align}
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
   \begin{align}
     -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
-    \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \nabla_\perp^2
+    \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
+    \left(\frac{\beta}{\mu_i}n_e - \frac{\beta}{\mu_e}N_i-\Delta_\perp\right)
+    A_\parallel &= -n_e w_e + N_iW_i
   \end{align}
 The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$
 \begin{align}
-  \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}+  \frac{1}{2} \mu_i N_i u_E^2 +\frac{1}{2} z_e\mu_e  n_e u_e^2 +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
-  \mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
-  (z\tau N\ln N + \frac{1}{2}z\mu NU^2 + \psi N \right) + \vec v_C' z\mu NU^2 + \bhat UNT \right], \\
+  \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
+  +\frac{\beta}{2}\left(\nabla_\perp A_\parallel\right)^2
+   +  \frac{1}{2} \mu_i N_i u_E^2  \right .\nonumber\\
+   &\left. +\frac{1}{2} z_e\mu_e  n_e u_e^2
+  +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
+  %\mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
+  %(z\tau N\ln N + \frac{1}{2}z\mu NU^2 + \psi N \right) + \vec v_C' z\mu NU^2 + \bhat UNT \right], \\
   \Lambda =  \int \dV & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
   \nonumber\\ &
 +z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
@@ -691,31 +722,48 @@ Input file format: json
 \begin{longtable}{llll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &\# Gaussian nodes in R and Z \\
-Nx     & integer &52& - &\# grid points in R \\
-Ny     & integer &52& - &\# grid points in Z \\
-Nz     & integer &16& - &\# grid points in $\varphi$ \\
-dt     & integer &1e-2& - &initial time step in units of $c_s/\rho_s$ \\
-cx & integer & 2 & 1 & output contains n*Nx/cx points in x,
-    has to divde Nx evenly\\
-cy & integer & 2 & 1 & output contains n*Ny/cy points in y,
-    has to divde Ny evenly\\
-itstp       & integer & 2  & - & steps between outputs \\
-maxout      & integer & 10 & - & \# outputs excluding first \\
-eps\_pol    & float & 1e-5  & - &  accuracy of polarisation solver \\
-jumpfactor  & float & 1 & 1 &   jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
-eps\_gamma  & float & 1e-6  & - & accuracy of $\Gamma_1$  \\
-eps\_time   & float & 1e-9  & - & accuracy of solver for implicit part in time-stepper \\
-rtol  & float &1e-6   & - &tolerance of adaptive time-stepper \\
-stages      & integer & 3 & 3 & \# stages in multigrid  \\
-mx     & integer & 10 & 10 & refinement factor in DS in X-direction\\
-my     & integer & 10 & 10 & refinement factor in DS in Y-direction\\
-mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i$. One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
+n      & integer & 3 & - &Number of Gaussian nodes in R and Z \\
+Nx     & integer &52& - &Number of grid points in R \\
+Ny     & integer &52& - &Number of grid points in Z \\
+Nz     & integer &16& - &Number of grid points in $\varphi$ \\
+dt     & integer &1e-2& - &initial time stepsize in units of $c_s/\rho_s$ \\
+compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
+    (has to divde Nx evenly), and n*Ny/c[1] points in y,
+    (has to divde Ny evenly)\\
+itstp       & integer & 2  & - & Number of time steps between outputs \\
+maxout      & integer & 10 & - & Total Number of outputs excluding first \\
+eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper \\
+rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
+eps\_pol    & float & 1e-5  & - &  Accuracy of polarisation solver \\
+jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
+eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
+stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
+has to evenly divide both $N_x$ and $N_y$\\
+refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in DS in X- and Y-direction\\
+mu         & float & -0.00272121& - & $\mu_e =-m_e/m_i$.
+    One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
+beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
-resistivity & float &1e-4  & - & parallel resistivity parameter~\eqref{eq:resistivity}\\
-amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation \\
+resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
+curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx \\
+bc & dict & & & Dictionary of boundary conditions \ldots\\
+\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
+\qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\
+\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$\\
+\qquad induction & char[2] & [DIR,DIR] & [DIR,DIR] & boundary conditions in x and y for $A_\parallel$ \\
+    boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon^{R-}, \varepsilon^{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
+    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon^{Z-}, \varepsilon^{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
+initne    & string & "turbulence"     & "blob"  & initial condition for the
+perturbation $\tilde n$ in \eqref{eq:initial_ne} "zonal",
+    "blob" = blob simulations (several rounds fieldaligned),
+    "straight blob" = straight blob simulation( 1 round fieldaligned),
+    "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
+initphi   & string & "zero"  & "zero" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" = 0
+electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity
+\\
+amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
 sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
 posX       & float &0.3    & - & blob x-position in units of $a$\\
 posY       & float &0.0    & - & blob y-position in units of $a$ \\
@@ -723,22 +771,9 @@ sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
-bc & dict & & & Dictionary of boundary conditions \ldots\\
-\qquad density  & char[2] & {DIR,DIR} & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
-\qquad velocity  & char[2] & {DIR,DIR} & - & boundary conditions in x and y for $u_e$ and $U_i$\\
-\qquad potential  & char[2] & {DIR,DIR} & - & boundary conditions in x and y for $\phi$ and $\psi$\\
 source  & float & 0     & - & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
-    boxscaleRp  & float & 1.1     & 1.05 & $\varepsilon^{R+}$ scale right boundary in units of $a$\\
-    boxscaleRm  & float & 1.1     & 1.05 & $\varepsilon^{R-}$ scale left boundary in units of $a$ \\
-    boxscaleZp  & float & 1.1     & 1.05 & $\varepsilon^{Z+}$ scale upper boundary in units of $ae$ \\
-    boxscaleZm  & float & 1.2     & 1.05 & $\varepsilon^{Z-}$ scale lower boundary in units of $ae$ \\
-initne    & string & "turbulence"     & "blob"  & initial condition for the
-perturbation $\tilde n$ in \eqref{eq:initial_ne} "zonal",
-    "blob" = blob simulations (several rounds fieldaligned),
-    "straight blob" = straight blob simulation( 1 round fieldaligned),
-    "turbulence" = turbulence simulations ( 1 round fieldaligned)\\
-initphi   & string & "zero"  & "zero" & initial condition in phi "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity \\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx \\
+alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
+rho\_psip & float  & -6   & - & Source region in Eq.~\eqref{eq:source_profile} \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -757,8 +792,6 @@ File format: json
     elongation    & float & 1 & - & Elongation \\
     triangularity & float & 0 & - & Triangularity \\
     inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
-    alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
-    psip\_min & float  & -6   & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
