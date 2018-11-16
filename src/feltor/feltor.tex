@@ -441,7 +441,7 @@ with the velocities
 \vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
 \label{}
 \end{align}
-\subsection{Parallel Resistivity, diffusion, profiles}\label{sec:dissres}
+\subsection{Parallel Resistivity and diffusion}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
 The parallel Spitzer resistivity
 \begin{align}
@@ -466,12 +466,12 @@ For numerical stabilisation we choose:
   \Lambda_{u_e,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\bhat \nabla_\parallel u_e\right) &
  \Lambda_{U_i,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\bhat \nabla_\parallel U_i\right) 
 \end{align}
-Similarly for the perpendicular dissipation we apply hyperviscous terms of second order.
+Similarly, for the perpendicular dissipation we apply hyperviscous terms of second order.
 \begin{align}\label{eq:perpdiffNT}
  \Lambda_{n_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 n_e &
- \Lambda_{N_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i &
- \Lambda_{u_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 u_e &
- \Lambda_{U_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 U_i
+ \Lambda_{N_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i  & \\
+ \Lambda_{u_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 (u_e - eA_\parallel/m_e)  &
+ \Lambda_{U_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 (U_i + eA_\parallel/m_i)
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
@@ -504,7 +504,7 @@ We initialize the parallel velocitiy to zero
   u_e(R,Z,\varphi,0) = U_i(R,Z,\varphi,0) = 0
   \label{}
 \end{align}
-which in turn initializes $A_\parallel = w_e=W_i = 0$
+which in turn initializes $A_\parallel = 0$
 and initialize the electron density with
 \begin{align} \label{eq:initial_ne}
     n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
@@ -698,14 +698,13 @@ The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
-\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\begin{longtable}{p{4cm}l>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
-    coordinate system & Cylindrical 3D & equidistant discretization of $[0,l_R] \times [0,l_Z] \times [0,2\pi]$, equal number of Gaussian nodes in R and Z, in $\varphi$ equidistant \\
-matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivative & refined  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
-Parallel diffusion & refined FCI & cf.~\cite{Held2016,Stegmeir2017} \\
-drift terms & direct & cf. curvature approximations \\
+    coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
+Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+Parallel derivatives & refined  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
+Curvature terms & direct dG & regular dG approximation of derivatives \\
 time & Adaptive ARKode stepper & $3rd$ order explicit, diffusion $3rd$ order implicit \\
 \bottomrule
 \end{longtable}
@@ -713,13 +712,13 @@ time & Adaptive ARKode stepper & $3rd$ order explicit, diffusion $3rd$ order imp
 The programs \texttt{feltor\_hpc.cu} and \texttt{feltor\_mpi.cu}
 expect two input files. One for the physical and numerical parameters
 of the model equations and one that describes the Solov'ev equilibrium.
-Both will write results into an output file.
+Both write results into an output file.
 
 \subsection{Input file structure}
 Input file format: json
 
 %%This is a booktabs table
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\begin{longtable}{llll>{\RaggedRight}p{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
 n      & integer & 3 & - &Number of Gaussian nodes in R and Z \\
@@ -745,6 +744,7 @@ mu         & float & -0.00272121& - & $\mu_e =-m_e/m_i$.
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
+perp\_diff & string & "viscous" & "hyperviscous" & "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\nabla_\perp^4$, "viscous": $\Lambda_\perp\propto \nu_\perp\nabla_\perp^2$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
@@ -760,8 +760,8 @@ perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})\\
-initphi   & string & "zero"  & "zero" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" = 0
-electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity
+initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
+electric potential, "balance": $n_e=N_i$, ExB vorticity equals ion diamagnetic vorticity
 \\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
 sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
@@ -787,11 +787,11 @@ File format: json
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
     A      & float & 1 &  - & Solovev parameter \\
-    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ \\
     C      & float[12] &  - & - & Solovev coefficients \\
-    elongation    & float & 1 & - & Elongation \\
-    triangularity & float & 0 & - & Triangularity \\
-    inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
+    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ \\
+    elongation    & float & 1 & - & Elongation $e$ \\
+    triangularity & float & 0 & - & Triangularity $\delta$ \\
+    inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -808,20 +808,23 @@ Output file format: netcdf-4/hdf5
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &     text attribute & 1 & verbose input file as a string \\
 geomfile   &     text attribute & 1 & verbose geometry input file as a string \\
-energy\_time     & Dataset & 1 & timesteps at which 1d variables are written (size: itstp$\cdot$maxout$+1$ \\
-time             & Dataset & 1 & time at which fields are written (size: maxout$+1$ \\
-x                & Dataset & 1 & R-coordinate (computational space, size: $nN_x$)\\
-y                & Dataset & 1 & Z-coordinate (computational space, size: $nN_y$)\\
+x                & Dataset & 1 & $R$-coordinate (computational space, size: $nN_x$)\\
+y                & Dataset & 1 & $Z$-coordinate (computational space, size: $nN_y$)\\
 z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
 x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
 y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
+BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
+BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
+time             & Dataset & 1 & time at which fields are written (size: maxout$+1$ \\
 electrons        & Dataset & 4 (time, z, y, x) & electron density $n_e$ \\
 ions             & Dataset & 4 (time, z, y, x) & ion density $N_i$ \\
 Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
 Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
+energy\_time     & Dataset & 1 & timesteps at which 1d variables are written (size: itstp$\cdot$maxout$+1$ \\
 mass      & Dataset & 1 (energy\_time) & total mass integral Eq.~\eqref{eq:mass_conservation} \\
 diff      & Dataset & 1 (energy\_time) & total mass integral diffusion Eq.~\eqref{eq:mass_conservation} \\
 energy    & Dataset & 1 (energy\_time) & total energy integral Eq.~\eqref{eq:energy_conservation} \\
@@ -833,8 +836,8 @@ Upari        & Dataset & 1 (energy\_time) & total ion parallel energy integral E
 Uperp     & Dataset & 1 (energy\_time) & total perpendicular energy integral Eq.~\eqref{eq:energy_conservation} \\
 Apar     & Dataset & 1 (energy\_time) & total magnetic energy integral Eq.~\eqref{eq:energy_conservation} \\
 dEdt      & Dataset & 1 (energy\_time) & change of energy per time  \\
-accuracy  & Dataset & 1 (energy\_time) & accuracy in time  \\
-aligned   & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Delta_\parallel n_e =  -\int\dV (\nabla_\parallel n_e)^2 /n_e$\\
+accuracy  & Dataset & 1 (energy\_time) & accuracy of energy theorem in time  \\
+aligned   & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Delta_\parallel n_e$\\
 \bottomrule
 \end{longtable}
 
