@@ -26,7 +26,8 @@ struct AddResistivity{
     double m_mu[2];
 };
 struct ComputePerpDrifts{
-    ComputePerpDrifts( double mu, double tau):m_mu(mu), m_tau(tau){}
+    ComputePerpDrifts( double mu, double tau, double beta):
+        m_mu(mu), m_tau(tau), m_beta(beta){}
     DG_DEVICE
     void operator()(
             double tilde_N, double d0N, double d1N, double d2N,
@@ -46,27 +47,75 @@ struct ComputePerpDrifts{
         double KU = curv0*d0U+curv1*d1U+curv2*d2U;
         double KN = curv0*d0N+curv1*d1N+curv2*d2N;
         double KP = curv0*d0P+curv1*d1P+curv2*d2P;
-        dtN =
-            -b_0*( d1P*d2N-d2P*d1N)
-            -b_1*( d2P*d0N-d0P*d2N)
-            -b_2*( d0P*d1N-d1P*d0N) //ExB drift
-            -m_tau*( KN)
-            -N*(     KP)
-            -m_mu*U*U* (   KappaN )
-            -2.*m_mu*N*U*( KappaU )
-            -m_mu*N*U*U*divCurvKappa;
-        dtU =
-            -b_0*( d1P*d2U-d2P*d1U)
-            -b_1*( d2P*d0U-d0P*d2U)
-            -b_2*( d0P*d1U-d1P*d0U)
-            -U*KappaP
-            -m_tau* KU
-            -m_tau*U*divCurvKappa
-            -(2.*m_tau + m_mu*U*U)*( KappaU )
-            - 2.*m_tau*U*( KappaN )/N;
+        double PN = b_0*( d1P*d2N-d2P*d1N)
+                    b_1*( d2P*d0N-d0P*d2N)
+                    b_2*( d0P*d1N-d1P*d0N) //ExB drift
+        double PU = b_0*( d1P*d2U-d2P*d1U)
+                    b_1*( d2P*d0U-d0P*d2U)
+                    b_2*( d0P*d1U-d1P*d0U) //ExB drift
+        dtN =   -PN
+                -m_tau*( KN)
+                -N*(     KP)
+                -m_mu*U*U* (   KappaN )
+                -2.*m_mu*N*U*( KappaU )
+                -m_mu*N*U*U*divCurvKappa;
+        dtU =   - PU
+                -U*KappaP
+                -m_tau* KU
+                -m_tau*U*divCurvKappa
+                -(2.*m_tau + m_mu*U*U)*( KappaU )
+                - 2.*m_tau*U*( KappaN )/N;
+    }
+    DG_DEVICE
+    void operator()(
+            double tilde_N, double d0N, double d1N, double d2N,
+            double U,       double d0U, double d1U, double d2U,
+            double d0P, double d1P, double d2P,
+            double A,       double d0A, double d1A, double d2A,
+            double b_0,         double b_1,         double b_2,
+            double curv0,       double curv1,       double curv2,
+            double curvKappa0,  double curvKappa1,  double curvKappa2,
+            double divCurvKappa,
+            double& dtN, double& dtU
+        )
+    {
+        //first compute the regular dynamics
+        this->operator()( tilde_N,  d0N,  d1N,  d2N,
+             U,        d0U,  d1U,  d2U,
+             d0P,  d1P,  d2P,
+             b_0,          b_1,          b_2,
+             curv0,        curv1,        curv2,
+             curvKappa0,   curvKappa1,   curvKappa2,
+             divCurvKappa,
+             dtN, dtU);
+        //now add the additional terms from modified parallel derivative
+        double N = tilde_N + 1.;
+        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
+        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
+        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
+
+        double KnablaBA = (curv0-curvKappa0)*d0A
+                         +(curv1-curvKappa1)*d1A
+                         +(curv2-curvKappa2)*d2A;
+        double UA = b_0*( d1U*d2A-d2U*d1A)
+                    b_1*( d2U*d0A-d0U*d2A)
+                    b_2*( d0U*d1A-d1U*d0A);
+        double NA = b_0*( d1N*d2A-d2N*d1A)
+                    b_1*( d2N*d0A-d0N*d2A)
+                    b_2*( d0N*d1A-d1N*d0A);
+        double PA = b_0*( d1P*d2A-d2P*d1A)
+                    b_1*( d2P*d0A-d0P*d2A)
+                    b_2*( d0P*d1A-d1P*d0A);
+        dtN +=  -m_beta*( A*N*KappaU + A*U*KappaN + N*UA + U*NA)
+                +m_beta*N*U*( -A*divCurvKappa + KnablaBA);
+        dtU +=  -m_beta/m_mu*( A*KappaP + PA)
+                -m_beta*U*( A*KappaU + UA)
+                -m_beta*m_tau/m_mu/N*(A*KappaN + NA);
+
+
     }
     private:
-    double m_mu, m_tau;
+    double m_mu, m_tau, m_beta;
 };
 struct ComputeChi{
     DG_DEVICE
@@ -77,13 +126,20 @@ struct ComputeChi{
 };
 struct ComputePsi{
     DG_DEVICE
+    void operator()( double& gradPhi2, double dxPhi, double dyPhi,
+        double dzPhi, double& HdxPhi, double HdyPhi, double HdzPhi,
+        ) const{
+        gradPhi2 = (dxPhi*HdxPhi + dyPhi*HdyPhi + dzPhi*HdzPhi);
+    }
+    DG_DEVICE
     void operator()( double& GammaPhi, double dxPhi, double dyPhi,
-        double dzPhi, double& GdxPhi, double GdyPhi, double GdzPhi,
+        double dzPhi, double& HdxPhi, double HdyPhi, double HdzPhi,
         double binv) const{
         //u_E^2
-        GdxPhi   = (dxPhi*GdxPhi + dyPhi*GdyPhi + dzPhi*GdzPhi)*binv*binv;
+        HdxPhi   = binv*binv*this->operator()(
+            HdxPhi, dxPhi, dyPhi, dzPhi, HdxPhi, HdyPhi , HdzPhi);
         //Psi
-        GammaPhi = GammaPhi - 0.5*GdxPhi;
+        GammaPhi = GammaPhi - 0.5*HdxPhi;
     }
 };
 struct ComputeDiss{
@@ -246,6 +302,7 @@ struct Explicit
     container m_source, m_profne;
     container m_vol3d;
 
+    container m_apar, m_dxA, m_dyA, m_dzA;
     std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
     std::array<container,2> m_npe, m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
     std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU;
@@ -253,18 +310,18 @@ struct Explicit
     std::vector<container> m_multi_chi;
 
     //matrices and solvers
-    Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
+    Matrix m_dx_N, m_dx_U, m_dx_P, m_dx_A, m_dy_N, m_dy_U, m_dy_P, m_dy_A, m_dz;
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds_P, m_ds_N, m_ds_U;
     dg::Elliptic3d< Geometry, Matrix, container> m_lapperpN, m_lapperpU;
     std::vector<dg::Elliptic3d< Geometry, Matrix, container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, container> > m_multi_invgammaP,
-        m_multi_invgammaN;
+        m_multi_invgammaN, m_multi_induction;
 
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
-    dg::Extrapolation<container> m_old_phi, m_old_psi, m_old_gammaN;
+    dg::Extrapolation<container> m_old_phi, m_old_psi, m_old_apar, m_old_gammaN;
 
     //metric and volume elements
-    dg::SparseTensor<container> m_metric;
+    dg::SparseTensor<container> m_hh;
 
     const feltor::Parameters m_p;
     Quantities m_q;
@@ -335,17 +392,16 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
-    m_metric = g.metric();
-    dg::tensor::inv_multiply3d( m_metric, m_b[0], m_b[1], m_b[2],
-                                          m_b[0], m_b[1], m_b[2]);
-    container vol = dg::tensor::volume(m_metric);
+    dg::SparseTensor<dg::DVec> metric = g.metric();
+    dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
+                                        m_b[0], m_b[1], m_b[2]);
+    container vol = dg::tensor::volume( metric);
     dg::blas1::pointwiseDivide( m_binv, vol, vol); //1/vol/B
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( vol, m_b[i], m_b[i]); //b_i/vol/B
-    dg::SparseTensor<dg::DVec> hh =
-        dg::geo::createProjectionTensor( bhat, g);
-    m_lapperpN.set_chi( hh);
-    m_lapperpU.set_chi( hh);
+    m_hh = dg::geo::createProjectionTensor( bhat, g);
+    m_lapperpN.set_chi( m_hh);
+    m_lapperpU.set_chi( m_hh);
 }
 template<class Grid, class IMatrix, class Matrix, class container>
 void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
@@ -359,6 +415,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
     m_multi_pol.resize(p.stages);
     m_multi_invgammaP.resize(p.stages);
     m_multi_invgammaN.resize(p.stages);
+    m_multi_induction.resize(p.stages);
     for( unsigned u=0; u<p.stages; u++)
     {
         dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor(
@@ -373,6 +430,9 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
         m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
             p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
         m_multi_invgammaN[u].elliptic().set_chi( hh);
+        m_multi_induction[u].construct(  m_multigrid.grid(u),
+            p.bcxA, p.bcyA, dg::PER, -1., dg::centered);
+        m_multi_induction[u].elliptic().set_chi( hh);
     }
 }
 template<class Grid, class IMatrix, class Matrix, class container>
@@ -382,16 +442,18 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_dx_N( dg::create::dx( g, p.bcxN) ),
     m_dx_U( dg::create::dx( g, p.bcxU) ),
     m_dx_P( dg::create::dx( g, p.bcxP) ),
+    m_dx_A( dg::create::dx( g, p.bcxA) ),
     m_dy_N( dg::create::dy( g, p.bcyN) ),
     m_dy_U( dg::create::dy( g, p.bcyU) ),
     m_dy_P( dg::create::dy( g, p.bcyP) ),
+    m_dy_A( dg::create::dy( g, p.bcyA) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     /////////the elliptic and Helmholtz operators//////////////////////////
     m_lapperpN ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
     m_lapperpU ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
-    m_old_psi( m_old_phi), m_old_gammaN( m_old_phi),
+    m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
     m_p(p)
 {
     ////////////////////////////init temporaries///////////////////
@@ -400,6 +462,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_npe = m_logn = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
+    m_apar = m_dxA = m_dyA = m_dzA = m_phi[0];
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
@@ -480,7 +543,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
     dg::blas2::symv( m_dx_P, m_phi[0], m_dxPhi[0]);
     dg::blas2::symv( m_dy_P, m_phi[0], m_dyPhi[0]);
     dg::blas2::symv( m_dz  , m_phi[0], m_dzPhi[0]);
-    dg::tensor::multiply3d( m_metric,
+    dg::tensor::multiply3d( m_hh, //grad_perp
         m_dxPhi[0], m_dyPhi[0], m_dzPhi[0], m_UE2, m_temp0, m_temp1);
     dg::blas1::subroutine( routines::ComputePsi(),
         m_phi[1], m_dxPhi[0], m_dyPhi[0], m_dzPhi[0],
@@ -489,6 +552,32 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
     dg::blas2::symv( m_dx_P, m_phi[1], m_dxPhi[1]);
     dg::blas2::symv( m_dy_P, m_phi[1], m_dyPhi[1]);
     dg::blas2::symv( m_dz  , m_phi[1], m_dzPhi[1]);
+}
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
+    double time, const std::array<container,2>& y)
+{
+    //y[0]:= w_e
+    //y[1]:= W_i
+    //----------Compute and set chi----------------------------//
+    dg::blas1::axpby( m_beta/m_p.mu[0], m_npe[0], -m_beta/m_p.mu[1], m_npe[1], m_temp0);
+    m_multigrid.project( m_temp0, m_multi_chi);
+    for( unsigned u=0; u<m_p.stages; u++)
+        m_multi_induction[u].set_chi( m_multi_chi[u]);
+
+    //----------Compute right hand side------------------------//
+    dg::blas1::pointwiseDot( -1., m_npe[0], y[0], 1., m_npe[1], y[1], 0., m_temp0);
+    //----------Invert Induction Eq----------------------------//
+    m_old_apar.extrapolate( time, m_apar);
+    std::vector<unsigned> number = m_multigrid.direct_solve(
+        m_multi_induction, m_apar, m_temp0, m_p.eps_pol);
+    m_old_apar.update( time, m_apar);
+    if(  number[0] == m_multigrid.max_iter())
+        throw dg::Fail( m_p.eps_pol);
+    //----------Compute Derivatives----------------------------//
+    dg::blas2::symv( m_dx_A, m_apar, m_dxA);
+    dg::blas2::symv( m_dy_A, m_apar, m_dyA);
+    dg::blas2::symv( m_dz,   m_apar, m_dzA);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -508,6 +597,14 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
         m_q.Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot(
             m_npe[i], m_vol3d, m_temp0);
     }
+    //= 0.5 beta (grad_perp Apar)^2
+    if( m_p.beta != 0)
+    {
+        dg::tensor::multiply3d( m_hh, m_dxA, m_dyA, m_dzA, m_temp0, m_temp1, m_temp2);
+        dg::blas1::subroutine( ComputePsi(), m_temp0, m_dxA, m_dyA, m_dzA,
+            m_temp0, m_temp1, m_temp2);
+        m_q.Apar = 0.5*m_p.beta*dg::blas1::dot( m_vol3d, m_temp0);
+    }
     //= 0.5 mu_i N_i u_E^2
     m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( m_npe[1], m_vol3d, m_UE2);
     m_q.energy = m_q.S[0] + m_q.S[1] + m_q.Tperp + m_q.Tpar[0] + m_q.Tpar[1];
@@ -524,22 +621,39 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
         ////////////////////perpendicular dynamics////////////////////////
         dg::blas2::symv( m_dx_N, y[0][i], m_dxN[i]);
         dg::blas2::symv( m_dy_N, y[0][i], m_dyN[i]);
+        dg::blas2::symv( m_dz,   y[0][i], m_dzN[i]);
         dg::blas2::symv( m_dx_U, y[1][i], m_dxU[i]);
         dg::blas2::symv( m_dy_U, y[1][i], m_dyU[i]);
-        dg::blas2::symv( m_dz,   y[0][i], m_dzN[i]);
         dg::blas2::symv( m_dz,   y[1][i], m_dzU[i]);
-        dg::blas1::subroutine( routines::ComputePerpDrifts(
-            m_p.mu[i], m_p.tau[i]),
-            //species depdendent
-            y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
-            y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
-            m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
-            //magnetic parameters
-            m_b[0], m_b[1], m_b[2],
-            m_curv[0], m_curv[1], m_curv[2],
-            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-            m_divCurvKappa, yp[0][i], yp[1][i]
-        );
+        if( m_beta == 0){
+            dg::blas1::subroutine( routines::ComputePerpDrifts(
+                m_p.mu[i], m_p.tau[i]),
+                //species depdendent
+                y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
+                y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
+                m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
+                //magnetic parameters
+                m_b[0], m_b[1], m_b[2],
+                m_curv[0], m_curv[1], m_curv[2],
+                m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
+                m_divCurvKappa, yp[0][i], yp[1][i]
+            );
+        }
+        if( m_beta != 0){
+            dg::blas1::subroutine( routines::ComputePerpDrifts(
+                m_p.mu[i], m_p.tau[i]),
+                //species depdendent
+                y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
+                y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
+                m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
+                m_apar, m_dxA, m_dyA, m_dzA,
+                //magnetic parameters
+                m_b[0], m_b[1], m_b[2],
+                m_curv[0], m_curv[1], m_curv[2],
+                m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
+                m_divCurvKappa, yp[0][i], yp[1][i]
+            );
+        }
     }
 }
 
@@ -652,7 +766,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     // Transform n-1 to n and n to logn
     dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_npe, m_logn);
 
-    // set energy quantities in m_q, --- needs m_npe, m_logn and m_UE2
+    // Compute Apar if necessary --- needs m_npe
+    if( m_beta != 0)
+        compute_apar( t, y[1]);
+
+    // set energy quantities in m_q, --- needs m_npe, m_apar, m_logn and m_UE2
     compute_energies( t, y);
 
     // Set perpendicular dynamics in yp

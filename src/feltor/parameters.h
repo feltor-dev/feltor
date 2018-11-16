@@ -42,7 +42,7 @@ struct Parameters
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
 
-    enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
+    enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
     std::string initne, initphi, curvmode;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
@@ -91,6 +91,8 @@ struct Parameters
         bcyU = dg::str2bc(js["bc"]["velocity"][1].asString());
         bcxP = dg::str2bc(js["bc"]["potential"][0].asString());
         bcyP = dg::str2bc(js["bc"]["potential"][1].asString());
+        bcxA = dg::str2bc(js["bc"].get("induction", {"DIR","DIR"})[0].asString());
+        bcxA = dg::str2bc(js["bc"].get("induction", {"DIR","DIR"})[1].asString());
 
         boxscaleRp  = js.get("boxscaleRp",1.05).asDouble();
         boxscaleRm  = js.get("boxscaleRm",1.05).asDouble();

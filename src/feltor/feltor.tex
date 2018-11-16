@@ -31,21 +31,21 @@ $\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
 %\toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Symbol} & \textbf{Definition} \\
 \midrule
-    perpendicular Poisson bracket&
-    $\left[.,.\right]_\perp$ & 
+    Perpendicular Poisson bracket&
+    $\left[.,.\right]_\perp$ &
     $\left[f,g\right]_\perp := \bhat \cdot \left(\vec{\nabla} f \times \vec\nabla g\right) =
     b_i \varepsilon^{ijk}\partial_j f\partial_k g/\sqrt{g}$  \\
     Projection Tensor&
     $h $ & $h^{ij} := g^{ij} - b^ib^j $\\
     %Alignment Tensor&
     %$t $ & $ t^{ij} := b^ib^j$\\
-    perpendicular Gradient&
+    Perpendicular Gradient&
     $\vec \nabla_\perp $&
     $ \vec \nabla_\perp f := \bhat\times(\vec \nabla f\times \bhat ) \equiv
     h \cdot \nabla f$ \\
     Perpendicular Laplacian&
     $\Delta_\perp $&
-    $ \nabla_\perp^2 f:= \vec \nabla\cdot (\vec \nabla_\perp f)
+    $ \Delta_\perp f:= \vec \nabla\cdot (\vec \nabla_\perp f)
     = \nabla\cdot( h\cdot\nabla f)$  \\
     Curl-b Curvature &
     $\mathcal K_\kappa$ &
@@ -415,7 +415,7 @@ computed by the polarisation and induction equations
 \end{align}
 with the generalised electric potential
 \begin{align}
-  \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i u_E^2}{2 q}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2
+  \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i }{2 q}\frac{(\nabla_\perp\phi)^2}{B^2}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \Delta_\perp
 \end{align}
 
 \subsection{Conservative form}
@@ -461,17 +461,17 @@ The dissipative terms can be decomposed into perpendicular and parallel componen
 \end{align}
 For numerical stabilisation we choose:
 \begin{align}
-\Lambda_{n_e,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\bhat \nabla_\parallel n_e\right) &
- \Lambda_{N_i,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\bhat \nabla_\parallel N_i\right) \\
-  \Lambda_{u_e,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\bhat \nabla_\parallel u_e\right) &
- \Lambda_{U_i,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\bhat \nabla_\parallel U_i\right) 
+\Lambda_{n_e,\parallel} &= \nu_\parallel \Delta_\parallel n_e &
+\Lambda_{N_i,\parallel} &= \nu_\parallel \Delta_\parallel N_i \\
+\Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
+\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i 
 \end{align}
 Similarly, for the perpendicular dissipation we apply hyperviscous terms of second order.
 \begin{align}\label{eq:perpdiffNT}
- \Lambda_{n_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 n_e &
- \Lambda_{N_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i  & \\
- \Lambda_{u_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 (u_e - eA_\parallel/m_e)  &
- \Lambda_{U_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 (U_i + eA_\parallel/m_i)
+ \Lambda_{n_e,\perp} &=  -\nu_\perp \Delta_\perp^2 n_e &
+ \Lambda_{N_i,\perp} &=  -\nu_\perp \Delta_\perp^2 N_i  & \\
+ \Lambda_{u_e,\perp} &=  -\nu_\perp \Delta_\perp^2 (u_e - eA_\parallel/m_e)  &
+ \Lambda_{U_i,\perp} &=  -\nu_\perp \Delta_\perp^2 (U_i + eA_\parallel/m_i)
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
@@ -676,6 +676,7 @@ together with
   \begin{align}
     -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
+    \psi &= \Gamma_{1,i}\phi -\frac{1}{2}\frac{(\nabla_\perp\phi)^2}{B^2} \\
     \left(\frac{\beta}{\mu_i}n_e - \frac{\beta}{\mu_e}N_i-\Delta_\perp\right)
     A_\parallel &= -n_e w_e + N_iW_i
   \end{align}
@@ -733,7 +734,7 @@ itstp       & integer & 2  & - & Number of time steps between outputs \\
 maxout      & integer & 10 & - & Total Number of outputs excluding first \\
 eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
-eps\_pol    & float & 1e-5  & - &  Accuracy of polarisation solver \\
+eps\_pol    & float & 1e-5  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. \\
 jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
 eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
@@ -744,7 +745,7 @@ mu         & float & -0.00272121& - & $\mu_e =-m_e/m_i$.
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
-perp\_diff & string & "viscous" & "hyperviscous" & "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\nabla_\perp^4$, "viscous": $\Lambda_\perp\propto \nu_\perp\nabla_\perp^2$ \\
+perp\_diff & string & "viscous" & "hyperviscous" & "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$, "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
