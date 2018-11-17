@@ -479,12 +479,11 @@ Here the mass diffusion coefficient coincides with the viscous coefficient, henc
 We define the simulation box as
 $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
-\begin{align}
+\begin{align} \label{eq:box}
     R_{\min}&=R_0-\varepsilon^{R-}a\quad
     &&R_{\max}=R_0+\varepsilon^{R+}a\nonumber\\
     Z_{\min}&=-\varepsilon^{Z-}ae\quad
     &&Z_{\max}=\varepsilon^{Z+}ae
-    \label{eq:box}
 \end{align}
 where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.

@@ -108,14 +108,7 @@ int main( int argc, char* argv[])
     //////////////////The initial field/////////////////////////////////
     //initial perturbation
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
-
-    //background profile
-    dg::geo::Nprofile prof(0, p.nprofileamp, gp, mag.psip()); //initial background profile
-    dg::DVec y0(dg::evaluate( prof, grid)), y1(y0);
-    //field aligning
-    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-    y1 = ex.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-    dg::blas1::axpby( 1., y1, 1., y0); //initialize y0
+    dg::DVec y0 = dg::evaluate( init0, grid);
     ///////////////////TIME STEPPER
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
         "ARK-4-2-3", y0, grid.size(), p.eps_time);
@@ -126,32 +119,6 @@ int main( int argc, char* argv[])
     ex.energies( y0);//now energies and potential are at time 0
     dg::DVec T0 = y0, T1(T0);
     double normT0 = dg::blas2::dot( T0, w3d, T0);
-    //////////////////set up netcdf for output/////////////////////////////////////
-
-    file::NC_Error_Handle err;
-    int ncid;
-    err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
-    std::string input = js.toStyledString();
-    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    std::string geom = gs.toStyledString();
-    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
-    int dim_ids[4], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-
-    //energy IDs
-    int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    std::string names0d []= { "heat", "entropy", "dissipation",
-        "entropy_dissipation", "accuracy", "error", "relerror"};
-    std::map<std::string, int> id0d;
-    for( auto name : names0d)
-        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &EtimeID, &id0d[name]);
-    std::string names3d [] = {"T"};
-    std::map<std::string, int> id3d;
-    for( auto name : names3d)
-        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids, &id3d[name]);
-
-    err = nc_enddef(ncid);
     //Now map quantities to values
     std::map<std::string, const dg::DVec*> v3d{ {"T", &y0} };
     const heat::Quantities& q = ex.quantities();
@@ -174,6 +141,29 @@ int main( int argc, char* argv[])
         {"entropy_dissipation", &q.entropy_diffusion},
         {"accuracy", &accuracy}, {"error", &error}, {"relerror", &relerror}
     };
+    //////////////////set up netcdf for output/////////////////////////////////////
+
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
+    std::string input = js.toStyledString();
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    std::string geom = gs.toStyledString();
+    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    int dim_ids[4], tvarID;
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+
+    //energy IDs
+    int EtimeID, EtimevarID;
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    std::map<std::string, int> id0d;
+    for( auto name_value : v0d)
+        err = nc_def_var( ncid, name_value.first.data(), NC_DOUBLE, 1, &EtimeID, &id0d[name_value.first]);
+    std::map<std::string, int> id3d;
+    for( auto name_value : v3d)
+        err = nc_def_var( ncid, name_value.first.data(), NC_DOUBLE, 4, dim_ids, &id3d[name_value.first]);
+
+    err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
@@ -195,8 +185,8 @@ int main( int argc, char* argv[])
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    for( auto name : names0d)
-        err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
+    for( auto name_value : v0d)
+        err = nc_put_vara_double( ncid, id0d[name_value.first], Estart, Ecount, name_value.second);
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -230,7 +220,7 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
-            ex.energies(y0);//advance potential and energies
+            ex.energies(y0);//advance energies
             Estart[0] = step;
             double dEdt = (*v0d["entropy"] - E0)/dt;
             accuracy = 2.*fabs(
@@ -248,8 +238,8 @@ int main( int argc, char* argv[])
             }
             err = nc_open(argv[3], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-            for( auto name : names0d)
-                err = nc_put_vara_double( ncid, id0d[name], Estart, Ecount, v0d[name]);
+            for( auto name_value : v0d)
+                err = nc_put_vara_double( ncid, id0d[name_value.first], Estart, Ecount, name_value.second);
 
             std::cout <<"(Q_tot-Q_0)/Q_0: "
                       << (q.energy-heat0)/heat0<<"\t";

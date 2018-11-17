@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
-    dg::geo::Nprofile prof( mag.psip(), mag.R0(), 0., p.bgprofamp, p.nprofileamp); //initial background ion profile
+    dg::geo::Nprofile(c.psip(), p.nprofileamp/c.psip()(c.R0(),0.), p.bgprofamp )},
     std::array<std::array<dg::DVec,2>,2> y0;
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
     dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation

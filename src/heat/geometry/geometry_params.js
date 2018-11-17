@@ -22,13 +22,6 @@
     "inverseaspectratio" : 0.41071428571428575, //a/R_0
     "elongation"         : 1.75,
     "triangularity"      : 0.47,
-    //----------------------Miscellaneous----------------------
-    "alpha"         :  0.05, //damping thickness
-    "rk4eps"        :  1e-5,
-    "psip_min"      : -6.,
-    "psip_max"      :  0.0, // (> -7.4)
-    "psip_max_cut"  :  5,
-    "psip_max_lim"  :  0.2, 
     "qampl"         :  1
 }
 //@ ----------------------------------------------------------

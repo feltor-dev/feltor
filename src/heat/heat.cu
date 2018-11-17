@@ -66,20 +66,7 @@ int main( int argc, char* argv[])
     //-----------------------------The initial field--------------------
     //initial perturbation
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
-
-    // background profile
-    dg::geo::Nprofile prof(0., p.nprofileamp, gp, mag.psip()); //initial background profile
-    dg::DVec y0( dg::evaluate( prof, grid)), y1(y0);
-
-    // field aligning
-    std::cout << "T aligning" << std::endl;
-    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-    y1 = ex.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
-
-    dg::blas1::axpby( 1., y1, 1., y0); //initialize y0
-
-    std::cout << "Done!\n";
-
+    dg::DVec y0 = dg::evaluate( init0, grid);
     //////////////////////////////////////////////////////////////////
     //Adaptive solver
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(

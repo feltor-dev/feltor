@@ -15,9 +15,7 @@ struct Parameters
     double nu_parallel, nu_perp;
 
     double amp, sigma, posX, posY, sigma_z;
-    double k_psi;
 
-    double nprofileamp;
     enum dg::bc bcx, bcy;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
     double eps_time, rtol, rk4eps;
@@ -44,13 +42,11 @@ struct Parameters
         posX = js["posX"].asDouble();
         posY = js["posY"].asDouble();
         sigma_z = js["sigma_z"].asDouble();
-        k_psi = js["k_psi"].asDouble();
 
         eps_time = js["eps_time"].asDouble();
         rtol = js["rtol"].asDouble();
         bcx = dg::str2bc(js["bcx"].asString());
         bcy = dg::str2bc(js["bcy"].asString());
-        nprofileamp = js["nprofileamp"].asDouble();
         boxscaleRp = js["boxscaleRp"].asDouble();
         boxscaleRm = js["boxscaleRm"].asDouble();
         boxscaleZp = js["boxscaleZp"].asDouble();
@@ -69,9 +65,7 @@ struct Parameters
             << "    posX:         "<<posX<<"\n"
             << "    posY:         "<<posY<<"\n"
             << "    sigma_z:      "<<sigma_z<<"\n";
-        os << "Profile parameters are: \n"
-            <<"     density profile amplitude:    "<<nprofileamp<<"\n"
-            <<"     zonal modes                   "<<k_psi<<"\n"
+        os << "Box parameters are: \n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
             <<"     boxscale Z+:                  "<<boxscaleZp<<"\n"

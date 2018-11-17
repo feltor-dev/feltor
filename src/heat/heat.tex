@@ -33,16 +33,27 @@ tensor.
 $\nu_\parallel$ and $\nu_\perp$ are the respective conduction
 coefficients parallel and perpendicular to this field.
 
+\subsection{Simulation domain}
+We define the simulation box as
+$[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
+where we define
+\begin{align} \label{eq:box}
+    R_{\min}&=R_0-\varepsilon^{R-}a\quad
+    &&R_{\max}=R_0+\varepsilon^{R+}a\nonumber\\
+    Z_{\min}&=-\varepsilon^{Z-}ae\quad
+    &&Z_{\max}=\varepsilon^{Z+}ae
+\end{align}
+where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
+the $\varepsilon$ are free parameters to be specified by the user.
 
 \subsection{Initialization}
-Initialization of $T$ is a Gaussian in the $\varphi =0$ plane.
-\begin{align}
-    T(x,y,0) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
-    \label{}
+Initialization of $T$ is a Gaussian
+\begin{align} \label{eq:initial}
+  T(R,Z,\varphi) = 1 + A\exp\left(
+      -\frac{(R-R_i)^2 + (Z-Z_i)^2}{2\sigma^2} - \frac{(\varphi-\pi)^2}{2\sigma_\varphi^2}\right)
 \end{align}
-where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+where $R_i = p_x a$ and $Z_i = p_y a$ denote the initial position, $A$ is the amplitude and $\sigma$ the
 radius of the blob.
-We then use the fieldline projection to initialize the blob on other planes.
 \subsection{Diagnostics}
 Integrating Eq.~\eqref{eq:temperature} over the volume yields
 \begin{align}
@@ -84,9 +95,9 @@ For the hpc code, there is another mode:
 \begin{verbatim}
 path/to/feltor/src/heat/heat_hpc input.json geometry_params.json output.nc input.nc
 \end{verbatim}
-In this case the temperature field of \code{input.nc} is read
+In this case the temperature field of \code{input.nc} at the last output
+time is read
 and taken as a reference solution.
-
 
 \subsection{Input file structure}
 Input file format: json
@@ -110,17 +121,17 @@ Input file format: json
   rtol  & float  & 1e-6  & - & desired tolerance of adaptive time-stepper \\
   nu\_parallel    & float &100   & - & parallel viscosity $\nu_\parallel$ \\
   nu\_perp    & float &0   & - & perpendicular viscosity $\nu_\perp$ \\
-  amplitude  & float &0.1    & - & amplitude $A$ of the blob \\
-  sigma      & float &5     & - & blob radius $\sigma$ \\
-  sigma\_z   & float &0.025  & - & variance in z in units of $R_0$ \\
-  posX       & float &0.8    & - & blob x-position in units of $a$\\
-  posY       & float &0    & - & blob y-position in units of $a$\\
-  bcx   & char & "NEU"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-  bcy   & char & "NEU"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-  boxscaleRp & float &  1.05, & - & (a little larger than 1) \\
-  boxscaleRm & float &  1.05, & - & (a little larger than 1) \\
-  boxscaleZp & float &  1.05, & - & (a little larger than 1) \\
-  boxscaleZm & float &  1.15, & - & (a little larger than 1) \\
+  amplitude  & float &0.1    & - & amplitude $A$ of the blob in Eq.~\eqref{eq:initial}\\
+  sigma      & float &5     & - & blob radius $\sigma$ in $R$ and $Z$ in Eq.~\eqref{eq:initial} \\
+  sigma\_z   & float &0.025  & - & variance in $\varphi$ in units of $R_0$ in Eq.~\eqref{eq:initial}  \\
+  posX       & float &0.8    & - & blob $R$-position in units of $a$ in Eq.~\eqref{eq:initial} \\
+  posY       & float &0    & - & blob $Z$-position in units of $a$ in Eq.~\eqref{eq:initial} \\
+  bcx   & char & "NEU"      & - & boundary condition in R (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+  bcy   & char & "NEU"      & - & boundary condition in Z (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+  boxscaleRp & float &  1.05, & - & $\varepsilon^{R+}$ in Eq.~\eqref{eq:box} \\
+  boxscaleRm & float &  1.05, & - & $\varepsilon^{R-}$ in Eq.~\eqref{eq:box} \\
+  boxscaleZp & float &  1.05, & - & $\varepsilon^{Z+}$ in Eq.~\eqref{eq:box} \\
+  boxscaleZm & float &  1.15, & - & $\varepsilon^{Z-}$ in Eq.~\eqref{eq:box} \\
   mx     & integer & 10 & - & refinement factor of DS in x \\
   my     & integer & 10 & - & refinement factor of DS in y \\
   rk4eps & float & 0.01 & 1e-5 & Accuracy of fieldline integration in DS \\
@@ -145,10 +156,6 @@ File format: json
     elongation & float & 1 & - & Elongation \\
     triangularity & float & 0 & - & Triangularity \\
     inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
-    alpha  & float & 0.02 & - & Width of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
-    psip\_min & float & -6 & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
-    psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile} \\
-    psip\_max\_lim & float & 1e10 & - & $\psi_p$ for limiter in DS \\
 \bottomrule
 \end{longtable}
 
