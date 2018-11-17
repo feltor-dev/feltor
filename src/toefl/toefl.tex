@@ -144,11 +144,12 @@ echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/toefl/toefl_mpi\
     input.json output.nc
 \end{verbatim}
 All programs write performance informations to std::cout.
-The first opens a terminal window with life simulation results the
-other two write the results to disc. The
-second is for shared memory systems. The third for distributed
-memory systems, which expects the distribution of processes in the
-x and y directions.
+The first is for shared memory systems (OpenMP/GPU) and opens a terminal window with life simulation results.
+ The
+second is for shared memory systems and uses serial netcdf.
+The third is for distributed
+memory systems (MPI+OpenMP/GPU) using parallel netcdf and expects the distribution of processes in the
+x and y directions as command line input parameters.
 
 \subsection{Input file structure}
 Input file format: json
