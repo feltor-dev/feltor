@@ -42,58 +42,75 @@ int main( int argc, char* argv[])
         p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
     dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
     feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
-        feltor( grid, p, gp); //initialize before im!
+        feltor( grid, p, mag); //initialize before im!
     std::cout << "Constructing Implicit...\n";
     feltor::Implicit< dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec >
-        im( grid, p, gp);
+        im( grid, p, mag);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    dg::DVec helper(dg::evaluate(dg::zero,grid));
-    //perturbation
-    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
+    //First the profile and the source (on the host since we want to output those)
+    dg::HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(), p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
+    dg::HVec xpoint_damping = dg::evaluate( dg::one, grid);
+    if( gp.hasXpoint() )
+        xpoint_damping = dg::pullback(
+            dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
+    dg::HVec source_damping = dg::pullback( dg::geo::TanhDamping(
+        mag.psip(), -3.*p.alpha, p.alpha, -1.), grid);
+    dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
+    if( p.omega_source != 0)
+    {
+        feltor.set_source( p.omega_source, profile, source_damping);
+    }
+    dg::HVec profile_damping = dg::pullback(dg::geo::TanhDamping(
+        //first change coordinate from psi to (psi_0 - psip)/psi_0
+        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
+        //then shift tanh
+        p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
+
+    dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
+    dg::blas1::pointwiseDot( profile_damping, profile, profile);
+
+    //Now perturbation
+    dg::DVec ntilde = dg::evaluate(dg::zero,grid);
     if( p.initne == "blob" || p.initne == "straight blob")
     {
+        dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
         if( p.initne == "blob")
-            helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
+            ntilde = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
                 (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
         if( p.initne == "straight blob")
-            helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
+            ntilde = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
                 (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
     }
     else if( p.initne == "turbulence")
     {
+        dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
         dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
-        helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
+        ntilde = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
             (unsigned)p.Nz/2, 1);
     }
     else if( p.initne == "zonal")
     {
-        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
+        dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
+        ntilde = dg::pullback( init0, grid);
     }
     else
-        std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
-    dg::geo::Nprofile(c.psip(), p.nprofileamp/c.psip()(c.R0(),0.), p.bgprofamp )},
+        std::cerr <<"WARNING: Unknown initial condition!\n";
     std::array<std::array<dg::DVec,2>,2> y0;
-    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
-    dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation
-    dg::blas1::plus(y0[0][1], -1); //initialize ni-1
-    if( p.initne == "turbulence" || p.initne == "zonal") //Cut initialization outside separatrix
-    {
-        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(
-            mag.psip(), gp), grid);
-        dg::blas1::pointwiseDot(damping, y0[0][1], y0[0][1]);
-    }
-    std::cout << "initialize ne" << std::endl;
+    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = profile;
+    dg::blas1::axpby( 1., ntilde, 1., y0[0][0]); //sum up background and perturbation
+    std::cout << "initialize ni" << std::endl;
     if( p.initphi == "zero")
-        feltor.initializene( y0[0][1], y0[0][0]);
+        feltor.initializeni( y0[0][0], y0[0][1]);
     else if( p.initphi == "balance")
-        dg::blas1::copy( y0[0][1], y0[0][0]); //set n_e = N_i
+        dg::blas1::copy( y0[0][0], y0[0][1]); //set n_e = N_i
     else
         std::cerr <<"WARNING: Unknown initial condition for phi!\n";
 
@@ -105,11 +122,12 @@ int main( int argc, char* argv[])
     v4d["electrons"] = &y0[0][0], v4d["ions"] = &y0[0][1];
     v4d["Ue"] = &y0[1][0],        v4d["Ui"] = &y0[1][1];
     v4d["potential"] = &feltor.potential()[0];
+    v4d["induction"] = &feltor.induction();
     const feltor::Quantities& q = feltor.quantities();
     double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
     std::map<std::string, const double*> v0d{
         {"energy", &q.energy}, {"ediff", &q.ediff},
-        {"mass", &q.mass}, {"diff", &q.diff},
+        {"mass", &q.mass}, {"diff", &q.diff}, {"Apar", &q.Apar},
         {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
         {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
         {"dEdt", &dEdt}, {"accuracy", &accuracy},
@@ -122,24 +140,29 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    {
-        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    {   //output 3d variables into file
         dg::geo::BFieldR fieldR(mag);
         dg::geo::BFieldZ fieldZ(mag);
         dg::geo::BFieldP fieldP(mag);
 
-        dg::HVec vecR = dg::evaluate( fieldR, grid_out);
-        dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
-        dg::HVec vecP = dg::evaluate( fieldP, grid_out);
-        int vecID[3];
-        err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
-        err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
-        err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
-        err = nc_enddef( ncid);
-        err = nc_put_var_double( ncid, vecID[0], vecR.data());
-        err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-        err = nc_put_var_double( ncid, vecID[2], vecP.data());
-        err = nc_redef(ncid);
+        dg::HVec vecR = dg::pullback( fieldR, grid_out);
+        dg::HVec vecZ = dg::pullback( fieldZ, grid_out);
+        dg::HVec vecP = dg::pullback( fieldP, grid_out);
+        dg::HVec psip = dg::pullback( mag.psip(), grid_out);
+        std::map<std::string, const dg::HVec*> v3d{
+            {"BR", &vecR}, {"BZ", &vecZ}, {"BP", &vecP},
+            {"Psip", &psip}, {"Nprof", &profile }, {"Source", &source_damping }
+        };
+        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+        for( auto pair : v3d)
+        {
+            int vecID;
+            err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 3, &dim_ids[1], &vecID);
+            err = nc_enddef( ncid);
+            err = nc_put_var_double( ncid, vecID, pair.second->data());
+            err = nc_redef(ncid);
+
+        }
     }
 
     //field IDs
@@ -169,7 +192,7 @@ int main( int argc, char* argv[])
     dg::IDMatrix project = dg::create::projection( grid_out, grid);
     for( auto pair : v4d)
     {
-        dg::blas2::symv( project, pair.second, transferD);
+        dg::blas2::symv( project, *pair.second, transferD);
         dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, id4d[pair.first], start, count, transferH.data() );
     }
@@ -247,7 +270,7 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         for( auto pair : v4d)
         {
-            dg::blas2::symv( project, pair.second, transferD);
+            dg::blas2::symv( project, *pair.second, transferD);
             dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, id4d[pair.first], start, count, transferH.data() );
         }

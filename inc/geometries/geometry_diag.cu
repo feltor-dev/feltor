@@ -146,19 +146,15 @@ int main( int argc, char* argv[])
     const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
     const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
     const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
-    bool Xpoint = false;
-    for( int i=7; i<12; i++)
-        if( gp.c[i] != 0)
-            Xpoint = true;
     std::cout << "TEST ACCURACY OF PSI (values must be close to 0!)\n";
-    if( Xpoint)
+    if( gp.hasXpoint())
         std::cout << "    Equilibrium with X-point!\n";
     else
         std::cout << "    NO X-point in flux function!\n";
     std::cout << "psip( 1+e,0)           "<<c.psip()(gp.R_0 + gp.a, 0.)<<"\n";
     std::cout << "psip( 1-e,0)           "<<c.psip()(gp.R_0 - gp.a, 0.)<<"\n";
     std::cout << "psip( 1-de,ke)         "<<c.psip()(R_H, Z_H)<<"\n";
-    if( !Xpoint)
+    if( !gp.hasXpoint())
         std::cout << "psipR( 1-de,ke)        "<<c.psipR()(R_H, Z_H)<<"\n";
     else
     {

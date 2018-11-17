@@ -508,7 +508,7 @@ and initialize the electron density with
 \begin{align} \label{eq:initial_ne}
     n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
 \end{align}
-consisting of a toroidally symmetric background profile $n_{prof}(R,Z)$ and a perturbation
+consisting of a toroidally symmetric background profile $n_{\text{prof}}(R,Z)$ and a perturbation
 $\tilde n(R,Z,\varphi)$.
 Let us define an approximate Heaviside function
 \begin{align}
@@ -519,7 +519,7 @@ where $H(x)$ is the actual Heaviside function and
 $\alpha$ is a (small) width parameter.
 We can then define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
-  n_{prof}(R,Z)=
+  n_{\text{prof}}(R,Z)=
       n_0 + \triangle n_{peak}\frac{\psi_p(R,Z)}{\psi_p(R_0, 0)} \Theta( -\psi_p(R,Z)) H(Z-Z_X)
 \end{align}
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
@@ -540,7 +540,7 @@ We initialize a blob in the R-Z plane
 \end{align}
 Then, we use fieldline integration modulated by 
 \begin{align}
-  m_{blob}(\varphi) = \exp\left( -\frac{\varphi^2 }{\pi^2\sigma_z^2} \right)
+  m_{blob}(s) = \exp\left( -\frac{s^2 }{\pi^2\sigma_z^2} \right)
 \end{align}
 to transform this blob to all other poloidal
 planes.
@@ -569,7 +569,7 @@ We thus define a particle source for electrons as
     (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{\max} -\rho(R,Z)) H(Z-Z_X) \\
     \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},
 \end{align}
-with $0 < \rho_{\min}<1$
+with $0 < \rho_{\max}<1$
 where $\omega_s$ is the source strength parameter. This will result in exponential adaption of the core
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 For ions we use
@@ -738,7 +738,8 @@ jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
 eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
 has to evenly divide both $N_x$ and $N_y$\\
-refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in DS in X- and Y-direction\\
+refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in DS in R- and Z-direction\\
+rk4eps     & float & 1e-5 & 1e-5 & Accuracy of fieldline integrator in DS\\
 mu         & float & -0.00272121& - & $\mu_e =-m_e/m_i$.
     One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
@@ -761,19 +762,18 @@ perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})\\
 initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
-electric potential, "balance": $n_e=N_i$, ExB vorticity equals ion diamagnetic vorticity
+electric potential, "balance": $n_e=N_i$, ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
 \\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
 sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
-posX       & float &0.3    & - & blob x-position in units of $a$\\
-posY       & float &0.0    & - & blob y-position in units of $a$ \\
+posX       & float &0.3    & - & blob R-position in units of $a$\\
+posY       & float &0.0    & - & blob Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
-bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
 source  & float & 0     & - & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
 alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} \\
-rho\_max & float  & -6   & - & Source region boundary $\rho_{\max}$ in Eq.~\eqref{eq:electron_source} \\
+rho\_source & float  & 0.2   & 0.2 & Source region boundary $0<\rho_{\max}<1$ in Eq.~\eqref{eq:electron_source}  \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -808,12 +808,15 @@ Output file format: netcdf-4/hdf5
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &     text attribute & 1 & verbose input file as a string \\
 geomfile   &     text attribute & 1 & verbose geometry input file as a string \\
-x                & Dataset & 1 & $R$-coordinate (computational space, size: $nN_x$)\\
-y                & Dataset & 1 & $Z$-coordinate (computational space, size: $nN_y$)\\
+x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
 x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
 y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
+Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
+Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{\max} - \rho(R,Z)) H(Z-Z_X)$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\

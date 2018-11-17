@@ -20,12 +20,14 @@ struct Parameters
     double eps_gamma;
     double eps_time;
     double rtol;
-    double eps_hat;
     unsigned stages;
     unsigned mx, my;
+    double rk4eps;
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
+    double alpha, beta;
+    double rho_source;
 
     double nu_perp, nu_parallel;
     double c;
@@ -37,40 +39,42 @@ struct Parameters
     double k_psi;
 
     double omega_source;
-    double nprofileamp;
-    double bgprofamp;
+    double nprofamp;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
-    std::string initne, initphi, curvmode;
+    std::string initne, initphi, curvmode, perp_diff;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
         Ny      = js["Ny"].asUInt();
         Nz      = js["Nz"].asUInt();
         dt      = js["dt"].asDouble();
-        cx      = js.get("cx",1).asUInt();
-        cy      = js.get("cy",1).asUInt();
+        cx      = js["compression"].get(0u,1).asUInt();
+        cy      = js["compression"].get(1u,1).asUInt();
         n_out = n, Nx_out = Nx/cx, Ny_out = Ny/cy, Nz_out = Nz;
         itstp   = js["itstp"].asUInt();
         maxout  = js["maxout"].asUInt();
+        eps_time    = js["eps_time"].asDouble();
+        rtol        = js["rtol"].asDouble();
 
         eps_pol     = js["eps_pol"].asDouble();
         jfactor     = js.get("jumpfactor",1).asDouble();
+
         eps_gamma   = js["eps_gamma"].asDouble();
-        eps_time    = js["eps_time"].asDouble();
-        rtol        = js["rtol"].asDouble();
-        eps_hat     = 1.;
         stages      = js.get( "stages", 3).asUInt();
-        mx          = js.get( "multiplyX", 10).asUInt();
-        my          = js.get( "multiplyY", 10).asUInt();
+        mx          = js["refineDS"].get( 0u, 10).asUInt();
+        my          = js["refineDS"].get( 1u, 10).asUInt();
+        rk4eps      = js.get( "rk4eps", 1e-5).asDouble();
 
         mu[0]       = js["mu"].asDouble();
         mu[1]       = +1.;
         tau[0]      = -1.;
         tau[1]      = js["tau"].asDouble();
+        beta        = js.get("beta",0.).asDouble();
         nu_perp     = js["nu_perp"].asDouble();
+        perp_diff   = js.get("perp_diff", "hyperviscous").asString();
         nu_parallel = js["nu_parallel"].asDouble();
         c           = js["resistivity"].asDouble();
 
@@ -81,9 +85,10 @@ struct Parameters
         sigma_z     = js["sigma_z"].asDouble();
         k_psi       = js["k_psi"].asDouble();
 
-        nprofileamp  = js["nprofileamp"].asDouble();
-        bgprofamp    = js["bgprofamp"].asDouble();
+        nprofamp  = js["nprofileamp"].asDouble();
         omega_source = js["source"].asDouble();
+        alpha        = js.get("alpha", 0.02).asDouble();
+        rho_source   = js.get("rho_source", 0.2).asDouble();
 
         bcxN = dg::str2bc(js["bc"]["density"][0].asString());
         bcyN = dg::str2bc(js["bc"]["density"][1].asString());
@@ -91,13 +96,13 @@ struct Parameters
         bcyU = dg::str2bc(js["bc"]["velocity"][1].asString());
         bcxP = dg::str2bc(js["bc"]["potential"][0].asString());
         bcyP = dg::str2bc(js["bc"]["potential"][1].asString());
-        bcxA = dg::str2bc(js["bc"].get("induction", {"DIR","DIR"})[0].asString());
-        bcxA = dg::str2bc(js["bc"].get("induction", {"DIR","DIR"})[1].asString());
+        bcxA = dg::str2bc(js["bc"]["indcution"].get(0u, "DIR").asString());
+        bcyA = dg::str2bc(js["bc"]["indcution"].get(1u, "DIR").asString());
 
-        boxscaleRp  = js.get("boxscaleRp",1.05).asDouble();
-        boxscaleRm  = js.get("boxscaleRm",1.05).asDouble();
-        boxscaleZp  = js.get("boxscaleZp",1.05).asDouble();
-        boxscaleZm  = js.get("boxscaleZm",1.05).asDouble();
+        boxscaleRm  = js["boxscaleR"].get(0u,1.05).asDouble();
+        boxscaleRp  = js["boxscaleR"].get(1u,1.05).asDouble();
+        boxscaleZm  = js["boxscaleZ"].get(0u,1.05).asDouble();
+        boxscaleZp  = js["boxscaleZ"].get(1u,1.05).asDouble();
 
         initne      = js.get( "initne", "blob").asString();
         initphi     = js.get( "initphi", "zero").asString();
@@ -121,8 +126,7 @@ struct Parameters
             << "    sigma_z:      "<<sigma_z<<"\n";
         os << "Profile parameters are: \n"
             <<"     omega_source:                 "<<omega_source<<"\n"
-            <<"     density profile amplitude:    "<<nprofileamp<<"\n"
-            <<"     background profile amplitude: "<<bgprofamp<<"\n"
+            <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
             <<"     boxscale Z+:                  "<<boxscaleZp<<"\n"

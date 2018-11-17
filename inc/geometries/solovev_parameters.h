@@ -79,6 +79,22 @@ struct Parameters
         return js;
     }
 #endif // JSONCPP_VERSION_STRING
+    /**
+    * @brief True if Psip has an Xpoint
+    *
+    * The Xpoint is situated at
+     <tt> R_X = R_0-1.1*triangularity*a</tt>
+     <tt> Z_X = -1.1*elongation*a</tt>
+    *
+    * @return \c true if Psip has an Xpoint, \c false else
+    */
+    bool hasXpoint( ) const{
+        bool Xpoint = false;
+        for( int i=7; i<12; i++)
+            if( c[i] != 0)
+                Xpoint = true;
+        return Xpoint;
+    }
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"
