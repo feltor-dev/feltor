@@ -5,8 +5,6 @@ numerical algorithms in the inc folder. Many contain a comprehensive
 technical documentation in the form of a tex file that should be compiled
 into a pdf.  Here is a short description of each:
 
-asela::    3d gyrofluid electrodynamic model
-
 feltor::    3d gyrofluid full-F electrodynamic model in toroidal geometry
 
 heat::  3d parallel / perpendicular diffusion equation in tokamak geometry
@@ -14,9 +12,8 @@ with realistic flux surfaces. Used in the paper "Three discontinuous
 Galerkin schemes for the anisotropic heat conduction equation on
 non-aligned grids" Comput. Phys. Commun. 199, 29-39 (2016)
 
-asela2d::  2d gyrofluid electrodynamic model (a reduction of asela)
-
-feltor2d::  2d gyrofluid electrodynamic model (a reduction of feltor)
+feltor2d::  2d gyrofluid electrodynamic model (the phi symmetric version
+of feltor)
 
 lamb_dipole:: Programs that reproduce results for the paper "A
 conservative discontinuous Galerkin scheme for the 2D incompressible
