@@ -198,11 +198,19 @@ struct Implicit
         */
         for( unsigned i=0; i<2; i++)
         {
-            //perpendicular hyperdiffusion for N and U
-            dg::blas2::symv( m_lapM_perpN, y[0][i],      m_temp);
-            dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[0][i]);
-            dg::blas2::symv( m_lapM_perpU, y[1][i],      m_temp);
-            dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., yp[1][i]);
+            //dissipation acts on w!
+            if( m_p.perp_diff == "hyperviscous")
+            {
+                dg::blas2::symv( m_lapM_perpN, y[0][i],      m_temp);
+                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[0][i]);
+                dg::blas2::symv( m_lapM_perpU, y[1][i],      m_temp);
+                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., yp[1][i]);
+            }
+            else // m_p.perp_diff == "viscous"
+            {
+                dg::blas2::symv( m_p.nu_perp, m_lapM_perpN, y[0][i],  0., yp[0][i]);
+                dg::blas2::symv( m_p.nu_perp, m_lapM_perpU, y[1][i],  0., yp[1][i]);
+            }
         }
     }
 
@@ -272,10 +280,10 @@ struct Explicit
     // This is to possibly save some computation time in the timestepper
     void update_quantities() {
         // set energy quantities in m_q, --- needs m_apar, m_logn and m_UE2
-        compute_energies( t, m_fields);
+        compute_energies( m_fields);
 
         // remaining of m_q --- needs Delta_par U, N, m_logn
-        compute_dissipation( t, m_fields);
+        compute_dissipation( m_fields);
     }
 
     // get a link to the internal storage for quantities
@@ -301,11 +309,9 @@ struct Explicit
     void compute_phi( double t, const std::array<container,2>& y);
     void compute_psi( double t, const std::array<container,2>& y);
     void compute_apar( double t, const std::array<container,2>& y);
-    void compute_energies( double t,
-        const std::array<std::array<container,2>,2>& y,
+    void compute_energies(
         const std::array<std::array<container,2>,2>& fields);
-    void compute_dissipation( double t,
-        const std::array<std::array<container,2>,2>& y,
+    void compute_dissipation(
         const std::array<std::array<container,2>,2>& fields);
     void compute_perp( double t,
         const std::array<std::array<container,2>,2>& y,
@@ -389,8 +395,8 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
     dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
         m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
     dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
-    dg::assign(  dg::pullback(dg::geo::InvB(mag),      g), m_binv);
-    dg::assign(  dg::pullback(dg::geo::Divb(mag),   g), m_divb);
+    dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
+    dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
 
 }
 template<class Grid, class IMatrix, class Matrix, class container>
@@ -515,14 +521,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const contain
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::initializeni( const container& src, container& target)
 {
-    if (m_p.tau[1] == 0.) {
-        // Ni = ne
-        dg::blas1::copy( src, target);
-    }
-    else {
-        // Ni-1 = Gamma^{-1}(ne-1)
-        dg::blas2::symv( m_multi_invgammaN[0], src, target);
-        dg::blas2::symv( m_multi_invgammaN[0].inv_weights(), target, target);
+    dg::blas1::copy( src, target);
+    if (m_p.tau[1] != 0.) {
+        //add FLR correction -0.5*tau*mu*Delta n_e
+        dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
+            m_lapperpN, src, 1.0, target);
     }
 }
 
@@ -601,13 +604,15 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     //y[0][0] = n_e, y[1][0]:= w_e
     //y[0][1] = N_i, y[1][1]:= W_i
     //----------Compute and set chi----------------------------//
-    dg::blas1::axpby( m_p.beta/m_p.mu[0], y[0][0], -m_p.beta/m_p.mu[1], y[0][1], m_temp0);
+    dg::blas1::axpby(  m_p.beta/m_p.mu[1], y[0][1],
+                      -m_p.beta/m_p.mu[0], y[0][0], m_temp0);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_induction[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    dg::blas1::pointwiseDot( -1., y[0][0], y[1][0], 1., y[0][1], y[1][1], 0., m_temp0);
+    dg::blas1::pointwiseDot(  1., y[0][1], y[1][1],
+                             -1., y[0][0], y[1][0], 0., m_temp0);
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
     std::vector<unsigned> number = m_multigrid.direct_solve(
@@ -663,6 +668,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
                 fields[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
                 fields[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
                 m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
+                //induction
                 m_apar, m_dxA, m_dyA, m_dzA,
                 //magnetic parameters
                 m_b[0], m_b[1], m_b[2],
@@ -681,21 +687,23 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
     const std::array<std::array<container,2>,2>& fields,
     std::array<std::array<container,2>,2>& yp)
 {
+    //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
     {
-        //density
+        //---------------------density--------------------------//
         //density: -Div ( NUb)
         m_ds_N.centered( y[0][i], m_dsN[i]);
         m_ds_U.centered( fields[1][i], m_dsU[i]);
         dg::blas1::pointwiseDot(-1., m_dsN[i], fields[1][i],
-            -1., y[0][i], m_dsU[i], 1., yp[0][i] );
-        dg::blas1::pointwiseDot( -1., y[0][i],fields[1][i],m_divb, 1.,yp[0][i]);
+            -1., fields[0][i], m_dsU[i], 1., yp[0][i] );
+        dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
+            1.,yp[0][i]);
         //density: + nu_par Delta_par N
         dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
                                  1., yp[0][i]);
         m_ds_N.dss( y[0][i], m_dsN[i]);
         dg::blas1::axpby( m_p.nu_parallel, m_dsN[i], 1., yp[0][i]);
-        //velocity
+        //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
         dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
         m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
@@ -708,19 +716,18 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
         m_ds_U.dss( fields[1][i], m_dsU[i]);
         dg::blas1::axpby( m_p.nu_parallel, m_dsU[i], 1., yp[1][i]);
     }
-    //Add Resistivity
+    //------------------Add Resistivity--------------------------//
     dg::blas1::subroutine( routines::AddResistivity( m_p.c, m_p.mu),
-        fields[0][0], fields[0][1], fields[1][0], fields[1][1], yp[1][0], yp[1][1]);
+        fields[0][0], fields[0][1], fields[1][0], fields[1][1],
+        yp[1][0], yp[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
     const std::array<std::array<container,2>,2>& fields)
 {
-    ////////////////////ENERGETICS///////////////////////////////////////
     double z[2]    = {-1.0,1.0};
     m_q.mass = dg::blas1::dot( m_vol3d, fields[0][0]);
-    //compute energies
     for(unsigned i=0; i<2; i++)
     {
         m_q.S[i] = z[i]*m_p.tau[i]*dg::blas2::dot(
@@ -732,8 +739,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
     //= 0.5 beta (grad_perp Apar)^2
     if( m_p.beta != 0)
     {
-        dg::tensor::multiply3d( m_hh, m_dxA, m_dyA, m_dzA, m_temp0, m_temp1, m_temp2);
-        dg::blas1::subroutine( routines::ComputePsi(), m_temp0, m_dxA, m_dyA, m_dzA,
+        dg::tensor::multiply3d( m_hh, m_dxA, m_dyA, m_dzA,
+            m_temp0, m_temp1, m_temp2);
+        dg::blas1::subroutine( routines::ComputePsi(),
+            m_temp0, m_dxA, m_dyA, m_dzA,
             m_temp0, m_temp1, m_temp2);
         m_q.Apar = 0.5*m_p.beta*dg::blas1::dot( m_vol3d, m_temp0);
     }
@@ -783,8 +792,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
             m_temp2, m_vol3d, m_dsU[i]);
     }
     // resistive energy (quadratic current): -C (n_e (U_i-u_e))**2
-    dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1], -1., fields[0][0], fields[1][0],
-        0., m_temp0);
+    dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1],
+        -1., fields[0][0], fields[1][0], 0., m_temp0);
     m_q.Dres = -m_p.c*dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
     m_q.ediff = m_q.Dres
         + m_q.Dpar[0]+m_q.Dperp[0]+m_q.Dpar[1]+m_q.Dperp[1]

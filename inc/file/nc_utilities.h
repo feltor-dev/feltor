@@ -1,6 +1,6 @@
 #pragma once
 #ifndef _FILE_INCLUDED_BY_DG_
-#pragma message( "The inclusion of file/nc_utilities.h is deprecated. Please use dg/file/file.h")
+#pragma message( "The inclusion of file/nc_utilities.h is deprecated. Please use dg/file/nc_utilities.h")
 #endif //_INCLUDED_BY_DG_
 
 #include <exception>

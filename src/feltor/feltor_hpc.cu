@@ -119,8 +119,8 @@ int main( int argc, char* argv[])
     ////////////map quantities to output/////////////////
     //since we map pointers we don't need to update those later
     std::map<std::string, const dg::DVec* > v4d;
-    v4d["electrons"] = &y0[0][0], v4d["ions"] = &y0[0][1];
-    v4d["Ue"] = &y0[1][0],        v4d["Ui"] = &y0[1][1];
+    v4d["electrons"] = &feltor.fields()[0][0], v4d["ions"] = &feltor.fields()[0][1];
+    v4d["Ue"] = &feltor.fields()[1][0],        v4d["Ui"] = &feltor.fields()[1][1];
     v4d["potential"] = &feltor.potential()[0];
     v4d["induction"] = &feltor.induction();
     const feltor::Quantities& q = feltor.quantities();

@@ -113,19 +113,27 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"     mu_e              = "<<mu[0]<<"\n"
             <<"     mu_i              = "<<mu[1]<<"\n"
-            <<"     El.-temperature:  = "<<tau[0]<<"\n"
-            <<"     Ion-temperature:  = "<<tau[1]<<"\n"
-            <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
-            <<"     par. Resistivity: = "<<c<<"\n"
-            <<"     par. Viscosity:   = "<<nu_parallel<<"\n";
-        os  <<"Blob parameters are: \n"
-            << "    amplitude:    "<<amp<<"\n"
-            << "    width:        "<<sigma<<"\n"
-            << "    posX:         "<<posX<<"\n"
-            << "    posY:         "<<posY<<"\n"
-            << "    sigma_z:      "<<sigma_z<<"\n";
+            <<"     El.-temperature   = "<<tau[0]<<"\n"
+            <<"     Ion-temperature   = "<<tau[1]<<"\n"
+            <<"     perp. Viscosity   = "<<nu_perp<<"\n"
+            <<"     perp. Viscosity   = "<<perp_diff<<"\n"
+            <<"     par. Resistivity  = "<<c<<"\n"
+            <<"     beta              = "<<beta<<"\n"
+            <<"     par. Viscosity    = "<<nu_parallel<<"\n"
+            <<"     curvature mode    = "<<curvmode<<"\n";
+        os  <<"Initial parameters are: \n"
+            <<"    amplitude:    "<<amp<<"\n"
+            <<"    width:        "<<sigma<<"\n"
+            <<"    posX:         "<<posX<<"\n"
+            <<"    posY:         "<<posY<<"\n"
+            <<"    sigma_z:      "<<sigma_z<<"\n"
+            <<"    k_psi:        "<<k_psi<<"\n"
+            <<"    init n_e:     "<<initne<<"\n"
+            <<"    init Phi:     "<<initphi<<"\n";
         os << "Profile parameters are: \n"
             <<"     omega_source:                 "<<omega_source<<"\n"
+            <<"     rho_source:                   "<<rho_source<<"\n"
+            <<"     alpha:                        "<<alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
@@ -136,11 +144,14 @@ struct Parameters
             <<"     Nx = "<<Nx<<"\n"
             <<"     Ny = "<<Ny<<"\n"
             <<"     Nz = "<<Nz<<"\n"
-            <<"     dt = "<<dt<<"\n";
-        os << "     Stopping for Polar CG:   "<<eps_pol<<"\n"
-            <<"     Jump scale factor:   "<<jfactor<<"\n"
-            <<"     Stopping for Gamma CG:   "<<eps_gamma<<"\n"
-            <<"     Stopping for Time  CG:   "<<eps_time<<"\n";
+            <<"     dt = "<<dt<<"\n"
+            <<"     Accuracy Polar CG:    "<<eps_pol<<"\n"
+            <<"     Jump scale factor:    "<<jfactor<<"\n"
+            <<"     Accuracy Gamma CG:    "<<eps_gamma<<"\n"
+            <<"     Accuracy Time  CG:    "<<eps_time<<"\n"
+            <<"     Accuracy Time Stepper "<<rtol<<"\n"
+            <<"     Accuracy Fieldline    "<<rk4eps<<"\n"
+            <<"     Refined DS            "<<mx<<" "<<my<<"\n";
         os << "Output parameters are: \n"
             <<"     n_out  =              "<<n_out<<"\n"
             <<"     Nx_out =              "<<Nx_out<<"\n"
@@ -148,16 +159,15 @@ struct Parameters
             <<"     Nz_out =              "<<Nz_out<<"\n"
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
-        os << "Boundary condition is: \n"
+        os << "Boundary conditions are: \n"
             <<"     bc density x   = "<<dg::bc2str(bcxN)<<"\n"
             <<"     bc density y   = "<<dg::bc2str(bcyN)<<"\n"
             <<"     bc velocity x  = "<<dg::bc2str(bcxU)<<"\n"
             <<"     bc velocity y  = "<<dg::bc2str(bcyU)<<"\n"
             <<"     bc potential x = "<<dg::bc2str(bcxP)<<"\n"
             <<"     bc potential y = "<<dg::bc2str(bcyP)<<"\n"
-            <<"     init n_e       = "<<initne<<"\n"
-            <<"     init Phi       = "<<initphi<<"\n"
-            <<"     curvature mode = "<<curvmode<<"\n";
+            <<"     bc induction x = "<<dg::bc2str(bcxA)<<"\n"
+            <<"     bc induction y = "<<dg::bc2str(bcyA)<<"\n"
         os << std::flush;
     }
 };
