@@ -181,6 +181,7 @@ int main( int argc, char* argv[])
     {
         std::array<std::array<dg::DVec,2>,2> y1(y0);
         feltor( time, y0, y1);
+        feltor.update_quantities();
     }
     q.display(std::cout);
     double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
@@ -236,6 +237,7 @@ int main( int argc, char* argv[])
             }
             step++;
 
+            feltor.update_quantities();
             dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));

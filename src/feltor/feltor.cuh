@@ -15,11 +15,11 @@ struct AddResistivity{
         m_mu[0] = mu[0], m_mu[1] = mu[1];
     }
     DG_DEVICE
-    void operator()( double tilde_ne, double tilde_ni, double ue,
+    void operator()( double ne, double ni, double ue,
         double ui, double& dtUe, double& dtUi) const{
-        double current = (tilde_ne+1)*(ui-ue);
+        double current = ne*(ui-ue);
         dtUe += -m_C/m_mu[0] * current;
-        dtUi += -m_C/m_mu[1] * (tilde_ne+1)/(tilde_ni+1) * current;
+        dtUi += -m_C/m_mu[1] * ne/ni * current;
     }
     private:
     double m_C;
@@ -30,8 +30,8 @@ struct ComputePerpDrifts{
         m_mu(mu), m_tau(tau), m_beta(beta){}
     DG_DEVICE
     void operator()(
-            double tilde_N, double d0N, double d1N, double d2N,
-            double U,       double d0U, double d1U, double d2U,
+            double N, double d0N, double d1N, double d2N,
+            double U, double d0U, double d1U, double d2U,
             double d0P, double d1P, double d2P,
             double b_0,         double b_1,         double b_2,
             double curv0,       double curv1,       double curv2,
@@ -40,7 +40,6 @@ struct ComputePerpDrifts{
             double& dtN, double& dtU
         )
     {
-        double N = tilde_N + 1.;
         double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
         double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
         double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
@@ -68,8 +67,8 @@ struct ComputePerpDrifts{
     }
     DG_DEVICE
     void operator()(
-            double tilde_N, double d0N, double d1N, double d2N,
-            double U,       double d0U, double d1U, double d2U,
+            double N, double d0N, double d1N, double d2N,
+            double U, double d0U, double d1U, double d2U,
             double d0P, double d1P, double d2P,
             double A,       double d0A, double d1A, double d2A,
             double b_0,         double b_1,         double b_2,
@@ -80,7 +79,7 @@ struct ComputePerpDrifts{
         )
     {
         //first compute the regular dynamics
-        this->operator()( tilde_N,  d0N,  d1N,  d2N,
+        this->operator()( N,  d0N,  d1N,  d2N,
              U,        d0U,  d1U,  d2U,
              d0P,  d1P,  d2P,
              b_0,          b_1,          b_2,
@@ -89,7 +88,6 @@ struct ComputePerpDrifts{
              divCurvKappa,
              dtN, dtU);
         //now add the additional terms from modified parallel derivative
-        double N = tilde_N + 1.;
         double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
         double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
         double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
@@ -195,8 +193,8 @@ struct Implicit
     {
         /* y[0][0] := N_e - 1
            y[0][1] := N_i - 1
-           y[1][0] := U_e
-           y[1][1] := U_i
+           y[1][0] := w_e
+           y[1][1] := W_i
         */
         for( unsigned i=0; i<2; i++)
         {
@@ -266,13 +264,26 @@ struct Explicit
     //Given n_e-1 initialize N_i-1 such that phi=0
     void initializeni( const container& ne, container& ni);
 
-    ///@param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := U_e, y[3] := U_i
     void operator()( double t,
         const std::array<std::array<container,2>,2>& y,
         std::array<std::array<container,2>,2>& yp);
 
+    // update quantities to the state of the last call to operator()
+    // This is to possibly save some computation time in the timestepper
+    void update_quantities() {
+        // set energy quantities in m_q, --- needs m_apar, m_logn and m_UE2
+        compute_energies( t, m_fields);
+
+        // remaining of m_q --- needs Delta_par U, N, m_logn
+        compute_dissipation( t, m_fields);
+    }
+
+    // get a link to the internal storage for quantities
     const Quantities& quantities( ) const{
         return m_q;
+    }
+    const std::array<std::array<container,2>,2>& fields() const{
+        return m_fields;
     }
     const dg::geo::DS<Geometry, IMatrix, Matrix, container>& ds() {
         return m_ds_N;
@@ -291,14 +302,18 @@ struct Explicit
     void compute_psi( double t, const std::array<container,2>& y);
     void compute_apar( double t, const std::array<container,2>& y);
     void compute_energies( double t,
-        const std::array<std::array<container,2>,2>& y);
+        const std::array<std::array<container,2>,2>& y,
+        const std::array<std::array<container,2>,2>& fields);
     void compute_dissipation( double t,
-        const std::array<std::array<container,2>,2>& y);
+        const std::array<std::array<container,2>,2>& y,
+        const std::array<std::array<container,2>,2>& fields);
     void compute_perp( double t,
         const std::array<std::array<container,2>,2>& y,
+        const std::array<std::array<container,2>,2>& fields,
         std::array<std::array<container,2>,2>& yp);
     void compute_parallel( double t,
         const std::array<std::array<container,2>,2>& y,
+        const std::array<std::array<container,2>,2>& fields,
         std::array<std::array<container,2>,2>& yp);
     void construct_mag( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);
@@ -319,8 +334,9 @@ struct Explicit
 
     container m_apar, m_dxA, m_dyA, m_dzA;
     std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
-    std::array<container,2> m_npe, m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
+    std::array<container,2> m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
     std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU;
+    std::array<std::array<container,2>,2> m_fields;
 
     std::vector<container> m_multi_chi;
 
@@ -471,7 +487,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_phi[0] = m_phi[1] = m_temp0;
-    m_dxPhi = m_dyPhi = m_dzPhi = m_npe = m_logn = m_phi;
+    m_dxPhi = m_dyPhi = m_dzPhi = m_fields[0] = m_fields[1] = m_logn = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
     m_apar = m_dxA = m_dyA = m_dzA = m_phi[0];
     construct_mag( g, p, mag);
@@ -579,18 +595,19 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
 }
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
-    double time, const std::array<container,2>& y)
+    double time, std::array<std::array<container,2>,2>& y)
 {
-    //y[0]:= w_e
-    //y[1]:= W_i
+    //on input
+    //y[0][0] = n_e, y[1][0]:= w_e
+    //y[0][1] = N_i, y[1][1]:= W_i
     //----------Compute and set chi----------------------------//
-    dg::blas1::axpby( m_p.beta/m_p.mu[0], m_npe[0], -m_p.beta/m_p.mu[1], m_npe[1], m_temp0);
+    dg::blas1::axpby( m_p.beta/m_p.mu[0], y[0][0], -m_p.beta/m_p.mu[1], y[0][1], m_temp0);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_induction[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    dg::blas1::pointwiseDot( -1., m_npe[0], y[0], 1., m_npe[1], y[1], 0., m_temp0);
+    dg::blas1::pointwiseDot( -1., y[0][0], y[1][0], 1., y[0][1], y[1][1], 0., m_temp0);
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
     std::vector<unsigned> number = m_multigrid.direct_solve(
@@ -602,59 +619,35 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     dg::blas2::symv( m_dx_A, m_apar, m_dxA);
     dg::blas2::symv( m_dy_A, m_apar, m_dyA);
     dg::blas2::symv( m_dz,   m_apar, m_dzA);
-}
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
-    double t,
-    const std::array<std::array<container,2>,2>& y)
-{
-    ////////////////////ENERGETICS///////////////////////////////////////
-    double z[2]    = {-1.0,1.0};
-    m_q.mass = dg::blas1::dot( m_vol3d, y[0][0]);
-    //compute energies
-    for(unsigned i=0; i<2; i++)
-    {
-        m_q.S[i] = z[i]*m_p.tau[i]*dg::blas2::dot(
-            m_logn[i], m_vol3d, m_npe[i]);
-        dg::blas1::pointwiseDot( y[1][i], y[1][i], m_temp0); //U^2
-        m_q.Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot(
-            m_npe[i], m_vol3d, m_temp0);
-    }
-    //= 0.5 beta (grad_perp Apar)^2
-    if( m_p.beta != 0)
-    {
-        dg::tensor::multiply3d( m_hh, m_dxA, m_dyA, m_dzA, m_temp0, m_temp1, m_temp2);
-        dg::blas1::subroutine( routines::ComputePsi(), m_temp0, m_dxA, m_dyA, m_dzA,
-            m_temp0, m_temp1, m_temp2);
-        m_q.Apar = 0.5*m_p.beta*dg::blas1::dot( m_vol3d, m_temp0);
-    }
-    //= 0.5 mu_i N_i u_E^2
-    m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( m_npe[1], m_vol3d, m_UE2);
-    m_q.energy = m_q.S[0] + m_q.S[1] + m_q.Tperp + m_q.Tpar[0] + m_q.Tpar[1];
+    //----------Compute Velocities-----------------------------//
+    dg::blas1::axpby( 1., y[1][0], -m_p.beta/m_p.mu[0], m_apar, y[1][0]);
+    dg::blas1::axpby( 1., y[1][1], -m_p.beta/m_p.mu[1], m_apar, y[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
     double t,
     const std::array<std::array<container,2>,2>& y,
+    const std::array<std::array<container,2>,2>& fields,
     std::array<std::array<container,2>,2>& yp)
 {
+    //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
     {
         ////////////////////perpendicular dynamics////////////////////////
         dg::blas2::symv( m_dx_N, y[0][i], m_dxN[i]);
         dg::blas2::symv( m_dy_N, y[0][i], m_dyN[i]);
         dg::blas2::symv( m_dz,   y[0][i], m_dzN[i]);
-        dg::blas2::symv( m_dx_U, y[1][i], m_dxU[i]);
-        dg::blas2::symv( m_dy_U, y[1][i], m_dyU[i]);
-        dg::blas2::symv( m_dz,   y[1][i], m_dzU[i]);
+        dg::blas2::symv( m_dx_U, fields[1][i], m_dxU[i]);
+        dg::blas2::symv( m_dy_U, fields[1][i], m_dyU[i]);
+        dg::blas2::symv( m_dz,   fields[1][i], m_dzU[i]);
         if( m_p.beta == 0){
             dg::blas1::subroutine( routines::ComputePerpDrifts(
                 m_p.mu[i], m_p.tau[i], m_p.beta),
                 //species depdendent
-                y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
-                y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
+                fields[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
+                fields[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
                 m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
                 //magnetic parameters
                 m_b[0], m_b[1], m_b[2],
@@ -667,8 +660,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
             dg::blas1::subroutine( routines::ComputePerpDrifts(
                 m_p.mu[i], m_p.tau[i], m_p.beta),
                 //species depdendent
-                y[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
-                y[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
+                fields[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
+                fields[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
                 m_dxPhi[i], m_dyPhi[i], m_dzPhi[i],
                 m_apar, m_dxA, m_dyA, m_dzA,
                 //magnetic parameters
@@ -685,6 +678,7 @@ template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
     double t,
     const std::array<std::array<container,2>,2>& y,
+    const std::array<std::array<container,2>,2>& fields,
     std::array<std::array<container,2>,2>& yp)
 {
     for( unsigned i=0; i<2; i++)
@@ -692,10 +686,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
         //density
         //density: -Div ( NUb)
         m_ds_N.centered( y[0][i], m_dsN[i]);
-        m_ds_U.centered( y[1][i], m_dsU[i]);
-        dg::blas1::pointwiseDot(-1., m_dsN[i], y[1][i],
+        m_ds_U.centered( fields[1][i], m_dsU[i]);
+        dg::blas1::pointwiseDot(-1., m_dsN[i], fields[1][i],
             -1., y[0][i], m_dsU[i], 1., yp[0][i] );
-        dg::blas1::pointwiseDot( -1., y[0][i],y[1][i],m_divb, 1.,yp[0][i]);
+        dg::blas1::pointwiseDot( -1., y[0][i],fields[1][i],m_divb, 1.,yp[0][i]);
         //density: + nu_par Delta_par N
         dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
                                  1., yp[0][i]);
@@ -703,7 +697,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
         dg::blas1::axpby( m_p.nu_parallel, m_dsN[i], 1., yp[0][i]);
         //velocity
         // Burgers term: -0.5 ds U^2
-        dg::blas1::pointwiseDot(y[1][i], y[1][i], m_temp1); //U^2
+        dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
         m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
         m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
@@ -711,18 +705,46 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
         // diffusion: + nu_par Delta_par U
         dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
                                 1., yp[1][i]);
-        m_ds_U.dss( y[1][i], m_dsU[i]);
+        m_ds_U.dss( fields[1][i], m_dsU[i]);
         dg::blas1::axpby( m_p.nu_parallel, m_dsU[i], 1., yp[1][i]);
     }
     //Add Resistivity
     dg::blas1::subroutine( routines::AddResistivity( m_p.c, m_p.mu),
-        y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
+        fields[0][0], fields[0][1], fields[1][0], fields[1][1], yp[1][0], yp[1][1]);
+}
+
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
+    const std::array<std::array<container,2>,2>& fields)
+{
+    ////////////////////ENERGETICS///////////////////////////////////////
+    double z[2]    = {-1.0,1.0};
+    m_q.mass = dg::blas1::dot( m_vol3d, fields[0][0]);
+    //compute energies
+    for(unsigned i=0; i<2; i++)
+    {
+        m_q.S[i] = z[i]*m_p.tau[i]*dg::blas2::dot(
+            m_logn[i], m_vol3d, fields[0][i]);
+        dg::blas1::pointwiseDot( fields[1][i], fields[1][i], m_temp0); //U^2
+        m_q.Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot(
+            fields[0][i], m_vol3d, m_temp0);
+    }
+    //= 0.5 beta (grad_perp Apar)^2
+    if( m_p.beta != 0)
+    {
+        dg::tensor::multiply3d( m_hh, m_dxA, m_dyA, m_dzA, m_temp0, m_temp1, m_temp2);
+        dg::blas1::subroutine( routines::ComputePsi(), m_temp0, m_dxA, m_dyA, m_dzA,
+            m_temp0, m_temp1, m_temp2);
+        m_q.Apar = 0.5*m_p.beta*dg::blas1::dot( m_vol3d, m_temp0);
+    }
+    //= 0.5 mu_i N_i u_E^2
+    m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( fields[0][1], m_vol3d, m_UE2);
+    m_q.energy = m_q.S[0] + m_q.S[1] + m_q.Tperp + m_q.Tpar[0] + m_q.Tpar[1];
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
-    double t,
-    const std::array<std::array<container,2>,2>& y)
+    const std::array<std::array<container,2>,2>& fields)
 {
     //alignement: lnN * Delta_s N
     m_q.aligned = dg::blas2::dot( m_logn[0], m_vol3d, m_dsN[0]);
@@ -735,9 +757,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         //Compute dissipation for N
         // Z*(tau (1+lnN )+psi + 0.5 mu U^2)
         dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i], m_p.tau[i]),
-                m_temp2, m_logn[i], m_phi[i], y[1][i]);
+                m_temp2, m_logn[i], m_phi[i], fields[1][i]);
         // perp dissipation for N: -nu_perp Delta_p**2 N
-        dg::blas2::gemv( m_lapperpN, y[0][i], m_temp1);
+        dg::blas1::transform( fields[0][i], m_temp0, dg::PLUS<double>(-1));
+        dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
         dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
         m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
             m_temp2, m_vol3d, m_temp0);
@@ -748,9 +771,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
                         m_temp2, m_vol3d, m_dsN[i]);
         //Compute parallel dissipation for U
         //Z*mu*N*U nu_parallel *( Delta_s U)
-        dg::blas1::pointwiseDot( z[i]*m_p.mu[i], m_npe[i], y[1][i], 0, m_temp2);
-        // perp dissipation for U: -nu_perp Delta_p**2 U
-        dg::blas2::gemv( m_lapperpU, y[1][i], m_temp1);
+        dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i], 0, m_temp2);
+        // perp dissipation for U: -nu_perp Delta_p**2 W
+        dg::blas1::axpyby( p.beta/p.mu[i], m_apar, 1., fields[1][i], m_temp0);
+        dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
         dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
         m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
             m_temp2, m_vol3d, m_temp0);
@@ -759,7 +783,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
             m_temp2, m_vol3d, m_dsU[i]);
     }
     // resistive energy (quadratic current): -C (n_e (U_i-u_e))**2
-    dg::blas1::pointwiseDot(1., m_npe[0], y[1][1], -1., m_npe[0], y[1][0],
+    dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1], -1., fields[0][0], fields[1][0],
         0., m_temp0);
     m_q.Dres = -m_p.c*dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
     m_q.ediff = m_q.Dres
@@ -767,10 +791,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         + m_q.Dpar[2]+m_q.Dperp[2]+m_q.Dpar[3]+m_q.Dperp[3];
 }
 
-/* y[0][0] := N_e - 1
+/* y[0][0] := n_e - 1
    y[0][1] := N_i - 1
-   y[1][0] := U_e
-   y[1][1] := U_i
+   y[1][0] := w_e
+   y[1][1] := W_i
 */
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
@@ -788,23 +812,19 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     compute_psi( t, y[0]);
 
     // Transform n-1 to n and n to logn
-    dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_npe, m_logn);
+    dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
 
-    // Compute Apar if necessary --- needs m_npe
+    // Compute Apar and m_U if necessary --- reads and updates m_fields
     if( m_p.beta != 0)
-        compute_apar( t, y[1]);
-
-    // set energy quantities in m_q, --- needs m_npe, m_apar, m_logn and m_UE2
-    compute_energies( t, y);
+        compute_apar( t, m_fields);
+    else
+        dg::blas1::copy( y[1], m_fields[1]);
 
     // Set perpendicular dynamics in yp
-    compute_perp( t, y, yp);
+    compute_perp( t, y, m_fields, yp);
 
     // Add parallel dynamics including resistivity --- needs m_logn
-    compute_parallel( t, y, yp);
-
-    // remaining of m_q --- needs Delta_par U, N, m_logn, m_npe
-    compute_dissipation( t, y);
+    compute_parallel( t, y, m_fields, yp);
 
     //Add particle source to dtNe
     if( m_omega_source != 0)
