@@ -167,7 +167,7 @@ struct Parameters
             <<"     bc potential x = "<<dg::bc2str(bcxP)<<"\n"
             <<"     bc potential y = "<<dg::bc2str(bcyP)<<"\n"
             <<"     bc induction x = "<<dg::bc2str(bcxA)<<"\n"
-            <<"     bc induction y = "<<dg::bc2str(bcyA)<<"\n"
+            <<"     bc induction y = "<<dg::bc2str(bcyA)<<"\n";
         os << std::flush;
     }
 };

@@ -672,6 +672,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
+\begin{subequations} \label{eq:elliptic}
   \begin{align}
     -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
@@ -679,7 +680,8 @@ together with
     \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
     A_\parallel &= N_iW_i-n_e w_e
   \end{align}
-  (Note that these are all positive definite operators).
+\end{subequations}
+Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
 The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$
 \begin{align}
   \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}

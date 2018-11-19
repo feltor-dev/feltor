@@ -8,10 +8,13 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
-all: feltor feltor_hpc
+all: feltor feltor_hpc manufactured
 
 feltor: feltor.cu feltor.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK
+
+manufactured: manufactured.cu manufactured.h feltor.cuh
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB)
 
 feltor_hpc: feltor_hpc.cu feltor.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)# -DDG_BENCHMARK
@@ -22,4 +25,4 @@ feltor_mpi: feltor_mpi.cu feltor.cuh
 .PHONY: clean
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi
+	rm -f feltor feltor_hpc feltor_mpi manufactured

@@ -748,7 +748,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
     }
     //= 0.5 mu_i N_i u_E^2
     m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( fields[0][1], m_vol3d, m_UE2);
-    m_q.energy = m_q.S[0] + m_q.S[1] + m_q.Tperp + m_q.Tpar[0] + m_q.Tpar[1];
+    m_q.energy = m_q.S[0] + m_q.S[1] + m_q.Tperp + m_q.Apar
+                 + m_q.Tpar[0] + m_q.Tpar[1];
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
