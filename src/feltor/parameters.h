@@ -74,7 +74,7 @@ struct Parameters
         tau[1]      = js["tau"].asDouble();
         beta        = js.get("beta",0.).asDouble();
         nu_perp     = js["nu_perp"].asDouble();
-        perp_diff   = js.get("perp_diff", "hyperviscous").asString();
+        perp_diff   = js.get("perp_diff", "viscous").asString();
         nu_parallel = js["nu_parallel"].asDouble();
         c           = js["resistivity"].asDouble();
 

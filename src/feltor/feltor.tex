@@ -466,12 +466,12 @@ For numerical stabilisation we choose:
 \Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
 \Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i 
 \end{align}
-Similarly, for the perpendicular dissipation we apply hyperviscous terms of second order.
+Similarly, for the perpendicular dissipation we apply viscous terms of second order.
 \begin{align}\label{eq:perpdiffNT}
- \Lambda_{n_e,\perp} &=  -\nu_\perp \Delta_\perp^2 n_e &
- \Lambda_{N_i,\perp} &=  -\nu_\perp \Delta_\perp^2 N_i  & \\
- \Lambda_{u_e,\perp} &=  -\nu_\perp \Delta_\perp^2 (u_e - eA_\parallel/m_e)  &
- \Lambda_{U_i,\perp} &=  -\nu_\perp \Delta_\perp^2 (U_i + eA_\parallel/m_i)
+ \Lambda_{n_e,\perp} &=  -\nu_\perp \Delta_\perp n_e &
+ \Lambda_{N_i,\perp} &=  -\nu_\perp \Delta_\perp N_i  & \\
+ \Lambda_{u_e,\perp} &=  -\nu_\perp \Delta_\perp (u_e - eA_\parallel/m_e)  &
+ \Lambda_{U_i,\perp} &=  -\nu_\perp \Delta_\perp (U_i + eA_\parallel/m_i)
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
@@ -743,12 +743,12 @@ stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-
 has to evenly divide both $N_x$ and $N_y$\\
 refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in DS in R- and Z-direction\\
 rk4eps     & float & 1e-5 & 1e-5 & Accuracy of fieldline integrator in DS\\
-mu         & float & -0.00272121& - & $\mu_e =-m_e/m_i$.
+mu         & float & -0.000272121& - & $\mu_e =-m_e/m_i$.
     One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
-perp\_diff & string & "viscous" & "hyperviscous" & "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$, "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ \\
+perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$\\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\

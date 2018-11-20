@@ -308,7 +308,7 @@ struct Explicit
   private:
     void compute_phi( double t, const std::array<container,2>& y);
     void compute_psi( double t, const std::array<container,2>& y);
-    void compute_apar( double t, const std::array<container,2>& y);
+    void compute_apar( double t, std::array<std::array<container,2>,2>& y);
     void compute_energies(
         const std::array<std::array<container,2>,2>& fields);
     void compute_dissipation(
@@ -330,6 +330,9 @@ struct Explicit
 
     container m_UE2;
     container m_temp0, m_temp1, m_temp2;//helper variables
+#ifdef DG_MANUFACTURED
+    container m_R, m_Z, m_P; //coordinates
+#endif //DG_MANUFACTURED
 
     //these should be considered const
     std::array<container,3> m_curv, m_curvKappa, m_b;
@@ -471,6 +474,11 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
 template<class Grid, class IMatrix, class Matrix, class container>
 Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     feltor::Parameters p, dg::geo::TokamakMagneticField mag):
+#ifdef DG_MANUFACTURED
+    m_R( dg::pullback( dg::cooX3d, g)),
+    m_Z( dg::pullback( dg::cooY3d, g)),
+    m_P( dg::pullback( dg::cooZ3d, g)),
+#endif //DG_MANUFACTURED
     /////////the poisson operators ////////////////////////////////////////
     m_dx_N( dg::create::dx( g, p.bcxN) ),
     m_dx_U( dg::create::dx( g, p.bcxU) ),
@@ -551,13 +559,27 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
     {
         //compute Gamma N_i - n_e
         m_old_gammaN.extrapolate( time, m_temp0);
+#ifdef DG_MANUFACTURED
+        dg::blas1::copy( y[1], m_temp1);
+        dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+            m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
+        std::vector<unsigned> numberG = m_multigrid.direct_solve(
+            m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
+#else
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_temp0, y[1], m_p.eps_gamma);
+#endif //DG_MANUFACTURED
         m_old_gammaN.update( time, m_temp0);
         if(  numberG[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
         dg::blas1::axpby( -1., y[0], 1., m_temp0, m_temp0);
     }
+#ifdef DG_MANUFACTURED
+    dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
+#endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, m_phi[0]);
     std::vector<unsigned> number = m_multigrid.direct_solve(
@@ -570,8 +592,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
         dg::blas1::copy( m_phi[0], m_phi[1]);
     } else {
         m_old_psi.extrapolate( time, m_phi[1]);
+#ifdef DG_MANUFACTURED
+        dg::blas1::copy( m_phi[0], m_temp0);
+        dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+            m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
+        std::vector<unsigned> number = m_multigrid.direct_solve(
+            m_multi_invgammaP, m_phi[1], m_temp0, m_p.eps_gamma);
+#else
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaP, m_phi[1], m_phi[0], m_p.eps_gamma);
+#endif //DG_MANUFACTURED
         m_old_psi.update( time, m_phi[1]);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
@@ -591,6 +622,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
     dg::blas1::subroutine( routines::ComputePsi(),
         m_phi[1], m_dxPhi[0], m_dyPhi[0], m_dzPhi[0],
         m_UE2, m_temp0, m_temp1, m_binv);
+#ifdef DG_MANUFACTURED
+    dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
+#endif //DG_MANUFACTURED
     //m_UE2 now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dx_P, m_phi[1], m_dxPhi[1]);
     dg::blas2::symv( m_dy_P, m_phi[1], m_dyPhi[1]);
@@ -615,6 +651,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
                              -1., y[0][0], y[1][0], 0., m_temp0);
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
+#ifdef DG_MANUFACTURED
+    dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SA{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
+#endif //DG_MANUFACTURED
     std::vector<unsigned> number = m_multigrid.direct_solve(
         m_multi_induction, m_apar, m_temp0, m_p.eps_pol);
     m_old_apar.update( time, m_apar);
@@ -783,7 +824,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         //Z*mu*N*U nu_parallel *( Delta_s U)
         dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i], 0, m_temp2);
         // perp dissipation for U: -nu_perp Delta_p**2 W
-        dg::blas1::axpyby( p.beta/p.mu[i], m_apar, 1., fields[1][i], m_temp0);
+        dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp0);
         dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
         dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
         m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
@@ -847,6 +888,20 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
         dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1],
             m_lapperpN, m_temp1, 1.0, yp[1][1]);
     }
+#ifdef DG_MANUFACTURED
+    dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
+    dg::blas1::evaluate( yp[0][1], dg::plus_equals(), manufactured::SNi{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
+    dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SUe{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
+    dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SUi{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
+#endif //DG_MANUFACTURED
     timer.toc();
     #ifdef MPI_VERSION
         int rank;
