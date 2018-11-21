@@ -56,6 +56,11 @@ int main()
     dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor( bhat, g3d);
     dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> ellipticP(g3d, dg::not_normed, dg::centered);
     ellipticP.set_chi( hh);
+    dg::DVec one = dg::evaluate( dg::one, g3d);
+    dg::blas1::copy( 3., one);
+    ellipticP.set_chi( one);
+    dg::blas1::copy( 1., one);
+    ellipticP.set_chi( one);
 
     b = dg::evaluate( dg::geo::DPerpFunction<dg::geo::TestFunctionCos>(mag), g3d);
 

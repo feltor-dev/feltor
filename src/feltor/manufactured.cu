@@ -78,67 +78,66 @@ int main( int argc, char* argv[])
     dg::blas1::axpby(p.beta/p.mu[0], apar, 1., y0[1][0]); //we=ue+b/mA
     dg::blas1::axpby(p.beta/p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+b/mA
 
-
     //Adaptive solver
     dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
         "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
-    double time = 0, dt_new = p.dt;
-    for( unsigned i=1; i<=p.maxout; i++)
+    double time = 0, dt_new = p.dt, TMAX = 1e-4;
+    while( time < TMAX)
     {
+        if( time + dt_new > TMAX)
+            dt_new = TMAX - time;
 
-        dg::Timer ti;
-        ti.tic();
-        for( unsigned j=0; j<p.itstp; j++)
-        {
-            try{
-                do
-                {
-                    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
-                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                    if( adaptive.failed())
-                        std::cout << "FAILED STEP! REPEAT!\n";
-                }while ( adaptive.failed());
-            }
-            catch( dg::Fail& fail) {
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                return -1;
-            }
-            dg::blas1::evaluate( sol[0][0], dg::equals(), ne, R,Z,P,time);
-            dg::blas1::evaluate( sol[0][1], dg::equals(), ni, R,Z,P,time);
-            dg::blas1::evaluate( sol[1][0], dg::equals(), ue, R,Z,P,time);
-            dg::blas1::evaluate( sol[1][1], dg::equals(), ui, R,Z,P,time);
-            dg::blas1::evaluate( sol_apar, dg::equals(), aa, R,Z,P,time);
-            dg::blas1::evaluate( sol_phi[0], dg::equals(),phie,R,Z,P,time);
-            dg::blas1::evaluate( sol_phi[1], dg::equals(),phii,R,Z,P,time);
-            const std::array<std::array<dg::DVec,2>,2>& num = feltor.fields();
-            const std::array<dg::DVec,2>& num_phi = feltor.potential();
-            const dg::DVec& num_apar = feltor.induction();
-            double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
-            double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
-            double normue = sqrt(dg::blas2::dot( w3d, sol[1][0]));
-            double normui = sqrt(dg::blas2::dot( w3d, sol[1][1]));
-            double normphie = sqrt(dg::blas2::dot( w3d, sol_phi[0]));
-            double normphii = sqrt(dg::blas2::dot( w3d, sol_phi[1]));
-            double normapar = sqrt(dg::blas2::dot( w3d, sol_apar));
-            dg::blas1::axpby( 1., num[0][0], -1.,sol[0][0]);
-            dg::blas1::axpby( 1., num[0][1], -1.,sol[0][1]);
-            dg::blas1::axpby( 1., num[1][0], -1.,sol[1][0]);
-            dg::blas1::axpby( 1., num[1][1], -1.,sol[1][1]);
-            dg::blas1::axpby( 1., num_phi[0], -1.,sol_phi[0]);
-            dg::blas1::axpby( 1., num_phi[1], -1.,sol_phi[1]);
-            dg::blas1::axpby( 1., num_apar, -1.,sol_apar);
-            std::cout <<"Error: \n"
-                      <<"    Time: "<<time<<"\n"
-                      <<"    ne:   "<<normne<<" "<<sqrt(dg::blas2::dot( w3d, sol[0][0]))/normne<<"\n"
-                      <<"    ni:   "<<normni<<" "<<sqrt(dg::blas2::dot( w3d, sol[0][1]))/normni<<"\n"
-                      <<"    ue:   "<<normue<<" "<<sqrt(dg::blas2::dot( w3d, sol[1][0]))/normue<<"\n"
-                      <<"    ui:   "<<normui<<" "<<sqrt(dg::blas2::dot( w3d, sol[1][1]))/normui<<"\n"
-                      <<"    phie: "<<normphie<<" "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))/normphie<<"\n"
-                      <<"    phii: "<<normphii<<" "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))/normphii<<"\n"
-                      <<"    apar: "<<normapar<<" "<<sqrt(dg::blas2::dot( w3d,sol_apar))/normapar<<"\n";
+        try{
+            do
+            {
+                adaptive.step( feltor, im, time, y0, time, y0, dt_new,
+                    dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                if( adaptive.failed())
+                    std::cout << "FAILED STEP! REPEAT!\n";
+            }while ( adaptive.failed());
         }
+        catch( dg::Fail& fail) {
+            std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+            std::cerr << "Does Simulation respect CFL condition?\n";
+            return -1;
+        }
+        std::cout << "Time "<<time<<std::endl;
     }
+    //now compare stuff
+    dg::blas1::evaluate( sol[0][0], dg::equals(), ne, R,Z,P,time);
+    dg::blas1::evaluate( sol[0][1], dg::equals(), ni, R,Z,P,time);
+    dg::blas1::evaluate( sol[1][0], dg::equals(), ue, R,Z,P,time);
+    dg::blas1::evaluate( sol[1][1], dg::equals(), ui, R,Z,P,time);
+    dg::blas1::evaluate( sol_apar, dg::equals(), aa, R,Z,P,time);
+    dg::blas1::evaluate( sol_phi[0], dg::equals(),phie,R,Z,P,time);
+    dg::blas1::evaluate( sol_phi[1], dg::equals(),phii,R,Z,P,time);
+    const std::array<std::array<dg::DVec,2>,2>& num = feltor.fields();
+    const std::array<dg::DVec,2>& num_phi = feltor.potential();
+    const dg::DVec& num_apar = feltor.induction();
+    double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
+    double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
+    double normue = sqrt(dg::blas2::dot( w3d, sol[1][0]));
+    double normui = sqrt(dg::blas2::dot( w3d, sol[1][1]));
+    double normphie = sqrt(dg::blas2::dot( w3d, sol_phi[0]));
+    double normphii = sqrt(dg::blas2::dot( w3d, sol_phi[1]));
+    double normapar = sqrt(dg::blas2::dot( w3d, sol_apar));
+    dg::blas1::axpby( 1., num[0][0], -1.,sol[0][0]);
+    dg::blas1::axpby( 1., num[0][1], -1.,sol[0][1]);
+    dg::blas1::axpby( 1., num[1][0], -1.,sol[1][0]);
+    dg::blas1::axpby( 1., num[1][1], -1.,sol[1][1]);
+    dg::blas1::axpby( 1., num_phi[0], -1.,sol_phi[0]);
+    dg::blas1::axpby( 1., num_phi[1], -1.,sol_phi[1]);
+    dg::blas1::axpby( 1., num_apar, -1.,sol_apar);
+    std::cout<<std::scientific;
+    std::cout <<"Error: \n"
+              <<"    Time: "<<time<<"\n"
+              <<"    ne:   "<<sqrt(dg::blas2::dot( w3d, sol[0][0]))/normne<<"\t"<<normne<<"\n"
+              <<"    ni:   "<<sqrt(dg::blas2::dot( w3d, sol[0][1]))/normni<<"\t"<<normni<<"\n"
+              <<"    ue:   "<<sqrt(dg::blas2::dot( w3d, sol[1][0]))/normue<<"\t"<<normue<<"\n"
+              <<"    ui:   "<<sqrt(dg::blas2::dot( w3d, sol[1][1]))/normui<<"\t"<<normui<<"\n"
+              <<"    phie: "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))/normphie<<"\t"<<normphie<<"\n"
+              <<"    phii: "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))/normphii<<"\t"<<normphii<<"\n"
+              <<"    apar: "<<sqrt(dg::blas2::dot( w3d,sol_apar))/normapar<<"\t"<<normapar<<"\n";
 
 
     return 0;
