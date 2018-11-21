@@ -364,7 +364,7 @@ struct Hector : public aGenerator2d
         //std::cout << "Error in u is "<<eps<<std::endl;
     }
 
-    container construct_grid_and_u( const aCylindricalFunctor& chi, const aCylindricalFunctor& lapChiPsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose)
+    container construct_grid_and_u( const CylindricalFunctor& chi, const CylindricalFunctor& lapChiPsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose)
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
@@ -449,7 +449,7 @@ struct Hector : public aGenerator2d
         return u;
     }
 
-    void construct(const container& u, double psi0, double psi1, const aCylindricalFunctor& chi_XX, const aCylindricalFunctor& chi_XY, const aCylindricalFunctor& chi_YY)
+    void construct(const container& u, double psi0, double psi1, const CylindricalFunctor& chi_XX, const CylindricalFunctor& chi_XY, const CylindricalFunctor& chi_YY)
     {
         //now compute u_zeta and u_eta
         Matrix dzeta = dg::create::dx( g2d_, dg::DIR);

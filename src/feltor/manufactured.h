@@ -6,9 +6,13 @@
 //    SNe, SNi, SUe, SUi, SPhie, SPhii, SGammaPhie, SGammaNi, SA
 //Requires a definition for DG_DEVICE (define empty for host code and __host__ __device__ to generate CUDA code!
 #include <cmath>
+DG_DEVICE
 double Power(double x, double y){ return pow(x,y);}
+DG_DEVICE
 double Sqrt(double x){ return sqrt(x);}
+DG_DEVICE
 double Sin(double x){ return sin(x);}
+DG_DEVICE
 double Cos(double x){ return cos(x);}
 static const double Pi = M_PI;
 struct Ne{

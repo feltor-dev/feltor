@@ -114,6 +114,13 @@ int main( int argc, char* argv[])
             const std::array<std::array<dg::DVec,2>,2>& num = feltor.fields();
             const std::array<dg::DVec,2>& num_phi = feltor.potential();
             const dg::DVec& num_apar = feltor.induction();
+            double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
+            double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
+            double normue = sqrt(dg::blas2::dot( w3d, sol[1][0]));
+            double normui = sqrt(dg::blas2::dot( w3d, sol[1][1]));
+            double normphie = sqrt(dg::blas2::dot( w3d, sol_phi[0]));
+            double normphii = sqrt(dg::blas2::dot( w3d, sol_phi[1]));
+            double normapar = sqrt(dg::blas2::dot( w3d, sol_apar));
             dg::blas1::axpby( 1., num[0][0], -1.,sol[0][0]);
             dg::blas1::axpby( 1., num[0][1], -1.,sol[0][1]);
             dg::blas1::axpby( 1., num[1][0], -1.,sol[1][0]);
@@ -123,13 +130,13 @@ int main( int argc, char* argv[])
             dg::blas1::axpby( 1., num_apar, -1.,sol_apar);
             std::cout <<"Error: \n"
                       <<"    Time: "<<time<<"\n"
-                      <<"    ne:   "<<sqrt(dg::blas2::dot( w3d, sol[0][0]))<<"\n"
-                      <<"    ni:   "<<sqrt(dg::blas2::dot( w3d, sol[0][1]))<<"\n"
-                      <<"    ue:   "<<sqrt(dg::blas2::dot( w3d, sol[1][0]))<<"\n"
-                      <<"    ui:   "<<sqrt(dg::blas2::dot( w3d, sol[1][1]))<<"\n"
-                      <<"    phie: "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))<<"\n"
-                      <<"    phii: "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))<<"\n"
-                      <<"    apar: "<<sqrt(dg::blas2::dot( w3d,sol_apar))<<"\n";
+                      <<"    ne:   "<<normne<<" "<<sqrt(dg::blas2::dot( w3d, sol[0][0]))/normne<<"\n"
+                      <<"    ni:   "<<normni<<" "<<sqrt(dg::blas2::dot( w3d, sol[0][1]))/normni<<"\n"
+                      <<"    ue:   "<<normue<<" "<<sqrt(dg::blas2::dot( w3d, sol[1][0]))/normue<<"\n"
+                      <<"    ui:   "<<normui<<" "<<sqrt(dg::blas2::dot( w3d, sol[1][1]))/normui<<"\n"
+                      <<"    phie: "<<normphie<<" "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))/normphie<<"\n"
+                      <<"    phii: "<<normphii<<" "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))/normphii<<"\n"
+                      <<"    apar: "<<normapar<<" "<<sqrt(dg::blas2::dot( w3d,sol_apar))/normapar<<"\n";
         }
     }
 
