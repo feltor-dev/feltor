@@ -6,14 +6,10 @@
 //    SNe, SNi, SUe, SUi, SPhie, SPhii, SGammaPhie, SGammaNi, SA
 //Requires a definition for DG_DEVICE (define empty for host code and __host__ __device__ to generate CUDA code!
 #include <cmath>
-DG_DEVICE
-double Power(double x, double y){ return pow(x,y);}
-DG_DEVICE
-double Sqrt(double x){ return sqrt(x);}
-DG_DEVICE
-double Sin(double x){ return sin(x);}
-DG_DEVICE
-double Cos(double x){ return cos(x);}
+DG_DEVICE double Power(double x, double y){ return pow(x,y);}
+DG_DEVICE double Sqrt(double x){ return sqrt(x);}
+DG_DEVICE double Sin(double x){ return sin(x);}
+DG_DEVICE double Cos(double x){ return cos(x);}
 static const double Pi = M_PI;
 struct Ne{
     double mue,mui,taue,taui,beta,nuperp,nuparallel;
@@ -114,62 +110,57 @@ struct SNe{
            (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           (4.934802200544679*Power(Z,2)*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
              Sin(Pi*Z))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/R - 
-  (nuperp*(1.5707963267948966*(1 + 
-          (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
+  (nuperp*((1.5707963267948966*(-10 + R)*Z*Cos(Pi*Z)*Sin(P)*
+          Sin(Pi*(-10 + R))*Sin(Pi*t))/
+        (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
        1.5707963267948966*(1 - 
           (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) + 
-       0.5*(1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-        Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
-       R*(4.934802200544679*(1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))\
-)*Cos(Pi*(-10 + R))*Cos(Pi*Z)*Sin(P)*Sin(Pi*t) + 
-          1.5707963267948966*(1 + 
-             (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(P)*
-           Cos(Pi*Z)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
+        Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) - 
+       (10.*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+        (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+       R*((4.934802200544679*(-10 + R)*Z*Cos(Pi*(-10 + R))*Cos(Pi*Z)*
+             Sin(P)*Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) \
++ (31.41592653589793*(-10 + R)*Cos(P)*Cos(Pi*Z)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.141592653589793*Power(-10 + R,2)*Z*Cos(Pi*Z)*Sin(P)*
              Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+          (3.141592653589793*(-10 + R)*Power(Z,2)*Cos(Pi*(-10 + R))*
+             Sin(P)*Sin(Pi*t)*Sin(Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          1.5707963267948966*((-2.*(-10 + R)*Power(Z,2))/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) - 
+          (1.5707963267948966*(-10 + R)*Cos(Pi*(-10 + R))*Sin(P)*
+             Sin(Pi*t)*Sin(Pi*Z))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
           (20.*(-10 + R)*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
            (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) - 
           4.934802200544679*(1 - 
              (1.*Power(-10 + R,2))/
               (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(P)*
            Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)) + 
-       R*(1.5707963267948966*(Power(R,-2) + 
-             (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(P)*
-           Cos(Pi*Z)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
-          1.5707963267948966*(Power(R,-2) - 
-             (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) - 
+       R*((31.41592653589793*(-10 + R)*Cos(P)*Cos(Pi*Z)*
+             Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (31.41592653589793*Z*Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*
+             Sin(Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           0.5*(Power(R,-2) - 400/
               (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
            Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)) + 
-       R*(4.934802200544679*(1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Cos(Pi*Z)*Sin(P)*Sin(Pi*t) + 
-          1.5707963267948966*((-2.*Power(-10 + R,2)*Z)/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(Pi*Z)*
-           Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
-          1.5707963267948966*(1 - 
-             (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
+       R*((4.934802200544679*(-10 + R)*Z*Cos(Pi*(-10 + R))*Cos(Pi*Z)*
+             Sin(P)*Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) \
+- (3.141592653589793*Power(-10 + R,2)*Z*Cos(Pi*Z)*Sin(P)*
+             Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.5707963267948966*Z*Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (31.41592653589793*Z*Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*
+             Sin(Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.141592653589793*(-10 + R)*Power(Z,2)*Cos(Pi*(-10 + R))*
              Sin(P)*Sin(Pi*t)*Sin(Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          0.5*((40.*(-10 + R)*Z)/
-              (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-             (20.*Z)/
-              (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) - 
+          (20.*(-10 + R)*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+           (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
+          (10.*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+           (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           4.934802200544679*(1 - 
              (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
            Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))))/R + 
@@ -500,62 +491,57 @@ struct SNi{
            (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           (4.934802200544679*Power(Z,2)*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
              Sin(Pi*Z))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/R - 
-  (nuperp*(1.5707963267948966*(1 + 
-          (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
+  (nuperp*((1.5707963267948966*(-10 + R)*Z*Cos(Pi*Z)*Sin(P)*
+          Sin(Pi*(-10 + R))*Sin(Pi*t))/
+        (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
        1.5707963267948966*(1 - 
           (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) + 
-       0.5*(1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-        Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
-       R*(4.934802200544679*(1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))\
-)*Cos(Pi*(-10 + R))*Cos(Pi*Z)*Sin(P)*Sin(Pi*t) + 
-          1.5707963267948966*(1 + 
-             (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(P)*
-           Cos(Pi*Z)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
+        Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) - 
+       (10.*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+        (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+       R*((4.934802200544679*(-10 + R)*Z*Cos(Pi*(-10 + R))*Cos(Pi*Z)*
+             Sin(P)*Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) \
++ (31.41592653589793*(-10 + R)*Cos(P)*Cos(Pi*Z)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.141592653589793*Power(-10 + R,2)*Z*Cos(Pi*Z)*Sin(P)*
              Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+          (3.141592653589793*(-10 + R)*Power(Z,2)*Cos(Pi*(-10 + R))*
+             Sin(P)*Sin(Pi*t)*Sin(Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          1.5707963267948966*((-2.*(-10 + R)*Power(Z,2))/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) - 
+          (1.5707963267948966*(-10 + R)*Cos(Pi*(-10 + R))*Sin(P)*
+             Sin(Pi*t)*Sin(Pi*Z))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
           (20.*(-10 + R)*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
            (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) - 
           4.934802200544679*(1 - 
              (1.*Power(-10 + R,2))/
               (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(P)*
            Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)) + 
-       R*(1.5707963267948966*(Power(R,-2) + 
-             (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(P)*
-           Cos(Pi*Z)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
-          1.5707963267948966*(Power(R,-2) - 
-             (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) - 
+       R*((31.41592653589793*(-10 + R)*Cos(P)*Cos(Pi*Z)*
+             Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (31.41592653589793*Z*Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*
+             Sin(Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           0.5*(Power(R,-2) - 400/
               (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
            Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)) + 
-       R*(4.934802200544679*(1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Cos(Pi*Z)*Sin(P)*Sin(Pi*t) + 
-          1.5707963267948966*((-2.*Power(-10 + R,2)*Z)/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(Pi*Z)*
-           Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
-          1.5707963267948966*(1 - 
-             (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
+       R*((4.934802200544679*(-10 + R)*Z*Cos(Pi*(-10 + R))*Cos(Pi*Z)*
+             Sin(P)*Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) \
+- (3.141592653589793*Power(-10 + R,2)*Z*Cos(Pi*Z)*Sin(P)*
+             Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.5707963267948966*Z*Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (31.41592653589793*Z*Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*
+             Sin(Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.141592653589793*(-10 + R)*Power(Z,2)*Cos(Pi*(-10 + R))*
              Sin(P)*Sin(Pi*t)*Sin(Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          0.5*((40.*(-10 + R)*Z)/
-              (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-             (20.*Z)/
-              (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) - 
+          (20.*(-10 + R)*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+           (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
+          (10.*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+           (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           4.934802200544679*(1 - 
              (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
            Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))))/R + 
@@ -1079,53 +1065,58 @@ struct SUe{
                        0.07957747154594767*Power(Z,2))*Sin(4*Pi*R))*
                   Sin(4*Pi*Z)))/
              Power(500. - 20.*R + 1.*Power(R,2) + 1.*Power(Z,2),2)))/3.))/3. \
-- (nuperp*((1 + (1.*(-10 + R)*Z)/
-           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
-          (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/mue\
-) + (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
+- (nuperp*((1.*(-10 + R)*Z*((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*
+               Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
+            (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/
+             mue))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+       (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
         ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
           (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z))/mue\
-) + (1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-        ((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
-          (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/mue) + 
-       R*((Power(R,-2) + (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
-                Sin(4*Pi*t))/mue) + 
-          (Power(R,-2) - (20.*Z)/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
-                Sin(4*Pi*Z))/mue) + 
+) - (20.*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
+            (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/mue\
+))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+       R*((20.*(-10 + R)*((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*
+                  Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mue))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (20.*Z*((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mue))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (Power(R,-2) - 400/
               (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
            ((-4*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. - 
              (4*beta*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
-              mue)) + R*((1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*Cos(2*Pi*Z)*Sin(2*P)*
-                Sin(2*Pi*t))/3. + 
-             (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*Sin(4*P)*
-                Sin(4*Pi*t))/mue) + 
-          (1 + (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
-                Sin(4*Pi*t))/mue) + 
+              mue)) + R*((1.*(-10 + R)*Z*
+             ((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*Cos(2*Pi*Z)*Sin(2*P)*
+                  Sin(2*Pi*t))/3. + 
+               (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*
+                  Sin(4*P)*Sin(4*Pi*t))/mue))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (20.*(-10 + R)*((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*
+                  Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mue))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (2.*Power(-10 + R,2)*Z*
              ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*
                   Sin(2*Pi*t))/3. + 
                (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
                   Sin(4*Pi*t))/mue))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+          (2.*(-10 + R)*Power(Z,2)*
+             ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mue))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          ((-2.*(-10 + R)*Power(Z,2))/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*Sin(2*Pi*Z))/
-              3. + (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
-                Sin(4*Pi*Z))/mue) - 
+          (1.*(-10 + R)*((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mue))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
           (40.*(-10 + R)*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
                   Sin(2*Pi*Z))/3. + 
                (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
@@ -1137,34 +1128,40 @@ struct SUe{
                 Sin(2*Pi*Z))/3. - 
              (4*beta*Power(Pi,2)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
                 Sin(4*Pi*Z))/mue)) + 
-       R*((1 + (1.*(-10 + R)*Z)/
-              (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*Cos(2*Pi*Z)*Sin(2*P)*
-                Sin(2*Pi*t))/3. + 
-             (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*Sin(4*P)*
-                Sin(4*Pi*t))/mue) + 
-          ((-2.*Power(-10 + R,2)*Z)/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
-              3. + (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
-                Sin(4*Pi*t))/mue) + 
-          (1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
-                Sin(4*Pi*Z))/mue) + 
+       R*((1.*(-10 + R)*Z*((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*
+                  Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*t))/3. + 
+               (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*
+                  Sin(4*P)*Sin(4*Pi*t))/mue))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (2.*Power(-10 + R,2)*Z*
+             ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
+                3. + (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mue))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.*Z*((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*
+                  Sin(2*Pi*t))/3. + 
+               (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mue))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (20.*Z*((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mue))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (2.*(-10 + R)*Power(Z,2)*
              ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*Sin(2*Pi*Z))/
                 3. + (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
                   Sin(4*Pi*Z))/mue))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          ((40.*(-10 + R)*Z)/
-              (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-             (20.*Z)/
-              (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
-             (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/mue\
-) + (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
+          (40.*(-10 + R)*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
+                mue))/(R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) \
++ (20.*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
+               (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
+                mue))/
+           (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+          (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
            ((-4*Power(Pi,2)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
                 Sin(2*Pi*Z))/3. - 
              (4*beta*Power(Pi,2)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
@@ -1417,53 +1414,58 @@ struct SUi{
                        0.07957747154594767*Power(Z,2))*Sin(4*Pi*R))*
                   Sin(4*Pi*Z)))/
              Power(500. - 20.*R + 1.*Power(R,2) + 1.*Power(Z,2),2)))/3.))/3. \
-- (nuperp*((1 + (1.*(-10 + R)*Z)/
-           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
-          (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/mui\
-) + (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
+- (nuperp*((1.*(-10 + R)*Z*((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*
+               Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
+            (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/
+             mui))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+       (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
         ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
           (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z))/mui\
-) + (1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-        ((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
-          (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/mui) + 
-       R*((Power(R,-2) + (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
-                Sin(4*Pi*t))/mui) + 
-          (Power(R,-2) - (20.*Z)/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
-                Sin(4*Pi*Z))/mui) + 
+) - (20.*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
+            (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/mui\
+))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+       R*((20.*(-10 + R)*((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*
+                  Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mui))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (20.*Z*((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mui))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (Power(R,-2) - 400/
               (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
            ((-4*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. - 
              (4*beta*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
-              mui)) + R*((1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*Cos(2*Pi*Z)*Sin(2*P)*
-                Sin(2*Pi*t))/3. + 
-             (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*Sin(4*P)*
-                Sin(4*Pi*t))/mui) + 
-          (1 + (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
-                Sin(4*Pi*t))/mui) + 
+              mui)) + R*((1.*(-10 + R)*Z*
+             ((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*Cos(2*Pi*Z)*Sin(2*P)*
+                  Sin(2*Pi*t))/3. + 
+               (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*
+                  Sin(4*P)*Sin(4*Pi*t))/mui))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (20.*(-10 + R)*((4*Pi*Cos(2*P)*Cos(2*Pi*Z)*
+                  Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mui))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (2.*Power(-10 + R,2)*Z*
              ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*
                   Sin(2*Pi*t))/3. + 
                (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
                   Sin(4*Pi*t))/mui))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+          (2.*(-10 + R)*Power(Z,2)*
+             ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mui))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          ((-2.*(-10 + R)*Power(Z,2))/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*Sin(2*Pi*Z))/
-              3. + (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
-                Sin(4*Pi*Z))/mui) - 
+          (1.*(-10 + R)*((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mui))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
           (40.*(-10 + R)*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
                   Sin(2*Pi*Z))/3. + 
                (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
@@ -1475,34 +1477,40 @@ struct SUi{
                 Sin(2*Pi*Z))/3. - 
              (4*beta*Power(Pi,2)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
                 Sin(4*Pi*Z))/mui)) + 
-       R*((1 + (1.*(-10 + R)*Z)/
-              (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*Cos(2*Pi*Z)*Sin(2*P)*
-                Sin(2*Pi*t))/3. + 
-             (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*Sin(4*P)*
-                Sin(4*Pi*t))/mui) + 
-          ((-2.*Power(-10 + R,2)*Z)/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
-              3. + (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
-                Sin(4*Pi*t))/mui) + 
-          (1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/
-              3. + (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
-                Sin(4*Pi*Z))/mui) + 
+       R*((1.*(-10 + R)*Z*((4*Power(Pi,2)*Cos(2*Pi*(-10 + R))*
+                  Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*t))/3. + 
+               (4*beta*Power(Pi,2)*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*
+                  Sin(4*P)*Sin(4*Pi*t))/mui))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (2.*Power(-10 + R,2)*Z*
+             ((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t))/
+                3. + (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mui))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.*Z*((2*Pi*Cos(2*Pi*Z)*Sin(2*P)*Sin(2*Pi*(-10 + R))*
+                  Sin(2*Pi*t))/3. + 
+               (beta*Pi*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
+                  Sin(4*Pi*t))/mui))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (20.*Z*((4*Pi*Cos(2*P)*Cos(2*Pi*(-10 + R))*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (4*beta*Pi*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+                  Sin(4*Pi*Z))/mui))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (2.*(-10 + R)*Power(Z,2)*
              ((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*Sin(2*Pi*Z))/
                 3. + (beta*Pi*Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*
                   Sin(4*Pi*Z))/mui))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          ((40.*(-10 + R)*Z)/
-              (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-             (20.*Z)/
-              (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           ((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
-             (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/mui\
-) + (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
+          (40.*(-10 + R)*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
+                  Sin(2*Pi*Z))/3. + 
+               (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
+                mui))/(R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) \
++ (20.*Z*((2*Cos(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/3. + 
+               (beta*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
+                mui))/
+           (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+          (1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
            ((-4*Power(Pi,2)*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
                 Sin(2*Pi*Z))/3. - 
              (4*beta*Power(Pi,2)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
@@ -1511,93 +1519,85 @@ struct SUi{
 struct SPhie{
     double mue,mui,taue,taui,beta,nuperp,nuparallel;
     DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return 0. - ((0.005*Power(R,3)*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)*
-        ((3*Pi*(Power(R,-2) + 
-               (20.*(-10 + R))/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (3*Pi*(Power(R,-2) - 
-               (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-          (3*(Power(R,-2) - 400/
-                (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
-      (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
-     (0.015707963267948967*Power(R,3)*Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*
+    return 0. - ((0.015707963267948967*Power(R,3)*Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*
         Sin(Pi*t)*((3*Pi*(1 - 
                (1.*Power(-10 + R,2))/
                 (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(3*Pi*Z)*
              Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (3*Pi*(1 + (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-          (3*(1 + (20.*(-10 + R))/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
+          (1.8849555921538759*(-10 + R)*Z*Cos(3*Pi*(-10 + R))*Sin(3*P)*
+             Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (12.*(-10 + R)*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+             Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/
       (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
      (0.02*Power(R,3)*Z*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
            Sin(Pi*Z))*((3*Pi*(1 - 
                (1.*Power(-10 + R,2))/
                 (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(3*Pi*Z)*
              Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (3*Pi*(1 + (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-          (3*(1 + (20.*(-10 + R))/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
+          (1.8849555921538759*(-10 + R)*Z*Cos(3*Pi*(-10 + R))*Sin(3*P)*
+             Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (12.*(-10 + R)*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+             Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/
       Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
      (0.015707963267948967*Power(R,3)*Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*
-        Sin(Pi*Z)*((3*Pi*(1 + 
-               (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(3*Pi*Z)*
-             Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
+        Sin(Pi*Z)*((1.8849555921538759*(-10 + R)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
           (3*Pi*(1 - (1.*Power(Z,2))/
                 (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-          (3*(1 - (20.*Z)/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
+             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+          (12.*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/
       (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
      (0.02*(-10 + R)*Power(R,3)*
         (1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
-        ((3*Pi*(1 + (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(3*Pi*Z)*
-             Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (3*Pi*(1 - (1.*Power(Z,2))/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-          (3*(1 - (20.*Z)/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
-      Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-     (3*Power(R,2)*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
-        ((3*Pi*(1 + (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(3*Pi*Z)*
-             Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (3*Pi*(1 - (1.*Power(Z,2))/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-          (3*(1 - (20.*Z)/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
-      (100.*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
-     (Power(R,3)*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
-        ((9*Power(Pi,2)*(1 + 
-               (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*t))/5. + 
-          (9*Pi*(1 + (20.*(-10 + R))/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*P)*Cos(3*Pi*Z)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (3.7699111843077517*Power(-10 + R,2)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+        ((1.8849555921538759*(-10 + R)*Z*Cos(3*Pi*Z)*Sin(3*P)*
              Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
-           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          (3*Pi*((-2.*(-10 + R)*Power(Z,2))/
-                Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-               (1.*(-10 + R))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (3*Pi*(1 - (1.*Power(Z,2))/
                 (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
              Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+          (12.*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/
+      Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+     (3*Power(R,2)*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
+        ((1.8849555921538759*(-10 + R)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (3*Pi*(1 - (1.*Power(Z,2))/
+                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
+             Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+          (12.*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))))/
+      (100.*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+     (0.005*Power(R,3)*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)*
+        ((37.69911184307752*(-10 + R)*Cos(3*Pi*Z)*Sin(3*P)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (37.69911184307752*Z*Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*
+             Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) \
++ (3*(Power(R,-2) - 400/
+                (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
+             Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
+      (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+     (Power(R,3)*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
+        ((17.765287921960844*(-10 + R)*Z*Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*
+             Sin(3*P)*Sin(3*Pi*t))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+          (113.09733552923255*(-10 + R)*Cos(3*P)*Cos(3*Pi*Z)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+          (3.7699111843077517*Power(-10 + R,2)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+          (3.7699111843077517*(-10 + R)*Power(Z,2)*Cos(3*Pi*(-10 + R))*
+             Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.8849555921538759*(-10 + R)*Cos(3*Pi*(-10 + R))*Sin(3*P)*
+             Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
           (24.*(-10 + R)*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*
              Sin(3*Pi*Z))/
            (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) - 
@@ -1607,36 +1607,34 @@ struct SPhie{
              Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
       (100.*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
      (Power(R,3)*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
-        ((9*Pi*(Power(R,-2) + 
-               (20.*(-10 + R))/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*P)*Cos(3*Pi*Z)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (9*Pi*(Power(R,-2) - 
-               (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*P)*Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
-          (9*(Power(R,-2) - 400/
+        ((113.09733552923255*(-10 + R)*Cos(3*P)*Cos(3*Pi*Z)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (113.09733552923255*Z*Cos(3*P)*Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+             Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) \
+- (9*(Power(R,-2) - 400/
                 (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
              Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
       (100.*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
      (Power(R,3)*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))*
-        ((9*Power(Pi,2)*(1 + (1.*(-10 + R)*Z)/
-                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*t))/5. + 
-          (3*Pi*((-2.*Power(-10 + R,2)*Z)/
-                Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-               (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-             Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-          (9*Pi*(1 - (20.*Z)/
-                (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-             Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
+        ((17.765287921960844*(-10 + R)*Z*Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*
+             Sin(3*P)*Sin(3*Pi*t))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (3.7699111843077517*Power(-10 + R,2)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.8849555921538759*Z*Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*(-10 + R))*
+             Sin(3*Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (113.09733552923255*Z*Cos(3*P)*Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+             Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.7699111843077517*(-10 + R)*Power(Z,2)*Cos(3*Pi*(-10 + R))*
              Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          (3*((40.*(-10 + R)*Z)/
-                (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-               (20.*Z)/
-                (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-             Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+          (24.*(-10 + R)*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+             Sin(3*Pi*Z))/
+           (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
+          (12.*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+           (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           (9*Power(Pi,2)*(1 - 
                (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))\
 )*Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.))/
@@ -1645,104 +1643,83 @@ struct SPhie{
 struct SPhii{
     double mue,mui,taue,taui,beta,nuperp,nuparallel;
     DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return (0.0355305758439217*mui*Power(Sin(3*Pi*t),2)*
-    (Power(R,2)*(200. + 0.5*Power(Z,2))*Power(Cos(3*Pi*Z),2)*
-       Power(Sin(3*P),2)*Power(Sin(3*Pi*R),2) + 
-      Power(R,2)*(250. - 10.*R + 0.5*Power(R,2))*Power(Cos(3*Pi*R),2)*
-       Power(Sin(3*P),2)*Power(Sin(3*Pi*Z),2) + 
-      5.066059182116889*Power(Cos(3*P),2)*Power(Sin(3*Pi*R),2)*
-       Power(Sin(3*Pi*Z),2) - 1.0132118364233775*R*Power(Cos(3*P),2)*
+    return (0.017765287921960846*mui*Power(Sin(3*Pi*t),2)*
+    (Power(R,2)*(400.00000000000006 + 1.0000000000000002*Power(Z,2))*
+       Power(Cos(3*Pi*Z),2)*Power(Sin(3*P),2)*Power(Sin(3*Pi*R),2) + 
+      Power(R,2)*(500. - 20.000000000000004*R + 1.*Power(R,2))*
+       Power(Cos(3*Pi*R),2)*Power(Sin(3*P),2)*Power(Sin(3*Pi*Z),2) + 
+      10.13211836423378*Power(Cos(3*P),2)*Power(Sin(3*Pi*R),2)*
+       Power(Sin(3*Pi*Z),2) - 2.026423672846756*R*Power(Cos(3*P),2)*
        Power(Sin(3*Pi*R),2)*Power(Sin(3*Pi*Z),2) + 
-      0.05066059182116888*Power(R,2)*Power(Cos(3*P),2)*Power(Sin(3*Pi*R),2)*
-       Power(Sin(3*Pi*Z),2) + 0.05066059182116888*Power(Z,2)*
-       Power(Cos(3*P),2)*Power(Sin(3*Pi*R),2)*Power(Sin(3*Pi*Z),2) + 
-      19.894367886486915*Sin(6*P)*Sin(6*Pi*R)*Power(Sin(3*Pi*Z),2) - 
-      0.7957747154594765*R*Sin(6*P)*Sin(6*Pi*R)*Power(Sin(3*Pi*Z),2) + 
-      19.934156622259888*Power(R,2)*Sin(6*P)*Sin(6*Pi*R)*
-       Power(Sin(3*Pi*Z),2) - 0.7957747154594766*Power(R,3)*Sin(6*P)*
-       Sin(6*Pi*R)*Power(Sin(3*Pi*Z),2) + 
-      0.039788735772973836*Power(R,4)*Sin(6*P)*Sin(6*Pi*R)*
-       Power(Sin(3*Pi*Z),2) - 1.591549430918953*R*Z*Sin(6*P)*Sin(6*Pi*R)*
-       Power(Sin(3*Pi*Z),2) + 0.03978873577297383*Power(Z,2)*Sin(6*P)*
-       Sin(6*Pi*R)*Power(Sin(3*Pi*Z),2) + 
-      0.039788735772973836*Power(R,2)*Power(Z,2)*Sin(6*P)*Sin(6*Pi*R)*
-       Power(Sin(3*Pi*Z),2) + 19.894367886486915*Sin(6*P)*
-       Power(Sin(3*Pi*R),2)*Sin(6*Pi*Z) - 
-      16.711269024649013*R*Sin(6*P)*Power(Sin(3*Pi*R),2)*Sin(6*Pi*Z) + 
-      21.525706053178844*Power(R,2)*Sin(6*P)*Power(Sin(3*Pi*R),2)*
-       Sin(6*Pi*Z) - 0.7957747154594766*Power(R,3)*Sin(6*P)*
-       Power(Sin(3*Pi*R),2)*Sin(6*Pi*Z) + 
-      0.039788735772973836*Power(R,4)*Sin(6*P)*Power(Sin(3*Pi*R),2)*
-       Sin(6*Pi*Z) + 0.03978873577297383*Power(Z,2)*Sin(6*P)*
-       Power(Sin(3*Pi*R),2)*Sin(6*Pi*Z) + 
-      0.039788735772973836*Power(R,2)*Power(Z,2)*Sin(6*P)*
-       Power(Sin(3*Pi*R),2)*Sin(6*Pi*Z) + 
-      125.*Power(R,2)*Power(Sin(3*P),2)*Sin(6*Pi*R)*Sin(6*Pi*Z) - 
-      5.*Power(R,3)*Power(Sin(3*P),2)*Sin(6*Pi*R)*Sin(6*Pi*Z) + 
-      0.25*Power(R,4)*Power(Sin(3*P),2)*Sin(6*Pi*R)*Sin(6*Pi*Z) - 
-      2.5*Power(R,2)*Z*Power(Sin(3*P),2)*Sin(6*Pi*R)*Sin(6*Pi*Z) + 
-      0.25*Power(R,3)*Z*Power(Sin(3*P),2)*Sin(6*Pi*R)*Sin(6*Pi*Z) + 
-      0.25*Power(R,2)*Power(Z,2)*Power(Sin(3*P),2)*Sin(6*Pi*R)*Sin(6*Pi*Z)))/
+      0.1013211836423378*Power(R,2)*Power(Cos(3*P),2)*Power(Sin(3*Pi*R),2)*
+       Power(Sin(3*Pi*Z),2) + 0.1013211836423378*Power(Z,2)*
+       Power(Cos(3*P),2)*Power(Sin(3*Pi*R),2)*Power(Sin(3*Pi*Z),2) - 
+      3.1830988618379075*R*Z*Sin(6*P)*Sin(6*Pi*R)*Power(Sin(3*Pi*Z),2) - 
+      31.830988618379074*R*Sin(6*P)*Power(Sin(3*Pi*R),2)*Sin(6*Pi*Z) + 
+      3.1830988618379075*Power(R,2)*Sin(6*P)*Power(Sin(3*Pi*R),2)*
+       Sin(6*Pi*Z) - 5.*Power(R,2)*Z*Power(Sin(3*P),2)*Sin(6*Pi*R)*
+       Sin(6*Pi*Z) + 0.5000000000000001*Power(R,3)*Z*Power(Sin(3*P),2)*
+       Sin(6*Pi*R)*Sin(6*Pi*Z)))/
   Power(500. - 20.*R + 1.*Power(R,2) + 1.*Power(Z,2),2)
 ; }};
 struct SGammaPhie{
     double mue,mui,taue,taui,beta,nuperp,nuparallel;
     DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return (-0.5*mui*taui*((3*Pi*(1 + (1.*(-10 + R)*Z)/
-            (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(3*Pi*Z)*
-         Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
+    return (-0.5*mui*taui*((1.8849555921538759*(-10 + R)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+         Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+       (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
       (3*Pi*(1 - (1.*Power(Z,2))/
             (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-         Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-      (3*(1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-         Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
-      R*((9*Power(Pi,2)*(1 + (1.*(-10 + R)*Z)/
-               (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-            Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*t))/5. + 
-         (9*Pi*(1 + (20.*(-10 + R))/
-               (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-            Cos(3*Pi*Z)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
+         Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+      (12.*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+       (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+      R*((17.765287921960844*(-10 + R)*Z*Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*
+            Sin(3*P)*Sin(3*Pi*t))/
+          (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+         (113.09733552923255*(-10 + R)*Cos(3*P)*Cos(3*Pi*Z)*
+            Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+          (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
          (3.7699111843077517*Power(-10 + R,2)*Z*Cos(3*Pi*Z)*Sin(3*P)*
             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+          Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+         (3.7699111843077517*(-10 + R)*Power(Z,2)*Cos(3*Pi*(-10 + R))*
+            Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/
           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-         (3*Pi*((-2.*(-10 + R)*Power(Z,2))/
-               Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-              (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-            Cos(3*Pi*(-10 + R))*Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+         (1.8849555921538759*(-10 + R)*Cos(3*Pi*(-10 + R))*Sin(3*P)*
+            Sin(3*Pi*t)*Sin(3*Pi*Z))/
+          (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
          (24.*(-10 + R)*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*
             Sin(3*Pi*Z))/
           (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) - 
          (9*Power(Pi,2)*(1 - (1.*Power(-10 + R,2))/
                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(3*P)*
             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.) + 
-      R*((9*Pi*(Power(R,-2) + 
-              (20.*(-10 + R))/
-               (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-            Cos(3*Pi*Z)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-         (9*Pi*(Power(R,-2) - 
-              (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-            Cos(3*P)*Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+      R*((113.09733552923255*(-10 + R)*Cos(3*P)*Cos(3*Pi*Z)*
+            Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+          (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+         (113.09733552923255*Z*Cos(3*P)*Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+            Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
          (9*(Power(R,-2) - 400/
                (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
             Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.) + 
-      R*((9*Power(Pi,2)*(1 + (1.*(-10 + R)*Z)/
-               (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-            Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*t))/5. + 
-         (3*Pi*((-2.*Power(-10 + R,2)*Z)/
-               Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-              (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-            Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/5. + 
-         (9*Pi*(1 - (20.*Z)/
-               (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(3*P)*
-            Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. + 
+      R*((17.765287921960844*(-10 + R)*Z*Cos(3*Pi*(-10 + R))*Cos(3*Pi*Z)*
+            Sin(3*P)*Sin(3*Pi*t))/
+          (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+         (3.7699111843077517*Power(-10 + R,2)*Z*Cos(3*Pi*Z)*Sin(3*P)*
+            Sin(3*Pi*(-10 + R))*Sin(3*Pi*t))/
+          Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+         (1.8849555921538759*Z*Cos(3*Pi*Z)*Sin(3*P)*Sin(3*Pi*(-10 + R))*
+            Sin(3*Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+         (113.09733552923255*Z*Cos(3*P)*Cos(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+            Sin(3*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
          (3.7699111843077517*(-10 + R)*Power(Z,2)*Cos(3*Pi*(-10 + R))*
             Sin(3*P)*Sin(3*Pi*t)*Sin(3*Pi*Z))/
           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-         (3*((40.*(-10 + R)*Z)/
-               (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-              (20.*Z)/
-               (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-            Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5. - 
+         (24.*(-10 + R)*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*
+            Sin(3*Pi*Z))/
+          (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
+         (12.*Z*Cos(3*P)*Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/
+          (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
          (9*Power(Pi,2)*(1 - (1.*Power(Z,2))/
                (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(3*P)*
             Sin(3*Pi*(-10 + R))*Sin(3*Pi*t)*Sin(3*Pi*Z))/5.)))/R
@@ -1750,62 +1727,56 @@ struct SGammaPhie{
 struct SGammaNi{
     double mue,mui,taue,taui,beta,nuperp,nuparallel;
     DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return 0. - (0.5*mui*taui*(1.5707963267948966*
-        (1 + (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
+    return 0. - (0.5*mui*taui*((1.5707963267948966*(-10 + R)*Z*Cos(Pi*Z)*Sin(P)*
+          Sin(Pi*(-10 + R))*Sin(Pi*t))/
+        (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
        1.5707963267948966*(1 - 
           (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-        Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) + 
-       0.5*(1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-        Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
-       R*(4.934802200544679*(1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Cos(Pi*Z)*Sin(P)*Sin(Pi*t) + 
-          1.5707963267948966*(1 + 
-             (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(P)*
-           Cos(Pi*Z)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
+        Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) - 
+       (10.*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+        (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+       R*((4.934802200544679*(-10 + R)*Z*Cos(Pi*(-10 + R))*Cos(Pi*Z)*
+             Sin(P)*Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) \
++ (31.41592653589793*(-10 + R)*Cos(P)*Cos(Pi*Z)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.141592653589793*Power(-10 + R,2)*Z*Cos(Pi*Z)*Sin(P)*
              Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+          (3.141592653589793*(-10 + R)*Power(Z,2)*Cos(Pi*(-10 + R))*
+             Sin(P)*Sin(Pi*t)*Sin(Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          1.5707963267948966*((-2.*(-10 + R)*Power(Z,2))/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*Sin(Pi*Z) - 
+          (1.5707963267948966*(-10 + R)*Cos(Pi*(-10 + R))*Sin(P)*
+             Sin(Pi*t)*Sin(Pi*Z))/
+           (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
           (20.*(-10 + R)*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
            (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) - 
           4.934802200544679*(1 - 
              (1.*Power(-10 + R,2))/
               (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(P)*
            Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)) + 
-       R*(1.5707963267948966*(Power(R,-2) + 
-             (20.*(-10 + R))/
-              (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(P)*
-           Cos(Pi*Z)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
-          1.5707963267948966*(Power(R,-2) - 
-             (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) - 
+       R*((31.41592653589793*(-10 + R)*Cos(P)*Cos(Pi*Z)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+          (31.41592653589793*Z*Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*
+             Sin(Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           0.5*(Power(R,-2) - 400/
               (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
            Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z)) + 
-       R*(4.934802200544679*(1 + 
-             (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-           Cos(Pi*(-10 + R))*Cos(Pi*Z)*Sin(P)*Sin(Pi*t) + 
-          1.5707963267948966*((-2.*Power(-10 + R,2)*Z)/
-              Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-             (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(Pi*Z)*
-           Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t) + 
-          1.5707963267948966*(1 - 
-             (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
+       R*((4.934802200544679*(-10 + R)*Z*Cos(Pi*(-10 + R))*Cos(Pi*Z)*
+             Sin(P)*Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (3.141592653589793*Power(-10 + R,2)*Z*Cos(Pi*Z)*Sin(P)*
+             Sin(Pi*(-10 + R))*Sin(Pi*t))/
+           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+          (1.5707963267948966*Z*Cos(Pi*Z)*Sin(P)*Sin(Pi*(-10 + R))*
+             Sin(Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+          (31.41592653589793*Z*Cos(P)*Cos(Pi*(-10 + R))*Sin(Pi*t)*
+             Sin(Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
           (3.141592653589793*(-10 + R)*Power(Z,2)*Cos(Pi*(-10 + R))*Sin(P)*
              Sin(Pi*t)*Sin(Pi*Z))/
            Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-          0.5*((40.*(-10 + R)*Z)/
-              (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-             (20.*Z)/
-              (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-           Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) - 
+          (20.*(-10 + R)*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+           (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
+          (10.*Z*Cos(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))/
+           (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
           4.934802200544679*(1 - 
              (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
            Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z))))/R
@@ -1813,57 +1784,59 @@ struct SGammaNi{
 struct SA{
     double mue,mui,taue,taui,beta,nuperp,nuparallel;
     DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return -((Pi*(1 + (1.*(-10 + R)*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-       Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t) + 
+    return -(((3.141592653589793*(-10 + R)*Z*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
+         Sin(4*Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
       Pi*(1 - (1.*Power(Z,2))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-       Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z) + 
-      (1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-       Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z) + 
-      R*(4*Power(Pi,2)*(1 + (1.*(-10 + R)*Z)/
-             (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-          Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*t) + 
-         4*Pi*(1 + (20.*(-10 + R))/
-             (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(4*P)*
-          Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t) + 
+       Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z) - 
+      (20.*Z*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
+       (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
+      R*((39.47841760435743*(-10 + R)*Z*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*
+            Sin(4*P)*Sin(4*Pi*t))/
+          (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) + 
+         (251.32741228718345*(-10 + R)*Cos(4*P)*Cos(4*Pi*Z)*
+            Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/
+          (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
          (6.283185307179586*Power(-10 + R,2)*Z*Cos(4*Pi*Z)*Sin(4*P)*
             Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/
+          Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) - 
+         (6.283185307179586*(-10 + R)*Power(Z,2)*Cos(4*Pi*(-10 + R))*
+            Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z))/
           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-         Pi*((-2.*(-10 + R)*Power(Z,2))/
-             Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-            (1.*(-10 + R))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-          Cos(4*Pi*(-10 + R))*Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z) - 
+         (3.141592653589793*(-10 + R)*Cos(4*Pi*(-10 + R))*Sin(4*P)*
+            Sin(4*Pi*t)*Sin(4*Pi*Z))/
+          (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
          (40.*(-10 + R)*Z*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
             Sin(4*Pi*Z))/
           (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) - 
          4*Power(Pi,2)*(1 - (1.*Power(-10 + R,2))/
              (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(4*P)*
           Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z)) + 
-      R*(4*Pi*(Power(R,-2) + (20.*(-10 + R))/
-             (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(4*P)*
-          Cos(4*Pi*Z)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t) + 
-         4*Pi*(Power(R,-2) - (20.*Z)/
-             (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*Cos(4*P)*
-          Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z) - 
+      R*((251.32741228718345*(-10 + R)*Cos(4*P)*Cos(4*Pi*Z)*
+            Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/
+          (R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
+         (251.32741228718345*Z*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+            Sin(4*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
          4*(Power(R,-2) - 400/
              (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
           Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z)) + 
-      R*(4*Power(Pi,2)*(1 + (1.*(-10 + R)*Z)/
-             (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*
-          Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*t) + 
-         Pi*((-2.*Power(-10 + R,2)*Z)/
-             Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-            (1.*Z)/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Cos(4*Pi*Z)*
-          Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t) + 
-         4*Pi*(1 - (20.*Z)/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-          Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z) + 
+      R*((39.47841760435743*(-10 + R)*Z*Cos(4*Pi*(-10 + R))*Cos(4*Pi*Z)*
+            Sin(4*P)*Sin(4*Pi*t))/
+          (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+         (6.283185307179586*Power(-10 + R,2)*Z*Cos(4*Pi*Z)*Sin(4*P)*
+            Sin(4*Pi*(-10 + R))*Sin(4*Pi*t))/
+          Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
+         (3.141592653589793*Z*Cos(4*Pi*Z)*Sin(4*P)*Sin(4*Pi*(-10 + R))*
+            Sin(4*Pi*t))/(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)) - 
+         (251.32741228718345*Z*Cos(4*P)*Cos(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+            Sin(4*Pi*Z))/(R*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) + 
          (6.283185307179586*(-10 + R)*Power(Z,2)*Cos(4*Pi*(-10 + R))*
             Sin(4*P)*Sin(4*Pi*t)*Sin(4*Pi*Z))/
           Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2) + 
-         ((40.*(-10 + R)*Z)/
-             (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
-            (20.*Z)/
-             (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))))*
-          Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z) - 
+         (40.*(-10 + R)*Z*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*
+            Sin(4*Pi*Z))/
+          (R*Power(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2),2)) + 
+         (20.*Z*Cos(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z))/
+          (Power(R,2)*(400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2))) - 
          4*Power(Pi,2)*(1 - (1.*Power(Z,2))/
              (400 + 1.*Power(-10 + R,2) + 1.*Power(Z,2)))*Sin(4*P)*
           Sin(4*Pi*(-10 + R))*Sin(4*Pi*t)*Sin(4*Pi*Z)))/R)
