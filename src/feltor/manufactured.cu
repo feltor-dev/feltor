@@ -8,6 +8,7 @@
 #include "parameters.h"
 namespace feltor{
 namespace manufactured{
+//#include "/mnt/hgfs/shared/manufactured.h"
 #include "manufactured.h"
 }//namespace manufactured
 }//namespace feltor
@@ -32,7 +33,8 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile]\n";
         return -1;
     }
-    const feltor::Parameters p( js); p.display( std::cout);
+    const feltor::Parameters p( js);// p.display( std::cout);
+    std::cout << "# "<<p.n<<" x "<<p.Nx<<" x "<<p.Ny<<" x "<<p.Nz<<"\n";
     const double R_0 = 10;
     const double I_0 = 20; //q factor at r=1 is I_0/R_0
     const double a  = 1; //small radius
@@ -81,7 +83,7 @@ int main( int argc, char* argv[])
     //Adaptive solver
     dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
         "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
-    double time = 0, dt_new = p.dt, TMAX = 1e-4;
+    double time = 0, dt_new = p.dt, TMAX = 1e-3;
     while( time < TMAX)
     {
         if( time + dt_new > TMAX)
@@ -101,7 +103,7 @@ int main( int argc, char* argv[])
             std::cerr << "Does Simulation respect CFL condition?\n";
             return -1;
         }
-        std::cout << "Time "<<time<<std::endl;
+        std::cout << "#Time "<<time<<std::endl;
     }
     //now compare stuff
     dg::blas1::evaluate( sol[0][0], dg::equals(), ne, R,Z,P,time);
@@ -111,6 +113,8 @@ int main( int argc, char* argv[])
     dg::blas1::evaluate( sol_apar, dg::equals(), aa, R,Z,P,time);
     dg::blas1::evaluate( sol_phi[0], dg::equals(),phie,R,Z,P,time);
     dg::blas1::evaluate( sol_phi[1], dg::equals(),phii,R,Z,P,time);
+    dg::blas1::plus(sol[0][0],-1); //ne-1
+    dg::blas1::plus(sol[0][1],-1); //Ni-1
     const std::array<std::array<dg::DVec,2>,2>& num = feltor.fields();
     const std::array<dg::DVec,2>& num_phi = feltor.potential();
     const dg::DVec& num_apar = feltor.induction();
@@ -121,8 +125,8 @@ int main( int argc, char* argv[])
     double normphie = sqrt(dg::blas2::dot( w3d, sol_phi[0]));
     double normphii = sqrt(dg::blas2::dot( w3d, sol_phi[1]));
     double normapar = sqrt(dg::blas2::dot( w3d, sol_apar));
-    dg::blas1::axpby( 1., num[0][0], -1.,sol[0][0]);
-    dg::blas1::axpby( 1., num[0][1], -1.,sol[0][1]);
+    dg::blas1::axpby( 1., y0[0][0], -1.,sol[0][0]);
+    dg::blas1::axpby( 1., y0[0][1], -1.,sol[0][1]);
     dg::blas1::axpby( 1., num[1][0], -1.,sol[1][0]);
     dg::blas1::axpby( 1., num[1][1], -1.,sol[1][1]);
     dg::blas1::axpby( 1., num_phi[0], -1.,sol_phi[0]);

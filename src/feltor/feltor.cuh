@@ -53,17 +53,17 @@ struct ComputePerpDrifts{
                     b_1*( d2P*d0U-d0P*d2U)+
                     b_2*( d0P*d1U-d1P*d0U);//ExB drift
         dtN =   -PN
-                -m_tau*( KN)
-                -N*(     KP)
-                -m_mu*U*U* (   KappaN )
-                -2.*m_mu*N*U*( KappaU )
-                -m_mu*N*U*U*divCurvKappa;
-        dtU =   - PU
+                -N * KP
+                -m_tau * KN
+                -m_mu * U * U * KappaN
+                -2. * m_mu * N * U * KappaU
+                -m_mu * N * U * U * divCurvKappa;
+        dtU =   -PU
                 -U*KappaP
-                -m_tau* KU
-                -m_tau*U*divCurvKappa
-                -(2.*m_tau + m_mu*U*U)*( KappaU )
-                - 2.*m_tau*U*( KappaN )/N;
+                -m_tau * KU
+                -m_tau * U * divCurvKappa
+                -(2. * m_tau + m_mu * U * U)*KappaU
+                - 2. * m_tau * U * KappaN / N;
     }
     DG_DEVICE
     void operator()(
@@ -208,8 +208,8 @@ struct Implicit
             }
             else // m_p.perp_diff == "viscous"
             {
-                dg::blas2::symv( m_p.nu_perp, m_lapM_perpN, y[0][i],  0., yp[0][i]);
-                dg::blas2::symv( m_p.nu_perp, m_lapM_perpU, y[1][i],  0., yp[1][i]);
+                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, y[0][i],  0., yp[0][i]);
+                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, y[1][i],  0., yp[1][i]);
             }
         }
     }
@@ -308,7 +308,7 @@ struct Explicit
   private:
     void compute_phi( double t, const std::array<container,2>& y);
     void compute_psi( double t, const std::array<container,2>& y);
-    void compute_apar( double t, std::array<std::array<container,2>,2>& y);
+    void compute_apar( double t, std::array<std::array<container,2>,2>& fields);
     void compute_energies(
         const std::array<std::array<container,2>,2>& fields);
     void compute_dissipation(
@@ -634,21 +634,21 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
 }
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
-    double time, std::array<std::array<container,2>,2>& y)
+    double time, std::array<std::array<container,2>,2>& fields)
 {
     //on input
-    //y[0][0] = n_e, y[1][0]:= w_e
-    //y[0][1] = N_i, y[1][1]:= W_i
+    //fields[0][0] = n_e, fields[1][0]:= w_e
+    //fields[0][1] = N_i, fields[1][1]:= W_i
     //----------Compute and set chi----------------------------//
-    dg::blas1::axpby(  m_p.beta/m_p.mu[1], y[0][1],
-                      -m_p.beta/m_p.mu[0], y[0][0], m_temp0);
+    dg::blas1::axpby(  m_p.beta/m_p.mu[1], fields[0][1],
+                      -m_p.beta/m_p.mu[0], fields[0][0], m_temp0);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_induction[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    dg::blas1::pointwiseDot(  1., y[0][1], y[1][1],
-                             -1., y[0][0], y[1][0], 0., m_temp0);
+    dg::blas1::pointwiseDot(  1., fields[0][1], fields[1][1],
+                             -1., fields[0][0], fields[1][0], 0., m_temp0);
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
 #ifdef DG_MANUFACTURED
@@ -667,8 +667,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     dg::blas2::symv( m_dz,   m_apar, m_dzA);
 
     //----------Compute Velocities-----------------------------//
-    dg::blas1::axpby( 1., y[1][0], -m_p.beta/m_p.mu[0], m_apar, y[1][0]);
-    dg::blas1::axpby( 1., y[1][1], -m_p.beta/m_p.mu[1], m_apar, y[1][1]);
+    dg::blas1::axpby( 1., fields[1][0], -m_p.beta/m_p.mu[0], m_apar, fields[1][0]);
+    dg::blas1::axpby( 1., fields[1][1], -m_p.beta/m_p.mu[1], m_apar, fields[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -749,6 +749,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
         dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
         m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
+        // (These two terms converge slowly and require high z resolution)
         m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
         m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
         // diffusion: + nu_par Delta_par U
@@ -866,10 +867,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
 
     // Compute Apar and m_U if necessary --- reads and updates m_fields
+    dg::blas1::copy( y[1], m_fields[1]);
     if( m_p.beta != 0)
         compute_apar( t, m_fields);
-    else
-        dg::blas1::copy( y[1], m_fields[1]);
 
     // Set perpendicular dynamics in yp
     compute_perp( t, y, m_fields, yp);
@@ -908,7 +908,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         if(rank==0)
     #endif
-    std::cout << "One rhs took "<<timer.diff()<<"s\n";
+    //std::cout << "#One rhs took "<<timer.diff()<<"s\n";
 }
 
 } //namespace feltor
