@@ -43,24 +43,25 @@ struct Compose : public aCloneableCylindricalFunctor<Compose<UnaryFunctor>>
 ///@{
 
 /**
- * @brief Returns zero outside psipmax and inside psipmin, otherwise 1
-     \f[ \begin{cases}
+ * @brief <tt>(CylindricalFunctor psip, double psip_min, double psip_max)</tt>
+     \f[ f(R,Z) = \begin{cases}
         1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
         0  \text{ else}
      \end{cases}\f]
  */
 using Iris = Compose<dg::Iris>;
 /**
- * @brief Returns zero outside psipmax, otherwise 1
-     \f[ \begin{cases}
+ * @brief <tt> (CylindricalFunctor psip, double psipmax) </tt>
+     \f[ f(R,Z) = \begin{cases}
         0  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
         1  \text{ else}
      \end{cases}\f]
  */
 using Pupil = Compose<dg::Pupil>;
+
 /**
- * @brief Returns psi inside psipmax and psipmax outside psipmax
-     \f[ \begin{cases}
+ * @brief <tt> (CylindricalFunctor psip, double psipmax)</tt>
+     \f[ f(R,Z) = \begin{cases}
         \psi_{p,max}  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
         \psi_p(R,Z) \text{ else}
      \end{cases}\f]
@@ -68,33 +69,28 @@ using Pupil = Compose<dg::Pupil>;
 using PsiPupil = Compose<dg::PsiPupil>;
 
 /**
- * @brief Sets values to one outside psipmax, zero else
-     \f[ \begin{cases}
+ * @brief <tt> (CylindricalFunctor psip, double psipmax) </tt>
+     \f[ f(R,Z) = \begin{cases}
         1  \text{ if } \psi_p(R,Z) > \psi_{p,\max} \\
         0  \text{ else}
      \end{cases}\f]
- *
  */
 using PsiLimiter = dg::geo::Compose<dg::Heaviside>;
 
 /**
- * @brief Damps the outer boundary in a zone
- * from psipmax to psipmax+ 4*alpha with a normal distribution
- * Returns 1 inside, zero outside and a gaussian within
-     \f[ \begin{cases}
+ * @brief <tt>(CylindricalFunctor psip, double psipmax, double alpha)</tt>
+ * \f[ f(R,Z) = \begin{cases}
  1 \text{ if } \psi_p(R,Z) < \psi_{p,max}\\
  0 \text{ if } \psi_p(R,Z) > (\psi_{p,max} + 4\alpha) \\
- \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right), \text{ else}
+ \exp\left( - \frac{(\psi_p(R,Z) - \psi_{p,max})^2}{2\alpha^2}\right), \text{ else}
  \end{cases}
    \f]
- *
  */
 using GaussianDamping = dg::geo::Compose<dg::GaussianDamping>;
 
 /**
- * @brief
- * A tanh profile
- \f[ 0.5\left( 1 + \tanh\left( \frac{\psi_p(R,Z) - \psi_{p,max} }{\alpha}\right)\right) \f]
+ * @brief <tt>(CylindricalFunctor psip, double psipmax, double alpha, int sign =1,double B = 0., double A = 1.) </tt>
+ * \f[ f(R,Z) = B + 0.5 A(1+ \text{sign} \tanh((\psi_p(R,Z)-\psi_{p,max})/\alpha ) ) \f]
 
  Similar to GaussianProfDamping is zero outside given \c psipmax and
  one inside of it.
@@ -102,20 +98,20 @@ using GaussianDamping = dg::geo::Compose<dg::GaussianDamping>;
 using TanhDamping = dg::geo::Compose<dg::TanhProfX>;
 
 /**
- * @brief Density profile with variable peak and background amplitude
- *\f[ N(R,Z)= B + A\psi_p(R,Z)\f]
+ * @brief <tt> (CylindricalFunctor psip, double A, double B)</tt>
+ *\f[ f(R,Z)= B + A\psi_p(R,Z)\f]
  */
 using Nprofile = dg::geo::Compose<dg::LinearX>;
 
 /**
- * @brief Zonal flow field
-     \f[ N(R,Z)= B + A \sin(k_\psi \psi_p(R,Z) ) \f]
+ * @brief <tt>(CylindricalFunctor psip, double A, double B, double k_psi)</tt>
+     \f[ f(R,Z)= B + A \sin(k_\psi \psi_p(R,Z) ) \f]
  */
 using ZonalFlow = dg::geo::Compose<dg::SinX>;
 
 /**
- * @brief Cut everything below X-point
- \f[ \begin{cases}
+ * @brief <tt> (double Z_X)</tt>
+ \f[ f(R,Z)= \begin{cases}
  1 \text{ if } Z > Z_X \\
  0 \text{ else }
  \end{cases}

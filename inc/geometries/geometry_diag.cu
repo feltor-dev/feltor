@@ -214,7 +214,7 @@ int main( int argc, char* argv[])
         {"ZonalFlow", dg::geo::ZonalFlow(c.psip(), p.amp, 0., 2.*M_PI*p.k_psi )},
         {"PsiLimiter", dg::geo::PsiLimiter(c.psip(), gp.psipmaxlim)},
         {"Nprofile", dg::geo::Nprofile(c.psip(), p.nprofileamp/c.psip()(c.R0(),0.), p.bgprofamp )},
-        {"TanhDamping", dg::geo::TanhDamping(c.psip(), gp.psipmin, gp.alpha)},
+        {"TanhDamping", dg::geo::TanhDamping(c.psip(), -3*gp.alpha, gp.alpha, -1)},
         ////
         {"BathRZ", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,5., p.amp)},
         {"Gaussian3d", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,

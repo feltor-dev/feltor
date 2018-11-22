@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
         xpoint_damping = dg::pullback(
             dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
     dg::HVec source_damping = dg::pullback( dg::geo::TanhDamping(
-        mag.psip(), -3.*p.alpha, p.alpha, -1.), grid);
+        mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
     if( p.omega_source != 0)
     {
@@ -140,6 +140,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     {   //output 3d variables into file
         dg::geo::BFieldR fieldR(mag);
         dg::geo::BFieldZ fieldZ(mag);
@@ -151,15 +152,19 @@ int main( int argc, char* argv[])
         dg::HVec psip = dg::pullback( mag.psip(), grid_out);
         std::map<std::string, const dg::HVec*> v3d{
             {"BR", &vecR}, {"BZ", &vecZ}, {"BP", &vecP},
-            {"Psip", &psip}, {"Nprof", &profile }, {"Source", &source_damping }
+            {"Psip", &psip}, {"Nprof", &profile },
+            {"Source", &source_damping }
         };
-        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+        dg::IHMatrix project = dg::create::projection( grid_out, grid);
+        dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
         for( auto pair : v3d)
         {
             int vecID;
-            err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 3, &dim_ids[1], &vecID);
+            err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 3,
+                &dim_ids[1], &vecID);
             err = nc_enddef( ncid);
-            err = nc_put_var_double( ncid, vecID, pair.second->data());
+            dg::blas2::symv( project, *pair.second, transferH);
+            err = nc_put_var_double( ncid, vecID, transferH.data());
             err = nc_redef(ncid);
 
         }
@@ -180,7 +185,13 @@ int main( int argc, char* argv[])
     //first, update quantities in feltor
     {
         std::array<std::array<dg::DVec,2>,2> y1(y0);
-        feltor( time, y0, y1);
+        try{
+            feltor( time, y0, y1);
+        } catch( dg::Fail& fail) {
+            std::cerr << "CG failed to converge in first step to "<<fail.epsilon()<<"\n";
+            err = nc_close(ncid);
+            return -1;
+        }
         feltor.update_quantities();
     }
     q.display(std::cout);

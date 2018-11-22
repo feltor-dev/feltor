@@ -43,8 +43,10 @@ We do not (yet) follow semantic versioning.
   preferred for unified access and easier recognition as a dg header file
 - the header file/nc\_utilities.h; now dg/file/nc\_utilities.h is preferred for
   unified access and easier recognition as a dg header file
+- the Helmholtz2 class (it's much faster to use Helmholtz twice)
 
 ### Removed
+- CylindricalFunctorAdapter ( we now use the better CylindricalFunctor everywhere)
 - TensorElliptic, GeneralElliptic and GeneralEllipticSym classes ( superceded by Elliptic3d)
 - ds\_geom\_t.cu, ds\_guenther\_b.cu (superceded by better test programs)
 - dg::SparseElement (it's more intuitive to use a container directly)

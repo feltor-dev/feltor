@@ -17,6 +17,7 @@ namespace geo
 * This behaviour is injected into all classes that derive from this class
 * @ingroup fluxfunctions
 * @sa \c aCloneableCylindricalFunctor
+* @sa An alternative is \c RealCylindricalFunctor
 */
 struct aCylindricalFunctor
 {
@@ -67,25 +68,44 @@ struct aCylindricalFunctor
     virtual double do_compute(double R, double Z) const=0;
 };
 
-/*! @brief Any 2d functor can be a Cylindrical functor
+/*! @brief Inject both 2d and 3d \c operator() to a 2d functor
+ *
+ * The purpose of this class is to extend any 2d Functor to a
+ * 3d Functor by defining \f$ f(x,y,z) := f(x,y)\f$. This class is
+ * especially useful in an interface since any 2d functor can be converted
+ * to it.
+ * @note If you want to write a functor that is both 2d and 3d directly,
+ * it is easier to derive from \c aCylindricalFunctor
+ * @ingroup fluxfunctions
+ * @sa this class is an alternative to \c aCylindricalFunctor
  */
 template<class real_type>
 struct RealCylindricalFunctor
 {
     RealCylindricalFunctor(){}
+    /**
+    * @brief Construct from any binary functor
+    *
+    * @tparam BinaryFunctor Interface must be <tt> real_type(real_type x, real_type y)</tt>
+    * @param f a 2d functor
+    */
     template<class BinaryFunctor>
     RealCylindricalFunctor( BinaryFunctor f):
         m_f(f) {}
+    /// @return f(R,Z)
     real_type operator()( real_type R, real_type Z) const{
         return m_f(R,Z);
     }
-    real_type operator()( real_type R, real_type Z, real_type P) const{
+    /// @return f(R,Z)
+    real_type operator()( real_type R, real_type Z, real_type phi) const{
         return m_f(R,Z);
     }
     private:
     std::function<real_type(real_type,real_type)> m_f;
 };
 
+///Most of the times we use \c double
+/// @ingroup fluxfunctions
 using CylindricalFunctor = RealCylindricalFunctor<double>;
 
 /**
@@ -108,33 +128,6 @@ struct aCloneableCylindricalFunctor : public aCylindricalFunctor
         return new Derived(static_cast<Derived const &>(*this));
     }
 };
-/**
- * @brief With this adapater class you can make any Functor cloneable
- *
- * @tparam BinaryFunctor must overload the operator() like
- * double operator()(double,double)const;
-* @ingroup fluxfunctions
- */
-template<class BinaryFunctor>
-struct CylindricalFunctorAdapter : public aCloneableCylindricalFunctor<CylindricalFunctorAdapter<BinaryFunctor> >
-{
-    CylindricalFunctorAdapter( const BinaryFunctor& f):f_(f){}
-    private:
-    double do_compute(double x, double y)const{return f_(x,y);}
-    BinaryFunctor f_;
-};
-/**
- * @brief Use this function when you want to convert any Functor to aCylindricalFunctor
- *
- * @tparam BinaryFunctor must overload the operator() like
- * double operator()(double,double)const;
- * @param f const reference to a functor class
- * @return a newly allocated instance of aCylindricalFunctor on the heap
- * @note the preferred way is to derive your Functor from aCloneableCylindricalFunctor but if you can't or don't want to for whatever reason then use this to make one
-* @ingroup fluxfunctions
- */
-template<class BinaryFunctor>
-aCylindricalFunctor* make_aCylindricalFunctor(const BinaryFunctor& f){return new CylindricalFunctorAdapter<BinaryFunctor>(f);}
 
 /**
  * @brief The constant functor
