@@ -8,7 +8,7 @@
 #include "parameters.h"
 #define DG_MANUFACTURED
 #define FELTORPARALLEL 1
-#define FELTORPERP 0
+#define FELTORPERP 1
 //#include "/mnt/hgfs/shared/manufactured.h"
 #include "manufactured.h"
 #include "feltor.cuh"

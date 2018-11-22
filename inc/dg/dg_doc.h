@@ -195,7 +195,7 @@
 /*! @mainpage Introduction
  *
  * @section pdf Introduction to discontinuous Galerkin methods
- * Here is a pdf document explainin the fundamentals of discontinuous Galerkin methods
+ * Here is a pdf document explaining the fundamentals of discontinuous Galerkin methods
  *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  *
 

@@ -22,9 +22,9 @@ system $\vec x :=\{x_0, x_1, x_2\}$, metric
 tensor $g_{ij}$ and volume element $\sqrt{g} := \sqrt{\det g}$.
 Given a vector field $\vec B(\vec x)$ with unit vector $\bhat := \vec B/B$
 we can define various differential operations.
-Let us further assume that $\bhat$ is perturbed by the parallel
-vector potential $A_\parallel$ via
-$\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
+%Let us further assume that $\bhat$ is perturbed by the parallel
+%vector potential $A_\parallel$ via
+%$\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
 %\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
@@ -59,9 +59,9 @@ $\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
     Parallel derivative&
     $\nabla_\parallel $&
     $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
-    Perturbed parallel Derivative&
-    $\bar\nabla_\parallel$ &
-    $\bar\nabla_\parallel f := (\bhat + \tilde{\vec b })\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_\kappa(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
+    %Perturbed parallel Derivative&
+    %$\bar\nabla_\parallel$ &
+    %$\bar\nabla_\parallel f := (\bhat + \tilde{\vec b })\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_\kappa(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
     Parallel Laplacian&
     $\Delta_\parallel $&
     $\Delta_\parallel f:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f )$\\
@@ -340,107 +340,44 @@ K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
 % Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL.
 % However, our isothermal model misses important core physics ingredients, such as the ion temperature gradient (ITG) and trapped electron mode (TEM)~\cite{Wesson07}. Thus the validity the global model is limited to certain
 % parameter regimes.\\
-The continuity equations for the electron density \(n_e\) and  ion gyro-centre density electrons  \(N_i\) read
-\begin{align}
- \frac{\partial}{\partial t}n_e =&
- - \frac{1}{B}\left[\phi,  n_e \right]_{\perp}
- -  \bar{\nabla}_{\parallel}( n_e u_e)
- + n_e u_e   \bar{\nabla}_{\parallel} \ln{(B)}
-+ \frac{t_e }{e }  \mathcal{K} \left( n_e\right)
-\nonumber  \\ &
--   n_e \mathcal{K}(\phi)
-%  + \frac{m_e }{ e } n_e u_e \mathcal{K} \left(  u_e \right)
-%  + \frac{m_e }{2 e } u_e^2 \mathcal{K} \left(n_e \right) +
-   +  \frac{m_e }{ e } \mathcal{K}_{\kappa} \left( n_e u_e^2 \right)
-   + \frac{m_e }{ e } \left( n_e u_e^2 \right) \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
-   + \Lambda_{n_e} + S_{n_e},\\
-\frac{\partial}{\partial t}N_i =&
- - \frac{1}{B}\left[\psi_i,  N_i \right]_{\perp}
- - \bar{\nabla}_{\parallel}(N_i U_i)
- + N_i U_i   \bar {\nabla}_{\parallel} \ln{(B)}
-- \frac{T_i }{e }  \mathcal{K} \left( N_i\right)
-\nonumber  \\ &
--   N_i \mathcal{K}(\psi)
-%  - \frac{m_i }{ e } N_i U_i \mathcal{K} \left(  U_i \right)
-%  - \frac{m_i }{2 e } U_i^2 \mathcal{K} \left(N_i \right) +
-- \frac{m_i }{ e }\mathcal{K}_{\kappa}  \left( N_i U_i^2 \right)
-- \frac{m_i }{ e } \left( N_i U_i^2 \right)\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
-+ \Lambda_{N_i} + S_{N_i}.
-\end{align}
-The evolution equation for the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
-\begin{align}
-\frac{\partial}{\partial t}\left(  u_e -\frac{e}{m_e} A_\parallel\right)
-      =&
-      - \frac{1 }{ B} \left[ \phi, u_e  \right]_{\perp}
-      +  \frac{e}{m_e}   \bar \nabla_\parallel \phi
-      -   \frac{1}{2}   \bar \nabla_\parallel u_e^2
-      - \frac{t_e}{m_e } \bar \nabla_\parallel \ln  n_e
-     - u_e   \mathcal{K}_{\kappa} \left( \phi  \right)
-     + \frac{t_e}{e} \mathcal{K}\left(  u_e \right)
-     \nonumber  \\    &
-%      + \frac{m_e  u_e^2}{ e} \mathcal{K}_{\kappa} \left(u_e\right)
-%     + \frac{2  t_e}{ e} \mathcal{K}_{\kappa} \left(u_e\right)
-     + \frac{1}{e} \left(m_e  u_e^2 +  2  t_e\right)\mathcal{K}_{\kappa} \left(u_e\right)
-    + \frac{2  t_e u_e }{ e} \mathcal{K}_{\kappa} \left(\ln n_e \right)
-    + \frac{t_e  u_e }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
-%      +\frac{  t_e u_e }{e }  \mathcal{K}\left( \ln n_e \right)
-%       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)
-%       +\frac{e}{m_e}   \eta_{\parallel} J_\parallel
-    + R_{e, \eta_\parallel}+\Lambda_{u_e} ,  \\
-\frac{\partial}{\partial t}   \left( U_i + \frac{e}{m_i} A_\parallel\right)
-      =&
-      - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp}
-      -  \frac{e}{m_i}   \bar \nabla_\parallel \psi_i
-      -     \frac{1}{2}  \bar \nabla_\parallel U_i^2
-      - \frac{T_i}{m_i } \bar \nabla_\parallel \ln  N_i
-     -  U_i  \mathcal{K}_{\kappa} \left( \psi_i  \right)
-     - \frac{T_i}{e} \mathcal{K}\left(  U_i \right)
-     \nonumber  \\    &
-%            - \frac{m_i  U_i^2}{ e} \mathcal{K}_{\kappa} \left(U_i\right)
-%            - \frac{2  T_i}{ e} \mathcal{K}_{\kappa} \left(U_i\right)
-           - \frac{1}{e}\left(m_i  U_i^2 + 2  T_i \right) \mathcal{K}_{\kappa} \left(U_i\right)
-           - \frac{2  T_i U_i }{ e} \mathcal{K}_{\kappa} \left(\ln N_i \right)
-           - \frac{T_i  U_i }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
-%      -\frac{  T_i U_i }{e }  \mathcal{K}\left( \ln N_i \right)
-%       -\left(\frac{2  T_i  }{e} + \frac{m_i  U_i^2}{2 e} \right) \mathcal{K} \left(U_i\right)
-%       -\frac{e}{m_i}   \eta_{\parallel} J_\parallel
-         + R_{i,\eta_\parallel}  +\Lambda_{U_i}  .
-\end{align}
-The electric potential \(\phi\) and parallel magnetic vector potential are
-computed by the polarisation and induction equations
-\begin{align}
-  n_e -\Gamma_{1,i} N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right), \\
-  -\frac{1}{\mu_0} \Delta_\perp A_\parallel &= -en_e u_e + eN_i U_i
-  \label{eq:polarisation_dimensional}
-\end{align}
-with the generalised electric potential
-\begin{align}
-  \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i }{2 q}\frac{(\nabla_\perp\phi)^2}{B^2}, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q^2 B_0^2} \Delta_\perp
-\end{align}
-
-\subsection{Conservative form}
-Note that the continuity and momentum conservation equations can be
-written in the form
+The continuity equation for the electron density \(n_e\) and the ion gyro-centre
+density \(N_i\) and the momentum conservation equation for
+the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
+(omitting species labels)
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat + U\tilde{\vec b}\right)\right) = \Lambda_N + S_N \\
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})\right)\right) = \Lambda_N + S_N \\
 mN \frac{\partial}{\partial t} U &+ mN \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\bhat + U\tilde{\vec b}
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})
     \right)\cdot \vec\nabla U  \nonumber \\
-    &+ \vec \nabla \cdot ( 2mNU \vec v_\kappa)
-    + mNU\mathcal K_\kappa(\phi)
-    + mNU\vec v_\kappa \cdot \nabla \ln B \nonumber\\
-    &= -T \bar \nabla_\parallel N -qN ( \bar \nabla_\parallel \psi + \partial_t A_\parallel) + mN R_\eta + mN\Lambda_U
+    &+ 2m\vec \nabla \cdot ( NU \vec v_\kappa)
+    -mNU\vec \nabla\cdot \vec v_\kappa
+    + mNU\mathcal K_\kappa(\phi) \nonumber\\
+    &= -T (\bhat + \tilde{\vec b})\cdot \nabla N -qN \left( (\bhat+\tilde{\vec b})\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) + mN R_{\eta_\parallel} + mN\Lambda_U
 \label{}
 \end{align}
-with the velocities
+with
 \begin{align}
-\vec v_E := \frac{\bhat\times\nabla\phi}{B},\quad
+\tilde{\vec b} = \frac{\nabla\times A_\parallel \bhat}{B}, \quad
+\vec v_E := \frac{\bhat\times\nabla\psi}{B},\quad
 \vec v_C := \frac{T+mU^2}{q}\vec{\mathcal K_\kappa},\quad
 \vec v_\kappa := \frac{T}{q}\vec{\mathcal K_\kappa},\quad
 \vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
 \label{}
 \end{align}
+
+The electric potential \(\phi\) and parallel magnetic vector potential \(A_\parallel\) are
+computed by the polarisation and induction equations
+\begin{align}
+ -\vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2q_i^2 B_0^2} \Delta_\perp , \\
+  -\frac{1}{\mu_0} \Delta_\perp A_\parallel &= e\left(N_i U_i-n_e u_e \right)
+  \label{eq:polarisation_dimensional}
+\end{align}
+Given $\phi$ we define the generalised electric potential
+\begin{align}
+  \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i }{2 q}\frac{(\vec \nabla_\perp\phi)^2}{B^2}
+\end{align}
+
 \subsection{Parallel Resistivity and diffusion}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
 The parallel Spitzer resistivity
@@ -466,7 +403,7 @@ For numerical stabilisation we choose:
 \Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
 \Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i 
 \end{align}
-Similarly, for the perpendicular dissipation we apply viscous terms of second order.
+Similarly, for the perpendicular dissipation we apply viscous terms.
 \begin{align}\label{eq:perpdiffNT}
  \Lambda_{n_e,\perp} &=  -\nu_\perp \Delta_\perp n_e &
  \Lambda_{N_i,\perp} &=  -\nu_\perp \Delta_\perp N_i  & \\
@@ -474,6 +411,8 @@ Similarly, for the perpendicular dissipation we apply viscous terms of second or
  \Lambda_{U_i,\perp} &=  -\nu_\perp \Delta_\perp (U_i + eA_\parallel/m_i)
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
+Note that we let the perpendicular diffusion act on $W$ instead of $U$ for
+numerical reasons.
 
 \subsection{Boundary and Initial conditions}
 We define the simulation box as
@@ -653,7 +592,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         - N \mathcal K(\psi)
         -\mu \mathcal K_\kappa(NU^2)
         -\mu NU^2\nabla\cdot \vec{ \mathcal K_\kappa}
-        - \nu_\perp\Delta_\perp^2 N + \nu_\parallel \Delta_\parallel N + S_N, \\
+        + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
     \frac{\partial}{\partial t} W =&
         - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
         - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
@@ -665,7 +604,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
         -2\tau U\mathcal K_\kappa(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
-        - \nu_\perp\Delta_\perp^2 W + \nu_\parallel \Delta_\parallel U ,
+        + \nu_\perp\Delta_\perp W + \nu_\parallel \Delta_\parallel U ,
         \label{eq:EgyrofluidU} \\
         W&:= \left( U + \frac{\beta}{\mu}A_\parallel\right)
     \end{align}
@@ -687,7 +626,7 @@ Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} posit
 The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$
 \begin{align}
   \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
-  +\frac{\beta}{2}\left(\nabla_\perp A_\parallel\right)^2
+  +\frac{\beta}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
    +  \frac{1}{2} \mu_i N_i u_E^2  \right .\nonumber\\
    &\left. +\frac{1}{2} z_e\mu_e  n_e u_e^2
   +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
@@ -699,6 +638,28 @@ The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$
 \nonumber \\ &
 + z_e\mu_e u_e n_e \Lambda_{u_e}+z_i\mu_iU_i N_i \Lambda_{U_i} - \eta J_{\parallel,s}^2\bigg\}.
 \end{align}
+\subsection{Manufactured Solution}
+In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
+\begin{align*}
+n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
+N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \Gamma N_i  \\
+u_e(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
+U_i(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_e(R,Z,\varphi,t) \\
+\phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
+\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \Gamma \phi \\
+A_\parallel( R,Z,\varphi,t) &:= \sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
+\end{align*}
+We choose circular flux surfaces of the form
+\begin{align*}
+\psi_p(R,Z) &:=0.5((R-R_0)^2 + Z^2)\\
+I_p(R,Z)&:=I_0
+\end{align*}
+with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times[0,2\pi]$.
+We then symbolically compute source terms that we insert to the right hand side of
+the corresponding equation in code and simulate from $t=0...10^{-3}$.
+By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
+the convergence of the dG discretized terms from our parallel derivative
+we can selectively choose to only activate perpendicular (including $A_\parallel$ temrs) or parallel terms (those that involve derivatives along $\bhat$).
 
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
