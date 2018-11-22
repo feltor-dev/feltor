@@ -8,8 +8,8 @@
 #include "parameters.h"
 namespace feltor{
 namespace manufactured{
-//#include "/mnt/hgfs/shared/manufactured.h"
-#include "manufactured.h"
+#include "/mnt/hgfs/shared/manufactured.h"
+//#include "manufactured.h"
 }//namespace manufactured
 }//namespace feltor
 #define DG_MANUFACTURED
@@ -49,19 +49,19 @@ int main( int argc, char* argv[])
     std::cout << "Initialize implicit" << std::endl;
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 
-    feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                  p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                  p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                 p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                  p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                      p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                      p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],
+    feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
                                 p.beta,p.nu_perp,p.nu_parallel};
 
     dg::DVec R = dg::pullback( dg::cooX3d, grid);

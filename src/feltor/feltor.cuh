@@ -562,7 +562,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
 #ifdef DG_MANUFACTURED
         dg::blas1::copy( y[1], m_temp1);
         dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
-            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
             m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
@@ -577,7 +577,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
@@ -595,7 +595,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
 #ifdef DG_MANUFACTURED
         dg::blas1::copy( m_phi[0], m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
-            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
             m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaP, m_phi[1], m_temp0, m_p.eps_gamma);
@@ -624,7 +624,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
         m_UE2, m_temp0, m_temp1, m_binv);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //m_UE2 now contains u_E^2; also update derivatives
@@ -653,7 +653,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     m_old_apar.extrapolate( time, m_apar);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SA{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     std::vector<unsigned> number = m_multigrid.direct_solve(
@@ -890,16 +890,16 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[0][1], dg::plus_equals(), manufactured::SNi{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SUe{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SUi{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();
