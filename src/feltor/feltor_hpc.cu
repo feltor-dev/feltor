@@ -104,13 +104,13 @@ int main( int argc, char* argv[])
     else
         std::cerr <<"WARNING: Unknown initial condition!\n";
     std::array<std::array<dg::DVec,2>,2> y0;
-    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = profile;
+    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<dg::DVec>(profile);
     dg::blas1::axpby( 1., ntilde, 1., y0[0][0]); //sum up background and perturbation
     std::cout << "initialize ni" << std::endl;
     if( p.initphi == "zero")
         feltor.initializeni( y0[0][0], y0[0][1]);
     else if( p.initphi == "balance")
-        dg::blas1::copy( y0[0][0], y0[0][1]); //set n_e = N_i
+        dg::blas1::copy( y0[0][0], y0[0][1]); //set N_i = n_e
     else
         std::cerr <<"WARNING: Unknown initial condition for phi!\n";
 

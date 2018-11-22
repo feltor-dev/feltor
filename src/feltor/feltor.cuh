@@ -444,6 +444,8 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( vol, m_b[i], m_b[i]); //b_i/vol/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
+    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
+    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
 }
@@ -498,8 +500,6 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_dy_A( dg::create::dy( g, p.bcyA) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     /////////the elliptic and Helmholtz operators//////////////////////////
-    m_lapperpN ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
-    m_lapperpU ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
@@ -520,13 +520,12 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
+void Explicit<Geometry, IMatrix, Matrix, container>::initializene(
+    const container& src, container& target)
 {
-    if (m_p.tau[1] == 0.) {
-        // ne = N_i
-        dg::blas1::copy( src, target);
-    }
-    else {
+    // ne = Ni
+    dg::blas1::copy( src, target);
+    if (m_p.tau[1] != 0.) {
         // ne-1 = Gamma (ni-1)
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaN, target, src, m_p.eps_gamma);
@@ -535,12 +534,14 @@ void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const contain
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::initializeni( const container& src, container& target)
+void Explicit<Geometry, IMatrix, Matrix, container>::initializeni(
+    const container& src, container& target)
 {
+    // Ni = ne
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
         //add FLR correction -0.5*tau*mu*Delta n_e
-        dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
+        dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
             m_lapperpN, src, 1.0, target);
     }
 }
@@ -815,9 +816,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i], m_p.tau[i]),
                 m_temp2, m_logn[i], m_phi[i], fields[1][i]);
         // perp dissipation for N: -nu_perp Delta_p**2 N
-        dg::blas1::transform( fields[0][i], m_temp0, dg::PLUS<double>(-1));
-        dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
-        dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
+        if( m_p.perp_diff == "viscous")
+        {
+            dg::blas1::transform( fields[0][i], m_temp1, dg::PLUS<double>(-1));
+            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
+        }
+        else
+        {
+            dg::blas1::transform( fields[0][i], m_temp0, dg::PLUS<double>(-1));
+            dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
+            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
+        }
         m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
             m_temp2, m_vol3d, m_temp0);
         if( i==0)
@@ -829,9 +838,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         //Z*mu*N*U nu_parallel *( Delta_s U)
         dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i], 0, m_temp2);
         // perp dissipation for U: -nu_perp Delta_p**2 W
-        dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp0);
-        dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
-        dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
+        if( m_p.perp_diff == "viscous")
+        {
+            dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp1);
+            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
+        }
+        else
+        {
+            dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp0);
+            dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
+            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
+        }
         m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
             m_temp2, m_vol3d, m_temp0);
         // parallel dissipation for U: nu_parallel *(Delta_s U)
@@ -903,7 +920,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
         dg::blas1::axpby( 1., m_temp1, 1.0, yp[0][0]);
         //add FLR correction to dtNi
         dg::blas1::axpby( 1., m_temp1, 1.0, yp[1][1]);
-        dg::blas2::gemv( -0.5*m_p.tau[1]*m_p.mu[1],
+        dg::blas2::gemv( 0.5*m_p.tau[1]*m_p.mu[1],
             m_lapperpN, m_temp1, 1.0, yp[1][1]);
     }
 #ifdef DG_MANUFACTURED
