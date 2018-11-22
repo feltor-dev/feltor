@@ -11,13 +11,13 @@ namespace dg
 namespace tensor
 {
 
-///@addtogroup geometry
+///@addtogroup tensor
 ///@{
 
 /**
- * @brief Scale tensor with a Scalar or a Vector
+ * @brief \f$ t^{ij} = \mu t^{ij} \ \forall i,j \f$
  *
- * Computes \f$ t^{ij} = \mu t^{ij}\f$
+ * Scale tensor with a Scalar or a Vector
  * @param t input (contains result on output)
  * @param mu all elements in t are scaled with mu
  * @copydoc hide_ContainerType
@@ -128,14 +128,15 @@ struct InverseMultiply{
 }//namespace detail
 ///@endcond
 /**
- * @brief Multiply a tensor with a vector in 2d
+ * @brief \f$ w^i = \sum_{i=0}^1t^{ij}v_j \text{ for } i\in \{0,1\}\f$
  *
- * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{0,1\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
+ * Multiply a tensor with a vector in 2d.
+ * Ignore the 3rd dimension in \c t.
  * @param t input Tensor
- * @param in0 (input) first component    (may alias out0)
- * @param in1 (input) second component   (may alias out1)
- * @param out0 (output) first component  (may alias in0)
- * @param out1 (output) second component (may alias in1)
+ * @param in0 (input) first component  of \c v  (may alias out0)
+ * @param in1 (input) second component of \c v  (may alias out1)
+ * @param out0 (output) first component  of \c w (may alias in0)
+ * @param out1 (output) second component of \c w (may alias in1)
  * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
@@ -150,16 +151,16 @@ void multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in
 }
 
 /**
- * @brief Multiply a tensor with a vector in 3d
+ * @brief \f$ w^i = \sum_{i=0}^2t^{ij}v_j \text{ for } i\in \{0,1,2\}\f$
  *
- * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{0,1,2\}\f$
+ * Multiply a tensor with a vector in 3d.
  * @param t input Tensor
- * @param in0 (input)  first component  (may alias out0)
- * @param in1 (input)  second component (may alias out1)
- * @param in2 (input)  third component  (may alias out2)
- * @param out0 (output)  first component  (may alias in0)
- * @param out1 (output)  second component (may alias in1)
- * @param out2 (output)  third component  (may alias in2)
+ * @param in0 (input)  first component of \c v  (may alias out0)
+ * @param in1 (input)  second component of \c v (may alias out1)
+ * @param in2 (input)  third component of \c v  (may alias out2)
+ * @param out0 (output)  first component of \c w  (may alias in0)
+ * @param out1 (output)  second component of \c w (may alias in1)
+ * @param out2 (output)  third component of \c w  (may alias in2)
  * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
@@ -175,14 +176,15 @@ void multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1& in
 }
 
 /**
- * @brief Multiply the inverse tensor with a vector in 2d
+ * @brief \f$ v_j = \sum_{i=0}^1(t^{-1})_{ji}w^i \text{ for } i\in \{0,1\}\f$
  *
- * Compute \f$ v_j = t^{-1}_{ji}w^i\f$ for \f$ i,j\in \{0,1\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
+ * Multiply the inverse of a tensor \c t with a vector in 2d.
+ * Ignore the 3rd dimension in \c t. The inverse of \c t is computed inplace.
  * @param t input Tensor
- * @param in0 (input) first component    (may alias out0)
- * @param in1 (input) second component   (may alias out1)
- * @param out0 (output) first component  (may alias in0)
- * @param out1 (output) second component (may alias in1)
+ * @param in0 (input) first component of \c w    (may alias out0)
+ * @param in1 (input) second component of \c w   (may alias out1)
+ * @param out0 (output) first component of \c v  (may alias in0)
+ * @param out1 (output) second component of \c v (may alias in1)
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
@@ -196,16 +198,17 @@ void inv_multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1
 }
 
 /**
- * @brief Multiply the inverse tensor with a vector in 3d
+ * @brief \f$ v_j = \sum_{i=0}^2(t^{-1})_{ji}w^i \text{ for } i\in \{0,1,2\}\f$i
  *
- * Compute \f$ v_j = t^{-1}_{ji}w^i\f$ for \f$ i,j\in \{0,1,2\}\f$
+ * Multiply the inverse of a tensor with a vector in 3d.
+ * The inverse of \c t is computed inplace.
  * @param t input Tensor
- * @param in0 (input)  first component  (may alias out0)
- * @param in1 (input)  second component (may alias out1)
- * @param in2 (input)  third component  (may alias out2)
- * @param out0 (output)  first component  (may alias in0)
- * @param out1 (output)  second component (may alias in1)
- * @param out2 (output)  third component  (may alias in2)
+ * @param in0 (input)  first component  of \c w (may alias out0)
+ * @param in1 (input)  second component of \c w (may alias out1)
+ * @param in2 (input)  third component  of \c w (may alias out2)
+ * @param out0 (output)  first component  of \c v (may alias in0)
+ * @param out1 (output)  second component of \c v (may alias in1)
+ * @param out2 (output)  third component  of \c v (may alias in2)
  * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  * @copydoc hide_ContainerType
  */
@@ -221,7 +224,28 @@ void inv_multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1
 }
 
 /**
-* @brief Compute the determinant of a 3d tensor
+* @brief \f$\det_{2d}( t)\f$
+*
+* Compute the minor determinant of a tensor \f$ \det_{2d}(t) := t_{00}t_{01}-t_{10}t_{11}\f$.
+* @param t the input tensor
+* @return the upper left minor determinant of \c t
+* @copydoc hide_ContainerType
+*/
+template<class ContainerType>
+ContainerType determinant2d( const SparseTensor<ContainerType>& t)
+{
+    ContainerType det = t.value(0,0);
+    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+                           t.value(0,0), t.value(0,1),
+                           t.value(1,0), t.value(1,1));
+    return det;
+}
+
+/**
+* @brief \f$\det( t)\f$
+*
+* Compute the determinant of a 3d tensor:
+* \f$ \det(t) := t_{00}t_{11}t_{22} + t_{01}t_{12}t_{20} + \ldots - t_{22}t_{10}t_{01}\f$.
 * @param t the input tensor
 * @return the determinant of t
 * @copydoc hide_ContainerType
@@ -238,45 +262,9 @@ ContainerType determinant( const SparseTensor<ContainerType>& t)
 }
 
 /**
-* @brief Compute the minor determinant of a tensor
-* @param t the input tensor
-* @return the upper left minor determinant of t (\f$ t_{00}t_{01}-t_{10}t_{11}\f$)
-* @copydoc hide_ContainerType
-*/
-template<class ContainerType>
-ContainerType determinant2d( const SparseTensor<ContainerType>& t)
-{
-    ContainerType det = t.value(0,0);
-    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
-                           t.value(0,0), t.value(0,1),
-                           t.value(1,0), t.value(1,1));
-    return det;
-}
-
-/**
- * @brief Compute the sqrt of the inverse determinant of a 3d tensor
+ * @brief \f$ \sqrt{\det_{2d}(t)}^{-1}\f$
  *
- * This is a convenience function that is equivalent to
- * @code
-    ContainerType vol=determinant(t);
-    dg::blas1::transform(vol, vol, dg::INVERT<>());
-    dg::blas1::transform(vol, vol, dg::SQRT<>());
-    @endcode
- * @param t the input tensor
- * @return the inverse square root of the determinant of \c t
- * @copydoc hide_ContainerType
- */
-template<class ContainerType>
-ContainerType volume( const SparseTensor<ContainerType>& t)
-{
-    ContainerType vol=determinant(t);
-    dg::blas1::transform(vol, vol, detail::Determinant<get_value_type<ContainerType>>());
-    return vol;
-}
-
-/**
- * @brief Compute the sqrt of the inverse minor determinant of a tensor
- *
+ * Compute the sqrt of the inverse minor determinant of a tensor.
  * This is a convenience function that is equivalent to
  * @code
     ContainerType vol=determinant2d(t);
@@ -291,6 +279,28 @@ template<class ContainerType>
 ContainerType volume2d( const SparseTensor<ContainerType>& t)
 {
     ContainerType vol=determinant2d(t);
+    dg::blas1::transform(vol, vol, detail::Determinant<get_value_type<ContainerType>>());
+    return vol;
+}
+
+/**
+ * @brief \f$ \sqrt{\det(t)}^{-1}\f$
+ *
+ * Compute the sqrt of the inverse determinant of a 3d tensor.
+ * This is a convenience function that is equivalent to
+ * @code
+    ContainerType vol=determinant(t);
+    dg::blas1::transform(vol, vol, dg::INVERT<>());
+    dg::blas1::transform(vol, vol, dg::SQRT<>());
+    @endcode
+ * @param t the input tensor
+ * @return the inverse square root of the determinant of \c t
+ * @copydoc hide_ContainerType
+ */
+template<class ContainerType>
+ContainerType volume( const SparseTensor<ContainerType>& t)
+{
+    ContainerType vol=determinant(t);
     dg::blas1::transform(vol, vol, detail::Determinant<get_value_type<ContainerType>>());
     return vol;
 }

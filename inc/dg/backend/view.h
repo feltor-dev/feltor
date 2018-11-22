@@ -33,7 +33,10 @@ dg::blas1::copy( 7., view); //elements of vector now equal 7 instead of 20
  * @attention when constructing a View from a pointer the user also promises
  * that the pointer can be dereferenced on the device the View acts on.
  * @note cannot be used in \c dg::construct or \c dg::assign
- * @tparam ThrustVector \c TensorTraits exists for this class and the \c tensor_category derives from \c ThrustVectorTag
+ * @note You cannot have a \c View of an \c MPI_Vector but you can have an
+ * \c MPI_Vector of \c View
+ * @tparam ThrustVector \c TensorTraits exists for this class and the
+ * \c tensor_category derives from \c ThrustVectorTag
  */
 template<class ThrustVector >
 struct View

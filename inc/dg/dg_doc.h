@@ -6,32 +6,39 @@
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup blas Basic Linear Algebra Subroutines
+ *     @defgroup blas Basic container independent subroutines
  *
  *         These routines form the heart of our container free numerical algorithms.
  *         They are called by all our numerical algorithms like conjugate gradient or
  *         time integrators.
  *     @{
- *         @defgroup blas1 BLAS level 1 routines
- *             This group contains Vector-Vector operations.
+ *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
  *             Successive calls to blas routines are executed sequentially.
- *             A manual synchronization of threads or devices is never needed in an application
- *             using these functions. All functions returning a value block until the value is ready.
- *         @defgroup blas2 BLAS level 2 routines
- *             This group contains Matrix-Vector operations.
+ *             A manual synchronization of threads or devices is never needed
+ *             in an application using these functions. All functions returning
+ *             a value block until the value is ready.
+ *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
  *             Successive calls to blas routines are executed sequentially.
- *             A manual synchronization of threads or devices is never needed in an application
- *             using these functions. All functions returning a value block until the value is ready.
+ *             A manual synchronization of threads or devices is never needed
+ *             in an application using these functions. All functions returning
+ *             a value block until the value is ready.
+ *         @defgroup tensor Tensor-Vector operations
+ *              Although a tensor needs a topology to be well-defined mathematically,
+ *              we do not need a grid to perform basic operations computationally.
+ *              This is why the tensor operations can appear already in Level 1
+ *              of this library.
  *     @}
  *     @defgroup typedefs Useful Typedefs
  *          Useful type definitions for easy programming
  *     @defgroup sparsematrix Sparse matrix formats
  *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
- *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
- *             is e.g. CPU, GPU, accelerator cards...
- *             The general idea to achieve this is to separate global communication from local computations and thus
- *             readily reuse the existing, optimized library for the local part.
+ *             In this section the blas functions are implemented for the MPI+X
+ *             hardware architectures, where X is e.g. CPU, GPU, accelerator
+ *             cards...
+ *             The general idea to achieve this is to separate global
+ *             communication from local computations and thus readily reuse the
+ *             existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
  *           Please read the chapter \ref dispatch in the introduction.
  * @}
@@ -46,8 +53,8 @@
  * @{
  *     @defgroup grid Topological grids and operations
  *
- *     Objects that store topological information (which point is neighbour of which other point)
- *     about the grid.
+ *     Objects that store topological information (which point is neighbour of
+ *     which other point) about the grid.
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate

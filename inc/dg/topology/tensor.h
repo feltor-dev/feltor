@@ -19,7 +19,7 @@ namespace dg
 * In this way duplicate entries are stored only once, which helps to
 * avoid unnecessary memory accesses.
 * @tparam container must be default constructible and copyable.
-* @ingroup misc
+* @ingroup sparsematrix
 */
 template<class container>
 struct SparseTensor

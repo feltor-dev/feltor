@@ -4,9 +4,9 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = ExBLAS
+PROJECT_NAME           = "Extension: ExBLAS"
 PROJECT_NUMBER         =
-PROJECT_BRIEF          = "feltor adaption of the exblas library"
+PROJECT_BRIEF          = "Adaption of the exblas library (included in \"dg/algorithm.h\")"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./doc
 CREATE_SUBDIRS         = NO
