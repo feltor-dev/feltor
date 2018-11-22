@@ -1029,7 +1029,7 @@ struct SUe{
              12.*Cos(3*P)*Sin(3*Pi*R))*Sin(3*Pi*Z)))/
       (mue*R*Sqrt(500. - 20.*R + 1.*Power(R,2) + 1.*Power(Z,2)))) + 
   (beta*Pi*Cos(4*Pi*t)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*Z))/mue + 
-  FELTORPERP*(0. - (eta*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
+  FELTORPERP*(0. + (eta*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
            Sin(Pi*Z))*((Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
              Sin(2*Pi*Z))/3. - 
           (Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/
@@ -1409,7 +1409,7 @@ struct SUi{
              12.*Cos(3*P)*Sin(3*Pi*R))*Sin(3*Pi*Z)))/
       (mui*R*Sqrt(500. - 20.*R + 1.*Power(R,2) + 1.*Power(Z,2)))) + 
   (beta*Pi*Cos(4*Pi*t)*Sin(4*P)*Sin(4*Pi*(-10 + R))*Sin(4*Pi*Z))/mui + 
-  FELTORPERP*(0. - (eta*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
+  FELTORPERP*(0. + (eta*(1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
            Sin(Pi*Z))*((Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
              Sin(2*Pi*Z))/3. - 
           (Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*Sin(2*Pi*Z))/
