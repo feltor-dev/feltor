@@ -3,6 +3,10 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "dg/geometries/geometries.h"
+#ifndef DG_MANUFACTURED
+#define FELTORPARALLEL 1
+#define FELTORPERP 1
+#endif
 
 namespace feltor
 {
@@ -191,6 +195,7 @@ struct Implicit
 
     void operator()( double t, const std::array<std::array<container,2>,2>& y, std::array<std::array<container,2>,2>& yp)
     {
+#if FELTORPERP == 1
         /* y[0][0] := N_e - 1
            y[0][1] := N_i - 1
            y[1][0] := w_e
@@ -212,6 +217,9 @@ struct Implicit
                 dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, y[1][i],  0., yp[1][i]);
             }
         }
+#else
+        dg::blas1::copy( 0, yp);
+#endif
     }
 
     const container& weights() const{
@@ -758,10 +766,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
         m_ds_U.dss( fields[1][i], m_dsU[i]);
         dg::blas1::axpby( m_p.nu_parallel, m_dsU[i], 1., yp[1][i]);
     }
-    //------------------Add Resistivity--------------------------//
-    dg::blas1::subroutine( routines::AddResistivity( m_p.c, m_p.mu),
-        fields[0][0], fields[0][1], fields[1][0], fields[1][1],
-        yp[1][0], yp[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -871,11 +875,25 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     if( m_p.beta != 0)
         compute_apar( t, m_fields);
 
+#if FELTORPERP == 1
+
     // Set perpendicular dynamics in yp
     compute_perp( t, y, m_fields, yp);
+    //------------------Add Resistivity--------------------------//
+    dg::blas1::subroutine( routines::AddResistivity( m_p.c, m_p.mu),
+        m_fields[0][0], m_fields[0][1], m_fields[1][0], m_fields[1][1],
+        yp[1][0], yp[1][1]);
 
-    // Add parallel dynamics including resistivity --- needs m_logn
+#else
+
+    dg::blas1::copy( 0., yp);
+
+#endif
+
+    // Add parallel dynamics --- needs m_logn
+#if FELTORPARALLEL == 1
     compute_parallel( t, y, m_fields, yp);
+#endif
 
     //Add particle source to dtNe
     if( m_omega_source != 0)

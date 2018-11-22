@@ -6,13 +6,11 @@
 #include "dg/geometries/geometries.h"
 
 #include "parameters.h"
-namespace feltor{
-namespace manufactured{
-#include "/mnt/hgfs/shared/manufactured.h"
-//#include "manufactured.h"
-}//namespace manufactured
-}//namespace feltor
 #define DG_MANUFACTURED
+#define FELTORPARALLEL 1
+#define FELTORPERP 0
+//#include "/mnt/hgfs/shared/manufactured.h"
+#include "manufactured.h"
 #include "feltor.cuh"
 
 int main( int argc, char* argv[])
