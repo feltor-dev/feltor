@@ -109,7 +109,7 @@ struct ComputePerpDrifts{
                     b_1*( d2P*d0A-d0P*d2A)+
                     b_2*( d0P*d1A-d1P*d0A);
         dtN +=  -m_beta*( A*N*KappaU + A*U*KappaN + N*UA + U*NA)
-                +m_beta*N*U*( -A*divCurvKappa + KnablaBA);
+                -m_beta*N*U*( A*divCurvKappa - KnablaBA);
         dtU +=  -m_beta/m_mu*( A*KappaP + PA)
                 -m_beta*U*( A*KappaU + UA)
                 -m_beta*m_tau/m_mu/N*(A*KappaN + NA);
@@ -815,10 +815,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         // Z*(tau (1+lnN )+psi + 0.5 mu U^2)
         dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i], m_p.tau[i]),
                 m_temp2, m_logn[i], m_phi[i], fields[1][i]);
-        // perp dissipation for N: -nu_perp Delta_p**2 N
+        // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
         if( m_p.perp_diff == "viscous")
         {
             dg::blas1::transform( fields[0][i], m_temp1, dg::PLUS<double>(-1));
+            //minus in Laplacian!
             dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
         }
         else
@@ -827,17 +828,18 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
             dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
             dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
         }
-        m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
-            m_temp2, m_vol3d, m_temp0);
         if( i==0)
             m_q.diff += -m_p.nu_perp*dg::blas1::dot( m_vol3d, m_temp0);
+        m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
+                        m_temp2, m_vol3d, m_temp0);
         // parallel dissipation for N: nu_parallel *(Delta_s N)
         m_q.Dpar[i] = z[i]*m_p.nu_parallel*dg::blas2::dot(
                         m_temp2, m_vol3d, m_dsN[i]);
         //Compute parallel dissipation for U
         //Z*mu*N*U nu_parallel *( Delta_s U)
-        dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i], 0, m_temp2);
-        // perp dissipation for U: -nu_perp Delta_p**2 W
+        dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i],
+                0, m_temp2);
+        // perp dissipation for U: nu_perp Delta_p W or -nu_perp Delta_p**2 W
         if( m_p.perp_diff == "viscous")
         {
             dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp1);
