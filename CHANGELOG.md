@@ -10,7 +10,8 @@ We do not (yet) follow semantic versioning.
 - dg::Helmholtz3d: a three-dimensional version of dg::Helmholtz
 - a 2nd set\_chi function in Elliptic allowing a SparseTensor argument
 - new member functions for DS
-- adaptive timesteppers, notably through the dg::Adaptive and dg::ERKStep and dg::ARKStep classes
+- adaptive timesteppers, notably through the dg::Adaptive and dg::ERKStep and
+  dg::ARKStep classes
 - dg::ButcherTableau and dg::ConvertsToButcherTableau
 - Extrapolation class now can take a time variable
 - dg::View vector view class usable in dg::blas1 and dg::blas2
@@ -20,11 +21,12 @@ We do not (yet) follow semantic versioning.
 
 ### Changed
 - Reimplement and merge src/feltor with src/asela
-- More general interface for geometries/init.h functors including Nprofile and ZonalFlow
+- More general interface for geometries/init.h functors including Nprofile and
+  ZonalFlow
 - Rename BinaryFunctors to CylindricalFunctors (they are not only binary after all)
 - Rewrite dg::ClonePtr as a pointer class
-- Change grids() method interface of Multigrid class to grid(unsigned) (avoids
-  to expose ClonePtr to users completely)
+- Change grids() method interface of Multigrid class to grid(unsigned) (now we
+  completely avoid exposing ClonePtr to users)
 - pushForwardPerp for tensors uses SparseTensor as output argument
 - interface for DS
 - boundary condition implementation of Fieldaligned (reflected in parallel.pdf)
@@ -46,8 +48,13 @@ We do not (yet) follow semantic versioning.
 - the Helmholtz2 class (it's much faster to use Helmholtz twice)
 
 ### Removed
-- CylindricalFunctorAdapter and aCloneableCylindricalFunctor ( we now use the better CylindricalFunctor based on std::function to do the type erasure)
-- TensorElliptic, GeneralElliptic and GeneralEllipticSym classes ( superceded by Elliptic3d)
+- src/feltor/feltor.cu (not really useful any more with our adatpive
+  Timesteppers as we don't need to find suitable timesteps anymore)
+- src/feltor/feltor\_mpi.cu (now merged into feltor\_hpc.cu)
+- BinaryFunctorAdapter and aCloneableBinaryFunctor ( we now use the better
+  CylindricalFunctor based on std::function to do the type erasure)
+- TensorElliptic, GeneralElliptic and GeneralEllipticSym classes ( superceded
+  by Elliptic3d)
 - ds\_geom\_t.cu, ds\_guenther\_b.cu (superceded by better test programs)
 - dg::SparseElement (it's more intuitive to use a container directly)
 - src/asela and src/asela2d (now merged into src/feltor and src/feltor2d)
