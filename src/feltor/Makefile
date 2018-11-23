@@ -17,10 +17,10 @@ manufactured: manufactured.cu manufactured.h feltor.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB)
 
 feltor_hpc: feltor_hpc.cu feltor.cuh
-	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)# -DDG_BENCHMARK
+	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
 
-feltor_mpi: feltor_mpi.cu feltor.cuh
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
+feltor_mpi: feltor_hpc.cu feltor.cuh
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DFELTOR_MPI
 
 .PHONY: clean
 

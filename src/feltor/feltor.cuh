@@ -186,7 +186,7 @@ struct Implicit
         auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
         if( p.curvmode == "true")
             bhat = dg::geo::createBHat(mag);
-        dg::SparseTensor<dg::DVec> hh
+        dg::SparseTensor<container> hh
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
         m_lapM_perpN.set_chi( hh);
@@ -436,7 +436,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
-    dg::SparseTensor<dg::DVec> metric = g.metric();
+    dg::SparseTensor<container> metric = g.metric();
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
     container vol = dg::tensor::volume( metric);
@@ -464,7 +464,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
     m_multi_induction.resize(p.stages);
     for( unsigned u=0; u<p.stages; u++)
     {
-        dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor(
+        dg::SparseTensor<container> hh = dg::geo::createProjectionTensor(
             bhat, m_multigrid.grid(u));
         m_multi_pol[u].construct( m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, dg::not_normed,
@@ -940,11 +940,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();
-    #ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        if(rank==0)
-    #endif
+    //#ifdef MPI_VERSION
+    //    int rank;
+    //    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    //    if(rank==0)
+    //#endif
     //std::cout << "#One rhs took "<<timer.diff()<<"s\n";
 }
 
