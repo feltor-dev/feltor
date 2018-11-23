@@ -19,7 +19,7 @@ namespace geo
 * @ingroup profiles
 */
 template<class UnaryFunctor>
-struct Compose : public aCloneableCylindricalFunctor<Compose<UnaryFunctor>>
+struct Compose : public aCylindricalFunctor<Compose<UnaryFunctor>>
 {
     /**
     * @brief Construct from 2d functor and forward any parameters to \c UnaryFunctor
@@ -31,11 +31,11 @@ struct Compose : public aCloneableCylindricalFunctor<Compose<UnaryFunctor>>
     template<class ...FunctorParams>
     Compose ( CylindricalFunctor psi, FunctorParams&& ... ps): m_psip(psi),
         m_f(std::forward<FunctorParams>(ps)...){}
-    private:
     double do_compute( double R, double Z) const
     {
         return m_f(m_psip(R,Z));
     }
+    private:
     CylindricalFunctor m_psip;
     UnaryFunctor m_f;
 };
@@ -117,15 +117,15 @@ using ZonalFlow = dg::geo::Compose<dg::SinX>;
  \end{cases}
  \f]
  */
-struct ZCutter : public aCloneableCylindricalFunctor<ZCutter>
+struct ZCutter : public aCylindricalFunctor<ZCutter>
 {
     ZCutter(double ZX): Z_X(ZX){}
-    private:
     double do_compute(double R, double Z) const {
         if( Z > Z_X)
             return 1;
         return 0;
     }
+    private:
     double Z_X;
 };
 

@@ -41,7 +41,7 @@ typedef dg::geo::solovev::Parameters Parameters; //!< bring Parameters into the 
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
  * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
-struct Psip : public aCloneableCylindricalFunctor<Psip>
+struct Psip : public aCylindricalFunctor<Psip>
 { /**
      * @brief Construct from given geometric parameters
      *
@@ -50,7 +50,6 @@ struct Psip : public aCloneableCylindricalFunctor<Psip>
     Psip( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-  private:
     double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
@@ -72,6 +71,7 @@ struct Psip : public aCloneableCylindricalFunctor<Psip>
                + c_[9]*sin(c_[11]*Zn));
 
     }
+  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
@@ -80,14 +80,13 @@ struct Psip : public aCloneableCylindricalFunctor<Psip>
  * @brief \f[\psi_R\f]
  * @attention When the taylor field is used we need the boost library for special functions
  */
-struct PsipR: public aCloneableCylindricalFunctor<PsipR>
+struct PsipR: public aCylindricalFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
     PsipR( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_=sqrt(c_[11]*c_[11]-c_[10]*c_[10]);
 
     }
-    private:
     double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
@@ -112,19 +111,19 @@ struct PsipR: public aCloneableCylindricalFunctor<PsipR>
                + c_[7]*j1_csR*sin(c_[10]*Zn)
                + c_[8]*y1_csR*sin(c_[10]*Zn) );
     }
+    private:
     double R0_, cs_;
     std::vector<double> c_;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
  */
-struct PsipRR: public aCloneableCylindricalFunctor<PsipRR>
+struct PsipRR: public aCylindricalFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
     PsipRR( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-  private:
     double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
@@ -145,19 +144,19 @@ struct PsipRR: public aCloneableCylindricalFunctor<PsipRR>
                + c_[7]*j1_csR*sin(c_[10]*Zn)
                + c_[8]*y1_csR*sin(c_[10]*Zn) );
     }
+  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  */
-struct PsipZ: public aCloneableCylindricalFunctor<PsipZ>
+struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
     PsipZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    private:
     double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
@@ -176,19 +175,19 @@ struct PsipZ: public aCloneableCylindricalFunctor<PsipZ>
                + c_[8]*Rn*y1_cs*c_[10]*cos(c_[10]*Zn)
                + c_[9]*c_[11]*cos(c_[11]*Zn));
     }
+    private:
     double R0_,cs_;
     std::vector<double> c_;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
  */
-struct PsipZZ: public aCloneableCylindricalFunctor<PsipZZ>
+struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
     PsipZZ( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    private:
     double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
@@ -205,19 +204,19 @@ struct PsipZZ: public aCloneableCylindricalFunctor<PsipZZ>
                - c_[8]*Rn*y1_cs*c_[10]*c_[10]*sin(c_[10]*Zn)
                - c_[9]*c_[11]*c_[11]*sin(c_[11]*Zn));
     }
+    private:
     double R0_, cs_;
     std::vector<double> c_;
 };
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f]
  */
-struct PsipRZ: public aCloneableCylindricalFunctor<PsipRZ>
+struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
     PsipRZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-  private:
     double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
@@ -240,6 +239,7 @@ struct PsipRZ: public aCloneableCylindricalFunctor<PsipRZ>
                + c_[7]*j1_csR*c_[10]*cos(c_[10]*Zn)
                + c_[8]*y1_csR*c_[10]*cos(c_[10]*Zn) );
     }
+  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
@@ -249,46 +249,46 @@ struct PsipRZ: public aCloneableCylindricalFunctor<PsipRZ>
  *
    \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f]
  */
-struct Ipol: public aCloneableCylindricalFunctor<Ipol>
+struct Ipol: public aCylindricalFunctor<Ipol>
 {
     ///@copydoc Psip::Psip()
     Ipol(  solovev::Parameters gp ): c12_(gp.c[11]), psip_(gp) { }
-  private:
     double do_compute(double R, double Z) const
     {
         return c12_*psip_(R,Z);
 
     }
+  private:
     double c12_;
     Psip psip_;
 };
 /**
  * @brief \f[\hat I_R\f]
  */
-struct IpolR: public aCloneableCylindricalFunctor<IpolR>
+struct IpolR: public aCylindricalFunctor<IpolR>
 {
     ///@copydoc Psip::Psip()
     IpolR(  solovev::Parameters gp ): c12_(gp.c[11]), psipR_(gp) { }
-  private:
     double do_compute(double R, double Z) const
     {
         return c12_*psipR_(R,Z);
     }
+  private:
     double c12_;
     PsipR psipR_;
 };
 /**
  * @brief \f[\hat I_Z\f]
  */
-struct IpolZ: public aCloneableCylindricalFunctor<IpolZ>
+struct IpolZ: public aCylindricalFunctor<IpolZ>
 {
     ///@copydoc Psip::Psip()
     IpolZ(  solovev::Parameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
-  private:
     double do_compute(double R, double Z) const
     {
         return c12_*psipZ_(R,Z);
     }
+  private:
     double c12_;
     PsipZ psipZ_;
 };

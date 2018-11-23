@@ -46,7 +46,7 @@ We do not (yet) follow semantic versioning.
 - the Helmholtz2 class (it's much faster to use Helmholtz twice)
 
 ### Removed
-- CylindricalFunctorAdapter ( we now use the better CylindricalFunctor everywhere)
+- CylindricalFunctorAdapter and aCloneableCylindricalFunctor ( we now use the better CylindricalFunctor based on std::function to do the type erasure)
 - TensorElliptic, GeneralElliptic and GeneralEllipticSym classes ( superceded by Elliptic3d)
 - ds\_geom\_t.cu, ds\_guenther\_b.cu (superceded by better test programs)
 - dg::SparseElement (it's more intuitive to use a container directly)

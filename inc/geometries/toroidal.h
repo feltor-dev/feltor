@@ -48,41 +48,41 @@ namespace circular{
  * @brief \f[ \psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right) \f]
  * gives circular flux surfaces
  */
-struct Psip : public aCloneableCylindricalFunctor<Psip>
+struct Psip : public aCylindricalFunctor<Psip>
 { /**
      * @brief Construct from major radius
      * @param R0 the major radius
      */
     Psip( double R0): m_R0(R0) { }
-  private:
     double do_compute(double R, double Z) const
     {
         return 0.5*((R-m_R0)*(R-m_R0) + Z*Z);
     }
+  private:
     double m_R0;
 };
 /// @brief \f[ R-R_0 \f]
-struct PsipR : public aCloneableCylindricalFunctor<PsipR>
+struct PsipR : public aCylindricalFunctor<PsipR>
 { /**
      * @brief Construct from major radius
      * @param R0 the major radius
      */
     PsipR( double R0): m_R0(R0) { }
-  private:
     double do_compute(double R, double Z) const
     {
         return R-m_R0;
     }
+  private:
     double m_R0;
 };
 ///@brief \f[ Z \f]
-struct PsipZ : public aCloneableCylindricalFunctor<PsipZ>
+struct PsipZ : public aCylindricalFunctor<PsipZ>
 {
-  private:
     double do_compute(double R, double Z) const
     {
         return Z;
     }
+  private:
 };
 
 /**

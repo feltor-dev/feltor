@@ -31,110 +31,110 @@ namespace guenther
 /**
  * @brief \f[\cos(\pi(R-R_0)/2)\cos(\pi Z/2)\f]
  */
-struct Psip : public aCloneableCylindricalFunctor<Psip>
+struct Psip : public aCylindricalFunctor<Psip>
 {
     Psip(double R_0 ):   R_0(R_0) {}
-  private:
     double do_compute(double R, double Z) const
     {
         return cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
+  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi\sin(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
  */
-struct PsipR : public aCloneableCylindricalFunctor<PsipR>
+struct PsipR : public aCylindricalFunctor<PsipR>
 {
     PsipR(double R_0 ):   R_0(R_0) {}
-  private:
     double do_compute(double R, double Z) const
     {
         return -M_PI*0.5*sin(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
+  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipRR : public aCloneableCylindricalFunctor<PsipRR>
+struct PsipRR : public aCylindricalFunctor<PsipRR>
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
-  private:
     double do_compute(double R, double Z) const
     {
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
+  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi\cos(\pi(R-R_0)/2)\sin(\pi Z/2)/2\f]
  */
-struct PsipZ : public aCloneableCylindricalFunctor<PsipZ>
+struct PsipZ : public aCylindricalFunctor<PsipZ>
 
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
-  private:
     double do_compute(double R, double Z) const
     {
         return -M_PI*0.5*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
+  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipZZ : public aCloneableCylindricalFunctor<PsipZZ>
+struct PsipZZ : public aCylindricalFunctor<PsipZZ>
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
-  private:
     double do_compute(double R, double Z) const
     {
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
+  private:
     double R_0;
 };
 /**
  * @brief \f[ \pi^2\sin(\pi(R-R_0)/2)\sin(\pi Z/2)/4\f]
  */
-struct PsipRZ : public aCloneableCylindricalFunctor<PsipRZ>
+struct PsipRZ : public aCylindricalFunctor<PsipRZ>
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
-  private:
     double do_compute(double R, double Z) const
     {
         return M_PI*M_PI*0.25*sin(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
+  private:
     double R_0;
 };
 
 /**
  * @brief \f[ I_0\f]
  */
-struct Ipol : public aCloneableCylindricalFunctor<Ipol>
+struct Ipol : public aCylindricalFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
-    private:
     double do_compute(double R, double Z) const { return I_0; }
+    private:
     double I_0;
 };
 /**
  * @brief \f[0\f]
  */
-struct IpolR : public aCloneableCylindricalFunctor<IpolR>
+struct IpolR : public aCylindricalFunctor<IpolR>
 {
     IpolR(  ) {}
-    private:
     double do_compute(double R, double Z) const { return 0; }
+    private:
 };
 /**
  * @brief \f[0\f]
  */
-struct IpolZ : public aCloneableCylindricalFunctor<IpolZ>
+struct IpolZ : public aCylindricalFunctor<IpolZ>
 {
     IpolZ(  ) {}
-    private:
     double do_compute(double R, double Z) const { return 0; }
+    private:
 };
 
 static inline CylindricalFunctorsLvl2 createPsip( double R_0)

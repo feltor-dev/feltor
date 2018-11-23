@@ -15,40 +15,40 @@ namespace geo
 ///@cond
 namespace detail{
 
-struct LaplaceAdaptPsi: public aCloneableCylindricalFunctor<LaplaceAdaptPsi>
+struct LaplaceAdaptPsi: public aCylindricalFunctor<LaplaceAdaptPsi>
 {
     LaplaceAdaptPsi( const CylindricalFunctorsLvl2& psi, const CylindricalFunctorsLvl1& chi) : psi_(psi), chi_(chi){}
-    private:
     double do_compute(double x, double y)const
     {
         return  psi_.dfx()(x,y)*chi_.dfx()(x,y) +
                 psi_.dfy()(x,y)*chi_.dfy()(x,y) +
                 chi_.f()(x,y)*( psi_.dfxx()(x,y) + psi_.dfyy()(x,y));
     }
+    private:
     CylindricalFunctorsLvl2 psi_;
     CylindricalFunctorsLvl1 chi_;
 };
 
-struct LaplaceChiPsi: public aCloneableCylindricalFunctor<LaplaceChiPsi>
+struct LaplaceChiPsi: public aCylindricalFunctor<LaplaceChiPsi>
 {
     LaplaceChiPsi( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi):
         psi_(psi), chi_(chi){}
-    private:
     double do_compute(double x, double y)const
     {
         return psi_.dfxx()(x,y)*chi_.xx()(x,y)+2.*psi_.dfxy()(x,y)*chi_.xy()(x,y)+psi_.dfyy()(x,y)*chi_.yy()(x,y)
             + chi_.divX()(x,y)*psi_.dfx()(x,y) + chi_.divY()(x,y)*psi_.dfy()(x,y);
     }
+    private:
 
     CylindricalFunctorsLvl2 psi_;
     CylindricalSymmTensorLvl1 chi_;
 };
 
-struct LaplacePsi: public aCloneableCylindricalFunctor<LaplacePsi>
+struct LaplacePsi: public aCylindricalFunctor<LaplacePsi>
 {
     LaplacePsi( const CylindricalFunctorsLvl2& psi): psi_(psi){}
-    private:
     double do_compute(double x, double y)const{return psi_.dfxx()(x,y)+psi_.dfyy()(x,y);}
+    private:
     CylindricalFunctorsLvl2 psi_;
 };
 
@@ -62,7 +62,7 @@ struct LaplacePsi: public aCloneableCylindricalFunctor<LaplacePsi>
  * @brief  A weight function for the Hector algorithm
  *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
  */
-struct NablaPsiInv: public aCloneableCylindricalFunctor<NablaPsiInv>
+struct NablaPsiInv: public aCylindricalFunctor<NablaPsiInv>
 {
     /**
      * @brief Construct with function container
@@ -70,12 +70,12 @@ struct NablaPsiInv: public aCloneableCylindricalFunctor<NablaPsiInv>
      * @param psi \f$ \psi(x,y)\f$ and its first derivatives
      */
     NablaPsiInv( const CylindricalFunctorsLvl1& psi): psi_(psi){}
-    private:
-    virtual double do_compute(double x, double y)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         return 1./sqrt(psiX*psiX+psiY*psiY);
     }
+    private:
     CylindricalFunctorsLvl1 psi_;
 };
 
@@ -83,17 +83,17 @@ struct NablaPsiInv: public aCloneableCylindricalFunctor<NablaPsiInv>
  * @brief Derivative of the weight function
  *\f[\partial_x|\nabla\psi|^{-1} \f]
  */
-struct NablaPsiInvX: public aCloneableCylindricalFunctor<NablaPsiInvX>
+struct NablaPsiInvX: public aCylindricalFunctor<NablaPsiInvX>
 {
     NablaPsiInvX( const CylindricalFunctorsLvl2& psi):psi_(psi) {}
-    private:
-    virtual double do_compute(double x, double y)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y);
         double psip = sqrt( psiX*psiX+psiY*psiY);
         return -(psiX*psiXX+psiY*psiXY)/psip/psip/psip;
     }
+    private:
 
     CylindricalFunctorsLvl2 psi_;
 };
@@ -102,10 +102,9 @@ struct NablaPsiInvX: public aCloneableCylindricalFunctor<NablaPsiInvX>
  * @brief Derivative of the weight function
  *\f[ \partial_y|\nabla\psi|^{-1} \f]
  */
-struct NablaPsiInvY: public aCloneableCylindricalFunctor<NablaPsiInvY>
+struct NablaPsiInvY: public aCylindricalFunctor<NablaPsiInvY>
 {
     NablaPsiInvY( const CylindricalFunctorsLvl2& psi):psi_(psi) {}
-    private:
     double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
@@ -113,6 +112,7 @@ struct NablaPsiInvY: public aCloneableCylindricalFunctor<NablaPsiInvY>
         double psip = sqrt( psiX*psiX+psiY*psiY);
         return -(psiX*psiXY+psiY*psiYY)/psip/psip/psip;
     }
+    private:
 
     CylindricalFunctorsLvl2 psi_;
 };
@@ -135,10 +135,9 @@ static inline CylindricalFunctorsLvl1 make_NablaPsiInvCollective( const Cylindri
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-struct Liseikin_XX: public aCloneableCylindricalFunctor<Liseikin_XX>
+struct Liseikin_XX: public aCylindricalFunctor<Liseikin_XX>
 {
     Liseikin_XX(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    private:
     double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
@@ -146,6 +145,7 @@ struct Liseikin_XX: public aCloneableCylindricalFunctor<Liseikin_XX>
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (psiY*psiY+k2*psiX*psiX + eps_)/sqrtG;
     }
+    private:
 
     double k_, eps_;
     CylindricalFunctorsLvl1 psi_;
@@ -158,10 +158,9 @@ struct Liseikin_XX: public aCloneableCylindricalFunctor<Liseikin_XX>
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-struct Liseikin_XY: public aCloneableCylindricalFunctor<Liseikin_XY>
+struct Liseikin_XY: public aCylindricalFunctor<Liseikin_XY>
 {
     Liseikin_XY(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    private:
     double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
@@ -169,6 +168,7 @@ struct Liseikin_XY: public aCloneableCylindricalFunctor<Liseikin_XY>
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (-psiX*psiY+k2*psiX*psiY)/sqrtG;
     }
+    private:
 
     double k_, eps_;
     CylindricalFunctorsLvl1 psi_;
@@ -181,10 +181,9 @@ struct Liseikin_XY: public aCloneableCylindricalFunctor<Liseikin_XY>
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-struct Liseikin_YY: public aCloneableCylindricalFunctor<Liseikin_YY>
+struct Liseikin_YY: public aCylindricalFunctor<Liseikin_YY>
 {
     Liseikin_YY(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    private:
     double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
@@ -192,6 +191,7 @@ struct Liseikin_YY: public aCloneableCylindricalFunctor<Liseikin_YY>
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (eps_+psiX*psiX+k2*psiY*psiY)/sqrtG;
     }
+    private:
 
     double k_, eps_;
     CylindricalFunctorsLvl1 psi_;
@@ -201,10 +201,9 @@ struct Liseikin_YY: public aCloneableCylindricalFunctor<Liseikin_YY>
  * @brief The x-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f]
  */
-struct DivLiseikinX: public aCloneableCylindricalFunctor<DivLiseikinX>
+struct DivLiseikinX: public aCylindricalFunctor<DivLiseikinX>
 {
     DivLiseikinX(const CylindricalFunctorsLvl2& psi, double k, double eps): k_(k), eps_(eps), psi_(psi){}
-    private:
     double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
@@ -219,6 +218,7 @@ struct DivLiseikinX: public aCloneableCylindricalFunctor<DivLiseikinX>
                     psiY*((eps_*eps_-k2*psiX4)*psiXY-(eps_+2*psiX2)*(eps_+k2*psiX2)*psiXY) +
                     psiY3*(eps_*(1.+k2)*psiXY-(eps_+2.*k2*psiX2)*psiXY))/sqrtG/sqrtG/sqrtG;
     }
+    private:
 
     double k_, eps_;
     CylindricalFunctorsLvl2 psi_;
@@ -228,10 +228,9 @@ struct DivLiseikinX: public aCloneableCylindricalFunctor<DivLiseikinX>
  * @brief The y-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f]
  */
-struct DivLiseikinY : public aCloneableCylindricalFunctor<DivLiseikinY>
+struct DivLiseikinY : public aCylindricalFunctor<DivLiseikinY>
 {
     DivLiseikinY(const CylindricalFunctorsLvl2& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    private:
     double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
@@ -246,6 +245,7 @@ struct DivLiseikinY : public aCloneableCylindricalFunctor<DivLiseikinY>
                 psiX3*(-(eps_+2.*k2*psiY2)*psiXY+eps_*(1.+k2)*psiXY) +
                 psiX*(-(eps_+2.*psiY2)*(eps_+k2*psiY2)*psiXY + (eps_*eps_-k2*psiY4)*psiXY))/sqrtG/sqrtG/sqrtG;
     }
+    private:
 
     double k_, eps_;
     CylindricalFunctorsLvl2 psi_;

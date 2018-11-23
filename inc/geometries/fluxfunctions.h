@@ -8,76 +8,18 @@ namespace dg
 namespace geo
 {
 
-/**
-* @brief Represent functions written in cylindrical coordinates
-        that are independent of the angle phi serving as both 2d and 3d functions
-
-* The rational is that these functors can serve as both 2d and 3d functors
-* where the 3d functor trivially redirects to the 2d version.
-* This behaviour is injected into all classes that derive from this class
-* @ingroup fluxfunctions
-* @sa \c aCloneableCylindricalFunctor
-* @sa An alternative is \c RealCylindricalFunctor
-*/
-struct aCylindricalFunctor
-{
-    /**
-    * @brief The function value
-    *
-    * @param R radius (cylindrical coordinate)
-    * @param Z height (cylindrical coordinate)
-    *
-    * @return f(R,Z)
-    */
-    double operator()(double R, double Z) const
-    {
-        return do_compute(R,Z); //if we didn't make the virtual function have another way
-        //the operator() would hide the 3d version
-    }
-    /**
-    * @brief Redirects to the 2D version
-    *
-    * @param R radius (cylindrical coordinate)
-    * @param Z height (cylindrical coordinate)
-    * @param phi angle (cylindrical coordinate)
-    *
-    * @return f(R,Z)
-    */
-    double operator()(double R, double Z, double phi)const
-    {
-        return operator()(R,Z);
-    }
-    /**
-    * @brief abstract copy of a binary functor
-    *
-    * @return a functor on the heap
-    */
-    virtual aCylindricalFunctor* clone()const=0;
-    virtual ~aCylindricalFunctor(){}
-    protected:
-    aCylindricalFunctor(){}
-    /**
-    * @brief We do not allow object slicing so the copy is protected
-    */
-    aCylindricalFunctor(const aCylindricalFunctor&){}
-    /**
-    * @brief We do not allow object slicing so the assignment is protected
-    */
-    aCylindricalFunctor& operator=(const aCylindricalFunctor&){return *this;}
-    private:
-    virtual double do_compute(double R, double Z) const=0;
-};
-
 /*! @brief Inject both 2d and 3d \c operator() to a 2d functor
  *
  * The purpose of this class is to extend any 2d Functor to a
  * 3d Functor by defining \f$ f(x,y,z) := f(x,y)\f$. This class is
  * especially useful in an interface since any 2d functor can be converted
- * to it.
+ * to it (type erasure property of the \c std::function that we use
+ * to implement this class).
  * @note If you want to write a functor that is both 2d and 3d directly,
  * it is easier to derive from \c aCylindricalFunctor
  * @ingroup fluxfunctions
- * @sa this class is an alternative to \c aCylindricalFunctor
+ * @sa this class is an alternative to \c aCylindricalFunctor and
+ * \c aCylindricalFunctor can be converted to this class
  */
 template<class real_type>
 struct RealCylindricalFunctor
@@ -109,24 +51,60 @@ struct RealCylindricalFunctor
 using CylindricalFunctor = RealCylindricalFunctor<double>;
 
 /**
-* @brief Intermediate implementation helper class for the clone pattern with CRTP
+* @brief Represent functions written in cylindrical coordinates
+        that are independent of the angle phi serving as both 2d and 3d functions
 
-    https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
-  The intention is to inject the clone function into all classes that derive from it
+* The rational is that these functors can serve as both 2d and 3d functors
+* where the 3d functor trivially redirects to the 2d version.
+* This behaviour is injected into all classes that derive from this class
+* via the Curiously Recurring Template Pattern (CRTP).
 * @ingroup fluxfunctions
+* @sa \c aCylindricalFunctor
+* @sa An alternative is \c RealCylindricalFunctor
+* @tparam Derived Interface: <tt> double do_compute(double,double) const</tt>
 */
 template<class Derived>
-struct aCloneableCylindricalFunctor : public aCylindricalFunctor
+struct aCylindricalFunctor
 {
     /**
-    * @brief Returns a copy of the functor dynamically allocated on the heap
+    * @brief <tt> do_compute(R,Z)</tt>
     *
-    * @return new copy of the functor
+    * @param R radius (cylindrical coordinate)
+    * @param Z height (cylindrical coordinate)
+    *
+    * @return f(R,Z)
     */
-    virtual aCylindricalFunctor* clone() const
+    double operator()(double R, double Z) const
     {
-        return new Derived(static_cast<Derived const &>(*this));
+        const Derived& underlying = static_cast<const Derived&>(*this);
+        return underlying.do_compute(R,Z);
     }
+    /**
+    * @brief <tt> do_compute(R,Z)</tt>
+    *
+    * @param R radius (cylindrical coordinate)
+    * @param Z height (cylindrical coordinate)
+    * @param phi angle (cylindrical coordinate)
+    *
+    * @return f(R,Z)
+    */
+    double operator()(double R, double Z, double phi)const
+    {
+        const Derived& underlying = static_cast<const Derived&>(*this);
+        return underlying.do_compute(R,Z);
+    }
+    //This trick avoids that classes inherit from the wrong Base:
+    private:
+    friend Derived;
+    aCylindricalFunctor(){}
+    /**
+    * @brief We do not allow object slicing so the copy is protected
+    */
+    aCylindricalFunctor(const aCylindricalFunctor&){}
+    /**
+    * @brief We do not allow object slicing so the assignment is protected
+    */
+    aCylindricalFunctor& operator=(const aCylindricalFunctor&){return *this;}
 };
 
 /**
@@ -134,11 +112,11 @@ struct aCloneableCylindricalFunctor : public aCylindricalFunctor
  * \f[ f(x,y) = c\f]
 * @ingroup fluxfunctions
  */
-struct Constant: public aCloneableCylindricalFunctor<Constant>
+struct Constant: public aCylindricalFunctor<Constant>
 {
     Constant(double c):c_(c){}
-    private:
     double do_compute(double R,double Z)const{return c_;}
+    private:
     double c_;
 };
 

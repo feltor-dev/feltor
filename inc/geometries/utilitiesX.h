@@ -35,32 +35,32 @@ static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, 
 
 ///@cond
 namespace detail{
-struct Monitor : public aCloneableCylindricalFunctor<Monitor>
+struct Monitor : public aCylindricalFunctor<Monitor>
 {
     //computes a + eps * b
     Monitor( double value, double eps_value, double R_X, double Z_X, double sigmaR, double sigmaZ):
         m_value(value), m_eps_value(eps_value),
         m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
-    private:
     double do_compute( double x, double y)const
     {
         return m_value+m_cauchy(x,y)*m_eps_value;
     }
+    private:
     double m_value, m_eps_value;
     dg::Cauchy m_cauchy;
 
 };
-struct DivMonitor : public aCloneableCylindricalFunctor<DivMonitor>
+struct DivMonitor : public aCylindricalFunctor<DivMonitor>
 {
     //computes a*epsX + b*epsY
     DivMonitor( double valueX, double valueY, double R_X, double Z_X, double sigmaR, double sigmaZ):
         m_valueX(valueX), m_valueY(valueY),
         m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
-    private:
     double do_compute( double x, double y)const
     {
         return m_valueX*m_cauchy.dx(x,y)+m_valueY*m_cauchy.dy(x,y);
     }
+    private:
     double m_valueX, m_valueY;
     dg::Cauchy m_cauchy;
 
