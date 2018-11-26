@@ -326,7 +326,7 @@ K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
 \end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{The model}
+\section{The model} \label{sec:model}
 \subsection{Dimensional Equations}
 % \(n_e\) is the electron density, \(N_i\) is the ion gyro-centre density, \(\phi\) is the electric potential,
 % \\
@@ -340,7 +340,7 @@ K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
 The continuity equation for the electron density \(n_e\) and the ion gyro-centre
 density \(N_i\) and the momentum conservation equation for
 the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
-(omitting species labels)
+(omitting species labels)~\cite{WiesenbergerPhD, HeldPhD}
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
     \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})\right)\right) = \Lambda_N + S_N \\
@@ -609,7 +609,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
 \end{subequations}
 together with
 $\bar\nabla_\parallel f = \nabla_\parallel f + \beta A_\parallel \mathcal K_\kappa(f) + \frac{\beta}{B}[ f, A_\parallel]_\perp$
-and $\vec \nabla \cdot \tilde{ \vec b} = A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K_\kappa}} - \mathcal K_{\nabla B}(A_\parallel) $
+and $\vec \nabla \cdot \tilde{ \vec b} = \beta A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K_\kappa}} - \beta \mathcal K_{\nabla B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -718,6 +718,7 @@ perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
+symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwtiten to $N_z\equiv 1$. \\
 bc & dict & & & Dictionary of boundary conditions \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\

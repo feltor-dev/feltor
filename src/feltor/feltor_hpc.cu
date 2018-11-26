@@ -105,17 +105,18 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a;
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-#ifdef FELTOR_MPI
-    Geometry grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
-        p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER, comm);
-    Geometry grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER, comm);
-#else
-    Geometry grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
-        p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    Geometry grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
-#endif //FELTOR_MPI
+    Geometry grid( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+        p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER
+        #ifdef FELTOR_MPI
+        , comm
+        #endif //FELTOR_MPI
+        );
+    Geometry grid_out( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+        p.n_out, p.Nx_out, p.Ny_out, p.symmetric ? 1 : p.Nz_out, p.bcxN, p.bcyN, dg::PER
+        #ifdef FELTOR_MPI
+        , comm
+        #endif //FELTOR_MPI
+        );
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
 
     //create RHS
@@ -136,9 +137,7 @@ int main( int argc, char* argv[])
         mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
     if( p.omega_source != 0)
-    {
         feltor.set_source( p.omega_source, profile, source_damping);
-    }
     HVec profile_damping = dg::pullback(dg::geo::TanhDamping(
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
@@ -154,19 +153,21 @@ int main( int argc, char* argv[])
     {
         dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-        if( p.initne == "blob")
-            ntilde = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
-                (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
-        if( p.initne == "straight blob")
-            ntilde = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
-                (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
+        if( p.symmetric)
+            ntilde = dg::pullback( init0, grid);
+        else if( p.initne == "blob")//rounds =3 ->2*3-1
+            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 3);
+        else if( p.initne == "straight blob")//rounds =1 ->2*1-1
+            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
     }
     else if( p.initne == "turbulence")
     {
         dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
         dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
-        ntilde = feltor.ds().fieldaligned().evaluate( init0, gaussianZ,
-            (unsigned)p.Nz/2, 1);
+        if( p.symmetric)
+            ntilde = dg::pullback( init0, grid);
+        else
+            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
     }
     else if( p.initne == "zonal")
     {
@@ -251,10 +252,11 @@ int main( int argc, char* argv[])
             dg::blas2::symv( project, *pair.second, transferH);
             err = nc_put_var_double( ncid, vecID,
             #ifdef FELTOR_MPI
-                transferH.data().data() );
+                transferH.data().data()
             #else //FELTOR_MPI
-                transferH.data() );
+                transferH.data()
             #endif //FELTOR_MPI
+            );
             err = nc_redef(ncid);
         }
     }
@@ -322,11 +324,12 @@ int main( int argc, char* argv[])
         dg::blas2::symv( project, *pair.second, transferD);
         dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, id4d[pair.first], start, count,
-#ifdef FELTOR_MPI
-            transferH.data().data() );
-#else //FELTOR_MPI
-            transferH.data() );
-#endif //FELTOR_MPI
+            #ifdef FELTOR_MPI
+            transferH.data().data()
+            #else //FELTOR_MPI
+            transferH.data()
+            #endif //FELTOR_MPI
+        );
     }
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
@@ -419,11 +422,12 @@ int main( int argc, char* argv[])
             dg::blas2::symv( project, *pair.second, transferD);
             dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, id4d[pair.first], start, count,
-            #ifdef FELTOR_MPI
-                transferH.data().data() );
-            #else //FELTOR_MPI
-                transferH.data() );
-            #endif //FELTOR_MPI
+                #ifdef FELTOR_MPI
+                transferH.data().data()
+                #else //FELTOR_MPI
+                transferH.data()
+                #endif //FELTOR_MPI
+            );
         }
         #ifndef FELTOR_MPI
         err = nc_close(ncid);

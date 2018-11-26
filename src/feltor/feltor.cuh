@@ -280,6 +280,11 @@ struct Explicit
     //Given n_e-1 initialize N_i-1 such that phi=0
     void initializeni( const container& ne, container& ni);
 
+    template<class ...Params>
+    container fieldalignedn( Params&&... ps){
+        return m_ds_N.fieldaligned().evaluate( std::forward<Params>(ps)...);
+    }
+
     void operator()( double t,
         const std::array<std::array<container,2>,2>& y,
         std::array<std::array<container,2>,2>& yp);
@@ -300,9 +305,6 @@ struct Explicit
     }
     const std::array<std::array<container,2>,2>& fields() const{
         return m_fields;
-    }
-    const dg::geo::DS<Geometry, IMatrix, Matrix, container>& ds() {
-        return m_ds_N;
     }
 
     //source strength, profile - 1 and damping
@@ -475,9 +477,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
         m_multi_invgammaP[u].elliptic().set_chi( hh);
         m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
             p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
-        m_multi_invgammaN[u].elliptic().set_chi( hh);
-        m_multi_induction[u].construct(  m_multigrid.grid(u),
-            p.bcxA, p.bcyA, dg::PER, -1., dg::centered);
+        m_multi_invgammaN[u].elliptic().set_chi( hh); m_multi_induction[u].construct(  m_multigrid.grid(u), p.bcxA, p.bcyA, dg::PER, -1., dg::centered);
         m_multi_induction[u].elliptic().set_chi( hh);
     }
 }
@@ -489,7 +489,6 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_Z( dg::pullback( dg::cooY3d, g)),
     m_P( dg::pullback( dg::cooZ3d, g)),
 #endif //DG_MANUFACTURED
-    /////////the poisson operators ////////////////////////////////////////
     m_dx_N( dg::create::dx( g, p.bcxN) ),
     m_dx_U( dg::create::dx( g, p.bcxU) ),
     m_dx_P( dg::create::dx( g, p.bcxP) ),
@@ -499,23 +498,23 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_dy_P( dg::create::dy( g, p.bcyP) ),
     m_dy_A( dg::create::dy( g, p.bcyA) ),
     m_dz( dg::create::dz( g, dg::PER) ),
-    /////////the elliptic and Helmholtz operators//////////////////////////
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
     m_p(p)
 {
-    ////////////////////////////init temporaries///////////////////
+    //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_fields[0] = m_fields[1] = m_logn = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
     m_apar = m_dxA = m_dyA = m_dzA = m_phi[0];
+    //--------------------------Construct-------------------------//
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
-    //////////////////////////////Metric///////////////////////////////
+    //---------------------------Volume------------------------------//
     dg::assign( dg::create::volume(g), m_vol3d);
 }
 
@@ -625,7 +624,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
     //-------Compute Psi and derivatives
     dg::blas2::symv( m_dx_P, m_phi[0], m_dxPhi[0]);
     dg::blas2::symv( m_dy_P, m_phi[0], m_dyPhi[0]);
-    dg::blas2::symv( m_dz  , m_phi[0], m_dzPhi[0]);
+    if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[0], m_dzPhi[0]);
     dg::tensor::multiply3d( m_hh, //grad_perp
         m_dxPhi[0], m_dyPhi[0], m_dzPhi[0], m_UE2, m_temp0, m_temp1);
     dg::blas1::subroutine( routines::ComputePsi(),
@@ -639,7 +638,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
     //m_UE2 now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dx_P, m_phi[1], m_dxPhi[1]);
     dg::blas2::symv( m_dy_P, m_phi[1], m_dyPhi[1]);
-    dg::blas2::symv( m_dz  , m_phi[1], m_dzPhi[1]);
+    if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[1], m_dzPhi[1]);
 }
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
@@ -673,7 +672,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     //----------Compute Derivatives----------------------------//
     dg::blas2::symv( m_dx_A, m_apar, m_dxA);
     dg::blas2::symv( m_dy_A, m_apar, m_dyA);
-    dg::blas2::symv( m_dz,   m_apar, m_dzA);
+    if(!m_p.symmetric) dg::blas2::symv( m_dz, m_apar, m_dzA);
 
     //----------Compute Velocities-----------------------------//
     dg::blas1::axpby( 1., fields[1][0], -m_p.beta/m_p.mu[0], m_apar, fields[1][0]);
@@ -693,10 +692,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
         ////////////////////perpendicular dynamics////////////////////////
         dg::blas2::symv( m_dx_N, y[0][i], m_dxN[i]);
         dg::blas2::symv( m_dy_N, y[0][i], m_dyN[i]);
-        dg::blas2::symv( m_dz,   y[0][i], m_dzN[i]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, y[0][i], m_dzN[i]);
         dg::blas2::symv( m_dx_U, fields[1][i], m_dxU[i]);
         dg::blas2::symv( m_dy_U, fields[1][i], m_dyU[i]);
-        dg::blas2::symv( m_dz,   fields[1][i], m_dzU[i]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dzU[i]);
         if( m_p.beta == 0){
             dg::blas1::subroutine( routines::ComputePerpDrifts(
                 m_p.mu[i], m_p.tau[i], m_p.beta),

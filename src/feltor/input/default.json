@@ -42,6 +42,7 @@
     "initne"     : "turbulence",
     "initphi"    : "zero",
     "curvmode"   : "true",
+    "symmetric"  : false,
     "source"     : 0,
     "alpha"      : 0.02,
     "rho_source" : 0.2

@@ -45,6 +45,7 @@ struct Parameters
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
     std::string initne, initphi, curvmode, perp_diff;
+    bool symmetric;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
@@ -107,6 +108,7 @@ struct Parameters
         initne      = js.get( "initne", "blob").asString();
         initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
+        symmetric  = js.get( "symmetric", false).asBool();
     }
     void display( std::ostream& os = std::cout ) const
     {
@@ -120,7 +122,8 @@ struct Parameters
             <<"     par. Resistivity  = "<<c<<"\n"
             <<"     beta              = "<<beta<<"\n"
             <<"     par. Viscosity    = "<<nu_parallel<<"\n"
-            <<"     curvature mode    = "<<curvmode<<"\n";
+            <<"     curvature mode    = "<<curvmode<<"\n"
+            <<"     Symmetry in phi   = "<<std::boolalpha<<symmetric<<"\n";
         os  <<"Initial parameters are: \n"
             <<"    amplitude:    "<<amp<<"\n"
             <<"    width:        "<<sigma<<"\n"
