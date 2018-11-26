@@ -48,6 +48,8 @@ We do not (yet) follow semantic versioning.
 - the Helmholtz2 class (it's much faster to use Helmholtz twice)
 
 ### Removed
+- src/asela and src/asela2d (now merged into src/feltor and src/feltor2d)
+- src/feltor2D (now merged in src/feltor project as an input parameter)
 - src/feltor/feltor.cu (not really useful any more with our adatpive
   Timesteppers as we don't need to find suitable timesteps anymore)
 - src/feltor/feltor\_mpi.cu (now merged into feltor\_hpc.cu)
@@ -57,7 +59,6 @@ We do not (yet) follow semantic versioning.
   by Elliptic3d)
 - ds\_geom\_t.cu, ds\_guenther\_b.cu (superceded by better test programs)
 - dg::SparseElement (it's more intuitive to use a container directly)
-- src/asela and src/asela2d (now merged into src/feltor and src/feltor2d)
 
 ### Fixed
     Fixed for any bug fixes.
