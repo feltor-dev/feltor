@@ -20,6 +20,8 @@ We do not (yet) follow semantic versioning.
 - dg::tensor::inv\_multiply3d and dg::tensor::inv\_multiply2d functions
 
 ### Changed
+- Remove container argument from dg::geo::SafetyFactor constructor (Since it
+  always takes Alpha)
 - Reimplement and merge src/feltor with src/asela
 - More general interface for geometries/init.h functors including Nprofile and
   ZonalFlow

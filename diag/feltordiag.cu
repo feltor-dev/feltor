@@ -136,10 +136,8 @@ int main( int argc, char* argv[])
 //     os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
     std::cout << "Compute safety factor   "<< "\n";
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-    dg::geo::Alpha alpha(c); 
-    dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
     dg::DVec abs = dg::evaluate( dg::cooX1d, g1d_out);
-    dg::geo::SafetyFactor<dg::DVec> qprofile(g2d_out, c, alphaog2d );
+    dg::geo::SafetyFactor qprofile(g2d_out, c);
     dg::DVec sf = dg::evaluate(qprofile, g1d_out);
 
 

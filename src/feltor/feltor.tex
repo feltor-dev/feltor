@@ -324,6 +324,30 @@ K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
 %contravariant phi component
 \label{}
 \end{align}
+\subsection{Flux surface average and Safety factor}
+The flux surface average
+of a function $f(R,Z,\varphi)$ is given by the formula
+\begin{align}\label{eq:fsa}
+\langle f \rangle_{\psi_{p0}} :=
+\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} =
+\frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| \dV}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|\dV}
+\end{align}
+with $\dV := \d R\d Z\d \varphi$ (we define the average in computational space and omit one $R$).
+A numerically tractable approximation to the $\delta$-function reads
+\begin{align}\label{eq:delta}
+\delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
+\exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
+\end{align}
+where $\epsilon$ is a small, free parameter. In the dG framework the integrals
+in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
+
+If we write $B_p:=R_0|\nabla\psi_p|/R$, we can define the safety factor (in two dimensions) as
+\begin{align}
+q:=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) \d R\d Z
+\end{align}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -678,22 +702,6 @@ Curvature terms & direct dG & regular dG approximation of derivatives \\
 time & Adaptive ARKode stepper & $3rd$ order explicit, perpendicular diffusion $3rd$ order implicit \\
 \bottomrule
 \end{longtable}
-\subsection{Flux surface average and Safety factor}
-The flux surface average of a function $f(R,Z,\varphi)$ is given by the formula
-\begin{align}\label{eq:fsa}
-\langle f \rangle_{\psi_{p0}} :=
-\frac{ \int_{\psi_p = \psi_{p0} } f\dA}{\int_{\psi_p = \psi_{p0} } \dA} =
-\frac{\int_\Omega f \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| \dV}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|\dV}
-\end{align}
-A numerically tractable approximation to the $\delta$-function reads
-\begin{align}\label{eq:delta}
-\delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
-\exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
-\end{align}
-where $\epsilon$ is a small, free parameter. In the dG framework the integrals
-in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
-
 \section{Input/Output}
 The program \texttt{feltor\_hpc.cu} expects two input files. One is for the
 physical and numerical parameters of the model equations and the other one describes

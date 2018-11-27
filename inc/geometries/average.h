@@ -92,7 +92,6 @@ struct Alpha
  \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dV \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z) \f]
 
  with \f$ A = \int dV \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|\f$
- * @copydoc hide_container
  * @ingroup misc_geo
  */
 template <class container = thrust::host_vector<double> >
@@ -107,17 +106,16 @@ struct FluxSurfaceAverage
     FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f) :
     g2d_(g2d),
     f_(f),
-    deltaf_(geo::DeltaFunction(c,0.0,0.0)),
-    w2d_ ( dg::create::weights( g2d_)),
-    oneongrid_(dg::evaluate(dg::one,g2d_))
+    deltaf_(c, 0.,0.),
+    w2d_ ( dg::create::weights( g2d))
     {
-        thrust::host_vector<double> psipRog2d  = dg::evaluate( c.psipR(), g2d_);
-        thrust::host_vector<double> psipZog2d  = dg::evaluate( c.psipZ(), g2d_);
+        thrust::host_vector<double> psipRog2d  = dg::evaluate( c.psipR(), g2d);
+        thrust::host_vector<double> psipZog2d  = dg::evaluate( c.psipZ(), g2d);
         double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );
         //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
         double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );
         //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );
-        double deltapsi = fabs(psipZmax/g2d_.Ny()/g2d_.n() +psipRmax/g2d_.Nx()/g2d_.n());
+        double deltapsi = fabs(psipZmax/g2d.Ny()/g2d.n() +psipRmax/g2d.Nx()/g2d.n());
         //deltaf_.setepsilon(deltapsi/4.);
         deltaf_.setepsilon(deltapsi); //macht weniger Zacken
     }
@@ -125,22 +123,21 @@ struct FluxSurfaceAverage
      * @brief Calculate the Flux Surface Average
      *
      * @param psip0 the actual psi value for q(psi)
+     * @return q(psip0)
      */
     double operator()(double psip0)
     {
         deltaf_.setpsi( psip0);
-        container deltafog2d = dg::evaluate( deltaf_, g2d_);
-        double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
-        double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
-        double fsa = psipcut/vol;
-        return fsa;
+        deltafog2d_ = dg::evaluate( deltaf_, g2d_);
+        double psipcut = dg::blas2::dot( f_, w2d_, deltafog2d_); //int deltaf psip
+        double vol     = dg::blas1::dot( w2d_, deltafog2d_); //int deltaf
+        return psipcut/vol;
     }
     private:
-    dg::Grid2d g2d_;
-    container f_;
+    Grid2d g2d_;
+    container f_, deltafog2d_;
     geo::DeltaFunction deltaf_;
     const container w2d_;
-    const container oneongrid_;
 };
 /**
  * @brief Class for the evaluation of the safety factor q
@@ -151,7 +148,6 @@ where \f$ \alpha\f$ is the dg::geo::Alpha functor.
  * @ingroup misc_geo
  *
  */
-template <class container = thrust::host_vector<double> >
 struct SafetyFactor
 {
      /**
@@ -160,22 +156,22 @@ struct SafetyFactor
      * @param c contains psip, psipR and psipZ
      * @param f container for global safety factor
      */
-    SafetyFactor(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f) :
+    SafetyFactor(const dg::Grid2d& g2d, const TokamakMagneticField& c) :
     g2d_(g2d),
-    f_(f), //why not directly use Alpha??
     deltaf_(geo::DeltaFunction(c,0.0,0.0)),
-    w2d_ ( dg::create::weights( g2d_)),
-    oneongrid_(dg::evaluate(dg::one,g2d_))
+    w2d_ ( dg::create::weights( g2d)),
+    alphaog2d_(dg::evaluate( dg::geo::Alpha(c), g2d)),
+    deltafog2d_(dg::evaluate(dg::one,g2d))
     {
-      thrust::host_vector<double> psipRog2d  = dg::evaluate( c.psipR(), g2d_);
-      thrust::host_vector<double> psipZog2d  = dg::evaluate( c.psipZ(), g2d_);
-      double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );
-      //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
-      double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );
-      //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );
-      double deltapsi = fabs(psipZmax/g2d_.Ny() +psipRmax/g2d_.Nx());
-      //deltaf_.setepsilon(deltapsi/4.);
-      deltaf_.setepsilon(4.*deltapsi); //macht weniger Zacken
+        thrust::host_vector<double> psipRog2d  = dg::evaluate( c.psipR(), g2d);
+        thrust::host_vector<double> psipZog2d  = dg::evaluate( c.psipZ(), g2d);
+        double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );
+        //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
+        double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );
+        //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );
+        double deltapsi = fabs(psipZmax/g2d.Ny() +psipRmax/g2d.Nx());
+        //deltaf_.setepsilon(deltapsi/4.);
+        deltaf_.setepsilon(4.*deltapsi); //macht weniger Zacken
     }
     /**
      * @brief Calculate the q profile over the function f which has to be the global safety factor
@@ -186,16 +182,14 @@ struct SafetyFactor
     double operator()(double psip0)
     {
         deltaf_.setpsi( psip0);
-        container deltafog2d = dg::evaluate( deltaf_, g2d_);
-        double q = dg::blas2::dot( f_,w2d_,deltafog2d)/(2.*M_PI);
-        return q;
+        deltafog2d_ = dg::evaluate( deltaf_, g2d_);
+        return dg::blas2::dot( alphaog2d_,w2d_,deltafog2d_)/(2.*M_PI);
     }
     private:
     dg::Grid2d g2d_;
-    container f_;
     geo::DeltaFunction deltaf_;
-    const container w2d_;
-    const container oneongrid_;
+    const thrust::host_vector<double> w2d_, alphaog2d_;
+    thrust::host_vector<double> deltafog2d_;
 };
 
 }//namespace geo

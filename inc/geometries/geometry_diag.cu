@@ -221,14 +221,12 @@ int main( int argc, char* argv[])
             M_PI, p.sigma, p.sigma, p.sigma, p.amp)}
     };
     //Compute flux average
-    dg::geo::Alpha alpha(c); // = B^phi / |nabla psip |
     dg::DVec psipog2d   = dg::evaluate( c.psip(), grid2d);
-    dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d);
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    dg::geo::SafetyFactor< dg::DVec>     qprof(grid2d, c, alphaog2d );
+    dg::geo::SafetyFactor     qprof(grid2d, c);
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
 
