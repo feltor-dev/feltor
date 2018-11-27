@@ -134,6 +134,8 @@ we recover the familiar slab geometry.
 
 
 Let us state the Grad-Shafranov equation
+(the equilibrium equation in toroidally symmetric, ideal MHD,
+$\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ )
 \begin{align}\label{eq:GSEdimless}
  -\Delta^*_\perp  \psi_p &= R^2 \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p }\equiv R j_\varphi.
 \end{align}
@@ -203,12 +205,13 @@ By construction we have $\partial_\varphi B = 0$ with
     \label{}
 \end{align}
 Furthermore, we have
-\begin{align}
+\begin{align} \label{eq:curl_B}
   \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat,\\
-    \vec\nabla\times \vec B = \frac{R_0}{R}\left[ I_Z \ehat_R - I_R\ehat_Z + Rj_\varphi\ehat_\varphi  \right].
-    \label{}
+    \vec\nabla\times \vec B = \frac{R_0}{R}\left[ I_Z \ehat_R - I_R\ehat_Z + Rj_\varphi\ehat_\varphi  \right]\equiv \vec j.
 \end{align}
-The latter together with Eq.~\eqref{eq:curl_curvature}
+Note that the poloidal equilibrium current is given by $R_0 \vec \nabla I\times \ehat_\varphi/R$
+and the toroidal current by $R_0 \Delta^* \psi_p$.
+Eq.~\eqref{eq:curl_B} together with Eq.~\eqref{eq:curl_curvature}
 can be used as a consistency test for the correct implementation of the
 curvature operators (remember to convert $Rj_\varphi \rightarrow j_\varphi$ to get the contravariant component).
 We allow various simplifications to the curvature operator
@@ -325,6 +328,10 @@ K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
 \label{}
 \end{align}
 \subsection{Flux surface average and Safety factor}
+We define the toroidal average of a function $f(R,Z,\varphi)$ as
+\begin{align} \label{eq:phi_average}
+\langle f\rangle_\varphi := \frac{1}{2\pi}\oint f\d \varphi
+\end{align}
 The flux surface average
 of a function $f(R,Z,\varphi)$ is given by the formula
 \begin{align}\label{eq:fsa}
@@ -840,7 +847,27 @@ aligned   & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Del
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
-This program reads in the output file above
+This program reads in the output file above and computes
+
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
+geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
+x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
+x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
+y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
+z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
+\rangle_\varphi$ (Eq.~\eqref{eq:phi_average} where X is \{Ne, Ni, Ue, Ui, phi,
+vor\} corresponding to $\{ n_e, N_i, u_e, U_i, \phi, \Delta\phi\}$ \\
+dX\_mp           & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ where X is \{Ne, Ni, Ue, Ui, phi,
+vor\} corresponding to $\{ n_e, N_i, u_e, U_i, \phi, \Delta\phi\}$ \\
+\bottomrule
+\end{longtable}
+
 
 
 
