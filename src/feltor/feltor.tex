@@ -847,7 +847,22 @@ aligned   & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Del
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
-This program reads in the output file above and computes
+This program reads in the output file above and writes into another output file.
+
+\begin{align}
+ \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ B} + u_e \left(\bhat + \tilde{\vec b}\right)\right) \cdot \vec
+ \nabla\psi_p \nonumber\\
+ =& \beta n_eu_e\left( A_\parallel \mathcal
+ K_\kappa(A_\parallel) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
+  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
+   n_e\mathcal K_\kappa(\phi) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
+   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
+   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
+   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
+\end{align}
+
+Output file format: netcdf-4/hdf5
 
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
@@ -856,17 +871,17 @@ inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON
 geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
 x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
-x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
-y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
-z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+psip1d           & Dataset & 1 & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
 X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
-\rangle_\varphi$ (Eq.~\eqref{eq:phi_average} where X is \{Ne, Ni, Ue, Ui, phi,
-vor\} corresponding to $\{ n_e, N_i, u_e, U_i, \phi, \Delta\phi\}$ \\
-dX\_mp           & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ where X is \{Ne, Ni, Ue, Ui, phi,
-vor\} corresponding to $\{ n_e, N_i, u_e, U_i, \phi, \Delta\phi\}$ \\
+    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
+X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
+X\_fsa           & Dataset & 2 (time, psip1d) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
 \bottomrule
 \end{longtable}
+X $\in$ \{ electrons, ions, Ue, Ui, potential,
+induction, vorticity, fluxe, Lpeprinv, Lparallelinv\} corresponding to \{
+    $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$, $-\Delta_\perp \phi$,
+    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\}
 
 
 

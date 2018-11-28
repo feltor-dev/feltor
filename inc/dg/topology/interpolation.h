@@ -29,7 +29,7 @@ using IDMatrix = tIDMatrix<double>;
 ///@}
 
 namespace create{
-    ///@cond
+///@cond
 namespace detail{
 
 /**
@@ -68,60 +68,6 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
     return px;
 }
 
-}//namespace detail
-///@endcond
-///@addtogroup interpolation
-///@{
-/**
- * @brief Create interpolation matrix
- *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses
- * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points.
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @param x X-coordinates of interpolation points (All points must lie within the grid domain)
- * @param g The Grid on which to operate
- *
- * @return interpolation matrix
- */
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGrid1d<real_type>& g)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
-
-    int number = 0;
-    dg::Operator<real_type> forward( g.dlt().forward());
-    for( unsigned i=0; i<x.size(); i++)
-    {
-        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << "xi = " << x[i] <<std::endl;
-        }
-        assert(x[i] >= g.x0() && x[i] <= g.x1());
-
-        //determine which cell (x) lies in
-        real_type xnn = (x[i]-g.x0())/g.h();
-        unsigned n = (unsigned)floor(xnn);
-        //determine normalized coordinates
-        real_type xn = 2.*xnn - (real_type)(2*n+1);
-        //intervall correction
-        if (n==g.N()) {
-            n-=1;
-            xn = 1.;
-        }
-        //evaluate 2d Legendre polynomials at (xn, yn)...
-        std::vector<real_type> px = detail::coefficients( xn, g.n());
-        //...these are the matrix coefficients with which to multiply
-        std::vector<real_type> pxF(px.size(),0);
-        for( unsigned l=0; l<g.n(); l++)
-            for( unsigned k=0; k<g.n(); k++)
-                pxF[l]+= px[k]*forward(k,l);
-        unsigned col_begin = n*g.n();
-        detail::add_line( A, number, i,  col_begin, pxF);
-    }
-    return A;
-}
-///@cond
-namespace detail{
 template<class real_type>
 void mirror( bool& negative, real_type& x, real_type x0, real_type x1, bc boundary) {
     while( (x<x0) || (x>x1) )
@@ -147,8 +93,68 @@ void assert_contains( real_type X, real_type x0, real_type x1, char const * poin
     }
     assert(X >= x0 && X <= x1);
 }
+
 }//namespace detail
 ///@endcond
+///@addtogroup interpolation
+///@{
+/**
+ * @brief Create interpolation matrix
+ *
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses
+ * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the given interpolation points.
+ * The given boundary conditions determine how interpolation points outside the grid domain are treated.
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @param x X-coordinates of interpolation points
+ * @param g The Grid on which to operate
+ * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
+ * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
+ (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
+ * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ *
+ * @return interpolation matrix
+ */
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGrid1d<real_type>& g, dg::bc bcx = dg::NEU)
+{
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
+
+    int number = 0;
+    dg::Operator<real_type> forward( g.dlt().forward());
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        real_type X = x[i];
+        g.shift_topologic( X,X, bcx);
+        //mirror at boundary
+        bool negative = false;
+        detail::mirror( negative, X, g.x0(), g.x1(), bcx);
+
+        //determine which cell (x) lies in
+        real_type xnn = (x[i]-g.x0())/g.h();
+        unsigned n = (unsigned)floor(xnn);
+        //determine normalized coordinates
+        real_type xn = 2.*xnn - (real_type)(2*n+1);
+        //intervall correction
+        if (n==g.N()) {
+            n-=1;
+            xn = 1.;
+        }
+        //evaluate 2d Legendre polynomials at (xn, yn)...
+        std::vector<real_type> px = detail::coefficients( xn, g.n());
+        //...these are the matrix coefficients with which to multiply
+        std::vector<real_type> pxF(px.size(),0);
+        for( unsigned l=0; l<g.n(); l++)
+            for( unsigned k=0; k<g.n(); k++)
+                pxF[l]+= px[k]*forward(k,l);
+        unsigned col_begin = n*g.n();
+        if( negative)
+            for( unsigned l=0; l<g.n(); l++)
+                pxF[l]*=-1.;
+        detail::add_line( A, number, i,  col_begin, pxF);
+    }
+    return A;
+}
 
 /**
  * @brief Create interpolation matrix
