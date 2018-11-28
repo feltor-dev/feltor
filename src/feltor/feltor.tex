@@ -120,8 +120,8 @@ The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
 In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be written as
 \begin{align}
- \vec{B} &= \frac{R_0I(\psi)}{R} \ehat_{\varphi} + \frac{R_0}{R}\left[\frac{\partial \psi}{\partial Z} \ehat_R 
-         -  \frac{\partial \psi}{\partial R} \ehat_Z\right] ,
+ \vec{B} &= \frac{R_0}{R}\left[I(\psi) \ehat_{\varphi} + \frac{\partial
+ \psi_p}{\partial Z} \ehat_R -  \frac{\partial \psi_p}{\partial R} \ehat_Z\right] ,
 \end{align}
 which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
@@ -131,13 +131,21 @@ Note that with $\psi_p = I(\psi_p) \equiv 1$ we recover a purely toroidal field.
 With a subsequent identification of $x:=R-R_0$ and the transition to
 Cartesian coordinates while straightening the field lines for large $R_0$
 we recover the familiar slab geometry.
-
-
-Let us state the Grad-Shafranov equation
-(the equilibrium equation in toroidally symmetric, ideal MHD,
+We have
+the equilibrium equations in toroidally symmetric, ideal MHD (
 $\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ )
+\begin{align}
+    \vec\nabla\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
+ j_\parallel &= \vec j\cdot \bhat = \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
+ \frac{\d I}{\d\psi_p} B \quad \text{  Pfirsch-Schl\"uter \& Bootstrap current } \\
+ \vec j_\perp &= \bhat\times\left(\vec j\times\bhat\right)=
+ \frac{\bhat \times \nabla p}{B} \quad\quad\quad \text{ diamagnetic current} \\
+ \vec j\times\vec B &= \frac{R_0^2}{R^2}\left[ -\Delta^* \psi_p - I
+     \frac{\d I}{\d \psi_p} \right]\vec\nabla\psi_p \equiv \frac{\d p}{\d\psi_p}\vec\nabla\psi_p =\vec \nabla p
+\end{align}
+from where we recover the Grad-Shafranov equation
 \begin{align}\label{eq:GSEdimless}
- -\Delta^*_\perp  \psi_p &= R^2 \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p }\equiv R j_\varphi.
+ -\Delta^*_\perp  \psi_p &= \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p }
 \end{align}
 with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
 Note that $R$ and $Z$ are normalized
@@ -205,15 +213,9 @@ By construction we have $\partial_\varphi B = 0$ with
     \label{}
 \end{align}
 Furthermore, we have
-\begin{align} \label{eq:curl_B}
-  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat,\\
-    \vec\nabla\times \vec B = \frac{R_0}{R}\left[ I_Z \ehat_R - I_R\ehat_Z + Rj_\varphi\ehat_\varphi  \right]\equiv \vec j.
+\begin{align}
+  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat.
 \end{align}
-Note that the poloidal equilibrium current is given by $R_0 \vec \nabla I\times \ehat_\varphi/R$
-and the toroidal current by $R_0 \Delta^* \psi_p$.
-Eq.~\eqref{eq:curl_B} together with Eq.~\eqref{eq:curl_curvature}
-can be used as a consistency test for the correct implementation of the
-curvature operators (remember to convert $Rj_\varphi \rightarrow j_\varphi$ to get the contravariant component).
 We allow various simplifications to the curvature operator
 for the Solov'ev equilibrium.
 
