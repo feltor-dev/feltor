@@ -170,8 +170,8 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d& 
  *
  * Dimensions are named x, and time
  * @param ncid file ID
- * @param dimsIDs dimension ID
- * @param tvarID time ID
+ * @param dimsIDs dimension IDs (time, x)
+ * @param tvarID time variable ID
  * @param g The 1d DG grid from which data points are generated
  *
  * @return netcdf error code if any
@@ -187,9 +187,9 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
 /**
  * @brief Define 2d dimensions and associate values in NetCDF-file
  *
- * Dimensions are named x, y
+ * Dimensions are named y, x
  * @param ncid file ID
- * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
+ * @param dimsIDs (write - only) 2D array of dimension IDs (y,x)
  * @param g The 2d grid from which to derive the dimensions
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
@@ -208,7 +208,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
 /**
  * @brief Define 2d time-dependent dimensions and associate values in NetCDF-file
  *
- * Dimensions are named x, y, and time
+ * Dimensions are named time, y and x
  * @param ncid file ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
  * @param tvarID (write - only) The ID of the time variable

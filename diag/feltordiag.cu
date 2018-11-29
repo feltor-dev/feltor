@@ -54,11 +54,10 @@ int main( int argc, char* argv[])
     }
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
-    //////////////////////////////open nc file//////////////////////////////////
+    //------------------------open input nc file--------------------------------//
     file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile und geomfile//////////////////
     size_t length;
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
     std::string input( length, 'x');
@@ -82,7 +81,6 @@ int main( int argc, char* argv[])
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     //-------------------Construct grids-------------------------------------//
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -95,6 +93,7 @@ int main( int argc, char* argv[])
     dg::Grid2d   g2d_out( Rmin,Rmax, Zmin,Zmax,
         p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
 
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     double psipmin = (double)thrust::reduce(
         psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>() );
@@ -105,6 +104,7 @@ int main( int argc, char* argv[])
     dg::Grid1d g1d_out(psipmin, psipmax, 3, Npsi, dg::NEU);
 
     // Construct weights and temporaries
+
     const dg::DVec w3d = dg::create::volume( g3d_out);
     const dg::DVec w1d = dg::create::weights( g1d_out);
 
@@ -199,6 +199,9 @@ int main( int argc, char* argv[])
     std::vector<std::string> names_derived{
         "vorticity","fluxe","Lperpinv","Lparallelinv"
     };
+    std::vector<std::string> names_0d{
+        "aligned", "perp_aligned", "correlationNPhi"
+    };
     std::map<std::string, dg::DVec> v3d;
     for( auto name : names_direct)
         v3d[name] = t3d;
@@ -212,13 +215,13 @@ int main( int argc, char* argv[])
         input.size(), input.data());
     err = nc_put_att_text( ncid_out, NC_GLOBAL, "geomfile",
         geom.size(), geom.data());
-    //define 2d and 1d dimensions
+    // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
     int dim_ids1d[2] = {dim_ids[0],dim_ids[0]};
     err = file::define_dimension( ncid_out, "psip1d", &dim_ids1d[1], g1d_out);
 
-    std::map<std::string, int> id1d, id2d;
+    std::map<std::string, int> id0d, id1d, id2d;
     for( auto pair : v3d)
     {
         std::string name = pair.first + "_avg";
@@ -231,10 +234,17 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
             &id1d[name]);
     }
+    std::map<std::string, double> v0d;
+    for( auto name : names_0d)
+    {
+        v0d[name] = 0.;
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 1, dim_ids,
+            &id0d[name]);
+    }
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t start1d[2] = {0, 0};
-    size_t count2d[3] = {1, g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
+    size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
     size_t start2d[3] = {0, 0, 0};
     size_t count3d[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3d[4] = {0, 0, 0, 0};
@@ -250,7 +260,7 @@ int main( int argc, char* argv[])
     err = nc_close(ncid_out);
 
     /////////////////////////////////////////////////////////////////////////
-    unsigned outlim = 0.; int timeID;
+    int timeID;
     double time=0.;
 
     size_t steps;
@@ -258,29 +268,27 @@ int main( int argc, char* argv[])
     err = nc_inq_unlimdim( ncid, &timeID);
     err = nc_inq_dimlen( ncid, timeID, &steps);
     err = nc_close( ncid); //close 3d file
-    steps-=1;
-    outlim = steps/p.itstp;
 
     dg::Average<dg::DVec> toroidal_average( g3d_out, dg::coo3d::z);
 
-    for( unsigned i=0; i<outlim; i++)//timestepping
+    for( unsigned i=0; i<steps; i++)//timestepping
     {
         start3d[0] = i; //set specific time
         start2d[0] = i;
         start1d[0] = i;
-        time += p.itstp*p.dt;
+        err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+        err = nc_get_vara_double( ncid, timeID, start3d, count3d, &time);
         std::cout << "Timestep = " << i << "  time = " << time << "\n";
         //read in Ne,Ni,Ue,Ui,Phi,Apar
         for( auto name : names_direct)
         {
-            err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
             int dataID;
             err = nc_inq_varid(ncid, name.data(), &dataID);
             err = nc_get_vara_double( ncid, dataID, start3d, count3d,
                 transfer3d.data());
-            err = nc_close(ncid);  //close 3d file
             dg::assign( transfer3d, v3d[name]);
         }
+        err = nc_close(ncid);  //close 3d file
         //----------------vorticity computation
         dg::blas2::gemv( laplacianM, v3d["potential"], v3d["vorticity"]);
         //----------------radial flux computation
@@ -308,30 +316,38 @@ int main( int argc, char* argv[])
         dg::blas1::subroutine( feltor::routines::ComputePsi(),
             t3d, dx_N, dy_N, dz_N, dx_A, dy_A, dz_A);
         dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
+        v0d["perp_aligned"] = dg::blas1::dot( t3d, w3d);
         dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
         dg::blas1::transform( t3d, v3d["Lperpinv"], dg::SQRT<double>());
         //----------------parallel length scale computation
         dg::blas1::axpby( 1., v3d["electrons"], -1., 1., t3d);
         dsN.centered( t3d, dx_N);
-        dg::blas1::pointwiseDivide( dx_N, v3d["electrons"], t3d);
-        dg::blas1::pointwiseDot ( t3d, t3d, t3d);
+        dg::blas1::pointwiseDot ( dx_N, dx_N, t3d);
+        dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
+        v0d["aligned"] = dg::blas1::dot( t3d, w3d);
+        dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
         dg::blas1::transform( t3d, v3d["Lparallelinv"], dg::SQRT<double>());
+        //------------------correlation------------//
+        dg::blas1::transform( v3d["potential"], t3d, dg::EXP<double>());
+        double norm1 = sqrt(dg::blas2::dot(t3d, w3d, t3d));
+        double norm2 = sqrt(dg::blas2::dot(v3d["electrons"], w3d, v3d["electrons"]));
+        v0d["correlationNPhi"] = dg::blas2::dot( t3d, w3d, v3d["electrons"])
+            /norm1/norm2;  //<e^phi, N>/||e^phi||/||N||
 
-
-        //now write out 2d quantities
+        //now write out 2d and 1d quantities
         err = nc_open(argv[2], NC_WRITE, &ncid_out);
         for( auto pair : v3d)// {name, DVec}
         {
             toroidal_average( pair.second, t2d, false);
             dg::blas1::transfer( t2d, transfer2d);
-            err = nc_put_vara_double( ncid_out, id2d[pair.first+"_avg"],
+            err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_avg"),
                 start2d, count2d, transfer2d.data());
 
             //computa fsa of quantities
             dg::geo::FluxSurfaceAverage<dg::DVec> fsa(g2d_out, mag, t2d );
             t1d = dg::evaluate(fsa, g1d_out);
             dg::assign( t1d, transfer1d);
-            err = nc_put_vara_double( ncid_out, id1d[pair.first+"_fsa"],
+            err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsa"),
                 start1d, count1d, transfer1d.data());
 
             //get 2d data of MidPlane
@@ -343,16 +359,20 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(fsaonrzmatrix, t1d, t2d); //fsa on RZ grid
             dg::blas1::axpby( 1.0, t2d_mp, -1.0, t2d);
             dg::assign( t2d, transfer2d);
-            err = nc_put_vara_double( ncid_out, id2d[pair.first]["_fsa_mp"],
+            err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_fsa_mp"),
                 start2d, count2d, transfer2d.data() );
 
         }
+        //and the 0d quantities
+        for( auto pair : v0d) //{name, double}
+            err = nc_put_vara_double( ncid_out, id0d.at(pair.first),
+                start2d, count2d, &pair.second );
         //write time data
         err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
+        //and close file
         err = nc_close(ncid_out);
 
     } //end timestepping
-    //cross coherence between phi and ne
     //relative fluctuation amplitude(R,Z,phi) = delta n(R,Z,phi)/n0(psi)
 
     return 0;

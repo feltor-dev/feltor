@@ -128,22 +128,23 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //First the profile and the source (on the host since we want to output those)
-    HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(), p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
+    HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(),
+        p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
     HVec xpoint_damping = dg::evaluate( dg::one, grid);
     if( gp.hasXpoint() )
         xpoint_damping = dg::pullback(
             dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
-    HVec source_damping = dg::pullback( dg::geo::TanhDamping(
-        mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
-    dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
-    if( p.omega_source != 0)
-        feltor.set_source( p.omega_source, profile, source_damping);
-    HVec profile_damping = dg::pullback(dg::geo::TanhDamping(
+    HVec source_damping = dg::pullback(dg::geo::TanhDamping(
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
         //then shift tanh
         p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
+    dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
+    if( p.omega_source != 0)
+        feltor.set_source( p.omega_source, profile, source_damping);
 
+    HVec profile_damping = dg::pullback( dg::geo::TanhDamping(
+        mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
@@ -323,7 +324,7 @@ int main( int argc, char* argv[])
     {
         dg::blas2::symv( project, *pair.second, transferD);
         dg::assign( transferD, transferH);
-        err = nc_put_vara_double( ncid, id4d[pair.first], start, count,
+        err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
             #ifdef FELTOR_MPI
             transferH.data().data()
             #else //FELTOR_MPI
@@ -337,7 +338,7 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     for( auto pair : v0d)
-        err = nc_put_vara_double( ncid, id0d[pair.first],
+        err = nc_put_vara_double( ncid, id0d.at(pair.first),
             Estart, Ecount, pair.second);
 #ifndef FELTOR_MPI
     err = nc_close(ncid);
@@ -378,6 +379,7 @@ int main( int argc, char* argv[])
             step++;
 
             feltor.update_quantities();
+            MPI_OUT std::cout << "Timestep "<<dt<<"\n";
             dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
@@ -388,7 +390,7 @@ int main( int argc, char* argv[])
             Estart[0] = step;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             for( auto pair : v0d)
-                err = nc_put_vara_double( ncid, id0d[pair.first],
+                err = nc_put_vara_double( ncid, id0d.at(pair.first),
                     Estart, Ecount, pair.second);
 
             MPI_OUT q.display(std::cout);
@@ -421,7 +423,7 @@ int main( int argc, char* argv[])
         {
             dg::blas2::symv( project, *pair.second, transferD);
             dg::assign( transferD, transferH);
-            err = nc_put_vara_double( ncid, id4d[pair.first], start, count,
+            err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
                 #ifdef FELTOR_MPI
                 transferH.data().data()
                 #else //FELTOR_MPI

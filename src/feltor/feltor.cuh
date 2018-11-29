@@ -258,7 +258,7 @@ struct Quantities
            << "    Dres: "<<Dres<<"\n"
            << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"]\n"
            << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"]\n"
-           << " aligned: "<<aligned;
+           << " aligned: "<<aligned<<"\n";
     }
 };
 
@@ -818,7 +818,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         if( m_p.perp_diff == "viscous")
         {
             dg::blas1::transform( fields[0][i], m_temp1, dg::PLUS<double>(-1));
-            //minus in Laplacian!
             dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
         }
         else
@@ -827,6 +826,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
             dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
             dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
         }
+        //minus in Laplacian!
         if( i==0)
             m_q.diff += -m_p.nu_perp*dg::blas1::dot( m_vol3d, m_temp0);
         m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(

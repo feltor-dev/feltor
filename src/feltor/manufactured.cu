@@ -140,6 +140,8 @@ int main( int argc, char* argv[])
               <<"    phie: "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))/normphie<<"\t"<<normphie<<"\n"
               <<"    phii: "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))/normphii<<"\t"<<normphii<<"\n"
               <<"    apar: "<<sqrt(dg::blas2::dot( w3d,sol_apar))/normapar<<"\t"<<normapar<<"\n";
+    feltor.update_quantities();
+    feltor.quantities().display();
 
 
     return 0;
