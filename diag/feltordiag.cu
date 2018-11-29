@@ -200,7 +200,7 @@ int main( int argc, char* argv[])
         "vorticity","fluxe","Lperpinv","Lparallelinv"
     };
     std::vector<std::string> names_0d{
-        "aligned", "perp_aligned", "correlationNPhi"
+        "aligned", "perp_aligned", "correlationNPhi", "total_flux"
     };
     std::map<std::string, dg::DVec> v3d;
     for( auto name : names_direct)
@@ -273,7 +273,7 @@ int main( int argc, char* argv[])
 
     for( unsigned i=0; i<steps; i++)//timestepping
     {
-        start3d[0] = i; //set specific time
+        start3d[0] = i;
         start2d[0] = i;
         start1d[0] = i;
         err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
@@ -289,9 +289,13 @@ int main( int argc, char* argv[])
             dg::assign( transfer3d, v3d[name]);
         }
         err = nc_close(ncid);  //close 3d file
+
         //----------------vorticity computation
+
         dg::blas2::gemv( laplacianM, v3d["potential"], v3d["vorticity"]);
+
         //----------------radial flux computation
+
         dg::blas2::symv( dxA, v3d["induction"], dx_A);
         dg::blas2::symv( dyA, v3d["induction"], dy_A);
         dg::blas2::symv( dz , v3d["induction"], dz_A);
@@ -306,7 +310,10 @@ int main( int argc, char* argv[])
             curvNabla[0], curvNabla[1], curvNabla[2],
             curvKappa[0], curvKappa[1], curvKappa[2]
         );
+        v0d["total_flux"] = dg::blas1::dot( w3d, v3d["fluxe"]);
+
         //----------------perp length scale computation
+
         dg::blas1::axpby( 1., v3d["electrons"], -1., 1., t3d);
         dg::blas2::symv( dxN, t3d, dx_N);
         dg::blas2::symv( dyN, t3d, dy_N);
@@ -319,7 +326,9 @@ int main( int argc, char* argv[])
         v0d["perp_aligned"] = dg::blas1::dot( t3d, w3d);
         dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
         dg::blas1::transform( t3d, v3d["Lperpinv"], dg::SQRT<double>());
+
         //----------------parallel length scale computation
+
         dg::blas1::axpby( 1., v3d["electrons"], -1., 1., t3d);
         dsN.centered( t3d, dx_N);
         dg::blas1::pointwiseDot ( dx_N, dx_N, t3d);
@@ -327,7 +336,9 @@ int main( int argc, char* argv[])
         v0d["aligned"] = dg::blas1::dot( t3d, w3d);
         dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
         dg::blas1::transform( t3d, v3d["Lparallelinv"], dg::SQRT<double>());
+
         //------------------correlation------------//
+
         dg::blas1::transform( v3d["potential"], t3d, dg::EXP<double>());
         double norm1 = sqrt(dg::blas2::dot(t3d, w3d, t3d));
         double norm2 = sqrt(dg::blas2::dot(v3d["electrons"], w3d, v3d["electrons"]));

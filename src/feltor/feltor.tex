@@ -878,6 +878,10 @@ X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
 X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
 X\_fsa           & Dataset & 2 (time, psip1d) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
+aligned          & Dataset & 1 (time) & $\int \dV (\nabla_\parallel n_e)^2 /n_e$ \\
+perp\_aligned    & Dataset & 1 (time) & $\int \dV (\vec\nabla_\perp n_e)^2 /n_e$ \\
+correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^\phi||||n_e||$\\
+total\_flux      & Dataset & 1 (time) & $\int \dV f_e$\\
 \bottomrule
 \end{longtable}
 X $\in$ \{ electrons, ions, Ue, Ui, potential,
