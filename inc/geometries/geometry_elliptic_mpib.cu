@@ -5,7 +5,7 @@
 #include <netcdf_par.h>
 #include "json/json.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 #include "dg/algorithm.h"
 

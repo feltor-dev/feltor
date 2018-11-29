@@ -15,7 +15,7 @@
 #include "testfunctors.h"
 #include "curvilinear.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {

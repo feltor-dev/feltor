@@ -18,7 +18,7 @@
 #include "init.h"
 
 #include <netcdf_par.h>
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}

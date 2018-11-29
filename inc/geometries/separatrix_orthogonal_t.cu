@@ -19,7 +19,7 @@
 #include "init.h"
 #include "testfunctors.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 
 double sine( double x) {return sin(x);}

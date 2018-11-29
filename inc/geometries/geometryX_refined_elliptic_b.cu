@@ -1,11 +1,10 @@
 #include <iostream>
 #include "json/json.h"
 
-#include "file/nc_utilities.h"
-
 #include "dg/algorithm.h"
+#include "dg/file/nc_utilities.h"
+#include "dg/geometries/geometries.h"
 
-#include "geometries.h"
 //#include "taylor.h"
 #include "testfunctors.h"
 

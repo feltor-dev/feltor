@@ -29,10 +29,16 @@ struct Parameters
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
            psipmaxlim,  //!< for limiter
-           qampl; //scales grad-shafranov q factor
+           qampl; //!< scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
     std::string equilibrium;
 #ifdef JSONCPP_VERSION_STRING
+    /**
+     * @brief Construct from Json dataset
+     * @param js Must contain the variables "A", "c", "R_0", "inverseaspectratio", "elongation", "triangularity", "alpha", "rk4eps" (1e-5), "psip_min" (0), "psip_max" (0), "psip_max_cut" (0), "psip_max_lim" (1e10), "qampl" (1), "equilibrium" ("solovev")
+     * @note the default values in brackets are taken if the variables are not found in the input
+     * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
+     */
     Parameters( const Json::Value& js) {
         A  = js.get("A", 0).asDouble();
         c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
@@ -57,7 +63,8 @@ struct Parameters
     /**
      * @brief Put values into a json string
      *
-     * @return
+     * @return Json value
+     * @attention This member is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
     Json::Value dump( ) const
     {
@@ -95,6 +102,7 @@ struct Parameters
                 Xpoint = true;
         return Xpoint;
     }
+    ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"

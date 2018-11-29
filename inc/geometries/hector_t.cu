@@ -7,7 +7,7 @@
 #include <memory>
 #include "json/json.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 #include "dg/backend/timer.h"
 #include "dg/functors.h"
