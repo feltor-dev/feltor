@@ -20,6 +20,7 @@ We do not (yet) follow semantic versioning.
 - dg::tensor::inv\_multiply3d and dg::tensor::inv\_multiply2d functions
 
 ### Changed
+- make cuda-aware mpi a warning instead of an error
 - rewrite feltordiag.cu merging ncdiag and filamentdiag
 - Remove container argument from dg::geo::SafetyFactor constructor (Since it
   always takes Alpha)

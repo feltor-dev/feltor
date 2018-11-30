@@ -219,14 +219,14 @@ int main(int argc, char* argv[])
         dg::geo::TokamakMagneticField mag =
             dg::geo::createGuentherField(R0, I0);
         dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector>
-            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter());
+            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 5, 5);
         dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>
             ds ( dsFA, dg::centered);
 
-        ds.symv(x,y);//warm up
+        ds.centered(x,y);//warm up
         t.tic();
         for( unsigned i=0; i<multi; i++)
-            ds.symv(x,y);
+            ds.centered(x,y);
         t.toc();
         if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     }

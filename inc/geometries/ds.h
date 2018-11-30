@@ -30,6 +30,11 @@ namespace geo{
     * @param g contains result on output (write only)
     * @note the vector sizes need to equal the grid size in the constructor
     */
+/*!@class hide_ds_attention
+@attention The \c div and \c symv member functions reliably converge only if fieldlines
+do not(!) intersect the boundary and then only if the \c mx and \c my
+    parameters are sufficiently high
+*/
 
 /**
 * @brief Class for the evaluation of parallel derivatives
@@ -198,36 +203,42 @@ struct DS
 
     ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
+    ///@copydoc hide_ds_attention
     ///@note divForward is the negative adjoint of backward
     void divForward( double alpha, const container& f, double beta, container& g){
         do_divForward( alpha, f, beta, g);
     }
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
+    ///@copydoc hide_ds_attention
     ///@note divBackward is the negative adjoint of forward
     void divBackward( double alpha, const container& f, double beta, container& g){
         do_divBackward( alpha, f, beta, g);
     }
     ///@brief centered divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
+    ///@copydoc hide_ds_attention
     ///@note divCentered is the negative adjoint of centered
     void divCentered(double alpha, const container& f, double beta, container& g){
         do_divCentered( alpha, f, beta, g);
     }
     ///@brief forward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
+    ///@copydoc hide_ds_attention
     ///@note divForward is the negative adjoint of backward
     void divForward(const container& f, container& g){
         do_divForward( 1.,f,0.,g);
     }
     ///@brief backward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
+    ///@copydoc hide_ds_attention
     ///@note divBackward is the negative adjoint of forward
     void divBackward(const container& f, container& g){
         do_divBackward( 1.,f,0.,g);
     }
     ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
+    ///@copydoc hide_ds_attention
     ///@note divCentered is the negative adjoint of centered
     void divCentered(const container& f, container& g){
         do_divCentered( 1.,f,0.,g);
@@ -274,6 +285,7 @@ struct DS
     *
     * @param dir redirects to either \c divForward(), \c divBackward() or \c divCentered()
     * @copydoc hide_ds_parameters2
+     * @copydoc hide_ds_attention
     */
     void div(dg::direction dir,  const container& f, container& g){
         div(dir, 1., f, 0., g);
@@ -283,6 +295,7 @@ struct DS
     *
     * @param dir redirects to either \c divForward(), \c divBackward() or \c divCentered()
     * @copydoc hide_ds_parameters4
+     * @copydoc hide_ds_attention
     */
     void div(dg::direction dir, double alpha, const container& f, double beta, container& g);
 
@@ -291,6 +304,7 @@ struct DS
      *
      * If direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters2
+     * @copydoc hide_ds_attention
      */
     void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}
     /**
@@ -298,19 +312,20 @@ struct DS
      *
      * if direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters4
+     * @copydoc hide_ds_attention
      */
     void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
     /**
      * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^2} - \frac{f^0}{h_z^2} + \frac{f^-}{h_z^2}\right) \f]
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
      * @copydoc hide_ds_parameters2
      */
     void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^2} - \frac{f^0}{h_z^2} + \frac{f^-}{h_z^2}\right) \f]
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
      * @copydoc hide_ds_parameters4
      */
     void dss( double alpha, const container& f, double beta, container& g){ do_dss( alpha, f, beta, g);}

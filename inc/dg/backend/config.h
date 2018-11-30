@@ -59,7 +59,7 @@
 
 #include "mpi-ext.h"
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#error "CUDA aware MPI installation required!"
+#warning "CUDA aware MPI installation required!"
 #else
 #pragma message( "Cannot determine CUDA-aware MPI support!")
 #endif //MPIX_CUDA
