@@ -70,7 +70,7 @@ int main(int argc, char* argv[] )
 
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered);
+        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered);
         multi_pol[u].set_chi( chi_[u]);
     }
     t.toc();

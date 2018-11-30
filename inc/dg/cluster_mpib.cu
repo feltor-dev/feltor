@@ -212,24 +212,21 @@ int main(int argc, char* argv[])
         dg::blas1::axpby( 1., solution, -1., x);
         res.d = dg::blas2::dot( x, ellw3d, x);
         //Application of ds
-        double gpR0  =  10, gpI0=20;
-        double inv_aspect_ratio =  0.1;
-        double gpa = gpR0*inv_aspect_ratio;
-        double Rmin=gpR0-1.0*gpa;
-        double Zmin=-1.0*gpa*1.00;
-        double Rmax=gpR0+1.0*gpa;
-        double Zmax=1.0*gpa*1.00;
-        dg::CylindricalMPIGrid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
-        dg::geo::TokamakMagneticField magfield = dg::geo::createGuentherField(gpR0, gpI0);
-        dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector> dsFA( magfield, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter());
-        dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>  ds ( dsFA, dg::not_normed, dg::centered);
-        dg::geo::guenther::FuncNeu funcNEU(gpR0,gpI0);
-        Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
+        double R0 = 10, I0=20;
+        double a = 1.;
+        dg::CylindricalMPIGrid3d g3d( R0-a,R0+a, -a,+a, 0, 2.*M_PI, n, Nx
+            ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
+        dg::geo::TokamakMagneticField mag =
+            dg::geo::createGuentherField(R0, I0);
+        dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector>
+            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter());
+        dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>
+            ds ( dsFA, dg::centered);
 
-        ds.symv(function,dsTdsfb);//warm up
+        ds.symv(x,y);//warm up
         t.tic();
         for( unsigned i=0; i<multi; i++)
-            ds.symv(function,dsTdsfb);
+            ds.symv(x,y);
         t.toc();
         if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     }

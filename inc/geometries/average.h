@@ -154,7 +154,6 @@ struct SafetyFactor
      * @brief Construct from a field and a grid
      * @param g2d 2d grid
      * @param c contains psip, psipR and psipZ
-     * @param f container for global safety factor
      */
     SafetyFactor(const dg::Grid2d& g2d, const TokamakMagneticField& c) :
     g2d_(g2d),

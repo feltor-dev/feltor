@@ -295,13 +295,11 @@ struct IpolZ: public aCylindricalFunctor<IpolZ>
 
 static inline CylindricalFunctorsLvl2 createPsip( solovev::Parameters gp)
 {
-    CylindricalFunctorsLvl2 psip( Psip(gp), PsipR(gp), PsipZ(gp),PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
-    return psip;
+    return CylindricalFunctorsLvl2( Psip(gp), PsipR(gp), PsipZ(gp),PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
 }
 static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
-    CylindricalFunctorsLvl1 ipol( Ipol(gp), IpolR(gp), IpolZ(gp));
-    return ipol;
+    return CylindricalFunctorsLvl1( Ipol(gp), IpolR(gp), IpolZ(gp));
 }
 static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
 {

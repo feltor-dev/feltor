@@ -65,8 +65,10 @@ We do not (yet) follow semantic versioning.
 - dg::SparseElement (it's more intuitive to use a container directly)
 
 ### Fixed
-    Fixed for any bug fixes.
-
-### Security
-    Security in case of vulnerabilities.
+- fix bug in reconnection\_mpi.cu regarding output
+- fix bug in feltorShw/feltor.cu regarding BathRZ constructor
+- fix bug in feltorShw/feltor\_hpc.cu regarding BathRZ constructor
+- fix bug in feltorShw/feltor\_mpi.cu regarding BathRZ constructor
+- fix bug in feltorSHp/feltor\_hpc.cu regarding step function in timestepper
+- fix bug in polar/polar.cu regarding DVec in interpolation function
 

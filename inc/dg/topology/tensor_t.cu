@@ -33,7 +33,8 @@ int main()
     print( dense2d);
     std::vector<thrust::host_vector<double> > values(4);
     values[0] = seven; values[1] = three; values[2] = nine; values[3] = one;
-    dg::SparseTensor<thrust::host_vector<double> > sparse3d(values);
+    dg::SparseTensor<thrust::host_vector<double> > sparse3d(zero);
+    sparse3d.values() = values;
     sparse3d.idx(0,0) = 0, sparse3d.idx(0,1) = 1                       ;
     sparse3d.idx(1,0) = 1                       , sparse3d.idx(1,2) = 3;
     sparse3d.idx(2,0) = 1                       , sparse3d.idx(2,2) = 3;

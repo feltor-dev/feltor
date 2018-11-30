@@ -78,8 +78,8 @@ int main( int argc, char* argv[])
         err = nc_inq_varid(ncid, names[5].data(), &dataIDs[5]);
         err = nc_get_vara_double( ncid, dataIDs[5], start2d, count2d, tempH.data());
         apar=tempH;
-        dg::DVec x0(1,0.);
-        dg::DVec y0(1,0.);
+        dg::HVec x0(1,0.);
+        dg::HVec y0(1,0.);
         dg::DVec aparx0y0(1,0.);
         dg::DVec apareqx0y0(1,0.);
 

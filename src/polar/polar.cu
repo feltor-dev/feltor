@@ -31,7 +31,7 @@ void write(string prefix, const DVec& y0, double time, const Parameters& p, dg::
 {
     // interpolate to an equidistant grid
     int N = 1024;
-    DVec x(N*N), y(N*N);
+    HVec x(N*N), y(N*N);
     for(int i=0;i<N;i++) {
         for(int j=0;j<N;j++) {
             x[j*N + i] = i*(p.r_max-p.r_min)/double(N);
