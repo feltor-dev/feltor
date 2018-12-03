@@ -151,15 +151,17 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
         unsigned size = this->local().size();
         unsigned size2d = this->n()*this->n()*this->local().Nx()*this->local().Ny();
         //resize for 3d values
+        MPI_Comm comm = this->communicator(), comm_mod, comm_mod_reduce;
+        exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_mod_reduce);
         for( unsigned r=0; r<6;r++)
         {
             jac_.values()[r].data().resize(size);
-            jac_.values()[r].set_communicator( this->communicator());
+            jac_.values()[r].set_communicator( comm, comm_mod, comm_mod_reduce);
         }
         map_[0].data().resize(size);
-        map_[0].set_communicator( this->communicator());
+        map_[0].set_communicator( comm, comm_mod, comm_mod_reduce);
         map_[1].data().resize(size);
-        map_[1].set_communicator( this->communicator());
+        map_[1].set_communicator( comm, comm_mod, comm_mod_reduce);
         //lift to 3D grid
         for( unsigned k=1; k<localNz; k++)
             for( unsigned i=0; i<size2d; i++)

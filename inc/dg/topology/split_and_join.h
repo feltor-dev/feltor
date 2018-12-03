@@ -46,7 +46,8 @@ void split( MPIContainer& in, std::vector<MPI_Vector<View<SharedContainer>> >& o
     int result;
     MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-    MPI_Comm planeComm = grid.get_perp_comm();
+    MPI_Comm planeComm = grid.get_perp_comm(), comm_mod, comm_mod_reduce;
+    exblas::mpi_reduce_communicator( planeComm, &comm_mod, &comm_mod_reduce);
     //local size2d
     Grid3d l = grid.local();
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
@@ -54,7 +55,7 @@ void split( MPIContainer& in, std::vector<MPI_Vector<View<SharedContainer>> >& o
     for(unsigned i=0; i<l.Nz(); i++)
     {
         out[i].data().construct( thrust::raw_pointer_cast(in.data().data()) + i*size2d, size2d);
-        out[i].set_communicator( planeComm);
+        out[i].set_communicator( planeComm, comm_mod, comm_mod_reduce);
     }
 }
 #endif //MPI_VERSION

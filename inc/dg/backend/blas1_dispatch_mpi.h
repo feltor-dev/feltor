@@ -22,7 +22,7 @@ template< class Vector1, class Vector2, class ...Params>
 Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
     Vector1 out;
-    out.set_communicator(in.communicator());
+    out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
     using container1 = typename std::decay<Vector1>::type::container_type;
     out.data() = dg::construct<container1>( in.data(), std::forward<Params>(ps)...);
     return out;
@@ -30,7 +30,7 @@ Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...
 template< class Vector1, class Vector2, class ...Params>
 void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
-    out.set_communicator(in.communicator());
+    out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
     dg::assign( in.data(), out.data(), std::forward<Params>(ps)...);
 }
 

@@ -28,15 +28,19 @@ template<class container>
 struct MPI_Vector
 {
     typedef container container_type;//!< typedef to acces underlying container
-    ///no data is allocated, communicator is MPI_COMM_WORLD
-    MPI_Vector(){ set_communicator(MPI_COMM_WORLD);}
+    ///no data is allocated, communicators are \c MPI_COMM_NULL
+    MPI_Vector(){
+        comm_ = comm128_ = comm128Reduce_ = MPI_COMM_NULL;
+    }
     /**
      * @brief construct a vector
+     *
+     * calls \c exblas::mpi_reduce_communicator() (collective call)
      * @param data internal data copy
-     * @param comm MPI communicator
+     * @param comm MPI communicator (may not be \c MPI_COMM_NULL)
      */
-    MPI_Vector( const container& data, MPI_Comm comm): data_( data) {
-        set_communicator( comm);
+    MPI_Vector( const container& data, MPI_Comm comm): data_( data), comm_(comm) {
+        exblas::mpi_reduce_communicator( comm, &comm128_, &comm128Reduce_);
     }
 
     /**
@@ -49,7 +53,9 @@ struct MPI_Vector
     template<class OtherContainer>
     MPI_Vector( const MPI_Vector<OtherContainer>& src){
         data_ = src.data();
-        set_communicator( src.communicator());
+        comm_ = src.communicator();
+        comm128_ = src.communicator_mod();
+        comm128Reduce_ = src.communicator_mod_reduce();
     }
 
     ///@brief Get underlying data
@@ -71,10 +77,13 @@ struct MPI_Vector
      * @return returns MPI_COMM_NULL to processes not part of that group
      */
     MPI_Comm communicator_mod_reduce() const{return comm128Reduce_;}
-    ///@brief Set the communicator to which this vector belongs
-    void set_communicator(MPI_Comm comm){
+    /**
+    * @brief Set the communicators with \c exblas::mpi_reduce_communicator
+    */
+    void set_communicator(MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce){
         comm_ = comm;
-        exblas::mpi_reduce_communicator( comm_, &comm128_, &comm128Reduce_);
+        comm128_ = comm_mod;
+        comm128Reduce_ = comm_mod_reduce;
     }
 
     ///@brief Return the size of the data object

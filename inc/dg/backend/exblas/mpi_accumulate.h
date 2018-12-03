@@ -15,25 +15,28 @@ namespace exblas {
  * @brief This function can be used to partition communicators for the \c exblas::reduce_mpi_cpu function
  *
  * @ingroup highlevel
- * @param comm the input communicator (unmodified)
+ * @param comm the input communicator (unmodified, may not be \c MPI_COMM_NULL)
  * @param comm_mod a subgroup of comm (comm is split)
  * @param comm_mod_reduce a subgroup of comm, consists of all rank 0 processes in comm_mod
  * @note the creation of new communicators involves communication between all participation processes (comm in this case)
  */
 static void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
+    assert( comm != MPI_COMM_NULL);
     int mod = 128;
     int rank, size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
-    MPI_Comm_split( comm, rank/mod, rank%mod, comm_mod);
+    MPI_Comm_split( comm, rank/mod, rank%mod, comm_mod); //collective call
     MPI_Group group, reduce_group;
-    MPI_Comm_group( comm, &group);
+    MPI_Comm_group( comm, &group); //local call
     int reduce_size=(int)ceil((double)size/(double)mod);
     int reduce_ranks[reduce_size];
     for( int i=0; i<reduce_size; i++)
         reduce_ranks[i] = i*mod;
-    MPI_Group_incl( group, reduce_size, reduce_ranks, &reduce_group);
-    MPI_Comm_create( comm, reduce_group, comm_mod_reduce);
+    MPI_Group_incl( group, reduce_size, reduce_ranks, &reduce_group); //local
+    MPI_Comm_create( comm, reduce_group, comm_mod_reduce); //collective
+    MPI_Group_free( &group);
+    MPI_Group_free( &reduce_group);
     //returns MPI_COMM_NULL to processes that are not in the group
 }
 
