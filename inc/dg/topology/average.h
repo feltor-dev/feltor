@@ -11,8 +11,12 @@
 namespace dg{
 
 /**
- * @brief Class for average computations over a given direction or plane
+ * @brief Class for average computations in a Cartesian topology
  *
+ * Given a Cartesian topology it is possible to define a partial reduction of a given vector.
+ * In two dimensions for example we can define a reduction over all points that are neighbors in the x (or y) direction.
+ * We are then left with Ny (Nx) points. In three dimensions we can define the reduction along the x, y, z directions
+ * but also over all points in the xy (xz or yz) planes. We are left with two- (respectively three-)dimensional vectors.
  * @snippet topology/average_t.cu doxygen
  * @ingroup utilities
  */
