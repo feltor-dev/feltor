@@ -592,7 +592,7 @@ dg::assign( host, device_vec, 3);
 template<class from_ContainerType, class ContainerType, class ...Params>
 inline void assign( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
 {
-    dg::detail::doTransfer<from_ContainerType, ContainerType, Params...>( from, to, get_tensor_category<from_ContainerType>(), get_tensor_category<ContainerType>(), std::forward<Params>(ps)...);
+    dg::detail::doAssign<from_ContainerType, ContainerType, Params...>( from, to, get_tensor_category<from_ContainerType>(), get_tensor_category<ContainerType>(), std::forward<Params>(ps)...);
 }
 
 /**

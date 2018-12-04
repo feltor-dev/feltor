@@ -43,14 +43,14 @@ To doConstruct( const From& src, RecursiveVectorTag, AnyVectorTag, Size size, Pa
     return t;
 }
 template<class From, class To, class ...Params>
-void doTransfer( const From& src, To& to, AnyVectorTag, ArrayVectorTag, Params&&...ps )
+void doAssign( const From& src, To& to, AnyVectorTag, ArrayVectorTag, Params&&...ps )
 {
     for (unsigned i=0; i<to.size(); i++)
         dg::assign(src, to[i], std::forward<Params>(ps)...);
 }
 
 template<class From, class To, class Size, class ...Params>
-void doTransfer( const From& src, To& to, AnyVectorTag, RecursiveVectorTag, Size size, Params&&... ps )
+void doAssign( const From& src, To& to, AnyVectorTag, RecursiveVectorTag, Size size, Params&&... ps )
 {
     to.resize(size);
     for (int i=0; i<(int)size; i++)

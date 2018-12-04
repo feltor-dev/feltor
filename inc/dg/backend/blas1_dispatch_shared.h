@@ -32,7 +32,7 @@ To doConstruct( const From& from, ThrustVectorTag, ThrustVectorTag, Params&& ...
     return To( from.begin(), from.end());
 }
 template< class From, class To, class ...Params>
-void doTransfer( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+void doAssign( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
 {
     to.assign( from.begin(), from.end());
 }

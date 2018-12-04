@@ -28,7 +28,7 @@ Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...
     return out;
 }
 template< class Vector1, class Vector2, class ...Params>
-void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
+void doAssign( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
     out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
     dg::assign( in.data(), out.data(), std::forward<Params>(ps)...);
