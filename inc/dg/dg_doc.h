@@ -247,7 +247,10 @@
  *     are promoted to this type with the same size, communicator and execution policy
  *  -# Check the base class of the tensor_category:
  *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation multiplies and accumulates all elements in the vectors). Return the result.
- *      -# If \c dg::MPIVectorTag, assert that the vector MPI-communicators are \c congruent or \c ident. Then, access the underlying data and recursively call \c dot (and start again at 1). Accumulate the result
+ *      -# If \c dg::MPIVectorTag, assert that the vector MPI-communicators are
+ *      \c congruent (same process group, different context) or \c ident (same
+ *      process group, same context). Then, access the underlying data and
+ *      recursively call \c dot (and start again at 1). Accumulate the result
  *      among participating processes and return.
  *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dot for all elements (and start again at 1). Accumulate the results
  *      and return.

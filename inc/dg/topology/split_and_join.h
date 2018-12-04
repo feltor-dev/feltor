@@ -62,7 +62,9 @@ using get_mpi_view_type = typename
 
 /** @brief MPI Version of split (fast version)
  *
- * @note every plane in \c out must hold a 2d Cartesian MPI_Communicator congruent with the communicator in \c grid
+ * @note every plane in \c out must hold a 2d Cartesian MPI_Communicator
+ * congruent (same process group) or ident (same process group, same context)
+ * with the communicator in \c grid
  * @attention This version will NOT adapt the communicators in \c out
  * @attention out will NOT be resized
  * @param in contiguous 3d vector (must be of size \c grid.size())
@@ -89,7 +91,7 @@ void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
 * @param in contiguous 3d vector (must be of size \c grid.size())
 * @param grid provide dimensions in 3rd and first two dimensions
 * @return \c out contains \c grid.Nz() 2d vector views of 2d size on output
-* @note two seperately split vectors have congruent (not identical) MPI_Communicators (Note here the MPI concept of congruent vs. identical communicators)
+* @note two seperately split vectors have congruent (not identical) MPI_Communicators Note here the MPI concept of congruent (same process group, different contexts) vs. identical (same process group, same context) communicators.
 * @tparam MPIContainer An MPI_Vector of a \c SharedContainer
 */
 template< class MPIContainer>
