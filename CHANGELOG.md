@@ -20,6 +20,10 @@ We do not (yet) follow semantic versioning.
 - dg::tensor::inv\_multiply3d and dg::tensor::inv\_multiply2d functions
 
 ### Changed
+- dg::split now creates vector views instead of hard copies
+- default constructor of MPI\_Vector constructs empty communicator
+- set\_communicator in MPI\_Vector takes three arguments now to avoid group
+  creation
 - make cuda-aware mpi a warning instead of an error
 - rewrite feltordiag.cu merging ncdiag and filamentdiag
 - Remove container argument from dg::geo::SafetyFactor constructor (Since it
@@ -52,6 +56,7 @@ We do not (yet) follow semantic versioning.
 - the Helmholtz2 class (it's much faster to use Helmholtz twice)
 
 ### Removed
+- dg::join (no longer necessary because split works on views)
 - diag/filamentdiag.cu and diag/ncdiag.cpp (merged into feltordiag.cu)
 - src/asela and src/asela2d (now merged into src/feltor and src/feltor2d)
 - src/feltor2D (now merged in src/feltor project as an input parameter)

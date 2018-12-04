@@ -245,7 +245,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::assign( dg::evaluate( dg::zero, *grid_coarse), m_hp);
     m_hm = m_hp;
     dg::assign( yp_coarse[2], m_hp.data()); //2d vector
-    dg::split( m_hp_inv, m_temp, grid); //3d vector
+    m_temp = dg::split( m_hp_inv, grid); //3d vector
+    m_f = dg::split( (const MPI_Vector<LocalContainer>&)m_hp_inv, grid);
     for( unsigned i=0; i<m_Nz; i++)
         dg::blas1::copy( m_hp, m_temp[i]);
     dg::assign( ym_coarse[2], m_hm.data()); //2d vector

@@ -448,7 +448,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::assign( dg::evaluate( dg::zero, grid), m_h0_inv);
     m_hp_inv = m_hm_inv = m_h0_inv;
     dg::assign( yp_coarse[2], m_hp); //2d vector
-    dg::split( m_hp_inv, m_temp, grid); //3d vector
+    m_temp = dg::split( m_hp_inv, grid); //3d vector
+    m_f = dg::split( (const container&)m_hp_inv, grid);
     for( unsigned i=0; i<m_Nz; i++)
         dg::blas1::copy( m_hp, m_temp[i]);
     dg::assign( ym_coarse[2], m_hm); //2d vector

@@ -52,6 +52,15 @@ struct View
     ///@brief Initialize empty view
     View( void): m_ptr(), m_size(0){}
 
+    /** @brief Construct from another View or Vector
+     *
+     * The pointer types must be compatible
+     * @tparam OtherView Must provide members: \c data() and \c size()
+     * @param src Initialize from \c src.data() and \c src.size()
+     */
+    template<class OtherView>
+    View( OtherView& src): m_ptr(src.data()), m_size(src.size()){}
+
     ///@copydoc construct()
     template<class InputIterator>
     View( InputIterator data, unsigned size): m_ptr(pointer(data)),m_size(size){ }
