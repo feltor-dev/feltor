@@ -218,9 +218,17 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse->global(), bcx, bcy), plus;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse->global(), bcx, bcy), minus;
-    dg::IHMatrix projection = dg::create::projection( grid_coarse->local(), grid_fine.local());
-    cusp::multiply( projection, plusFine, plus);
-    cusp::multiply( projection, minusFine, minus);
+    if( mx == my && mx == 1)
+    {
+        plus = plusFine;
+        minus = minusFine;
+    }
+    else
+    {
+        dg::IHMatrix projection = dg::create::projection( grid_coarse->local(), grid_fine.local());
+        cusp::multiply( projection, plusFine, plus);
+        cusp::multiply( projection, minusFine, minus);
+    }
 #ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
