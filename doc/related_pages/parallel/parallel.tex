@@ -523,6 +523,34 @@ $\varphi \in [0,2\pi]$ and choose
   \label{}
 \end{align}
 On the chosen domain these functions have Neumann respectively Dirichlet boundary conditions.
+In Tables~\ref{tab:ds_cylindrical_dirichlet1} and
+\ref{tab:ds_cylindrical_dirichlet10} we show the convergence of the solution
+for various operators and Dirichlet boundary conditions. Note that the same
+tables for Neumann boundary conditions exhibit similar values.
+Apparently, the discretization for the divergence does not converge even if we
+increase the refinement.
+\begin{table*}[ht]
+\begin{centering}
+\footnotesize
+\hspace*{-2cm}
+\input{ds_cylindrical_dirichlet1.tex}
+\caption{Convergence Table for Dirichlet boundary conditions and $m=1$. The
+table for Neumann conditions exhibits equivalent features.}
+\label{tab:ds_cylindrical_dirichlet1}
+\end{centering}
+\end{table*}
+
+\begin{table*}[ht]
+\begin{centering}
+\footnotesize
+\hspace*{-2cm}
+\input{ds_cylindrical_dirichlet10.tex}
+\caption{Convergence Table for Dirichlet boundary conditions and $m=10$. The
+table for Neumann conditions exhibits equivalent features.}
+\label{tab:ds_cylindrical_dirichlet10}
+\end{centering}
+\end{table*}
+
 \subsection{The G\"unther field}
 A simple choice for the flux function that makes fieldlines stay
 inside a square box is
