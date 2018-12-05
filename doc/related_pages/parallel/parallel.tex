@@ -222,7 +222,12 @@ with the correct boundary conditions and thus have a periodic
 extension of the fields beyond the boundaries.
 For example, for Neumann boundary
 conditions the field is effectively mirrored at the boundary, while for
-Dirichlet boundary conditions the values are the negative mirror image.
+Dirichlet boundary conditions the values are the negative mirror image. In one
+dimension this reads
+\begin{align}
+f(x) = \pm f(2x_b-x)
+\end{align}
+where $x_b$ is the closest boundary $+$ is for Neumann, and $-$ for Dirichlet conditions.
 This is very easily implemented (at least as long as we only allow
 homogeneous Boundary conditions) since we don't actually have to
 perform the Fourier transformation, we only need to mirror the end
@@ -539,6 +544,25 @@ Here we choose the general Solov'ev equilibrium for
 $\psi_p$ and choose to use $f_1$ or $f_2$ again.
 We use the simple orthogonal flux to construct
 grids on the ring bounded by $\psi_p=-20$ and $\psi_p=-4$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Performance considerations}
+The performance of the main matrix-vector multiplication depends, as do all our
+routines, on the number of memory loads and stores per vector element.
+A dG interpolation matrix in two dimensions has $n^2$ points per line since
+it uses all $n^2$ points in one dG-cell to compute the result.
+A matrix-vector multiplication with the interpolation matrix thus needs $n^2+3$
+vector loads and stores, with the $3$ coming from loading the input vector and
+loading and storing the output vector.
+However, since we use the refinement-projection aproach to our discretization
+the number of points per line of the interpolation matrix increases to typically
+$4n^2$ since now also neighboring cells are used for the computation.
+
+For the discretization of $\nabla_\parallel$ this in total means that the number
+of memory operations per element is
+\begin{align}
+m = 2\cdot(4n^2+3)+5
+\end{align}
+This is comparable to one iteration of a CG method in three dimensions.
 
 
 
