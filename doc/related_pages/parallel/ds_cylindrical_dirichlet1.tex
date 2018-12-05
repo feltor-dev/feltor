@@ -1,14 +1,20 @@
 \begin{tabular}{lllllllllllllll}
 \toprule
-  &    &     & \multicolumn{2}{l}{dss} & \multicolumn{2}{l}{centered} & \multicolumn{2}{l}{divDirectCentered} & \multicolumn{2}{l}{directLap} & \multicolumn{2}{l}{divCentered} & \multicolumn{2}{l}{invCenteredLap} \\
-  &    &     &     error & order &     error & order &             error & order &     error & order &       error &  order &          error & order \\
-\textbf{m} & \textbf{N} & \textbf{Nz} &           &       &           &       &                   &       &           &       &             &        &                &       \\
+  &     &     & \multicolumn{2}{l}{$\nabla_\parallel f$
+  Eq.~\eqref{eq:paralleldis}} & \multicolumn{2}{l}{$(\nabla\cdot\bhat) f +
+  \nabla_\parallel f$} &
+  \multicolumn{2}{l}{$\nabla_\parallel^2 f$ Eq.~\eqref{eq:second_order}} &
+  \multicolumn{2}{l}{$(\nabla\cdot\bhat)\nabla_\parallel f + \nabla_\parallel^2
+  f$} & \multicolumn{2}{l}{$\nabla\cdot(\bhat f)$} &
+  \multicolumn{2}{l}{$\Delta_\parallel^{-1}f $} \\
+  &    &     &     error & order &             error & order &     error & order &     error & order &       error &  order &          error & order \\
+\textbf{m} & \textbf{N} & \textbf{Nz} &           &       &                   &       &           &       &           &       &             &        &                &       \\
 \midrule
-\textbf{1} & \textbf{5 } & \textbf{5  } &  4.64e-01 &   n/a &  3.56e-01 &   n/a &          3.56e-01 &   n/a &  4.64e-01 &   n/a &    5.04e-01 &    n/a &       7.46e-03 &   n/a \\
-  & \textbf{8 } & \textbf{10 } &  1.64e-01 &  1.50 &  1.34e-01 &  1.41 &          1.34e-01 &  1.41 &  1.64e-01 &  1.50 &    7.07e-01 &  -0.49 &       6.04e-03 &  0.30 \\
-  & \textbf{13} & \textbf{20 } &  4.48e-02 &  1.87 &  3.76e-02 &  1.83 &          3.76e-02 &  1.83 &  4.48e-02 &  1.87 &    1.40e+00 &  -0.98 &       5.14e-03 &  0.23 \\
-  & \textbf{20} & \textbf{40 } &  1.15e-02 &  1.97 &  9.68e-03 &  1.96 &          9.68e-03 &  1.96 &  1.15e-02 &  1.97 &    2.95e+00 &  -1.08 &       4.17e-03 &  0.30 \\
-  & \textbf{32} & \textbf{80 } &  2.94e-03 &  1.96 &  2.44e-03 &  1.99 &          2.44e-03 &  1.99 &  2.94e-03 &  1.96 &    5.53e+00 &  -0.91 &       3.47e-03 &  0.27 \\
-  & \textbf{50} & \textbf{160} &  9.93e-04 &  1.57 &  6.13e-04 &  1.99 &          6.13e-04 &  1.99 &  9.93e-04 &  1.57 &    1.03e+01 &  -0.89 &       3.27e-03 &  0.08 \\
+\textbf{1} & \textbf{5 } & \textbf{5  } &  3.56e-01 &   n/a &          3.56e-01 &   n/a &  4.64e-01 &   n/a &  4.64e-01 &   n/a &    5.04e-01 &    n/a &       7.46e-03 &   n/a \\
+  & \textbf{8 } & \textbf{10 } &  1.34e-01 &  1.41 &          1.34e-01 &  1.41 &  1.64e-01 &  1.50 &  1.64e-01 &  1.50 &    7.07e-01 &  -0.49 &       6.04e-03 &  0.30 \\
+  & \textbf{13} & \textbf{20 } &  3.76e-02 &  1.83 &          3.76e-02 &  1.83 &  4.48e-02 &  1.87 &  4.48e-02 &  1.87 &    1.40e+00 &  -0.98 &       5.14e-03 &  0.23 \\
+  & \textbf{20} & \textbf{40 } &  9.68e-03 &  1.96 &          9.68e-03 &  1.96 &  1.15e-02 &  1.97 &  1.15e-02 &  1.97 &    2.95e+00 &  -1.08 &       4.17e-03 &  0.30 \\
+  & \textbf{32} & \textbf{80 } &  2.44e-03 &  1.99 &          2.44e-03 &  1.99 &  2.94e-03 &  1.96 &  2.94e-03 &  1.96 &    5.53e+00 &  -0.91 &       3.47e-03 &  0.27 \\
+  & \textbf{50} & \textbf{160} &  6.13e-04 &  1.99 &          6.13e-04 &  1.99 &  9.93e-04 &  1.57 &  9.93e-04 &  1.57 &    1.03e+01 &  -0.89 &       3.27e-03 &  0.08 \\
 \bottomrule
 \end{tabular}

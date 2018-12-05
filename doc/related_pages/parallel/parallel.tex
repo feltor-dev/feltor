@@ -75,10 +75,9 @@ Obviously we have $\Tm\circ\Tp = \Eins$, but $\Tpm$ is not necessarily unitary s
 not divergence free.
 
 We now propose a centered discretization for the parallel derivative
-\begin{align}
+\begin{align} \label{eq:paralleldis}
     \nabla_\parallel f \equiv \frac{df}{ds}
     \rightarrow \frac{f\left(T_{\Delta\varphi}^+\vec z_k\right)-f\left(T_{\Delta\varphi}^-\vec z_k\right)}{s_{k+1}-s_{k-1}},
-  \label{eq:paralleldis}
 \end{align}
 where $\vec z_k = (R,Z,\varphi_k)$.
 Eq.~\eqref{eq:paralleldis} is slightly different from Reference~\cite{Hariri2014}, where the $\d f/\d\varphi v^\varphi$ is discretized to avoid integrating $s$.
@@ -130,12 +129,11 @@ $\vec{ \hat v} $ is the unit vector $\vec v/ |\vec v|$.
 
 Note that the second order derivative $\nabla_\parallel^2$ can be
 discretized using
-\begin{align}
+\begin{align}\label{eq:second_order}
     \frac{\d^2 f}{\d s^2} \rightarrow
      \frac{2f_{k+1}}{(s_{k+1}-s_k)(s_{k+1}-s_{k-1})}
     -\frac{2f_{k}}{(s_{k+1}-s_k)(s_{k}-s_{k-1})} \nonumber\\
     +\frac{2f_{k-1}}{(s_{k}-s_{k-1})(s_{k+1}-s_{k-1})}
-    \label{}
 \end{align}
 where $f_k = f(\vec z_k)$ with $\vec z_k = (R,Z,\varphi_k)$ and $f_{k\pm 1} := f(\Tpm \vec z_k)$.
 
@@ -529,13 +527,21 @@ for various operators and Dirichlet boundary conditions. Note that the same
 tables for Neumann boundary conditions exhibit similar values.
 Apparently, the discretization for the divergence does not converge even if we
 increase the refinement.
+
 \begin{table*}[ht]
 \begin{centering}
 \footnotesize
 \hspace*{-2cm}
+%  &     &     & \multicolumn{2}{l}{$\nabla_\parallel f$
+%  Eq.~\eqref{eq:paralleldis}} & \multicolumn{2}{l}{$(\nabla\cdot\bhat) f +
+%  \nabla_\parallel f$} &
+%  \multicolumn{2}{l}{$\nabla_\parallel^2 f$ Eq.~\eqref{eq:second_order}} &
+%  \multicolumn{2}{l}{$(\nabla\cdot\bhat)\nabla_\parallel f + \nabla_\parallel^2
+%  f$} & \multicolumn{2}{l}{$\nabla\cdot(\bhat f)$} &
+%  \multicolumn{2}{l}{$\Delta_\parallel^{-1}f $} \\
 \input{ds_cylindrical_dirichlet1.tex}
-\caption{Convergence Table for Dirichlet boundary conditions and $m=1$. The
-table for Neumann conditions exhibits equivalent features.}
+\caption{Convergence Table for Dirichlet boundary conditions and $m=1$,
+$N_R=N_Z=N$. The table for Neumann conditions exhibits equivalent features.}
 \label{tab:ds_cylindrical_dirichlet1}
 \end{centering}
 \end{table*}
@@ -545,8 +551,8 @@ table for Neumann conditions exhibits equivalent features.}
 \footnotesize
 \hspace*{-2cm}
 \input{ds_cylindrical_dirichlet10.tex}
-\caption{Convergence Table for Dirichlet boundary conditions and $m=10$. The
-table for Neumann conditions exhibits equivalent features.}
+\caption{Convergence Table for Dirichlet boundary conditions and $m=10$,
+$N_R=N_Z=N$. The table for Neumann conditions exhibits equivalent features.}
 \label{tab:ds_cylindrical_dirichlet10}
 \end{centering}
 \end{table*}
@@ -567,11 +573,31 @@ $\varphi \in [0,2\pi]$ and choose
   f_2(R,Z,\varphi) = -\psi_p(R,Z)\cos(\varphi) + (R-R_0)^2/4 + Z(R-R_0)/4
   \label{}
 \end{align}
+\begin{table*}[ht]
+\begin{centering}
+\footnotesize
+\hspace*{-2cm}
+\input{ds_guenther10.tex}
+\caption{Convergence Table for $m=10$ and $N_R=N_Z=N$. Centered discretizations.
+}
+\label{tab:ds_guenther10}
+\end{centering}
+\end{table*}
 \subsection{Curvilinear grid}
 Here we choose the general Solov'ev equilibrium for
 $\psi_p$ and choose to use $f_1$ or $f_2$ again.
 We use the simple orthogonal flux to construct
 grids on the ring bounded by $\psi_p=-20$ and $\psi_p=-4$.
+\begin{table*}[ht]
+\begin{centering}
+\footnotesize
+\hspace*{-2cm}
+\input{ds_curv1000.tex}
+\caption{Convergence Table for $m=1000$, $N_R = 2$, $N_Z=N$. Centered discretizations.
+}
+\label{tab:ds_curv1000}
+\end{centering}
+\end{table*}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Performance considerations}
 The performance of the main matrix-vector multiplication depends, as do all our
@@ -588,8 +614,10 @@ $4n^2$ since now also neighboring cells are used for the computation.
 For the discretization of $\nabla_\parallel$ this in total means that the number
 of memory operations per element is
 \begin{align}
-m = 2\cdot(4n^2+3)+5
+m &= 2\cdot(4n^2+3)+5\quad \text{ (refined)} \\
+m &= 2\cdot(n^2+3)+5\quad \text{ (unrefined)}
 \end{align}
+with $n$ the number of polynomial coefficients.
 This is comparable to one iteration of a CG method in three dimensions.
 
 
