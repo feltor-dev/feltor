@@ -313,7 +313,8 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 			value_type temp = 0;
 			for (int q = 0; q < n; q++) //multiplication-loop
 				temp = DG_FMA(data[(data_idx[i] * n + k)*n + q],
-					x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
+					//x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
+                    x[(((cols_idx[i])*n+q)*left_size +s )*right_size+j],
 					temp);
 			y[I] = DG_FMA(alpha, temp, y[I]);
 		}

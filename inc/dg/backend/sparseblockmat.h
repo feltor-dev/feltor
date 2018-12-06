@@ -127,6 +127,10 @@ where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix.
 @note This matrix type is used for the computation of boundary points in
 mpi - distributed matrices
+@attention We assume that the right hand side vector in \c symv has the layout
+that the plane perpendicular to the direction of derivative lies contiguously in
+memory.
+@sa \c dg::NearestNeighborComm
 */
 template<class value_type>
 struct CooSparseBlockMat
@@ -245,7 +249,8 @@ void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type
         value_type temp = 0;
         for( int q=0; q<n; q++) //multiplication-loop
             temp = DG_FMA( data[ (data_idx[i]*n + k)*n+q],
-                    x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
+                    //x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
+                    x[(((cols_idx[i])*n+q)*left_size +s )*right_size+j],
                     temp);
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
         y[I] = DG_FMA( alpha,temp, y[I]);

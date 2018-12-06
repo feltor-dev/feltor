@@ -58,6 +58,7 @@ doxygen documentation, READMEs or tex writeups.
 - replace use of dg::transfer with either dg::assign or dg::construct throughout the dg library
 - improve 3d benchmark functionality in cluster\_mpib.cu
 - add hasXpoint() member to solovev::parameter
+- Optimization: change buffer layout in dg::NearestNeighborComm and CooSparseBlockMat kernels to avoid slow scatter/gather operations in matrix-vector multiplication
 
 ### Deprecated
 - dg::blas1::transfer
