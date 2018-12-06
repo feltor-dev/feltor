@@ -375,12 +375,9 @@ void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* 
     }
     else
     {
-        #pragma omp parallel
-        {
-            #pragma omp for nowait
+        #pragma omp parallel for
             for( unsigned i=0; i<4*size; i++)
                 buffer[i+size] = input[gather_map_middle[i]];
-        }
     }
     sendrecv( buffer+size, buffer+4*size, buffer, buffer+5*size, rqst);
 }
