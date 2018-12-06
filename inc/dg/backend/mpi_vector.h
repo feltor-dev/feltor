@@ -421,7 +421,16 @@ void NearestNeighborComm<I,V>::do_global_gather_init( CudaTag, const value_type*
 {
     unsigned size = buffer_size();
     //gather values from input into sendbuffer
-    thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer+size);
+    if(trivial_)
+    {
+        thrust::copy( thrust::cuda::tag(), input, input+2*size, buffer+size);
+        thrust::copy( thrust::cuda::tag(), input+(outer_size_-2)*size,
+            input+outer_size_*size, buffer+3*size);
+    }
+    else
+    {
+        thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer+size);
+    }
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
     sendrecv( buffer+size, buffer+4*size, buffer, buffer+5*size, rqst);
 }
