@@ -9,6 +9,7 @@
 #include "mpi_communicator.h"
 #include "memory.h"
 
+//TODO: should we catch the cases where outer_size \in {1,2,3} in NearestNeighborComm?
 namespace dg
 {
 
@@ -122,9 +123,9 @@ struct TensorTraits<MPI_Vector<container> > {
 *
 * Imagine a communicator with Cartesian topology and further imagine that the
 * grid topology is also Cartesian (vectors form a box) in two or three dimensions.
-* In each direction this box has a boundary layer (the halo) or a depth given by
+* In each direction this box has a boundary layer (the halo) of a depth given by
 * the user. Each boundary layer has two neighboring layers, one on the same process
-* one lying on the neighboring process.
+* and one lying on the neighboring process.
 * What this class does is to gather these six layers (three for each side)
 * into one buffer vector. The layout of the buffer vector is independently of the
 * direction contiguous in the layer.
@@ -136,6 +137,7 @@ struct TensorTraits<MPI_Vector<container> > {
 * and signal when the results are needed at a later stage.
 * @note the corresponding gather map is of general type and the communication
 *  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm
+*  @attention Currently we cannot handle the case where the whole vector is the boundary layer (i.e. \c buffer_size() == local_vector_size) i.e. both neighboring layers are on different processes
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
 * @tparam Vector the vector container type must have a resize() function and work
@@ -282,7 +284,10 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
     else if( direction == 2) trivial_ = true;
     else trivial_ = false;
     if( !silent_)
+    {
         outer_size_ = dimensions[0]*dimensions[1]*dimensions[2]/buffer_size();
+        assert( outer_size_ > 1 && "Parallelization too fine grained!"); //right now we cannot have that
+    }
     comm_ = comm;
     {
         int ndims;

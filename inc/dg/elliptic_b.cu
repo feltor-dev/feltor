@@ -98,9 +98,9 @@ int main()
     std::vector<unsigned>  number(grid.Nz());
     t.tic();
     dg::blas1::pointwiseDivide( b, g_parallel, b);
-    dg::split( b, b_split, grid);
-    dg::split( chi, chi_split, grid);
-    dg::split( x, x_split, grid);
+    b_split = dg::split( b, grid);
+    chi_split = dg::split( chi, grid);
+    x_split = dg::split( x, grid);
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
