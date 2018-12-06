@@ -173,7 +173,7 @@ struct RowColDistMat
         MPI_Request rqst[4];
         using value_type = get_value_type<typename Collective::container_type>;
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-        m_c.global_gather_init( x_ptr, rqst);
+        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
         //1.2 compute inner points
         dg::blas2::symv( m_i, x.data(), y.data());
         //2. wait for communication to finish
