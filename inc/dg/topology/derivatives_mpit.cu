@@ -26,15 +26,17 @@ typedef dg::MDVec Vector;
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
-    MPI_Comm comm2d;
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    mpi_init2d( bcx, bcy, comm2d);
+    dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
     if(rank==0)std::cout << "This program tests the creation and application of two-dimensional and three-dimensional derivatives!\n";
     if(rank==0)std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
     unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
     if(rank==0)std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
+    MPI_Comm comm2d;
+    mpi_init2d( bcx, bcy, comm2d);
+    MPI_Comm comm3d;
+    mpi_init3d( bcx, bcy, bcz, comm3d);
     dg::MPIGrid2d g2d( 0, M_PI,0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy, comm2d);
     const Vector w2d = dg::create::weights( g2d);
 
@@ -60,8 +62,6 @@ int main(int argc, char* argv[])
         double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary2[i]<<"\n";
     }
-    MPI_Comm comm3d;
-    mpi_init3d( bcx, bcy, bcz, comm3d);
     dg::MPIGrid3d g3d( 0, M_PI, 0.1, 2*M_PI+0.1, M_PI/2., M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm3d);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
