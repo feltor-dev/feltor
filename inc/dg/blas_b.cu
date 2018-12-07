@@ -133,6 +133,17 @@ int main()
     t.toc();
     std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
+    if( grid.Nz() > 1)
+    {
+        dg::blas2::transfer(dg::create::dz( grid, dg::centered), M);
+        dg::blas2::symv( M, x, y);//warm up
+        t.tic();
+        for( int i=0; i<multi; i++)
+            dg::blas2::symv( M, x, y);
+        t.toc();
+        std::cout<<"centered z derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    }
+
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     dg::blas2::symv( M, x, y);//warm up
     t.tic();
