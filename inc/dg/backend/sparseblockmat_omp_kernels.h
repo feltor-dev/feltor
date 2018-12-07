@@ -64,6 +64,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
+    //basically we check which direction is the largest and parallelize that one
     if(right_size==1)
     {
     //trivial means that the data blocks do not change among rows
@@ -111,9 +112,9 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                     y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
-#ifndef _MSC_VER
+        #ifndef _MSC_VER
         #pragma omp SIMD //very important for KNL
-#endif
+        #endif
         for( int i=1; i<num_rows-1; i++)
         {
             //for( int d=0; d<blocks_per_line; d++)
@@ -205,39 +206,76 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     {
     value_type dprivate[blocks_per_line*n];
     int J[blocks_per_line];
-#pragma omp for nowait
-	for (int sik = 0; sik < left_size*num_rows*n; sik++)
-	{
-		int s = sik / (num_rows*n);
-		int i = (sik % (num_rows*n)) / n;
-		int k = (sik % (num_rows*n)) % n;
+    if( 100*left_size*num_rows*n > (right_range[1]-right_range[0])) //there needs to be enough data to parallelize
+    {
+        #pragma omp for nowait
+        for (int sik = 0; sik < left_size*num_rows*n; sik++)
+        {
+            int s = sik / (num_rows*n);
+            int i = (sik % (num_rows*n)) / n;
+            int k = (sik % (num_rows*n)) % n;
 
-        for( int d=0; d<blocks_per_line; d++)
-        {
-            J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
-            int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-            for(int q=0; q<n; q++)
-                dprivate[d*n+q] = data[B+q];
-        }
-#ifndef _MSC_VER
-#pragma omp SIMD //very important for KNL
-#endif
-        for( int j=right_range[0]; j<right_range[1]; j++)
-        {
-            int I = ((s*num_rows + i)*n+k)*right_size+j;
-            y[I]*= beta;
             for( int d=0; d<blocks_per_line; d++)
             {
-                value_type temp = 0;
-                int Jd = J[d];
-                for( int q=0; q<n; q++) //multiplication-loop
-                    temp = DG_FMA( dprivate[ d*n+q],
-                                x[(Jd+q)*right_size+j],
-                                temp);
-                y[I] = DG_FMA(alpha, temp, y[I]);
+                J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+                for(int q=0; q<n; q++)
+                    dprivate[d*n+q] = data[B+q];
+            }
+            #ifndef _MSC_VER
+            #pragma omp SIMD //very important for KNL
+            #endif
+            for( int j=right_range[0]; j<right_range[1]; j++)
+            {
+                int I = ((s*num_rows + i)*n+k)*right_size+j;
+                y[I]*= beta;
+                for( int d=0; d<blocks_per_line; d++)
+                {
+                    value_type temp = 0;
+                    int Jd = J[d];
+                    for( int q=0; q<n; q++) //multiplication-loop
+                        temp = DG_FMA( dprivate[ d*n+q],
+                                    x[(Jd+q)*right_size+j],
+                                    temp);
+                    y[I] = DG_FMA(alpha, temp, y[I]);
+                }
             }
         }
     }
+    else
+    {
+
+        for (int sik = 0; sik < left_size*num_rows*n; sik++)
+        {
+            int s = sik / (num_rows*n);
+            int i = (sik % (num_rows*n)) / n;
+            int k = (sik % (num_rows*n)) % n;
+
+            for( int d=0; d<blocks_per_line; d++)
+            {
+                J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+                for(int q=0; q<n; q++)
+                    dprivate[d*n+q] = data[B+q];
+            }
+            #pragma omp for SIMD nowait//very important for KNL
+            for( int j=right_range[0]; j<right_range[1]; j++)
+            {
+                int I = ((s*num_rows + i)*n+k)*right_size+j;
+                y[I]*= beta;
+                for( int d=0; d<blocks_per_line; d++)
+                {
+                    value_type temp = 0;
+                    int Jd = J[d];
+                    for( int q=0; q<n; q++) //multiplication-loop
+                        temp = DG_FMA( dprivate[ d*n+q],
+                                    x[(Jd+q)*right_size+j],
+                                    temp);
+                    y[I] = DG_FMA(alpha, temp, y[I]);
+                }
+            }
+        }
+        }
     }
 }
 
@@ -299,26 +337,63 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 }
 
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
+void coo_multiply_kernel( value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
 {
-#pragma omp for nowait
-	for (int skj = 0; skj < left_size*n*right_size; skj++)
+    #pragma omp for nowait
+	for (int skj = 0; skj < m.left_size*m.n*m.right_size; skj++)
 	{
-		int s = skj / (n*right_size);
-		int k = (skj % (n*right_size)) / right_size;
-		int j = (skj % (n*right_size)) % right_size;
-		for (int i = 0; i < num_entries; i++)
+		int s = skj / (m.n*m.right_size);
+		int k = (skj % (m.n*m.right_size)) / m.right_size;
+		int j = (skj % (m.n*m.right_size)) % m.right_size;
+		for (int i = 0; i < m.num_entries; i++)
 		{
-			int I = ((s*num_rows + rows_idx[i])*n + k)*right_size + j;
+			int I = ((s*m.num_rows + m.rows_idx[i])*m.n + k)*m.right_size + j;
 			value_type temp = 0;
-			for (int q = 0; q < n; q++) //multiplication-loop
-				temp = DG_FMA(data[(data_idx[i] * n + k)*n + q],
+			for (int q = 0; q < m.n; q++) //multiplication-loop
+				temp = DG_FMA(m.data[(m.data_idx[i] * m.n + k)*m.n + q],
 					//x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                    x[(((cols_idx[i])*n+q)*left_size +s )*right_size+j],
+                    x[(((m.cols_idx[i])*m.n+q)*m.left_size +s )*m.right_size+j],
 					temp);
 			y[I] = DG_FMA(alpha, temp, y[I]);
 		}
 	}
+}
+template<class value_type, int n>
+void coo_multiply_kernel( value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
+{
+    #pragma omp for nowait
+	for (int skj = 0; skj < m.left_size*n*m.right_size; skj++)
+	{
+		int s = skj / (n*m.right_size);
+		int k = (skj % (n*m.right_size)) / m.right_size;
+		int j = (skj % (n*m.right_size)) % m.right_size;
+		for (int i = 0; i < m.num_entries; i++)
+		{
+			int I = ((s*m.num_rows + m.rows_idx[i])*n + k)*m.right_size + j;
+			value_type temp = 0;
+			for (int q = 0; q < n; q++) //multiplication-loop
+				temp = DG_FMA(m.data[(m.data_idx[i] * n + k)*n + q],
+					//x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
+                    x[(((m.cols_idx[i])*n+q)*m.left_size +s )*m.right_size+j],
+					temp);
+			y[I] = DG_FMA(alpha, temp, y[I]);
+		}
+	}
+}
+template<class value_type>
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
+{
+    if( n == 1)
+        coo_multiply_kernel<value_type, 1>( alpha, x, beta, y, *this);
+    else if( n == 2)
+        coo_multiply_kernel<value_type, 2>( alpha, x, beta, y, *this);
+    else if( n == 3)
+        coo_multiply_kernel<value_type, 3>( alpha, x, beta, y, *this);
+    else if( n == 4)
+        coo_multiply_kernel<value_type, 4>( alpha, x, beta, y, *this);
+    else
+        coo_multiply_kernel<value_type>( alpha, x, beta, y, *this);
+
 }
 
 }//namespace dg

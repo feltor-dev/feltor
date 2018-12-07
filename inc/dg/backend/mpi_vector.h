@@ -370,19 +370,19 @@ void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* 
     {
         #pragma omp parallel
         {
-            #pragma omp for nowait
+            #pragma omp for SIMD nowait
             for( unsigned i=0; i<2*size; i++)
                 buffer[i+size] = input[i];
-            #pragma omp for nowait
+            #pragma omp for SIMD nowait
             for( unsigned i=0; i<2*size; i++)
                 buffer[i+3*size] = input[i+(outer_size_-2)*size];
         }
     }
     else
     {
-        #pragma omp parallel for
-            for( unsigned i=0; i<4*size; i++)
-                buffer[i+size] = input[gather_map_middle[i]];
+        #pragma omp parallel for SIMD
+        for( unsigned i=0; i<4*size; i++)
+            buffer[i+size] = input[gather_map_middle[i]];
     }
     sendrecv( buffer+size, buffer+4*size, buffer, buffer+5*size, rqst);
 }
