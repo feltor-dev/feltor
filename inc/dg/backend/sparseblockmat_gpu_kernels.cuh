@@ -168,7 +168,7 @@ template<class value_type>
          const int num_rows, const int num_cols, const int num_entries,
          const int n,
          const int left, const int right,
-         value_type alpha, const value_type* __restrict__  x, value_type beta, value_type * __restrict__ y
+         value_type alpha, const value_type**  x, value_type beta, value_type * __restrict__ y
          )
 {
     int size = left*n*right;
@@ -188,16 +188,46 @@ template<class value_type>
             int J = cols_idx[entry];
             for( int q=0; q<n; q++) //multiplication-loop
                 temp = fma( data[ (B*n + k)*n+q],
-                    x[((J*n+q)*left +s )*right+j], temp);
+                    x[J][(q*left +s )*right+j], temp);
                     //x[((s*num_cols + J)*n+q)*right+j], temp);
             y[I] = fma( alpha, temp, y[I]);
         }
     }
-
+}
+template<class value_type, int n>
+ __global__ void coo_multiply_kernel(
+         const value_type* __restrict__  data, const int* __restrict__  rows_idx, const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
+         const int num_rows, const int num_cols, const int num_entries,
+         const int left, const int right,
+         value_type alpha, const value_type**  x, value_type beta, value_type * __restrict__ y
+         )
+{
+    int size = left*n*right;
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int idx = thread_id; idx<size; idx += grid_size)
+    {
+        int s=idx/(n*right),
+            k=(idx/right)%n,
+            j=idx%right;
+        for( int entry=0; entry<num_entries; entry++)
+        {
+            int I = ((s*num_rows+rows_idx[entry])*n+k)*right+j;
+            value_type temp = 0;
+            int B = data_idx[entry];
+            int J = cols_idx[entry];
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp = fma( data[ (B*n + k)*n+q],
+                    x[J][(q*left +s )*right+j], temp);
+                    //x[((s*num_cols + J)*n+q)*right+j], temp);
+            y[I] = fma( alpha, temp, y[I]);
+        }
+    }
 }
 
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type** x_ptr, value_type beta, value_type* y_ptr) const
 {
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256;
@@ -208,11 +238,21 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     const int* rows_ptr = thrust::raw_pointer_cast( rows_idx.data());
     const int* cols_ptr = thrust::raw_pointer_cast( cols_idx.data());
     const int* block_ptr = thrust::raw_pointer_cast( data_idx.data());
-    //for( int i=0; i<num_entries; i++)
-    //{
+    if( n == 1)
+        coo_multiply_kernel<value_type, 1> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+    else if( n == 2)
+        coo_multiply_kernel<value_type, 2> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+    else if( n == 3)
+        coo_multiply_kernel<value_type, 3> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+    else if( n == 4)
+        coo_multiply_kernel<value_type, 4> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+    else
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
             data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, n, left_size, right_size, alpha, x_ptr, beta, y_ptr);
-    //}
 }
 
 }//namespace dg

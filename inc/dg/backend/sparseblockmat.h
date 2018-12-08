@@ -188,7 +188,7 @@ struct CooSparseBlockMat
     * @param y output may not alias input
     * @attention beta == 1 (anything else is ignored)
     */
-    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const;
     public:
     /**
     * @brief Display internal data to a stream
@@ -235,8 +235,10 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type 
 }
 
 template<class value_type>
-void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
+    if( num_entries==0)
+        return;
     if( beta!= 1 )
         std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";
 
@@ -250,7 +252,7 @@ void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type
         for( int q=0; q<n; q++) //multiplication-loop
             temp = DG_FMA( data[ (data_idx[i]*n + k)*n+q],
                     //x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
-                    x[(((cols_idx[i])*n+q)*left_size +s )*right_size+j],
+                    x[cols_idx[i]][(q*left_size +s )*right_size+j],
                     temp);
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
         y[I] = DG_FMA( alpha,temp, y[I]);

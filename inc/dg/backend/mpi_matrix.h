@@ -2,6 +2,7 @@
 
 #include "mpi_vector.h"
 #include "memory.h"
+#include "timer.h"
 
 /*!@file
 
@@ -54,6 +55,7 @@ only the inner matrix is applied.
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
 struct RowColDistMat
 {
+    using value_type = get_value_type<LocalMatrixInner>;
     ///@brief no memory allocation
     RowColDistMat(){}
 
@@ -115,7 +117,7 @@ struct RowColDistMat
     * @param y output
     */
     template<class ContainerType1, class ContainerType2>
-    void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
+    void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
         if( m_c.size() == 0) //no communication needed
@@ -132,15 +134,16 @@ struct RowColDistMat
 
         //1.1 initiate communication
         MPI_Request rqst[4];
-        using value_type = get_value_type<typename Collective::container_type>;
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
+              value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
+        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
+        m_c.global_gather_init( x_ptr, b_ptr, rqst);
         //1.2 compute inner points
         dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
         //2. wait for communication to finish
-        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
+        m_c.global_gather_wait( x_ptr, b_ptr, rqst);
         //3. compute and add outer points
-        dg::blas2::symv(alpha, m_o, m_buffer.data(), 1., y.data());
+        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, beta, y_ptr);
     }
 
     /**
@@ -171,22 +174,23 @@ struct RowColDistMat
 
         //1.1 initiate communication
         MPI_Request rqst[4];
-        using value_type = get_value_type<typename Collective::container_type>;
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
+              value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
+        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
+        m_c.global_gather_init( x_ptr, b_ptr, rqst);
         //1.2 compute inner points
         dg::blas2::symv( m_i, x.data(), y.data());
         //2. wait for communication to finish
-        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
+        m_c.global_gather_wait( x_ptr, b_ptr, rqst);
         //3. compute and add outer points
-        dg::blas2::symv(1, m_o, m_buffer.data(), 1., y.data());
+        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), 1., b_ptr, 1., y_ptr);
     }
 
     private:
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
     Collective m_c;
-    Buffer< typename Collective::container_type>  m_buffer;
+    Buffer< typename Collective::buffer_type>  m_buffer;
 };
 
 
@@ -214,6 +218,7 @@ only the local matrix is applied.
 template<class LocalMatrix, class Collective >
 struct MPIDistMat
 {
+    using value_type = get_value_type<LocalMatrix>;
     ///@brief no memory allocation
     MPIDistMat( ) { }
     /**
@@ -253,7 +258,7 @@ struct MPIDistMat
     void set_dist(enum dist_type dist){m_dist=dist;}
 
     template<class ContainerType1, class ContainerType2>
-    void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
+    void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
         if( m_c->buffer_size() == 0) //no communication needed
@@ -267,7 +272,6 @@ struct MPIDistMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        using value_type = get_value_type<typename Collective::container_type>;
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
             m_c->global_gather( x_ptr, m_buffer.data());
@@ -294,7 +298,6 @@ struct MPIDistMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        using value_type = get_value_type<typename Collective::container_type>;
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
             m_c->global_gather( x_ptr, m_buffer.data());

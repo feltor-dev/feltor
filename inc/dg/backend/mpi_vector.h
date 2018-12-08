@@ -117,7 +117,7 @@ struct TensorTraits<MPI_Vector<container> > {
 };
 ///@}
 
-/////////////////////////////communicator exchanging columns//////////////////
+/////////////////////////////communicator//////////////////////////
 /**
 * @brief Communicator for asynchronous nearest neighbor communication
 *
@@ -137,17 +137,19 @@ struct TensorTraits<MPI_Vector<container> > {
 * and signal when the results are needed at a later stage.
 * @note the corresponding gather map is of general type and the communication
 *  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm
-*  @attention Currently we cannot handle the case where the whole vector is the boundary layer (i.e. \c buffer_size() == local_vector_size) i.e. both neighboring layers are on different processes
+*  @attention Currently we cannot handle the case where the whole vector is the boundary layer (i.e. \c size() == local_vector_size) i.e. both neighboring layers are on different processes
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
 * @tparam Vector the vector container type must have a resize() function and work
 * in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
 */
-template<class Index, class Vector>
+template<class Index, class Buffer, class Vector>
 struct NearestNeighborComm
 {
     using container_type = Vector;
-    using value_type = get_value_type<Vector>;
+    using buffer_type = Buffer;
+    using pointer_type = get_value_type<Vector>*;
+    using const_pointer_type = get_value_type<Vector> const *;
     ///@brief no communication
     NearestNeighborComm(){
         silent_ = true;
@@ -162,6 +164,7 @@ struct NearestNeighborComm
     */
     NearestNeighborComm( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction)
     {
+        static_assert( std::is_same<const_pointer_type, get_value_type<Buffer>>::value, "Must be same pointer types");
         construct( n, vector_dimensions, comm, direction);
     }
 
@@ -174,8 +177,8 @@ struct NearestNeighborComm
     * @tparam OtherVector other container type
     * @param src source object
     */
-    template< class OtherIndex, class OtherVector>
-    NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
+    template< class OtherIndex, class OtherBuffer, class OtherVector>
+    NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherBuffer, OtherVector>& src){
         if( src.size() == 0)  silent_=true;
         else
             construct( src.n(), src.dims(), src.communicator(), src.direction());
@@ -199,13 +202,13 @@ struct NearestNeighborComm
     unsigned direction() const {return direction_;}
 
     /**
-     * @brief Allocate a buffer object of size \c size()
+     * @brief Allocate a buffer object
      * @return a buffer object on the stack
-     * @note if \c size()==0 the default constructor of \c Vector is called
+     * @note if \c size()==0 the default constructor of \c Buffer is called
      */
-    Vector allocate_buffer( )const{
-        if( do_size() == 0 ) return Vector();
-        return do_make_buffer();
+    Buffer allocate_buffer( )const{
+        if( do_size() == 0 ) return Buffer();
+        return Buffer(6);
     }
 
     /**
@@ -214,12 +217,32 @@ struct NearestNeighborComm
     * @param buffer (write only) where received data resides after \c global_gather_wait() was called (must be of size \c size())
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    void global_gather_init( const value_type* input, Vector& buffer, MPI_Request rqst[4])const
+    void global_gather_init( const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector>>::value ,
-                   "Only Shared vectors allowed");
-        value_type* ptr = thrust::raw_pointer_cast( buffer.data());
-        do_global_gather_init( get_execution_policy<Vector>(), input, ptr, rqst);
+        unsigned size = buffer_size();
+        if(trivial_)
+        {
+            buffer[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
+            buffer[1] = input;
+            buffer[2] = input+size;
+            buffer[3] = input+(outer_size_-2)*size;
+            buffer[4] = input+(outer_size_-1)*size;
+            buffer[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
+        }
+        else
+        {
+            buffer[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
+            buffer[1] = thrust::raw_pointer_cast(&internal_buffer_.data()[1*size]);
+            buffer[2] = thrust::raw_pointer_cast(&internal_buffer_.data()[2*size]);
+            buffer[3] = thrust::raw_pointer_cast(&internal_buffer_.data()[3*size]);
+            buffer[4] = thrust::raw_pointer_cast(&internal_buffer_.data()[4*size]);
+            buffer[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
+        }
+        do_global_gather_init( get_execution_policy<Vector>(), input, buffer, rqst);
+        sendrecv( buffer[1], buffer[4],
+                  thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]),
+                  thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]),
+                  rqst);
     }
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
@@ -228,13 +251,9 @@ struct NearestNeighborComm
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    void global_gather_wait(const value_type* input, Vector& buffer, MPI_Request rqst[4])const
+    void global_gather_wait(const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector>>::value,
-                   "Only Shared vectors allowed");
-        value_type* ptr = thrust::raw_pointer_cast( buffer.data());
-        do_global_gather_wait( get_execution_policy<Vector>(), input, ptr, rqst);
-
+        MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     }
     ///@copydoc aCommunicator::buffer_size()
     unsigned size() const{return do_size();}
@@ -246,17 +265,10 @@ struct NearestNeighborComm
     ///@copydoc aCommunicator::isCommunicating()
     MPI_Comm communicator() const{return comm_;}
     private:
-    void do_global_gather_init( OmpTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( OmpTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_init( SerialTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( SerialTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_init( CudaTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( CudaTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    unsigned do_size()const; //size of values is size of input plus ghostcells
-    Vector do_make_buffer( )const{
-        Vector tmp( do_size());
-        return tmp;
-    }
+    void do_global_gather_init( OmpTag, const_pointer_type, const_pointer_type*, MPI_Request rqst[4])const;
+    void do_global_gather_init( SerialTag, const_pointer_type, const_pointer_type*, MPI_Request rqst[4])const;
+    void do_global_gather_init( CudaTag, const_pointer_type, const_pointer_type*, MPI_Request rqst[4])const;
+    unsigned do_size()const;
     void construct( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction);
 
     unsigned n_, dim_[3]; //deepness, dimensions
@@ -264,18 +276,21 @@ struct NearestNeighborComm
     unsigned direction_;
     bool silent_, trivial_=false; //silent -> no comm, trivial -> comm in last dim
     unsigned outer_size_ = 1; //size of vector in units of buffer_size
-    Index gather_map_middle;
+    Index gather_map_middle_;
+    dg::Buffer<Vector> internal_buffer_;
 
-    void sendrecv(value_type*, value_type*, value_type*, value_type*, MPI_Request rqst[4])const;
+    void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
     unsigned buffer_size() const;
     int m_source[2], m_dest[2];
 };
 
 ///@cond
 
-template<class I, class V>
-void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[3], MPI_Comm comm, unsigned direction)
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimensions[3], MPI_Comm comm, unsigned direction)
 {
+    static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<V>>::value,
+               "Only Shared vectors allowed");
     silent_=false;
     n_=n;
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
@@ -335,18 +350,19 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
             }
         break;
     }
-    gather_map_middle = mid_gather;
+    gather_map_middle_ = mid_gather;
+    internal_buffer_.data().resize( 6*buffer_size() );
 }
 
-template<class I, class V>
-unsigned NearestNeighborComm<I,V>::do_size() const
+template<class I, class B, class V>
+unsigned NearestNeighborComm<I,B,V>::do_size() const
 {
     if( silent_) return 0;
     return 6*buffer_size(); //3 buffers on each side
 }
 
-template<class I, class V>
-unsigned NearestNeighborComm<I,V>::buffer_size() const
+template<class I, class B, class V>
+unsigned NearestNeighborComm<I,B,V>::buffer_size() const
 {
     switch( direction_)
     {
@@ -361,98 +377,58 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
     }
 }
 
-#ifdef _OPENMP
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* input, value_type* buffer, MPI_Request rqst[4]) const
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4]) const
 {
-    unsigned size = buffer_size();
-    if(trivial_)
+    if( !trivial_)
     {
-        #pragma omp parallel
-        {
-            #pragma omp for SIMD nowait
-            for( unsigned i=0; i<2*size; i++)
-                buffer[i+size] = input[i];
-            #pragma omp for SIMD nowait
-            for( unsigned i=0; i<2*size; i++)
-                buffer[i+3*size] = input[i+(outer_size_-2)*size];
-        }
-    }
-    else
-    {
-        #pragma omp parallel for SIMD
+        unsigned size = buffer_size();
         for( unsigned i=0; i<4*size; i++)
-            buffer[i+size] = input[gather_map_middle[i]];
+            internal_buffer_.data()[i+size] = input[gather_map_middle_[i]];
     }
-    sendrecv( buffer+size, buffer+4*size, buffer, buffer+5*size, rqst);
 }
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, const value_type* input, value_type* buffer, MPI_Request rqst[4]) const
+#ifdef _OPENMP
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4]) const
 {
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
+    if(!trivial_)
+    {
+        unsigned size = buffer_size();
+        #pragma omp parallel for
+        for( unsigned i=0; i<4*size; i++)
+            internal_buffer_.data()[size+i] = input[gather_map_middle_[i]];
+    }
 }
 #endif
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_init( SerialTag, const value_type* input, value_type* buffer, MPI_Request rqst[4]) const
-{
-    unsigned size = buffer_size();
-    if(trivial_)
-    {
-        for( unsigned i=0; i<2*size; i++)
-            buffer[i+size] = input[i];
-        for( unsigned i=0; i<2*size; i++)
-            buffer[i+3*size] = input[i+(outer_size_-2)*size];
-    }
-    else
-    {
-        for( unsigned i=0; i<4*size; i++)
-            buffer[i+size] = input[gather_map_middle[i]];
-    }
-    sendrecv( buffer+size, buffer+4*size, buffer, buffer+5*size, rqst);
-}
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait( SerialTag, const value_type* input, value_type * values, MPI_Request rqst[4]) const
-{
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-}
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_init( CudaTag, const value_type* input, value_type* buffer, MPI_Request rqst[4]) const
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4]) const
 {
-    unsigned size = buffer_size();
     //gather values from input into sendbuffer
-    if(trivial_)
+    if(!trivial_)
     {
-        thrust::copy( thrust::cuda::tag(), input, input+2*size, buffer+size);
-        thrust::copy( thrust::cuda::tag(), input+(outer_size_-2)*size,
-            input+outer_size_*size, buffer+3*size);
-    }
-    else
-    {
-        thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer+size);
+        unsigned size = buffer_size();
+        thrust::gather( thrust::cuda::tag(), gather_map_middle_.begin(), gather_map_middle_.end(), input, internal_buffer_.data().begin()+size);
     }
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
-    sendrecv( buffer+size, buffer+4*size, buffer, buffer+5*size, rqst);
-}
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait( CudaTag, const value_type* input, value_type * values, MPI_Request rqst[4]) const
-{
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
 }
 #endif
 
-
-template<class I, class V>
-void NearestNeighborComm<I,V>::sendrecv( value_type* sb1_ptr, value_type* sb2_ptr, value_type* rb1_ptr, value_type* rb2_ptr, MPI_Request rqst[4]) const
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_pointer_type sb2_ptr, pointer_type rb1_ptr, pointer_type rb2_ptr, MPI_Request rqst[4]) const
 {
-    MPI_Isend( sb1_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
+    MPI_Isend( sb1_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[0], 3, comm_, &rqst[0]); //destination
-    MPI_Irecv( rb2_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
+    MPI_Irecv( rb2_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(), //receiver
                m_source[0], 3, comm_, &rqst[1]); //source
 
-    MPI_Isend( sb2_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
+    MPI_Isend( sb2_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[1], 9, comm_, &rqst[2]);  //destination
-    MPI_Irecv( rb1_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
+    MPI_Irecv( rb1_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, comm_, &rqst[3]); //source
 }
 

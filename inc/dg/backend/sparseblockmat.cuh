@@ -121,13 +121,13 @@ struct CooSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not equal input
     */
-    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 #ifdef _OPENMP
-    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 #endif //_OPENMP
     using IVec = thrust::device_vector<int>;
 
-    void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void launch_multiply_kernel(value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 
     thrust::device_vector<value_type> data;
     IVec cols_idx, rows_idx, data_idx;
@@ -144,8 +144,10 @@ inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
 }
 template<class value_type>
 inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
-        value_type alpha, const value_type* x, value_type beta, value_type* y) const
+        value_type alpha, const value_type** x, value_type beta, value_type* y) const
 {
+    if( num_entries==0)
+        return;
     launch_multiply_kernel( alpha, x, beta, y);
 }
 #ifdef _OPENMP
@@ -164,8 +166,10 @@ inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, v
 }
 
 template<class value_type>
-inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
+inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const
 {
+    if( num_entries==0)
+        return;
     if( !omp_in_parallel())
     {
         #pragma omp parallel

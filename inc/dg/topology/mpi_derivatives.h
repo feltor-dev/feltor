@@ -69,6 +69,11 @@ CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in)
     {
         in.data.insert( in.data.end(), zero.begin(), zero.end());
     }
+
+    //std::cout << "coo num entries "<<out.num_entries<<"\n";
+    //for( int i=0; i<out.num_entries; i++)
+    //    std::cout << "coo entries "<<out.cols_idx[i]<<" "<<out.data_idx[i]<<"\n";
+
     return out;
 }
 
