@@ -365,12 +365,13 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
             trivial=false;
     if( trivial)
     {
-        #pragma omp for nowait
-        for (int skj = 0; skj < m.left_size*n*m.right_size; skj++)
+        #pragma omp for SIMD nowait
+        for (int sj = 0; sj < m.left_size*m.right_size; sj++)
         {
-            int s = skj / (n*m.right_size);
-            int k = (skj % (n*m.right_size)) / m.right_size;
-            int j = (skj % (n*m.right_size)) % m.right_size;
+            int s = sj / m.right_size;
+            int j = (sj % m.right_size) % m.right_size;
+            for( int k=0; k<n; k++)
+            {
             for (int i = 0; i < m.num_entries; i++)
             {
                 int I = ((s*m.num_rows + m.rows_idx[i])*n + k)*m.right_size + j;
@@ -379,20 +380,22 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[DDD + q],
                         //x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                        x[CCC][(q*m.left_size +s )*m.right_size+j],
+                        x[CCC][q*m.left_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
+            }
             }
         }
     }
     else
     {
-        #pragma omp for nowait
-        for (int skj = 0; skj < m.left_size*n*m.right_size; skj++)
+        #pragma omp for SIMD nowait
+        for (int sj = 0; sj < m.left_size*m.right_size; sj++)
         {
-            int s = skj / (n*m.right_size);
-            int k = (skj % (n*m.right_size)) / m.right_size;
-            int j = (skj % (n*m.right_size)) % m.right_size;
+            int s = sj / m.right_size;
+            int j = (sj % m.right_size) % m.right_size;
+            for( int k=0; k<n; k++)
+            {
             for (int i = 0; i < m.num_entries; i++)
             {
                 int I = ((s*m.num_rows + m.rows_idx[i])*n + k)*m.right_size + j;
@@ -400,9 +403,10 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[(m.data_idx[i] * n + k)*n + q],
                         //x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                        x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
+                        x[m.cols_idx[i]][q*m.left_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
+            }
             }
         }
     }
