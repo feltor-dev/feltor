@@ -163,6 +163,10 @@ struct CooSparseBlockMat
     void add_value( int row, int col, const thrust::host_vector<value_type>& element)
     {
         assert( (int)element.size() == n*n);
+        bool zero = true;
+        for( int i=0; i<n*n; i++)
+            if( element[i] != 0 ) zero = false;
+        if ( zero) return; //do not add explicit zeros
         int index = data.size()/n/n;
         data.insert( data.end(), element.begin(), element.end());
         rows_idx.push_back(row);
