@@ -61,7 +61,7 @@ struct EllSparseBlockMatDevice
 #ifdef _OPENMP
     void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #endif //_OPENMP
-    private:
+    //private:
     using IVec = thrust::device_vector<int>;
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 
@@ -85,20 +85,11 @@ template<class value_type>
 struct CooSparseBlockMatDevice
 {
     CooSparseBlockMatDevice(){}
-    /**
-    * @brief Allocate storage
-    *
-    * A device matrix has to be constructed from a host matrix. It simply
-        copies all internal data of the host matrix to the device
-        @param src  source on the host
-    */
     template<class OtherValueType>
     CooSparseBlockMatDevice( const CooSparseBlockMat<OtherValueType>& src)
     {
-        data = src.data;
-        rows_idx = src.rows_idx, cols_idx = src.cols_idx, data_idx = src.data_idx;
-        num_rows = src.num_rows, num_cols = src.num_cols, num_entries = src.num_entries;
-        n = src.n, left_size = src.left_size, right_size = src.right_size;
+        ell_matrix = src.ell_matrix;
+        rows_idx = src.rows_idx;
     }
     /**
     * @brief Display internal data to a stream
@@ -107,10 +98,10 @@ struct CooSparseBlockMatDevice
     */
     void display(std::ostream& os = std::cout) const;
     int total_num_rows()const{
-        return num_rows*n*left_size*right_size;
+        return ell_matrix.total_num_rows();
     }
     int total_num_cols()const{
-        return num_cols*n*left_size*right_size;
+        return ell_matrix.total_num_cols();
     }
 
     /**
@@ -129,10 +120,8 @@ struct CooSparseBlockMatDevice
 
     void launch_multiply_kernel(value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 
-    thrust::device_vector<value_type> data;
-    IVec cols_idx, rows_idx, data_idx;
-    int num_rows, num_cols, num_entries;
-    int n, left_size, right_size;
+    EllSparseBlockMatDevice<value_type> ell_matrix;
+    IVec rows_idx;
 };
 
 ///@cond
@@ -146,8 +135,6 @@ template<class value_type>
 inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
         value_type alpha, const value_type** x, value_type beta, value_type* y) const
 {
-    if( num_entries==0)
-        return;
     launch_multiply_kernel( alpha, x, beta, y);
 }
 #ifdef _OPENMP
@@ -168,8 +155,6 @@ inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, v
 template<class value_type>
 inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const
 {
-    if( num_entries==0)
-        return;
     if( !omp_in_parallel())
     {
         #pragma omp parallel
@@ -194,14 +179,14 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     os << "right_size            "<<right_size<<"\n";
     os << "right_range_0         "<<right_range[0]<<"\n";
     os << "right_range_1         "<<right_range[1]<<"\n";
-    os << " Columns: \n";
+    os << "Columns: \n";
     for( int i=0; i<num_rows; i++)
     {
         for( int d=0; d<blocks_per_line; d++)
             os << cols_idx[i*blocks_per_line + d] <<" ";
         os << "\n";
     }
-    os << "\n Data: \n";
+    os << "\nData: \n";
     for( int i=0; i<num_rows; i++)
     {
         for( int d=0; d<blocks_per_line; d++)
@@ -214,24 +199,11 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 {
-    os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
-    os << "num_rows         "<<num_rows<<"\n";
-    os << "num_cols         "<<num_cols<<"\n";
-    os << "num_entries      "<<num_entries<<"\n";
-    os << "n                "<<n<<"\n";
-    os << "left_size             "<<left_size<<"\n";
-    os << "right_size            "<<right_size<<"\n";
-    os << " Columns: \n";
-    for( int i=0; i<num_entries; i++)
-        os << cols_idx[i] <<" ";
-    os << "\n Rows: \n";
-    for( int i=0; i<num_entries; i++)
-        os << rows_idx[i] <<" ";
-    os << "\n Data: \n";
-    for( int i=0; i<num_entries; i++)
-        os << data_idx[i] <<" ";
+    ell_matrix.display(os);
+    os << "Row indices:\n";
+    for( unsigned i=0; i<rows_idx.size(); i++)
+        os << rows_idx[i]<<"\n";
     os << std::endl;
-
 }
 
 ///@endcond

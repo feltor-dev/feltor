@@ -117,12 +117,6 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         #endif
         for( int i=1; i<num_rows-1; i++)
         {
-            //for( int d=0; d<blocks_per_line; d++)
-            //{
-            //    int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
-            //    for(int q=0; q<n; q++)
-            //        xprivate[d*n+q] = x[J+q];
-            //}
             for( int k=0; k<n; k++)
             {
                 int I = ((s*num_rows + i)*n+k);
@@ -138,13 +132,6 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                     }
                     y[I] = DG_FMA(alpha, temp, y[I]);
                 }
-                //value_type temp[blocks_per_line] = {0};
-                //int B = n*blocks_per_line*k;
-                //for( int d=0; d<blocks_per_line; d++)
-                //    for( int q=0; q<n; q++)
-                //        temp[d] = DG_FMA( dprivate[B+d*n+q], xprivate[d*n+q], temp[d]);
-                //for( int d=0; d<blocks_per_line; d++)
-                //    y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
         for( int i=num_rows-1; i<num_rows; i++)
@@ -336,77 +323,90 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 template<class value_type>
 void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
 {
-    #pragma omp for nowait
-	for (int skj = 0; skj < m.left_size*m.n*m.right_size; skj++)
-	{
-		int s = skj / (m.n*m.right_size);
-		int k = (skj % (m.n*m.right_size)) / m.right_size;
-		int j = (skj % (m.n*m.right_size)) % m.right_size;
-		for (int i = 0; i < m.num_entries; i++)
-		{
-			int I = ((s*m.num_rows + m.rows_idx[i])*m.n + k)*m.right_size + j;
-			value_type temp = 0;
-			for (int q = 0; q < m.n; q++) //multiplication-loop
-				temp = DG_FMA(m.data[(m.data_idx[i] * m.n + k)*m.n + q],
-					//x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                    x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
-					temp);
-			y[I] = DG_FMA(alpha, temp, y[I]);
-		}
-	}
+    int num_rows = m.rows_idx.size(), n = m.ell_matrix.n;
+    int blocks_per_line = m.ell_matrix.blocks_per_line;
+    int left_size = m.ell_matrix.left_size, right_size = m.ell_matrix.right_size;
+    if( num_rows == 0)
+        return;
+    if( beta!= 1 )
+        std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";
+
+    #pragma omp for nowait collapse(3)
+    for( int s=0; s<left_size; s++)
+    for( int i=0; i<num_rows; i++)
+    for( int j=0; j<right_size; j++)
+    {
+    for( int k=0; k<n; k++)
+    {
+        int I = ((s*m.ell_matrix.num_rows + m.rows_idx[i])*n+k)*right_size+j;
+        for( int d=0; d<blocks_per_line; d++)
+        {
+            value_type temp = 0;
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp = DG_FMA( m.ell_matrix.data[ (m.ell_matrix.data_idx[i*blocks_per_line+d]*n + k)*n+q],
+                            x[m.ell_matrix.cols_idx[i*blocks_per_line+d]][(q*left_size +s )*right_size+j],
+                            temp);
+            y[I] = DG_FMA( alpha,temp, y[I]);
+        }
+    }
+    }
 }
-template<class value_type, int n>
+template<class value_type, int n, int blocks_per_line>
 void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
 {
-    bool trivial = true;
-    int CC = m.cols_idx[0], DD = m.data_idx[0];
-    for( int i=0; i<m.num_entries; i++)
-        if( CC+i != m.cols_idx[i] || DD+i != m.data_idx[i])
-            trivial=false;
-    if( trivial)
+    int num_rows = m.rows_idx.size();
+    int left_size = m.ell_matrix.left_size, right_size = m.ell_matrix.right_size;
+    if( num_rows == 0)
+        return;
+    if( beta!= 1 )
+        std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";
+    //copy ell_mutliply_kernel
+    if( !( right_size > 100*left_size*num_rows*n )) //typically a derivative in x or y ( Ny*Nz >~ Nx)
     {
-        #pragma omp for SIMD nowait
-        for (int sj = 0; sj < m.left_size*m.right_size; sj++)
+        #pragma omp for nowait
+        for (int sik = 0; sik < left_size*num_rows*n; sik++)
         {
-            int s = sj / m.right_size;
-            int j = (sj % m.right_size) % m.right_size;
-            for( int k=0; k<n; k++)
+            int s = sik / (num_rows*n);
+            int i = (sik % (num_rows*n)) / n;
+            int k = (sik % (num_rows*n)) % n;
+
+            #ifndef _MSC_VER
+            #pragma omp SIMD //very important for KNL
+            #endif
+            for( int j=0; j<right_size; j++)
             {
-            for (int i = 0; i < m.num_entries; i++)
-            {
-                int I = ((s*m.num_rows + m.rows_idx[i])*n + k)*m.right_size + j;
-                int DDD = ((DD +i)*n+k)*n, CCC = CC+i;
-                value_type temp = 0;
-                for (int q = 0; q < n; q++) //multiplication-loop
-                    temp = DG_FMA(m.data[DDD + q],
-                        //x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                        x[CCC][q*m.left_size +sj],
-                        temp);
-                y[I] = DG_FMA(alpha, temp, y[I]);
-            }
+                int I = ((s*m.ell_matrix.num_rows + m.rows_idx[i])*n+k)*right_size+j;
+                for( int d=0; d<blocks_per_line; d++)
+                {
+                    value_type temp = 0;
+                    for( int q=0; q<n; q++) //multiplication-loop
+                        temp = DG_FMA( m.ell_matrix.data[ (m.ell_matrix.data_idx[i*blocks_per_line+d]*n + k)*n+q],
+                                    x[m.ell_matrix.cols_idx[i*blocks_per_line+d]][(q*left_size +s )*right_size+j],
+                                    temp);
+                    y[I] = DG_FMA( alpha,temp, y[I]);
+                }
             }
         }
     }
-    else
+    else //typically a derivative in z (since n*n*Nx*Ny > 100*Nz)
     {
-        #pragma omp for SIMD nowait
-        for (int sj = 0; sj < m.left_size*m.right_size; sj++)
+        for( int s=0; s<left_size; s++)
+        for( int i=0; i<num_rows; i++)
+        for( int k=0; k<n; k++)
         {
-            int s = sj / m.right_size;
-            int j = (sj % m.right_size) % m.right_size;
-            for( int k=0; k<n; k++)
+            #pragma omp for SIMD nowait
+            for( int j=0; j<right_size; j++)
             {
-            for (int i = 0; i < m.num_entries; i++)
-            {
-                int I = ((s*m.num_rows + m.rows_idx[i])*n + k)*m.right_size + j;
-                value_type temp = 0;
-                for (int q = 0; q < n; q++) //multiplication-loop
-                    temp = DG_FMA(m.data[(m.data_idx[i] * n + k)*n + q],
-                        //x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                        x[m.cols_idx[i]][q*m.left_size +sj],
-                        temp);
-                y[I] = DG_FMA(alpha, temp, y[I]);
-            }
+                int I = ((s*m.ell_matrix.num_rows + m.rows_idx[i])*n+k)*right_size+j;
+                for( int d=0; d<blocks_per_line; d++)
+                {
+                    value_type temp = 0;
+                    for( int q=0; q<n; q++) //multiplication-loop
+                        temp = DG_FMA( m.ell_matrix.data[ (m.ell_matrix.data_idx[i*blocks_per_line+d]*n + k)*n+q],
+                                    x[m.ell_matrix.cols_idx[i*blocks_per_line+d]][(q*left_size +s )*right_size+j],
+                                    temp);
+                    y[I] = DG_FMA( alpha,temp, y[I]);
+                }
             }
         }
     }
@@ -414,14 +414,23 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
-    if( n == 1)
-        coo_multiply_kernel<value_type, 1>( alpha, x, beta, y, *this);
-    else if( n == 2)
-        coo_multiply_kernel<value_type, 2>( alpha, x, beta, y, *this);
-    else if( n == 3)
-        coo_multiply_kernel<value_type, 3>( alpha, x, beta, y, *this);
-    else if( n == 4)
-        coo_multiply_kernel<value_type, 4>( alpha, x, beta, y, *this);
+    int n = ell_matrix.n, blocks_per_line = ell_matrix.blocks_per_line;
+    if( n == 1 && blocks_per_line == 2)
+        coo_multiply_kernel<value_type, 1, 2>( alpha, x, beta, y, *this);
+    else if( n == 1 && blocks_per_line == 3)
+        coo_multiply_kernel<value_type, 1, 3>( alpha, x, beta, y, *this);
+    else if( n == 2 && blocks_per_line == 2)
+        coo_multiply_kernel<value_type, 2, 2>( alpha, x, beta, y, *this);
+    else if( n == 2 && blocks_per_line == 3)
+        coo_multiply_kernel<value_type, 2, 3>( alpha, x, beta, y, *this);
+    else if( n == 3 && blocks_per_line == 2)
+        coo_multiply_kernel<value_type, 3, 2>( alpha, x, beta, y, *this);
+    else if( n == 3 && blocks_per_line == 3)
+        coo_multiply_kernel<value_type, 3, 3>( alpha, x, beta, y, *this);
+    else if( n == 4 && blocks_per_line == 2)
+        coo_multiply_kernel<value_type, 4, 2>( alpha, x, beta, y, *this);
+    else if( n == 4 && blocks_per_line == 3)
+        coo_multiply_kernel<value_type, 4, 3>( alpha, x, beta, y, *this);
     else
         coo_multiply_kernel<value_type>( alpha, x, beta, y, *this);
 }
