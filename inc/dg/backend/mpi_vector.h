@@ -210,21 +210,6 @@ struct NearestNeighborComm
         if( do_size() == 0 ) return Buffer();
         return Buffer(6);
     }
-    int map_index(int i) const{
-        switch( i){
-            case -1 : return 0;
-            case 0 : return 1;
-            case 1 : return 2;
-        }
-        if( i==-1) return 0;
-        if( i== 0) return 1;
-        if( i==+1) return 2;
-        if( i==(int)outer_size_-0) return 5;
-        if( i==(int)outer_size_-1) return 4;
-        if( i==(int)outer_size_-2) return 3;
-        throw Error( Message(_ping_)<<"Index not mappable!");
-        return -1;
-    }
 
     /**
     * @brief Gather values from given Vector and initiate asynchronous MPI communication

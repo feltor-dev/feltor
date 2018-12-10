@@ -91,7 +91,7 @@ struct EllSparseBlockMat
     }
 
     thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
-    IVec cols_idx; //!< is of size num_rows*num_blocks_per_line and contains the column indices % n into the vector
+    IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices % n into the vector
     IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number
     int num_rows; //!< number of block rows, each row contains blocks ( total number of rows is num_rows*n*left_size*right_size
     int num_cols; //!< number of block columns (total number of columns is num_cols*n*left_size*right_size
@@ -135,14 +135,54 @@ memory.
 template<class value_type>
 struct CooSparseBlockMat
 {
+    /**
+    * @brief default constructor does nothing
+    */
+    CooSparseBlockMat(){}
+    /**
+    * @brief Allocate storage
+    *
+    * @param num_block_rows number of rows. Each row contains blocks.
+    * @param num_block_cols number of columns.
+    * @param n each block is of size nxn
+    * @param left_size size of the left_size Kronecker delta
+    * @param right_size size of the right_size Kronecker delta
+    */
+    CooSparseBlockMat( int num_block_rows, int num_block_cols, int n, int left_size, int right_size):
+        num_rows(num_block_rows), num_cols(num_block_cols), num_entries(0),
+        n(n),left_size(left_size), right_size(right_size){}
 
+    /**
+    * @brief Convenience function to assemble the matrix
+    *
+    * appends the given matrix entry to the existing matrix
+    * @param row row index
+    * @param col column index
+    * @param element new block
+    */
+    void add_value( int row, int col, const thrust::host_vector<value_type>& element)
+    {
+        assert( (int)element.size() == n*n);
+        bool zero = true;
+        for( int i=0; i<n*n; i++)
+            if( element[i] != 0 ) zero = false;
+        if ( zero) return; //do not add explicit zeros
+        int index = data.size()/n/n;
+        data.insert( data.end(), element.begin(), element.end());
+        rows_idx.push_back(row);
+        cols_idx.push_back(col);
+        data_idx.push_back( index );
+
+        num_entries++;
+    }
     int total_num_rows()const{
-        return ell_matrix.total_num_rows();
+        return num_rows*n*left_size*right_size;
     }
     int total_num_cols()const{
-        return ell_matrix.total_num_cols();
+        return num_cols*n*left_size*right_size;
     }
 
+    typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
     /**
     * @brief Apply the matrix to a vector
     *
@@ -153,6 +193,7 @@ struct CooSparseBlockMat
     * @attention beta == 1 (anything else is ignored)
     */
     void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const;
+    public:
     /**
     * @brief Display internal data to a stream
     *
@@ -160,9 +201,17 @@ struct CooSparseBlockMat
     * @param show_data if true, displays the whole data vector
     */
     void display(std::ostream& os = std::cout, bool show_data = false) const;
-    typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
-    EllSparseBlockMat<value_type> ell_matrix;
+
+    thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
+    IVec cols_idx; //!< is of size num_block_rows and contains the column indices
     IVec rows_idx; //!< is of size num_block_rows and contains the row
+    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array
+    int num_rows; //!< number of rows, each row contains blocks
+    int num_cols; //!< number of columns
+    int num_entries; //!< number of entries in the matrix
+    int n;  //!< each block has size n*n
+    int left_size; //!< size of the left Kronecker delta
+    int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
 };
 ///@cond
 
@@ -192,30 +241,25 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type 
 template<class value_type>
 void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
-    int num_rows = rows_idx.size(), n = ell_matrix.n;
-    int blocks_per_line = ell_matrix.blocks_per_line;
-    int left_size = ell_matrix.left_size, right_size = ell_matrix.right_size;
-    if( num_rows == 0)
+    if( num_entries==0)
         return;
     if( beta!= 1 )
         std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";
 
-    //simplest implementation (all optimization must respect the order of operations)
+    //simplest implementation (sums block by block)
     for( int s=0; s<left_size; s++)
-    for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
     for( int j=0; j<right_size; j++)
+    for( int i=0; i<num_entries; i++)
     {
-        int I = ((s*ell_matrix.num_rows + rows_idx[i])*n+k)*right_size+j;
-        for( int d=0; d<blocks_per_line; d++)
-        {
-            value_type temp = 0;
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp = DG_FMA( ell_matrix.data[ (ell_matrix.data_idx[i*blocks_per_line+d]*n + k)*n+q],
-                            x[ell_matrix.cols_idx[i*blocks_per_line+d]][(q*left_size +s )*right_size+j],
-                            temp);
-            y[I] = DG_FMA( alpha,temp, y[I]);
-        }
+        value_type temp = 0;
+        for( int q=0; q<n; q++) //multiplication-loop
+            temp = DG_FMA( data[ (data_idx[i]*n + k)*n+q],
+                    //x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
+                    x[cols_idx[i]][(q*left_size +s )*right_size+j],
+                    temp);
+        int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
+        y[I] = DG_FMA( alpha,temp, y[I]);
     }
 }
 
@@ -232,14 +276,14 @@ void EllSparseBlockMat<T>::display( std::ostream& os, bool show_data ) const
     os << "right_range_0         "<<right_range[0]<<"\n";
     os << "right_range_1         "<<right_range[1]<<"\n";
     os << "Column indices: \n";
-    for( int i=0; i<(int)cols_idx.size()/blocks_per_line; i++)
+    for( int i=0; i<num_rows; i++)
     {
         for( int d=0; d<blocks_per_line; d++)
             os << cols_idx[i*blocks_per_line + d] <<" ";
         os << "\n";
     }
-    os << "\nData indices: \n";
-    for( int i=0; i<(int)data_idx.size()/blocks_per_line; i++)
+    os << "\n Data indices: \n";
+    for( int i=0; i<num_rows; i++)
     {
         for( int d=0; d<blocks_per_line; d++)
             os << data_idx[i*blocks_per_line + d] <<" ";
@@ -247,7 +291,7 @@ void EllSparseBlockMat<T>::display( std::ostream& os, bool show_data ) const
     }
     if(show_data)
     {
-        os << "\nData: \n";
+        os << "\n Data: \n";
         for( unsigned i=0; i<data.size()/n/n; i++)
             for(unsigned k=0; k<n*n; k++)
             {
@@ -262,10 +306,27 @@ void EllSparseBlockMat<T>::display( std::ostream& os, bool show_data ) const
 template<class value_type>
 void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) const
 {
-    ell_matrix.display(os, show_data);
-    os << "Row indices:\n";
-    for( unsigned i=0; i<rows_idx.size(); i++)
-        os << rows_idx[i]<<"\n";
+    os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
+    os << "num_rows         "<<num_rows<<"\n";
+    os << "num_cols         "<<num_cols<<"\n";
+    os << "num_entries      "<<num_entries<<"\n";
+    os << "n                "<<n<<"\n";
+    os << "left_size             "<<left_size<<"\n";
+    os << "right_size            "<<right_size<<"\n";
+    os << "row\tcolumn\tdata:\n";
+    for( int i=0; i<num_entries; i++)
+        os << rows_idx[i]<<"\t"<<cols_idx[i] <<"\t"<<data_idx[i]<<"\n";
+    if(show_data)
+    {
+        os << "\n Data: \n";
+        for( unsigned i=0; i<data.size()/n/n; i++)
+            for(unsigned k=0; k<n*n; k++)
+            {
+                exblas::udouble res;
+                res.d = data[i*n*n+k];
+                os << "idx "<<i<<" "<<res.d <<"\t"<<res.i<<"\n";
+            }
+    }
     os << std::endl;
 
 }

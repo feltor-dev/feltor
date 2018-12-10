@@ -143,8 +143,6 @@ struct RowColDistMat
         //2. wait for communication to finish
         m_c.global_gather_wait( x_ptr, b_ptr, rqst);
         //3. compute and add outer points
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, beta, y_ptr);
     }
 
