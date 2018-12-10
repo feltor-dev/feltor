@@ -211,6 +211,11 @@ struct NearestNeighborComm
         if( do_size() == 0 ) return Buffer();
         return Buffer(6);
     }
+    /**
+     * @brief Map a local matrix index to a buffer index
+     * @param i matrix index
+     * @return buffer index
+     */
     int map_index(int i) const{
         switch( i){
             case -1 : return 0;

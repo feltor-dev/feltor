@@ -25,6 +25,7 @@ doxygen documentation, READMEs or tex writeups.
 - Additional constructors in BijectiveComm consistent with SujectiveComm
 - Add consistency test to mpi\_collective\_mpit.cu
 - copyable member function in CG, Invert, RungeKutta and Karniadakis
+- float overloads of dg::one, dg::zero and dg::coo functions
 
 ### Changed
 - Change grids() method interface of Multigrid class to grid(unsigned) and adapt this in all programs using it (now we completely avoid exposing ClonePtr to users)
@@ -58,7 +59,9 @@ doxygen documentation, READMEs or tex writeups.
 - replace use of dg::transfer with either dg::assign or dg::construct throughout the dg library
 - improve 3d benchmark functionality in cluster\_mpib.cu
 - add hasXpoint() member to solovev::parameter
+- add map\_index to NearestNeighborComm to signify responsibility of mapping matrix indices to buffer indices
 - Optimization: change buffer layout in dg::NearestNeighborComm and CooSparseBlockMat kernels to avoid slow scatter/gather operations in matrix-vector multiplication
+- Optimization: implement faster kernels for CooSparseBlockMat symv functions to accelerate mpi symv with low computation to communication ratio
 
 ### Deprecated
 - dg::blas1::transfer

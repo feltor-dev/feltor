@@ -34,6 +34,7 @@ int main()
     std::cin >> eps;
 
     dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    dg::RealGrid2d<float> gridf( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec v2d = dg::create::inv_weights( grid);
     std::cout<<"Evaluate initial condition...\n";
@@ -43,7 +44,7 @@ int main()
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
     dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
-    dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::RealCartesianGrid2d<float>, dg::fDMatrix, dg::fDVec> flap(gridf, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 

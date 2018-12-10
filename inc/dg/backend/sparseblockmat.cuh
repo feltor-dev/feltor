@@ -18,7 +18,7 @@ to device vectors and does the same thing as the host version
 template<class value_type>
 struct EllSparseBlockMatDevice
 {
-    EllSparseBlockMatDevice(){}
+    EllSparseBlockMatDevice() = default;
     /**
     * @brief Allocate storage
     *
@@ -26,8 +26,7 @@ struct EllSparseBlockMatDevice
         copies all internal data of the host matrix to the device
         @param src  source on the host
     */
-    template< class OtherValueType>
-    EllSparseBlockMatDevice( const EllSparseBlockMat<OtherValueType>& src)
+    EllSparseBlockMatDevice( const EllSparseBlockMat<value_type>& src)
     {
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -61,16 +60,14 @@ struct EllSparseBlockMatDevice
 #ifdef _OPENMP
     void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #endif //_OPENMP
-    private:
-    using IVec = thrust::device_vector<int>;
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 
     thrust::device_vector<value_type> data;
-    IVec cols_idx, data_idx;
+    thrust::device_vector<int> cols_idx, data_idx;
+    thrust::device_vector<int> right_range; // behold that right_size != right_range[1]-right_range[0] in general
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left_size, right_size;
-    IVec right_range; // behold that right_size != right_range[1]-right_range[0] in general
 };
 
 
@@ -84,7 +81,7 @@ be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thin
 template<class value_type>
 struct CooSparseBlockMatDevice
 {
-    CooSparseBlockMatDevice(){}
+    CooSparseBlockMatDevice() = default;
     /**
     * @brief Allocate storage
     *
@@ -92,8 +89,7 @@ struct CooSparseBlockMatDevice
         copies all internal data of the host matrix to the device
         @param src  source on the host
     */
-    template<class OtherValueType>
-    CooSparseBlockMatDevice( const CooSparseBlockMat<OtherValueType>& src)
+    CooSparseBlockMatDevice( const CooSparseBlockMat<value_type>& src)
     {
         data = src.data;
         rows_idx = src.rows_idx, cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -125,12 +121,11 @@ struct CooSparseBlockMatDevice
 #ifdef _OPENMP
     void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 #endif //_OPENMP
-    using IVec = thrust::device_vector<int>;
 
     void launch_multiply_kernel(value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 
     thrust::device_vector<value_type> data;
-    IVec cols_idx, rows_idx, data_idx;
+    thrust::device_vector<int> cols_idx, rows_idx, data_idx;
     int num_rows, num_cols, num_entries;
     int n, left_size, right_size;
 };
