@@ -3,6 +3,7 @@
 #include <cassert>
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
+#include "exceptions.h"
 #include "exblas/mpi_accumulate.h"
 #include "tensor_traits.h"
 #include "blas1_dispatch_shared.h"
