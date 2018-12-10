@@ -210,6 +210,21 @@ struct NearestNeighborComm
         if( do_size() == 0 ) return Buffer();
         return Buffer(6);
     }
+    int map_index(int i) const{
+        switch( i){
+            case -1 : return 0;
+            case 0 : return 1;
+            case 1 : return 2;
+        }
+        if( i==-1) return 0;
+        if( i== 0) return 1;
+        if( i==+1) return 2;
+        if( i==(int)outer_size_-0) return 5;
+        if( i==(int)outer_size_-1) return 4;
+        if( i==(int)outer_size_-2) return 3;
+        throw Error( Message(_ping_)<<"Index not mappable!");
+        return -1;
+    }
 
     /**
     * @brief Gather values from given Vector and initiate asynchronous MPI communication
@@ -217,29 +232,33 @@ struct NearestNeighborComm
     * @param buffer (write only) where received data resides after \c global_gather_wait() was called (must be of size \c size())
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    void global_gather_init( const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4])const
+    void global_gather_init( const_pointer_type input, buffer_type& buffer, MPI_Request rqst[4])const
     {
         unsigned size = buffer_size();
+        //init pointers on host
+        const_pointer_type host_ptr[6];
         if(trivial_)
         {
-            buffer[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
-            buffer[1] = input;
-            buffer[2] = input+size;
-            buffer[3] = input+(outer_size_-2)*size;
-            buffer[4] = input+(outer_size_-1)*size;
-            buffer[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
+            host_ptr[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
+            host_ptr[1] = input;
+            host_ptr[2] = input+size;
+            host_ptr[3] = input+(outer_size_-2)*size;
+            host_ptr[4] = input+(outer_size_-1)*size;
+            host_ptr[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
         }
         else
         {
-            buffer[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
-            buffer[1] = thrust::raw_pointer_cast(&internal_buffer_.data()[1*size]);
-            buffer[2] = thrust::raw_pointer_cast(&internal_buffer_.data()[2*size]);
-            buffer[3] = thrust::raw_pointer_cast(&internal_buffer_.data()[3*size]);
-            buffer[4] = thrust::raw_pointer_cast(&internal_buffer_.data()[4*size]);
-            buffer[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
+            host_ptr[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
+            host_ptr[1] = thrust::raw_pointer_cast(&internal_buffer_.data()[1*size]);
+            host_ptr[2] = thrust::raw_pointer_cast(&internal_buffer_.data()[2*size]);
+            host_ptr[3] = thrust::raw_pointer_cast(&internal_buffer_.data()[3*size]);
+            host_ptr[4] = thrust::raw_pointer_cast(&internal_buffer_.data()[4*size]);
+            host_ptr[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
         }
-        do_global_gather_init( get_execution_policy<Vector>(), input, buffer, rqst);
-        sendrecv( buffer[1], buffer[4],
+        //copy to device
+        thrust::copy( host_ptr, host_ptr+6, buffer.begin());
+        do_global_gather_init( get_execution_policy<Vector>(), input, rqst);
+        sendrecv( host_ptr[1], host_ptr[4],
                   thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]),
                   thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]),
                   rqst);
@@ -251,7 +270,7 @@ struct NearestNeighborComm
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    void global_gather_wait(const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4])const
+    void global_gather_wait(const_pointer_type input, const buffer_type& buffer, MPI_Request rqst[4])const
     {
         MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     }
@@ -265,9 +284,9 @@ struct NearestNeighborComm
     ///@copydoc aCommunicator::isCommunicating()
     MPI_Comm communicator() const{return comm_;}
     private:
-    void do_global_gather_init( OmpTag, const_pointer_type, const_pointer_type*, MPI_Request rqst[4])const;
-    void do_global_gather_init( SerialTag, const_pointer_type, const_pointer_type*, MPI_Request rqst[4])const;
-    void do_global_gather_init( CudaTag, const_pointer_type, const_pointer_type*, MPI_Request rqst[4])const;
+    void do_global_gather_init( OmpTag, const_pointer_type, MPI_Request rqst[4])const;
+    void do_global_gather_init( SerialTag, const_pointer_type, MPI_Request rqst[4])const;
+    void do_global_gather_init( CudaTag, const_pointer_type, MPI_Request rqst[4])const;
     unsigned do_size()const;
     void construct( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction);
 
@@ -378,7 +397,7 @@ unsigned NearestNeighborComm<I,B,V>::buffer_size() const
 }
 
 template<class I, class B, class V>
-void NearestNeighborComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer_type input, MPI_Request rqst[4]) const
 {
     if( !trivial_)
     {
@@ -389,7 +408,7 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer
 }
 #ifdef _OPENMP
 template<class I, class B, class V>
-void NearestNeighborComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_type input, MPI_Request rqst[4]) const
 {
     if(!trivial_)
     {
@@ -402,7 +421,7 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_ty
 #endif
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 template<class I, class B, class V>
-void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_type input, const_pointer_type* buffer, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_type input, MPI_Request rqst[4]) const
 {
     //gather values from input into sendbuffer
     if(!trivial_)

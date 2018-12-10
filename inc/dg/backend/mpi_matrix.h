@@ -136,13 +136,13 @@ struct RowColDistMat
         MPI_Request rqst[4];
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
               value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
-        m_c.global_gather_init( x_ptr, b_ptr, rqst);
+        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
         //1.2 compute inner points
         dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
         //2. wait for communication to finish
-        m_c.global_gather_wait( x_ptr, b_ptr, rqst);
+        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
         //3. compute and add outer points
+        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
         m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, beta, y_ptr);
     }
 
@@ -176,13 +176,13 @@ struct RowColDistMat
         MPI_Request rqst[4];
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
               value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
-        m_c.global_gather_init( x_ptr, b_ptr, rqst);
+        m_c.global_gather_init( x_ptr, m_buffer, rqst);
         //1.2 compute inner points
         dg::blas2::symv( m_i, x.data(), y.data());
         //2. wait for communication to finish
-        m_c.global_gather_wait( x_ptr, b_ptr, rqst);
+        m_c.global_gather_wait( x_ptr, m_buffer, rqst);
         //3. compute and add outer points
+        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
         m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), 1., b_ptr, 1., y_ptr);
     }
 

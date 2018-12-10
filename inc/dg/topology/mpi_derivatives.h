@@ -26,7 +26,7 @@ namespace detail{
 * @return a newly created Coordinate matrix holding the outer rows
 */
 template<class real_type>
-CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in)
+CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in, const NNCH<real_type>& c)
 {
     //search outer values in m
     CooSparseBlockMat<real_type> out( in.num_rows, 6, in.n, in.left_size, in.right_size);
@@ -42,8 +42,7 @@ CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in)
                 {
                     for( int j=0; j<in.n*in.n; j++)
                         data_element[j] = in.data[ in.data_idx[i*in.blocks_per_line+k]*in.n*in.n + j];
-                    //assume col is either 0,1,or 2
-                    int col = in.cols_idx[i*in.blocks_per_line+k] + 1;
+                    int col = c.map_index( in.cols_idx[i*in.blocks_per_line+k]);
                     out.add_value( i, col, data_element);
                     in.data_idx[i*in.blocks_per_line+k] = index; //
                     in.cols_idx[i*in.blocks_per_line+k] = 0;
@@ -57,7 +56,7 @@ CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in)
                     for( int j=0; j<in.n*in.n; j++)
                         data_element[j] = in.data[ in.data_idx[i*in.blocks_per_line+k]*in.n*in.n + j];
                     //assume col is either 3,4,or 5
-                    int col = in.cols_idx[i*in.blocks_per_line+k] - in.num_cols + 5;
+                    int col = c.map_index( in.cols_idx[i*in.blocks_per_line+k]);
                     out.add_value( i, col, data_element);
                     in.data_idx[i*in.blocks_per_line+k] = index;
                     in.cols_idx[i*in.blocks_per_line+k] = in.num_cols-1;
@@ -155,7 +154,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     //distribute_rows, collective and save_outer_values are aware of howmany[1] == 1
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -184,7 +183,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {1, dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -212,7 +211,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -239,7 +238,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {1, dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -268,7 +267,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -296,7 +295,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {dims[2], dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -324,7 +323,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[2], howmany);
     NNCH<real_type> c( 1, vector_dimensions, comm, 2);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -352,7 +351,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -380,7 +379,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {dims[2], dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }
@@ -407,7 +406,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[2], howmany);
     NNCH<real_type> c( 1, vector_dimensions, comm, 2);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
 }

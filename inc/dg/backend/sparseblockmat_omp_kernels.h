@@ -117,12 +117,6 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         #endif
         for( int i=1; i<num_rows-1; i++)
         {
-            //for( int d=0; d<blocks_per_line; d++)
-            //{
-            //    int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
-            //    for(int q=0; q<n; q++)
-            //        xprivate[d*n+q] = x[J+q];
-            //}
             for( int k=0; k<n; k++)
             {
                 int I = ((s*num_rows + i)*n+k);
@@ -138,13 +132,6 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                     }
                     y[I] = DG_FMA(alpha, temp, y[I]);
                 }
-                //value_type temp[blocks_per_line] = {0};
-                //int B = n*blocks_per_line*k;
-                //for( int d=0; d<blocks_per_line; d++)
-                //    for( int q=0; q<n; q++)
-                //        temp[d] = DG_FMA( dprivate[B+d*n+q], xprivate[d*n+q], temp[d]);
-                //for( int d=0; d<blocks_per_line; d++)
-                //    y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
         for( int i=num_rows-1; i<num_rows; i++)
@@ -348,7 +335,6 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
 			value_type temp = 0;
 			for (int q = 0; q < m.n; q++) //multiplication-loop
 				temp = DG_FMA(m.data[(m.data_idx[i] * m.n + k)*m.n + q],
-					//x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
                     x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
 					temp);
 			y[I] = DG_FMA(alpha, temp, y[I]);
@@ -379,8 +365,7 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
                 value_type temp = 0;
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[DDD + q],
-                        //x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                        x[CCC][q*m.left_size +sj],
+                        x[CCC][q*m.left_size*m.right_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
             }
@@ -402,8 +387,7 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
                 value_type temp = 0;
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[(m.data_idx[i] * n + k)*n + q],
-                        //x[((s*num_cols + cols_idx[i])*n + q)*right_size + j],
-                        x[m.cols_idx[i]][q*m.left_size +sj],
+                        x[m.cols_idx[i]][q*m.left_size*m.right_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
             }

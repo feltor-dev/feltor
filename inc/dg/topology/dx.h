@@ -105,21 +105,37 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
     }
     else //periodic
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 3, n);
-        for( int i=0; i<n; i++)
-        for( int j=0; j<n; j++)
+        if( n==1)
         {
-            A.data[(0*n+i)*n+j] = bp(i,j);
-            A.data[(1*n+i)*n+j] = a(i,j);
-            A.data[(2*n+i)*n+j] = b(i,j);
+            EllSparseBlockMat<real_type> A(N, N, 2, 2, 1);
+            A.data[0] = bp(0,0);
+            A.data[1] = b(0,0);
+            for( int i=0; i<N; i++)
+                for( int d=0; d<2; d++)
+                {
+                    A.data_idx[i*2+d] = d; //bp, a, b
+                    A.cols_idx[i*2+d] = (i+2*d-1+N)%N;
+                }
+            return A;
         }
-        for( int i=0; i<N; i++)
-            for( int d=0; d<3; d++)
+        else
+        {
+            EllSparseBlockMat<real_type> A(N, N, 3, 3, n);
+            for( int i=0; i<n; i++)
+            for( int j=0; j<n; j++)
             {
-                A.data_idx[i*3+d] = d; //bp, a, b
-                A.cols_idx[i*3+d] = (i+d-1+N)%N;
+                A.data[(0*n+i)*n+j] = bp(i,j);
+                A.data[(1*n+i)*n+j] = a(i,j);
+                A.data[(2*n+i)*n+j] = b(i,j);
             }
-        return A;
+            for( int i=0; i<N; i++)
+                for( int d=0; d<3; d++)
+                {
+                    A.data_idx[i*3+d] = d; //bp, a, b
+                    A.cols_idx[i*3+d] = (i+d-1+N)%N;
+                }
+            return A;
+        }
     }
 };
 
