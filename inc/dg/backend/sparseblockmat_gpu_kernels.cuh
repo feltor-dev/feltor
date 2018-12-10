@@ -6,7 +6,8 @@ namespace dg
 // general multiply kernel
 template<class value_type>
  __global__ void ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
+         const value_type* __restrict__  data,
+         const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
          const int right_size,
@@ -43,7 +44,8 @@ template<class value_type>
 //specialized multiply kernel
 template<class value_type, size_t n, size_t blocks_per_line>
  __global__ void ell_multiply_kernel(value_type alpha, value_type beta,
-         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
+         const value_type* __restrict__  data,
+         const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
          const int num_rows, const int num_cols,
          const int size, const int right_size,
          const int* __restrict__  right_range,
@@ -95,7 +97,8 @@ template<class value_type, size_t n, size_t blocks_per_line>
 
 template<class value_type, size_t n>
 void call_ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type * __restrict__ data_ptr, const int * __restrict__ cols_ptr, const int * __restrict__ block_ptr,
+         const value_type * __restrict__ data_ptr,
+         const int * __restrict__ cols_ptr, const int * __restrict__ block_ptr,
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int left_size, const int right_size,
          const int * __restrict__ right_range_ptr,
@@ -107,20 +110,25 @@ void call_ell_multiply_kernel( value_type alpha, value_type beta,
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
     //note that the following use size instead of left_size
     if( blocks_per_line == 1)
-        ell_multiply_kernel<value_type, n, 1><<<NUM_BLOCKS, BLOCK_SIZE>>>  (alpha, beta,
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr,  x_ptr,y_ptr);
+        ell_multiply_kernel<value_type, n, 1><<<NUM_BLOCKS, BLOCK_SIZE>>>
+        (alpha, beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size,
+        right_size, right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 2)
-        ell_multiply_kernel<value_type, n, 2><<<NUM_BLOCKS, BLOCK_SIZE>>>  (alpha, beta,
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr,  x_ptr,y_ptr);
+        ell_multiply_kernel<value_type, n, 2><<<NUM_BLOCKS, BLOCK_SIZE>>>
+        (alpha, beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size,
+        right_size, right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 3)
-        ell_multiply_kernel<value_type, n, 3><<<NUM_BLOCKS, BLOCK_SIZE>>>  (alpha, beta,
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr,  x_ptr,y_ptr);
+        ell_multiply_kernel<value_type, n, 3><<<NUM_BLOCKS, BLOCK_SIZE>>>
+        (alpha, beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size,
+        right_size, right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 4)
-        ell_multiply_kernel<value_type, n, 4><<<NUM_BLOCKS, BLOCK_SIZE>>>  (alpha, beta,
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr,  x_ptr,y_ptr);
+        ell_multiply_kernel<value_type, n, 4><<<NUM_BLOCKS, BLOCK_SIZE>>>
+        (alpha, beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size,
+        right_size, right_range_ptr,  x_ptr,y_ptr);
     else
-        ell_multiply_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>  (alpha, beta,
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, right_range_ptr,  x_ptr,y_ptr);
+        ell_multiply_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>
+        (alpha, beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols,
+        blocks_per_line, n, size, right_size, right_range_ptr,  x_ptr,y_ptr);
 }
 
 
@@ -133,23 +141,28 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 1)
         call_ell_multiply_kernel<value_type, 1>  (alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
-
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 2)
         call_ell_multiply_kernel<value_type, 2>  (alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 3)
         call_ell_multiply_kernel<value_type, 3>  (alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 4)
         call_ell_multiply_kernel<value_type, 4>  (alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 5)
         call_ell_multiply_kernel<value_type, 5>  (alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 6)
         call_ell_multiply_kernel<value_type, 6>  (alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     else
     {
         //set up kernel parameters
@@ -157,18 +170,22 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
         const size_t size = left_size*right_size*num_rows*n; //number of lines
         const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
         ell_multiply_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta,
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, right_range_ptr,  x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line,
+            n, size, right_size, right_range_ptr,  x_ptr,y_ptr);
     }
 }
 
 //////////////////// COO multiply kernel
 template<class value_type>
  __global__ void coo_multiply_kernel(
-         const value_type* __restrict__  data, const int* __restrict__  rows_idx, const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
+         const value_type* __restrict__  data,
+         const int* __restrict__  rows_idx, const int* __restrict__  cols_idx,
+         const int* __restrict__  data_idx,
          const int num_rows, const int num_cols, const int num_entries,
          const int n,
          const int left, const int right,
-         value_type alpha, const value_type**  x, value_type beta, value_type * __restrict__ y
+         value_type alpha, const value_type**  x, value_type beta,
+         value_type * __restrict__ y
          )
 {
     int size = left*n*right;
@@ -189,17 +206,19 @@ template<class value_type>
             for( int q=0; q<n; q++) //multiplication-loop
                 temp = fma( data[ (B*n + k)*n+q],
                     x[J][(q*left +s )*right+j], temp);
-                    //x[((s*num_cols + J)*n+q)*right+j], temp);
             y[I] = fma( alpha, temp, y[I]);
         }
     }
 }
 template<class value_type, int n>
  __global__ void coo_multiply_kernel(
-         const value_type* __restrict__  data, const int* __restrict__  rows_idx, const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
+         const value_type* __restrict__  data,
+         const int* __restrict__  rows_idx, const int* __restrict__  cols_idx,
+         const int* __restrict__  data_idx,
          const int num_rows, const int num_cols, const int num_entries,
          const int left, const int right,
-         value_type alpha, const value_type**  x, value_type beta, value_type * __restrict__ y
+         value_type alpha, const value_type**  x, value_type beta,
+         value_type * __restrict__ y
          )
 {
     int size = left*n*right;
@@ -220,7 +239,6 @@ template<class value_type, int n>
             for( int q=0; q<n; q++) //multiplication-loop
                 temp = fma( data[ (B*n + k)*n+q],
                     x[J][(q*left +s )*right+j], temp);
-                    //x[((s*num_cols + J)*n+q)*right+j], temp);
             y[I] = fma( alpha, temp, y[I]);
         }
     }
@@ -240,21 +258,24 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     const int* block_ptr = thrust::raw_pointer_cast( data_idx.data());
     if( n == 1)
         coo_multiply_kernel<value_type, 1> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols,
+            num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
     else if( n == 2)
         coo_multiply_kernel<value_type, 2> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols,
+            num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
     else if( n == 3)
         coo_multiply_kernel<value_type, 3> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols,
+            num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
     else if( n == 4)
         coo_multiply_kernel<value_type, 4> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols,
+            num_entries, left_size, right_size, alpha, x_ptr, beta, y_ptr);
     else
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, n, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols,
+            num_entries, n, left_size, right_size, alpha, x_ptr, beta, y_ptr);
 }
 
 }//namespace dg
-
-

@@ -38,7 +38,9 @@
  *             cards...
  *             The general idea to achieve this is to separate global
  *             communication from local computations and thus readily reuse the
- *             existing, optimized library for the local part.
+ *             existing, optimized library for the local part. Please consult
+ *             the chapter \ref mpi_backend in the introduction for more
+ *             details.
  *     @defgroup dispatch The tag dispatch system
  *           Please read the chapter \ref dispatch in the introduction.
  * @}

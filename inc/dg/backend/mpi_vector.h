@@ -130,19 +130,21 @@ struct TensorTraits<MPI_Vector<container> > {
 * What this class does is to gather these six layers (three for each side)
 * into one buffer vector. The layout of the buffer vector is independently of the
 * direction contiguous in the layer.
+* This is done asynchronously i.e. the user can initiate the communication
+* and signal when the results are needed at a later stage.
 *
 * If the number of neighboring processes in the given direction is 1,
 * the buffer size is 0 and all members return immediately.
 *
-* This is done asynchronously i.e. the user can initiate the communication
-* and signal when the results are needed at a later stage.
 * @note the corresponding gather map is of general type and the communication
 *  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm
 *  @attention Currently we cannot handle the case where the whole vector is the boundary layer (i.e. \c size() == local_vector_size) i.e. both neighboring layers are on different processes
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
+* @tparam Buffer the container for the pointers to the buffer arrays
 * @tparam Vector the vector container type must have a resize() function and work
 * in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
+* @sa dg::RowColDistMat
 */
 template<class Index, class Buffer, class Vector>
 struct NearestNeighborComm
@@ -204,6 +206,8 @@ struct NearestNeighborComm
 
     /**
      * @brief Allocate a buffer object
+     *
+     * The buffer object is only a colletion of pointers to the actual data
      * @return a buffer object on the stack
      * @note if \c size()==0 the default constructor of \c Buffer is called
      */
@@ -234,8 +238,8 @@ struct NearestNeighborComm
 
     /**
     * @brief Gather values from given Vector and initiate asynchronous MPI communication
-    * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into \c buffer)
-    * @param buffer (write only) where received data resides after \c global_gather_wait() was called (must be of size \c size())
+    * @param input from which to gather data (it is @b unsafe to change values on return)
+    * @param buffer (write only) where received data resides after \c global_gather_wait() was called (must be allocated by \c allocate_buffer())
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
     void global_gather_init( const_pointer_type input, buffer_type& buffer, MPI_Request rqst[4])const
@@ -273,7 +277,7 @@ struct NearestNeighborComm
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
     * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into \c buffer)
-    * @param buffer (write only) where received data resides on return (must be of size \c size())
+    * @param buffer (write only) where received data resides on return (must be allocated by \c allocate_buffer())
     * @param rqst the same four request variables that were used in global_gather_init
     */
     void global_gather_wait(const_pointer_type input, const buffer_type& buffer, MPI_Request rqst[4])const
