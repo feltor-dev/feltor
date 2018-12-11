@@ -11,7 +11,6 @@
 namespace dg
 {
 
-//mixed derivatives for jump terms missing
 /**
 * @brief Ell Sparse Block Matrix format
 *
@@ -102,6 +101,9 @@ struct EllSparseBlockMat
 };
 
 
+//four classes/files play together in mpi distributed EllSparseBlockMat
+//CooSparseBlockMat and kernels, NearestNeighborComm, RowColDistMat
+//and the creation functions in mpi_derivatives.h
 /**
 * @brief Coo Sparse Block Matrix format
 *
@@ -117,10 +119,9 @@ Kronecker deltas of the form
 where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix.
 @note This matrix type is used for the computation of boundary points in
-mpi - distributed matrices
-@attention We assume that the right hand side vector in \c symv has the layout
-that the plane perpendicular to the direction of derivative lies contiguously in
-memory.
+an mpi - distributed \c EllSparseBlockMat
+@attention We assume that the input vector in \c symv has the layout
+that is given by the Buffer vectors in \c dg::NearestNeighborComm
 @sa \c dg::NearestNeighborComm
 */
 template<class value_type>

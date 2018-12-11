@@ -49,11 +49,11 @@ void symv( get_value_type<ContainerType1> alpha,
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points.
  symv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
 * @tparam Collective must be a \c NearestNeighborComm The Communication class
-* needs to gather values across processes. The \c global_gather_init(), \c
-* global_gather_wait(), \c allocate_buffer() and \c size() member functions are
-* called.  Gather points from other processes that are necessary for the outer
-* computations.  If \c size()==0 the global_gather() function won't be called
-* and only the inner matrix is applied.
+* needs to gather values across processes. The \c global_gather_init(),
+* \c global_gather_wait(), \c allocate_buffer() and \c isCommunicating() member
+* functions are called.  Gather points from other processes that are necessary
+* for the outer computations. If \c !isCommunicating() the
+* global_gather() function won't be called and only the inner matrix is applied.
 @note This class overlaps communication with computation of the inner matrix
 */
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
@@ -72,7 +72,6 @@ struct RowColDistMat
     */
     RowColDistMat( const LocalMatrixInner& inside, const LocalMatrixOuter& outside, const Collective& c):
         m_i(inside), m_o(outside), m_c(c), m_buffer( c.allocate_buffer()) { }
-
 
     /**
     * @brief Copy constructor
@@ -124,7 +123,7 @@ struct RowColDistMat
     void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( m_c.size() == 0) //no communication needed
+        if( !m_c.isCommunicating()) //no communication needed
         {
             dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
             return;
@@ -164,7 +163,7 @@ struct RowColDistMat
     void symv( const ContainerType1& x, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( m_c.size() == 0) //no communication needed
+        if( !m_c.isCommunicating()) //no communication needed
         {
             dg::blas2::symv( m_i, x.data(), y.data());
             return;

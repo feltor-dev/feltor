@@ -77,10 +77,10 @@ CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in,
 }
 
 /**
-* @brief Reduce a global matrix into equal chunks among mpi processes
+* @brief Partition a global matrix into equal chunks among mpi processes
 *
-* grabs the right chunk of column and data indices and remaps the column indices to vector with ghostcells
-* copies the whole data array
+* grab the local rows of column and data indices and remap the column indices to vector with ghostcells
+* copy the whole data array
 * @param coord The mpi proces coordinate of the proper dimension
 * @param howmany[3] # of processes 0 is left, 1 is the middle, 2 is right
 * @return The reduced matrix

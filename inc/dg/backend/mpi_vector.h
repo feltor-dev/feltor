@@ -127,18 +127,28 @@ struct TensorTraits<MPI_Vector<container> > {
 * In each direction this box has a boundary layer (the halo) of a depth given by
 * the user. Each boundary layer has two neighboring layers, one on the same process
 * and one lying on the neighboring process.
-* What this class does is to gather these six layers (three for each side)
-* into one buffer vector. The layout of the buffer vector is independently of the
-* direction contiguous in the layer.
-* This is done asynchronously i.e. the user can initiate the communication
-* and signal when the results are needed at a later stage.
+* What this class does is to provide you with six pointers to each of these
+* six layers (three on each side). The pointers either reference data in an
+* internal communication buffer (since it involves communciation to get the
+* layers from neighboring processes) another buffer (if mpi communication
+* requires to reorder input data) or the input vector itself (if the
+* communication goes along the last dimension there is no need to reorder,
+* in fact, here is the main gain we get from the pointer approach, we save
+* on unnecessary data copies, which might be significant in cases where
+* the communication to computation ratio is high).
+* The size of the data each pointer references is the halo size, \c buffer_size()
 *
-* If the number of neighboring processes in the given direction is 1,
+* The communication is done asynchronously i.e. the user can initiate
+* the communication and signal when the results are needed at a later stage.
+*
+* @note If the number of neighboring processes in the given direction is 1,
 * the buffer size is 0 and all members return immediately.
+* @note the pointers may alias each other (if the input contains less than 4 layers)
 *
 * @note the corresponding gather map is of general type and the communication
 *  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm
-*  @attention Currently we cannot handle the case where the whole vector is the boundary layer (i.e. \c size() == local_vector_size) i.e. both neighboring layers are on different processes
+*  @attention Currently we cannot handle the case where the whole vector is
+*  the boundary layer (i.e. \c buffer_size()==input.size() and both neighboring layers are on different processes)
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
 * @tparam Buffer the container for the pointers to the buffer arrays
@@ -182,7 +192,7 @@ struct NearestNeighborComm
     */
     template< class OtherIndex, class OtherBuffer, class OtherVector>
     NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherBuffer, OtherVector>& src){
-        if( src.size() == 0)  silent_=true;
+        if( src.buffer_size() == 0)  silent_=true;
         else
             construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
@@ -203,29 +213,35 @@ struct NearestNeighborComm
     * @return direction
     */
     unsigned direction() const {return direction_;}
+    ///@copydoc aCommunicator::isCommunicating()
+    MPI_Comm communicator() const{return comm_;}
 
     /**
      * @brief Allocate a buffer object
      *
      * The buffer object is only a colletion of pointers to the actual data
      * @return a buffer object on the stack
-     * @note if \c size()==0 the default constructor of \c Buffer is called
+     * @note if \c buffer_size()==0 the default constructor of \c Buffer is called
      */
     Buffer allocate_buffer( )const{
-        if( do_size() == 0 ) return Buffer();
+        if( buffer_size() == 0 ) return Buffer();
         return Buffer(6);
+    }
+    /**  @brief The size of the halo
+     * @return the size of the halo (0 if no communication)
+     */
+    unsigned buffer_size() const;
+    ///@copydoc aCommunicator::isCommunicating()
+    bool isCommunicating() const{
+        if( buffer_size() == 0) return false;
+        return true;
     }
     /**
      * @brief Map a local matrix index to a buffer index
      * @param i matrix index
-     * @return buffer index
+     * @return buffer index (0,1,...,5)
      */
     int map_index(int i) const{
-        switch( i){
-            case -1 : return 0;
-            case 0 : return 1;
-            case 1 : return 2;
-        }
         if( i==-1) return 0;
         if( i== 0) return 1;
         if( i==+1) return 2;
@@ -239,7 +255,7 @@ struct NearestNeighborComm
     /**
     * @brief Gather values from given Vector and initiate asynchronous MPI communication
     * @param input from which to gather data (it is @b unsafe to change values on return)
-    * @param buffer (write only) where received data resides after \c global_gather_wait() was called (must be allocated by \c allocate_buffer())
+    * @param buffer (write only) pointers to the received data after \c global_gather_wait() was called (must be allocated by \c allocate_buffer())
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
     void global_gather_init( const_pointer_type input, buffer_type& buffer, MPI_Request rqst[4])const
@@ -276,6 +292,7 @@ struct NearestNeighborComm
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
+    * Calls MPI_Waitall on the \c rqst variables and may do additional cleanup. After this call returns it is safe to use data the buffer points to.
     * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into \c buffer)
     * @param buffer (write only) where received data resides on return (must be allocated by \c allocate_buffer())
     * @param rqst the same four request variables that were used in global_gather_init
@@ -284,20 +301,10 @@ struct NearestNeighborComm
     {
         MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     }
-    ///@copydoc aCommunicator::buffer_size()
-    unsigned size() const{return do_size();}
-    ///@copydoc aCommunicator::isCommunicating()
-    bool isCommunicating() const{
-        if( do_size() == 0) return false;
-        return true;
-    }
-    ///@copydoc aCommunicator::isCommunicating()
-    MPI_Comm communicator() const{return comm_;}
     private:
     void do_global_gather_init( OmpTag, const_pointer_type, MPI_Request rqst[4])const;
     void do_global_gather_init( SerialTag, const_pointer_type, MPI_Request rqst[4])const;
     void do_global_gather_init( CudaTag, const_pointer_type, MPI_Request rqst[4])const;
-    unsigned do_size()const;
     void construct( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction);
 
     unsigned n_, dim_[3]; //deepness, dimensions
@@ -309,7 +316,6 @@ struct NearestNeighborComm
     dg::Buffer<Vector> internal_buffer_;
 
     void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
-    unsigned buffer_size() const;
     int m_source[2], m_dest[2];
 };
 
@@ -323,16 +329,15 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
     silent_=false;
     n_=n;
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
-    direction_ = direction; //now buffer_size() is callable
+    direction_ = direction;
     if( dimensions[2] == 1 && direction == 1) trivial_ = true;
     else if( direction == 2) trivial_ = true;
     else trivial_ = false;
-    if( !silent_)
-    {
-        outer_size_ = dimensions[0]*dimensions[1]*dimensions[2]/buffer_size();
-        assert( outer_size_ > 1 && "Parallelization too fine grained!"); //right now we cannot have that
-    }
+    assert( direction <3);
     comm_ = comm;
+    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
+    MPI_Cart_shift( comm_, direction_, -1, &m_source[0], &m_dest[0]);
+    MPI_Cart_shift( comm_, direction_, +1, &m_source[1], &m_dest[1]);
     {
         int ndims;
         MPI_Cartdim_get( comm, &ndims);
@@ -340,10 +345,10 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
         MPI_Cart_get( comm, ndims, dims, periods, coords);
         if( dims[direction] == 1) silent_ = true;
     }
-    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
-    MPI_Cart_shift( comm_, direction_, -1, &m_source[0], &m_dest[0]);
-    MPI_Cart_shift( comm_, direction_, +1, &m_source[1], &m_dest[1]);
-    assert( direction <3);
+    if( !silent_)
+    {
+    outer_size_ = dimensions[0]*dimensions[1]*dimensions[2]/buffer_size();
+    assert( outer_size_ > 1 && "Parallelization too fine grained!"); //right now we cannot have that
     thrust::host_vector<int> mid_gather( 4*buffer_size());
     switch( direction)
     {
@@ -379,20 +384,15 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
             }
         break;
     }
-    gather_map_middle_ = mid_gather;
+    gather_map_middle_ = mid_gather; //transfer to device
     internal_buffer_.data().resize( 6*buffer_size() );
-}
-
-template<class I, class B, class V>
-unsigned NearestNeighborComm<I,B,V>::do_size() const
-{
-    if( silent_) return 0;
-    return 6*buffer_size(); //3 buffers on each side
+    }
 }
 
 template<class I, class B, class V>
 unsigned NearestNeighborComm<I,B,V>::buffer_size() const
 {
+    if( silent_) return 0;
     switch( direction_)
     {
         case( 0): //x-direction
