@@ -25,7 +25,7 @@ doxygen documentation, READMEs or tex writeups.
 - Additional constructors in BijectiveComm consistent with SujectiveComm
 - Add consistency test to mpi\_collective\_mpit.cu
 - copyable member function in CG, Invert, RungeKutta, AdamsBashforth and Karniadakis
-- float overloads of dg::one, dg::zero and dg::coo functions
+- float overloads of dg::one and dg::zero functions
 - Add trivial 2d and 3d operator() for most 1d functors in functors.h
 - New subroutines in subroutines.h
 - Add shift\_topologic member to RealTopology overriding boundary conditions
