@@ -99,8 +99,8 @@ int main(int argc, char* argv[])
     for( const auto& tuple :  names)
     {
         std::string name = std::get<0>(tuple);
-        const dg::MDVec& function = std::get<1>(tuple);
-        const dg::MDVec& solution = std::get<2>(tuple);
+        const dg::MDVec& function = *std::get<1>(tuple)[0];
+        const dg::MDVec& solution = *std::get<1>(tuple)[1];
         callDS( ds, name, function, derivative, divb, max_iter,1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
