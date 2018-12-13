@@ -149,7 +149,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
     //Now perturbation
-    DVec ntilde = dg::evaluate(dg::zero,grid);
+    HVec ntilde = dg::evaluate(dg::zero,grid);
     if( p.initne == "blob" || p.initne == "straight blob")
     {
         dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
@@ -169,17 +169,19 @@ int main( int argc, char* argv[])
             ntilde = dg::pullback( init0, grid);
         else
             ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
     }
     else if( p.initne == "zonal")
     {
         dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
         ntilde = dg::pullback( init0, grid);
+        dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
     }
     else
         MPI_OUT std::cerr <<"WARNING: Unknown initial condition!\n";
     std::array<std::array<DVec,2>,2> y0;
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(profile);
-    dg::blas1::axpby( 1., ntilde, 1., y0[0][0]); //sum up background and perturbation
+    dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
     MPI_OUT std::cout << "initialize ni" << std::endl;
     if( p.initphi == "zero")
         feltor.initializeni( y0[0][0], y0[0][1]);
@@ -188,8 +190,8 @@ int main( int argc, char* argv[])
     else
         MPI_OUT std::cerr <<"WARNING: Unknown initial condition for phi!\n";
 
-    dg::blas1::copy( 0., y0[1][0]); //set Ue = 0
-    dg::blas1::copy( 0., y0[1][1]); //set Ui = 0
+    dg::blas1::copy( 0., y0[1][0]); //set we = 0
+    dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
     ////////////map quantities to output/////////////////
     //since we map pointers we don't need to update those later
     std::map<std::string, const DVec* > v4d;
@@ -295,7 +297,8 @@ int main( int argc, char* argv[])
         try{
             feltor( time, y0, y1);
         } catch( dg::Fail& fail) {
-            MPI_OUT std::cerr << "CG failed to converge in first step to "<<fail.epsilon()<<"\n";
+            MPI_OUT std::cerr << "CG failed to converge in first step to "
+                              <<fail.epsilon()<<"\n";
             err = nc_close(ncid);
             return -1;
         }

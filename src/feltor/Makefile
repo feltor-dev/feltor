@@ -11,7 +11,10 @@ INCLUDE+= -I../../inc   # other project libraries
 all: feltor_hpc manufactured
 
 manufactured: manufactured.cu manufactured.h feltor.cuh
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
+
+feltor: feltor.cu feltor.cuh
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -g
 
 feltor_hpc: feltor_hpc.cu feltor.cuh
 	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)

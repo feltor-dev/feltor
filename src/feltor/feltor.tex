@@ -712,9 +712,11 @@ time & Adaptive ARKode stepper & $3rd$ order explicit, perpendicular diffusion $
 \bottomrule
 \end{longtable}
 \section{Input/Output}
-The program \texttt{feltor\_hpc.cu} expects two input files. One is for the
-physical and numerical parameters of the model equations and the other one describes
-the Solov'ev equilibrium. Results are written into an output file.
+The programs \texttt{feltor\_hpc.cu} and \texttt{feltor.cu} expect two input
+files. One is for the physical and numerical parameters of the model equations
+and the other one describes the Solov'ev equilibrium. Results are written into
+an output file in the first program and plotted on screen with glfw in the
+second.
 
 \subsection{Input file structure}
 Input file format: json
