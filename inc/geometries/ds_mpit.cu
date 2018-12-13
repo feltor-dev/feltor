@@ -55,16 +55,16 @@ int main(int argc, char* argv[])
     dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionSin>(mag), g3d);
     dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
     dg::MDVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    std::vector<std::tuple<std::string, const dg::MDVec&, const dg::MDVec&>> names{
-         {"forward",fun,sol0},          {"backward",fun,sol0},
-         {"centered",fun,sol0},         {"dss",fun,sol1},
-         {"divForward",fun,sol2},       {"divBackward",fun,sol2},
-         {"divCentered",fun,sol2},      {"divDirectForward",fun,sol2},
-         {"divDirectBackward",fun,sol2},{"divDirectCentered",fun,sol2},
-         {"forwardLap",fun,sol3},       {"backwardLap",fun,sol3},
-         {"centeredLap",fun,sol3},      {"directLap",fun,sol3},
-         {"invForwardLap",sol4,fun},    {"invBackwardLap",sol4,fun},
-         {"invCenteredLap",sol4,fun}
+    std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
+         {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
+         {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
+         {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
+         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
+         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
+         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
+         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
+         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
+         {"invCenteredLap",{&sol4,&fun}}
     };
     if(rank==0)std::cout << "# TEST NEU Boundary conditions!\n";
     if(rank==0)std::cout << "# TEST ADJOINT derivatives do unfortunately not fulfill Neumann BC!\n";
@@ -74,8 +74,8 @@ int main(int argc, char* argv[])
     for( const auto& tuple :  names)
     {
         std::string name = std::get<0>(tuple);
-        const dg::MDVec& function = std::get<1>(tuple);
-        const dg::MDVec& solution = std::get<2>(tuple);
+        const dg::MDVec& function = *std::get<1>(tuple)[0];
+        const dg::MDVec& solution = *std::get<1>(tuple)[1];
         callDS( ds, name, function, derivative, divb, max_iter,1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
