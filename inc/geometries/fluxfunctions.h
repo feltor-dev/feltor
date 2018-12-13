@@ -93,6 +93,7 @@ struct aCylindricalFunctor
         const Derived& underlying = static_cast<const Derived&>(*this);
         return underlying.do_compute(R,Z);
     }
+#ifndef __CUDACC__ //nvcc below 10 has problems with the following construct
     //This trick avoids that classes inherit from the wrong Base:
     private:
     friend Derived;
@@ -105,6 +106,7 @@ struct aCylindricalFunctor
     * @brief We do not allow object slicing so the assignment is protected
     */
     aCylindricalFunctor& operator=(const aCylindricalFunctor&){return *this;}
+#endif //__CUDACC__
 };
 
 /**
