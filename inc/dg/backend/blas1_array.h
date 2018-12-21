@@ -12,6 +12,7 @@
 #include "vector_categories.h"
 #include "tensor_traits.h"
 
+//UNUSED AT THE MOMENT
 ///@cond
 namespace dg
 {
@@ -35,6 +36,7 @@ T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
     return exblas::cpu::Round(acc.data());
 }
 
+//This implementation is wrong since now x and y are always rvalue references instead of universal references
 template< class Subroutine, std::size_t N, class T, class ...Ts>
 inline void doSubroutine( StdArrayTag, Subroutine f, std::array<T,N>&& x, std::array<Ts,N>&&... xs) {
     for( size_t i=0; i<N; i++)

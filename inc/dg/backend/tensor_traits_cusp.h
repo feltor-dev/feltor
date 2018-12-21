@@ -14,7 +14,8 @@
 
 namespace dg
 {
-
+//makes such a long name in class list
+///@cond
 ///@addtogroup dispatch
 ///@{
 template<class T>
@@ -39,6 +40,7 @@ struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
 #endif
 };
 ///@}
+///@endcond
 ///@addtogroup dispatch
 ///@{
 

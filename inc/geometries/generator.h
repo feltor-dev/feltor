@@ -15,12 +15,13 @@ is a product space. It can be used to construct curvilinear grids like the follo
 @note the origin of the computational space is assumed to be (0,0)
  @ingroup generators_geo
 */
-struct aGenerator2d
+template<class real_type>
+struct aRealGenerator2d
 {
     ///@brief length in \f$ \zeta\f$ of the computational space
-    double width()  const{return do_width();}
+    real_type width()  const{return do_width();}
     ///@brief length in \f$ \eta\f$ of the computational space
-    double height() const{return do_height();}
+    real_type height() const{return do_height();}
     ///@brief sparsity pattern for metric
     bool isOrthogonal() const { return do_isOrthogonal(); }
 
@@ -39,14 +40,14 @@ struct aGenerator2d
     * @note All the resulting vectors are write-only and get properly resized
     */
     void generate(
-         const thrust::host_vector<double>& zeta1d,
-         const thrust::host_vector<double>& eta1d,
-         thrust::host_vector<double>& x,
-         thrust::host_vector<double>& y,
-         thrust::host_vector<double>& zetaX,
-         thrust::host_vector<double>& zetaY,
-         thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         const thrust::host_vector<real_type>& zeta1d,
+         const thrust::host_vector<real_type>& eta1d,
+         thrust::host_vector<real_type>& x,
+         thrust::host_vector<real_type>& y,
+         thrust::host_vector<real_type>& zetaX,
+         thrust::host_vector<real_type>& zetaY,
+         thrust::host_vector<real_type>& etaX,
+         thrust::host_vector<real_type>& etaY) const
     {
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
@@ -59,32 +60,33 @@ struct aGenerator2d
     *
     * @return a copy of *this on the heap
     */
-    virtual aGenerator2d* clone() const=0;
-    virtual ~aGenerator2d(){}
+    virtual aRealGenerator2d* clone() const=0;
+    virtual ~aRealGenerator2d(){}
 
     protected:
     ///empty
-    aGenerator2d(){}
+    aRealGenerator2d(){}
     ///empty
-    aGenerator2d(const aGenerator2d& ){}
+    aRealGenerator2d(const aRealGenerator2d& ){}
     ///return *this
-    aGenerator2d& operator=(const aGenerator2d& ){ return *this; }
+    aRealGenerator2d& operator=(const aRealGenerator2d& ){ return *this; }
     private:
     virtual void do_generate(
-         const thrust::host_vector<double>& zeta1d,
-         const thrust::host_vector<double>& eta1d,
-         thrust::host_vector<double>& x,
-         thrust::host_vector<double>& y,
-         thrust::host_vector<double>& zetaX,
-         thrust::host_vector<double>& zetaY,
-         thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const = 0;
-     virtual double do_width() const =0;
-     virtual double do_height() const =0;
+         const thrust::host_vector<real_type>& zeta1d,
+         const thrust::host_vector<real_type>& eta1d,
+         thrust::host_vector<real_type>& x,
+         thrust::host_vector<real_type>& y,
+         thrust::host_vector<real_type>& zetaX,
+         thrust::host_vector<real_type>& zetaY,
+         thrust::host_vector<real_type>& etaX,
+         thrust::host_vector<real_type>& etaY) const = 0;
+     virtual real_type do_width() const =0;
+     virtual real_type do_height() const =0;
      virtual bool do_isOrthogonal()const{return false;}
 
 
 };
+using aGenerator2d = dg::geo::aRealGenerator2d<double>;
 
 }//namespace geo
 }//namespace dg

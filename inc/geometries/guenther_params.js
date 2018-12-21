@@ -11,7 +11,7 @@
     //----------------------Miscellaneous----------------------
     "alpha"                 :  0.1, //(Damping thickness)
     "rk4eps"                :  1e-4,
-    "psip_min"              : -1e10.,
+    "psip_min"              : -1e10,
     "psip_max"              :  1e10, //(> -7.4)
     "psip_max_cut"          :  1e10,
     "psip_max_lim"          :  1e10

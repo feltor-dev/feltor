@@ -35,7 +35,8 @@ template< class ContainerType>
 class CG
 {
   public:
-    typedef typename TensorTraits<ContainerType>::value_type value_type;//!< value type of the ContainerType class
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
     ///@copydoc construct()
@@ -46,6 +47,9 @@ class CG
     ///@brief Get the current maximum number of iterations
     ///@return the current maximum
     unsigned get_max() const {return max_iter;}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return r;}
 
     /**
      * @brief Allocate memory for the pcg method
@@ -75,11 +79,12 @@ class CG
              - 11  reads + 3 writes
              - plus the number of memops for \c A;
      * @copydoc hide_matrix
-     * @tparam Preconditioner A class for which the blas2::symv(value_type, const Preconditioner&, const ContainerType&, value_type, ContainerType&) and
-     blas2::dot( const Preconditioner&, const ContainerType&) functions are callable.
+     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
+     * @tparam Preconditioner A class for which the <tt> blas2::symv(value_type, const Preconditioner&, const ContainerType&, value_type, ContainerType&) and
+     blas2::dot( const Preconditioner&, const ContainerType&) </tt> functions are callable.
      */
-    template< class MatrixType, class Preconditioner >
-    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner >
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
@@ -99,11 +104,12 @@ class CG
              - 15  reads + 4 writes
              - plus the number of memops for \c A;
      * @copydoc hide_matrix
+     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
      * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
-    template< class MatrixType, class Preconditioner, class SquareNorm >
-    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
@@ -127,8 +133,8 @@ class CG
 */
 ///@cond
 template< class ContainerType>
-template< class Matrix, class Preconditioner>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner>
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -138,8 +144,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
     if(rank==0)
 #endif //MPI
     {
-    std::cout << "Norm of b "<<nrmb <<"\n";
-    std::cout << "Residual errors: \n";
+    std::cout << "# Norm of b "<<nrmb <<"\n";
+    std::cout << "# Residual errors: \n";
     }
 #endif //DG_DEBUG
     if( nrmb == 0)
@@ -175,9 +181,9 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
     if(rank==0)
 #endif //MPI
     {
-        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+        std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
     }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction))
@@ -190,8 +196,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
 }
 
 template< class ContainerType>
-template< class Matrix, class Preconditioner, class SquareNorm>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -201,8 +207,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
     if(rank==0)
 #endif //MPI
     {
-    std::cout << "Norm of S b "<<nrmb <<"\n";
-    std::cout << "Residual errors: \n";
+    std::cout << "# Norm of S b "<<nrmb <<"\n";
+    std::cout << "# Residual errors: \n";
     }
 #endif //DG_DEBUG
     if( nrmb == 0)
@@ -229,9 +235,9 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
     if(rank==0)
 #endif //MPI
     {
-        std::cout << "Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "(Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+        std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
     }
 #endif //DG_DEBUG
         if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
@@ -247,92 +253,188 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
 
 
 /**
-* @brief Class that stores up to three solutions of iterative methods and
-can be used to get initial guesses based on past solutions
-
+* @brief Extrapolate based on up to three past solutions
+*
+* The intention of this class is to provide an initial guess for iterative solvers
+* based on past solutions:
  \f[ x_{init} = \alpha_0 x_0 + \alpha_{-1}x_{-1} + \alpha_{-2} x_{-2}\f]
  where the indices indicate the current (0) and past (negative) solutions.
+ Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+ The user can choose to provide a time value \c t_i associated with the \c x_i, which
+ are then used to compute the coefficients \c alpha_i (using Lagrange interpolation).
+ Otherwise an equidistant distribution is assumed.
 *
+* @note Since extrapolation with higher order polynomials is so prone to oscillations
+* anything higher than linear rarely leads to anything useful. So best stick to
+* constant or linear extrapolation
 * @copydoc hide_ContainerType
 * @ingroup invert
+* @sa https://en.wikipedia.org/wiki/Extrapolation
 */
 template<class ContainerType>
 struct Extrapolation
 {
-    /*! @brief Set extrapolation number without initializing values
-     * @param number number of vectors to use for extrapolation ( 0<=number<=3)
+    using value_type = get_value_type<ContainerType>;
+    using container_type = ContainerType;
+    /*! @brief Set extrapolation order without initializing values
+     * @param number number of vectors to use for extrapolation.
+         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
      * @attention the update function must be used at least \c number times before the extrapolate function can be called
      */
-    Extrapolation( unsigned number = 2){ set_number(number); }
-    /*! @brief Set extrapolation number and initialize values
-     * @param number number of vectors to use for extrapolation ( 0<=number<=3)
+    Extrapolation( unsigned number = 2){
+        set_number(number);
+    }
+    /*! @brief Set extrapolation order and initialize values
+     * @param number number of vectors to use for extrapolation.
+         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+     * @param t_init the times are initialized with the values <tt> t_init, t_init-1 , t_init-2 </tt>
      * @param init the vectors are initialized with this value
      */
+    Extrapolation( unsigned number, value_type t_init, const ContainerType& init) {
+        set_number(number, t_init, init);
+    }
+    /*! @brief Set extrapolation order and initialize values (equidistant)
+     * @param number number of vectors to use for extrapolation.
+         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+     * @param init the vectors are initialized with this value
+     * @note the times are initialized with the values <tt> 0, -1 , -2 </tt>
+     */
     Extrapolation( unsigned number, const ContainerType& init) {
-        set_number(number, init);
+        set_number(number, 0, init);
     }
     ///@copydoc Extrapolation(unsigned)
     void set_number( unsigned number)
     {
+        assert( number <= 3 );
         m_number = number;
+        m_t.resize( number);
         m_x.resize( number);
-        assert( m_number <= 3 );
+        for(unsigned i=0; i<m_t.size(); i++)
+            m_t[i] = -(value_type)i;
+    }
+    ///@copydoc Extrapolation(unsigned,value_type,const ContainerType&)
+    void set_number( unsigned number, value_type t_init, const ContainerType& init)
+    {
+        //init times 0, -1, -2
+        assert( number <= 3 );
+        m_x.assign( number, init);
+        m_t.assign( number, t_init);
+        m_number = number;
+        for(unsigned i=0; i<m_t.size(); i++)
+            m_t[i] = t_init - (value_type)i;
     }
     ///@copydoc Extrapolation(unsigned,const ContainerType&)
     void set_number( unsigned number, const ContainerType& init)
     {
-        m_x.assign( number, init);
-        m_number = number;
-        assert( m_number <= 3 );
+        //init times 0, -1, -2
+        set_number( number, 1, init);
+        for(unsigned i=0; i<m_t.size(); i++)
+            m_t[i] = -(value_type)i;
     }
-    ///read the current extrapolation number
-    unsigned get_number( ) const{return m_number;}
+    ///return the current extrapolation number
+    unsigned get_number( ) const{
+        return m_number;
+    }
 
     /**
-    * @brief Extrapolate values (\c number +1 memops)
+    * @brief Extrapolate value to given time
+    * @param t time to which to extrapolate (must be different from the times used in the update function, else division by zero occurs)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
-    void extrapolate( ContainerType& new_x) const{
+    template<class ContainerType0>
+    void extrapolate( value_type t, ContainerType0& new_x) const{
         switch(m_number)
         {
             case(0):
                      break;
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
-            case(2): dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
-                     break;
-            case(3): dg::blas1::axpby( 1., m_x[2], -3., m_x[1], new_x);
-                     dg::blas1::axpby( 3., m_x[0], 1., new_x);
-                     break;
-            default: dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
+            case(3): {
+                value_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
+                value_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
+                value_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                dg::blas1::evaluate( new_x, dg::equals(), dg::PairSum(),
+                        f0, m_x[0], f1, m_x[1], f2, m_x[2]);
+                 break;
+            }
+            default: {
+                value_type f0 = (t-m_t[1])/(m_t[0]-m_t[1]);
+                value_type f1 = (t-m_t[0])/(m_t[1]-m_t[0]);
+                dg::blas1::axpby( f0, m_x[0], f1, m_x[1], new_x);
+            }
         }
     }
 
+    /**
+    * @brief Extrapolate value
+    * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @note Assumes that extrapolation time equals last inserted time+1
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
+    template<class ContainerType0>
+    void extrapolate( ContainerType0& new_x) const{
+        value_type t = m_t[0] +1.;
+        extrapolate( t, new_x);
+    }
+
 
     /**
-    * @brief move the all values one step back and copy the given vector as current head
-    * @param new_head the new head ( may alias the tail)
+    * @brief insert a new entry, deleting the oldest entry or update existing entry
+    * @param t_new the time for the new entry
+    * @param new_entry the new entry ( may alias the tail), replaces value of existing entry if \c t_new already exists
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
-    void update( const ContainerType& new_head){
+    template<class ContainerType0>
+    void update( value_type t_new, const ContainerType0& new_entry){
         if( m_number == 0) return;
-        //push out last value
+        //check if entry is already there to avoid division by zero errors
+        for( unsigned i=0; i<m_number; i++)
+            if( fabs(t_new - m_t[i]) <1e-14)
+            {
+                blas1::copy( new_entry, m_x[i]);
+                return;
+            }
+        //push out last value (keep track of what is oldest value
         for (unsigned u=m_number-1; u>0; u--)
+        {
+            std::swap( m_t[u], m_t[u-1]);
             m_x[u].swap( m_x[u-1]);
-        blas1::copy( new_head, m_x[0]);
+        }
+        m_t[0] = t_new;
+        blas1::copy( new_entry, m_x[0]);
+    }
+    /**
+    * @brief insert a new entry
+    * @param new_entry the new entry ( may alias the tail)
+    * @note Assumes new time equals last inserted time+1
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
+    template<class ContainerType0>
+    void update( const ContainerType0& new_entry){
+        value_type t_new = m_t[0] + 1;
+        update( t_new, new_entry);
     }
 
     /**
-     * @brief return the current head
+     * @brief return the current head (the one most recently inserted)
      * @return current head (undefined if number==0)
      */
-    const ContainerType& head()const{return m_x[0];}
+    const ContainerType& head()const{
+        return m_x[0];
+    }
     ///write access to tail value ( the one that will be deleted in the next update
-    ContainerType& tail(){return m_x[m_number-1];}
+    ContainerType& tail(){
+        return m_x[m_number-1];
+    }
     ///read access to tail value ( the one that will be deleted in the next update
-    const ContainerType& tail()const{return m_x[m_number-1];}
+    const ContainerType& tail()const{
+        return m_x[m_number-1];
+    }
 
     private:
     unsigned m_number;
+    std::vector<value_type> m_t;
     std::vector<ContainerType> m_x;
 };
 
@@ -373,6 +475,9 @@ struct Invert
     {
         construct( copyable, max_iter, eps, extrapolationType, multiplyWeights, nrmb_correction);
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return cg.copyable();}
 
     /**
      * @brief Allocate memory
@@ -400,7 +505,7 @@ struct Invert
      * @param max_iterations
      */
     void set_size( const ContainerType& assignable, unsigned max_iterations) {
-        cg.construct(assignable, max_iterations);
+        cg.construct( assignable, max_iterations);
         m_ex.set_number( m_ex.get_number(), assignable);
     }
 
@@ -448,12 +553,12 @@ struct Invert
      * @param phi solution (write only)
      * @param rho right-hand-side (will be multiplied by \c weights)
      * @note computes inverse weights from the weights
-     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
+     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      *
      * @return number of iterations used
      */
-    template< class SymmetricOp >
-    unsigned operator()( SymmetricOp& op, ContainerType& phi, const ContainerType& rho)
+    template< class SymmetricOp, class ContainerType0, class ContainerType1 >
+    unsigned operator()( SymmetricOp& op, ContainerType0& phi, const ContainerType1& rho)
     {
         return this->operator()(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
     }
@@ -465,6 +570,7 @@ struct Invert
      * conjugate gradient method. The initial guess comes from an extrapolation
      * of the last solutions.
      * @copydoc hide_matrix
+     * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
      * @tparam SquareNorm A type for which the blas2::dot( const Matrix&, const Vector&) function is callable. This can e.g. be one of the container types.
      * @tparam Preconditioner A type for which the <tt> blas2::symv(Matrix&, Vector1&, Vector2&) </tt> function is callable.
      * @param op symmetric Matrix operator class
@@ -474,12 +580,12 @@ struct Invert
      * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner
      * @note (15+N)memops per iteration where N is the memops contained in \c op.
-     *   If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
+     *   If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      *
      * @return number of iterations used
      */
-    template< class Matrix, class SquareNorm, class Preconditioner >
-    unsigned operator()( Matrix& op, ContainerType& phi, const ContainerType& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm0, class SquareNorm1, class Preconditioner >
+    unsigned operator()( MatrixType& op, ContainerType0& phi, const ContainerType1& rho, const SquareNorm0& weights, const SquareNorm1& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);
@@ -508,7 +614,7 @@ struct Invert
 #endif //MPI
         {
             std::cout << "# of cg iterations \t"<< number << "\t";
-            std::cout<< "took \t"<<t.diff()<<"s\n";
+            std::cout << "# took \t"<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
         return number;

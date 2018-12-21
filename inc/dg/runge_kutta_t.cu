@@ -6,7 +6,7 @@
 #include <thrust/host_vector.h>
 
 #include "backend/typedefs.h"
-#include "geometry/evaluation.h"
+#include "topology/evaluation.h"
 #include "arakawa.h"
 #include "runge_kutta.h"
 
@@ -46,7 +46,7 @@ int main()
     const double damping = 0.2, omega_0 = 1.0, omega_drive = 0.9;
     std::array<double,2> u = solution(t_start, damping, omega_0, omega_drive);
     //construct Runge Kutta class
-    dg::RK<2, std::array<double,2> >  rk( u);
+    dg::RungeKutta<std::array<double,2> >  rk( "Runge-Kutta-4-4", u);
     //construct a functor with the right interface
     using namespace std::placeholders; //for _1, _2, _3
     auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);
@@ -58,54 +58,32 @@ int main()
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u);
     std::cout << "Norm of error is "<<sqrt(dg::blas1::dot( u, u))<<"\n";
     //![doxygen]
-    u = solution(t_start, damping, omega_0, omega_drive);
-    std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
-    dg::stepperRK<1>( functor, t_start, u, t_end, u1, N);
-    dg::blas1::axpby( 1., sol , -1., u1);
-    std::cout << "Norm of error in stepperRK<1> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::stepperRK<2>( functor, t_start, u, t_end, u1, N);
-    dg::blas1::axpby( 1., sol , -1., u1);
-    std::cout << "Norm of error in stepperRK<2> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::stepperRK<3>( functor, t_start, u, t_end, u1, N);
-    dg::blas1::axpby( 1., sol , -1., u1);
-    std::cout << "Norm of error in stepperRK<3> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::stepperRK<4>( functor, t_start, u, t_end, u1, N);
-    dg::blas1::axpby( 1., sol , -1., u1);
-    std::cout << "Norm of error in stepperRK<4> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::stepperRK<6>( functor, t_start, u, t_end, u1, N);
-    dg::blas1::axpby( 1., sol , -1., u1);
-    std::cout << "Norm of error in stepperRK<6> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::stepperRK<17>( functor, t_start, u, t_end, u1, N);
-    dg::blas1::axpby( 1., sol , -1., u1);
-    std::cout << "Norm of error in stepperRK<17> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::RK_opt<1, std::array<double,2> > rk_opt1(u);
-    u1 = u;
-    t=t_start;
-    for( unsigned i=0; i<N; i++)
-        rk_opt1.step( functor, t, u1, t, u1, dt); //step inplace
-    dg::blas1::axpby( 1., sol, -1., u1);
-    std::cout << "Norm of error in RK_opt<1> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::RK_opt<2, std::array<double,2> > rk_opt2(u);
-    u1 = u;
-    t=t_start;
-    for( unsigned i=0; i<N; i++)
-        rk_opt2.step( functor, t, u1, t, u1, dt); //step inplace
-    dg::blas1::axpby( 1., sol, -1., u1);
-    std::cout << "Norm of error in RK_opt<2> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::RK_opt<3, std::array<double,2> > rk_opt3(u);
-    u1 = u;
-    t=t_start;
-    for( unsigned i=0; i<N; i++)
-        rk_opt3.step( functor, t, u1, t, u1, dt); //step inplace
-    dg::blas1::axpby( 1., sol, -1., u1);
-    std::cout << "Norm of error in RK_opt<3> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-    dg::RK_opt<4, std::array<double,2> > rk_opt4(u);
-    u1 = u;
-    t=t_start;
-    for( unsigned i=0; i<N; i++)
-        rk_opt4.step( functor, t, u1, t, u1, dt); //step inplace
-    dg::blas1::axpby( 1., sol, -1., u1);
-    std::cout << "Norm of error in RK_opt<4> is "<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
-
+    std::vector<std::string> names{
+        "Euler",
+        "Midpoint-2-2",
+        "Kutta-3-3",
+        "Runge-Kutta-4-4",
+        "Heun-Euler-2-1-2",
+        "Bogacki-Shampine-4-2-3",
+        "ARK-4-2-3 (explicit)",
+        "Zonneveld-5-3-4",
+        "ARK-6-3-4 (explicit)",
+        "Sayfy-Aburub-6-3-4",
+        "Cash-Karp-6-4-5",
+        "Fehlberg-6-4-5",
+        "Dormand-Prince-7-4-5",
+        "ARK-8-4-5 (explicit)",
+        "Verner-8-5-6",
+        "Fehlberg-13-7-8",
+        "Feagin-17-8-10"
+    };
+    for( auto name : names)
+    {
+        u = solution(t_start, damping, omega_0, omega_drive);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
+        dg::stepperRK(name, functor, t_start, u, t_end, u1, N);
+        dg::blas1::axpby( 1., sol , -1., u1);
+        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
+    }
     return 0;
 }

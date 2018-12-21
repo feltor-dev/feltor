@@ -1,11 +1,14 @@
 #pragma once
+#ifndef _FILE_INCLUDED_BY_DG_
+#pragma message( "The inclusion of file/nc_utilities.h is deprecated. Please use dg/file/nc_utilities.h")
+#endif //_INCLUDED_BY_DG_
 
 #include <exception>
 #include <netcdf.h>
 #include "thrust/host_vector.h"
 
-#include "dg/geometry/grid.h"
-#include "dg/geometry/evaluation.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/evaluation.h"
 
 /*!@file
  *
@@ -89,7 +92,7 @@ struct NC_Error_Handle
  *
  * @return netcdf error code if any
  */
-int define_time( int ncid, const char* name, int* dimID, int* tvarID)
+static inline int define_time( int ncid, const char* name, int* dimID, int* tvarID)
 {
     int retval;
     if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
@@ -112,7 +115,7 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
  *
  * @return netcdf error code if any
  */
-int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
+static inline int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
 {
     int retval;
     if( (retval = nc_def_dim( ncid, name, size, dimID)) ){ return retval;}
@@ -134,7 +137,7 @@ int define_limited_time( int ncid, const char* name, int size, int* dimID, int* 
  *
  * @return netcdf error code if any
  */
-int define_dimension( int ncid, const char* name, int* dimID, const double * points, int size)
+static inline int define_dimension( int ncid, const char* name, int* dimID, const double * points, int size)
 {
     int retval;
     if( (retval = nc_def_dim( ncid, name, size, dimID)) ) { return retval;}
@@ -156,7 +159,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
  *
  * @return netcdf error code if any
  */
-int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d& g)
+static inline int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d& g)
 {
     thrust::host_vector<double> points = dg::create::abscissas( g);
     return define_dimension( ncid, name, dimID, points.data(), points.size());
@@ -167,13 +170,13 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d& 
  *
  * Dimensions are named x, and time
  * @param ncid file ID
- * @param dimsIDs dimension ID
- * @param tvarID time ID
+ * @param dimsIDs dimension IDs (time, x)
+ * @param tvarID time variable ID
  * @param g The 1d DG grid from which data points are generated
  *
  * @return netcdf error code if any
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
+static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
 {
     int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g))){ return retval;}
@@ -184,15 +187,15 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
 /**
  * @brief Define 2d dimensions and associate values in NetCDF-file
  *
- * Dimensions are named x, y
+ * Dimensions are named y, x
  * @param ncid file ID
- * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
+ * @param dimsIDs (write - only) 2D array of dimension IDs (y,x)
  * @param g The 2d grid from which to derive the dimensions
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
+static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -205,7 +208,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
 /**
  * @brief Define 2d time-dependent dimensions and associate values in NetCDF-file
  *
- * Dimensions are named x, y, and time
+ * Dimensions are named time, y and x
  * @param ncid file ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
  * @param tvarID (write - only) The ID of the time variable
@@ -214,7 +217,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology2d& g)
+static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology2d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -239,7 +242,7 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology2
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::aTopology2d& g)
+static inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::aTopology2d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -261,7 +264,7 @@ int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology3d& g)
+static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology3d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -285,7 +288,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology3d& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology3d& g)
+static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology3d& g)
 {
     int retval;
     if( (retval = define_dimensions( ncid, &dimsIDs[1], g)) ){ return retval;}

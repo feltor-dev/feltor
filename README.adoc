@@ -176,7 +176,7 @@ function:
 //include the basic dg-library
 #include "dg/algorithm.h"
 //optional: include the geometries expansion
-#include "geometries/geometries.h"
+#include "dg/geometries/geometries.h"
 
 double function(double x, double y){return exp(x)*exp(y);}
 int main()
@@ -350,7 +350,7 @@ Please also have a look at the relevant <<tab_requirements, system requirements>
 ===== Creating a basic FELTOR Property Sheet
 In Visual Studio we suggest to create a Property Sheet for FELTOR.
 The Property Sheet can then be conveniently added to any project that includes
-the FELTOR library headers `dg/algorithm.h` and/or `geometries/geometries.h`
+the FELTOR library headers `dg/algorithm.h` and/or `dg/geometries/geometries.h`
 
 * Open an existing solution in Visual Studio or create a new project with `File -> New -> Projet ...` selecting `Empty Project` in Visual C++.
 * In the Solution Explorer change to the `Property Manager` tab, then click on `Add New Project Property Sheet`, name it `FeltorPropertySheet.props` and save it

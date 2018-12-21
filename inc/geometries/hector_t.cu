@@ -7,7 +7,7 @@
 #include <memory>
 #include "json/json.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 #include "dg/backend/timer.h"
 #include "dg/functors.h"
@@ -62,7 +62,7 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
-    {const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
+    {const dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";}
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     t.tic();
     //![doxygen]
     std::unique_ptr< dg::geo::aGenerator2d > hector;
-    const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
+    const dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if( construction == 0)
     {
@@ -84,13 +84,13 @@ int main( int argc, char* argv[])
     }
     else if( construction == 1)
     {
-        dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
+        dg::geo::CylindricalFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
         hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else
     {
-        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective(
+        dg::geo::CylindricalSymmTensorLvl1 lc = dg::geo::make_LiseikinCollective(
                 psip, 0.1, 0.001);
         hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
@@ -158,19 +158,19 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
-    dg::SparseElement<dg::HVec> vol = dg::tensor::volume(metric);
-    dg::blas1::axpby( 1., temp0, -1., vol.value(), temp0);
-    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol.value(), w2d, vol.value()));
+    dg::HVec vol = dg::tensor::volume(metric);
+    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
     dg::HVec volume = dg::create::volume( g2d);
     dg::HVec ones2d = dg::evaluate( dg::one, g2d);
-    double volumeUV = dg::blas1::dot( vol.value(), ones2d);
+    double volumeUV = dg::blas1::dot( vol, ones2d);
 
     volume = dg::create::volume( dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>*>( hector.get())->internal_grid());
     ones2d = dg::evaluate( dg::one, dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>*>( hector.get())->internal_grid());
-    double volumeZE = dg::blas1::dot( vol.value(), ones2d);
+    double volumeZE = dg::blas1::dot( vol, ones2d);
     std::cout << "volumeUV is "<< volumeUV<<std::endl;
     std::cout << "volumeZE is "<< volumeZE<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeUV - volumeZE)/volumeZE<<std::endl;

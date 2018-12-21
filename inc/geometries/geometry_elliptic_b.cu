@@ -2,9 +2,8 @@
 #include <memory>
 #include "json/json.h"
 
-#include "file/nc_utilities.h"
-
 #include "dg/algorithm.h"
+#include "dg/file/nc_utilities.h"
 
 #include "solovev.h"
 #include "guenther.h"
@@ -97,7 +96,7 @@ int main(int argc, char**argv)
     std::cout << sqrt( err/norm) << "\t";
 
     dg::SparseTensor<dg::DVec> metric = g2d->metric();
-    dg::DVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::DVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);

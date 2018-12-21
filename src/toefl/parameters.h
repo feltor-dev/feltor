@@ -8,10 +8,10 @@
  */
 struct Parameters
 {
-    unsigned n, Nx, Ny; 
-    double dt; 
-    unsigned n_out, Nx_out, Ny_out; 
-    unsigned itstp; 
+    unsigned n, Nx, Ny;
+    double dt;
+    unsigned n_out, Nx_out, Ny_out;
+    unsigned itstp;
     unsigned maxout;
 
     double eps_pol, eps_gamma, eps_time;
@@ -20,7 +20,7 @@ struct Parameters
 
     double amp, sigma, posX, posY;
 
-    double lx, ly; 
+    double lx, ly;
     dg::bc bc_x, bc_y;
 
     std::string init, equations;
@@ -57,7 +57,7 @@ struct Parameters
         friction = js.get("friction", 0.).asDouble();
         jfactor = js.get("jfactor", 1.).asDouble();
     }
-    
+
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
@@ -92,6 +92,6 @@ struct Parameters
             <<"scale for jump terms:    "<<jfactor<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
-            <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
+            <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush
     }
 };

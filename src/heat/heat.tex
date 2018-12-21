@@ -1,0 +1,194 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../../doc/related_pages/header.tex}
+\input{../../doc/related_pages/newcommands.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The heat diffusion project}
+\author{ M.~Wiesenberger and M.~Held}
+\maketitle
+
+\begin{abstract}
+  This is a program for the 3d heat diffusion in arbitrary magnetic field
+  geometry.
+  \end{abstract}
+
+\section{Equations}
+The temperature $T$ follows a non-isotropic heat diffusion equation
+\begin{align}
+\frac{\partial T}{\partial t} = \nu_\perp \Delta_\perp T + \nu_\parallel\Delta_\parallel T
+\label{eq:temperature}
+\end{align}
+with
+\begin{align}
+\Delta_\parallel T &= \nabla\cdot ( \bhat\bhat\cdot\nabla T) \\
+\Delta_\perp T     &= -\nabla\cdot( \bhat\times(\bhat\times \nabla T)) \equiv \nabla\cdot (h \nabla T) \\
+h^{ij} &= g^{ij} - b^ib^j
+\end{align}
+$\bhat = \bhat(\vec x)$ is the prescribed magnetic field unit vector, $g$ is the
+metric and $h$ is the projection
+tensor.
+$\nu_\parallel$ and $\nu_\perp$ are the respective conduction
+coefficients parallel and perpendicular to this field.
+
+\subsection{Simulation domain}
+We define the simulation box as
+$[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
+where we define
+\begin{align} \label{eq:box}
+    R_{\min}&=R_0-\varepsilon^{R-}a\quad
+    &&R_{\max}=R_0+\varepsilon^{R+}a\nonumber\\
+    Z_{\min}&=-\varepsilon^{Z-}ae\quad
+    &&Z_{\max}=\varepsilon^{Z+}ae
+\end{align}
+where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
+the $\varepsilon$ are free parameters to be specified by the user.
+
+\subsection{Initialization}
+Initialization of $T$ is a Gaussian
+\begin{align} \label{eq:initial}
+  T(R,Z,\varphi) = 1 + A\exp\left(
+      -\frac{(R-R_i)^2 + (Z-Z_i)^2}{2\sigma^2} - \frac{(\varphi-\pi)^2}{2\sigma_\varphi^2}\right)
+\end{align}
+where $R_i = p_x a$ and $Z_i = p_y a$ denote the initial position, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+\subsection{Diagnostics}
+Integrating Eq.~\eqref{eq:temperature} over the volume yields
+\begin{align}
+ \frac{\partial}{\partial t} \int T \dV &=
+    \int \dV ( \nu_\perp \Delta_\perp + \nu_\parallel \Delta_\parallel T) \\
+ \frac{\partial}{\partial t} \int T^2/2 \dV &=
+    \int \dV ( \nu_\perp T\Delta_\perp T + \nu_\parallel T\Delta_\parallel T)
+\label{}
+\end{align}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid
+\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & Cylindrical 3D & equidistant discretization of $[R_0-a,R_0+a] \times [-a,a] \times [0,2\pi]$, equal number of Gaussian nodes in R and Z, one node in $\varphi$ \\
+$\Delta_\parallel$ & FCI & forward-backward symmetric sym, See the documentation on DS\\
+time &  Adaptive embedded ARK-4-2-3 & $3rd$ order accurate in both
+explicit and implicit parts\\
+\bottomrule
+\end{longtable}
+
+\section{Compilation and useage}
+There are two programs heat.cu and heat\_hpc.cu . Compilation with
+\begin{verbatim}
+make device = <omp or gpu>
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/feltor/src/heat/heat input.json geometry_params.json
+path/to/feltor/src/heat/heat_hpc input.json geometry_params.json output.nc
+\end{verbatim}
+All programs write performance informations to std::cout.
+The first opens a terminal window with life simulation results
+the
+other writes the results to disc. Both programs run on shared memory
+systems.
+For the hpc code, there is another mode:
+\begin{verbatim}
+path/to/feltor/src/heat/heat_hpc input.json geometry_params.json output.nc input.nc
+\end{verbatim}
+In this case the temperature field of \code{input.nc} at the last output
+time is read
+and taken as a reference solution.
+
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+  n      & integer & 3 & - &\# Gaussian nodes in x and y \\
+  Nx     & integer &20& - &\# grid points in x \\
+  Ny     & integer &40& - &\# grid points in y \\
+  Nz     & integer &60& - &\# grid points in z \\
+  dt     & integer &0.001& - &initial time step\\
+  cx & integer & 2 & 1 & output contains n*Nx/cx points in x,
+    has to divde Nx evenly\\
+  cy & integer & 2 & 1 & output contains n*Ny/cy points in y,
+    has to divde Ny evenly\\
+  itstp  & integer &2  & - &   steps between outputs \\
+  maxout & integer &100& - &      \# outputs excluding first \\
+  eps\_time  & float &1e-10   & - & accuracy of implicit solver in time-stepper \\
+  rtol  & float  & 1e-6  & - & desired tolerance of adaptive time-stepper \\
+  nu\_parallel    & float &100   & - & parallel viscosity $\nu_\parallel$ \\
+  nu\_perp    & float &0   & - & perpendicular viscosity $\nu_\perp$ \\
+  amplitude  & float &0.1    & - & amplitude $A$ of the blob in Eq.~\eqref{eq:initial}\\
+  sigma      & float &5     & - & blob radius $\sigma$ in $R$ and $Z$ in Eq.~\eqref{eq:initial} \\
+  sigma\_z   & float &0.025  & - & variance in $\varphi$ in units of $R_0$ in Eq.~\eqref{eq:initial}  \\
+  posX       & float &0.8    & - & blob $R$-position in units of $a$ in Eq.~\eqref{eq:initial} \\
+  posY       & float &0    & - & blob $Z$-position in units of $a$ in Eq.~\eqref{eq:initial} \\
+  bcx   & char & "NEU"      & - & boundary condition in R (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+  bcy   & char & "NEU"      & - & boundary condition in Z (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+  boxscaleRp & float &  1.05, & - & $\varepsilon^{R+}$ in Eq.~\eqref{eq:box} \\
+  boxscaleRm & float &  1.05, & - & $\varepsilon^{R-}$ in Eq.~\eqref{eq:box} \\
+  boxscaleZp & float &  1.05, & - & $\varepsilon^{Z+}$ in Eq.~\eqref{eq:box} \\
+  boxscaleZm & float &  1.15, & - & $\varepsilon^{Z-}$ in Eq.~\eqref{eq:box} \\
+  mx     & integer & 10 & - & refinement factor of DS in x \\
+  my     & integer & 10 & - & refinement factor of DS in y \\
+  rk4eps & float & 0.01 & 1e-5 & Accuracy of fieldline integration in DS \\
+  diff       & char & non-adjoint & non-adjoint & adjoint, non-adjoint, elliptic (discretization for $\Delta_\parallel$) \\
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
+
+\subsection{Geometry file structure}
+File format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+    A      & float & 1 &  - & Solovev parameter \\
+    R\_0   & float & - & -  & Major radius in $\rho_s$ \\
+    C      & float[12] &  - & - & Solovev coefficients \\
+    elongation & float & 1 & - & Elongation \\
+    triangularity & float & 0 & - & Triangularity \\
+    inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
+\bottomrule
+\end{longtable}
+
+\subsection{Structure of output file}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &     text attribute & 1 & verbose input file as a string \\
+geomfile   &     text attribute & 1 & verbose geometry input file as a string \\
+energy\_time     & Dataset & 1 & timesteps at which 1d variables are written \\
+time             & Dataset & 1 & time at which temperature is written \\
+x                & Dataset & 1 & x-coordinate  \\
+y                & Dataset & 1 & y-coordinate \\
+z                & Dataset & 1 & z-coordinate \\
+T                & Dataset & 4 (time, z, y, x) & temperature $T$ \\
+energy           & Dataset & 1 (energy\_time) & total energy integral  \\
+entropy          & Dataset & 1 (energy\_time) & total entropy integral  \\
+mass             & Dataset & 1 (energy\_time) & mass integral   \\
+dEdt             & Dataset & 1 (energy\_time) & change of energy per time  \\
+dissipation      & Dataset & 1 (energy\_time) & diffusion integrals  \\
+accuracy         & Dataset & 1 (energy\_time) & accuracy in time  \\
+error            & Dataset & 1 (energy\_time) & relative distance to temperature field at time 0\\
+relerror         & Dataset & 1 (energy\_time) & relative difference to reference solution if one is provide, else 0 \\
+\bottomrule
+\end{longtable}
+
+%..................................................................
+\bibliography{../../doc/related_pages/references}
+%..................................................................
+
+
+\end{document}

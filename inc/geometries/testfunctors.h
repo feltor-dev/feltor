@@ -12,29 +12,355 @@ namespace dg
 namespace geo
 {
 ///@cond
-//if you need those functors you're in the thick of it
+//For testing purposes only
 ///@addtogroup profiles
 ///@{
-
-
-struct FuncNeu
+/////////////Test functors for DS////////////////////////
+//-psi*cos(phi)
+struct TestFunctionPsi
 {
-    FuncNeu( const TokamakMagneticField& c):c_(c){}
-    double operator()(double R, double Z, double phi) const {return -c_.psip()(R,Z)*cos(phi);
+    TestFunctionPsi( const TokamakMagneticField& c):c_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return -c_.psip()(R,Z)*cos(phi);
+    }
+    double dR( double R, double Z, double phi) const{
+        return -c_.psipR()(R,Z)*cos(phi);
+    }
+    double dRR( double R, double Z, double phi) const{
+        return -c_.psipRR()(R,Z)*cos(phi);
+    }
+    double dRZ( double R, double Z, double phi) const{
+        return -c_.psipRZ()(R,Z)*cos(phi);
+    }
+    double dZ( double R, double Z, double phi) const{
+        return -c_.psipZ()(R,Z)*cos(phi);
+    }
+    double dZZ( double R, double Z, double phi) const{
+        return -c_.psipZZ()(R,Z)*cos(phi);
+    }
+    double dP( double R, double Z, double phi) const{
+        return c_.psip()(R,Z)*sin(phi);
+    }
+    double dRP( double R, double Z, double phi) const{
+        return c_.psipR()(R,Z)*sin(phi);
+    }
+    double dZP( double R, double Z, double phi) const{
+        return c_.psipZ()(R,Z)*sin(phi);
+    }
+    double dPP( double R, double Z, double phi) const{
+        return c_.psip()(R,Z)*cos(phi);
     }
     private:
     TokamakMagneticField c_;
 };
 
-struct DeriNeu
+//-psi*cos(phi) + 0.25*(R-R_0)*(R-R_0) +0.25*Z*(R-R_0) ;
+struct TestFunctionPsi2
 {
-    DeriNeu( const TokamakMagneticField& c, double R0):c_(c), bhat_(c){}
-    double operator()(double R, double Z, double phi) const {return c_.psip()(R,Z,phi)*bhat_(R,Z,phi)*sin(phi);
+    TestFunctionPsi2( const TokamakMagneticField& c):R_0(c.R0()), f_(c), c_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_(R,Z,phi)+0.25*(R-R_0)*(R-R_0) +0.25*Z*(R-R_0) ;
+    }
+    double dR( double R, double Z, double phi) const{
+        return f_.dR(R,Z,phi) + 0.5*(R-R_0) + 0.25*Z;
+    }
+    double dRR( double R, double Z, double phi) const{
+        return f_.dRR(R,Z,phi) + 0.5;
+    }
+    double dRZ( double R, double Z, double phi) const{
+        return f_.dRZ(R,Z,phi) + 0.25;
+    }
+    double dZ( double R, double Z, double phi) const{
+        return f_.dZ(R,Z,phi) + 0.25*(R-R_0);
+    }
+    double dZZ( double R, double Z, double phi) const{
+        return f_.dZZ(R,Z,phi);
+    }
+    double dP( double R, double Z, double phi) const{
+        return f_.dP(R,Z,phi);
+    }
+    double dRP( double R, double Z, double phi) const{
+        return f_.dRP(R,Z,phi);
+    }
+    double dZP( double R, double Z, double phi) const{
+        return f_.dZP(R,Z,phi);
+    }
+    double dPP( double R, double Z, double phi) const{
+        return f_.dPP(R,Z,phi);
     }
     private:
+    double R_0;
+    TestFunctionPsi f_;
     TokamakMagneticField c_;
-    dg::geo::BHatP bhat_;
 };
+
+// sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+struct TestFunctionSin{
+    TestFunctionSin( const TokamakMagneticField& c){
+        R_0 = c.R0();
+    }
+    double operator()(double R, double Z, double phi)const{
+        return sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dR(double R, double Z, double phi)const{
+        return M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dZ(double R, double Z, double phi)const{
+        return M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dP(double R, double Z, double phi)const{
+        return sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+    }
+    double dRR(double R, double Z, double phi)const{
+        return -M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dZZ(double R, double Z, double phi)const{
+        return -M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dPP(double R, double Z, double phi)const{
+        return -sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dRZ(double R, double Z, double phi)const{
+        return M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dRP(double R, double Z, double phi)const{
+        return M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+    }
+    double dZP(double R, double Z, double phi)const{
+        return M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
+    }
+    private:
+    double R_0;
+};
+// cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+struct TestFunctionCos{
+    TestFunctionCos( const TokamakMagneticField& c){
+        R_0 = c.R0();
+    }
+    double operator()(double R, double Z, double phi)const{
+        return cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dR(double R, double Z, double phi)const{
+        return -M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dZ(double R, double Z, double phi)const{
+        return -M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dP(double R, double Z, double phi)const{
+        return cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
+    }
+    double dRR(double R, double Z, double phi)const{
+        return -M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dZZ(double R, double Z, double phi)const{
+        return -M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dPP(double R, double Z, double phi)const{
+        return -cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+    }
+    double dRZ(double R, double Z, double phi)const{
+        return M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+    }
+    double dRP(double R, double Z, double phi)const{
+        return -M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
+    }
+    double dZP(double R, double Z, double phi)const{
+        return -M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+    }
+    private:
+    double R_0;
+};
+
+/////With the next functors compute derivatives
+// b \nabla f
+template<class Function>
+struct DsFunction
+{
+    DsFunction( const TokamakMagneticField& c): f_(c), c_(c),
+        bhatR_(c), bhatZ_(c), bhatP_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return bhatR_(R,Z)*f_.dR(R,Z,phi) +
+               bhatZ_(R,Z)*f_.dZ(R,Z,phi) +
+               bhatP_(R,Z)*f_.dP(R,Z,phi);
+    }
+    private:
+    Function f_;
+    TokamakMagneticField c_;
+    dg::geo::BHatR bhatR_;
+    dg::geo::BHatZ bhatZ_;
+    dg::geo::BHatP bhatP_;
+};
+//\nabla( b f)
+template<class Function>
+struct DsDivFunction
+{
+    DsDivFunction( const TokamakMagneticField& c):
+        f_(c), dsf_(c), divb_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_(R,Z,phi)*divb_(R,Z) + dsf_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    DsFunction<Function> dsf_;
+    dg::geo::Divb divb_;
+};
+
+//2nd derivative \nabla_\parallel^2
+template<class Function>
+struct DssFunction
+{
+    DssFunction( TokamakMagneticField c):f_(c), c_(c),
+        bhatR_(c), bhatZ_(c), bhatP_(c),
+        gradbhatR_(c), gradbhatZ_(c), gradbhatP_(c){}
+    double operator()(double R, double Z, double phi) const {
+        double bhatR = bhatR_(R,Z), bhatZ = bhatZ_(R,Z), bhatP = bhatP_(R,Z);
+        double fR = f_.dR(R,Z,phi), fZ = f_.dZ(R,Z,phi), fP = f_.dP(R,Z,phi);
+        double fRR = f_.dRR(R,Z,phi), fRZ = f_.dRZ(R,Z,phi), fZZ = f_.dZZ(R,Z,phi);
+        double fRP = f_.dRP(R,Z,phi), fZP = f_.dZP(R,Z,phi), fPP = f_.dPP(R,Z,phi);
+        double gradbhatR = gradbhatR_(R,Z), gradbhatZ = gradbhatZ_(R,Z), gradbhatP = gradbhatP_(R,Z);
+        return bhatR*bhatR*fRR + bhatZ*bhatZ*fZZ + bhatP*bhatP*fPP
+            +2.*(bhatR*bhatZ*fRZ + bhatR*bhatP*fRP + bhatZ*bhatP*fZP)
+            + gradbhatR*fR + gradbhatZ*fZ + gradbhatP*fP;
+    }
+    private:
+    Function f_;
+    TokamakMagneticField c_;
+    dg::geo::BHatR bhatR_;
+    dg::geo::BHatZ bhatZ_;
+    dg::geo::BHatP bhatP_;
+    dg::geo::GradBHatR gradbhatR_;
+    dg::geo::GradBHatZ gradbhatZ_;
+    dg::geo::GradBHatP gradbhatP_;
+};
+
+//positive Laplacian \Delta_\parallel
+template<class Function>
+struct DsDivDsFunction
+{
+    DsDivDsFunction( const TokamakMagneticField& c): dsf_(c), dssf_(c), divb_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return divb_(R,Z)*dsf_(R,Z,phi) + dssf_(R,Z,phi);
+    }
+    private:
+    DsFunction<Function> dsf_;
+    DssFunction<Function> dssf_;
+    dg::geo::Divb divb_;
+};
+
+//positive perp Laplacian \Delta_\perp
+template<class Function>
+struct DPerpFunction
+{
+    DPerpFunction( const TokamakMagneticField& c): f_(c), dsf_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_.dR(R,Z,phi)/R + f_.dRR(R,Z,phi) + f_.dZZ(R,Z,phi) + f_.dPP(R,Z,phi)/R/R - dsf_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    DsDivDsFunction<Function> dsf_;
+};
+
+template<class Function>
+struct OMDsDivDsFunction
+{
+    OMDsDivDsFunction( const TokamakMagneticField& c): f_(c), df_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_(R,Z,phi)-df_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    DsDivDsFunction<Function> df_;
+};
+
+template<class DS, class container>
+struct TestInvertDS{
+    TestInvertDS( DS& ds, double alpha = -1.):
+        m_ds(ds), m_alpha(alpha){}
+    void symv( const container& x, container& y)
+    {
+        dg::blas2::symv( 1., m_ds, x, 0., y);
+        dg::blas1::axpby( 1., x, m_alpha, y, y);
+        dg::blas2::symv( m_ds.weights(), y,y);
+    }
+    const container& weights(){return m_ds.weights();}
+    const container& inv_weights(){return m_ds.inv_weights();}
+    const container& precond(){return m_ds.precond();}
+    private:
+    DS& m_ds;
+    double m_alpha;
+};
+
+//////////////function to call DS////////////////////
+template<class DS, class container>
+void callDS( DS& ds, std::string name, const container& in, container& out,
+const container& divb,
+unsigned max_iter = 1e4, double eps = 1e-6)
+{
+    if( name == "forward") ds.ds( dg::forward, in, out);
+    else if( name == "backward") ds.ds( dg::backward, in, out);
+    else if( name == "centered") ds.ds( dg::centered, in, out);
+    else if( name == "dss") ds.dss( in, out);
+    else if( name == "divForward") ds.div( dg::forward, in, out);
+    else if( name == "divBackward") ds.div( dg::backward, in, out);
+    else if( name == "divCentered") ds.div( dg::centered, in, out);
+    else if( name == "divDirectForward"){
+        ds.ds( dg::forward, in, out);
+        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
+    }
+    else if( name == "divDirectBackward"){
+        ds.ds( dg::backward, in, out);
+        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
+    }
+    else if( name == "divDirectCentered"){
+        ds.ds( dg::centered, in, out);
+        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
+    }
+    else if( name == "forwardLap") {
+        ds.set_direction( dg::forward);
+        ds.symv( in, out);
+    }
+    else if( name == "backwardLap"){
+        ds.set_direction( dg::backward);
+        ds.symv( in, out);
+    }
+    else if( name == "centeredLap"){
+        ds.set_direction( dg::centered);
+        ds.symv( in, out);
+    }
+    else if( name == "directLap") {
+        ds.ds( dg::centered, in, out);
+        dg::blas1::pointwiseDot( divb, out, out);
+        ds.dss( 1., in, 1., out);
+    }
+    else if( name == "invForwardLap"){
+        dg::Invert<container> invert( in, max_iter, eps, 1);
+        ds.set_direction( dg::forward);
+        dg::geo::TestInvertDS< DS, container> rhs(ds);
+        invert( rhs, out, in);
+    }
+    else if( name == "invBackwardLap"){
+        dg::Invert<container> invert( in, max_iter, eps, 1);
+        ds.set_direction( dg::backward);
+        dg::geo::TestInvertDS< DS, container> rhs(ds);
+        invert( rhs, out, in);
+    }
+    else if( name == "invCenteredLap"){
+        dg::Invert<container> invert( in, max_iter, eps, 1);
+        ds.set_direction( dg::centered);
+        dg::geo::TestInvertDS< DS, container> rhs(ds);
+        invert( rhs, out, in);
+    }
+
+}
+}//namespace geo
+template<class DS, class container>
+struct TensorTraits<dg::geo::TestInvertDS<DS,container>>{
+    using value_type = double;
+    using tensor_category = SelfMadeMatrixTag;
+};
+namespace geo{
+
+///////////////////////////////Functions for 2d grids//////////////////
 
 //psi * cos(theta)
 struct FuncDirPer
@@ -330,81 +656,6 @@ struct EllipticDirSimpleM
     }
     private:
     FuncDirNeu func_;
-};
-
-/**
- * @brief testfunction to test the parallel derivative
-      \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
- */
-struct TestFunction
-{
-    TestFunction( const TokamakMagneticField& c) :
-        bhatR_(c),
-        bhatZ_(c),
-        bhatP_(c) {}
-    /**
-     * @brief \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
-     */
-    double operator()( double R, double Z, double phi)const
-    {
-//         return psip_(R,Z,phi)*sin(phi);
-//         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
-//         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
-//         double kR = 1.*M_PI/(Rmax - Rmin);
-//         double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
-//         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
-//         double kZ = 1.*M_PI/(Zmax - Zmin);
-        double kP = 1.;
-//         return sin(phi*kP)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
-//         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
-//         return sin(phi*kP); //DIR
-//         return cos(phi*kP); //NEU
-        return -cos(phi*kP)/bhatP_(R,Z,phi)/R; //NEU 2
-
-    }
-    private:
-    dg::geo::BHatR bhatR_;
-    dg::geo::BHatZ bhatZ_;
-    dg::geo::BHatP bhatP_;
-};
-
-/**
- * @brief analyitcal solution of the parallel derivative of the testfunction
- *  \f[ \nabla_\parallel(R,Z,\varphi) f = \frac{\sin(\varphi)}{R}\f]
- */
-struct DeriTestFunction
-{
-    DeriTestFunction( const TokamakMagneticField& c) :
-        bhatR_(c),
-        bhatZ_(c),
-        bhatP_(c) {}
-/**
- * @brief \f[ \nabla_\parallel f = \frac{\sin(\varphi)}{R}\f]
- */
-    double operator()( double R, double Z, double phi)const
-    {
-//         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
-//         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
-//         double kR = 1.*M_PI/(Rmax - Rmin);
-//         double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
-//         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
-//         double kZ = 1.*M_PI/(Zmax - Zmin);
-        double kP = 1.;
-//          return (bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
-//                 bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
-//                 bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP); //DIR
-//         return -bhatR_(R,Z,phi)*cos(phi)*cos((Z-Zmin)*kZ)*sin((R-Rmin)*kR)*kR-
-//                bhatZ_(R,Z,phi)*cos(phi)*cos((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kZ-
-//                bhatP_(R,Z,phi)*sin(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kP;
-//         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP; //DIR
-//         return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP; //NEU
-        return sin(phi*kP)*kP/R; //NEU 2
-
-    }
-    private:
-    dg::geo::BHatR bhatR_;
-    dg::geo::BHatZ bhatZ_;
-    dg::geo::BHatP bhatP_;
 };
 
 ///@}

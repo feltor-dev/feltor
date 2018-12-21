@@ -15,7 +15,7 @@
 //#include "ds.h"
 #include "init.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
@@ -58,7 +58,7 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
-    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
+    dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -107,8 +107,7 @@ int main( int argc, char* argv[])
 
     dg::SparseTensor<dg::HVec> metric = g2d->metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
-    dg::HVec vol = vol_.value();
+    dg::HVec vol = dg::tensor::volume(metric);
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
     //compute and write deformation into netcdf
     dg::blas1::pointwiseDivide( g_xy, g_xx, temp0);

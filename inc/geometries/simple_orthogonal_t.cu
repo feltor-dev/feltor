@@ -15,7 +15,7 @@
 #include "testfunctors.h"
 #include "curvilinear.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
@@ -57,7 +57,7 @@ int main( int argc, char* argv[])
         is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
-    dg::geo::BinaryFunctorsLvl2 psip=dg::geo::solovev::createPsip(gp);
+    dg::geo::CylindricalFunctorsLvl2 psip=dg::geo::solovev::createPsip(gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
@@ -109,8 +109,7 @@ int main( int argc, char* argv[])
     //compute and write deformation into netcdf
     dg::SparseTensor<dg::HVec> metric = g2d->metric();
     dg::HVec g_xx = metric.value(0,0), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
-    dg::HVec vol = vol_.value();
+    dg::HVec vol = dg::tensor::volume(metric);
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::HVec ones = dg::evaluate( dg::one, *g2d);
     X=temp0;

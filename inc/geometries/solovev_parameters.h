@@ -29,10 +29,16 @@ struct Parameters
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
            psipmaxlim,  //!< for limiter
-           qampl; //scales grad-shafranov q factor
+           qampl; //!< scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
     std::string equilibrium;
 #ifdef JSONCPP_VERSION_STRING
+    /**
+     * @brief Construct from Json dataset
+     * @param js Must contain the variables "A", "c", "R_0", "inverseaspectratio", "elongation", "triangularity", "alpha", "rk4eps" (1e-5), "psip_min" (0), "psip_max" (0), "psip_max_cut" (0), "psip_max_lim" (1e10), "qampl" (1), "equilibrium" ("solovev")
+     * @note the default values in brackets are taken if the variables are not found in the input
+     * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
+     */
     Parameters( const Json::Value& js) {
         A  = js.get("A", 0).asDouble();
         c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
@@ -46,18 +52,19 @@ struct Parameters
         elongation=js["elongation"].asDouble();
         triangularity=js["triangularity"].asDouble();
         alpha=js["alpha"].asDouble();
-        rk4eps=js["rk4eps"].asDouble();
-        psipmin= js["psip_min"].asDouble();
-        psipmax= js["psip_max"].asDouble();
-        psipmaxcut= js["psip_max_cut"].asDouble();
-        psipmaxlim= js["psip_max_lim"].asDouble();
+        rk4eps=js.get("rk4eps",1e-5).asDouble();
+        psipmin= js.get("psip_min",0).asDouble();
+        psipmax= js.get("psip_max",0).asDouble();
+        psipmaxcut= js.get("psip_max_cut",0).asDouble();
+        psipmaxlim= js.get("psip_max_lim",1e10).asDouble();
         qampl = js.get("qampl", 1.).asDouble();
         equilibrium = js.get( "equilibrium", "solovev").asString();
     }
     /**
      * @brief Put values into a json string
      *
-     * @return
+     * @return Json value
+     * @attention This member is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
     Json::Value dump( ) const
     {
@@ -79,6 +86,23 @@ struct Parameters
         return js;
     }
 #endif // JSONCPP_VERSION_STRING
+    /**
+    * @brief True if Psip has an Xpoint
+    *
+    * The Xpoint is situated at
+     <tt> R_X = R_0-1.1*triangularity*a</tt>
+     <tt> Z_X = -1.1*elongation*a</tt>
+    *
+    * @return \c true if Psip has an Xpoint, \c false else
+    */
+    bool hasXpoint( ) const{
+        bool Xpoint = false;
+        for( int i=7; i<12; i++)
+            if( c[i] != 0)
+                Xpoint = true;
+        return Xpoint;
+    }
+    ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"

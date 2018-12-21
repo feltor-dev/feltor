@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dg/geometry/grid.h"
-#include "dg/geometry/gridX.h"
-#include "dg/geometry/evaluationX.h"
-#include "dg/geometry/weightsX.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/gridX.h"
+#include "dg/topology/evaluationX.h"
+#include "dg/topology/weightsX.h"
 #include "dg/runge_kutta.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
@@ -25,7 +25,7 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct FpsiX
 {
-    FpsiX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0):
+    FpsiX( const CylindricalFunctorsLvl1& psi, double xX, double yX, double x0, double y0):
         initX_(psi, xX, yX), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi)
     { }
     //for a given psi finds the four starting points for the integration in y direction on the perpendicular lines through the X-point
@@ -41,7 +41,7 @@ struct FpsiX
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
         //double y_old=0;
-		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
+        std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
@@ -55,17 +55,17 @@ struct FpsiX
             N*=2;
             if( psi < 0)
             {
-                dg::stepperRK<17>( fieldRZYT_, 0., begin, 2.*M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2.*M_PI, end, N);
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
                 eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             }
             else
             {
-                dg::stepperRK<17>( fieldRZYZ_, begin[1], begin, 0., end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, begin[1], begin, 0., end, N);
                 std::array<double,3> temp(end);
-                dg::stepperRK<17>( fieldRZYT_, 0., begin, M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, M_PI, end, N);
                 temp = end; //temp[1] should be 0 now
-                dg::stepperRK<17>( fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old;
@@ -171,12 +171,12 @@ struct FpsiX
 //This struct computes -2pi/f with a fixed number of steps for all psi
 struct XFieldFinv
 {
-    XFieldFinv( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
+    XFieldFinv( const CylindricalFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
         fpsi_(psi, xX, yX, x0, y0), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi) , N_steps(N_steps)
             { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-		std::array<double, 3> begin{ {0,0,0} }, end(begin);
+        std::array<double, 3> begin{ {0,0,0} }, end(begin);
         double R_i[2], Z_i[2];
         dg::Timer t;
         t.tic();
@@ -189,14 +189,14 @@ struct XFieldFinv
         if( psi[0] < -1. && psi[0] > -2.) N*=2;
         if( psi[0] < 0 && psi[0] > -1.) N*=10;
         if( psi[0] <0  )
-            dg::stepperRK<17>( fieldRZYT_, 0., begin, 2.*M_PI, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2.*M_PI, end, N);
         else
         {
-            dg::stepperRK<17>( fieldRZYZ_, begin[1], begin, 0., end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, begin[1], begin, 0., end, N);
             std::array<double,3> temp(end);
-            dg::stepperRK<17>( fieldRZYT_, 0., temp,  M_PI, end, N/2);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., temp,  M_PI, end, N/2);
             temp = end; //temp[1] should be 0 now
-            dg::stepperRK<17>( fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = end[2]/2./M_PI;
@@ -216,7 +216,7 @@ struct XFieldFinv
         while( eps < eps_old && N < 1e6 &&  eps > 1e-9)
         {
             eps_old = eps, end_old = end;
-            N*=2; dg::stepperRK<17>( *this, x0, begin, x, end, N);
+            N*=2; dg::stepperRK( "Feagin-17-8-10",  *this, x0, begin, x, end, N);
             eps = fabs( end[0]- end_old[0]);
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
         }
@@ -242,7 +242,7 @@ struct XFieldFinv
  */
 struct RibeiroX : public aGeneratorX2d
 {
-    RibeiroX( const BinaryFunctorsLvl2& psi, double psi_0, double fx,
+    RibeiroX( const CylindricalFunctorsLvl2& psi, double psi_0, double fx,
             double xX, double yX, double x0, double y0):
         psi_(psi), fpsi_(psi, xX, yX, x0,y0), fpsiMinv_(psi, xX, yX, x0,y0, 500)
     {
@@ -301,7 +301,7 @@ struct RibeiroX : public aGeneratorX2d
     virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
     virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
-    BinaryFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl2 psi_;
     dg::geo::ribeiro::detail::FpsiX fpsi_;
     dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_;
     double zeta0_, zeta1_;

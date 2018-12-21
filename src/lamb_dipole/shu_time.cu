@@ -38,7 +38,7 @@ int main( int argc, char * argv[])
         //initiate solver 
         DVec y0( omega ), y1( y0);
         //make solver and stepper
-        AB< 3, DVec > ab( y0);
+        AdamsBashforth< DVec > ab(3, y0);
         ab.init( shu, time, y0, dt);
 
         double vorticity = blas2::dot( stencil, w2d, y1);

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "runge_kutta.h"
-#include "cg.h"
+#include "implicit.h"
 
 
 /*! @file
@@ -23,67 +22,67 @@ namespace dg{
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
-    Furthermore, the routines %weights(), %inv_weights() and %precond() must be callable
-    and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
+    Furthermore, if the \c DefaultSolver is used, the routines %weights(), %inv_weights() and %precond() must be callable
+    and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient method.
     The return type of these member functions must be useable in blas2 functions together with the ContainerType type.
- * @param exp explic part
- * @param imp implicit part ( must be linear in its second argument and symmetric up to weights)
+ * @param ex explic part
+ * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
  */
-
-///@cond
-template< size_t k,class real_type>
-struct ab_coeff;
-template<class real_type>
-struct ab_coeff<2,real_type>{
-    const real_type b[2] = {
-        1.5, -0.5
-    };
-};
-template<class real_type>
-struct ab_coeff<3,real_type>{
-    const real_type b[3] = {
-        23./12., -4./3., 5./12.
-    };
-};
-template<class real_type>
-struct ab_coeff<4,real_type>{
-    const real_type b[4] = {
-        55./24., -59./24., 37./24., -3./8.
-    };
-};
-template<class real_type>
-struct ab_coeff<5,real_type>{
-    const real_type b[5] = {
-        1901./720., -1387./360., 109./30., -637./360., 251./720.
-    };
-};
-///@endcond
+/*!@class hide_note_multistep
+* @note Uses only \c blas1::axpby routines to integrate one step.
+* @note The difference between a multistep and a single step method like RungeKutta
+* is that the multistep only takes one right-hand-side evaluation per step.
+* This might be advantageous if the right hand side is expensive to evaluate like in
+* partial differential equations. However, it might also happen that the stability
+* region of the one-step method is larger so that a larger timestep can be taken there
+* and on average they take just the same rhs evaluations.
+* @note a disadvantage of multistep is that timestep adaption is not easily done.
+*/
 
 /**
 * @brief Struct for Adams-Bashforth explicit multistep time-integration
-* \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^k b_j f\left(u^{n-j}\right) \f]
+* \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
 *
-* @ingroup time
-*
-* Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f]
-* Uses only \c blas1::axpby routines to integrate one step
-* and only one right-hand-side evaluation per step.
-* @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
+* with coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
+* @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
+* @ingroup time
 */
-template< size_t k, class ContainerType>
-struct AB
+template<class ContainerType>
+struct AdamsBashforth
 {
-    using real_type = get_value_type<ContainerType>;
-    ///copydoc RK_opt::RK_opt()
-    AB(){}
-    ///@copydoc RK_opt::construct(const ContainerType&)
-    AB( const ContainerType& copyable){ construct(copyable); }
-    ///@copydoc RK_opt::construct(const ContainerType&)
-    void construct(const ContainerType& copyable){
-        f_.fill( copyable);
-        u_ = copyable;
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///copydoc RungeKutta::RungeKutta()
+    AdamsBashforth(){}
+    ///@copydoc AdamsBashforth::construct()
+    AdamsBashforth( unsigned order, const ContainerType& copyable){
+        construct( order, copyable);
     }
+    /**
+    * @brief Reserve internal workspace for the integration
+    *
+    * @param order (global) order (= number of steps in the multistep) of the method (Currently, one of 1, 2, 3, 4 or 5)
+    * @param copyable ContainerType of the size that is used in \c step
+    * @note it does not matter what values \c copyable contains, but its size is important
+    */
+    void construct(unsigned order, const ContainerType& copyable){
+        m_k = order;
+        f_.assign( order, copyable);
+        u_ = copyable;
+        m_ab.resize( order);
+        switch (order){
+            case 1: m_ab = {1}; break;
+            case 2: m_ab = {1.5, -0.5}; break;
+            case 3: m_ab = { 23./12., -4./3., 5./12.}; break;
+            case 4: m_ab = {55./24., -59./24., 37./24., -3./8.}; break;
+            case 5: m_ab = { 1901./720., -1387./360., 109./30., -637./360., 251./720.}; break;
+            default: throw dg::Error(dg::Message()<<"Order not implemented in AdamsBashforth!");
+        }
+    }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return u_;}
 
     /**
      * @brief Initialize first step. Call before using the step function.
@@ -99,7 +98,7 @@ struct AB
      * @note the implementation is such that on output the last call to the rhs is at (t0,u0). This might be interesting if the call to the rhs changes its state.
      */
     template< class RHS>
-    void init( RHS& rhs, real_type t0, const ContainerType& u0, real_type dt);
+    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
     /**
     * @brief Advance u0 one timestep
     *
@@ -110,23 +109,24 @@ struct AB
     * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
     */
     template< class RHS>
-    void step( RHS& f, real_type& t, ContainerType& u);
+    void step( RHS& f, value_type& t, ContainerType& u);
   private:
-    real_type tu_, dt_;
-    std::array<ContainerType,k> f_;
+    value_type tu_, dt_;
+    std::vector<ContainerType> f_;
     ContainerType u_;
-    ab_coeff<k,real_type> m_ab;
+    std::vector<value_type> m_ab;
+    unsigned m_k;
 };
 
-template< size_t k, class ContainerType>
+template< class ContainerType>
 template< class RHS>
-void AB<k, ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, real_type dt)
+void AdamsBashforth<ContainerType>::init( RHS& f, value_type t0, const ContainerType& u0, value_type dt)
 {
     tu_ = t0, dt_ = dt;
     f( t0, u0, f_[0]);
     //now do k Euler steps
     ContainerType u1(u0);
-    for( unsigned i=1; i<k; i++)
+    for( unsigned i=1; i<m_k; i++)
     {
         blas1::axpby( 1., u1, -dt, f_[i-1], u1);
         tu_ -= dt;
@@ -138,95 +138,19 @@ void AB<k, ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, 
     f( tu_, u_, f_[0]);
 }
 
-template< size_t k, class ContainerType>
+template<class ContainerType>
 template< class RHS>
-void AB<k, ContainerType>::step( RHS& f, real_type& t, ContainerType& u)
+void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& u)
 {
-    for( unsigned i=0; i<k; i++)
-        blas1::axpby( dt_*m_ab.b[i], f_[i], 1., u_);
+    for( unsigned i=0; i<m_k; i++)
+        blas1::axpby( dt_*m_ab[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
-    for( unsigned i=k-1; i>0; i--)
+    for( unsigned i=m_k-1; i>0; i--)
         f_[i-1].swap( f_[i]);
     blas1::copy( u_, u);
     t = tu_ = tu_ + dt_;
     f( tu_, u_, f_[0]); //evaluate f at new point
 }
-
-///@cond
-//Euler specialisation
-template < class ContainerType>
-struct AB<1, ContainerType>
-{
-    using real_type = get_value_type<ContainerType>;
-    AB(){}
-    AB( const ContainerType& copyable){
-        construct(copyable);
-    }
-    void construct(const ContainerType& copyable){
-       f_  = u_ = copyable;
-    }
-    template < class RHS>
-    void init( RHS& f, real_type t0, const ContainerType& u0, real_type dt){
-        u_ = u0;
-        t_ = t0, dt_=dt;
-        f( t_, u_, f_);
-    }
-    template < class RHS>
-    void step( RHS& f, real_type& t, ContainerType& u)
-    {
-        //this implementation calls rhs at end point
-        blas1::axpby( 1., u_, dt_, f_, u); //compute new u
-
-        u_ = u; //store new u
-        t = t_ = t_ + dt_; //and time
-        f( t_, u_, f_); //and update rhs
-    }
-    private:
-    real_type t_, dt_;
-    ContainerType u_, f_;
-};
-///@endcond
-///@cond
-namespace detail{
-
-//compute: y + alpha f(y,t)
-template< class LinearOp, class ContainerType>
-struct Implicit
-{
-    using real_type = get_value_type<ContainerType>;
-    Implicit( real_type alpha, real_type t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
-    void symv( const ContainerType& x, ContainerType& y)
-    {
-        if( alpha_ != 0)
-            f_(t_,x,y);
-        blas1::axpby( 1., x, alpha_, y, y);
-        blas2::symv( f_.weights(), y, y);
-    }
-    //compute without weights
-    void operator()( const ContainerType& x, ContainerType& y)
-    {
-        if( alpha_ != 0)
-            f_(t_,x,y);
-        blas1::axpby( 1., x, alpha_, y, y);
-    }
-    real_type& alpha( ){  return alpha_;}
-    real_type alpha( ) const  {return alpha_;}
-    real_type& time( ){  return t_;}
-    real_type time( ) const  {return t_;}
-  private:
-    LinearOp& f_;
-    real_type alpha_;
-    real_type t_;
-};
-
-}//namespace detail
-template< class M, class V>
-struct TensorTraits< detail::Implicit<M, V> >
-{
-    using value_type = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-///@endcond
 
 /**
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
@@ -248,47 +172,51 @@ struct TensorTraits< detail::Implicit<M, V> >
     \gamma_0 = \frac{6}{11}
 \f]
 *
-* Uses only one evaluation of the explicit part per step.
-* Uses a conjugate gradient method for the implicit operator (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
+* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
+* Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
+* @note The implicit part equals a third order backward differentiation formula (BDF) https://en.wikipedia.org/wiki/Backward_differentiation_formula
+*
 The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
-@snippet multistep_t.cu function
-In the main function:
-@snippet multistep_t.cu karniadakis
-@note In our experience the implicit treatment of diffusive or hyperdiffusive
+* @snippet multistep_t.cu function
+* In the main function:
+* @snippet multistep_t.cu karniadakis
+* @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
-far outweighs the increased computational cost of the additional matrix inversions.
-* @ingroup time
+outweighs the increased computational cost of the additional matrix inversions.
+* @copydoc hide_note_multistep
+* @copydoc hide_SolverType
 * @copydoc hide_ContainerType
+* @ingroup time
 */
-template<class ContainerType>
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct Karniadakis
 {
-    using real_type = get_value_type<ContainerType>;
-    ///@copydoc RK_opt::RK_opt()
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
     Karniadakis(){}
 
     ///@copydoc construct()
-    Karniadakis( const ContainerType& copyable, unsigned max_iter, real_type eps){
-        construct( copyable, max_iter, eps);
+    template<class ...SolverParams>
+    Karniadakis( SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...){
+        f_.fill(m_solver.copyable()), u_.fill(m_solver.copyable());
+        init_coeffs();
     }
     /**
-    * @brief Reserve memory for the integration
-    *
-    * @param copyable ContainerType of size which is used in integration (values do not matter, the size is important).
-    * @param max_iter parameter for cg
-    * @param eps  accuracy parameter for cg
+     * @brief Reserve memory for the integration
+     *
+     * @param ps Parameters that are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
     */
-    void construct( const ContainerType& copyable, unsigned max_iter, real_type eps){
-        f_.fill(copyable), u_.fill(copyable);
-        pcg.construct( copyable, max_iter);
-        eps_ = eps;
-        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
-        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
-        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
-        a[0] =  18./11.;    b[0] =  18./11.;
-        a[1] = -9./11.;     b[1] = -18./11.;
-        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
+    template<class ...SolverParams>
+    void construct( SolverParams&& ...ps){
+        m_solver = Solver( std::forward<SolverParams>(ps)...);
+        f_.fill(m_solver.copyable()), u_.fill(m_solver.copyable());
+        init_coeffs();
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return u_[0];}
 
     /**
      * @brief Initialize by integrating two timesteps backward in time
@@ -298,10 +226,10 @@ struct Karniadakis
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on output the last call to the explicit part \c exp is at \c (t0,u0). This might be interesting if the call to \c exp changes its state.
+     * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
      */
     template< class Explicit, class Implicit>
-    void init( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type dt);
+    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
@@ -309,24 +237,31 @@ struct Karniadakis
     * @copydoc hide_explicit_implicit
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
-     * @note the implementation is such that on output the last call to the explicit part \c exp is at the new \c (t,u). This might be interesting if the call to \c exp changes its state.
+     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
     */
     template< class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, real_type& t, ContainerType& u);
+    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
 
   private:
+    void init_coeffs(){
+        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
+        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
+        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
+        a[0] =  18./11.;    b[0] =  18./11.;
+        a[1] = -9./11.;     b[1] = -18./11.;
+        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
+    }
+    SolverType m_solver;
     std::array<ContainerType,3> u_, f_;
-    CG< ContainerType> pcg;
-    real_type eps_;
-    real_type t_, dt_;
-    real_type a[3];
-    real_type b[3];
+    value_type t_, dt_;
+    value_type a[3];
+    value_type b[3], g0 = 6./11.;
 };
 
 ///@cond
-template< class ContainerType>
+template< class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType>::init( RHS& f, Diffusion& diff, real_type t0, const ContainerType& u0, real_type dt)
+void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
 {
     //operator splitting using explicit Euler for both explicit and implicit part
     t_ = t0, dt_ = dt;
@@ -343,9 +278,9 @@ void Karniadakis<ContainerType>::init( RHS& f, Diffusion& diff, real_type t0, co
     f( t0, u0, f_[0]); // and set state in f to (t0,u0)
 }
 
-template<class ContainerType>
+template<class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, ContainerType& u)
+void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, value_type& t, ContainerType& u)
 {
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
@@ -357,174 +292,16 @@ void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, Co
     }
     blas1::axpby( 1., f_[0], 1., u_[0]);
     //compute implicit part
-    real_type alpha[2] = {2., -1.};
-    //real_type alpha[2] = {1., 0.};
+    value_type alpha[2] = {2., -1.};
+    //value_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
-    blas2::symv( diff.weights(), u_[0], u_[0]);
     t = t_ = t_+ dt_;
-    detail::Implicit<Diffusion, ContainerType> implicit( -dt_*6./11., t, diff);
-#ifdef DG_BENCHMARK
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif//MPI
-    Timer ti;
-    ti.tic();
-    unsigned number = pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
-    ti.toc();
-#ifdef MPI_VERSION
-    if(rank==0)
-#endif//MPI
-    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<ti.diff()<<"s\n";
-#else
-    pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
-#endif //BENCHMARK
+    m_solver.solve( -dt_*g0, diff, t, u, u_[0]);
     blas1::copy( u, u_[0]); //store result
     f(t_, u_[0], f_[0]); //call f on new point
 }
 ///@endcond
 
 
-/**
- * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
- *
-The SIRK algorithm reads
-\f[
-	\vec v^{n+1} = \vec v^n + \sum_{i=0}^2 w_i \vec k_i \\
-	\vec k_i = \Delta t\left[ \vec E\left( \vec v^n + \sum_{j=0}^{i-1} b_{ij}\vec k_j\right)
-	+\vec I\left( \vec v^n + \sum_{j=0}^{i-1}c_{ij}\vec k_j + d_i \vec k_i\right) \right]
-  \f]
-with rational coefficients
-\f[
-	w_0 = \frac{1}{8} \quad b_{10} = \frac{8}{7} \quad d_0 = \frac{3}{4}  \quad c_{10} = \frac{5589}{6524}  \\
-	w_1 = \frac{1}{8} \quad b_{20} = \frac{71}{252} \quad d_1 = \frac{75}{233}  \quad c_{20} = \frac{7691}{26096} \\
-	w_2 = \frac{3}{4} \quad b_{21} = \frac{7}{36}   \quad d_2 = \frac{65}{168}  \quad c_{21} = -\frac{26335}{78288}
-\f]
-We solve the implicit substeps by a conjugate gradient method, which works as long
-as the implicit part remains symmetric and linear.
-
-The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
-@snippet multistep_t.cu function
-In the main function:
-@snippet multistep_t.cu sirk
-@note To our experience the implicit treatment of diffusive or hyperdiffusive
-terms can significantly reduce the required number of time steps. This
-far outweighs the increased computational cost of the additional matrix inversions.
- * @ingroup time
- * @copydoc hide_ContainerType
- */
-template <class ContainerType>
-struct SIRK
-{
-    using real_type = get_value_type<ContainerType>;
-    ///@copydoc RK_opt::RK_opt()
-    SIRK(){}
-    ///@copydoc Karniadakis::construct()
-    SIRK(const ContainerType& copyable, unsigned max_iter, real_type eps){
-        construct( copyable, max_iter, eps);
-    }
-    ///@copydoc Karniadakis::construct()
-    void construct(const ContainerType& copyable, unsigned max_iter, real_type eps)
-    {
-        k_.fill( copyable);
-        temp_ = rhs_ = f_ = g_ = copyable;
-        pcg.construct( copyable, max_iter);
-        eps_ = eps;
-
-        w[0] = 1./8., w[1] = 1./8., w[2] = 3./4.;
-        b[1][0] = 8./7., b[2][0] = 71./252., b[2][1] = 7./36.;
-        d[0] = 3./4., d[1] = 75./233., d[2] = 65./168.;
-        c[1][0] = 5589./6524., c[2][0] = 7691./26096., c[2][1] = -26335./78288.;
-    }
-    /**
-     * @brief integrate one step
-     *
-     * @copydoc hide_explicit_implicit
-     * @param t0 start time
-     * @param u0 start point at \c t0
-     * @param t1 (write only) end time (equals \c t0+dt on output, may alias t0)
-     * @param u1 (write only) contains result at \c t1 on output (may alias u0)
-     * @param dt timestep
-     */
-    template <class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
-    {
-        exp(t0, u0, f_);
-        imp(t0+d[0]*dt, u0, g_);
-        dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        detail::Implicit<Implicit, ContainerType> implicit( -dt*d[0], t0+d[0]*dt, imp);
-        implicit.alpha() = -dt*d[0];
-        implicit.time()  = t0 + (d[0])*dt;
-        blas2::symv( imp.weights(), rhs_, rhs_);
-        pcg( implicit, k_[0], rhs_, imp.precond(), imp.inv_weights(), eps_);
-
-        dg::blas1::axpby( 1., u0, b[1][0], k_[0], rhs_);
-        exp(t0+b[1][0]*dt, rhs_, f_);
-        dg::blas1::axpby( 1., u0, c[1][0], k_[0], rhs_);
-        imp(t0+(c[1][0]+d[1])*dt, rhs_, g_);
-        dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        implicit.alpha() = -dt*d[1];
-        implicit.time()  =  t0 + (c[1][0]+d[1])*dt;
-        blas2::symv( imp.weights(), rhs_, rhs_);
-        pcg( implicit, k_[1], rhs_, imp.precond(), imp.inv_weights(), eps_);
-
-        dg::blas1::axpby( 1., u0, b[2][0], k_[0], rhs_);
-        dg::blas1::axpby( b[2][1], k_[1], 1., rhs_);
-        exp(t0 + (b[2][1]+b[2][0])*dt, rhs_, f_);
-        dg::blas1::axpby( 1., u0, c[2][0], k_[0], rhs_);
-        dg::blas1::axpby( c[2][1], k_[1], 1., rhs_);
-        imp(t0 + (c[2][1]+c[2][0] + d[2])*dt, rhs_, g_);
-        dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        implicit.alpha() = -dt*d[2];
-        implicit.time()  =  t0 + (c[2][1]+c[2][0] + d[2])*dt;
-        blas2::symv( imp.weights(), rhs_, rhs_);
-        pcg( implicit, k_[2], rhs_, imp.precond(), imp.inv_weights(), eps_);
-        //sum up results
-        dg::blas1::copy( u0, u1);
-        dg::blas1::axpby( 1., u1, w[0], k_[0], u1);
-        dg::blas1::axpbypgz( w[1], k_[1], w[2], k_[2], 1., u1);
-        t1 = t0 + dt;
-    }
-
-    /**
-     * @brief adapt timestep (experimental)
-     *
-     * Make same timestep twice, once with half timestep. The resulting error should be smaller than some given tolerance
-     *
-     * @copydoc hide_explicit_implicit
-     * @param t0 start time
-     * @param u0 start point
-     * @param t1 (write only) end time (equals \c t0+dt on output, may alias t0)
-     * @param u1 (write only) contains result at \c t1 on output (may alias u0)
-     * @param dt (read and write) contains new recommended timestep on output
-     * @param tolerance tolerable error
-     * @param verbose if true writes error to \c std::cout
-     */
-    template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type& dt, real_type tolerance, bool verbose = false)
-    {
-        real_type t;
-        step( exp, imp, t0, u0, t, temp_, dt/2.);
-        step( exp, imp, t, temp_, t, temp_, dt/2.);
-        step( exp, imp, t0, u0, t1, u1, dt); //one full step
-        dg::blas1::axpby( 1., u1, -1., temp_);
-        real_type error = dg::blas1::dot( temp_, temp_);
-        if(verbose)std::cout << "Error " << error<<"\tTime "<<t1<<"\tdt "<<dt;
-        real_type dt_old = dt;
-        dt = 0.9*dt_old*sqrt(tolerance/error);
-        if( dt > 1.33*dt_old) dt = 1.33*dt_old;
-        if( dt < 0.75*dt_old) dt = 0.75*dt_old;
-        if(verbose) std::cout <<"\tnew_dt "<<dt<<"\n";
-    }
-    private:
-    std::array<ContainerType,3> k_;
-    ContainerType f_, g_, rhs_, temp_;
-    real_type w[3];
-    real_type b[3][3];
-    real_type d[3];
-    real_type c[3][3];
-    CG<ContainerType> pcg;
-    real_type eps_;
-};
 
 } //namespace dg

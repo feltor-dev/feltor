@@ -3,9 +3,9 @@
 #include <sstream>
 #include "draw/host_window.h"
 #include "dg/backend/typedefs.h"
-#include "dg/geometry/interpolation.h"
-#include "dg/geometry/xspacelib.h"
-#include "dg/geometry/projection.h"
+#include "dg/topology/interpolation.h"
+#include "dg/topology/xspacelib.h"
+#include "dg/topology/projection.h"
 #include "functors.h"
 #include "blas.h"
 
@@ -32,7 +32,7 @@ int main()
     //dg::HMatrix interpolate = dg::create::interpolation( grid_new, grid_old);
     dg::IHMatrix interpolate = dg::create::projection( grid_old, grid_new);
     //construct bathRZ
-    dg::BathRZ bathRZ(16, 16, 1, Rmin,Zmin, gamma,eddysize,amplitude);
+    dg::BathRZ bathRZ(16, 16, Rmin,Zmin, gamma,eddysize,amplitude);
     //evaluate bathRZ on the dggrid on a hvector
     dg::HVec hvisual_old = dg::evaluate( bathRZ, grid_old);
     dg::HVec hvisual_new( grid_new.size());

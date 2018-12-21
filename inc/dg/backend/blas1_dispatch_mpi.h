@@ -11,20 +11,34 @@
 
 ///@cond
 namespace dg {
-namespace blas1{
+
+template<class to_ContainerType, class from_ContainerType, class ...Params>
+inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);
+template<class from_ContainerType, class to_ContainerType, class ...Params>
+inline void assign( const from_ContainerType&, to_ContainerType&, Params&& ...ps);
 namespace detail{
 
-template< class Vector1, class Vector2>
-Vector1 doTransfer( const Vector2& in, MPIVectorTag, MPIVectorTag)
+template< class Vector1, class Vector2, class ...Params>
+Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
     Vector1 out;
-    out.set_communicator(in.communicator());
+    out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
     using container1 = typename std::decay<Vector1>::type::container_type;
-    using container2 = typename std::decay<Vector2>::type::container_type;
-    out.data() = doTransfer<container1, container2>( in.data(), get_tensor_category<container1>(), get_tensor_category<container2>());
+    out.data() = dg::construct<container1>( in.data(), std::forward<Params>(ps)...);
     return out;
-
 }
+template< class Vector1, class Vector2, class ...Params>
+void doAssign( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
+{
+    out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
+    dg::assign( in.data(), out.data(), std::forward<Params>(ps)...);
+}
+
+}//namespace detail
+namespace blas1{
+
+namespace detail{
+
 
 template< class Vector1, class Vector2>
 void do_mpi_assert( const Vector1& x, const Vector2& y, AnyVectorTag, AnyVectorTag)

@@ -1,7 +1,51 @@
-== The source folder
+== The source folder "src"
 
-The src folder contains specific projects that are based on the numerical algorithms
-in the inc folder
+The src folder contains simulation projects that are based on the
+numerical algorithms in the inc folder. Many contain a comprehensive
+technical documentation in the form of a tex file that should be compiled
+into a pdf.  Here is a short description of each:
+
+feltor::    3d gyrofluid full-F electrodynamic model in toroidal geometry
+
+heat::  3d parallel / perpendicular diffusion equation in tokamak geometry
+with realistic flux surfaces. Used in the paper "Three discontinuous
+Galerkin schemes for the anisotropic heat conduction equation on
+non-aligned grids" Comput. Phys. Commun. 199, 29-39 (2016)
+
+feltor2d::  2d gyrofluid electrodynamic model (the phi symmetric version
+of feltor)
+
+lamb_dipole:: Programs that reproduce results for the paper "A
+conservative discontinuous Galerkin scheme for the 2D incompressible
+Navier-Stokes equations" Comput. Phys. Commun. 185, 2865-2873 (2014) (The
+very first paper resulting from this library)
+
+polar:: A version of lamb_dipole in Polar coordinates (unmaintained)
+
+toefl:: 2d local and global blobs.  This code
+reproduces results for, among others, the paper M. Wiesenberger, J. Madsen,
+and A. Kendl, "Radial convection of finite ion temperature, high amplitude
+plasma blobs" Phys. Plasmas 21, 092301 (2014).
+
+ep:: the electron positron plasma (branches off the toefl code) in the
+paper "Interchange instability and transport in matter-antimatter plasmas"
+Physical Review Letters 118, 235001 (2017)
+
+impurities:: A multi-species version of the toefl project (currently unmaintained)
+
+reco2d:: 2d reconnection model based on the feltor model
+
+
+hasegawa:: 2d Hasegawa-Wakatani and Hasegawa-Mima models
+
+feltorShw:: 2d global Hasegawa-Wakatani model
+
+feltorSH:: 2d gyrofluid model with temperature dynamics
+
+feltorSHp:: 2d gyrofluid model with temperature dynamics (pressure formulation)
+
+feltorSesol:: 2d gyrofluid model for SOL turbulence
+
 
 In order to check if an update introduces an unwanted bug, do the following steps:
 

@@ -8,18 +8,20 @@
 
 #include "backend/timer.h"
 #include "backend/mpi_init.h"
-#include "geometry/split_and_join.h"
+#include "topology/split_and_join.h"
 
 
-const double R_0 = 1000;
+const double R_0 = 10;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
-double fct( double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
+double fct(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
+double derivative( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
+double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
+double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::PER;
+dg::bc bcy = dg::DIR;
+dg::bc bcz = dg::PER;
 double initial( double x, double y, double z) {return sin(0);}
 
 
@@ -46,7 +48,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::CylindricalMPIGrid3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic3d<dg::aMPIGeometry3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
     dg::MDMatrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -56,22 +58,24 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"Expand right hand side\n";
     const dg::MDVec solution = dg::evaluate ( fct, grid);
     const dg::MDVec deriv = dg::evaluate( derivative, grid);
-    dg::MDVec b = dg::evaluate ( laplace_fct, grid);
+    dg::MDVec b = dg::evaluate ( laplace3d_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
 
     if(rank==0)std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
-    unsigned num = pcg( laplace,x,b,v3d,eps);
-    if(rank==0)std::cout << "Number of pcg iterations "<< num<<std::endl;
+    unsigned num = pcg( laplace, x, b, v3d, eps);
     t.toc();
+    if(rank==0)std::cout << "Number of pcg iterations "<< num<<std::endl;
     if(rank==0)std::cout << "... took                 "<< t.diff()<<"s\n";
     dg::MDVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
-    if(rank==0)std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
+    exblas::udouble res;
+    norm = sqrt(normerr/norm); res.d = norm;
+    if(rank==0)std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error);
@@ -80,33 +84,33 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "TEST SPLIT SOLUTION\n";
     x = dg::evaluate( initial, grid);
-    b = dg::evaluate ( laplace_fct, grid);
+    b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
-    dg::MDVec v2d = dg::create::inv_volume( grid_perp.get());
-    dg::MDVec w2d = dg::create::volume( grid_perp.get());
-    dg::SparseElement<dg::MDVec> g_parallel = dg::tensor::volume( grid.metric().parallel());
+    dg::MDVec v2d = dg::create::inv_volume( *grid_perp);
+    dg::MDVec w2d = dg::create::volume( *grid_perp);
+    dg::MDVec g_parallel = grid.metric().value(2,2);
+    dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
     dg::MDVec chi = dg::evaluate( dg::one, grid);
-    dg::tensor::pointwiseDot( chi, g_parallel, chi);
+    dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split(
-            grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
+            grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(*grid_perp, dg::not_normed, dg::centered));
     // create split  vectors and solve
-    std::vector<dg::MDVec> b_split, x_split, chi_split;
+    std::vector<dg::MPI_Vector<dg::View<dg::DVec>>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
     std::vector<unsigned>  number(grid.local().Nz());
     t.tic();
-    dg::tensor::pointwiseDot( b, g_parallel, b);
-    dg::split( b, b_split, grid);
-    dg::split( chi, chi_split, grid);
-    dg::split( x, x_split, grid);
+    dg::blas1::pointwiseDivide( b, g_parallel, b);
+    b_split = dg::split( b, grid);
+    chi_split = dg::split( chi, grid);
+    x_split = dg::split( x, grid);
     for( unsigned i=0; i<grid.local().Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
         number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
     }
-    dg::join( x_split, x, grid);
     t.toc();
     if(rank==0)std::cout << "Number of iterations in split     "<< number[0]<<"\n";
     if(rank==0)std::cout << "Split solution on the device took "<< t.diff()<<"s\n";

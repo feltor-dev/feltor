@@ -24,7 +24,7 @@
     "triangularity"      : 0.47,
     //----------------------Miscellaneous----------------------
     "alpha"         :  0.05, //damping thickness
-    "rk4eps"        :  1e-4,
+    "rk4eps"        :  1e-6,
     "psip_min"      : -6.,
     "psip_max"      :  0.0, // (> -7.4)
     "psip_max_cut"  :  1e10,

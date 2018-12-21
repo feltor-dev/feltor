@@ -4,9 +4,9 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = ExBLAS
+PROJECT_NAME           = "Extension: ExBLAS"
 PROJECT_NUMBER         =
-PROJECT_BRIEF          = "feltor adaption of the exblas library"
+PROJECT_BRIEF          = "Adaption of the exblas library (included in \"dg/algorithm.h\")"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./doc
 CREATE_SUBDIRS         = NO
@@ -119,6 +119,7 @@ FILE_PATTERNS          = *.h \
 RECURSIVE              = NO
 EXCLUDE                = mylibm.hpp \
                          mylibm.cuh \
+                         config.h \
                          ExSUM.FPE.hpp
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =

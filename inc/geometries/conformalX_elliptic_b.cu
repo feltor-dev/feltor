@@ -58,16 +58,16 @@ template<class Geometry>
 void compute_cellsize( const Geometry& g2d)
 {
     ///////////////////////////////////metric//////////////////////
-    dg::SparseTensor<dg::DVec> metric = g2d.metric();
-    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::HVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0, 0, gxx, g2d);
-    double hyX = dg::interpolate( 0, 0, gyy, g2d);
+    double hxX = dg::interpolate( 0., 0., gxx, g2d);
+    double hyX = dg::interpolate( 0., 0., gyy, g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";
@@ -103,14 +103,14 @@ int main(int argc, char**argv)
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     /////////////no monitor
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
     ////////////const monitor
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
     /////////////monitor bumped around X-point
     //double radius;
     //std::cout << "Type radius\n";
     //std::cin >> radius;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
     /////////////
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;

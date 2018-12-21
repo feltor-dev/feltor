@@ -31,6 +31,11 @@ struct Parameters
            psipmaxlim; //!< for limiter
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
 #ifdef JSONCPP_VERSION_STRING
+    /**
+     * @brief Construct from Json dataset
+     * @param js Must contain the variables "I_0", "R_0", "inverseaspectratio", "elongation", "triangularity", "alpha", "rk4eps" (1e-5), "psip_min" (0), "psip_max" (0), "psip_max_cut" (0), "psip_max_lim" (1e10)
+     * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
+     */
     Parameters( const Json::Value& js) {
         I_0  = js["I_0"].asDouble();
         R_0  = js["R_0"].asDouble();
@@ -38,13 +43,14 @@ struct Parameters
         elongation=js["elongation"].asDouble();
         triangularity=js["triangularity"].asDouble();
         alpha=js["alpha"].asDouble();
-        rk4eps=js["rk4eps"].asDouble();
-        psipmin= js["psip_min"].asDouble();
-        psipmax= js["psip_max"].asDouble();
-        psipmaxcut= js["psip_max_cut"].asDouble();
-        psipmaxlim= js["psip_max_lim"].asDouble();
+        rk4eps=js.get("rk4eps",1e-5).asDouble();
+        psipmin= js.get("psip_min",0).asDouble();
+        psipmax= js.get("psip_max",0).asDouble();
+        psipmaxcut= js.get("psip_max_cut",0).asDouble();
+        psipmaxlim= js.get("psip_max_lim",1e10).asDouble();
     }
 #endif // JSONCPP_VERSION_STRING
+    ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"

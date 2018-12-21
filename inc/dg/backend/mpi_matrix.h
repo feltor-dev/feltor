@@ -2,6 +2,7 @@
 
 #include "mpi_vector.h"
 #include "memory.h"
+#include "timer.h"
 
 /*!@file
 
@@ -10,49 +11,19 @@
 @note the corresponding blas file for the Local matrix must be included before this file
 */
 namespace dg {
-///@cond
-namespace blas2{
-namespace detail{
+namespace blas2 {
+//forward declare blas2 symv functions
 template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( get_value_type<ContainerType1> alpha,
+void symv( MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( get_value_type<ContainerType1> alpha,
                   MatrixType&& M,
                   const ContainerType1& x,
                   get_value_type<ContainerType1> beta,
-                  ContainerType2& y,
-                  AnyMatrixTag);
-template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( MatrixType&& M,
-                  const ContainerType1& x,
-                  ContainerType2& y,
-                  AnyMatrixTag);
-template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( get_value_type<ContainerType1> alpha,
-                  MatrixType&& M,
-                  const ContainerType1& x,
-                  get_value_type<ContainerType1> beta,
-                  ContainerType2& y,
-                  SparseBlockMatrixTag);
-template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( MatrixType&& M,
-                  const ContainerType1& x,
-                  ContainerType2& y,
-                  SparseBlockMatrixTag);
-template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( get_value_type<ContainerType1> alpha,
-                  MatrixType&& M,
-                  const ContainerType1& x,
-                  get_value_type<ContainerType1> beta,
-                  ContainerType2& y,
-                  SelfMadeMatrixTag);
-template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( MatrixType&& M,
-                  const ContainerType1& x,
-                  ContainerType2& y,
-                  SelfMadeMatrixTag);
-}//namespace detail
+                  ContainerType2& y);
 }//namespace blas2
-///@endcond
-
 
 ///@addtogroup mpi_structures
 ///@{
@@ -60,10 +31,13 @@ inline void doSymv( MatrixType&& M,
 /**
 * @brief Distributed memory matrix class, asynchronous communication
 *
-* The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation.
-* It can be expected that this works particularly well for cases in which the communication to computation ratio is low.
-* This class assumes that the matrix and vector elements are distributed rowwise among mpi processes.
-* The matrix elements are then further separated into columns that are inside the domain and the ones that are outside, i.e.
+* The idea of this mpi matrix is to separate communication and computation in
+* order to reuse existing optimized matrix formats for the computation. It can
+* be expected that this works particularly well for cases in which the
+* communication to computation ratio is low. This class assumes that the matrix
+* and vector elements are distributed rowwise among mpi processes. The matrix
+* elements are then further separated into columns that are inside the domain
+* and the ones that are outside, i.e.
 * \f[
  M=M_i+M_o
  \f]
@@ -74,16 +48,18 @@ inline void doSymv( MatrixType&& M,
  symv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points.
  symv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
-* @tparam Collective must be a \c NearestNeighborComm The Communication class needs to gather values across processes. The \c global_gather_init(), \c global_gather_wait() and \c size()
-member functions are called.
-Gather points from other processes that are necessary for the outer computations.
- If \c size()==0 the global_gather() function won't be called and
-only the inner matrix is applied.
+* @tparam Collective must be a \c NearestNeighborComm The Communication class
+* needs to gather values across processes. The \c global_gather_init(),
+* \c global_gather_wait(), \c allocate_buffer() and \c isCommunicating() member
+* functions are called.  Gather points from other processes that are necessary
+* for the outer computations. If \c !isCommunicating() the
+* global_gather() function won't be called and only the inner matrix is applied.
 @note This class overlaps communication with computation of the inner matrix
 */
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
 struct RowColDistMat
 {
+    using value_type = get_value_type<LocalMatrixInner>;
     ///@brief no memory allocation
     RowColDistMat(){}
 
@@ -96,7 +72,6 @@ struct RowColDistMat
     */
     RowColDistMat( const LocalMatrixInner& inside, const LocalMatrixOuter& outside, const Collective& c):
         m_i(inside), m_o(outside), m_c(c), m_buffer( c.allocate_buffer()) { }
-
 
     /**
     * @brief Copy constructor
@@ -145,13 +120,12 @@ struct RowColDistMat
     * @param y output
     */
     template<class ContainerType1, class ContainerType2>
-    void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
+    void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
-        if( m_c.size() == 0) //no communication needed
+        //the blas2 functions should make enough static assertions on tpyes
+        if( !m_c.isCommunicating()) //no communication needed
         {
-            dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
-                       get_tensor_category<LocalMatrixInner>()
-                       );
+            dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
             return;
 
         }
@@ -163,17 +137,16 @@ struct RowColDistMat
 
         //1.1 initiate communication
         MPI_Request rqst[4];
-        m_c.global_gather_init( x.data(), rqst);
+        const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
+              value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
+        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
         //1.2 compute inner points
-        dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
-                       get_tensor_category<LocalMatrixInner>()
-                       );
+        dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
         //2. wait for communication to finish
-        m_c.global_gather_wait( x.data(), m_buffer.data(), rqst);
+        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
         //3. compute and add outer points
-        dg::blas2::detail::doSymv(alpha, m_o, m_buffer.data(), 1., y.data(),
-                       get_tensor_category<LocalMatrixOuter>()
-                       );
+        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
+        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, beta, y_ptr);
     }
 
     /**
@@ -189,11 +162,10 @@ struct RowColDistMat
     template<class ContainerType1, class ContainerType2>
     void symv( const ContainerType1& x, ContainerType2& y) const
     {
-        if( m_c.size() == 0) //no communication needed
+        //the blas2 functions should make enough static assertions on tpyes
+        if( !m_c.isCommunicating()) //no communication needed
         {
-            dg::blas2::detail::doSymv( m_i, x.data(), y.data(),
-                       get_tensor_category<LocalMatrixInner>()
-                       );
+            dg::blas2::symv( m_i, x.data(), y.data());
             return;
 
         }
@@ -205,24 +177,23 @@ struct RowColDistMat
 
         //1.1 initiate communication
         MPI_Request rqst[4];
-        m_c.global_gather_init( x.data(), rqst);
+        const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
+              value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
+        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
         //1.2 compute inner points
-        dg::blas2::detail::doSymv( m_i, x.data(), y.data(),
-                       get_tensor_category<LocalMatrixInner>()
-                       );
+        dg::blas2::symv( m_i, x.data(), y.data());
         //2. wait for communication to finish
-        m_c.global_gather_wait( x.data(), m_buffer.data(), rqst);
+        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
         //3. compute and add outer points
-        dg::blas2::detail::doSymv(1, m_o, m_buffer.data(), 1., y.data(),
-                       get_tensor_category<LocalMatrixOuter>()
-                       );
+        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
+        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), 1., b_ptr, 1., y_ptr);
     }
 
     private:
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
     Collective m_c;
-    Buffer< typename Collective::container_type>  m_buffer;
+    Buffer< typename Collective::buffer_type>  m_buffer;
 };
 
 
@@ -244,12 +215,13 @@ enum dist_type
 * @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes.
 Gather all points (including the ones that the process already has) necessary for the local matrix-vector
 product into one vector, such that the local matrix can be applied.
-If size()==0 the global_gather and global_scatter_reduce functions won't be called and
+If \c buffer_size()==0 the global_gather and global_scatter_reduce functions won't be called and
 only the local matrix is applied.
 */
 template<class LocalMatrix, class Collective >
 struct MPIDistMat
 {
+    using value_type = get_value_type<LocalMatrix>;
     ///@brief no memory allocation
     MPIDistMat( ) { }
     /**
@@ -271,7 +243,7 @@ struct MPIDistMat
     */
     template< class OtherMatrix, class OtherCollective>
     MPIDistMat( const MPIDistMat<OtherMatrix, OtherCollective>& src):
-        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c.get().allocate_buffer()), m_dist(src.get_dist()) { }
+        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c->allocate_buffer()), m_dist(src.get_dist()) { }
     /**
     * @brief Access to the local matrix
     *
@@ -283,67 +255,61 @@ struct MPIDistMat
     *
     * @return Reference to the collective object
     */
-    const Collective& collective() const{return m_c.get();}
+    const Collective& collective() const{return *m_c;}
 
     enum dist_type get_dist() const {return m_dist;}
     void set_dist(enum dist_type dist){m_dist=dist;}
 
     template<class ContainerType1, class ContainerType2>
-    void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
+    void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
-        if( m_c.size() == 0) //no communication needed
+        //the blas2 functions should make enough static assertions on tpyes
+        if( m_c->buffer_size() == 0) //no communication needed
         {
-            dg::blas2::detail::doSymv( alpha, m_m, x.data(), beta, y.data(),
-                       get_tensor_category<LocalMatrix>()
-                       );
+            dg::blas2::symv( alpha, m_m, x.data(), beta, y.data());
             return;
 
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
+        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         if( m_dist == row_dist){
-            m_c.global_gather( x.data(), m_buffer.data());
-            dg::blas2::detail::doSymv( alpha, m_m, m_buffer.data(), beta, y.data(),
-                       get_tensor_category<LocalMatrix>()
-                       );
+            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
+            m_c->global_gather( x_ptr, m_buffer.data());
+            dg::blas2::symv( alpha, m_m, m_buffer.data(), beta, y.data());
         }
         if( m_dist == col_dist){
-            dg::blas2::detail::doSymv( alpha, m_m, x.data(), beta, m_buffer.data(),
-                       get_tensor_category<LocalMatrix>()
-                       );
-            m_c.get().global_scatter_reduce( m_buffer.data(), y.data());
+            dg::blas2::symv( alpha, m_m, x.data(), beta, m_buffer.data());
+            value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
+            m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
         }
     }
     template<class ContainerType1, class ContainerType2>
     void symv( const ContainerType1& x, ContainerType2& y) const
     {
-        if( m_c.get().size() == 0) //no communication needed
+        //the blas2 functions should make enough static assertions on tpyes
+        if( m_c->buffer_size() == 0) //no communication needed
         {
-            dg::blas2::detail::doSymv( m_m, x.data(), y.data(),
-                       get_tensor_category<LocalMatrix>()
-                       );
+            dg::blas2::symv( m_m, x.data(), y.data());
             return;
 
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
+        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         if( m_dist == row_dist){
-            m_c.get().global_gather( x.data(), m_buffer.data());
-            dg::blas2::detail::doSymv( m_m, m_buffer.data(), y.data(),
-                       get_tensor_category<LocalMatrix>()
-                       );
+            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
+            m_c->global_gather( x_ptr, m_buffer.data());
+            dg::blas2::symv( m_m, m_buffer.data(), y.data());
         }
         if( m_dist == col_dist){
-            dg::blas2::detail::doSymv( m_m, x.data(), m_buffer.data(),
-                       get_tensor_category<LocalMatrix>()
-                       );
-            m_c.get().global_scatter_reduce( m_buffer.data(), y.data());
+            dg::blas2::symv( m_m, x.data(), m_buffer.data());
+            value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
+            m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
         }
     }
 

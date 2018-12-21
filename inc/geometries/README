@@ -1,14 +1,19 @@
 
 #grids
+    curvilinear.h
+    mpi_curvilinear.h
     curvilinearX.h
     refined_curvilinearX.h
 
 #generators
+    generator.h
     simple_orthogonal.h
     ribeiro.h
     flux.h
     hector.h
+    polar.h
 
+    generatorX.h
     separatrix_orthogonal.h
     ribeiroX.h
 
@@ -24,7 +29,9 @@
     guenther_parameters.h
     toroidal.h
 
-    testfunctors.h
+    #utilities
+        testfunctors.h
+        fluxfunctions.h
     init.h
     magnetic_field.h
     adaption.h

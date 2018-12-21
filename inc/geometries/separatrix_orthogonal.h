@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dg/geometry/gridX.h"
-#include "dg/geometry/interpolationX.h"
-#include "dg/geometry/evaluationX.h"
-#include "dg/geometry/weightsX.h"
+#include "dg/topology/gridX.h"
+#include "dg/topology/interpolationX.h"
+#include "dg/topology/evaluationX.h"
+#include "dg/topology/weightsX.h"
 #include "dg/runge_kutta.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
@@ -25,25 +25,26 @@ namespace detail
 
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
-void computeX_rzy( const BinaryFunctorsLvl1& psi,
-        const thrust::host_vector<double>& y_vec,
+template<class real_type>
+void computeX_rzy( const CylindricalFunctorsLvl1& psi,
+        const thrust::host_vector<real_type>& y_vec,
         const unsigned nodeX0, const unsigned nodeX1,
-        thrust::host_vector<double>& r, //output r - values
-        thrust::host_vector<double>& z, //output z - values
-        const double* R_init, const double* Z_init,  //2 input coords on perp line
-        double f_psi,  //input f
+        thrust::host_vector<real_type>& r, //output r - values
+        thrust::host_vector<real_type>& z, //output z - values
+        const real_type* R_init, const real_type* Z_init,  //2 input coords on perp line
+        real_type f_psi,  //input f
         int mode, bool verbose = false )
 {
-    thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
-    thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
+    thrust::host_vector<real_type> r_old(y_vec.size(), 0), r_diff( r_old);
+    thrust::host_vector<real_type> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-	std::array<double, 2> begin{ {0,0} }, end(begin), temp(begin);
+    std::array<real_type,2> begin{ {0,0} }, end(begin), temp(begin);
     begin[0] = R_init[0], begin[1] = Z_init[0];
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi);
     dg::geo::equalarc::FieldRZY fieldRZYequi(psi);
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
-    unsigned steps = 1; double eps = 1e10, eps_old=2e10;
+    unsigned steps = 1; real_type eps = 1e10, eps_old=2e10;
     while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
     {
         eps_old = eps, r_old = r, z_old = z;
@@ -51,56 +52,56 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         if( nodeX0 != 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[nodeX0-1], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[nodeX0-1], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[nodeX0-1], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[nodeX0-1], end, steps);
             r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
         }
         for( int i=nodeX0-2; i>=0; i--)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i+1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i+1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i+1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i+1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         ////////////////middle region///////////////////////////
         begin[0] = R_init[0], begin[1] = Z_init[0];
-        if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[nodeX0], end, steps);
-        if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[nodeX0], end, steps);
+        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[nodeX0], end, steps);
+        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[nodeX0], end, steps);
         r[nodeX0] = end[0], z[nodeX0] = end[1];
         for( unsigned i=nodeX0+1; i<nodeX1; i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         temp = end;
-        if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
-        if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
         if(verbose)std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
             r[nodeX1] = end[0], z[nodeX1] = end[1];
         }
         for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
         dg::blas1::axpby( 1., r, -1., r_old, r_diff);
         dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-        double er = dg::blas1::dot( r_diff, r_diff);
-        double ez = dg::blas1::dot( z_diff, z_diff);
-        double ar = dg::blas1::dot( r, r);
-        double az = dg::blas1::dot( z, z);
+        real_type er = dg::blas1::dot( r_diff, r_diff);
+        real_type ez = dg::blas1::dot( z_diff, z_diff);
+        real_type ar = dg::blas1::dot( r, r);
+        real_type az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
         if(verbose)std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
         steps*=2;
@@ -122,18 +123,18 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
     ///psi_0 must be the closed surface, 0 the separatrix
-    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0,
+    SimpleOrthogonalX( const CylindricalFunctorsLvl2& psi, double psi_0,
             double xX, double yX, double x0, double y0, int firstline =0): psi_(psi)
     {
         firstline_ = firstline;
-        orthogonal::detail::Fpsi fpsi(psi_, BinarySymmTensorLvl1(), x0, y0, firstline);
+        orthogonal::detail::Fpsi fpsi(psi_, CylindricalSymmTensorLvl1(), x0, y0, firstline);
         double R0, Z0;
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
         dg::geo::orthogonal::detail::InitialX initX(psi_, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
-    SimpleOrthogonalX* clone()const{return new SimpleOrthogonalX(*this);}
+    virtual SimpleOrthogonalX* clone()const override final{return new SimpleOrthogonalX(*this);}
     private:
     bool isConformal()const{return false;}
     bool do_isOrthogonal()const{return true;}
@@ -147,12 +148,12 @@ struct SimpleOrthogonalX : public aGeneratorX2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
 
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::computeX_rzy( psi_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        dg::geo::orthogonal::detail::Nemov nemov(psi_, BinarySymmTensorLvl1(), f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov nemov(psi_, CylindricalSymmTensorLvl1(), f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -168,11 +169,11 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    double do_zeta0(double fx) const { return zeta0_; }
-    double do_zeta1(double fx) const { return -fx/(1.-fx)*zeta0_;}
-    double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
-    BinaryFunctorsLvl2 psi_;
+    double do_zeta0(double fx) const override final{ return zeta0_; }
+    double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
+    double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
+    double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    CylindricalFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
     int firstline_;
@@ -198,7 +199,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @param firstline =0 means conformal, =1 means equalarc discretization of the separatrix
      * @param verbose if true the integrators will write additional information to \c std::cout
      */
-    SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+    SeparatrixOrthogonal( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
         psi_(psi), chi_(chi),
         sep_( psi, chi, xX, yX, x0, y0, firstline, verbose), m_verbose( verbose)
@@ -337,8 +338,8 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     double R0_[2], Z0_[2];
     double f0_, psi_0_;
     int firstline_;
-    BinaryFunctorsLvl2 psi_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
     bool m_verbose;
 };

@@ -12,27 +12,16 @@
 #include "solovev.h"
 //#include "taylor.h"
 //#include "guenther.h"
-#include "dg/geometry/transform.h"
+#include "dg/topology/transform.h"
 #include "refined_curvilinearX.h"
 #include "curvilinearX.h"
 #include "separatrix_orthogonal.h"
 #include "init.h"
 #include "testfunctors.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 
-struct ZCutter
-{
-    ZCutter(double ZX): Z_X(ZX){}
-    double operator()(double R, double Z) const {
-        if( Z> Z_X)
-            return 1;
-        return 0;
-    }
-    private:
-    double Z_X;
-};
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
 //typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
@@ -125,9 +114,9 @@ int main( int argc, char* argv[])
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
     std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
 
     double R0 = gp.R_0, Z0 = 0;
@@ -181,8 +170,7 @@ int main( int argc, char* argv[])
 
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
-    dg::HVec vol = vol_.value();
+    dg::HVec vol = dg::tensor::volume(metric);
     dg::blas1::transfer( vol, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     dg::blas1::transfer( g_xx, X);
@@ -209,7 +197,7 @@ int main( int argc, char* argv[])
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
 
     dg::HVec cutter = dg::pullback( iris, g2d), vol_cut( cutter);
-    ZCutter cut(Z_X);
+    dg::geo::ZCutter cut(Z_X);
     dg::HVec zcutter = dg::pullback( cut, g2d);
     w2d = dg::create::weights( g2d);//make weights w/o refined weights
     dg::blas1::pointwiseDot(cutter, w2d, vol_cut);

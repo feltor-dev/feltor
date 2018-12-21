@@ -41,6 +41,9 @@ struct TensorTraits<thrust::device_vector<T> >//, typename std::enable_if<std::i
 };
 ///@}
 ///@cond
+//thrust::cpp is an alias for thrust::system::cpp
+//tag is a class deriving from thrust::execution_policy<tag>
+//raw pointers have the std::random_access_iterator_tag as iterator_category in thrust
 template<class Tag>
 struct ThrustTag { };
 template <>
@@ -63,5 +66,6 @@ struct ThrustTag<OmpTag>
 #endif
 template<class Vector>
 using get_thrust_tag = typename ThrustTag<get_execution_policy<Vector>>::thrust_tag;
+
 ///@endcond
 } //namespace dg

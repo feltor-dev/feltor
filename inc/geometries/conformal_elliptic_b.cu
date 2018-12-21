@@ -1,7 +1,7 @@
 #include <iostream>
 #include "json/json.h"
 
-#include "dg/geometry/grid.h"
+#include "dg/topology/grid.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
@@ -59,7 +59,7 @@ template<class Geometry>
 void compute_cellsize( const Geometry& g2d)
 {
     dg::SparseTensor<dg::DVec> metric = g2d.metric();
-    dg::DVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::DVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
@@ -139,7 +139,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalMonitor:\n";
-    dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( c.get_psip(), 0.1, 0.001);
+    dg::geo::CylindricalSymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( c.get_psip(), 0.1, 0.001);
     dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.get_psip(), lc, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
@@ -152,7 +152,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalAdaption:\n";
-    dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( c.get_psip());
+    dg::geo::CylindricalFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( c.get_psip());
     dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.get_psip(), nc, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {

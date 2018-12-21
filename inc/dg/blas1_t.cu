@@ -16,7 +16,7 @@ using Vector = thrust::device_vector<double>;
 int main()
 {
     {
-    std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/geometry/evaluation_t program\n";
+    std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/topology/evaluation_t program\n";
     std::cout << "A TEST IS PASSED IF THE RESULT IS ZERO.\n";
     //Vector v1( 5, 2.0002), v2( 5, 3.00003), v3(5,5.0005), v4(5,4.00004), v5(v4);
     //Vector v1( {2,2.0002}), v2({3,3.00003}), v3({5,5.0005}), v4({4,4.00004}), v5(v4); //std::array
@@ -51,7 +51,7 @@ int main()
 
     std::cout << "Human readable test RecursiveVector (passed if ouput equals value in brackets) \n";
     Vector v1( 5, 2.), v2( 5, 3.), v3(5,5.), v4(5,4.), v5(v4);
-    std::array<Vector, 2> w1( dg::transfer<std::array<Vector,2>>(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
+    std::array<Vector, 2> w1( dg::construct<std::array<Vector,2>>(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     std::cout << "2*2+ 3*3 = " << w3[0][0] <<" (13)\n";
     dg::blas1::axpby( 0., w1, 3., w2, w3);
@@ -85,7 +85,7 @@ int main()
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
-    std::cout << "\nFINISHED! Continue with geometry/evaluation_t.cu !\n\n";
+    std::cout << "\nFINISHED! Continue with topology/evaluation_t.cu !\n\n";
 
     return 0;
 

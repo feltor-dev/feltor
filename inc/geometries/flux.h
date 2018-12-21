@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dg/geometry/grid.h"
-#include "dg/geometry/functions.h"
-#include "dg/geometry/interpolation.h"
-#include "dg/geometry/derivatives.h"
-#include "dg/geometry/geometry.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/functions.h"
+#include "dg/topology/interpolation.h"
+#include "dg/topology/derivatives.h"
+#include "dg/topology/geometry.h"
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
@@ -29,7 +29,7 @@ struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
+    Fpsi( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
         psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip),m_verbose(verbose)
     {
         X_init = x0, Y_init = y0;
@@ -40,7 +40,7 @@ struct Fpsi
     void find_initial( double psi, double& R_0, double& Z_0)
     {
         unsigned N = 50;
-		std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
+        std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
         if(m_verbose)std::cout << "In init function\n";
         begin2d[0] = end2d[0] = end2d_old[0] = X_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
@@ -48,7 +48,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK<17>( fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
+            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -66,7 +66,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps, end_old = end; N*=2;
-            dg::stepperRK<17>( fieldRZYT_, 0., begin, 2*M_PI, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -111,7 +111,7 @@ struct Fpsi
 
     private:
     double X_init, Y_init;
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     dg::geo::flux::FieldRZYT fieldRZYT_;
     dg::geo::FieldRZtau fieldRZtau_;
     bool m_verbose;
@@ -143,7 +143,7 @@ struct FluxGenerator : public aGenerator2d
      * @param verbose if true the integrators will write additional information to \c std::cout
      * @note If \c mode==1 then this class does the same as the \c RibeiroFluxGenerator
      */
-    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
+    FluxGenerator( const CylindricalFunctorsLvl2& psi, const CylindricalFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
         psi_(psi), ipol_(ipol), mode_(mode), m_verbose( verbose)
     {
         psi0_ = psi_0, psi1_ = psi_1;
@@ -209,8 +209,8 @@ struct FluxGenerator : public aGenerator2d
             }
         }
     }
-    BinaryFunctorsLvl2 psi_;
-    BinaryFunctorsLvl1 ipol_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalFunctorsLvl1 ipol_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
     bool m_verbose;
@@ -233,7 +233,7 @@ struct RibeiroFluxGenerator : public aGenerator2d
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @param verbose if true the integrators will write additional information to \c std::cout
      */
-    RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
+    RibeiroFluxGenerator( const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
         psip_(psi), mode_(mode), m_verbose(verbose)
     {
         psi0_ = psi_0, psi1_ = psi_1;
@@ -288,7 +288,7 @@ struct RibeiroFluxGenerator : public aGenerator2d
             }
         }
     }
-    BinaryFunctorsLvl2 psip_;
+    CylindricalFunctorsLvl2 psip_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
     bool m_verbose;

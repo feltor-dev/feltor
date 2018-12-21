@@ -11,20 +11,17 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CUFILES:%.cu=%)
 
-ds_geom_t: ds_geom_t.cu solovev.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS) $(JSONLIB)  -DDG_BENCHMARK -g
-
 geometry_diag: geometry_diag.cu solovev.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) $(JSONLIB) -g
 
 %_t: %_t.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
 %_b: %_b.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
 %_mpit: %_mpit.cu
-	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS)  $< -o $@ $(LIBS) $(JSONLIB) -DDG_DEBUG -g
+	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS)  $< -o $@ $(LIBS) $(JSONLIB) -g
 
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ -g $(INCLUDE) $(LIBS) $(JSONLIB) -g

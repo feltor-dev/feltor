@@ -6,9 +6,9 @@
 
 #include "backend/timer.h"
 #include "blas.h"
-#include "geometry/derivatives.h"
-#include "geometry/evaluation.h"
-#include "geometry/fast_interpolation.h"
+#include "topology/derivatives.h"
+#include "topology/evaluation.h"
+#include "topology/fast_interpolation.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -42,13 +42,11 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
     dg::Grid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
-    Vector w2d;
-    dg::blas1::transfer( dg::create::weights(grid), w2d);
+    Vector w2d = dg::construct<Vector>( dg::create::weights(grid));
 
     //std::cout<<"Evaluate a function on the grid\n";
     t.tic();
-    ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    ArrayVec x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
     t.toc();
     //std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     //std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
@@ -93,7 +91,7 @@ int main()
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
-    //Test new subroutine
+    //Test new evaluate
     std::array<double, 3> array_p{ 1,2,3};
     t.tic();
     for( int i=0; i<multi; i++)
@@ -135,6 +133,17 @@ int main()
     t.toc();
     std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
+    if( grid.Nz() > 1)
+    {
+        dg::blas2::transfer(dg::create::dz( grid, dg::centered), M);
+        dg::blas2::symv( M, x, y);//warm up
+        t.tic();
+        for( int i=0; i<multi; i++)
+            dg::blas2::symv( M, x, y);
+        t.toc();
+        std::cout<<"centered z derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    }
+
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     dg::blas2::symv( M, x, y);//warm up
     t.tic();
@@ -142,7 +151,7 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
+    ArrayVec x_half = dg::construct<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     dg::blas2::gemv( inter, x_half, x); //warm up
     t.tic();
     for( int i=0; i<multi; i++)
@@ -157,8 +166,8 @@ int main()
     std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     //////////////////////these functions are more mean to dot
     std::cout<<"\nGlobal communication\n";
-    dg::blas1::transfer( dg::evaluate( left, grid), x);
-    dg::blas1::transfer( dg::evaluate( right, grid), y);
+    x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
+    y = dg::construct<ArrayVec>( dg::evaluate( right, grid));
     value_type norm=0;
     norm += dg::blas1::dot( x,y);//warm up
     t.tic();

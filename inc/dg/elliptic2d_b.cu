@@ -3,7 +3,7 @@
 
 #include <thrust/device_vector.h>
 #include "backend/timer.h"
-#include "geometry/projection.h"
+#include "topology/projection.h"
 
 #include "blas.h"
 #include "elliptic.h"
@@ -86,7 +86,7 @@ int main()
 
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor);
+        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, jfactor);
         multi_pol[u].set_chi( multi_chi[u]);
     }
 

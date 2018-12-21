@@ -1,0 +1,122 @@
+#pragma once
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include "dg/backend/blas1_dispatch_shared.h"
+#include "dg/backend/view.h"
+#include "grid.h"
+#ifdef MPI_VERSION
+#include "dg/backend/mpi_vector.h"
+#include "mpi_grid.h"
+#endif //MPI_VERSION
+
+namespace dg
+{
+
+///@ingroup scatter
+///@{
+
+/** @brief Split a vector into planes along the last dimension (fast version)
+*
+* @param in contiguous 3d vector (must be of size \c grid.size())
+* @param out contains \c grid.Nz() 2d vector views of 2d size on output
+* @param grid provide dimensions in 3rd and first two dimensions
+* @attention out will NOT be resized
+* @tparam SharedContainer \c TensorTraits exists for this class and the
+*   \c tensor_category derives from \c SharedVectorTag
+*/
+template<class SharedContainer>
+void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const aTopology3d& grid)
+{
+    assert( out.size() == grid.Nz());
+    unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+    for(unsigned i=0; i<grid.Nz(); i++)
+        out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
+}
+/** @brief Split a vector into planes along the last dimension (construct version)
+*
+* @param in contiguous 3d vector (must be of size \c grid.size())
+* @param grid provide dimensions in 3rd and first two dimensions
+* @return \c out contains \c grid.Nz() 2d vector views of 2d size on output
+* @tparam SharedContainer \c TensorTraits exists for this class and the
+*   \c tensor_category derives from \c SharedVectorTag
+*/
+template<class SharedContainer>
+std::vector<View<SharedContainer>> split( SharedContainer& in, const aTopology3d& grid)
+{
+    std::vector<View<SharedContainer>> out;
+    Grid3d l( grid);
+    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
+    out.resize( l.Nz());
+    for(unsigned i=0; i<l.Nz(); i++)
+        out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
+    return out;
+}
+
+#ifdef MPI_VERSION
+
+template<class MPIContainer>
+using get_mpi_view_type = typename
+    std::conditional< std::is_const<MPIContainer>::value,
+    MPI_Vector<View<const typename MPIContainer::container_type>>,
+    MPI_Vector<View<typename MPIContainer::container_type>> >::type;
+
+/** @brief MPI Version of split (fast version)
+ *
+ * @note every plane in \c out must hold a 2d Cartesian MPI_Communicator
+ * congruent (same process group) or ident (same process group, same context)
+ * with the communicator in \c grid
+ * @attention This version will NOT adapt the communicators in \c out
+ * @attention out will NOT be resized
+ * @param in contiguous 3d vector (must be of size \c grid.size())
+ * @param out contains \c grid.Nz() 2d vector views of 2d size on output
+ * @param grid provide dimensions in 3rd and first two dimensions
+ * @tparam MPIContainer An MPI_Vector of a \c SharedContainer
+*/
+template<class MPIContainer>
+void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
+    out, const aMPITopology3d& grid)
+{
+    //local size2d
+    Grid3d l = grid.local();
+    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
+    for(unsigned i=0; i<l.Nz(); i++)
+    {
+        out[i].data().construct( thrust::raw_pointer_cast(in.data().data()) +
+            i*size2d, size2d);
+    }
+}
+/** @brief MPI Version of split (construct version)
+*
+* may take longer due to the many calls to MPI group creation functions
+* @param in contiguous 3d vector (must be of size \c grid.size())
+* @param grid provide dimensions in 3rd and first two dimensions
+* @return \c out contains \c grid.Nz() 2d vector views of 2d size on output
+* @note two seperately split vectors have congruent (not identical) MPI_Communicators Note here the MPI concept of congruent (same process group, different contexts) vs. identical (same process group, same context) communicators.
+* @tparam MPIContainer An MPI_Vector of a \c SharedContainer
+*/
+template< class MPIContainer>
+std::vector<get_mpi_view_type<MPIContainer> > split(
+    MPIContainer& in, const aMPITopology3d& grid)
+{
+    std::vector<get_mpi_view_type<MPIContainer>> out;
+    int result;
+    MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+    MPI_Comm planeComm = grid.get_perp_comm(), comm_mod, comm_mod_reduce;
+    exblas::mpi_reduce_communicator( planeComm, &comm_mod, &comm_mod_reduce);
+    //local size2d
+    Grid3d l = grid.local();
+    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
+    out.resize( l.Nz());
+    for(unsigned i=0; i<l.Nz(); i++)
+    {
+        out[i].data().construct( thrust::raw_pointer_cast(in.data().data())
+            + i*size2d, size2d);
+        out[i].set_communicator( planeComm, comm_mod, comm_mod_reduce);
+    }
+    return out;
+}
+#endif //MPI_VERSION
+
+///@}
+}//namespace dg

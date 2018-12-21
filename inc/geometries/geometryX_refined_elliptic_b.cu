@@ -1,11 +1,10 @@
 #include <iostream>
 #include "json/json.h"
 
-#include "file/nc_utilities.h"
-
 #include "dg/algorithm.h"
+#include "dg/file/nc_utilities.h"
+#include "dg/geometries/geometries.h"
 
-#include "geometries.h"
 //#include "taylor.h"
 #include "testfunctors.h"
 
@@ -55,14 +54,14 @@ int main(int argc, char**argv)
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     /////////////no monitor
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
     ////////////const monitor
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
     /////////////monitor bumped around X-point
     //double radius;
     //std::cout << "Type radius\n";
     //std::cin >> radius;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
     /////////////
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
@@ -198,7 +197,7 @@ int main(int argc, char**argv)
     std::cout << sqrt( err/norm) << "\t";//<<sqrt( errFINE/normFINE)<<"\t";
     ///////////////////////////////////metric//////////////////////
     dg::SparseTensor<dg::DVec> metric = g2d_fine.metric();
-    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);

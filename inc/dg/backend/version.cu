@@ -25,7 +25,6 @@ int main(void)
         std::cout << "CUDA   v" << cuda_major   << "." << cuda_minor   << std::endl;
     std::cout << "Thrust v" << thrust_major << "." << thrust_minor << "."<<thrust_subminor << std::endl;
     std::cout << "Cusp   v" << cusp_major   << "." << cusp_minor   << "."<<cusp_subminor<< std::endl;
-    std::cout << __INTEL_COMPILER <<std::endl;
 
     return 0;
 }

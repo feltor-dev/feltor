@@ -1,99 +1,78 @@
 #include <iostream>
+#include <iomanip>
 
-#include <cusp/print.h>
-#include <cusp/csr_matrix.h>
-#include "json/json.h"
-
+#define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "ds.h"
-// #include "draw/host_window.h"
 #include "guenther.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
+const double R_0 = 10;
+const double I_0 = 20; //q factor at r=1 is I_0/R_0
+const double a  = 1; //small radius
 
 int main( )
 {
+    std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
+    std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
+    unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
+    std::cin >> n>> Nx>>Ny>>Nz;
+    std::cout <<"# You typed\n"
+              <<"n:  "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"Nz: "<<Nz<<std::endl;
+    std::cout << "# Type mx (10) and my (10)\n";
+    std::cin >> mx>> my;
+    std::cout << "# You typed\n"
+              <<"mx: "<<mx<<"\n"
+              <<"my: "<<my<<std::endl;
+    std::cout << "# Create parallel Derivative!\n";
+    ////////////////////////////////initialze fields /////////////////////
+    const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds(
+        mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
+        dg::centered, 1e-8, mx, my);
 
-    /////////////////initialize params////////////////////////////////
-    Json::Value js;
-    std::ifstream is("guenther_params.js");
-    is>>js;
-    dg::geo::guenther::Parameters gp(js);
-    //////////////////////////////////////////////////////////////////////////
-    double Rmin=gp.R_0-1.0*gp.a;
-    double Zmin=-1.0*gp.a*gp.elongation;
-    double Rmax=gp.R_0+1.0*gp.a;
-    double Zmax=1.0*gp.a*gp.elongation;
-    /////////////////////////////////////////////initialze fields /////////////////////
-    dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(gp.R_0, gp.I_0);
-    dg::geo::InvB invb(mag);
-    dg::geo::GradLnB gradlnB(mag);
-    dg::geo::Divb divb(mag);
-    dg::geo::guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    dg::geo::guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    ///##########################################################///
+    const dg::DVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
+    const dg::DVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
+    dg::DVec derivative(fun);
+    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    std::vector<std::pair<std::string, std::array<const dg::DVec*,2>>> names{
+         {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
+         {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
+         {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
+         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
+         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
+         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
+         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
+         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
+         {"invCenteredLap",{&sol4,&fun}}
+    };
 
-    unsigned n=3;
-    unsigned Nxn = 20;
-    unsigned Nyn = 20;
-    unsigned Nzn = 20;
-
-    double rk4eps = 1e-8;
-    double z0 = 0, z1 = 2.*M_PI;
-    std::cout << "Type n, Nx, Ny, Nz\n";
-    std::cin >> n >> Nxn >> Nyn >> Nzn;
-
-    dg::CylindricalGrid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
-    dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
-
-    const dg::DVec w3d = dg::create::volume( g3d);
-
-    std::cout << "Type multipleX (10) and multipleY (10)!\n";
-    unsigned mx, my;
-    std::cin >> mx >> my;
-
-    std::cout << "Integrate or extrapolate field lines (1/0)?\n";
-    bool integrate;
-    std::cin >> integrate;
-
-
-    std::cout << "computing dsDIR" << std::endl;
-    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, mx, my, true, true, integrate);
-
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( dsFA, dg::not_normed, dg::centered);
-
-    dg::DVec function = dg::evaluate( funcNEU, g3d) ,
-                        temp( function),
-                        derivative(function),
-                        inverseB( dg::evaluate(invb, g3d)),
-                        divbsol(dg::evaluate(divb, g3d)),
-                        divbT(function),
-                        divBT(function);
-
-
-    dg::DVec ones = dg::evaluate( dg::one, g3d);
-    const dg::DVec solution = dg::evaluate( deriNEU, g3d);
-
-    const dg::DVec gradlnB_ = dg::evaluate(gradlnB, g3d);
-
-    ds( function, derivative); //ds(f)
-    dg::blas1::pointwiseDivide(ones,  inverseB, temp); //B
-    ds.centeredDiv( temp, divBT); // dsT B
-    ds.centeredDiv( ones, divbT);
-
-    double norm = dg::blas2::dot( w3d, solution);
-    double err =dg::blas2::dot( w3d, derivative);
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    err =dg::blas2::dot( w3d, derivative);
-    std::cout << "Relative Difference in ds f   = "<< sqrt( err/norm )<<"\n";
-
-    norm = dg::blas2::dot( w3d, divbsol);
-    err = dg::blas2::dot( w3d, divbT);
-    dg::blas1::axpby( 1., divbsol, -1., divbT);
-    err = dg::blas2::dot(divbT, w3d,divbT);
-    std::cout << "Relative Difference in div(b) = "<<sqrt(err/norm)<<"\n";
-    double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-    std::cout << "Error in div(B)  = "<<sqrt( normdivBT)<<"\n";
-
+    ///##########################################################///
+    std::cout << "# TEST Guenther (No Boundary conditions)!\n";
+    std::cout <<"Guenther:\n";
+    const dg::DVec vol3d = dg::create::volume( g3d);
+    for( const auto& tuple :  names)
+    {
+        std::string name = std::get<0>(tuple);
+        const dg::DVec& function = *std::get<1>(tuple)[0];
+        const dg::DVec& solution = *std::get<1>(tuple)[1];
+        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        double sol = dg::blas2::dot( vol3d, solution);
+        dg::blas1::axpby( 1., solution, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
+    ///##########################################################///
     return 0;
 }

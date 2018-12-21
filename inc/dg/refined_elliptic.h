@@ -1,11 +1,11 @@
 #pragma once
 
-#include "geometry/interpolation.h"
-#include "geometry/projection.h"
+#include "topology/interpolation.h"
+#include "topology/projection.h"
 #include "elliptic.h"
-#include "geometry/refined_grid.h"
+#include "topology/refined_grid.h"
 #ifdef MPI_VERSION
-#include "geometry/mpi_projection.h"
+#include "topology/mpi_projection.h"
 #endif
 
 /*! @file
@@ -22,10 +22,14 @@ namespace dg
  * @ingroup matrixoperators
  * @attention This class is still under construction!
  */
-template < class Geometry,class IMatrix, class Matrix, class container>
+template < class Geometry,class IMatrix, class Matrix, class Container>
 class RefinedElliptic
 {
     public:
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
     /**
      * @brief Construct from a coarse and a fine grid
      *
@@ -34,11 +38,7 @@ class RefinedElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, norm no = not_normed, direction dir = forward):
-        no_(no), elliptic_( g_fine, no, dir)
-    {
-        construct( g_coarse, g_fine, g_fine.bcx(), g_fine.bcy(), dir);
-    }
+    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, norm no = not_normed, direction dir = forward): RefinedElliptic( g_coarse, g_fine, g_fine.bcx(), g_fine.bcy(), no, dir){}
 
     /**
      * @brief Construct from grid and boundary conditions
@@ -60,8 +60,10 @@ class RefinedElliptic
      * @brief Change Chi
      *
      * @param chi The new chi
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
-    void set_chi( const container& chi)
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& chi)
     {
         //dg::blas2::gemv( Q_, chi, temp1_);
         //elliptic_.set_chi( temp1_);
@@ -72,21 +74,23 @@ class RefinedElliptic
      * @brief Returns the inverse weights used to make the matrix normed
      * @return inverse weights
      */
-    const container& inv_weights()const {return inv_weights_;}
-    const container& weights()const {return weights_;}
+    const Container& inv_weights()const {return inv_weights_;}
+    const Container& weights()const {return weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      * @return inverse weights
      */
-    const container& precond()const {return inv_weights_;}
+    const Container& precond()const {return inv_weights_;}
 
     /**
      * @brief Computes the polarisation term
      *
      * @param x left-hand-side
      * @param y result
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
-    void symv( const container& x, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
     {
         dg::blas2::gemv( Q_, x, temp1_);
         elliptic_.symv( temp1_, temp2_);
@@ -108,12 +112,14 @@ class RefinedElliptic
      * \f[P\sqrt{g} Q \rho\f]
      * @param rhs the original right hand side
      * @param rhs_mod the modified right hand side of the same size (may equal rhs)
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
-    void compute_rhs( const container& rhs, container& rhs_mod )
+    template<class ContainerType0, class ContainerType1>
+    void compute_rhs( const ContainerType0& rhs, ContainerType1& rhs_mod )
     {
         //dg::blas2::gemv( Q_, rhs, temp1_);
         //dg::blas1::pointwiseDot( vol_, temp1_, temp1_);
-        dg::tensor::pointwiseDot( vol_, rhs, temp1_);
+        dg::blas1::pointwiseDot( vol_, rhs, temp1_);
         dg::blas2::gemv( QT_, temp1_, rhs_mod);
         dg::blas2::symv( inv_weights_, rhs_mod, rhs_mod);
     }
@@ -124,20 +130,19 @@ class RefinedElliptic
         dg::blas2::transfer( dg::create::interpolationT( g_coarse, g_fine), QT_);
         dg::blas2::transfer( dg::create::projection( g_coarse, g_fine), P_);
 
-        dg::blas1::transfer( dg::evaluate( dg::one, g_fine), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g_fine), temp2_);
-        dg::blas1::transfer( dg::create::weights( g_coarse), weights_);
-        dg::blas1::transfer( dg::create::inv_weights( g_coarse), inv_weights_);
-        inv_vol_ = vol_ = dg::tensor::volume( g_fine.metric());
-        dg::tensor::invert( inv_vol_);
+        dg::assign( dg::evaluate( dg::one, g_fine), temp1_);
+        dg::assign( dg::evaluate( dg::one, g_fine), temp2_);
+        dg::assign( dg::create::weights( g_coarse), weights_);
+        dg::assign( dg::create::inv_weights( g_coarse), inv_weights_);
+        vol_ = dg::tensor::volume( g_fine.metric());
 
     }
     norm no_;
     IMatrix P_, Q_, QT_;
-    Elliptic<Geometry, Matrix, container> elliptic_;
-    container temp1_, temp2_;
-    container weights_, inv_weights_;
-    dg::SparseElement<container> vol_, inv_vol_;
+    Elliptic<Geometry, Matrix, Container> elliptic_;
+    Container temp1_, temp2_;
+    Container weights_, inv_weights_;
+    Container vol_;
 };
 
 

@@ -44,9 +44,9 @@ using MDVec     = dg::MPI_Vector<dg::DVec >; //!< MPI Device Vector s.a. dg::DVe
 using fMDVec    = dg::MPI_Vector<dg::fDVec >; //!< MPI Device Vector s.a. dg::fDVec
 
 template<class real_type>
-using NNCH = dg::NearestNeighborComm<dg::iHVec, thrust::host_vector<real_type> >; //!< host Communicator for the use in an mpi matrix for derivatives
+using NNCH = dg::NearestNeighborComm<dg::iHVec, thrust::host_vector<const real_type*>, thrust::host_vector<real_type> >; //!< host Communicator for the use in an mpi matrix for derivatives
 template<class real_type>
-using NNCD = dg::NearestNeighborComm<dg::iDVec, thrust::device_vector<real_type> >; //!< host Communicator for the use in an mpi matrix for derivatives
+using NNCD = dg::NearestNeighborComm<dg::iDVec, thrust::device_vector<const real_type*>, thrust::device_vector<real_type> >; //!< host Communicator for the use in an mpi matrix for derivatives
 using dNNCH = dg::NNCH<double>; //!< host Communicator for the use in an mpi matrix for derivatives
 using fNNCH = dg::NNCH<float>; //!< host Communicator for the use in an mpi matrix for derivatives
 using dNNCD = dg::NNCD<double>; //!< device Communicator for the use in an mpi matrix for derivatives

@@ -33,6 +33,7 @@ template<class Vector>
 using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::type >::tensor_category;
 template<class Vector>
 using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
+
 ///@}
 
 ///@cond
@@ -79,6 +80,8 @@ inline T&& do_get_pointer_or_reference( T&& v, AnyScalarTag){
     return std::forward<T>(v);
 }
 
+///@endcond
+
 //template<class T>
 //inline typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T&&, get_element_type<T> >::type get_vector_element( T&& v, unsigned i )// -> decltype( do_get_vector_element( std::forward<T>(v), i, get_tensor_category<T>()) )
 //{
@@ -96,8 +99,6 @@ inline T&& do_get_pointer_or_reference( T&& v, AnyScalarTag){
 //{
 //    return do_get_pointer_or_reference( std::forward<T>(v), get_tensor_category<T>());
 //}
-
-///@endcond
 
 }//namespace dg
 

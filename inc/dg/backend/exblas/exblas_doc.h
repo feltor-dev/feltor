@@ -3,7 +3,7 @@
  *
  * This version of exblas is an adaption of the original exblas library for FELTOR.
  * The algorithm is described in the paper \n
- * Sylvain Collange, David Defour, Stef Graillat, Roman Iakymchuk. "Numerical Reproducibility for the Parallel Reduction on Multi- and Many-Core Architectures", 2015. <hal-00949355v3>
+ * Sylvain Collange, David Defour, Stef Graillat, Roman Iakymchuk. "Numerical Reproducibility for the Parallel Reduction on Multi- and Many-Core Architectures", 2015. https://hal.archives-ouvertes.fr/hal-00949355v3
  */
 /*!
  * @brief This is the namespace for all functions and

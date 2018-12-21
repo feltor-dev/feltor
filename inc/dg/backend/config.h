@@ -58,8 +58,10 @@
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 
 #include "mpi-ext.h"
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#error "CUDA aware MPI installation required!"
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+//Has cuda aware MPI support. Everything fine
+#elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
+#warning "CUDA aware MPI installation required!"
 #else
 #pragma message( "Cannot determine CUDA-aware MPI support!")
 #endif //MPIX_CUDA

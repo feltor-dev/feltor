@@ -1,19 +1,20 @@
 #pragma once
 #include <cmath>
+#include <array>
 #include <cusp/csr_matrix.h>
 
 #include "dg/backend/transpose.h"
 #include "dg/blas.h"
-#include "dg/geometry/grid.h"
-#include "dg/geometry/interpolation.h"
-#include "dg/geometry/projection.h"
-#include "dg/geometry/functions.h"
-#include "dg/geometry/split_and_join.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/interpolation.h"
+#include "dg/topology/projection.h"
+#include "dg/topology/functions.h"
+#include "dg/topology/split_and_join.h"
 
-#include "dg/geometry/geometry.h"
+#include "dg/topology/geometry.h"
 #include "dg/functors.h"
 #include "dg/nullstelle.h"
-#include "dg/runge_kutta.h"
+#include "dg/adaptive.h"
 #include "magnetic_field.h"
 #include "fluxfunctions.h"
 #include "curvilinear.h"
@@ -41,10 +42,12 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
+
+
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
-    void operator()( double t, const dg::HVec& y, dg::HVec& yp) const {
+    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
+    void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
         double vz = v_.z()(R, Z);
@@ -53,226 +56,70 @@ struct DSFieldCylindrical
         yp[2] = 1./vz;
     }
 
-    double error( const dg::HVec& x0, const dg::HVec& x1)const {
-        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
-    }
-    bool monitor( const dg::HVec& end)const{
-        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) )
-        {
-            return false;
-        }
-        ////if new integrated point outside domain
-        //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-        //{
-        //    return false;
-        //}
-        return true;
-    }
-
     private:
-    dg::geo::BinaryVectorLvl0 v_;
+    dg::geo::CylindricalVectorLvl0 v_;
     dg::Grid2d m_b;
 };
 
 struct DSField
 {
     //z component of v may not vanish
-    DSField( const dg::geo::BinaryVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
+    DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
     {
         thrust::host_vector<double> v_zeta, v_eta;
         dg::pushForwardPerp( v.x(), v.y(), v_zeta, v_eta, g);
         thrust::host_vector<double> v_phi = dg::pullback( v.z(), g);
         dg::blas1::pointwiseDivide(v_zeta, v_phi, v_zeta);
         dg::blas1::pointwiseDivide(v_eta, v_phi, v_eta);
-        dg::blas1::transform(v_phi, v_phi, dg::INVERT<double>());
+        dg::blas1::pointwiseDivide(1.,    v_phi, v_phi);
         dzetadphi_  = dg::create::forward_transform( v_zeta, g );
         detadphi_   = dg::create::forward_transform( v_eta, g );
         dsdphi_     = dg::create::forward_transform( v_phi, g );
-
     }
     //interpolate the vectors given in the constructor on the given point
     //if point lies outside of grid boundaries zero is returned
-    void operator()(double t, const thrust::host_vector<double>& y, thrust::host_vector<double>& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double R = y[0], Z = y[1];
-        g_.get().shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
-        if( !g_.get().contains( R, Z)) yp[0] = yp[1]= yp[2] = 0;
+        g_->shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
+        if( !g_->contains( R, Z))
+        {
+            yp[0] = yp[1] = 0; //Let's hope this never happens?
+        }
         else
         {
             //else interpolate
-            yp[0] = interpolate( R, Z, dzetadphi_, g_.get());
-            yp[1] = interpolate( R, Z, detadphi_,  g_.get());
-            yp[2] = interpolate( R, Z, dsdphi_,    g_.get());
+            yp[0] = interpolate( R, Z, dzetadphi_, *g_);
+            yp[1] = interpolate( R, Z, detadphi_,  *g_);
+            yp[2] = interpolate( R, Z, dsdphi_,    *g_);
         }
-    }
-
-    ///take the sum of the absolute errors perp and parallel
-    double error( const dg::HVec& x0, const dg::HVec& x1) const {
-        //here, we don't need to shift coordinates since x0 and x1 are both end points
-        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1]))+sqrt((x0[2]-x1[2])*(x0[2]-x1[2]));
-    }
-    bool monitor( const dg::HVec& end)const{
-        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) )
-        {
-            return false;
-        }
-        ////if new integrated point far outside domain (How could it end up there??)
-        //if ((end[0] < g_.get().x0()-1e4 ) || (g_.get().x1()+1e4 < end[0])  ||(end[1] < g_.get().y0()-1e4 ) || (g_.get().y1()+1e4 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-        //{
-        //    return false;
-        //}
-        return true;
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
     dg::ClonePtr<dg::aGeometry2d> g_;
-
 };
 
-void clip_to_boundary( double& x, double& y, const dg::aTopology2d& grid)
-{
-    //there is no shift_topologic because if interpolating the results
-    if (!(x > grid.x0())) { x=grid.x0();}
-    if (!(x < grid.x1())) { x=grid.x1();}
-    if (!(y > grid.y0())) { y=grid.y0();}
-    if (!(y < grid.y1())) { y=grid.y1();}
-}
-void clip_to_boundary( thrust::host_vector<double>& x, const dg::aTopology2d& grid)
-{
-    clip_to_boundary(x[0], x[1], grid);
-}
-
-void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2d& g2dFine, const dg::aTopology2d& boundary, //2 different grid on account of the MPI implementation
-        const std::vector<thrust::host_vector<double> >& yp_coarse,
-        const std::vector<thrust::host_vector<double> >& ym_coarse,
-        std::vector<thrust::host_vector<double> >& yp_fine,
-        std::vector<thrust::host_vector<double> >& ym_fine
-        )
-{
-    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp);
-    for( unsigned i=0; i<3; i++)
-    {
-        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
-        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
-    }
-    for( unsigned i=0; i<yp[0].size(); i++)
-    {
-        boundary.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
-        boundary.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
-        detail::clip_to_boundary( yp[0][i], yp[1][i], boundary);
-        detail::clip_to_boundary( ym[0][i], ym[1][i], boundary);
-    }
-    yp_fine=yp, ym_fine=ym;
-}
-
-/**
- * @brief Integrate a field line to find whether the result lies inside or outside of the box
- * @tparam Field Must be usable in the integrateRK() functions
- * @tparam Topology must provide 2d contains function
- */
-template < class Field, class Topology>
-struct BoxIntegrator
-{
-    /**
-     * @brief Construct from a given Field and Grid and accuracy
-     *
-     * @param field field must overload operator() with dg::HVec for three entries
-     * @param g The 2d or 3d grid
-     * @param eps the accuracy of the runge kutta integrator
-     */
-    BoxIntegrator( const Field& field, const Topology& g, double eps): m_field(field), m_g(g), m_coords0(3), m_coords1(3), m_deltaPhi0(0), m_eps(eps) {}
-    /**
-     * @brief Set the starting coordinates for next field line integration
-     * @param coords the new coords (must have size = 3)
-     */
-    void set_coords( const thrust::host_vector<double>& coords){
-        m_coords0 = coords;
-        m_deltaPhi0 = 0;
-    }
-
-    /**
-     * @brief Integrate from 0 to deltaPhi
-     * @param deltaPhi upper integration boundary
-     * @return >0 if result is inside the box, <0 else
-     * @note changes starting coords!
-     */
-    double operator()( double deltaPhi)
-    {
-        double delta = deltaPhi - m_deltaPhi0;
-        dg::integrateRK<4>( m_field, 0., m_coords0, delta, m_coords1, m_eps, 2);
-        m_deltaPhi0 = deltaPhi;
-        m_coords0 = m_coords1;
-        if( !m_g.contains( m_coords1[0], m_coords1[1]) ) return -1;
-        return +1;
-    }
-    private:
-    const Field& m_field;
-    const Topology& m_g;
-    thrust::host_vector<double> m_coords0, m_coords1;
-    double m_deltaPhi0;
-    double m_eps;
-};
-
-/**
- * @brief Integrate one field line in a given box
- *
- * @tparam Field Must be usable in the integrateRK function
- * @tparam Topology must provide 2d contains and shift_topologic function
- * @param field The field to use
- * @param grid instance of the Grid class
- * @param coords0 The initial condition
- * @param coords1 The resulting points (write only) guaranteed to lie inside the grid
- * @param phi1 The angle (read/write) contains maximum phi on input and resulting phi on output
- * @param eps error
- */
-template< class Field, class Topology>
-void boxintegrator( const Field& field, const Topology& grid,
-        const thrust::host_vector<double>& coords0,
-        thrust::host_vector<double>& coords1,
-        double& phi1, double eps)
-{
-    dg::integrateRK<6>( field, 0., coords0, phi1, coords1, eps, 2); //integration
-    double R = coords1[0], Z=coords1[1];
-    //First, catch periodic domain
-    grid.shift_topologic( coords0[0], coords0[1], R, Z);
-    if ( !grid.contains( R, Z))   //point still outside domain
-    {
-        double deltaPhi = phi1;
-        BoxIntegrator<Field, Topology> boxy( field, grid, eps);//stores references to field and grid
-        boxy.set_coords( coords0); //nimm alte koordinaten
-        if( phi1 > 0)
-        {
-            double dPhiMin = 0, dPhiMax = phi1;
-            dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
-            phi1 = (dPhiMin+dPhiMax)/2.;
-            dg::integrateRK<4>( field, 0., coords0, dPhiMax, coords1, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
-        }
-        else // phi1 < 0
-        {
-            double dPhiMin = phi1, dPhiMax = 0;
-            dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-            phi1 = (dPhiMin+dPhiMax)/2.;
-            dg::integrateRK<4>( field, 0., coords0, dPhiMin, coords1, eps);
-        }
-        detail::clip_to_boundary( coords1, grid);
-        //now assume the rest is purely toroidal
-        double deltaS = coords1[2];
-        thrust::host_vector<double> temp=coords0;
-        //compute the vector value on the boundary point
-        field(0., coords1, temp); //we are just interested in temp[2]
-        coords1[2] = deltaS + (deltaPhi-phi1)*temp[2]; // ds + dphi*f[2]
-    }
+template<class real_type>
+real_type ds_norm( const std::array<real_type,3>& x0){
+    return sqrt( x0[0]*x0[0] +x0[1]*x0[1] + x0[2]*x0[2]);
 }
 
 //used in constructor of Fieldaligned
-void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg::aGeometry2d& grid_field, const dg::aTopology2d& grid_evaluate, std::vector<thrust::host_vector<double> >& yp_result, std::vector<thrust::host_vector<double> >& ym_result , double deltaPhi, double eps)
+template<class real_type>
+void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
+    const dg::aRealGeometry2d<real_type>& grid_field,
+    const dg::aRealTopology2d<real_type>& grid_evaluate,
+    std::array<thrust::host_vector<real_type>,3>& yp,
+    std::array<thrust::host_vector<real_type>,3>& ym,
+    real_type deltaPhi, real_type eps)
 {
     //grid_field contains the global geometry for the field and the boundaries
     //grid_evaluate contains the points to actually integrate
-    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, grid_evaluate)); //x
+    thrust::host_vector<real_type> tmp( dg::evaluate( dg::cooX2d, grid_evaluate));
+    std::array<thrust::host_vector<real_type>,3> y{tmp,tmp,tmp};; //x
     y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
-    y[2] = dg::evaluate( dg::zero,   grid_evaluate); //s
-    std::vector<thrust::host_vector<double> > yp( 3, y[0]), ym(yp);
+    y[2] = dg::evaluate( dg::zero, grid_evaluate); //s
+    yp.fill(tmp); ym.fill(tmp); //allocate memory for output
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
@@ -280,26 +127,23 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
     unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
-        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
-        double phi1 = deltaPhi;
+        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP, coordsM;
+        //x,y,s
+        real_type phi1 = deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-        {
-            boxintegrator( cyl_field, grid_field, coords, coordsP, phi1, eps);
-        }
+            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         else
-            boxintegrator( field, grid_field, coords, coordsP, phi1, eps);
+            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         phi1 =  - deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-            boxintegrator( cyl_field, grid_field, coords, coordsM, phi1, eps);
+            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         else
-            boxintegrator( field, grid_field, coords, coordsM, phi1, eps);
+            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-    yp_result=yp;
-    ym_result=ym;
 }
+
 
 }//namespace detail
 ///@endcond
@@ -310,21 +154,19 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
         is a limiter and 0 if there isn't.
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply.
     * @param vec The vector field to integrate
-    * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
-    * @param bcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-    * @param bcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-    * @param limit Instance of the limiter class (Default is a limiter everywhere,
-        note that if \c grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+    * @param grid The grid on which to integrate fieldlines.
+    * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc) (see there for more details)
+    * function and deterimens what happens when the endpoint of the fieldline integration leaves the domain boundaries of \c grid. Note that \c bcx and \c grid.bcx() have to be either both periodic or both not periodic.
+    * @param bcy analogous to \c bcx, applies to y direction
+    * @param limit Instance of the limiter class
+        (Note that if \c grid.bcz()==dg::PER this parameter is ignored, Default is a limiter everywhere)
     */
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
-    * @param multiplyX defines the resolution in X of the fine grid relative to grid
-    * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
-    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
-    * @param integrateAll indicates, that all fieldlines of the fine grid should be integrated instead of interpolating it from the coarse grid.
-    *  Should be true if the streamlines of the vector field cross the domain boudary.
-    * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz() == 1, then \c deltaPhi is taken instead of \c grid.hz()
+    * @param mx refinement factor in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
+    * high as possible, 10 is a good start)
+    * @param my analogous to \c mx, applies to y direction
+    * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz()==1, then \c deltaPhi is taken instead of \c grid.hz()
     * @note If there is a limiter, the boundary condition on the first/last plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries function.
         If there is no limiter, the boundary condition is periodic.
@@ -358,46 +200,44 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
-        double deltaPhi = -1)
+        unsigned mx=10, unsigned my=10,
+        double deltaPhi = -1):
+            Fieldaligned( dg::geo::createBHat(vec),
+                grid, bcx, bcy, limit, eps, mx, my, deltaPhi)
     {
-        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
     }
 
     ///@brief Construct from a vector field and a grid
     ///@copydoc hide_fieldaligned_physics_parameters
     ///@copydoc hide_fieldaligned_numerics_parameters
     template <class Limiter>
-    Fieldaligned(const dg::geo::BinaryVectorLvl0& vec,
+    Fieldaligned(const dg::geo::CylindricalVectorLvl0& vec,
         const ProductGeometry& grid,
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
-        double deltaPhi = -1)
-    {
-        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
-    }
-    ///@brief Construct from a field and a grid
-    ///@copydoc hide_fieldaligned_physics_parameters
-    ///@copydoc hide_fieldaligned_numerics_parameters
-    template <class Limiter>
-    void construct(const dg::geo::BinaryVectorLvl0& vec,
-        const ProductGeometry& grid,
-        dg::bc bcx = dg::NEU,
-        dg::bc bcy = dg::NEU,
-        Limiter limit = FullLimiter(),
-        double eps = 1e-5,
-        unsigned multiplyX=10, unsigned multiplyY=10,
-        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
+        unsigned mx=10, unsigned my=10,
         double deltaPhi = -1);
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = Fieldaligned( std::forward<Params>( ps)...);
+    }
 
-    bool dependsOnX()const{return m_dependsOnX;}
-    bool dependsOnY()const{return m_dependsOnY;}
+    dg::bc bcx()const{
+        return m_bcx;
+    }
+    dg::bc bcy()const{
+        return m_bcy;
+    }
+
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -444,9 +284,9 @@ struct Fieldaligned
      */
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_temp, m_g.get());
-        dg::blas1::axpby( scal_left,  m_temp[0],      0, m_left);
-        dg::blas1::axpby( scal_right, m_temp[m_Nz-1], 0, m_right);
+        dg::split( global, m_f, *m_g);
+        dg::blas1::axpby( scal_left,  m_f[0],      0, m_left);
+        dg::blas1::axpby( scal_right, m_f[m_Nz-1], 0, m_right);
         m_bcz = bcz;
     }
 
@@ -498,30 +338,37 @@ struct Fieldaligned
     */
     void operator()(enum whichMatrix which, const container& in, container& out);
 
-    ///@brief hz is the distance between the plus and minus planes
+    ///@brief Inverse distance between the planes \f$ (s^{k}-s^{k-1})^{-1} \f$
     ///@return three-dimensional vector
-    const container& hz_inv()const {return m_hz_inv;}
-    ///@brief hp is the distance between the plus and current planes
+    const container& hm_inv()const {
+        return m_hm_inv;
+    }
+    ///@brief Inverse distance between the planes \f$ (s^{k+1}-s^{k})^{-1} \f$
     ///@return three-dimensional vector
-    const container& hp_inv()const {return m_hp_inv;}
-    ///@brief hm is the distance between the current and minus planes
+    const container& hp_inv()const {
+        return m_hp_inv;
+    }
+    ///@brief Inverse distance between the planes \f$ (s^{k+1}-s^{k-1})^{-1} \f$
     ///@return three-dimensional vector
-    const container& hm_inv()const {return m_hm_inv;}
-    const ProductGeometry& grid()const{return m_g.get();}
+    const container& h0_inv()const {
+        return m_h0_inv;
+    }
+    ///Grid used for construction
+    const ProductGeometry& grid()const{return *m_g;}
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
-    container m_hz_inv, m_hp_inv, m_hm_inv; //3d size
-    container m_hp, m_hm; //2d size
+    container m_h0_inv, m_hm_inv, m_hp_inv; //3d size
+    container m_hm, m_hp; //2d size
     container m_left, m_right;      //perp_size
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
     unsigned m_Nz, m_perp_size;
-    dg::bc m_bcz;
-    std::vector<container> m_f, m_temp; //split 3d vectors
+    dg::bc m_bcx, m_bcy, m_bcz;
+    std::vector<dg::View<const container>> m_f;
+    std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
-    bool m_dependsOnX, m_dependsOnY;
 };
 
 ///@cond
@@ -531,87 +378,96 @@ struct Fieldaligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-void Fieldaligned<Geometry, IMatrix, container>::construct(
-    const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid,
+Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
+    const dg::geo::CylindricalVectorLvl0& vec, const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, bool bx, bool by, bool integrateAll, double deltaPhi)
+    unsigned mx, unsigned my, double deltaPhi)
 {
-    m_dependsOnX=bx, m_dependsOnY=by;
-    m_Nz=grid.Nz(), m_bcz=grid.bcz();
+    ///Let us check boundary conditions:
+    if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
+        throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
+    if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
+        throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
+    m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
     m_g.reset(grid);
-    dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
-    dg::split( m_hz_inv, m_temp, grid);
-    dg::split( m_hz_inv, m_f, grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    m_perp_size = grid_coarse.get().size();
-    dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
-    dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
+    m_perp_size = grid_coarse->size();
+    dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
+    dg::assign( dg::evaluate(zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym;
-
+    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
     dg::Timer t;
     t.tic();
-    std::cout << "Generate high order grid...\n";
-#endif
+#endif //DG_BENCHMARK
+    std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
-    dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
+    grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
+    dg::Grid2d grid_fine( *grid_coarse );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
     t.toc();
-     std::cout << "High order grid gen   took: "<<t.diff()<<"\n";
+    std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
     t.tic();
-#endif
-    if(integrateAll)
-        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_fine, yp, ym, deltaPhi, eps);
-    else
+#endif //DG_BENCHMARK
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse, yp_coarse, ym_coarse, deltaPhi, eps);
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, *grid_coarse);  //INTERPOLATE TO FINE GRID
+    yp.fill(dg::evaluate( dg::zero, grid_fine));
+    ym = yp;
+    for( int i=0; i<2; i++) //only R and Z get interpolated
     {
-        detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
-        dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
-        dg::geo::detail::interpolate_and_clip( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
+        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
+        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
     }
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
-
-    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    std::cout << "# DS: Computing all points took: "<<t.diff()<<"\n";
     t.tic();
-#endif
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), bcx, bcy), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), bcx, bcy), minus, minusT;
-    dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
-    cusp::multiply( projection, plusFine, plus);
-    cusp::multiply( projection, minusFine, minus);
+#endif //DG_BENCHMARK
+    ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid_coarse, bcx, bcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid_coarse, bcx, bcy), minus, minusT;
+    if( mx == my && mx == 1)
+    {
+        plus = plusFine;
+        minus = minusFine;
+    }
+    else
+    {
+        dg::IHMatrix projection = dg::create::projection( *grid_coarse, grid_fine);
+        cusp::multiply( projection, plusFine, plus);
+        cusp::multiply( projection, minusFine, minus);
+    }
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout << "Multiplication        took: "<<t.diff()<<"\n";
-#endif
+    std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
+#endif //DG_BENCHMARK
     plusT = dg::transpose( plus);
     minusT = dg::transpose( minus);
     dg::blas2::transfer( plus, m_plus);
     dg::blas2::transfer( plusT, m_plusT);
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
-    //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    thrust::host_vector<double> hp( m_perp_size), hm(hp), hz(hp);
-    dg::blas2::symv( projection, yp[2], hp);
-    dg::blas2::symv( projection, ym[2], hm);
-    dg::blas1::scal( hm, -1.);
-    dg::blas1::axpby(  1., hp, +1., hm, hz);
-    dg::blas1::transfer( hp, m_hp);
-    dg::blas1::transfer( hm, m_hm);
-    dg::blas1::transform( hp, hp, dg::INVERT<double>());
-    dg::blas1::transform( hm, hm, dg::INVERT<double>());
-    dg::blas1::transform( hz, hz, dg::INVERT<double>());
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hp), m_hp_inv, grid);
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hm), m_hm_inv, grid);
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hz), m_hz_inv, grid);
+    ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
+    dg::assign( dg::evaluate( dg::zero, grid), m_h0_inv);
+    m_hp_inv = m_hm_inv = m_h0_inv;
+    dg::assign( yp_coarse[2], m_hp); //2d vector
+    m_temp = dg::split( m_hp_inv, grid); //3d vector
+    m_f = dg::split( (const container&)m_hp_inv, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::copy( m_hp, m_temp[i]);
+    dg::assign( ym_coarse[2], m_hm); //2d vector
+    dg::split( m_hm_inv, m_temp, grid); //3d vector
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::copy( m_hm, m_temp[i]);
+    dg::blas1::axpby( 1., m_hp_inv, -1., m_hm_inv, m_h0_inv);//hm is negative
+    dg::blas1::pointwiseDivide( -1., m_hm_inv, m_hm_inv);
+    dg::blas1::pointwiseDivide(  1., m_hp_inv, m_hp_inv);
+    dg::blas1::pointwiseDivide(  1., m_h0_inv, m_h0_inv);
 }
 
 template<class G, class I, class container>
@@ -620,13 +476,13 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
-    assert( p0 < m_g.get().Nz());
-    const dg::ClonePtr<aGeometry2d> g2d = m_g.get().perp_grid();
-    container init2d = dg::pullback( binary, g2d.get());
-    container zero2d = dg::evaluate( dg::zero, g2d.get());
+    assert( p0 < m_g->Nz());
+    const dg::ClonePtr<aGeometry2d> g2d = m_g->perp_grid();
+    container init2d = dg::pullback( binary, *g2d);
+    container zero2d = dg::evaluate( dg::zero, *g2d);
 
     container temp(init2d), tempP(init2d), tempM(init2d);
-    container vec3d = dg::evaluate( dg::zero, m_g.get());
+    container vec3d = dg::evaluate( dg::zero, *m_g);
     std::vector<container>  plus2d(m_Nz, zero2d), minus2d(plus2d), result(plus2d);
     unsigned turns = rounds;
     if( turns ==0) turns++;
@@ -644,8 +500,8 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
                 dg::blas2::symv( m_minus, tempM, temp);
                 temp.swap( tempM);
             }
-            dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_g->hz() ) );
             dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
             dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
         }
@@ -691,7 +547,8 @@ void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const co
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const container& f, container& fpe)
 {
-    dg::split( f, m_f, m_g.get());
+    dg::split( f, m_f, *m_g);
+    dg::split( fpe, m_temp, *m_g);
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -714,13 +571,13 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
         dg::blas1::axpby( 1., m_ghostP, -1., m_temp[i0], m_ghostP);
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostP, 1., m_temp[i0]);
     }
-    dg::join( m_temp, fpe, m_g.get());
 }
 
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const container& f, container& fme)
 {
-    dg::split( f, m_f, m_g.get());
+    dg::split( f, m_f, *m_g);
+    dg::split( fme, m_temp, *m_g);
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -743,7 +600,6 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const contai
         dg::blas1::axpby( 1., m_ghostM, -1., m_temp[i0], m_ghostM);
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_temp[i0]);
     }
-    dg::join( m_temp, fme, m_g.get());
 }
 
 

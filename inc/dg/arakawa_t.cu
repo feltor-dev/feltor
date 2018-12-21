@@ -72,8 +72,8 @@ int main()
     const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
 
     // evaluate left and right hand side on the grid
-    const dg::DVec lhs = dg::transfer<dg::DVec>( dg::evaluate( left, grid));
-    const dg::DVec rhs = dg::transfer<dg::DVec>( dg::evaluate( right, grid));
+    const dg::DVec lhs = dg::construct<dg::DVec>( dg::evaluate( left, grid));
+    const dg::DVec rhs = dg::construct<dg::DVec>( dg::evaluate( right, grid));
     dg::DVec jac(lhs);
 
     // create an Arakawa object
@@ -111,6 +111,6 @@ int main()
     dg::blas1::axpby( 1., variation, -1., jac);
     res.d = sqrt( dg::blas2::dot( w2d, jac));
     std::cout << "Variation distance   "<<res.d<<"\t"<<res.i-binary[4]<<std::endl; //don't forget sqrt when comuting errors
-    std::cout << "\nContinue with geometry/average_t.cu !\n\n";
+    std::cout << "\nContinue with topology/average_t.cu !\n\n";
     return 0;
 }

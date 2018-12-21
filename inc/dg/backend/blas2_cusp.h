@@ -51,7 +51,7 @@ inline void doSymv_cusp_dispatch( Matrix&& m,
         for (index_type jj = row_ptr[i]; jj < row_ptr[i+1]; jj++)
         {
             index_type j = col_ptr[jj];
-            temp += val_ptr[jj]*x_ptr[j];
+            temp = DG_FMA( val_ptr[jj], x_ptr[j], temp);
         }
 
         y_ptr[i] = temp;

@@ -8,15 +8,11 @@ include ../config/devices/devices.mk
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 
-TARGETS =  compare histdiag ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag feltordiag vmaxnc feltorSHvmaxdiag toeflRdiag impRdiag feltorShwmerger feltorShwradstat feltorShwstat growthrate toeflEPdiag normdiag reco2Ddiag
+TARGETS =  compare histdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag feltordiag vmaxnc feltorSHvmaxdiag toeflRdiag impRdiag feltorShwmerger feltorShwradstat feltorShwstat growthrate toeflEPdiag normdiag reco2Ddiag
 
 all: $(TARGETS)
 
 
-ncdiag: ncdiag.cpp
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
-filamentdiag: filamentdiag.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)  
 feltordiag: feltordiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g 
 feltorSHdiag: feltorSHdiag.cu

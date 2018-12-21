@@ -17,10 +17,10 @@ namespace geo
  * @param Z_X start value on input, X-point on output
  * @ingroup misc_geo
  */
-void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     dg::geo::HessianRZtau hessianRZtau(  psi);
-	std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
+    std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
     X[0] = R_X, X[1] = Z_X;
     double eps = 1e10, eps_old= 2e10;
     while( (eps < eps_old || eps > 1e-7) && eps > 1e-13)
@@ -35,32 +35,32 @@ void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 
 ///@cond
 namespace detail{
-struct Monitor : public aCloneableBinaryFunctor<Monitor>
+struct Monitor : public aCylindricalFunctor<Monitor>
 {
     //computes a + eps * b
     Monitor( double value, double eps_value, double R_X, double Z_X, double sigmaR, double sigmaZ):
         m_value(value), m_eps_value(eps_value),
         m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
-    private:
     double do_compute( double x, double y)const
     {
         return m_value+m_cauchy(x,y)*m_eps_value;
     }
+    private:
     double m_value, m_eps_value;
     dg::Cauchy m_cauchy;
 
 };
-struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
+struct DivMonitor : public aCylindricalFunctor<DivMonitor>
 {
     //computes a*epsX + b*epsY
     DivMonitor( double valueX, double valueY, double R_X, double Z_X, double sigmaR, double sigmaZ):
         m_valueX(valueX), m_valueY(valueY),
         m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
-    private:
     double do_compute( double x, double y)const
     {
         return m_valueX*m_cauchy.dx(x,y)+m_valueY*m_cauchy.dy(x,y);
     }
+    private:
     double m_valueX, m_valueY;
     dg::Cauchy m_cauchy;
 
@@ -80,7 +80,7 @@ struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
+static inline CylindricalSymmTensorLvl1 make_Xbump_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -97,7 +97,7 @@ BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& 
     detail::Monitor yy(1, gyy-1, x,y, radiusX, radiusY);
     detail::DivMonitor divX(gxx-1, gxy, x,y, radiusX, radiusY);
     detail::DivMonitor divY(gxy, gyy-1, x,y, radiusX, radiusY);
-    BinarySymmTensorLvl1 chi( xx, xy, yy, divX, divY);
+    CylindricalSymmTensorLvl1 chi( xx, xy, yy, divX, divY);
     //double laplace = psi.dfxx()(x,y)*chi.xx()(x,y)+2.*psi.dfxy()(x,y)*chi.xy()(x,y)+psi.dfyy()(x,y)*chi.yy()(x,y)
     //        + chi.divX()(x,y)*psi.dfx()(x,y) + chi.divY()(x,y)*psi.dfy()(x,y);
     //std::cout << "Laplace at X-point "<<laplace<<std::endl;
@@ -114,7 +114,7 @@ BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& 
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline CylindricalSymmTensorLvl1 make_Xconst_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -131,7 +131,7 @@ BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double&
     Constant yy(gyy);
     Constant divX(0);
     Constant divY(0);
-    BinarySymmTensorLvl1 chi( xx, xy, yy, divX, divY);
+    CylindricalSymmTensorLvl1 chi( xx, xy, yy, divX, divY);
     //std::cout << "px  "<<psi.dfx()(x,y)<<" py "<<psi.dfy()(x,y)<<std::endl;
     //std::cout << "gxx "<<chi.xx()(x,y)<<" gxy "<< chi.xy()(x,y)<<" gyy "<<chi.yy()(x,y)<<std::endl;
     //std::cout << "pxx "<<psixx<<" pxy "<< psixy<<" pyy "<<psiyy<<std::endl;
@@ -152,7 +152,7 @@ namespace detail
  */
 struct XCross
 {
-    XCross( const BinaryFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
+    XCross( const CylindricalFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
     {
         R_X_ = R_X, Z_X_ = Z_X;
         //std::cout << "X-point set at "<<R_X_<<" "<<Z_X_<<"\n";
@@ -181,7 +181,7 @@ struct XCross
         {
             eps_old = eps; end_old = end;
             N*=2;
-            dg::stepperRK<17>( fieldRZtau_, psi0, begin, 0, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psi0, begin, 0, end, N);
 
             eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -205,7 +205,7 @@ struct XCross
     private:
     int quad_;
     dg::geo::FieldRZtau fieldRZtau_;
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     double R_X_, Z_X_;
     double R_i[4], Z_i[4];
     double dist_;
@@ -232,7 +232,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old), yz_old(r_old), xz_old(z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
     //now compute f and starting values
-	std::array<double, 4> begin{ {0,0,0,0} }, end(begin), temp(begin);
+    std::array<double, 4> begin{ {0,0,0,0} }, end(begin), temp(begin);
     const double fprime = fpsi.f_prime( psi);
     f_psi = fpsi.construct_f(psi, R_0, Z_0);
     fieldRZYRYZY.set_f(f_psi);
@@ -248,14 +248,14 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
             else     begin[0] = R_0[0], begin[1] = Z_0[0];
             fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
             unsigned i=nodeX0-1;
-            dg::stepperRK<17>( fieldRZYRYZY, 0, begin, y_vec[i], end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 0, begin, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
         for( int i=nodeX0-2; i>=0; i--)
         {
             temp = end;
-            dg::stepperRK<17>( fieldRZYRYZY, y_vec[i+1],temp, y_vec[i], end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i+1],temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
@@ -263,18 +263,18 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
         begin[0] = R_0[0], begin[1] = Z_0[0];
         fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
         unsigned i=nodeX0;
-        dg::stepperRK<17>( fieldRZYRYZY, 0, begin, y_vec[i], end, steps);
+        dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 0, begin, y_vec[i], end, steps);
         r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
         fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         for( unsigned i=nodeX0+1; i<nodeX1; i++)
         {
             temp = end;
-            dg::stepperRK<17>( fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
         temp = end;
-        dg::stepperRK<17>( fieldRZYRYZY, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
         if( psi <0)
             eps = sqrt( (end[0]-R_0[0])*(end[0]-R_0[0]) + (end[1]-Z_0[0])*(end[1]-Z_0[0]));
         else
@@ -286,14 +286,14 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
             begin[0] = R_0[1], begin[1] = Z_0[1];
             fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
             unsigned i=nodeX1;
-            dg::stepperRK<17>( fieldRZYRYZY, 2.*M_PI, begin, y_vec[i], end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 2.*M_PI, begin, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
         for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK<17>( fieldRZYRYZY, y_vec[i-1], temp, y_vec[i] ,end, steps);
+            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i-1], temp, y_vec[i] ,end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
@@ -336,13 +336,13 @@ double construct_psi_values( XFieldFinv fpsiMinv,
         x0 = x_0, x1 = x_vec[0];
 
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
-        dg::stepperRK<17>( fpsiMinv, x0, begin, x1, end, N);
+        dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, begin, x1, end, N);
         psi_x[0] = end[0]; fpsiMinv(0.,end,temp);
         for( unsigned i=1; i<idxX; i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
-            dg::stepperRK<17>( fpsiMinv, x0, temp, x1, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, temp, x1, end, N);
             psi_x[i] = end[0]; fpsiMinv(0.,end,temp);
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
@@ -353,12 +353,12 @@ double construct_psi_values( XFieldFinv fpsiMinv,
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
-            dg::stepperRK<17>( fpsiMinv, x0, temp, x1, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, temp, x1, end, N);
             psi_x[i] = end[0]; fpsiMinv(0.,end,temp);
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
         temp = end;
-        dg::stepperRK<17>(fpsiMinv, x1, temp, x_1, end,N);
+        dg::stepperRK( "Feagin-17-8-10", fpsiMinv, x1, temp, x_1, end,N);
         psi_1_numerical = end[0];
         dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
@@ -376,11 +376,11 @@ double construct_psi_values( XFieldFinv fpsiMinv,
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
 struct PsipSep
 {
-    PsipSep( const aBinaryFunctor& psi): psip_(psi), Z_(0){}
+    PsipSep( const CylindricalFunctor& psi): psip_(psi), Z_(0){}
     void set_Z( double z){ Z_=z;}
-    double operator()(double R) { return psip_.get()(R, Z_);}
+    double operator()(double R) { return psip_(R, Z_);}
     private:
-    ClonePtr<aBinaryFunctor> psip_;
+    CylindricalFunctor psip_;
     double Z_;
 };
 
@@ -389,7 +389,7 @@ struct PsipSep
 //good as it can, i.e. until machine precision is reached (like FpsiX just for separatrix)
 struct SeparatriX
 {
-    SeparatriX( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline, bool verbose=false):
+    SeparatriX( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline, bool verbose=false):
         mode_(firstline),
         fieldRZYequi_(psi, chi), fieldRZYTequi_(psi, x0, y0, chi), fieldRZYZequi_(psi, chi),
         fieldRZYconf_(psi, chi), fieldRZYTconf_(psi, x0, y0, chi), fieldRZYZconf_(psi, chi), m_verbose( verbose)
@@ -414,7 +414,7 @@ struct SeparatriX
         R_i[3] = (R_min+R_max)/2., Z_i[3] = Z_X-1.;
         if(m_verbose)std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
         //now measure y distance to X-point
-		std::array<double, 3> begin2d{ {0,0,0} }, end2d(begin2d);
+        std::array<double, 3> begin2d{ {0,0,0} }, end2d(begin2d);
         for( int i=0; i<4; i++)
         {
             unsigned N = 1;
@@ -427,8 +427,8 @@ struct SeparatriX
             while( (eps < eps_old || eps > 5e-5))
             {
                 eps_old = eps; N*=2; y_old=y;
-                if(mode_==0)dg::stepperRK<6>( fieldRZYZconf_, Z_i[i], begin2d, Z_X, end2d, N);
-                if(mode_==1)dg::stepperRK<6>( fieldRZYZequi_, Z_i[i], begin2d, Z_X, end2d, N);
+                if(mode_==0)dg::stepperRK( "Fehlberg-6-4-5",  fieldRZYZconf_, Z_i[i], begin2d, Z_X, end2d, N);
+                if(mode_==1)dg::stepperRK( "Fehlberg-6-4-5",  fieldRZYZequi_, Z_i[i], begin2d, Z_X, end2d, N);
                 y=end2d[2];
                 eps = fabs((y-y_old)/y_old);
                 eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
@@ -456,7 +456,7 @@ struct SeparatriX
             thrust::host_vector<double>& z ) const
     {
         ///////////////////////////find y coordinate line//////////////
-		std::array<double, 2> begin{ {0,0} }, end(begin), temp(begin);
+        std::array<double, 2> begin{ {0,0} }, end(begin), temp(begin);
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size());
@@ -468,32 +468,32 @@ struct SeparatriX
             if( nodeX0 != 0) //integrate to start point
             {
                 begin[0] = R_i[3], begin[1] = Z_i[3];
-                if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, -y_i[3], begin, y_vec[nodeX0-1], end, N_steps_);
-                if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, -y_i[3], begin, y_vec[nodeX0-1], end, N_steps_);
+                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, -y_i[3], begin, y_vec[nodeX0-1], end, N_steps_);
+                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, -y_i[3], begin, y_vec[nodeX0-1], end, N_steps_);
                 r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
             }
             for( int i=nodeX0-2; i>=0; i--)
             {
                 temp = end;
-                if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, y_vec[i+1], temp, y_vec[i], end,steps);
-                if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, y_vec[i+1], temp, y_vec[i], end, steps);
+                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[i+1], temp, y_vec[i], end,steps);
+                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[i+1], temp, y_vec[i], end, steps);
                 r[i] = end[0], z[i] = end[1];
             }
             ////////////////middle region///////////////////////////
             begin[0] = R_i[0], begin[1] = Z_i[0];
-            if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, y_i[0], begin, y_vec[nodeX0], end, N_steps_);
-            if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, y_i[0], begin, y_vec[nodeX0], end, N_steps_);
+            if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_i[0], begin, y_vec[nodeX0], end, N_steps_);
+            if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_i[0], begin, y_vec[nodeX0], end, N_steps_);
             r[nodeX0] = end[0], z[nodeX0] = end[1];
             for( unsigned i=nodeX0+1; i<nodeX1; i++)
             {
                 temp = end;
-                if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, y_vec[i-1], temp, y_vec[i], end, steps);
-                if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, y_vec[i-1], temp, y_vec[i], end, steps);
+                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[i-1], temp, y_vec[i], end, steps);
+                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[i-1], temp, y_vec[i], end, steps);
                 r[i] = end[0], z[i] = end[1];
             }
             temp = end;
-            if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end, N_steps_);
-            if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end, N_steps_);
+            if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end, N_steps_);
+            if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end, N_steps_);
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             ////////////////////bottom left region
@@ -501,15 +501,15 @@ struct SeparatriX
             if( nodeX0!= 0)
             {
                 begin[0] = R_i[2], begin[1] = Z_i[2];
-                if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, 2.*M_PI+y_i[2], begin, y_vec[nodeX1], end, N_steps_);
-                if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, 2.*M_PI+y_i[2], begin, y_vec[nodeX1], end, N_steps_);
+                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, 2.*M_PI+y_i[2], begin, y_vec[nodeX1], end, N_steps_);
+                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, 2.*M_PI+y_i[2], begin, y_vec[nodeX1], end, N_steps_);
                 r[nodeX1] = end[0], z[nodeX1] = end[1];
             }
             for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
             {
                 temp = end;
-                if(mode_==0)dg::stepperRK<17>( fieldRZYconf_, y_vec[i-1], temp, y_vec[i], end, steps);
-                if(mode_==1)dg::stepperRK<17>( fieldRZYequi_, y_vec[i-1], temp, y_vec[i], end, steps);
+                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[i-1], temp, y_vec[i], end, steps);
+                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[i-1], temp, y_vec[i], end, steps);
                 r[i] = end[0], z[i] = end[1];
             }
             //compute error in R,Z only
@@ -531,7 +531,7 @@ struct SeparatriX
     {
         if(m_verbose)std::cout << "In construct f function!\n";
 
-		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
+        std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 32;
@@ -541,19 +541,19 @@ struct SeparatriX
             N*=2;
             if(mode_==0)
             {
-                dg::stepperRK<17>( fieldRZYZconf_, begin[1], begin,  0., end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZconf_, begin[1], begin,  0., end, N);
                 std::array<double,3> temp(end);
-                dg::stepperRK<17>( fieldRZYTconf_, 0., temp, M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., temp, M_PI, end, N);
                 temp = end;
-                dg::stepperRK<17>( fieldRZYZconf_, temp[1], temp, Z_i[1], end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZconf_, temp[1], temp, Z_i[1], end, N);
             }
             if(mode_==1)
             {
-                dg::stepperRK<17>( fieldRZYZequi_, begin[1], begin, 0., end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZequi_, begin[1], begin, 0., end, N);
                 std::array<double,3> temp(end);
-                dg::stepperRK<17>( fieldRZYTequi_, 0., temp, M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequi_, 0., temp, M_PI, end, N);
                 temp = end;
-                dg::stepperRK<17>( fieldRZYZequi_, temp[1], temp, Z_i[1], end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZequi_, temp[1], temp, Z_i[1], end, N);
             }
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
@@ -587,7 +587,7 @@ namespace detail
 struct InitialX
 {
 
-    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX, bool verbose = false):
+    InitialX( const CylindricalFunctorsLvl1& psi, double xX, double yX, bool verbose = false):
         psip_(psi), fieldRZtau_(psi),
         xpointer_(psi, xX, yX, 1e-4), m_verbose( verbose)
     {
@@ -609,7 +609,7 @@ struct InitialX
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
-                N*=2; dg::stepperRK<6>( fieldRZtau_, psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
+                N*=2; dg::stepperRK( "Fehlberg-6-4-5",  fieldRZtau_, psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -623,7 +623,7 @@ struct InitialX
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
-                N*=2; dg::stepperRK<6>( fieldRZtau_, psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
+                N*=2; dg::stepperRK( "Fehlberg-6-4-5",  fieldRZtau_, psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -643,7 +643,7 @@ struct InitialX
      */
     void find_initial( double psi, double* R_0, double* Z_0)
     {
-		std::array<double, 2> begin{ {0,0} }, end(begin), end_old(begin);
+        std::array<double, 2> begin{ {0,0} }, end(begin), end_old(begin);
         for( unsigned i=0; i<2; i++)
         {
             if(psi<0)
@@ -659,7 +659,7 @@ struct InitialX
             while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
             {
                 eps_old = eps; end_old = end;
-                dg::stepperRK<17>( fieldRZtau_, psip_.f()(begin[0], begin[1]), begin, psi, end, steps);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(begin[0], begin[1]), begin, psi, end, steps);
                 eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -680,7 +680,7 @@ struct InitialX
 
 
     private:
-    BinaryFunctorsLvl1 psip_;
+    CylindricalFunctorsLvl1 psip_;
     const dg::geo::FieldRZtau fieldRZtau_;
     dg::geo::detail::XCross xpointer_;
     double R_i_[4], Z_i_[4];

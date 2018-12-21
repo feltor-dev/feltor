@@ -3,12 +3,14 @@
 #include <cassert>
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
+#include "exceptions.h"
 #include "exblas/mpi_accumulate.h"
 #include "tensor_traits.h"
 #include "blas1_dispatch_shared.h"
 #include "mpi_communicator.h"
 #include "memory.h"
 
+//TODO: should we catch the cases where outer_size \in {1,2,3} in NearestNeighborComm?
 namespace dg
 {
 
@@ -28,15 +30,19 @@ template<class container>
 struct MPI_Vector
 {
     typedef container container_type;//!< typedef to acces underlying container
-    ///no data is allocated, communicator is MPI_COMM_WORLD
-    MPI_Vector(){ set_communicator(MPI_COMM_WORLD);}
+    ///no data is allocated, communicators are \c MPI_COMM_NULL
+    MPI_Vector(){
+        comm_ = comm128_ = comm128Reduce_ = MPI_COMM_NULL;
+    }
     /**
      * @brief construct a vector
+     *
+     * calls \c exblas::mpi_reduce_communicator() (collective call)
      * @param data internal data copy
-     * @param comm MPI communicator
+     * @param comm MPI communicator (may not be \c MPI_COMM_NULL)
      */
-    MPI_Vector( const container& data, MPI_Comm comm): data_( data) {
-        set_communicator( comm);
+    MPI_Vector( const container& data, MPI_Comm comm): data_( data), comm_(comm) {
+        exblas::mpi_reduce_communicator( comm, &comm128_, &comm128Reduce_);
     }
 
     /**
@@ -49,7 +55,9 @@ struct MPI_Vector
     template<class OtherContainer>
     MPI_Vector( const MPI_Vector<OtherContainer>& src){
         data_ = src.data();
-        set_communicator( src.communicator());
+        comm_ = src.communicator();
+        comm128_ = src.communicator_mod();
+        comm128Reduce_ = src.communicator_mod_reduce();
     }
 
     ///@brief Get underlying data
@@ -71,10 +79,13 @@ struct MPI_Vector
      * @return returns MPI_COMM_NULL to processes not part of that group
      */
     MPI_Comm communicator_mod_reduce() const{return comm128Reduce_;}
-    ///@brief Set the communicator to which this vector belongs
-    void set_communicator(MPI_Comm comm){
+    /**
+    * @brief Set the communicators with \c exblas::mpi_reduce_communicator
+    */
+    void set_communicator(MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce){
         comm_ = comm;
-        exblas::mpi_reduce_communicator( comm_, &comm128_, &comm128Reduce_);
+        comm128_ = comm_mod;
+        comm128Reduce_ = comm_mod_reduce;
     }
 
     ///@brief Return the size of the data object
@@ -107,22 +118,51 @@ struct TensorTraits<MPI_Vector<container> > {
 };
 ///@}
 
-/////////////////////////////communicator exchanging columns//////////////////
+/////////////////////////////communicator//////////////////////////
 /**
 * @brief Communicator for asynchronous nearest neighbor communication
 *
-* exchanges a halo of given depth among neighboring processes in a given direction
-* (the corresponding gather map is of general type and the communication
-*  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm )
+* Imagine a communicator with Cartesian topology and further imagine that the
+* grid topology is also Cartesian (vectors form a box) in two or three dimensions.
+* In each direction this box has a boundary layer (the halo) of a depth given by
+* the user. Each boundary layer has two neighboring layers, one on the same process
+* and one lying on the neighboring process.
+* What this class does is to provide you with six pointers to each of these
+* six layers (three on each side). The pointers either reference data in an
+* internal communication buffer (since it involves communciation to get the
+* layers from neighboring processes) another buffer (if mpi communication
+* requires to reorder input data) or the input vector itself (if the
+* communication goes along the last dimension there is no need to reorder,
+* in fact, here is the main gain we get from the pointer approach, we save
+* on unnecessary data copies, which might be significant in cases where
+* the communication to computation ratio is high).
+* The size of the data each pointer references is the halo size, \c buffer_size()
+*
+* The communication is done asynchronously i.e. the user can initiate
+* the communication and signal when the results are needed at a later stage.
+*
+* @note If the number of neighboring processes in the given direction is 1,
+* the buffer size is 0 and all members return immediately.
+* @note the pointers may alias each other (if the input contains less than 4 layers)
+*
+* @note the corresponding gather map is of general type and the communication
+*  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm
+*  @attention Currently we cannot handle the case where the whole vector is
+*  the boundary layer (i.e. \c buffer_size()==input.size() and both neighboring layers are on different processes)
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
+* @tparam Buffer the container for the pointers to the buffer arrays
 * @tparam Vector the vector container type must have a resize() function and work
 * in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
+* @sa dg::RowColDistMat
 */
-template<class Index, class Vector>
+template<class Index, class Buffer, class Vector>
 struct NearestNeighborComm
 {
-    typedef Vector container_type; //!< reveal local container type
+    using container_type = Vector;
+    using buffer_type = Buffer;
+    using pointer_type = get_value_type<Vector>*;
+    using const_pointer_type = get_value_type<Vector> const *;
     ///@brief no communication
     NearestNeighborComm(){
         silent_ = true;
@@ -130,13 +170,14 @@ struct NearestNeighborComm
     /**
     * @brief Construct
     *
-    * @param n size of the halo
+    * @param n depth of the halo
     * @param vector_dimensions {x, y, z} dimension (total number of points)
     * @param comm the (cartesian) communicator
     * @param direction 0 is x, 1 is y, 2 is z
     */
     NearestNeighborComm( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction)
     {
+        static_assert( std::is_same<const_pointer_type, get_value_type<Buffer>>::value, "Must be same pointer types");
         construct( n, vector_dimensions, comm, direction);
     }
 
@@ -149,9 +190,9 @@ struct NearestNeighborComm
     * @tparam OtherVector other container type
     * @param src source object
     */
-    template< class OtherIndex, class OtherVector>
-    NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
-        if( src.size() == 0)  silent_=true;
+    template< class OtherIndex, class OtherBuffer, class OtherVector>
+    NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherBuffer, OtherVector>& src){
+        if( src.buffer_size() == 0)  silent_=true;
         else
             construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
@@ -172,99 +213,131 @@ struct NearestNeighborComm
     * @return direction
     */
     unsigned direction() const {return direction_;}
+    ///@copydoc aCommunicator::isCommunicating()
+    MPI_Comm communicator() const{return comm_;}
 
     /**
-     * @brief Allocate a buffer object of size \c size()
+     * @brief Allocate a buffer object
+     *
+     * The buffer object is only a colletion of pointers to the actual data
      * @return a buffer object on the stack
-     * @note if \c size()==0 the default constructor of \c Vector is called
+     * @note if \c buffer_size()==0 the default constructor of \c Buffer is called
      */
-    Vector allocate_buffer( )const{
-        if( do_size() == 0 ) return Vector();
-        return do_make_buffer();
+    Buffer allocate_buffer( )const{
+        if( buffer_size() == 0 ) return Buffer();
+        return Buffer(6);
+    }
+    /**  @brief The size of the halo
+     * @return the size of the halo (0 if no communication)
+     */
+    unsigned buffer_size() const;
+    ///@copydoc aCommunicator::isCommunicating()
+    bool isCommunicating() const{
+        if( buffer_size() == 0) return false;
+        return true;
+    }
+    /**
+     * @brief Map a local matrix index to a buffer index
+     * @param i matrix index
+     * @return buffer index (0,1,...,5)
+     */
+    int map_index(int i) const{
+        if( i==-1) return 0;
+        if( i== 0) return 1;
+        if( i==+1) return 2;
+        if( i==(int)outer_size_-0) return 5;
+        if( i==(int)outer_size_-1) return 4;
+        if( i==(int)outer_size_-2) return 3;
+        throw Error( Message(_ping_)<<"Index not mappable!");
+        return -1;
     }
 
     /**
     * @brief Gather values from given Vector and initiate asynchronous MPI communication
-    * @param values from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
+    * @param input from which to gather data (it is @b unsafe to change values on return)
+    * @param buffer (write only) pointers to the received data after \c global_gather_wait() was called (must be allocated by \c allocate_buffer())
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    template<class container>
-    void global_gather_init( const container& values, MPI_Request rqst[4])const
+    void global_gather_init( const_pointer_type input, buffer_type& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
-                   "Only Shared vectors allowed");
-        static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
-        static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
-        const get_value_type<container>* ptr = thrust::raw_pointer_cast( values.data());
-        do_global_gather_init( get_execution_policy<container>(),  ptr, rqst);
+        unsigned size = buffer_size();
+        //init pointers on host
+        const_pointer_type host_ptr[6];
+        if(trivial_)
+        {
+            host_ptr[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
+            host_ptr[1] = input;
+            host_ptr[2] = input+size;
+            host_ptr[3] = input+(outer_size_-2)*size;
+            host_ptr[4] = input+(outer_size_-1)*size;
+            host_ptr[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
+        }
+        else
+        {
+            host_ptr[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
+            host_ptr[1] = thrust::raw_pointer_cast(&internal_buffer_.data()[1*size]);
+            host_ptr[2] = thrust::raw_pointer_cast(&internal_buffer_.data()[2*size]);
+            host_ptr[3] = thrust::raw_pointer_cast(&internal_buffer_.data()[3*size]);
+            host_ptr[4] = thrust::raw_pointer_cast(&internal_buffer_.data()[4*size]);
+            host_ptr[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
+        }
+        //copy to device
+        thrust::copy( host_ptr, host_ptr+6, buffer.begin());
+        do_global_gather_init( get_execution_policy<Vector>(), input, rqst);
+        sendrecv( host_ptr[1], host_ptr[4],
+                  thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]),
+                  thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]),
+                  rqst);
     }
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
-    * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
-    * @param buffer (write only) where received data resides on return (must be of size \c size())
+    * Calls MPI_Waitall on the \c rqst variables and may do additional cleanup. After this call returns it is safe to use data the buffer points to.
+    * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into \c buffer)
+    * @param buffer (write only) where received data resides on return (must be allocated by \c allocate_buffer())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    template<class container>
-    void global_gather_wait(const container& input, container& buffer, MPI_Request rqst[4])const
+    void global_gather_wait(const_pointer_type input, const buffer_type& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
-                   "Only Shared vectors allowed");
-        static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
-        static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
-        get_value_type<container>* ptr = thrust::raw_pointer_cast( buffer.data());
-        const get_value_type<container>* i_ptr = thrust::raw_pointer_cast( input.data());
-        do_global_gather_wait( get_execution_policy<container>(), i_ptr, ptr, rqst);
-
+        MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     }
-    ///@copydoc aCommunicator::size()
-    unsigned size() const{return do_size();}
-    ///@copydoc aCommunicator::isCommunicating()
-    bool isCommunicating() const{
-        if( do_size() == 0) return false;
-        return true;
-    }
-    ///@copydoc aCommunicator::isCommunicating()
-    MPI_Comm communicator() const{return comm_;}
     private:
-    using value_type = get_value_type<Vector>;
-    void do_global_gather_init( OmpTag, const value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( OmpTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_init( SerialTag, const value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( SerialTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_init( CudaTag, const value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( CudaTag, const value_type*, value_type*, MPI_Request rqst[4])const;
-    unsigned do_size()const; //size of values is size of input plus ghostcells
-    Vector do_make_buffer( )const{
-        Vector tmp( do_size());
-        return tmp;
-    }
+    void do_global_gather_init( OmpTag, const_pointer_type, MPI_Request rqst[4])const;
+    void do_global_gather_init( SerialTag, const_pointer_type, MPI_Request rqst[4])const;
+    void do_global_gather_init( CudaTag, const_pointer_type, MPI_Request rqst[4])const;
     void construct( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction);
 
     unsigned n_, dim_[3]; //deepness, dimensions
     MPI_Comm comm_;
     unsigned direction_;
-    bool silent_;
-    Index gather_map1, gather_map2, scatter_map1, scatter_map2; //buffer_size
-    Index gather_map_middle, scatter_map_middle;
-    Buffer<Vector> sb1, sb2, rb1, rb2;  //buffer_size
-    Buffer<Vector> buffer_middle;
+    bool silent_, trivial_=false; //silent -> no comm, trivial -> comm in last dim
+    unsigned outer_size_ = 1; //size of vector in units of buffer_size
+    Index gather_map_middle_;
+    dg::Buffer<Vector> internal_buffer_;
 
-    void sendrecv(MPI_Request rqst[4])const;
-    unsigned buffer_size() const;
+    void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
     int m_source[2], m_dest[2];
 };
 
 ///@cond
 
-template<class I, class V>
-void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[3], MPI_Comm comm, unsigned direction)
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimensions[3], MPI_Comm comm, unsigned direction)
 {
+    static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<V>>::value,
+               "Only Shared vectors allowed");
     silent_=false;
     n_=n;
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
-    comm_ = comm;
     direction_ = direction;
+    if( dimensions[2] == 1 && direction == 1) trivial_ = true;
+    else if( direction == 2) trivial_ = true;
+    else trivial_ = false;
+    assert( direction <3);
+    comm_ = comm;
+    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
+    MPI_Cart_shift( comm_, direction_, -1, &m_source[0], &m_dest[0]);
+    MPI_Cart_shift( comm_, direction_, +1, &m_source[1], &m_dest[1]);
     {
         int ndims;
         MPI_Cartdim_get( comm, &ndims);
@@ -272,30 +345,21 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
         MPI_Cart_get( comm, ndims, dims, periods, coords);
         if( dims[direction] == 1) silent_ = true;
     }
-    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
-    MPI_Cart_shift( comm_, direction_, -1, &m_source[0], &m_dest[0]);
-    MPI_Cart_shift( comm_, direction_, +1, &m_source[1], &m_dest[1]);
-    assert( direction <3);
-    thrust::host_vector<int> hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
-    thrust::host_vector<int> mid_gather( 4*buffer_size()), mid_scatter( 4*buffer_size());
+    if( !silent_)
+    {
+    outer_size_ = dimensions[0]*dimensions[1]*dimensions[2]/buffer_size();
+    assert( outer_size_ > 1 && "Parallelization too fine grained!"); //right now we cannot have that
+    thrust::host_vector<int> mid_gather( 4*buffer_size());
     switch( direction)
     {
         case( 0):
         for( unsigned i=0; i<dim_[2]*dim_[1]; i++)
             for( unsigned j=0; j<n; j++)
             {
-                hbgather1[i*n+j]        = i*dim_[0]               + j;
-                mid_gather[i*4*n+0*n+j] = i*dim_[0]               + j;
-                mid_gather[i*4*n+1*n+j] = i*dim_[0] + n           + j;
-                mid_gather[i*4*n+2*n+j] = i*dim_[0] + dim_[0]-2*n + j;
-                mid_gather[i*4*n+3*n+j] = i*dim_[0] + dim_[0]-  n + j;
-                hbgather2[i*n+j]        = i*dim_[0] + dim_[0]-  n + j;
-                hbscattr1[i*n+j]         = i*(6*n) + 0*n + j;
-                mid_scatter[i*4*n+0*n+j] = i*(6*n) + 1*n + j;
-                mid_scatter[i*4*n+1*n+j] = i*(6*n) + 2*n + j;
-                mid_scatter[i*4*n+2*n+j] = i*(6*n) + 3*n + j;
-                mid_scatter[i*4*n+3*n+j] = i*(6*n) + 4*n + j;
-                hbscattr2[i*n+j]         = i*(6*n) + 5*n + j;
+                mid_gather[(0*n+j)*dim_[2]*dim_[1]+i] = i*dim_[0]               + j;
+                mid_gather[(1*n+j)*dim_[2]*dim_[1]+i] = i*dim_[0] + n           + j;
+                mid_gather[(2*n+j)*dim_[2]*dim_[1]+i] = i*dim_[0] + dim_[0]-2*n + j;
+                mid_gather[(3*n+j)*dim_[2]*dim_[1]+i] = i*dim_[0] + dim_[0]-  n + j;
             }
         break;
         case( 1):
@@ -303,58 +367,32 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
             for( unsigned j=0; j<n; j++)
                 for( unsigned k=0; k<dim_[0]; k++)
                 {
-                    hbgather1[(i*n+j)*dim_[0]+k]        = (i*dim_[1] +               j)*dim_[0] + k;
-                    mid_gather[(i*4*n+0*n+j)*dim_[0]+k] = (i*dim_[1]               + j)*dim_[0] + k;
-                    mid_gather[(i*4*n+1*n+j)*dim_[0]+k] = (i*dim_[1] + n           + j)*dim_[0] + k;
-                    mid_gather[(i*4*n+2*n+j)*dim_[0]+k] = (i*dim_[1] + dim_[1]-2*n + j)*dim_[0] + k;
-                    mid_gather[(i*4*n+3*n+j)*dim_[0]+k] = (i*dim_[1] + dim_[1]-  n + j)*dim_[0] + k;
-                    hbgather2[(i*n+j)*dim_[0]+k]        = (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
-                    hbscattr1[(i*n+j)*dim_[0]+k]         = (i*(6*n) + 0*n + j)*dim_[0] + k;
-                    mid_scatter[(i*4*n+0*n+j)*dim_[0]+k] = (i*(6*n) + 1*n + j)*dim_[0] + k;
-                    mid_scatter[(i*4*n+1*n+j)*dim_[0]+k] = (i*(6*n) + 2*n + j)*dim_[0] + k;
-                    mid_scatter[(i*4*n+2*n+j)*dim_[0]+k] = (i*(6*n) + 3*n + j)*dim_[0] + k;
-                    mid_scatter[(i*4*n+3*n+j)*dim_[0]+k] = (i*(6*n) + 4*n + j)*dim_[0] + k;
-                    hbscattr2[(i*n+j)*dim_[0]+k]         = (i*(6*n) + 5*n + j)*dim_[0] + k;
+                    mid_gather[((0*n+j)*dim_[2]+i)*dim_[0] + k] = (i*dim_[1]               + j)*dim_[0] + k;
+                    mid_gather[((1*n+j)*dim_[2]+i)*dim_[0] + k] = (i*dim_[1] + n           + j)*dim_[0] + k;
+                    mid_gather[((2*n+j)*dim_[2]+i)*dim_[0] + k] = (i*dim_[1] + dim_[1]-2*n + j)*dim_[0] + k;
+                    mid_gather[((3*n+j)*dim_[2]+i)*dim_[0] + k] = (i*dim_[1] + dim_[1]-  n + j)*dim_[0] + k;
                 }
         break;
         case( 2):
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<dim_[0]*dim_[1]; j++)
             {
-                hbgather1[i*dim_[0]*dim_[1]+j]            = (i               )*dim_[0]*dim_[1] + j;
-                mid_gather[(i*4*n+0*n)*dim_[0]*dim_[1]+j] = (i               )*dim_[0]*dim_[1] + j;
-                mid_gather[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i + n           )*dim_[0]*dim_[1] + j;
-                mid_gather[(i*4*n+2*n)*dim_[0]*dim_[1]+j] = (i + dim_[2]-2*n )*dim_[0]*dim_[1] + j;
-                mid_gather[(i*4*n+3*n)*dim_[0]*dim_[1]+j] = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
-                hbgather2[i*dim_[0]*dim_[1]+j]            = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
-
-                hbscattr1[i*dim_[0]*dim_[1]+j]             = (i*(6*n) + 0*n)*dim_[0]*dim_[1] + j;
-                mid_scatter[(i*4*n+0*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 1*n)*dim_[0]*dim_[1] + j;
-                mid_scatter[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 2*n)*dim_[0]*dim_[1] + j;
-                mid_scatter[(i*4*n+2*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 3*n)*dim_[0]*dim_[1] + j;
-                mid_scatter[(i*4*n+3*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 4*n)*dim_[0]*dim_[1] + j;
-                hbscattr2[i*dim_[0]*dim_[1]+j]             = (i*(6*n) + 5*n)*dim_[0]*dim_[1] + j;
+                mid_gather[(0*n+i)*dim_[0]*dim_[1]+j] = (i               )*dim_[0]*dim_[1] + j;
+                mid_gather[(1*n+i)*dim_[0]*dim_[1]+j] = (i + n           )*dim_[0]*dim_[1] + j;
+                mid_gather[(2*n+i)*dim_[0]*dim_[1]+j] = (i + dim_[2]-2*n )*dim_[0]*dim_[1] + j;
+                mid_gather[(3*n+i)*dim_[0]*dim_[1]+j] = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
             }
         break;
     }
-    gather_map1 =hbgather1, gather_map2 =hbgather2;
-    scatter_map1=hbscattr1, scatter_map2=hbscattr2;
-    gather_map_middle = mid_gather, scatter_map_middle = mid_scatter;
-    sb1.data().resize( buffer_size()), sb2.data().resize( buffer_size());
-    buffer_middle.data().resize( 4*buffer_size());
-    rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
+    gather_map_middle_ = mid_gather; //transfer to device
+    internal_buffer_.data().resize( 6*buffer_size() );
+    }
 }
 
-template<class I, class V>
-unsigned NearestNeighborComm<I,V>::do_size() const
+template<class I, class B, class V>
+unsigned NearestNeighborComm<I,B,V>::buffer_size() const
 {
     if( silent_) return 0;
-    return 6*buffer_size(); //3 buffers on each side
-}
-
-template<class I, class V>
-unsigned NearestNeighborComm<I,V>::buffer_size() const
-{
     switch( direction_)
     {
         case( 0): //x-direction
@@ -368,94 +406,58 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
     }
 }
 
-#ifdef _OPENMP
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* input, MPI_Request rqst[4]) const
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer_type input, MPI_Request rqst[4]) const
 {
-    unsigned size = buffer_size();
-#pragma omp parallel for
-    for( unsigned i=0; i<size; i++)
+    if( !trivial_)
     {
-        sb1.data()[i] = input[gather_map1[i]];
-        sb2.data()[i] = input[gather_map2[i]];
+        unsigned size = buffer_size();
+        for( unsigned i=0; i<4*size; i++)
+            internal_buffer_.data()[i+size] = input[gather_map_middle_[i]];
     }
-    //mpi sendrecv
-    sendrecv( rqst);
 }
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, const value_type* input, value_type* values, MPI_Request rqst[4]) const
+#ifdef _OPENMP
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_type input, MPI_Request rqst[4]) const
 {
-    unsigned size = buffer_size();
-#pragma omp parallel for
-    for( unsigned i=0; i<4*size; i++)
-        values[scatter_map_middle[i]] = input[gather_map_middle[i]];
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-#pragma omp parallel for
-    for( unsigned i=0; i<size; i++)
+    if(!trivial_)
     {
-        values[scatter_map1[i]] = rb1.data()[i];
-        values[scatter_map2[i]] = rb2.data()[i];
+        unsigned size = buffer_size();
+        #pragma omp parallel for
+        for( unsigned i=0; i<4*size; i++)
+            internal_buffer_.data()[size+i] = input[gather_map_middle_[i]];
     }
 }
 #endif
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_init( SerialTag, const value_type* input, MPI_Request rqst[4]) const
-{
-    unsigned size = buffer_size();
-    for( unsigned i=0; i<size; i++)
-    {
-        sb1.data()[i] = input[gather_map1[i]];
-        sb2.data()[i] = input[gather_map2[i]];
-    }
-    sendrecv( rqst);
-}
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait( SerialTag, const value_type* input, value_type * values, MPI_Request rqst[4]) const
-{
-    unsigned size = buffer_size();
-    for( unsigned i=0; i<4*size; i++)
-        values[scatter_map_middle[i]] = input[gather_map_middle[i]];
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-    for( unsigned i=0; i<size; i++)
-    {
-        values[scatter_map1[i]] = rb1.data()[i];
-        values[scatter_map2[i]] = rb2.data()[i];
-    }
-}
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_init( CudaTag, const value_type* input, MPI_Request rqst[4]) const
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_type input, MPI_Request rqst[4]) const
 {
     //gather values from input into sendbuffer
-    thrust::gather( thrust::cuda::tag(), gather_map1.begin(), gather_map1.end(), input, sb1.data().begin());
-    thrust::gather( thrust::cuda::tag(), gather_map2.begin(), gather_map2.end(), input, sb2.data().begin());
+    if(!trivial_)
+    {
+        unsigned size = buffer_size();
+        thrust::gather( thrust::cuda::tag(), gather_map_middle_.begin(), gather_map_middle_.end(), input, internal_buffer_.data().begin()+size);
+    }
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
-    sendrecv( rqst);
-}
-template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait( CudaTag, const value_type* input, value_type * values, MPI_Request rqst[4]) const
-{
-    thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer_middle.data().begin());
-    thrust::scatter( thrust::cuda::tag(), buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values);
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-    //scatter received values into values array
-    thrust::scatter( thrust::cuda::tag(), rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values);
-    thrust::scatter( thrust::cuda::tag(), rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values);
 }
 #endif
 
-
-template<class I, class V>
-void NearestNeighborComm<I,V>::sendrecv( MPI_Request rqst[4]) const
+template<class I, class B, class V>
+void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_pointer_type sb2_ptr, pointer_type rb1_ptr, pointer_type rb2_ptr, MPI_Request rqst[4]) const
 {
-    MPI_Isend( thrust::raw_pointer_cast(sb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
+    MPI_Isend( sb1_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[0], 3, comm_, &rqst[0]); //destination
-    MPI_Irecv( thrust::raw_pointer_cast(rb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
+    MPI_Irecv( rb2_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(), //receiver
                m_source[0], 3, comm_, &rqst[1]); //source
 
-    MPI_Isend( thrust::raw_pointer_cast(sb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
+    MPI_Isend( sb2_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[1], 9, comm_, &rqst[2]);  //destination
-    MPI_Irecv( thrust::raw_pointer_cast(rb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
+    MPI_Irecv( rb1_ptr, buffer_size(),
+               getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, comm_, &rqst[3]); //source
 }
 

@@ -7,7 +7,7 @@
 #include "json/json.h"
 
 #include "dg/algorithm.h"
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 #include "solovev.h"
 #include "taylor.h"
@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip(gp);
+    dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip(gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
@@ -152,8 +152,7 @@ int main( int argc, char* argv[])
 
     dg::SparseTensor<dg::DVec> metric = g2d.metric();
     dg::DVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::DVec> vol_ = dg::tensor::volume(metric);
-    dg::DVec vol = vol_.value();
+    dg::DVec vol = dg::tensor::volume(metric);
 
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);

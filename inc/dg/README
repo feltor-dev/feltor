@@ -1,2 +1,8 @@
-contains container free numerical algorithms based on the template metaprogramming approach and test programs
+Container free numerical algorithms based on the template metaprogramming approach and test programs
 
+backend                 # level 1 implementation
+backend/exblas          # adapted Exblas library
+./                      # Level 2 and 4 numerical algorithms
+topology                # level 3 Topology and basic Geometry
+file/nc_utilities.h     # shortcut to file extension
+geometries/geometries.h # shortcut to geometries extension

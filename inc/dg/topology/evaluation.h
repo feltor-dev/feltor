@@ -1,0 +1,177 @@
+#pragma once
+
+#include <cassert>
+#include <cmath>
+#include <thrust/host_vector.h>
+#include "dg/backend/config.h"
+#include "grid.h"
+
+/*! @file
+  @brief Function discretization routines
+  */
+namespace dg
+{
+///@cond
+namespace create
+{
+/**
+* @brief create host_vector containing 1d X-space abscissas
+*
+* same as evaluation of f(x) = x on the grid
+* @param g The grid
+*
+* @return Host Vector
+*/
+template<class real_type>
+thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
+{
+    thrust::host_vector<real_type> abs(g.size());
+    for( unsigned i=0; i<g.N(); i++)
+        for( unsigned j=0; j<g.n(); j++)
+        {
+            real_type xmiddle = DG_FMA( g.h(), (real_type)(i), g.x0());
+            real_type h2 = g.h()/2.;
+            real_type absj = 1.+g.dlt().abscissas()[j];
+            abs[i*g.n()+j] = DG_FMA( h2, absj, xmiddle);
+        }
+    return abs;
+}
+}//
+///@endcond
+
+///@addtogroup evaluation
+///@{
+
+
+
+/**
+ * @brief Evaluate a 1d function on grid coordinates
+ *
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate a list of grid coordinates \f$ x_i\f$ representing the given computational space discretization (the grid)
+ * -# evaluate the given function or functor at these coordinates and store the result
+ *   in the output vector \f$ v_i = f(x_i)\f$ for all \c i
+ * .
+ * @copydoc hide_code_evaluate1d
+ * @tparam UnaryOp Model of Unary Function \c real_type \c f(real_type)
+ * @param f The function to evaluate
+ * @param g The grid that defines the computational space on which to evaluate f
+ *
+ * @return The output vector \c v as a host vector
+ * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d() ) to generate the list of grid coordinates
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa \c dg::pullback if you want to evaluate a function in physical space
+ */
+template< class UnaryOp,class real_type>
+thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGrid1d<real_type>& g)
+{
+    thrust::host_vector<real_type> abs = create::abscissas( g);
+    for( unsigned i=0; i<g.size(); i++)
+        abs[i] = f( abs[i]);
+    return abs;
+};
+///@cond
+template<class real_type>
+thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGrid1d<real_type>& g)
+{
+    thrust::host_vector<real_type> v = evaluate<real_type (real_type)>( *f, g);
+    return v;
+};
+///@endcond
+
+
+/**
+ * @brief Evaluate a 2d function on grid coordinates
+ *
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the given computational space discretization (the grid)
+ * -# evaluate the given function or functor at these coordinates and store the result
+ *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \c i
+ *.
+ * @copydoc hide_code_evaluate2d
+ * @copydoc hide_binary
+ * @param f The function to evaluate: f = f(x,y)
+ * @param g The 2d grid on which to evaluate \c f
+ *
+ * @return The output vector \c v as a host vector
+ * @note Use the elementary function \f$ f(x,y) = x \f$ (\c dg::cooX2d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY2d)
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa \c dg::pullback if you want to evaluate a function in physical space
+ */
+template< class BinaryOp, class real_type>
+thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopology2d<real_type>& g)
+{
+    unsigned n= g.n();
+    RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+    RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+    thrust::host_vector<real_type> absx = create::abscissas( gx);
+    thrust::host_vector<real_type> absy = create::abscissas( gy);
+
+    thrust::host_vector<real_type> v( g.size());
+    for( unsigned i=0; i<gy.N(); i++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=0; j<gx.N(); j++)
+                for( unsigned r=0; r<n; r++)
+                    v[ ((i*n+k)*g.Nx() + j)*n + r] = f( absx[j*n+r], absy[i*n+k]);
+    return v;
+};
+///@cond
+template<class real_type>
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), const aRealTopology2d<real_type>& g)
+{
+    return evaluate<real_type(real_type, real_type)>( *f, g);
+};
+///@endcond
+
+/**
+ * @brief Evaluate a 3d function on grid coordinates
+ *
+ * Evaluate is equivalent to the following:
+ *
+ * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the given computational space discretization (the grid)
+ * -# evaluate the given function or functor at these coordinates and store the result
+ *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \c i
+ *.
+ * @copydoc hide_code_evaluate3d
+ * @copydoc hide_ternary
+ * @param f The function to evaluate: f = f(x,y,z)
+ * @param g The 3d grid on which to evaluate \c f
+ *
+ * @return The output vector \c v as a host vector
+ * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d)
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa \c dg::pullback if you want to evaluate a function in physical space
+ */
+template< class TernaryOp,class real_type>
+thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopology3d<real_type>& g)
+{
+    unsigned n= g.n();
+    RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+    RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+    RealGrid1d<real_type> gz(g.z0(), g.z1(), 1, g.Nz());
+    thrust::host_vector<real_type> absx = create::abscissas( gx);
+    thrust::host_vector<real_type> absy = create::abscissas( gy);
+    thrust::host_vector<real_type> absz = create::abscissas( gz);
+
+    thrust::host_vector<real_type> v( g.size());
+    for( unsigned s=0; s<gz.N(); s++)
+        for( unsigned i=0; i<gy.N(); i++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=0; j<gx.N(); j++)
+                    for( unsigned l=0; l<n; l++)
+                        v[ (((s*gy.N()+i)*n+k)*g.Nx() + j)*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
+    return v;
+};
+///@cond
+template<class real_type>
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aRealTopology3d<real_type>& g)
+{
+    return evaluate<real_type(real_type, real_type, real_type)>( *f, g);
+};
+///@endcond
+
+///@}
+}//namespace dg
+

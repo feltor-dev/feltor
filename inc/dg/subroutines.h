@@ -1,5 +1,5 @@
 #pragma once
-#include "dg/geometry/functions.h"
+#include "dg/topology/functions.h"
 #include "dg/backend/config.h"
 
 namespace dg{
@@ -50,6 +50,110 @@ struct divides_equals
 DG_DEVICE void operator()( T1& out, T2 in) const
     {
         out /= in;
+    }
+};
+
+///@brief \f[ \sum_i x_i \f]
+struct Sum
+{
+    ///@brief \f[ \sum_i x_i \f]
+    template< class T1, class ...Ts>
+DG_DEVICE T1 operator()( T1 x, Ts... rest) const
+    {
+        T1 tmp = T1{0};
+        sum( tmp, x, rest...);
+        return tmp;
+    }
+    private:
+    template<class T, class ...Ts>
+DG_DEVICE void sum( T& tmp, T x, Ts... rest) const
+    {
+        tmp += x;
+        sum( tmp, rest...);
+    }
+
+    template<class T>
+DG_DEVICE void sum( T& tmp, T x) const
+    {
+        tmp += x;
+    }
+};
+
+///@brief \f[ \sum_i \alpha_i x_i \f]
+struct PairSum
+{
+    ///@brief \f[ \sum_i \alpha_i x_i \f]
+    template< class T, class ...Ts>
+DG_DEVICE T operator()( T alpha, T x, Ts... rest) const
+    {
+        T tmp = T{0};
+        sum( tmp, alpha, x, rest...);
+        return tmp;
+    }
+    private:
+    template<class T, class ...Ts>
+DG_DEVICE void sum( T& tmp, T alpha, T x, Ts... rest) const
+    {
+        tmp = DG_FMA( alpha, x, tmp);
+        sum( tmp, rest...);
+    }
+
+    template<class T>
+DG_DEVICE void sum( T& tmp, T alpha, T x) const
+    {
+        tmp = DG_FMA(alpha, x, tmp);
+    }
+};
+///@brief \f[ y = \sum_i a_i x_i,\quad \tilde y = \sum_i \tilde a_i x_i \f]
+struct EmbeddedPairSum
+{
+    ///@brief \f[ \sum_i \alpha_i x_i \f]
+    template< class T1, class ...Ts>
+DG_DEVICE void operator()( T1& y, T1& yt, T1 a, T1 at, T1 x, Ts... rest) const
+    {
+        y = a*x;
+        yt = at*x;
+        sum( y, yt, rest...);
+    }
+    private:
+    template< class T1,  class ...Ts>
+DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k, Ts... rest) const
+    {
+        y_1 = DG_FMA( b, k, y_1);
+        yt_1 = DG_FMA( bt, k, yt_1);
+        sum( y_1, yt_1, rest...);
+    }
+
+    template< class T1>
+DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k) const
+    {
+        y_1 = DG_FMA( b, k, y_1);
+        yt_1 = DG_FMA( bt, k, yt_1);
+    }
+};
+///@brief \f[ \sum_i \alpha_i x_i y_i \f]
+struct TripletSum
+{
+    ///@brief \f[ \sum_i \alpha_i x_i y_i \f]
+    template< class T1, class ...Ts>
+DG_DEVICE T1 operator()( T1 alpha, T1 x1, T1 y1, Ts... rest) const
+    {
+        T1 tmp = T1{0};
+        sum( tmp, alpha, x1, y1, rest...);
+        return tmp;
+    }
+    private:
+    template<class T, class ...Ts>
+DG_DEVICE void sum( T& tmp, T alpha, T x, T y, Ts... rest) const
+    {
+        tmp = DG_FMA( alpha*x, y, tmp);
+        sum( tmp, rest...);
+    }
+
+    template<class T>
+DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
+    {
+        tmp = DG_FMA(alpha*x, y, tmp);
     }
 };
 

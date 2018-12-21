@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., sol, -1., jac);
     res.d = sqrt( dg::blas2::dot( w2d, jac));
     if(rank==0)std::cout << "Distance to solution "<<res.d<<"\t\t"<<res.i-binary[3]<<std::endl; //don't forget sqrt when comuting errors
-    if(rank==0)std::cout << "\nContinue with geometry/average_mpit.cu !\n\n";
+    if(rank==0)std::cout << "\nContinue with topology/average_mpit.cu !\n\n";
     MPI_Finalize();
     return 0;
 }

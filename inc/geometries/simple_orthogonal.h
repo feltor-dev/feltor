@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dg/geometry/grid.h"
-#include "dg/geometry/functions.h"
-#include "dg/geometry/interpolation.h"
-#include "dg/geometry/derivatives.h"
-#include "dg/geometry/geometry.h"
+#include "dg/topology/grid.h"
+#include "dg/topology/functions.h"
+#include "dg/topology/interpolation.h"
+#include "dg/topology/derivatives.h"
+#include "dg/topology/geometry.h"
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
@@ -30,7 +30,7 @@ struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double x0, double y0, int firstline):
+    Fpsi( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTensorLvl1& chi, double x0, double y0, int firstline):
         psip_(psi), fieldRZYTconf_(psi, x0, y0, chi),fieldRZYTequl_(psi, x0, y0, chi), fieldRZtau_(psi, chi)
     {
         X_init = x0, Y_init = y0;
@@ -49,7 +49,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK<17>( fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
+            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -68,9 +68,9 @@ struct Fpsi
         {
             eps_old = eps, end_old = end; N*=2;
             if( firstline_ == 0)
-                dg::stepperRK<17>( fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
             if( firstline_ == 1)
-                dg::stepperRK<17>( fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
+                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -87,8 +87,8 @@ struct Fpsi
     private:
     int firstline_;
     double X_init, Y_init;
-    BinaryFunctorsLvl1 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl1 psip_;
+    CylindricalSymmTensorLvl1 chi_;
     dg::geo::ribeiro::FieldRZYT fieldRZYTconf_;
     dg::geo::equalarc::FieldRZYT fieldRZYTequl_;
     dg::geo::FieldRZtau fieldRZtau_;
@@ -97,17 +97,18 @@ struct Fpsi
 
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
-void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi,
-        const thrust::host_vector<double>& y_vec,
-        thrust::host_vector<double>& r,
-        thrust::host_vector<double>& z,
-        double R_0, double Z_0, double f_psi, int mode )
+template<class real_type>
+void compute_rzy( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTensorLvl1& chi,
+        const thrust::host_vector<real_type>& y_vec,
+        thrust::host_vector<real_type>& r,
+        thrust::host_vector<real_type>& z,
+        real_type R_0, real_type Z_0, real_type f_psi, int mode )
 {
 
-    thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
-    thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
+    thrust::host_vector<real_type> r_old(y_vec.size(), 0), r_diff( r_old);
+    thrust::host_vector<real_type> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-	std::array<double, 2> begin{ {0,0} }, end(begin), temp(begin);
+    std::array<real_type,2> begin{ {0,0} }, end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);
@@ -115,28 +116,28 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1;
-    double eps = 1e10, eps_old=2e10;
+    real_type eps = 1e10, eps_old=2e10;
     while( (eps < eps_old||eps > 1e-7) && eps > 1e-14)
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z;
-        if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[0], end, steps);
-        if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[0], end, steps);
+        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[0], end, steps);
+        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1];
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
         dg::blas1::axpby( 1., r, -1., r_old, r_diff);
         dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-        double er = dg::blas1::dot( r_diff, r_diff);
-        double ez = dg::blas1::dot( z_diff, z_diff);
-        double ar = dg::blas1::dot( r, r);
-        double az = dg::blas1::dot( z, z);
+        real_type er = dg::blas1::dot( r_diff, r_diff);
+        real_type ez = dg::blas1::dot( z_diff, z_diff);
+        real_type ar = dg::blas1::dot( r, r);
+        real_type az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
         steps*=2;
     }
@@ -148,7 +149,7 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
 //and provides the Nemov algorithm for orthogonal grid
 struct Nemov
 {
-    Nemov( const BinaryFunctorsLvl2 psi, const BinarySymmTensorLvl1& chi, double f0, int mode):
+    Nemov( const CylindricalFunctorsLvl2 psi, const CylindricalSymmTensorLvl1& chi, double f0, int mode):
         f0_(f0), mode_(mode),
         psip_(psi), chi_(chi), lapPsi_(psi,chi) { }
     void initialize(
@@ -203,8 +204,8 @@ struct Nemov
     private:
     double f0_;
     int mode_;
-    BinaryFunctorsLvl2 psip_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psip_;
+    CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::LaplaceChiPsi lapPsi_;
 };
 
@@ -243,7 +244,7 @@ void construct_rz( Nemov nemov,
         {
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK<17>( nemov, x0, temp, x1, end, N);
+            dg::stepperRK( "Feagin-17-8-10",  nemov, x0, temp, x1, end, N);
             for( unsigned j=0; j<sizeY; j++)
             {
                 unsigned idx = j*sizeX+i;
@@ -289,7 +290,7 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, BinarySymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
     {
         m_orthogonal = true;
     }
@@ -304,7 +305,7 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
         psi_(psi), chi_(chi)
     {
         assert( psi_1 != psi_0);
@@ -358,8 +359,8 @@ struct SimpleOrthogonal : public aGenerator2d
             etaY[idx] = +h[idx]*(chiRR*psipR + chiRZ*psipZ);
         }
     }
-    BinaryFunctorsLvl2 psi_;
-    BinarySymmTensorLvl1 chi_;
+    CylindricalFunctorsLvl2 psi_;
+    CylindricalSymmTensorLvl1 chi_;
     double f0_, lz_, R0_, Z0_;
     int firstline_;
     bool m_orthogonal;

@@ -4,11 +4,7 @@
 #include <mpi.h>
 #include "json/json.h"
 
-#include "dg/arakawa.h"
-#include "dg/poisson.h"
-#include "dg/geometry/geometry.h"
-#include "dg/backend/mpi_init.h"
-#include "dg/backend/timer.h"
+#include "dg/algorithm.h"
 
 #include "solovev.h"
 #include "testfunctors.h"
@@ -24,18 +20,18 @@ struct FuncDirPer2
         return this->operator()(R,Z);
     }
     double operator()(double R, double Z) const {
-        double psip = psip_.get()(R,Z);
+        double psip = psip_(R,Z);
         return (psip-psi0_)*(psip-psi1_)*cos(theta(R,Z));
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_.get()(R,Z), psipR = psipR_.get()(R,Z), theta_ = theta(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_ = theta(R,Z);
         return (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_)
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*thetaR(R,Z);
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_.get()(R,Z), psipZ = psipZ_.get()(R,Z), theta_=theta(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z);
         return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_)
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*thetaZ(R,Z);
     }
@@ -57,7 +53,7 @@ struct FuncDirPer2
     }
     double R_0_;
     double psi0_, psi1_;
-    dg::ClonePtr<dg::geo::aBinaryFunctor> psip_, psipR_,  psipZ_;
+    dg::geo::CylindricalFunctor psip_, psipR_,  psipZ_;
 };
 
 struct ArakawaDirPer

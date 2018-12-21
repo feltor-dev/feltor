@@ -34,13 +34,13 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istr
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if(rank==0)std::cout << "MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
+    if(rank==0)std::cout << "# MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
     int np[2];
     if( rank == 0)
     {
-        if(verbose)std::cout << "Type npx and npy\n";
+        if(verbose)std::cout << "# Type npx and npy\n";
         is >> np[0] >> np[1];
-        if(verbose)std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" = "<<size<<" processes! "<<std::endl;
+        if(verbose)std::cout<< "# Computing with "<<np[0] <<" x "<<np[1]<<" = "<<size<<" processes! "<<std::endl;
         assert( size == np[0]*np[1]);
     }
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
@@ -50,11 +50,11 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istr
     cudaGetDeviceCount(&num_devices);
     if(num_devices == 0)
     {
-        std::cerr << "No CUDA capable devices found on rank "<<rank<<std::endl;
+        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
         return;
     }
     int device = rank % num_devices; //assume # of gpus/node is fixed
-    if(verbose)std::cout << "Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
+    if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
     cudaSetDevice( device);
 #endif//cuda
 }
@@ -75,9 +75,9 @@ static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm 
     MPI_Comm_rank( comm, &rank);
     if( rank == 0)
     {
-        if(verbose)std::cout << "Type n, Nx and Ny\n";
+        if(verbose)std::cout << "# Type n, Nx and Ny\n";
         is >> n >> Nx >> Ny;
-        if(verbose)std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<std::endl;
+        if(verbose)std::cout<< "# On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
@@ -129,9 +129,9 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
     int np[3];
     if( rank == 0)
     {
-        if(verbose)std::cout << "Type npx and npy and npz\n";
+        if(verbose)std::cout << "# Type npx and npy and npz\n";
         is >> np[0] >> np[1]>>np[2];
-        if(verbose)std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" x "<<np[2]<<" = "<<size<<" processses! "<<std::endl;
+        if(verbose)std::cout<< "# Computing with "<<np[0] <<" x "<<np[1]<<" x "<<np[2]<<" = "<<size<<" processses! "<<std::endl;
         assert( size == np[0]*np[1]*np[2]);
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
@@ -141,11 +141,11 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
     cudaGetDeviceCount(&num_devices);
     if(num_devices == 0)
     {
-        std::cerr << "No CUDA capable devices found on rank "<<rank<<std::endl;
+        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
         return;
     }
     int device = rank % num_devices; //assume # of gpus/node is fixed
-    if(verbose)std::cout << "Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
+    if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
     cudaSetDevice( device);
 #endif//cuda
 }
@@ -167,9 +167,9 @@ static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned&
     MPI_Comm_rank( comm, &rank);
     if( rank == 0)
     {
-        if(verbose)std::cout << "Type n, Nx and Ny and Nz\n";
+        if(verbose)std::cout << "# Type n, Nx and Ny and Nz\n";
         is >> n >> Nx >> Ny >> Nz;
-        if(verbose)std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
+        if(verbose)std::cout<< "# On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
