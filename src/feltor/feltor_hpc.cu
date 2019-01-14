@@ -19,7 +19,7 @@ using DVec = dg::MDVec;
 using DMatrix = dg::MDMatrix;
 using IDMatrix = dg::MIDMatrix;
 using IHMatrix = dg::MIHMatrix;
-using Geometry = dg::CartesianMPIGrid3d;
+using Geometry = dg::CylindricalMPIGrid3d;
 #define MPI_OUT if(rank==0)
 #else //FELTOR_MPI
 using HVec = dg::HVec;
@@ -27,7 +27,7 @@ using DVec = dg::DVec;
 using DMatrix = dg::DMatrix;
 using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CartesianGrid3d;
+using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
@@ -232,10 +232,10 @@ int main( int argc, char* argv[])
         dg::geo::BFieldZ fieldZ(mag);
         dg::geo::BFieldP fieldP(mag);
 
-        HVec vecR = dg::pullback( fieldR, grid_out);
-        HVec vecZ = dg::pullback( fieldZ, grid_out);
-        HVec vecP = dg::pullback( fieldP, grid_out);
-        HVec psip = dg::pullback( mag.psip(), grid_out);
+        HVec vecR = dg::pullback( fieldR, grid);
+        HVec vecZ = dg::pullback( fieldZ, grid);
+        HVec vecP = dg::pullback( fieldP, grid);
+        HVec psip = dg::pullback( mag.psip(), grid);
         std::map<std::string, const HVec*> v3d{
             {"BR", &vecR}, {"BZ", &vecZ}, {"BP", &vecP},
             {"Psip", &psip}, {"Nprof", &profile },

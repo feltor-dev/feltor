@@ -158,6 +158,7 @@ int main( int argc, char* argv[])
         }
         feltor.update_quantities();
     }
+    q.display( std::cout );
     double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
     /////////////////////////set up transfer for glfw
     dg::DVec dvisual( grid.size(), 0.);
