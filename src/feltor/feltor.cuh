@@ -477,7 +477,9 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
         m_multi_invgammaP[u].elliptic().set_chi( hh);
         m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
             p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
-        m_multi_invgammaN[u].elliptic().set_chi( hh); m_multi_induction[u].construct(  m_multigrid.grid(u), p.bcxA, p.bcyA, dg::PER, -1., dg::centered);
+        m_multi_invgammaN[u].elliptic().set_chi( hh);
+        m_multi_induction[u].construct(  m_multigrid.grid(u),
+            p.bcxA, p.bcyA, dg::PER, -1., dg::centered);
         m_multi_induction[u].elliptic().set_chi( hh);
     }
 }

@@ -523,26 +523,30 @@ struct BHatP: public aCylindricalFunctor<BHatP>
 };
 
 /**
- * @brief Magnetic unit vector field (BHatR, BHatZ, BHatP)
- *
+ * @brief Contravariant components of the magnetic unit vector field
+ * in cylindrical coordinates.
  * @param mag the tokamak magnetic field
  * @return the tuple BHatR, BHatZ, BHatP constructed from mag
  */
 inline CylindricalVectorLvl0 createBHat( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
 }
+
 /**
- * @brief Unit vector field (0, 0, 1)
- * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1)
+ * @brief Contravariant components of the unit vector field (0, 0, 1/R)
+ * in cylindrical coordinates.
+ * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$
+ * @note This is equivalent to inserting a toroidal magnetic field into the \c dg::geo::createBHat function.
  */
 inline CylindricalVectorLvl0 createEPhi( ){
-    return CylindricalVectorLvl0( Constant(0), Constant(0), Constant(1));
+    return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return 1./x;});
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
  *
  * @param mag the tokamak magnetic field
  * @return the tuple CurvatureNablaBR, CurvatureNablaBZ, dg::geo::Constant(0) constructed from mag
+ * @note The contravariant components in cylindrical coordinates
  */
 inline CylindricalVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( CurvatureNablaBR(mag), CurvatureNablaBZ(mag), Constant(0));
@@ -552,6 +556,7 @@ inline CylindricalVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& 
  *
  * @param mag the tokamak magnetic field
  * @return the tuple CurvatureKappaR, CurvatureKappaZ, dg::geo::Constant(0) constructed from mag
+ * @note The contravariant components in cylindrical coordinates
  */
 inline CylindricalVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( CurvatureKappaR(mag), CurvatureKappaZ(mag), Constant(0));
@@ -561,6 +566,7 @@ inline CylindricalVectorLvl0 createCurvatureKappa( const TokamakMagneticField& m
  *
  * @param mag the tokamak magnetic field
  * @return the tuple TrueCurvatureKappaR, TrueCurvatureKappaZ, TrueCurvatureKappaP constructed from mag
+ * @note The contravariant components in cylindrical coordinates
  */
 inline CylindricalVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( TrueCurvatureKappaR(mag), TrueCurvatureKappaZ(mag), TrueCurvatureKappaP(mag));
@@ -570,6 +576,7 @@ inline CylindricalVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticFiel
  *
  * @param mag the tokamak magnetic field
  * @return the tuple TrueCurvatureNablaBR, TrueCurvatureNablaBZ, TrueCurvatureNablaBP constructed from mag
+ * @note The contravariant components in cylindrical coordinates
  */
 inline CylindricalVectorLvl0 createTrueCurvatureNablaB( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( TrueCurvatureNablaBR(mag), TrueCurvatureNablaBZ(mag), TrueCurvatureNablaBP(mag));
