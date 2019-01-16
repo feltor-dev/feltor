@@ -164,8 +164,8 @@ struct ComputeLogN{
 struct ComputeSource{
     DG_DEVICE
     void operator()( double& result, double tilde_n, double profne,
-        double source, double omega_source) const{
-        double temp = omega_source*source*(profne - tilde_n);
+        double source, double omega_s, double damping, double omega_d) const{
+        double temp = (omega_s*source + omega_d*damping)*(profne - tilde_n);
         result = temp;
     }
 };
@@ -247,6 +247,7 @@ struct Quantities
     //resisitive and diffusive terms
     double Dres = 0, Dpar[4] = {0,0,0,0}, Dperp[4] = {0,0,0,0};
     double aligned = 0; //alignment parameter
+    double source[2] = {0,0}; //source terms
     void display( std::ostream& os = std::cout ) const
     {
         os << "Quantities: \n"
@@ -258,6 +259,7 @@ struct Quantities
            << "    Dres: "<<Dres<<"\n"
            << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"]\n"
            << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"]\n"
+           << " Sources: ["<<source[0]<<", "<<source[1]<<"]\n"
            << " aligned: "<<aligned<<"\n";
     }
 };
@@ -308,12 +310,14 @@ struct Explicit
     }
 
     //source strength, profile - 1 and damping
-    void set_source( double omega_source, container profile, container damping)
+    void set_source_and_sink( container profile, double omega_source,
+        container source, double omega_damping, container damping)
     {
-        m_omega_source = omega_source;
         m_profne = profile;
-        m_source = damping;
-
+        m_omega_source = omega_source;
+        m_source = source;
+        m_omega_damping = omega_damping;
+        m_damping = damping;
     }
   private:
     void compute_phi( double t, const std::array<container,2>& y);
@@ -339,6 +343,7 @@ struct Explicit
         dg::geo::TokamakMagneticField);
 
     container m_UE2;
+    std::array<container,2> m_sn;
     container m_temp0, m_temp1, m_temp2;//helper variables
 #ifdef DG_MANUFACTURED
     container m_R, m_Z, m_P; //coordinates
@@ -348,7 +353,7 @@ struct Explicit
     std::array<container,3> m_curv, m_curvKappa, m_b;
     container m_divCurvKappa;
     container m_binv, m_divb;
-    container m_source, m_profne;
+    container m_source, m_damping, m_profne;
     container m_vol3d;
 
     container m_apar, m_dxA, m_dyA, m_dzA;
@@ -374,7 +379,7 @@ struct Explicit
 
     const feltor::Parameters m_p;
     Quantities m_q;
-    double m_omega_source =0.;
+    double m_omega_source = 0., m_omega_damping = 0.;
 
 };
 
@@ -507,7 +512,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_UE2 = m_temp2 = m_temp1 = m_temp0;
+    m_UE2 = m_sn[0] = m_sn[1] = m_temp2 = m_temp1 = m_temp0;
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_fields[0] = m_fields[1] = m_logn = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
@@ -816,6 +821,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         // Z*(tau (1+lnN )+psi + 0.5 mu U^2)
         dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i], m_p.tau[i]),
                 m_temp2, m_logn[i], m_phi[i], fields[1][i]);
+        m_q.source[i] = z[i]*dg::blas2::dot( m_temp2, m_vol3d, m_sn[i]);
         // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
         if( m_p.perp_diff == "viscous")
         {
@@ -862,7 +868,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1],
         -1., fields[0][0], fields[1][0], 0., m_temp0);
     m_q.Dres = -m_p.c*dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
-    m_q.ediff = m_q.Dres
+    m_q.ediff = m_q.Dres + m_q.source[0] + m_q.source[1]
         + m_q.Dpar[0]+m_q.Dperp[0]+m_q.Dpar[1]+m_q.Dperp[1]
         + m_q.Dpar[2]+m_q.Dperp[2]+m_q.Dpar[3]+m_q.Dperp[3];
 }
@@ -915,16 +921,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 #endif
 
-    //Add particle source to dtNe
-    if( m_omega_source != 0)
+    //Add particle source to dtNe and dtNi
+    if( m_omega_source != 0 || m_omega_damping != 0)
     {
-        dg::blas1::subroutine( routines::ComputeSource(),
-            m_temp1, y[0][0], m_profne, m_source, m_omega_source);
-        dg::blas1::axpby( 1., m_temp1, 1.0, yp[0][0]);
-        //add FLR correction to dtNi
-        dg::blas1::axpby( 1., m_temp1, 1.0, yp[1][1]);
-        dg::blas2::gemv( 0.5*m_p.tau[1]*m_p.mu[1],
-            m_lapperpN, m_temp1, 1.0, yp[1][1]);
+        dg::blas1::subroutine( routines::ComputeSource(), m_sn[0], y[0][0],
+            m_profne, m_source, m_omega_source, m_damping, m_omega_damping);
+        //compute FLR correction
+        dg::blas2::gemv( m_lapperpN, m_sn[0], m_temp0);
+        dg::blas1::axpby( 1., m_sn[0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_sn[1]);
+
+        dg::blas1::axpby( 1., m_sn[0], 1.0, yp[0][0]);
+        dg::blas1::axpby( 1., m_sn[1], 1.0, yp[0][1]);
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{

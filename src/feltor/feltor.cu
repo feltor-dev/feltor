@@ -67,8 +67,8 @@ int main( int argc, char* argv[])
         //then shift tanh
         p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
-    if( p.omega_source != 0)
-        feltor.set_source( p.omega_source, profile, source_damping);
+    if( p.omega_source != 0 || p.omega_damping != 0)
+        feltor.set_source_and_sink( profile, p.omega_source, source_damping);
 
     dg::HVec profile_damping = dg::pullback( dg::geo::TanhDamping(
         mag.psip(), -3.*p.alpha, p.alpha, -1), grid);

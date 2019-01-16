@@ -433,16 +433,14 @@ For numerical stabilisation we choose:
 \Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
 \Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i 
 \end{align}
-Similarly, for the perpendicular dissipation we apply viscous terms.
+Similarly, for the perpendicular dissipation we apply viscous or hyperviscous terms.
 \begin{align}\label{eq:perpdiffNT}
- \Lambda_{n_e,\perp} &=  \nu_\perp \Delta_\perp n_e &
- \Lambda_{N_i,\perp} &=  \nu_\perp \Delta_\perp N_i  & \\
- \Lambda_{u_e,\perp} &=  \nu_\perp \Delta_\perp (u_e - eA_\parallel/m_e)  &
- \Lambda_{U_i,\perp} &=  \nu_\perp \Delta_\perp (U_i + eA_\parallel/m_i)
+ \Lambda_{n_e,\perp} &=  \nu_\perp \Delta_\perp n_e \text{ or } -\nu_\perp \Delta_\perp^2 n_e&
+ \Lambda_{N_i,\perp} &=  \nu_\perp \Delta_\perp N_i \text{ or } -\nu_\perp \Delta_\perp^2 N_i & \\
+ \Lambda_{u_e,\perp} &=  \nu_\perp \Delta_\perp u_e \text{ or } -\nu_\perp \Delta_\perp^2 u_e &
+ \Lambda_{U_i,\perp} &=  \nu_\perp \Delta_\perp U_i \text{ or } -\nu_\perp \Delta_\perp^2 U_i
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
-Note that we let the perpendicular diffusion act on $A_\parallel$ in addition to $U$ for
-numerical reasons.
 
 \subsection{Boundary and Initial conditions}
 We define the simulation box as
@@ -529,17 +527,20 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta(-\psi_p)H(Z-Z_X)
 \end{align}
 
-\subsection{Particle sources} \label{sec:sources}
+\subsection{Particle sinks/sources} \label{sec:sources}
 The idea for the source terms $S$ is to fix the profile $n_{prof}$ in the
-core of our domain, where our model does not apply.
-We thus define a particle source for electrons as
+core and the wall shadow (the corners) of our domain, where our model does not apply.
+We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{\max} -\rho(R,Z)) H(Z-Z_X) \\
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X) \nonumber\\
+                            &+ \omega_d
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho(R,Z) - \rho_{d}) \\
     \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},
 \end{align}
-with $0 < \rho_{\max}<1$
-where $\omega_s$ is the source strength parameter. This will result in exponential adaption of the core
+with $0 < \rho_{s}<1$ and $\rho_{d}>1$
+where $\omega_s$ is the source strength parameter and $\omega_d$ the damping parameter.
+This will result in exponential adaption of the core and wall
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 For ions we use
 \begin{align}
@@ -634,7 +635,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
         -2\tau U\mathcal K_\kappa(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
-        + \nu_\perp\Delta_\perp W + \nu_\parallel \Delta_\parallel U ,
+        + \nu_\perp\Delta_\perp U + \nu_\parallel \Delta_\parallel U ,
         \label{eq:EgyrofluidU} \\
         W&:= \left( U + \frac{\beta}{\mu}A_\parallel\right)
     \end{align}
@@ -776,9 +777,11 @@ posY       & float &0.0    & - & blob Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
-source  & float & 0     & - & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
+source  & float & 0     & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
+damping  & float & 0     & 0 & profile damping rate $\omega_d$ in Eq.~\eqref{eq:electron_source} \\
 alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} \\
-rho\_source & float  & 0.2   & 0.2 & Source region boundary $0<\rho_{\max}<1$ in Eq.~\eqref{eq:electron_source}  \\
+rho\_source & float  & 0.2   & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
+rho\_damping & float  & 1.1   & 1.1 & Damping region boundary $0<\rho_{d}<1$ in Eq.~\eqref{eq:electron_source}  \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -821,7 +824,8 @@ y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi
 z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
 Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
-Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{\max} - \rho(R,Z)) H(Z-Z_X)$\\
+Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
+Damping          & Dataset & 3 (z,y,x) & Damping  profile $\Theta(\rho(R,Z) - \rho_{d} )$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\

@@ -27,7 +27,7 @@ struct Parameters
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
     double alpha, beta;
-    double rho_source;
+    double rho_source, rho_damping;
 
     double nu_perp, nu_parallel;
     double c;
@@ -38,7 +38,7 @@ struct Parameters
     double sigma_z;
     double k_psi;
 
-    double omega_source;
+    double omega_source, omega_damping;
     double nprofamp;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
@@ -87,9 +87,11 @@ struct Parameters
         k_psi       = js["k_psi"].asDouble();
 
         nprofamp  = js["nprofileamp"].asDouble();
-        omega_source = js["source"].asDouble();
+        omega_source  = js.get("source", 0.).asDouble();
+        omega_damping = js.get("damping",0.).asDouble();
         alpha        = js.get("alpha", 0.02).asDouble();
         rho_source   = js.get("rho_source", 0.2).asDouble();
+        rho_damping  = js.get("rho_damping", 1.1).asDouble();
 
         bcxN = dg::str2bc(js["bc"]["density"][0].asString());
         bcyN = dg::str2bc(js["bc"]["density"][1].asString());
@@ -135,7 +137,9 @@ struct Parameters
             <<"    init Phi:     "<<initphi<<"\n";
         os << "Profile parameters are: \n"
             <<"     omega_source:                 "<<omega_source<<"\n"
+            <<"     omega_damping:                "<<omega_damping<<"\n"
             <<"     rho_source:                   "<<rho_source<<"\n"
+            <<"     rho_damping:                  "<<rho_damping<<"\n"
             <<"     alpha:                        "<<alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
