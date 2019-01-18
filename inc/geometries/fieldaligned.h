@@ -300,6 +300,7 @@ struct Fieldaligned
      * @param p0 The index of the plane to start
      *
      * @return Returns an instance of container
+     * @attention It is recommended to use  \c mx>1 and \c my>1 when this function is used, else there might occur some unfavourable summation effects due to the repeated use of transformations especially for low perpendicular resolution.
      */
     template< class BinaryOp>
     container evaluate( const BinaryOp& binary, unsigned p0=0) const
@@ -313,8 +314,8 @@ struct Fieldaligned
      * The algorithm does the equivalent of the following:
      *  - Evaluate the given \c BinaryOp on a 2d plane
      *  - Apply the plus and minus transformation each \f$ r N_z\f$ times where \f$ N_z\f$ is the number of planes in the global 3d grid and \f$ r\f$ is the number of rounds.
-     *  - Scale the transformations with \f$ u ( \pm (iN_z + j)h_z) \f$, where \c u is the given \c UnarayOp, \c i is the round index and \c j is the plane index.
-     *  - Sum all transformations with the same plane index \c j , where the minus transformations get the inverted index \f$ N_z - j\f$.
+     *  - Scale the transformations with \f$ u ( \pm (iN_z + j)h_z) \f$, where \c u is the given \c UnarayOp, \c i in [0..r] is the round index and \c j in [0..Nz] is the plane index.
+     *  - %Sum all transformations with the same plane index \c j , where the minus transformations get the inverted index \f$ N_z - j\f$.
      *  - Shift the index by \f$ p_0\f$
      *  .
      * @tparam BinaryOp Binary Functor
@@ -323,7 +324,8 @@ struct Fieldaligned
      * @param unary Functor to evaluate in z
      * @param p0 The index of the plane to start
      * @param rounds The number of rounds \c r to follow a fieldline; can be zero, then the fieldlines are only followed within the current box ( no periodicity)
-     * @note g is evaluated such that p0 corresponds to z=0, p0+1 corresponds to z=hz, p0-1 to z=-hz, ...
+     * @note \c unary is evaluated such that \c p0 corresponds to z=0, p0+1 corresponds to z=hz, p0-1 to z=-hz, ...
+     * @attention It is recommended to use  \c mx>1 and \c my>1 when this function is used, else there might occur some unfavourable summation effects due to the repeated use of transformations especially for low perpendicular resolution.
      *
      * @return Returns an instance of container
      */

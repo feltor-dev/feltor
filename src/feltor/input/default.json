@@ -34,8 +34,7 @@
     {
         "density" : ["DIR", "DIR"],
         "velocity": ["DIR", "DIR"],
-        "potential":["DIR", "DIR"],
-        "induction":["DIR", "DIR"]
+        "potential":["DIR", "DIR"]
     },
     "boxscaleR" :  [1.1,1.1],
     "boxscaleZ" :  [1.2,1.1],

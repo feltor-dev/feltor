@@ -140,13 +140,14 @@ int main( int argc, char* argv[])
         //then shift tanh
         p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
-    if( p.omega_source != 0)
-        feltor.set_source( p.omega_source, profile, source_damping);
 
     HVec profile_damping = dg::pullback( dg::geo::TanhDamping(
         mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
+
+    if( p.omega_source != 0 )
+        feltor.set_source( profile, p.omega_source, source_damping);
 
     //Now perturbation
     HVec ntilde = dg::evaluate(dg::zero,grid);
@@ -157,9 +158,21 @@ int main( int argc, char* argv[])
         if( p.symmetric)
             ntilde = dg::pullback( init0, grid);
         else if( p.initne == "blob")//rounds =3 ->2*3-1
-            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 3);
+        {
+            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+            //evaluate should always be used with mx,my > 1
+            ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
+        }
         else if( p.initne == "straight blob")//rounds =1 ->2*1-1
-            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        {
+            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+            //evaluate should always be used with mx,my > 1
+            ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        }
     }
     else if( p.initne == "turbulence")
     {
@@ -168,7 +181,13 @@ int main( int argc, char* argv[])
         if( p.symmetric)
             ntilde = dg::pullback( init0, grid);
         else
-            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        {
+            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+            //evaluate should always be used with mx,my > 1
+            ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        }
         dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
     }
     else if( p.initne == "zonal")

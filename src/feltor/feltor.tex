@@ -458,6 +458,9 @@ the $\varepsilon$ are free parameters to be specified by the user.
 We choose boundary conditions seperately on input for the variables
 $n_e$, $u_e$ and $\phi$. The boundary condition for $N_i$, $U_i$ and
 $\psi$ are equal to $n_e$, $u_e$ and $\phi$ respecitively.
+We choose $A_\parallel$ to have equal boundary conditions as $u_e$ and $U_i$.
+This will later enable us to treat the sum of $U$ and $A_\parallel$
+in the same way as $U$.
 Typically,
 \begin{align}
 n_e = n_0, \quad u_e = \phi = 0
@@ -527,19 +530,17 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta(-\psi_p)H(Z-Z_X)
 \end{align}
 
-\subsection{Particle sinks/sources} \label{sec:sources}
+\subsection{Sinks and sources} \label{sec:sources}
 The idea for the source terms $S$ is to fix the profile $n_{prof}$ in the
-core and the wall shadow (the corners) of our domain, where our model does not apply.
+core of our domain, where our model does not apply.
 We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X) \nonumber\\
-                            &+ \omega_d
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho(R,Z) - \rho_{d}) \\
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
     \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},
 \end{align}
-with $0 < \rho_{s}<1$ and $\rho_{d}>1$
-where $\omega_s$ is the source strength parameter and $\omega_d$ the damping parameter.
+with $0 < \rho_{s}<1$
+where $\omega_s$ is the source strength parameter.
 This will result in exponential adaption of the core and wall
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 For ions we use
@@ -550,7 +551,6 @@ For ions we use
 Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
 by the particle source (cf.~Section~\ref{sec:conservation}). $S_{n_e}$ needs to be smooth
 so that $\nabla_\perp^2 S_{n_e}$ is well defined.
-
 
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
@@ -590,7 +590,7 @@ boundary)
   \nonumber\\ &
 +\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
 \nonumber \\ &
-+ m_e u_e n_e \Lambda_{u_e}+m_iU_i N_i \Lambda_{U_i} - \eta_\parallel J_{\parallel,s}^2\bigg\}.
++ m_e u_e n_e \Lambda_{u_e}+m_iU_i N_i \Lambda_{U_i}- \eta_\parallel J_{\parallel,s}^2\bigg\}.
 \end{align}
 The energy consists of the Helmholtz free energy density for electrons and ions, the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
 In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
@@ -634,8 +634,10 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
         - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
         -2\tau U\mathcal K_\kappa(\ln N)
-        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
-        + \nu_\perp\Delta_\perp U + \nu_\parallel \Delta_\parallel U ,
+        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
+        + \nu_\perp\Delta_\perp W
+        - \nu_\perp\frac{\beta}{\mu}\Delta_\perp A_\parallel
+        + \nu_\parallel \Delta_\parallel U,
         \label{eq:EgyrofluidU} \\
         W&:= \left( U + \frac{\beta}{\mu}A_\parallel\right)
     \end{align}
@@ -654,7 +656,8 @@ and
     A_\parallel &= N_iW_i-n_e w_e
   \end{align}
 \end{subequations}
-Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
+Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite. Also note the peculiar notation of the perpendicular viscosity on $U$.
+We indicate that $\Delta_\perp W$ is treated implicitly while the correction $\Delta_\perp A_\parallel$ is treated explicitly.
 The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$ (with $z_e=-1$ and $z_i=+1$)
 \begin{align}
   \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
@@ -670,10 +673,12 @@ The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$ (with $z
 +z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right]
     \left(\nu_\perp\Delta_\perp N_i + \nu_\parallel\Delta_\parallel N_i +S_{N_i}\right)
 \nonumber \\ &
-    +z_e\mu_e u_e n_e \left(\nu_\perp\Delta_\perp w_e + \nu_\parallel \Delta_\parallel u_e\right)\nonumber \\ &
-    +z_i\mu_iU_i N_i \left(\nu_\perp\Delta_\perp W_i + \nu_\parallel \Delta_\parallel U_i\right)% \nonumber \\ &
+    +z_e\mu_e u_e n_e \left(\nu_\perp\Delta_\perp u_e + \nu_\parallel \Delta_\parallel u_e\right)\nonumber \\ &
+    +z_i\mu_iU_i N_i \left(\nu_\perp\Delta_\perp U_i + \nu_\parallel \Delta_\parallel U_i\right)% \nonumber \\ &
     - \eta \left(n_e(U_i-u_e)\right)^2\bigg\}.
 \end{align}
+Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
+for the diffusion terms in the above equations.
 \subsection{Manufactured Solution}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
@@ -755,11 +760,10 @@ nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
 symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwtiten to $N_z\equiv 1$. \\
-bc & dict & & & Dictionary of boundary conditions \ldots\\
+bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\
 \qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$\\
-\qquad induction & char[2] & [DIR,DIR] & [DIR,DIR] & boundary conditions in x and y for $A_\parallel$ \\
     boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon^{R-}, \varepsilon^{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
     boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon^{Z-}, \varepsilon^{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
 initne    & string & "turbulence"     & "blob"  & initial condition for the
@@ -778,10 +782,8 @@ sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 source  & float & 0     & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
-damping  & float & 0     & 0 & profile damping rate $\omega_d$ in Eq.~\eqref{eq:electron_source} \\
 alpha     & float  & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} \\
 rho\_source & float  & 0.2   & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
-rho\_damping & float  & 1.1   & 1.1 & Damping region boundary $0<\rho_{d}<1$ in Eq.~\eqref{eq:electron_source}  \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and

@@ -146,13 +146,13 @@ struct ComputePsi{
     }
 };
 struct ComputeDiss{
-    ComputeDiss( double mu, double tau):m_mu(mu), m_tau(tau){}
+    ComputeDiss( double z, double mu, double tau):m_z(z), m_mu(mu), m_tau(tau){}
     DG_DEVICE
     void operator()( double& energy, double logN, double phi, double U) const{
-        energy = m_tau*(1.+logN) + phi + 0.5*m_mu*U*U;
+        energy = m_z*(m_tau*(1.+logN) + phi + 0.5*m_mu*U*U);
     }
     private:
-    double m_mu, m_tau;
+    double m_z, m_mu, m_tau;
 };
 struct ComputeLogN{
     DG_DEVICE
@@ -164,8 +164,8 @@ struct ComputeLogN{
 struct ComputeSource{
     DG_DEVICE
     void operator()( double& result, double tilde_n, double profne,
-        double source, double omega_s, double damping, double omega_d) const{
-        double temp = (omega_s*source + omega_d*damping)*(profne - tilde_n);
+        double source, double omega_source) const{
+        double temp = omega_source*source*(profne - tilde_n);
         result = temp;
     }
 };
@@ -282,11 +282,6 @@ struct Explicit
     //Given n_e-1 initialize N_i-1 such that phi=0
     void initializeni( const container& ne, container& ni);
 
-    template<class ...Params>
-    container fieldalignedn( Params&&... ps){
-        return m_ds_N.fieldaligned().evaluate( std::forward<Params>(ps)...);
-    }
-
     void operator()( double t,
         const std::array<std::array<container,2>,2>& y,
         std::array<std::array<container,2>,2>& yp);
@@ -308,16 +303,16 @@ struct Explicit
     const std::array<std::array<container,2>,2>& fields() const{
         return m_fields;
     }
+    const std::array<container,2>& sources() const{
+        return m_s;
+    }
 
-    //source strength, profile - 1 and damping
-    void set_source_and_sink( container profile, double omega_source,
-        container source, double omega_damping, container damping)
+    //source strength, profile - 1
+    void set_source( container profile, double omega_source, container source)
     {
         m_profne = profile;
         m_omega_source = omega_source;
         m_source = source;
-        m_omega_damping = omega_damping;
-        m_damping = damping;
     }
   private:
     void compute_phi( double t, const std::array<container,2>& y);
@@ -343,7 +338,6 @@ struct Explicit
         dg::geo::TokamakMagneticField);
 
     container m_UE2;
-    std::array<container,2> m_sn;
     container m_temp0, m_temp1, m_temp2;//helper variables
 #ifdef DG_MANUFACTURED
     container m_R, m_Z, m_P; //coordinates
@@ -353,19 +347,19 @@ struct Explicit
     std::array<container,3> m_curv, m_curvKappa, m_b;
     container m_divCurvKappa;
     container m_binv, m_divb;
-    container m_source, m_damping, m_profne;
+    container m_source, m_profne;
     container m_vol3d;
 
     container m_apar, m_dxA, m_dyA, m_dzA;
     std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
     std::array<container,2> m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
-    std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU;
+    std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU, m_s;
     std::array<std::array<container,2>,2> m_fields;
 
     std::vector<container> m_multi_chi;
 
     //matrices and solvers
-    Matrix m_dx_N, m_dx_U, m_dx_P, m_dx_A, m_dy_N, m_dy_U, m_dy_P, m_dy_A, m_dz;
+    Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds_P, m_ds_N, m_ds_U;
     dg::Elliptic3d< Geometry, Matrix, container> m_lapperpN, m_lapperpU;
     std::vector<dg::Elliptic3d< Geometry, Matrix, container> > m_multi_pol;
@@ -379,7 +373,7 @@ struct Explicit
 
     const feltor::Parameters m_p;
     Quantities m_q;
-    double m_omega_source = 0., m_omega_damping = 0.;
+    double m_omega_source = 0.;
 
 };
 
@@ -484,7 +478,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
             p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
         m_multi_invgammaN[u].elliptic().set_chi( hh);
         m_multi_induction[u].construct(  m_multigrid.grid(u),
-            p.bcxA, p.bcyA, dg::PER, -1., dg::centered);
+            p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
         m_multi_induction[u].elliptic().set_chi( hh);
     }
 }
@@ -499,11 +493,9 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_dx_N( dg::create::dx( g, p.bcxN) ),
     m_dx_U( dg::create::dx( g, p.bcxU) ),
     m_dx_P( dg::create::dx( g, p.bcxP) ),
-    m_dx_A( dg::create::dx( g, p.bcxA) ),
     m_dy_N( dg::create::dy( g, p.bcyN) ),
     m_dy_U( dg::create::dy( g, p.bcyU) ),
     m_dy_P( dg::create::dy( g, p.bcyP) ),
-    m_dy_A( dg::create::dy( g, p.bcyA) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
@@ -512,9 +504,10 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_UE2 = m_sn[0] = m_sn[1] = m_temp2 = m_temp1 = m_temp0;
+    m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_fields[0] = m_fields[1] = m_logn = m_phi;
+    m_s = m_phi;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
     m_apar = m_dxA = m_dyA = m_dzA = m_phi[0];
     //--------------------------Construct-------------------------//
@@ -677,8 +670,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol);
     //----------Compute Derivatives----------------------------//
-    dg::blas2::symv( m_dx_A, m_apar, m_dxA);
-    dg::blas2::symv( m_dy_A, m_apar, m_dyA);
+    dg::blas2::symv( m_dx_U, m_apar, m_dxA);
+    dg::blas2::symv( m_dy_U, m_apar, m_dyA);
     if(!m_p.symmetric) dg::blas2::symv( m_dz, m_apar, m_dzA);
 
     //----------Compute Velocities-----------------------------//
@@ -732,6 +725,24 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
                 m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
                 m_divCurvKappa, yp[0][i], yp[1][i]
             );
+        }
+    }
+    // Add correction to perpendicular viscosity in W
+    if( m_p.beta != 0)
+    {
+        if( m_p.perp_diff == "viscous")
+        {
+            dg::blas2::gemv(  m_lapperpU, m_apar, m_temp0); //!minus
+        }
+        else
+        {
+            dg::blas2::gemv( m_lapperpU, m_apar, m_temp1);
+            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0); //!plus
+        }
+        for( unsigned i=0; i<2; i++)
+        {
+            //-nu_perp*beta/mu Delta_perp A_par
+            dg::blas1::axpby( m_p.nu_perp*m_p.beta/m_p.mu[i], m_temp0, 1., yp[1][i]);
         }
     }
 }
@@ -813,56 +824,55 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     m_q.aligned = dg::blas2::dot( m_logn[0], m_vol3d, m_dsN[0]);
     /////////////////DISSIPATION TERMS//////////////////////////////
     m_q.diff = m_p.nu_parallel*dg::blas1::dot( m_vol3d, m_dsN[0]);
+    m_q.diff += dg::blas1::dot( m_vol3d, m_s[0]); //particle sources
     // energy dissipation through diffusion
     double z[2] = {-1.0,1.0};
     for( unsigned i=0; i<2;i++)
     {
         //Compute dissipation for N
         // Z*(tau (1+lnN )+psi + 0.5 mu U^2)
-        dg::blas1::subroutine( routines::ComputeDiss(m_p.mu[i], m_p.tau[i]),
+        dg::blas1::subroutine( routines::ComputeDiss(z[i], m_p.mu[i], m_p.tau[i]),
                 m_temp2, m_logn[i], m_phi[i], fields[1][i]);
-        m_q.source[i] = z[i]*dg::blas2::dot( m_temp2, m_vol3d, m_sn[i]);
+        // Dissipation through sink/source terms
+        m_q.source[i] = dg::blas2::dot( m_temp2, m_vol3d, m_s[i]);
+        // parallel dissipation for N: nu_parallel *(Delta_s N)
+        m_q.Dpar[i] = m_p.nu_parallel*dg::blas2::dot(
+                        m_temp2, m_vol3d, m_dsN[i]);
         // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
         if( m_p.perp_diff == "viscous")
         {
             dg::blas1::transform( fields[0][i], m_temp1, dg::PLUS<double>(-1));
-            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
+            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0); //!minus
         }
         else
         {
             dg::blas1::transform( fields[0][i], m_temp0, dg::PLUS<double>(-1));
             dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
-            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0);
+            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0); //!plus
         }
-        //minus in Laplacian!
         if( i==0)
             m_q.diff += -m_p.nu_perp*dg::blas1::dot( m_vol3d, m_temp0);
-        m_q.Dperp[i] = -z[i]*m_p.nu_perp*dg::blas2::dot(
+        m_q.Dperp[i] = -m_p.nu_perp*dg::blas2::dot(
                         m_temp2, m_vol3d, m_temp0);
-        // parallel dissipation for N: nu_parallel *(Delta_s N)
-        m_q.Dpar[i] = z[i]*m_p.nu_parallel*dg::blas2::dot(
-                        m_temp2, m_vol3d, m_dsN[i]);
-        //Compute parallel dissipation for U
-        //Z*mu*N*U nu_parallel *( Delta_s U)
+        //Compute dissipation for U
+        //Z*mu*N*U
         dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i],
                 0, m_temp2);
-        // perp dissipation for U: nu_perp Delta_p W or -nu_perp Delta_p**2 W
-        if( m_p.perp_diff == "viscous")
-        {
-            dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp1);
-            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
-        }
-        else
-        {
-            dg::blas1::axpby( m_p.beta/m_p.mu[i], m_apar, 1., fields[1][i], m_temp0);
-            dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
-            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0);
-        }
-        m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
-            m_temp2, m_vol3d, m_temp0);
         // parallel dissipation for U: nu_parallel *(Delta_s U)
         m_q.Dpar[i+2] = m_p.nu_parallel*dg::blas2::dot(
             m_temp2, m_vol3d, m_dsU[i]);
+        // perp dissipation for U: nu_perp Delta_p U or -nu_perp Delta_p**2 U
+        if( m_p.perp_diff == "viscous")
+        {
+            dg::blas2::gemv( m_lapperpU, fields[1][i], m_temp0); //!minus
+        }
+        else
+        {
+            dg::blas2::gemv( m_lapperpU, fields[1][i], m_temp1);
+            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0); //!plus
+        }
+        m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
+            m_temp2, m_vol3d, m_temp0);
     }
     // resistive energy (quadratic current): -C (n_e (U_i-u_e))**2
     dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1],
@@ -921,17 +931,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 #endif
 
-    //Add particle source to dtNe and dtNi
-    if( m_omega_source != 0 || m_omega_damping != 0)
+    //Add source terms
+    if( m_omega_source != 0)
     {
-        dg::blas1::subroutine( routines::ComputeSource(), m_sn[0], y[0][0],
-            m_profne, m_source, m_omega_source, m_damping, m_omega_damping);
+        dg::blas1::subroutine( routines::ComputeSource(), m_s[0], y[0][0],
+            m_profne, m_source, m_omega_source);
         //compute FLR correction
-        dg::blas2::gemv( m_lapperpN, m_sn[0], m_temp0);
-        dg::blas1::axpby( 1., m_sn[0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_sn[1]);
+        dg::blas2::gemv( m_lapperpN, m_s[0], m_temp0);
+        dg::blas1::axpby( 1., m_s[0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[1]);
 
-        dg::blas1::axpby( 1., m_sn[0], 1.0, yp[0][0]);
-        dg::blas1::axpby( 1., m_sn[1], 1.0, yp[0][1]);
+        dg::blas1::axpby( 1., m_s[0], 1.0, yp[0][0]);
+        dg::blas1::axpby( 1., m_s[1], 1.0, yp[0][1]);
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
