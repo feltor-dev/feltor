@@ -25,4 +25,4 @@ feltor_mpi: feltor_hpc.cu feltor.cuh
 .PHONY: clean
 
 clean:
-	rm -f feltor_hpc feltor_mpi manufactured
+	rm -f feltor feltor_hpc feltor_mpi manufactured

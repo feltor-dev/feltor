@@ -213,6 +213,8 @@ int main( int argc, char* argv[])
     title << std::setprecision(2) << std::scientific;
     while ( !glfwWindowShouldClose( w ))
     {
+        title << std::fixed;
+        title << "t = "<<time<<"   ";
         for( auto pair : v4d)
         {
             if(pair.first == "Phi / ")
@@ -252,8 +254,6 @@ int main( int argc, char* argv[])
                                             grid.n()*grid.Ny(), colors);
             }
         }
-        title << std::fixed;
-        title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwPollEvents();
