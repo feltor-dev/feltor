@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
-        p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
+        p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
 
     //create RHS
@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
     std::map<std::string, const dg::DVec* > v4d;
     v4d["ne-1 / "] = &y0[0][0],               v4d["ni-1 / "] = &y0[0][1];
     v4d["Ue / "]   = &feltor.fields()[1][0],  v4d["Ui / "]   = &feltor.fields()[1][1];
-    v4d["Omega / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
+    v4d["Phi / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
     const feltor::Quantities& q = feltor.quantities();
     double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
     std::map<std::string, const double*> v0d{
@@ -201,8 +201,11 @@ int main( int argc, char* argv[])
     is >> js;
     is.close();
     unsigned red = js.get("reduction", 1).asUInt();
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/red+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
-    draw::RenderHostData render(js["rows"].asDouble(), p.Nz/red + 1);
+    double rows = js["rows"].asDouble(), cols = p.Nz/red+1,
+           width = js["width"].asDouble(), height = js["height"].asDouble();
+    if ( p.symmetric ) cols = rows, rows = 1;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( cols*width, rows*height, "");
+    draw::RenderHostData render(rows, cols);
 
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
@@ -212,10 +215,11 @@ int main( int argc, char* argv[])
     {
         for( auto pair : v4d)
         {
-            if(pair.first == "Omega / ")
+            if(pair.first == "Phi / ")
             {
-                dg::blas2::gemv( laplacianM, *pair.second, dvisual);
-                dg::assign( dvisual, hvisual);
+                //dg::blas2::gemv( laplacianM, *pair.second, dvisual);
+                //dg::assign( dvisual, hvisual);
+                dg::assign( *pair.second, hvisual);
             }
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
             {
@@ -229,18 +233,24 @@ int main( int argc, char* argv[])
                 visual.begin(), visual.end(), 0., thrust::maximum<double>() );
             colors.scalemin() = -colors.scalemax();
             title <<pair.first << colors.scalemax()<<"\t";
-            for( unsigned k=0; k<p.Nz/red;k++)
+            if ( p.symmetric )
+                render.renderQuad( hvisual, grid.n()*grid.Nx(),
+                                            grid.n()*grid.Ny(), colors);
+            else
             {
-                unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-                dg::HVec part( visual.begin() +  k*red   *size,
-                               visual.begin() + (k*red+1)*size);
-                render.renderQuad( part, grid.n()*grid.Nx(),
-                                         grid.n()*grid.Ny(), colors);
+                for( unsigned k=0; k<p.Nz/red;k++)
+                {
+                    unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+                    dg::HVec part( visual.begin() +  k*red   *size,
+                                   visual.begin() + (k*red+1)*size);
+                    render.renderQuad( part, grid.n()*grid.Nx(),
+                                             grid.n()*grid.Ny(), colors);
+                }
+                dg::blas1::scal(avisual,0.);
+                toroidal_average(visual,avisual);
+                render.renderQuad( avisual, grid.n()*grid.Nx(),
+                                            grid.n()*grid.Ny(), colors);
             }
-            dg::blas1::scal(avisual,0.);
-            toroidal_average(visual,avisual);
-            render.renderQuad( avisual, grid.n()*grid.Nx(),
-                                        grid.n()*grid.Ny(), colors);
         }
         title << std::fixed;
         title << " &&   time = "<<time;
