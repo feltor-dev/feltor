@@ -15,18 +15,18 @@ namespace routines{
 //Resistivity (consistent density dependency,
 //parallel momentum conserving, quadratic current energy conservation dependency)
 struct AddResistivity{
-    AddResistivity( double C, std::array<double,2> mu): m_C(C){
+    AddResistivity( double eta, std::array<double,2> mu): m_eta(eta){
         m_mu[0] = mu[0], m_mu[1] = mu[1];
     }
     DG_DEVICE
     void operator()( double ne, double ni, double ue,
         double ui, double& dtUe, double& dtUi) const{
         double current = (ne+1)*(ui-ue);
-        dtUe += -m_C/m_mu[0] * current;
-        dtUi += -m_C/m_mu[1] * (ne+1)/(ni+1) * current;
+        dtUe += -m_eta/m_mu[0] * current;
+        dtUi += -m_eta/m_mu[1] * (ne+1)/(ni+1) * current;
     }
     private:
-    double m_C;
+    double m_eta;
     double m_mu[2];
 };
 struct ComputePerpDrifts{
@@ -945,9 +945,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
         dg::blas1::pointwiseDot( 1., m_fields[0][0],m_fields[0][0],m_apar,
                                  0., m_temp0);
         dg::blas1::pointwiseDivide( m_p.beta*m_p.eta/m_p.mu[0]*(
-            1./m_p.mu[0]-1./m_p.mu[1]), m_temp0, m_fields[0][0], 1., yp[1][0]);
+            1./m_p.mu[1]-1./m_p.mu[0]), m_temp0, m_fields[0][0], 1., yp[1][0]);
         dg::blas1::pointwiseDivide( m_p.beta*m_p.eta/m_p.mu[1]*(
-            1./m_p.mu[0]-1./m_p.mu[1]), m_temp0, m_fields[0][1], 1., yp[1][1]);
+            1./m_p.mu[1]-1./m_p.mu[0]), m_temp0, m_fields[0][1], 1., yp[1][1]);
         if( m_omega_damping != 0)
         {
             dg::blas1::pointwiseDot( m_omega_damping*m_p.beta/m_p.mu[0],
