@@ -139,6 +139,11 @@ int main( int argc, char* argv[])
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
         //then shift tanh
         p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
+    dg::HVec damping_damping = dg::pullback(dg::geo::TanhDamping(
+        //first change coordinate from psi to (psi_0 - psip)/psi_0
+        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
+        //then shift tanh
+        p.rho_damping, p.alpha, 1.), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
 
     HVec profile_damping = dg::pullback( dg::geo::TanhDamping(
@@ -146,8 +151,9 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
-    if( p.omega_source != 0 )
-        feltor.set_source( profile, p.omega_source, source_damping);
+    feltor.set_source( profile, p.omega_source, source_damping,
+        p.omega_damping, damping_damping);
+    im.set_damping( p.omega_damping, damping_damping);
 
     //Now perturbation
     HVec ntilde = dg::evaluate(dg::zero,grid);
@@ -258,7 +264,7 @@ int main( int argc, char* argv[])
         std::map<std::string, const HVec*> v3d{
             {"BR", &vecR}, {"BZ", &vecZ}, {"BP", &vecP},
             {"Psip", &psip}, {"Nprof", &profile },
-            {"Source", &source_damping }
+            {"Source", &source_damping }, {"Damping", &damping_damping}
         };
         IHMatrix project = dg::create::projection( grid_out, grid);
         HVec transferH( dg::evaluate(dg::zero, grid_out));

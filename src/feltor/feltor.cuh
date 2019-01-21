@@ -21,9 +21,9 @@ struct AddResistivity{
     DG_DEVICE
     void operator()( double ne, double ni, double ue,
         double ui, double& dtUe, double& dtUi) const{
-        double current = ne*(ui-ue);
+        double current = (ne+1)*(ui-ue);
         dtUe += -m_C/m_mu[0] * current;
-        dtUi += -m_C/m_mu[1] * ne/ni * current;
+        dtUi += -m_C/m_mu[1] * (ne+1)/(ni+1) * current;
     }
     private:
     double m_C;
@@ -220,6 +220,24 @@ struct Implicit
 #else
         dg::blas1::copy( 0, yp);
 #endif
+        //------------------Add Resistivity--------------------------//
+        //Note that this works because N converges independently of W
+        //and the term is linear in W for fixed N
+        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+            y[0][0], y[0][1], y[1][0], y[1][1], yp[1][0], yp[1][1]);
+        //------------------Add Friction-----------------------------//
+        if( m_omega_damping != 0)
+        {
+            dg::blas1::pointwiseDot( -m_omega_damping, m_damping, y[1][0],
+                1., yp[1][0]);
+            dg::blas1::pointwiseDot( -m_omega_damping, m_damping, y[1][1],
+                1., yp[1][1]);
+        }
+    }
+
+    void set_damping( double omega_damping, container damping){
+        m_damping = damping;
+        m_omega_damping = omega_damping;
     }
 
     const container& weights() const{
@@ -233,8 +251,9 @@ struct Implicit
     }
 
   private:
+    double m_omega_damping=0;
     const feltor::Parameters m_p;
-    container m_temp;
+    container m_temp, m_damping;
     dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN, m_lapM_perpU;
 };
 
@@ -247,7 +266,7 @@ struct Quantities
     //resisitive and diffusive terms
     double Dres = 0, Dpar[4] = {0,0,0,0}, Dperp[4] = {0,0,0,0};
     double aligned = 0; //alignment parameter
-    double source[2] = {0,0}; //source terms
+    double source[4] = {0,0,0,0}; //source terms
     void display( std::ostream& os = std::cout ) const
     {
         os << "Quantities: \n"
@@ -259,7 +278,7 @@ struct Quantities
            << "    Dres: "<<Dres<<"\n"
            << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"]\n"
            << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"]\n"
-           << " Sources: ["<<source[0]<<", "<<source[1]<<"]\n"
+           << " Sources: ["<<source[0]<<", "<<source[1]<<", "<<source[2]<<", "<<source[3]<<"]\n"
            << " aligned: "<<aligned<<"\n";
     }
 };
@@ -303,16 +322,19 @@ struct Explicit
     const std::array<std::array<container,2>,2>& fields() const{
         return m_fields;
     }
-    const std::array<container,2>& sources() const{
+    const std::array<std::array<container,2>,2>& sources() const{
         return m_s;
     }
 
     //source strength, profile - 1
-    void set_source( container profile, double omega_source, container source)
+    void set_source( container profile, double omega_source, container source,
+        double omega_damping, container damping)
     {
         m_profne = profile;
         m_omega_source = omega_source;
         m_source = source;
+        m_omega_damping = omega_damping;
+        m_damping = damping;
     }
   private:
     void compute_phi( double t, const std::array<container,2>& y);
@@ -347,14 +369,14 @@ struct Explicit
     std::array<container,3> m_curv, m_curvKappa, m_b;
     container m_divCurvKappa;
     container m_binv, m_divb;
-    container m_source, m_profne;
+    container m_source, m_profne, m_damping;
     container m_vol3d;
 
     container m_apar, m_dxA, m_dyA, m_dzA;
     std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
     std::array<container,2> m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
-    std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU, m_s;
-    std::array<std::array<container,2>,2> m_fields;
+    std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU;
+    std::array<std::array<container,2>,2> m_fields, m_s;
 
     std::vector<container> m_multi_chi;
 
@@ -373,7 +395,7 @@ struct Explicit
 
     const feltor::Parameters m_p;
     Quantities m_q;
-    double m_omega_source = 0.;
+    double m_omega_source = 0., m_omega_damping = 0.;
 
 };
 
@@ -507,7 +529,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_phi[0] = m_phi[1] = m_temp0;
     m_dxPhi = m_dyPhi = m_dzPhi = m_fields[0] = m_fields[1] = m_logn = m_phi;
-    m_s = m_phi;
+    m_s = m_fields;
     m_dxN = m_dyN = m_dzN = m_dsN = m_dxU = m_dyU = m_dzU = m_dsU = m_phi;
     m_apar = m_dxA = m_dyA = m_dzA = m_phi[0];
     //--------------------------Construct-------------------------//
@@ -570,7 +592,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
 #ifdef DG_MANUFACTURED
         dg::blas1::copy( y[1], m_temp1);
         dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
-            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
             m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
@@ -585,7 +607,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
@@ -603,7 +625,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
 #ifdef DG_MANUFACTURED
         dg::blas1::copy( m_phi[0], m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
-            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
             m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaP, m_phi[1], m_temp0, m_p.eps_gamma);
@@ -632,7 +654,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
         m_UE2, m_temp0, m_temp1, m_binv);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //m_UE2 now contains u_E^2; also update derivatives
@@ -661,7 +683,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     m_old_apar.extrapolate( time, m_apar);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SA{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     std::vector<unsigned> number = m_multigrid.direct_solve(
@@ -824,7 +846,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     m_q.aligned = dg::blas2::dot( m_logn[0], m_vol3d, m_dsN[0]);
     /////////////////DISSIPATION TERMS//////////////////////////////
     m_q.diff = m_p.nu_parallel*dg::blas1::dot( m_vol3d, m_dsN[0]);
-    m_q.diff += dg::blas1::dot( m_vol3d, m_s[0]); //particle sources
+    m_q.diff += dg::blas1::dot( m_vol3d, m_s[0][0]); //particle sources
     // energy dissipation through diffusion
     double z[2] = {-1.0,1.0};
     for( unsigned i=0; i<2;i++)
@@ -834,7 +856,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         dg::blas1::subroutine( routines::ComputeDiss(z[i], m_p.mu[i], m_p.tau[i]),
                 m_temp2, m_logn[i], m_phi[i], fields[1][i]);
         // Dissipation through sink/source terms
-        m_q.source[i] = dg::blas2::dot( m_temp2, m_vol3d, m_s[i]);
+        m_q.source[i] = dg::blas2::dot( m_temp2, m_vol3d, m_s[0][i]);
         // parallel dissipation for N: nu_parallel *(Delta_s N)
         m_q.Dpar[i] = m_p.nu_parallel*dg::blas2::dot(
                         m_temp2, m_vol3d, m_dsN[i]);
@@ -858,6 +880,8 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
         //Z*mu*N*U
         dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i],
                 0, m_temp2);
+        // Dissipation through sink/source terms
+        m_q.source[i+2] = dg::blas2::dot( m_temp2, m_vol3d, m_s[1][i]);
         // parallel dissipation for U: nu_parallel *(Delta_s U)
         m_q.Dpar[i+2] = m_p.nu_parallel*dg::blas2::dot(
             m_temp2, m_vol3d, m_dsU[i]);
@@ -877,7 +901,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
     // resistive energy (quadratic current): -C (n_e (U_i-u_e))**2
     dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1],
         -1., fields[0][0], fields[1][0], 0., m_temp0);
-    m_q.Dres = -m_p.c*dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
+    m_q.Dres = -m_p.eta*dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
     m_q.ediff = m_q.Dres + m_q.source[0] + m_q.source[1]
         + m_q.Dpar[0]+m_q.Dperp[0]+m_q.Dpar[1]+m_q.Dperp[1]
         + m_q.Dpar[2]+m_q.Dperp[2]+m_q.Dpar[3]+m_q.Dperp[3];
@@ -915,10 +939,23 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
 
     // Set perpendicular dynamics in yp
     compute_perp( t, y, m_fields, yp);
-    //------------------Add Resistivity--------------------------//
-    dg::blas1::subroutine( routines::AddResistivity( m_p.c, m_p.mu),
-        m_fields[0][0], m_fields[0][1], m_fields[1][0], m_fields[1][1],
-        yp[1][0], yp[1][1]);
+    //------------------Add Apar correction terms----------------//
+    if( m_p.beta != 0 )
+    {
+        dg::blas1::pointwiseDot( 1., m_fields[0][0],m_fields[0][0],m_apar,
+                                 0., m_temp0);
+        dg::blas1::pointwiseDivide( m_p.beta*m_p.eta/m_p.mu[0]*(
+            1./m_p.mu[0]-1./m_p.mu[1]), m_temp0, m_fields[0][0], 1., yp[1][0]);
+        dg::blas1::pointwiseDivide( m_p.beta*m_p.eta/m_p.mu[1]*(
+            1./m_p.mu[0]-1./m_p.mu[1]), m_temp0, m_fields[0][1], 1., yp[1][1]);
+        if( m_omega_damping != 0)
+        {
+            dg::blas1::pointwiseDot( m_omega_damping*m_p.beta/m_p.mu[0],
+                m_damping, m_apar, 1., yp[1][0]);
+            dg::blas1::pointwiseDot( m_omega_damping*m_p.beta/m_p.mu[1],
+                m_damping, m_apar, 1., yp[1][1]);
+        }
+    }
 
 #else
 
@@ -934,27 +971,35 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     //Add source terms
     if( m_omega_source != 0)
     {
-        dg::blas1::subroutine( routines::ComputeSource(), m_s[0], y[0][0],
+        dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
             m_profne, m_source, m_omega_source);
         //compute FLR correction
-        dg::blas2::gemv( m_lapperpN, m_s[0], m_temp0);
-        dg::blas1::axpby( 1., m_s[0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[1]);
+        dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
+        dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
 
-        dg::blas1::axpby( 1., m_s[0], 1.0, yp[0][0]);
-        dg::blas1::axpby( 1., m_s[1], 1.0, yp[0][1]);
+        dg::blas1::axpby( 1., m_s[0][0], 1.0, yp[0][0]);
+        dg::blas1::axpby( 1., m_s[0][1], 1.0, yp[0][1]);
+    }
+    if( m_omega_damping != 0)
+    {
+        //just compute m_s terms for energies, terms are implicit
+        dg::blas1::pointwiseDot( -m_omega_damping, m_fields[1][0],
+            m_damping, 0., m_s[1][0]);
+        dg::blas1::pointwiseDot( -m_omega_damping, m_fields[1][1],
+            m_damping, 0., m_s[1][1]);
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[0][1], dg::plus_equals(), manufactured::SNi{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SUe{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SUi{
-        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.c,
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();

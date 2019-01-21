@@ -27,10 +27,10 @@ struct Parameters
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
     double alpha, beta;
-    double rho_source;
+    double rho_source, rho_damping;
 
     double nu_perp, nu_parallel;
-    double c;
+    double eta;
 
     double amp;
     double sigma;
@@ -38,7 +38,7 @@ struct Parameters
     double sigma_z;
     double k_psi;
 
-    double omega_source;
+    double omega_source, omega_damping;
     double nprofamp;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
@@ -77,7 +77,7 @@ struct Parameters
         nu_perp     = js["nu_perp"].asDouble();
         perp_diff   = js.get("perp_diff", "viscous").asString();
         nu_parallel = js["nu_parallel"].asDouble();
-        c           = js["resistivity"].asDouble();
+        eta         = js["resistivity"].asDouble();
 
         amp         = js["amplitude"].asDouble();
         sigma       = js["sigma"].asDouble();
@@ -88,8 +88,10 @@ struct Parameters
 
         nprofamp  = js["nprofileamp"].asDouble();
         omega_source  = js.get("source", 0.).asDouble();
+        omega_damping = js.get("damping", 0.).asDouble();
         alpha        = js.get("alpha", 0.02).asDouble();
         rho_source   = js.get("rho_source", 0.2).asDouble();
+        rho_damping  = js.get("rho_damping", 1.2).asDouble();
 
         bcxN = dg::str2bc(js["bc"]["density"][0].asString());
         bcyN = dg::str2bc(js["bc"]["density"][1].asString());
@@ -117,7 +119,7 @@ struct Parameters
             <<"     Ion-temperature   = "<<tau[1]<<"\n"
             <<"     perp. Viscosity   = "<<nu_perp<<"\n"
             <<"     perp. Viscosity   = "<<perp_diff<<"\n"
-            <<"     par. Resistivity  = "<<c<<"\n"
+            <<"     par. Resistivity  = "<<eta<<"\n"
             <<"     beta              = "<<beta<<"\n"
             <<"     par. Viscosity    = "<<nu_parallel<<"\n"
             <<"     curvature mode    = "<<curvmode<<"\n"
@@ -134,6 +136,8 @@ struct Parameters
         os << "Profile parameters are: \n"
             <<"     omega_source:                 "<<omega_source<<"\n"
             <<"     rho_source:                   "<<rho_source<<"\n"
+            <<"     omega_damping:                "<<omega_damping<<"\n"
+            <<"     rho_damping:                  "<<rho_damping<<"\n"
             <<"     alpha:                        "<<alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"

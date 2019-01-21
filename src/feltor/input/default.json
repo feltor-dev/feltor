@@ -42,7 +42,9 @@
     "initphi"    : "zero",
     "curvmode"   : "true",
     "symmetric"  : false,
-    "source"     : 0,
     "alpha"      : 0.02,
-    "rho_source" : 0.2
+    "source"     : 0,
+    "rho_source" : 0.2,
+    "damping"     : 0,
+    "rho_daming" : 1.2
 }
