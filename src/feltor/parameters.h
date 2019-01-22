@@ -12,6 +12,7 @@ struct Parameters
     unsigned n_out, Nx_out, Ny_out, Nz_out;
     double dt;
     unsigned cx, cy;
+    unsigned inner_loop;
     unsigned itstp;
     unsigned maxout;
 
@@ -55,6 +56,7 @@ struct Parameters
         cx      = js["compression"].get(0u,1).asUInt();
         cy      = js["compression"].get(1u,1).asUInt();
         n_out = n, Nx_out = Nx/cx, Ny_out = Ny/cy, Nz_out = Nz;
+        inner_loop = js.get("inner_loop",1).asUInt();
         itstp   = js["itstp"].asUInt();
         maxout  = js["maxout"].asUInt();
         eps_time    = js["eps_time"].asDouble();
@@ -158,12 +160,13 @@ struct Parameters
             <<"     Accuracy Fieldline    "<<rk4eps<<"\n"
             <<"     Refined DS            "<<mx<<" "<<my<<"\n";
         os << "Output parameters are: \n"
-            <<"     n_out  =              "<<n_out<<"\n"
-            <<"     Nx_out =              "<<Nx_out<<"\n"
-            <<"     Ny_out =              "<<Ny_out<<"\n"
-            <<"     Nz_out =              "<<Nz_out<<"\n"
-            <<"     Steps between output: "<<itstp<<"\n"
-            <<"     Number of outputs:    "<<maxout<<"\n";
+            <<"     n_out  =                 "<<n_out<<"\n"
+            <<"     Nx_out =                 "<<Nx_out<<"\n"
+            <<"     Ny_out =                 "<<Ny_out<<"\n"
+            <<"     Nz_out =                 "<<Nz_out<<"\n"
+            <<"     Steps between energies:  "<<inner_loop<<"\n"
+            <<"     Energies between output: "<<itstp<<"\n"
+            <<"     Number of outputs:       "<<maxout<<"\n";
         os << "Boundary conditions are: \n"
             <<"     bc density x   = "<<dg::bc2str(bcxN)<<"\n"
             <<"     bc density y   = "<<dg::bc2str(bcyN)<<"\n"

@@ -748,8 +748,9 @@ dt     & integer &1e-2& - &initial time stepsize in units of $c_s/\rho_s$ \\
 compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
     (has to divde Nx evenly), and n*Ny/c[1] points in y,
     (has to divde Ny evenly)\\
-itstp       & integer & 2  & - & Number of time steps between outputs \\
-maxout      & integer & 10 & - & Total Number of outputs excluding first \\
+inner\_loop & integer & 2  & 1 & Number of time steps between each energy output \\
+itstp       & integer & 2  & - & Number of energy outputs for each fields outputs \\
+maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is maxout$\cdot$itstp$\cdot$inner\_loop) \\
 eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
 eps\_pol    & float & 1e-5  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. \\

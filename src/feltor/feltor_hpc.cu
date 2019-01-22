@@ -314,7 +314,7 @@ int main( int argc, char* argv[])
     }
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    double time = 0, dt_new = p.dt, dt = 0;
+    double time = 0, dt = p.dt;
     MPI_OUT std::cout << "First output ... \n";
     //first, update quantities in feltor
     {
@@ -377,7 +377,7 @@ int main( int argc, char* argv[])
         "ARK-4-2-3", y0, grid.size(), p.eps_time);
     dg::Timer t;
     t.tic();
-    unsigned step = 0;
+    unsigned step = 0, failed_counter = 0;
     MPI_OUT q.display(std::cout);
     for( unsigned i=1; i<=p.maxout; i++)
     {
@@ -386,29 +386,36 @@ int main( int argc, char* argv[])
         ti.tic();
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{
-                do
-                {
-                    dt = dt_new;
-                    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
-                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                    if( adaptive.failed())
-                        MPI_OUT std::cout << "FAILED STEP! REPEAT!\n";
-                }while ( adaptive.failed());
+            double previous_time = time;
+            for( unsigned k=0; k<p.inner_loop; k++)
+            {
+                try{
+                    do
+                    {
+                        adaptive.step( feltor, im, time, y0, time, y0, dt,
+                            dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                        if( adaptive.failed())
+                        {
+                            MPI_OUT std::cout << "FAILED STEP! REPEAT!\n";
+                            failed_counter++;
+                        }
+                    }while ( adaptive.failed());
+                }
+                catch( dg::Fail& fail) {
+                    MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    MPI_OUT std::cerr << "Does Simulation respect CFL condition?\n";
+                    #ifdef FELTOR_MPI
+                    err = nc_close(ncid);
+                    #endif //FELTOR_MPI
+                    return -1;
+                }
+                step++;
             }
-            catch( dg::Fail& fail) {
-                MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                MPI_OUT std::cerr << "Does Simulation respect CFL condition?\n";
-                #ifdef FELTOR_MPI
-                err = nc_close(ncid);
-                #endif //FELTOR_MPI
-                return -1;
-            }
-            step++;
+            double deltat = time - previous_time;
 
             feltor.update_quantities();
-            MPI_OUT std::cout << "Timestep "<<dt<<"\n";
-            dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
+            MPI_OUT std::cout << "Timestep "<<deltat<<"\n";
+            dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
             accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
@@ -436,10 +443,12 @@ int main( int argc, char* argv[])
 
         }
         ti.toc();
-        MPI_OUT std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout
-                  << " at time "<<time;
+        MPI_OUT std::cout << "\n\t Step "<<step <<" of "
+                    << p.inner_loop*p.itstp*p.maxout << " at time "<<time;
         MPI_OUT std::cout << "\n\t Average time for one step: "
-                  << ti.diff()/(double)p.itstp<<"s";
+                    << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
+        MPI_OUT std::cout << "\n\t Total number of failed steps: "
+                    << failed_counter;
         ti.tic();
         //////////////////////////write fields////////////////////////
         start[0] = i;
@@ -471,7 +480,7 @@ int main( int argc, char* argv[])
     double second = t.diff() - hour*3600 - minute*60;
     MPI_OUT std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     MPI_OUT std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-    MPI_OUT std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    MPI_OUT std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout/p.inner_loop<<"s/step\n";
 #ifdef FELTOR_MPI
     err = nc_close(ncid);
     MPI_Finalize();
