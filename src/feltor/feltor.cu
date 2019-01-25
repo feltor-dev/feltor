@@ -218,6 +218,7 @@ int main( int argc, char* argv[])
     std::cout << std::scientific << std::setprecision( 2);
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     title << std::setprecision(2) << std::scientific;
+    unsigned failed_counter = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         title << std::fixed;
@@ -239,9 +240,9 @@ int main( int argc, char* argv[])
                 dg::assign( *pair.second, hvisual);
             dg::blas2::gemv( equi, hvisual, visual);
             colors.scalemax() = (double)thrust::reduce(
-                visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+                visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
             colors.scalemin() = -colors.scalemax();
-            title <<pair.first << colors.scalemax()<<"\t";
+            title <<pair.first << colors.scalemax()<<"   ";
             if ( p.symmetric )
                 render.renderQuad( hvisual, grid.n()*grid.Nx(),
                                             grid.n()*grid.Ny(), colors);
@@ -270,25 +271,33 @@ int main( int argc, char* argv[])
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{
-                do
-                {
-                    dt = dt_new;
-                    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
-                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                    if( adaptive.failed())
-                        std::cout << "FAILED STEP! REPEAT!\n";
-                }while ( adaptive.failed());
+            double current_time = time;
+            for( unsigned k=0; k<p.inner_loop; k++)
+            {
+                try{
+                    do
+                    {
+                        dt = dt_new;
+                        adaptive.step( feltor, im, time, y0, time, y0, dt_new,
+                            dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                        if( adaptive.failed())
+                        {
+                            failed_counter++;
+                            std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
+                        }
+                    }while ( adaptive.failed());
+                }
+                catch( dg::Fail& fail) {
+                    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    std::cerr << "Does Simulation respect CFL condition?\n";
+                    glfwSetWindowShouldClose( w, GL_TRUE);
+                    break;
+                }
+                step++;
             }
-            catch( dg::Fail& fail) {
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
-            step++;
+            dt = time - current_time;
             feltor.update_quantities();
-            std::cout << "Timestep "<<dt<<"\n";
+            std::cout << "Timestep "<<dt_new<<"\n";
             dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
@@ -306,8 +315,9 @@ int main( int argc, char* argv[])
 
         }
         t.toc();
-        std::cout << "\n\t Step "<<step;
-        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
+        std::cout << "\n\t Step "<<step << " at time  "<<time;
+        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop;
+        std::cout << "\n\t Total # of failed steps:   "<<failed_counter<<"\n\n";
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////

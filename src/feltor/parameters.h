@@ -110,7 +110,7 @@ struct Parameters
         initne      = js.get( "initne", "blob").asString();
         initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
-        symmetric  = js.get( "symmetric", false).asBool();
+        symmetric   = js.get( "symmetric", false).asBool();
     }
     void display( std::ostream& os = std::cout ) const
     {

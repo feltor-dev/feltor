@@ -273,7 +273,7 @@ simplify to
 In this approximation we apply the toroidal field line approximation
 as in Section
 \ref{sec:torfieldlineapprox}
-but approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$.
+but approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$
   with
   $\vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
@@ -455,9 +455,9 @@ where we define
 where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.
 
-We choose boundary conditions seperately on input for the variables
+We choose boundary conditions separately on input for the variables
 $n_e$, $u_e$ and $\phi$. The boundary condition for $N_i$, $U_i$ and
-$\psi$ are equal to $n_e$, $u_e$ and $\phi$ respecitively.
+$\psi$ are equal to $n_e$, $u_e$ and $\phi$ respectively.
 We choose $A_\parallel$ to have equal boundary conditions as $u_e$ and $U_i$.
 This will later enable us to treat the sum of $U$ and $A_\parallel$
 in the same way as $U$.
@@ -468,7 +468,7 @@ n_e = n_0, \quad u_e = \phi = 0
 \end{align}
 where $\hat n$ is the normal vector to the boundary.
 
-We initialize the parallel velocitiy to zero
+We initialize the parallel velocity to zero
 \begin{align}
   u_e(R,Z,\varphi,0) = U_i(R,Z,\varphi,0) = 0
   \label{}
@@ -709,7 +709,7 @@ We then symbolically compute (with the help of Mathematica) source terms that we
 the corresponding equation in code (\texttt{manufactured.h}) and simulate from $t=0...10^{-3}$.
 By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
 the convergence of the dG discretized terms from our parallel derivative
-we can selectively choose to only activate perpendicular (including $A_\parallel$ temrs) or parallel terms (those that involve derivatives along $\bhat$).
+we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
 
 Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
 
@@ -764,12 +764,12 @@ mu         & float & -0.000272121& - & $\mu_e =-m_e/m_i$.
     One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
-nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
+nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$ \\
 perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$\\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
 curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
-symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwtiten to $N_z\equiv 1$. \\
+symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\
@@ -796,6 +796,9 @@ source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
 damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
 rho\_damping& float & 0.2  & 1.2 & Friction region boundary $\rho_{d}>1$ in Eq.~\eqref{eq:velocity_source}  \\
+%restart    & bool & false & false & If true, all input and geometry parameters except maxout,
+%    itstp and inner\_loop are ignored. Instead, the parameters and all fields are initialized from output.nc
+%    The actual output is then appended to output.nc This effectively continues an existing simulation.
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -863,7 +866,7 @@ Uperp     & Dataset & 1 (energy\_time) & total perpendicular energy integral Eq.
 Apar     & Dataset & 1 (energy\_time) & total magnetic energy integral Eq.~\eqref{eq:energy_conservation} \\
 dEdt      & Dataset & 1 (energy\_time) & change of energy per time  \\
 accuracy  & Dataset & 1 (energy\_time) & accuracy of energy theorem in time  \\
-aligned   & Dataset & 1 (energy\_time) & Alignment paramter $\int\dV \ln n_e\Delta_\parallel n_e$\\
+aligned   & Dataset & 1 (energy\_time) & Alignment parameter $\int\dV \ln n_e\Delta_\parallel n_e$\\
 \bottomrule
 \end{longtable}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -905,7 +908,7 @@ total\_flux      & Dataset & 1 (time) & $\int \dV f_e$\\
 \bottomrule
 \end{longtable}
 X $\in$ \{ electrons, ions, Ue, Ui, potential,
-induction, vorticity, fluxe, Lpeprinv, Lparallelinv\} corresponding to \{
+induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
     $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$, $-\Delta_\perp \phi$,
     $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\}
 
