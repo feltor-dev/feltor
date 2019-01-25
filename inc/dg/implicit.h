@@ -63,7 +63,7 @@ struct TensorTraits< detail::Implicit<M, V> >
  * works only for linear positive definite operators as it uses a conjugate
  * gradient solver to invert the equation
  * @copydoc hide_ContainerType
- * @sa Karniadakis ARKStep
+ * @sa Karniadakis ARKStep DIRKStep
  */
 template<class ContainerType>
 struct DefaultSolver
@@ -112,5 +112,68 @@ struct DefaultSolver
     CG< ContainerType> m_pcg;
     ContainerType m_rhs;
     value_type m_eps;
+};
+
+/*!@brief Fixed point iterator for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
+ *
+ * @copydoc hide_ContainerType
+ * @sa Karniadakis ARKStep DIRKStep
+ */
+template<class ContainerType>
+struct FixedPointSolver
+{
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>;//!< value type of vectors
+    ///No memory allocation
+    FixedPointSolver(){}
+    /*!
+    * @param copyable vector of the size that is later used in \c solve (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c solve method can only be called with vectors of the same size)
+    * @param max_iter maimum iteration number
+    * @param eps accuracy parameter. Convergence is in the l2 norm
+    */
+    FixedPointSolver( const ContainerType& copyable, unsigned max_iter, value_type eps):
+        m_current( copyable), m_eps(eps), m_max_iter(max_iter)
+        {}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_current;}
+
+    template< class Implicit>
+    void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
+    {
+#ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif//MPI
+        Timer ti;
+        ti.tic();
+#endif //DG_BENCHMARK
+        unsigned number = 0;
+        value_type error = 0;
+        do
+        {
+            dg::blas1::copy( y, m_current);
+            im( t, m_current, y);
+            dg::blas1::axpby( 1., rhs, -alpha, y);
+            dg::blas1::axpby( 1., y, -1., m_current); //the difference
+            number++;
+            error = sqrt( dg::blas1::dot( m_current, m_current));
+        }while ( error > m_eps && number < m_max_iter);
+        //std::cout << " Error it "<<number<<" is "<<error<<"\n";
+#ifdef DG_BENCHMARK
+        ti.toc();
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif//MPI
+        std::cout << "# of iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+#endif //DG_BENCHMARK
+    }
+    private:
+    ContainerType m_current;
+    value_type m_eps;
+    unsigned m_max_iter;
 };
 }//namespace dg

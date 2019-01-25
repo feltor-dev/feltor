@@ -188,6 +188,13 @@ struct Adaptive
     template<class Explicit, class ErrorNorm = value_type(const container_type&)>
     value_type guess_stepsize( Explicit& ex, value_type t0, const container_type& u0, enum direction dir, ErrorNorm& norm, value_type rtol, value_type atol);
 
+    ///@brief Allow write access to internal stepper
+    ///
+    ///Maybe useful to set options in the stepper
+    stepper_type& stepper() { return m_stepper;}
+    ///@brief Read access to internal stepper
+    const stepper_type& stepper() const { return m_stepper;}
+
     /*!@brief Explicit or Implicit adaptive step
      *
      * @param rhs The right hand side of the equation to integrate

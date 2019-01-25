@@ -66,6 +66,12 @@ struct ERKStep
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_k[0];}
+
+    ///All susequqent calls to \c step method will ignore the first same as last property
+    void ignore_fsal(){ m_ignore_fsal = true;}
+    ///All susequqent calls to \c step method will enable the check for the first same as last property
+    void enable_fsal(){ m_ignore_fsal = false;}
+
     ///@copydoc RungeKutta::step()
     ///@param delta Contains error estimate on output (must have equal size as \c u0)
     template<class RHS>
@@ -86,6 +92,7 @@ struct ERKStep
     ButcherTableau<value_type> m_rk;
     std::vector<ContainerType> m_k;
     value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
+    bool m_ignore_fsal = false;
 };
 
 template< class ContainerType>
@@ -93,10 +100,9 @@ template< class RHS>
 void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rk.num_stages();
-    //this behaviour must be documented
-    //0 stage: probe fsal
+    //0 stage: probe
     value_type tu = t0;
-    if( t0 != m_t1)
+    if( t0 != m_t1 || m_ignore_fsal)
         f(t0, u0, m_k[0]); //freshly compute k_0
     //else take from last call
     //1 stage
@@ -277,9 +283,9 @@ struct ARKStep
              SolverParams&& ...ps
              ):
          m_solver( std::forward<SolverParams>(ps)...),
+         m_rhs( m_solver.copyable()),
          m_rkE(ex_tableau),
          m_rkI(im_tableau),
-         m_rhs( m_solver.copyable()),
          m_kE(m_rkE.num_stages(), m_rhs),
          m_kI(m_rkI.num_stages(), m_rhs)
     {
@@ -347,7 +353,7 @@ struct ARKStep
     }
     private:
     SolverType m_solver;
-    ContainerType m_rhs, m_u1;
+    ContainerType m_rhs;
     ButcherTableau<value_type> m_rkE, m_rkI;
     std::vector<ContainerType> m_kE, m_kI;
     value_type m_t1 = 1e300;
@@ -502,11 +508,23 @@ struct RungeKutta
     * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
+    * @note About the first same as last property (fsal): Some Butcher tableaus
+    * (e.g. Dormand-Prince) have the property that the last value k_s of a
+    * timestep is the same as the first value k_0 of the next timestep. This
+    * means that we can save one call to the right hand side. This property is
+    * automatically activated if \c tableau.isFsal() returns \c true and \c t0
+    * equals \c t1 of the last call to \c step. You can deactivate it by
+    * calling the \c ignore_fsal() method, which is useful for splitting methods
+    * but increases the number of rhs calls by 1.
     */
     template<class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
     }
+    ///All susequqent calls to \c step method will ignore the first same as last property
+    void ignore_fsal(){ m_erk.ignore_fsal();}
+    ///All susequqent calls to \c step method will enable the check for the first same as last property
+    void enable_fsal(){ m_erk.enable_fsal();}
     ///@copydoc ERKStep::order
     unsigned order() const {
         return m_erk.order();
@@ -517,6 +535,271 @@ struct RungeKutta
     }
   private:
     ERKStep<ContainerType> m_erk;
+    ContainerType m_delta;
+};
+/*!
+ * @brief Struct for diagonally implicit Runge Kutta time-step with error estimate
+* \f[
+ \begin{align}
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
+ \end{align}
+\f]
+ *
+ * So far we did not implement the use of a mass matrix \c M.
+ * You can provide your own coefficients or use one of the embedded methods
+ * in the following table:
+ * @copydoc hide_implicit_butcher_tableaus
+ *
+ * @copydoc hide_SolverType
+ * @copydoc hide_ContainerType
+ * @ingroup time
+ */
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct DIRKStep
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    DIRKStep(){ }
+
+    ///@copydoc construct()
+    template<class ...SolverParams>
+    DIRKStep( ConvertsToButcherTableau<value_type> im_tableau,
+             SolverParams&& ...ps
+             ):
+         m_solver( std::forward<SolverParams>(ps)...),
+         m_rhs( m_solver.copyable()),
+         m_rkI(im_tableau),
+         m_kI(m_rkI.num_stages(), m_rhs)
+    {
+    }
+
+    /*!@brief Construct with a diagonally implicit Butcher Tableau
+     *
+     * The tableau may be one of the implict methods listed in
+     * \c ConvertsToButcherTableau, or you provide your own tableau.
+     *
+     * @param im_tableau diagonally implicit tableau, name or identifier that \c ConvertsToButcherTableau
+     * @param ps Parameters that
+     * are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     */
+    template<class ...SolverParams>
+    void construct(
+             ConvertsToButcherTableau<value_type> im_tableau,
+             SolverParams&& ...ps
+             )
+    {
+        m_rkI = im_tableau;
+        m_solver = SolverType( std::forward<SolverParams>(ps)...);
+        m_rhs = m_solver.copyable();
+        m_kI.assign(m_rkI.num_stages(), m_rhs);
+    }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_kI[0];}
+
+    /**
+    * @brief Advance one step
+    *
+    * @copydoc hide_rhs
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on output
+    *   unless \c freeze_time() was called, then it equals \c t0 on output, may alias \c t0)
+    * @param u1 (write only) contains result on output (may alias u0)
+    * @param dt timestep
+    * @param delta Contains error estimate on output (must have equal size as \c u0)
+    */
+    template< class RHS>
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    ///@copydoc ERKStep::order()
+    unsigned order() const {
+        return m_rkI.order();
+    }
+    ///@copydoc ERKStep::embedded_order()
+    unsigned embedded_order() const {
+        return m_rkI.order();
+    }
+    ///@copydoc ERKStep::num_stages()
+    unsigned num_stages() const{
+        return m_rkI.num_stages();
+    }
+
+    ///All subsequent calls to \c step method will not advance time
+    ///This is useful in an operator splitting
+    void freeze_time() { m_freeze_time=true;}
+    ///All subsequent calls to \c step method will advance time again
+    void unfreeze_time() { m_freeze_time=false;}
+    private:
+    SolverType m_solver;
+    ContainerType m_rhs;
+    ButcherTableau<value_type> m_rkI;
+    std::vector<ContainerType> m_kI;
+    bool m_freeze_time = false;
+};
+
+template<class ContainerType, class SolverType>
+template< class RHS>
+void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+{
+    unsigned s = m_rkI.num_stages();
+    value_type tu = t0;
+    //0 stage
+    //rhs = u0
+    tu = DG_FMA( m_rkI.c(0),dt, t0);
+    if( m_freeze_time) tu = t0;
+    blas1::copy( u0, delta); //better init with rhs
+    m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
+
+    //1 stage
+    if( s>1){
+        rhs(tu, delta, m_kI[0]);
+        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
+                dt*m_rkI.a(1,0), m_kI[0]);
+        tu = DG_FMA( m_rkI.c(1),dt, t0);
+        if( m_freeze_time) tu = t0;
+        //store solution in delta, init with last solution
+        blas1::copy( m_rhs, delta); //better init with rhs
+        m_solver.solve( -dt*m_rkI.a(1,1), rhs, tu, delta, m_rhs);
+        rhs(tu, delta, m_kI[1]);
+    }
+    //2 stage
+    if( s>2){
+        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
+                 dt*m_rkI.a(2,0), m_kI[0],
+                 dt*m_rkI.a(2,1), m_kI[1]);
+        tu = DG_FMA( m_rkI.c(2),dt, t0);
+        if( m_freeze_time) tu = t0;
+        //just take last solution as init
+        blas1::copy( m_rhs, delta); //better init with rhs
+        m_solver.solve( -dt*m_rkI.a(2,2), rhs, tu, delta, m_rhs);
+        rhs(tu, delta, m_kI[2]);
+    }
+    //3 stage and higher
+    if( s>3){
+        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
+                 dt*m_rkI.a(3,0), m_kI[0],
+                 dt*m_rkI.a(3,1), m_kI[1],
+                 dt*m_rkI.a(3,2), m_kI[2]);
+        tu = DG_FMA( m_rkI.c(3),dt, t0);
+        blas1::copy( m_rhs, delta); //better init with rhs
+        m_solver.solve( -dt*m_rkI.a(3,3), rhs, tu, delta, m_rhs);
+        rhs(tu, delta, m_kI[3]);
+        for( unsigned i=4; i<s; i++)
+        {
+            dg::blas1::copy( u0, m_rhs);
+            for( unsigned j=0; j<i; j++)
+                dg::blas1::axpby( dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
+            tu = DG_FMA( m_rkI.c(i),dt, t0);
+            if( m_freeze_time) tu = t0;
+            blas1::copy( m_rhs, delta); //better init with rhs
+            m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
+            rhs(tu, delta, m_kI[i]);
+        }
+    }
+    t1 = t0 + dt;
+    //Now compute result and error estimate
+    switch( s)
+    {
+        case 1: dg::blas1::copy( delta, u1); break; //implicit Euler
+        case 2:
+            blas1::subroutine( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
+                            dt*m_rkI.b(1), dt*m_rkI.d(1), m_kI[1]); break;
+        case 3: blas1::subroutine( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
+                            dt*m_rkI.b(1), dt*m_rkI.d(1), m_kI[1],
+                            dt*m_rkI.b(2), dt*m_rkI.d(2), m_kI[2]); break;
+        default: blas1::subroutine( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
+                            dt*m_rkI.b(1), dt*m_rkI.d(1), m_kI[1],
+                            dt*m_rkI.b(2), dt*m_rkI.d(2), m_kI[2],
+                            dt*m_rkI.b(3), dt*m_rkI.d(3), m_kI[3]);
+            //sum the rest
+            for( unsigned i=4; i<s; i++)
+            {
+                dg::blas1::axpby( dt*m_rkI.b(i), m_kI[i], 1., u1);
+                dg::blas1::axpby( dt*m_rkI.d(i), m_kI[i], 1., delta);
+            }
+    }
+}
+/**
+* @brief Struct for Runge-Kutta fixed-step implicit time-integration
+* \f[
+ \begin{align}
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j
+ \end{align}
+\f]
+
+The method is defined by its (implicit) ButcherTableau, given by
+the coefficients \c a, \c b and \c c,  and \c s is the number
+of stages.
+
+You can provide your own coefficients or use one of our predefined methods:
+@copydoc hide_implicit_butcher_tableaus
+* @ingroup time
+*
+* @note Uses only \c dg::blas1 routines to integrate one step.
+* @copydoc hide_ContainerType
+*/
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct ImplicitRungeKutta
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@brief No memory allocation, Call \c construct before using the object
+    ImplicitRungeKutta(){}
+
+    ///@copydoc DIRKStep::construct()
+    template<class ...SolverParams>
+    ImplicitRungeKutta( ConvertsToButcherTableau<value_type> im_tableau,
+             SolverParams&& ...ps
+             ): m_dirk( im_tableau, std::forward<SolverParams>(ps)...), m_delta(m_dirk.copyable())
+             {}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_delta;}
+    ///All subsequent calls to \c step method will not advance time
+    ///This is useful in an operator splitting
+    void freeze_time() { m_dirk.freeze_time();}
+    ///All subsequent calls to \c step method will advance time again
+    void unfreeze_time() { m_dirk.unfreeze_time();}
+    /**
+    * @brief Advance one step
+    *
+    * @copydoc hide_rhs
+    * @param rhs right hand side subroutine
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on output
+    *   unless \c freeze_time() was called, then it equals \c t0 on output, may alias \c t0)
+    * @param u1 (write only) contains result on output (may alias u0)
+    * @param dt timestep
+    */
+    template<class RHS>
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+        m_dirk.step( rhs, t0, u0, t1, u1, dt, m_delta);
+    }
+    ///@copydoc ERKStep::order
+    unsigned order() const {
+        return m_dirk.order();
+    }
+    ///@copydoc ERKStep::num_stages()
+    unsigned num_stages() const{
+        return m_dirk.num_stages();
+    }
+  private:
+    DIRKStep<ContainerType, SolverType> m_dirk;
     ContainerType m_delta;
 };
 
