@@ -15,9 +15,16 @@ namespace dg{
  * https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
  * for an introduction.
  * The coefficients of the tableau
- * should be easily constructible and accessible afterwards.
- * Furthermore, it provides utilities like the number of stages, whether the
+ * are easily constructible and accessible.
+ * Furthermore, we provide utilities like the number of stages, whether the
  * tableau is embedded or not and the order of the method.
+ *
+ * Currently available are
+ *
+ * Explicit methods
+ * @copydoc hide_explicit_butcher_tableaus
+ * Implicit methods
+ * @copydoc hide_implicit_butcher_tableaus
  * @tparam real_type type of the coefficients
  * @sa RungeKutta, ERKStep, ARKStep
  * @ingroup time

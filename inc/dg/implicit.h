@@ -49,7 +49,7 @@ struct TensorTraits< detail::Implicit<M, V> >
  * @tparam SolverType
     The task of this class is to solve the equation \f$ (y+\alpha\hat I(t,y)) = \rho\f$
     for the given implicit part I, parameter alpha, time t and
-    right hand side rho. For example \c dg::DefaultSolver
+    right hand side rho. For example \c dg::DefaultSolver or \c dg::FixedPointSolver
     If you write your own class:
  * it must have a solve method of type:
     \c void \c solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs);
@@ -60,10 +60,12 @@ struct TensorTraits< detail::Implicit<M, V> >
 
 /*!@brief Default Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
  *
+ * for given t, alpha and rho.
  * works only for linear positive definite operators as it uses a conjugate
  * gradient solver to invert the equation
  * @copydoc hide_ContainerType
  * @sa Karniadakis ARKStep DIRKStep
+ * @ingroup invert
  */
 template<class ContainerType>
 struct DefaultSolver
@@ -116,8 +118,14 @@ struct DefaultSolver
 
 /*!@brief Fixed point iterator for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
  *
+ * for given t, alpha and rho.
+ * The fixed point iteration is given by
+ * \f[
+ *  y_{k+1}  = \rho - \alpha\hat I(t,y_k)
+ *  \f]
  * @copydoc hide_ContainerType
  * @sa Karniadakis ARKStep DIRKStep
+ * @ingroup invert
  */
 template<class ContainerType>
 struct FixedPointSolver

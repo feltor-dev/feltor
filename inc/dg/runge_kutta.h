@@ -605,6 +605,7 @@ struct DIRKStep
     * @brief Advance one step
     *
     * @copydoc hide_rhs
+    * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on output
