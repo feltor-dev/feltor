@@ -374,176 +374,161 @@ namespace mod
 
 struct Psip: public aCylindricalFunctor<Psip>
 {
-    Psip( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-
-    }
+    Psip( Parameters gp, double psi0, double alpha) :
+        m_isech2( psi0, alpha, -1), m_psip(gp)
+    { }
     double do_compute(double R, double Z) const
     {
-        double psip_RZ = psip_(R,Z);
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_RZ ;
-        return  psip_RZ + 0.5*psip_2*cauchy_(R,Z);
+        double psip = m_psip(R,Z);
+        return m_isech2( psip);
     }
     private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
+    dg::ISech2 m_isech2;
+    solovev::Psip m_psip;
 };
 struct PsipR: public aCylindricalFunctor<PsipR>
 {
-    PsipR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
+    PsipR( Parameters gp, double psi0, double alpha) :
+        m_sech2( psi0, alpha, -1), m_psip(gp), m_psipR(gp)
+    { }
     double do_compute(double R, double Z) const
     {
-        double psipR_RZ = psipR_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipR_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_RZ;
-        return psipR_RZ + 0.5*(psip_2R*cauchy_(R,Z) + psip_2*cauchy_.dx(R,Z)  );
+        double psip = m_psip(R,Z);
+        double psipR = m_psipR(R,Z);
+        return psipR*m_sech2( psip);
     }
     private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
+    dg::Sech2 m_sech2;
+    solovev::Psip m_psip;
+    solovev::PsipR m_psipR;
 };
 struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
-    PsipZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
+    PsipZ( Parameters gp, double psi0, double alpha) :
+        m_sech2( psi0, alpha, -1), m_psip(gp), m_psipZ(gp)
+    { }
     double do_compute(double R, double Z) const
     {
-        double psipZ_RZ = psipZ_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipZ_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_RZ;
-        return psipZ_RZ + 0.5*(psip_2Z*cauchy_(R,Z) + psip_2*cauchy_.dy(R,Z));
+        double psip = m_psip(R,Z);
+        double psipZ = m_psipZ(R,Z);
+        return psipZ*m_sech2( psip);
     }
     private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
+    dg::Sech2 m_sech2;
+    solovev::Psip m_psip;
+    solovev::PsipZ m_psipZ;
 };
 
 struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
-    PsipZZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
+    PsipZZ( Parameters gp, double psi0, double alpha) :
+        m_sech2( psi0, alpha, -1), m_dsech2( psi0, alpha, -1), m_psip(gp), m_psipZ(gp), m_psipZZ(gp)
+    { }
     double do_compute(double R, double Z) const
     {
-        double psipZZ_RZ = psipZZ_(R,Z);
-        if( !cauchy_.inside(R, Z)) return psipZZ_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_(R,Z);
-        double psip_2ZZ =  - psipRR_X_ - psipZZ_RZ;
-        return psipZZ_RZ + 0.5*(psip_2ZZ*cauchy_(R,Z) + 2.*cauchy_.dy(R,Z)*psip_2Z +  psip_2*cauchy_.dyy(R,Z));
+        double psip = m_psip(R,Z);
+        double psipZ = m_psipZ(R,Z);
+        double psipZZ = m_psipZZ(R,Z);
+        return psipZZ*m_sech2( psip) + psipZ*psipZ*m_dsech2(psip);
     }
     private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
+    dg::Sech2 m_sech2;
+    dg::DSech2 m_dsech2;
+    solovev::Psip m_psip;
+    solovev::PsipZ m_psipZ;
+    solovev::PsipZZ m_psipZZ;
 };
 struct PsipRR: public aCylindricalFunctor<PsipRR>
 {
-    PsipRR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
+    PsipRR( Parameters gp, double psi0, double alpha) :
+        m_sech2( psi0, alpha, -1), m_dsech2( psi0, alpha, -1), m_psip(gp), m_psipR(gp), m_psipRR(gp)
+    { }
     double do_compute(double R, double Z) const
     {
-        double psipRR_RZ = psipRR_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipRR_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_(R,Z);
-        double psip_2RR =  - psipZZ_X_ - psipRR_RZ;
-        return psipRR_RZ + 0.5*(psip_2RR*cauchy_(R,Z) + 2.*cauchy_.dx(R,Z)*psip_2R +  psip_2*cauchy_.dxx(R,Z));
+        double psip = m_psip(R,Z);
+        double psipR = m_psipR(R,Z);
+        double psipRR = m_psipRR(R,Z);
+        return psipRR*m_sech2( psip) + psipR*psipR*m_dsech2(psip);
     }
     private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
+    dg::Sech2 m_sech2;
+    dg::DSech2 m_dsech2;
+    solovev::Psip m_psip;
+    solovev::PsipR m_psipR;
+    solovev::PsipRR m_psipRR;
 };
 struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
-    PsipRZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
+    PsipRZ( Parameters gp, double psi0, double alpha) :
+        m_sech2( psi0, alpha, -1), m_dsech2( psi0, alpha, -1), m_psip(gp), m_psipR(gp), m_psipZ(gp), m_psipRZ(gp)
+    { }
     double do_compute(double R, double Z) const
     {
-        double psipRZ_RZ = psipRZ_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipRZ_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z);
-        double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_(R,Z);
-        double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_(R,Z);
-        double psip_2RZ =  - psipRZ_X_ - psipRZ_RZ;
-        return psipRZ_RZ + 0.5*(psip_2RZ*cauchy_(R,Z) + cauchy_.dx(R,Z)*psip_2Z + cauchy_.dy(R,Z)*psip_2R  +  psip_2*cauchy_.dxy(R,Z));
+        double psip = m_psip(R,Z);
+        double psipR = m_psipR(R,Z);
+        double psipZ = m_psipZ(R,Z);
+        double psipRZ = m_psipRZ(R,Z);
+        return psipRZ*m_sech2( psip) + psipR*psipZ*m_dsech2(psip);
     }
     private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
+    dg::Sech2 m_sech2;
+    dg::DSech2 m_dsech2;
+    solovev::Psip m_psip;
+    solovev::PsipR m_psipR;
+    solovev::PsipZ m_psipZ;
+    solovev::PsipRZ m_psipRZ;
 };
+
+struct Ipol: public aCylindricalFunctor<Ipol>
+{
+    Ipol(  Parameters gp, double psi0, double alpha ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp, psi0, alpha) { }
+    double do_compute(double R, double Z) const
+    {
+        //sign before A changed to -
+        return qampl_*sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
+    }
+  private:
+    double R_0_, A_,qampl_;
+    mod::Psip psip_;
+};
+struct IpolR: public aCylindricalFunctor<IpolR>
+{
+    IpolR(  Parameters gp, double psi0, double alpha ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp, psi0, alpha), psipR_(gp, psi0, alpha) { }
+    double do_compute(double R, double Z) const
+    {
+        return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.)*(A_*psipR_(R,Z)/R_0_);
+    }
+  private:
+    double R_0_, A_,qampl_;
+    mod::Psip psip_;
+    mod::PsipR psipR_;
+};
+struct IpolZ: public aCylindricalFunctor<IpolZ>
+{
+    IpolZ(  Parameters gp, double psi0, double alpha ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp, psi0, alpha), psipZ_(gp, psi0, alpha) { }
+    double do_compute(double R, double Z) const
+    {
+        return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.)*(A_*psipZ_(R,Z)/R_0_);
+    }
+  private:
+    double R_0_, A_,qampl_;
+    mod::Psip psip_;
+    mod::PsipZ psipZ_;
+};
+
+static inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp,
+    double psi0, double alpha)
+{
+    return CylindricalFunctorsLvl2( Psip(gp, psi0, alpha), PsipR(gp, psi0,
+    alpha), PsipZ(gp, psi0, alpha), PsipRR(gp, psi0, alpha), PsipRZ(gp,
+    psi0, alpha), PsipZZ(gp, psi0, alpha));
+}
+static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp,
+    double psi0, double alpha)
+{
+    return CylindricalFunctorsLvl1( Ipol(gp, psi0, alpha), IpolR(gp, psi0,
+    alpha), IpolZ(gp, psi0, alpha));
+}
 
 } //namespace mod
 ///@endcond
@@ -561,9 +546,33 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
  * @return A magnetic field object
  * @ingroup geom
  */
-static inline dg::geo::TokamakMagneticField createSolovevField( dg::geo::solovev::Parameters gp)
+static inline dg::geo::TokamakMagneticField createSolovevField(
+    dg::geo::solovev::Parameters gp)
 {
-    return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));
+    return TokamakMagneticField( gp.R_0, solovev::createPsip(gp),
+        solovev::createIpol(gp));
+}
+/**
+ * @brief Create a modified Solovev Magnetic field
+ *
+ * Based on \c dg::geo::solovev::mod::Psip(gp) and
+ * \c dg::geo::solovev::mod::Ipol(gp)
+ * We modify psi above a certain value to a constant using the
+ * \c dg::ISech2 function (an approximation to the integrated Heaviside
+ * function with width alpha), i.e. we replace psi with ISech2(psi).
+ * This subsequently modifies all derivatives of psi and the poloidal
+ * current of course.
+ * @param gp Solovev parameters
+ * @param psi0 above this value psi is modified to a constant
+ * @param alpha determines how quickly the modification acts (smaller is quicker)
+ * @return A magnetic field object
+ * @ingroup geom
+ */
+static inline dg::geo::TokamakMagneticField createModifiedSolovevField(
+    dg::geo::solovev::Parameters gp, double psi0, double alpha)
+{
+    return TokamakMagneticField( gp.R_0, solovev::mod::createPsip(gp,
+        psi0, alpha), solovev::mod::createIpol(gp, psi0, alpha));
 }
 
 } //namespace geo

@@ -67,9 +67,9 @@ struct ERKStep
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_k[0];}
 
-    ///All susequqent calls to \c step method will ignore the first same as last property
+    ///All subsequent calls to \c step method will ignore the first same as last property
     void ignore_fsal(){ m_ignore_fsal = true;}
-    ///All susequqent calls to \c step method will enable the check for the first same as last property
+    ///All subsequent calls to \c step method will enable the check for the first same as last property
     void enable_fsal(){ m_ignore_fsal = false;}
 
     ///@copydoc RungeKutta::step()
@@ -521,9 +521,9 @@ struct RungeKutta
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
     }
-    ///All susequqent calls to \c step method will ignore the first same as last property
+    ///All subsequent calls to \c step method will ignore the first same as last property
     void ignore_fsal(){ m_erk.ignore_fsal();}
-    ///All susequqent calls to \c step method will enable the check for the first same as last property
+    ///All subsequent calls to \c step method will enable the check for the first same as last property
     void enable_fsal(){ m_erk.enable_fsal();}
     ///@copydoc ERKStep::order
     unsigned order() const {

@@ -757,24 +757,33 @@ struct PsiPupil
     double psimax_;
 };
 /**
- * @brief Zero up to psimax, then one
+ * @brief Zero up to xb, then one
      \f[ \begin{cases}
-        1  \text{ if } \psi > \psi_{\max} \\
-        0  \text{ else}
+        0  \text{ if } x < x_b \\
+        1  \text{ else}
      \end{cases}\f]
  */
 struct Heaviside
 {
-    Heaviside( double psimax):
-        psimax_(psimax){ }
 
-    double operator()(double psi)const
+    /**
+     * @brief Construct with xb and sign
+     *
+     * @param xb boundary value
+     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
+     * thus approximating H(xb-x) if H(x-xb) is the regular Heaviside function
+     */
+    Heaviside( double xb, int sign = +1):
+        m_xb(xb){ }
+
+    double operator()(double x)const
     {
-        if( psi > psimax_) return 1.;
-        return 0.;
+        if( (x < m_xb && m_s == 1) || (x > m_xb && m_s == -1)) return 0.;
+        return 1.;
     }
     private:
-    double psimax_;
+    double m_xb;
+    int m_s;
 };
 
 /**
@@ -800,7 +809,7 @@ struct GaussianDamping
     double m_psimax, m_alpha;
 };
 /**
- * @brief Step function using tanh
+ * @brief An approximation to Heaviside using tanh
  * \f[ f(x) = B + 0.5 A(1+ \text{sign} \tanh((x-x_b)/\alpha ) ) \f]
  */
 struct TanhProfX {
@@ -832,6 +841,108 @@ struct TanhProfX {
     double bga_;
     double profa_;
 };
+
+/**
+ * @brief An approximation to Heaviside using cosh
+     \f[ \begin{cases}
+        \cosh^{-2}((x-x_b)/\alpha)  \text{ if } x < x_b \\
+        1  \text{ else }
+     \end{cases}\f]
+ */
+struct Sech2 {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param width damping width \c alpha
+     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
+     * thus approximating H(xb-x) if H(x-xb) is the regular Heaviside function
+     */
+    Sech2(double xb, double width, int sign = +1) :
+        m_xb(xb), m_w(width), m_s(sign){}
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        if( ( x > m_xb && m_s == 1 ) || (x < m_xb && m_s == -1 )) return 1;
+        return 1./cosh( (x-m_xb)/m_w)/cosh( (x-m_xb)/m_w);
+    }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    private:
+    double m_xb, m_w;
+    int m_s;
+};
+
+/**
+ * @brief The integral of Sech2,  approximates the integrated Heaviside using tanh
+     \f[ \begin{cases}
+        x_b + \alpha \tanh((x-x_b)/\alpha)  \text{ if } x < x_b \\
+        x  \text{ else }
+     \end{cases}\f]
+
+     The maximum is at \c x_b+alpha
+ */
+struct ISech2 {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param width damping width \c alpha
+     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
+     */
+    ISech2(double xb, double width, int sign = +1) :
+        m_xb(xb), m_w(width), m_s(sign){}
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        if( ( x > m_xb && m_s == 1 ) || (x < m_xb && m_s == -1 )) return x;
+        return m_xb + m_w*tanh( (x-m_xb)/m_w);
+    }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    private:
+    double m_xb, m_w;
+    int m_s;
+};
+
+/**
+ * @brief The derivative of Sech2
+     \f[ \begin{cases}
+        -\frac{2}{\alpha} \cosh^{-2}((x-x_b)/\alpha)\tanh((x-x_b)/\alpha)  \text{ if } x < x_b \\
+        0  \text{ else }
+     \end{cases}\f]
+ */
+struct DSech2 {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param width damping width \c alpha
+     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
+     */
+    DSech2(double xb, double width, int sign = +1) :
+        m_xb(xb), m_w(width), m_s(sign){}
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        if( ( x > m_xb && m_s == 1 ) || (x < m_xb && m_s == -1 )) return 0.;
+        return -2./m_w*tanh( (x-m_xb)/m_w)/cosh( (x-m_xb)/m_w)/cosh( (x-m_xb)/m_w);
+    }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    private:
+    double m_xb, m_w;
+    int m_s;
+};
+
+
+
 
 /**
  * @brief Exponential \f[ f(x) = A \exp(\lambda x)\f]
