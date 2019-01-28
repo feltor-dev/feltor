@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <functional>
 
 #undef DG_DEBUG
@@ -102,8 +103,11 @@ int main()
 {
     unsigned n = 3, Nx = 50 , Ny = 50;
     std::cout << "Program tests Multistep and Semi-Implicit methods on a manufactured PDE\n";
+    //std::cout << "Type n (3), Nx (50), Ny (50)\n";
+    //std::cin >> n >> Nx >> Ny;
+    std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     const double T = 0.1;
-    const double NT= 40, eps = 1e-8;
+    const double NT= 40, eps = 1e-6;
     const double dt = (T/NT);
     const double nu = 0.01;
     //construct the grid and the explicit and implicit parts
@@ -120,6 +124,7 @@ int main()
     double time = 0.;
     dg::DVec error( sol);
     exblas::udouble res;
+    std::cout << "### Test explicit multistep methods with "<<NT<<"steps\n";
     for( unsigned s=1; s<6; s++)
     {
         time = 0., y0 = init;
@@ -134,6 +139,7 @@ int main()
     }
     Explicit<dg::DVec> ex( grid, nu);
     Implicit<dg::DMatrix, dg::DVec> im( grid, nu);
+    std::cout << "### Test semi-implicit Karniadakis methods with "<<NT<<"steps\n";
     //![karniadakis]
     //construct time stepper
     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
@@ -149,14 +155,15 @@ int main()
     std::cout << "Relative error Karniadakis is "<< res.d<<"\t"<<res.i<<std::endl;
 
 
-    //TEST ARK methods
+    std::cout << "### Test semi-implicit ARK methods\n";
     std::vector<std::string> names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
+    double rtol = 1e-7, atol = 1e-10;
     for( auto name : names)
     {
         //![adaptive]
         time = 0., y0 = init;
         dg::Adaptive<dg::ARKStep<dg::DVec>> adapt( name, y0, y0.size(), eps);
-        double time = 0, rtol = 1e-5, atol = 1e-10;
+        double time = 0;
         double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol);
         int counter=0;
         while( time < T )
@@ -171,6 +178,44 @@ int main()
         res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
         std::cout << counter <<" steps! ";
         std::cout << "Relative error "<<name<<" is "<< res.d<<"\t"<<res.i<<std::endl;
+    }
+    std::cout << "### Test first order operator splitting\n";
+
+    std::vector<std::string> ex_names{
+        "Heun-Euler-2-1-2",
+        "Bogacki-Shampine-4-2-3",
+        "ARK-4-2-3 (explicit)",
+        "Zonneveld-5-3-4",
+        "ARK-6-3-4 (explicit)",
+        "Sayfy-Aburub-6-3-4",
+        "Cash-Karp-6-4-5",
+        "Fehlberg-6-4-5",
+        "Dormand-Prince-7-4-5",
+        "ARK-8-4-5 (explicit)"
+    };
+    for( auto name : ex_names)
+    {
+        time = 0., y0 = init;
+        dg::Adaptive<dg::ERKStep<dg::DVec>> adapt( name, y0);
+        dg::ImplicitRungeKutta<dg::DVec> dirk( "Euler (implicit)", y0, y0.size(), eps );
+        double time = 0;
+        double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol);
+        int counter=0;
+        adapt.stepper().ignore_fsal();
+        dirk.freeze_time();
+        while( time < T )
+        {
+            if( time + dt > T)
+                dt = T-time;
+            dirk.step( im, time, y0, time, y0, dt);
+            adapt.step( ex, time, y0, time, y0, dt, dg::pid_control,
+                dg::l2norm, rtol, atol);
+            counter ++;
+        }
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+        std::cout << counter <<" steps! ";
+        std::cout << "Relative error "<<std::setw(24) <<name<<"\t"<<res.d<<"\n";
     }
     return 0;
 }

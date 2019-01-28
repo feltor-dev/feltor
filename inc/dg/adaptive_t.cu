@@ -54,6 +54,7 @@ int main()
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u_end);
     std::cout << "With "<<counter<<"\t Dormand Prince steps norm of error is "<<sqrt(dg::blas1::dot( u_end, u_end))<<"\n";
     //![doxygen.]
+    std::cout << "Explicit Methods \n";
     std::vector<std::string> names{
         "Heun-Euler-2-1-2",
         "Bogacki-Shampine-4-2-3",
@@ -74,6 +75,35 @@ int main()
         dt = 0;
         u_start = solution(t_start, damping, omega_0, omega_drive);
         counter = dg::integrateERK( name, functor, t_start, u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
+
+        std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
+        dg::blas1::axpby( 1.,sol  , -1., u_end);
+        std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "<<std::setw(24)<<name<<"\t"<<dg::l2norm( u_end)<<"\n";
+    }
+    ///-------------------------------Implicit Methods----------------------//
+    std::cout << "Implicit Methods \n";
+    std::vector<std::string> implicit_names{
+        "SDIRK-2-1-2",
+        "Billington-3-3-2",
+        "TRBDF2-3-3-2",
+        "Kvaerno-4-2-3",
+        "ARK-4-2-3 (implicit)",
+        "Cash-5-2-4",
+        "Cash-5-3-4",
+        "SDIRK-5-3-4",
+        "ARK-6-3-4 (implicit)",
+        "Kvaerno-7-4-5",
+        "ARK-8-4-5 (implicit)",
+    };
+    for( auto name : implicit_names)
+    {
+        dt = 0;
+        u_start = solution(t_start, damping, omega_0, omega_drive);
+        dg::Adaptive< dg::DIRKStep<
+            std::array<double,2>, dg::FixedPointSolver<std::array<double,2> > > >
+                pd( name, u_start, 100, 1e-14);
+        counter = integrateAdaptive( pd, functor, t_start, u_start, t_end,
+            u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1.,sol  , -1., u_end);

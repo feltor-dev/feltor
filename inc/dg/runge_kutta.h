@@ -67,7 +67,7 @@ struct ERKStep
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_k[0];}
 
-    ///All subsequent calls to \c step method will ignore the first same as last property
+    ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
     void ignore_fsal(){ m_ignore_fsal = true;}
     ///All subsequent calls to \c step method will enable the check for the first same as last property
     void enable_fsal(){ m_ignore_fsal = false;}
@@ -243,6 +243,11 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
  * Currently, the possible Butcher Tableaus for a fully implicit-explicit scheme
  * are the "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
  * So far we did not implement the use of a mass matrix \c M.
+ * @attention When you use the ARKStep in combination with the Adaptive time
+ * step algorithm pay attention to solve the implicit part with sufficient
+ * accuracy. Else, the error propagates into the time controller, which will
+ * then choose the timestep as if the implicit part was explicit i.e. far too
+ * small (don't really know fully why though).
  *
  * @copydoc hide_SolverType
  * @copydoc hide_ContainerType
@@ -521,7 +526,7 @@ struct RungeKutta
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
     }
-    ///All subsequent calls to \c step method will ignore the first same as last property
+    ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
     void ignore_fsal(){ m_erk.ignore_fsal();}
     ///All subsequent calls to \c step method will enable the check for the first same as last property
     void enable_fsal(){ m_erk.enable_fsal();}
@@ -630,7 +635,7 @@ struct DIRKStep
     }
 
     ///All subsequent calls to \c step method will not advance time
-    ///This is useful in an operator splitting
+    ///This is useful if you want to implement operator splitting
     void freeze_time() { m_freeze_time=true;}
     ///All subsequent calls to \c step method will advance time again
     void unfreeze_time() { m_freeze_time=false;}
@@ -650,8 +655,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     value_type tu = t0;
     //0 stage
     //rhs = u0
-    tu = DG_FMA( m_rkI.c(0),dt, t0);
-    if( m_freeze_time) tu = t0;
+    tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(0),dt, t0);
     blas1::copy( u0, delta); //better init with rhs
     if( !(m_rkI.a(0,0)==0) )
         m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
@@ -661,8 +665,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     if( s>1){
         blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
                 dt*m_rkI.a(1,0), m_kI[0]);
-        tu = DG_FMA( m_rkI.c(1),dt, t0);
-        if( m_freeze_time) tu = t0;
+        tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(1),dt, t0);
         //store solution in delta, init with last solution
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(1,1), rhs, tu, delta, m_rhs);
@@ -673,8 +676,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
         blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
                  dt*m_rkI.a(2,0), m_kI[0],
                  dt*m_rkI.a(2,1), m_kI[1]);
-        tu = DG_FMA( m_rkI.c(2),dt, t0);
-        if( m_freeze_time) tu = t0;
+        tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(2),dt, t0);
         //just take last solution as init
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(2,2), rhs, tu, delta, m_rhs);
@@ -695,14 +697,13 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
             dg::blas1::copy( u0, m_rhs);
             for( unsigned j=0; j<i; j++)
                 dg::blas1::axpby( dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
-            tu = DG_FMA( m_rkI.c(i),dt, t0);
-            if( m_freeze_time) tu = t0;
+            tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(i),dt, t0);
             blas1::copy( m_rhs, delta); //better init with rhs
             m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
             rhs(tu, delta, m_kI[i]);
         }
     }
-    t1 = t0 + dt;
+    t1 = m_freeze_time ? t0 : t0 + dt;
     //Now compute result and error estimate
     switch( s)
     {

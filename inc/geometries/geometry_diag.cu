@@ -30,10 +30,10 @@ struct Parameters
         Nx = js.get("Nx",100).asUInt();
         Ny = js.get("Ny",100).asUInt();
         Nz = js.get("Nz", 1).asUInt();
-        boxscaleRm = js.get("boxscaleRm", 1.).asDouble();
-        boxscaleRp = js.get("boxscaleRp", 1.).asDouble();
-        boxscaleZm = js.get("boxscaleZm", 1.3).asDouble();
-        boxscaleZp = js.get("boxscaleZp", 1.).asDouble();
+        boxscaleRm = js.get("boxscaleRm", 1.1).asDouble();
+        boxscaleRp = js.get("boxscaleRp", 1.1).asDouble();
+        boxscaleZm = js.get("boxscaleZm", 1.2).asDouble();
+        boxscaleZp = js.get("boxscaleZp", 1.1).asDouble();
         amp = js.get("amplitude", 1.).asDouble();
         k_psi = js.get("k_psi", 1.).asDouble();
         bgprofamp = js.get("bgprofamp", 1.).asDouble();
@@ -137,7 +137,7 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
     //Test coefficients
-    dg::geo::TokamakMagneticField c = dg::geo::createModifiedSolovevField(gp, 1, 0.1);
+    dg::geo::TokamakMagneticField c = dg::geo::createModifiedSolovevField(gp, 0.16, 0.1);
     const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     const double Z_X = -1.1*gp.elongation*gp.a;
     const double R_H = gp.R_0-gp.triangularity*gp.a;
