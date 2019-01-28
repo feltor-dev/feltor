@@ -92,6 +92,8 @@ int main()
     std::cout << "Implicit Methods with "<<N_im<<" steps:\n";
     std::vector<std::string> implicit_names{
         "Euler (implicit)",
+        "Midpoint (implicit)",
+        "Trapezoidal-2-2",
         "SDIRK-2-1-2",
         "Billington-3-3-2",
         "TRBDF2-3-3-2",

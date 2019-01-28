@@ -653,11 +653,12 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     tu = DG_FMA( m_rkI.c(0),dt, t0);
     if( m_freeze_time) tu = t0;
     blas1::copy( u0, delta); //better init with rhs
-    m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
+    if( !(m_rkI.a(0,0)==0) )
+        m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
+    rhs(tu, delta, m_kI[0]);
 
     //1 stage
     if( s>1){
-        rhs(tu, delta, m_kI[0]);
         blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
                 dt*m_rkI.a(1,0), m_kI[0]);
         tu = DG_FMA( m_rkI.c(1),dt, t0);
@@ -705,9 +706,11 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     //Now compute result and error estimate
     switch( s)
     {
-        case 1: dg::blas1::copy( delta, u1); break; //implicit Euler
-        case 2:
-            blas1::subroutine( dg::EmbeddedPairSum(),
+        case 1: blas1::subroutine( dg::EmbeddedPairSum(),
+                            u1, delta,
+                            1., 0., u0,
+                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0]); break;
+        case 2: blas1::subroutine( dg::EmbeddedPairSum(),
                             u1, delta,
                             1., 0., u0,
                             dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
