@@ -179,7 +179,7 @@ int main()
         std::cout << counter <<" steps! ";
         std::cout << "Relative error "<<name<<" is "<< res.d<<"\t"<<res.i<<std::endl;
     }
-    std::cout << "### Test first order operator splitting\n";
+    std::cout << "### Test Strang operator splitting\n";
 
     std::vector<std::string> ex_names{
         "Heun-Euler-2-1-2",
@@ -197,24 +197,25 @@ int main()
     {
         time = 0., y0 = init;
         dg::Adaptive<dg::ERKStep<dg::DVec>> adapt( name, y0);
-        dg::ImplicitRungeKutta<dg::DVec> dirk( "Euler (implicit)", y0, y0.size(), eps );
+        dg::ImplicitRungeKutta<dg::DVec> dirk( "Trapezoidal-2-2", y0, y0.size(), eps );
         double time = 0;
         double dt = adapt.guess_stepsize( ex, time, y0, dg::forward, dg::l2norm, rtol, atol);
         int counter=0;
         adapt.stepper().ignore_fsal();
-        dirk.freeze_time();
         while( time < T )
         {
             if( time + dt > T)
                 dt = T-time;
-            dirk.step( im, time, y0, time, y0, dt);
-            adapt.step( ex, time, y0, time, y0, dt, dg::pid_control,
+            double dt_old = dt;
+            dirk.step( im, time, y0, time, y0, dt_old/2.);
+            adapt.step( ex, time-dt_old/2., y0, time, y0, dt, dg::pid_control,
                 dg::l2norm, rtol, atol);
+            dirk.step( im, time-dt_old/2., y0, time, y0, dt_old/2.);
             counter ++;
         }
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-        std::cout << counter <<" steps! ";
+        std::cout << std::setw(4)<<counter <<" steps! ";
         std::cout << "Relative error "<<std::setw(24) <<name<<"\t"<<res.d<<"\n";
     }
     return 0;

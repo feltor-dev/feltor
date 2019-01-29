@@ -4,6 +4,7 @@
 #include <map>
 #include <sstream>
 #include <cmath>
+#include <csignal>
 
 #ifdef FELTOR_MPI
 #include <mpi.h>
@@ -29,6 +30,24 @@ using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
+#endif //FELTOR_MPI
+
+int ncid = -1; //netcdf id (signal handler can close the file)
+
+#ifdef FELTOR_MPI
+void sigterm_handler(int signal)
+{
+    file :: NC_Error_Handle err;
+    std::cout << "sigterm_handler, got signal " << signal << std::endl;
+    std::cout << "ncid = " << ncid << std::endl;
+    if(ncid != -1)
+    {
+        err = nc_close(ncid);
+        std::cerr << "SIGTERM caught. Closing NetCDF file with id " << ncid << std::endl;
+    }
+    MPI_Finalize();
+    exit(signal);
+}
 #endif //FELTOR_MPI
 
 int main( int argc, char* argv[])
@@ -75,6 +94,9 @@ int main( int argc, char* argv[])
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
+    ////////////////////////////// Install signal handler ///////////////////
+    std::signal(SIGINT, sigterm_handler);
+    std::signal(SIGTERM, sigterm_handler);
 #endif //FELTOR_MPI
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js, gs;
@@ -117,7 +139,7 @@ int main( int argc, char* argv[])
         , comm
         #endif //FELTOR_MPI
         );
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    dg::geo::TokamakMagneticField mag = dg::geo::createModifiedSolovevField(gp, 0.16 ,0.1);
 
     //create RHS
     MPI_OUT std::cout << "Constructing Explicit...\n";
@@ -236,7 +258,6 @@ int main( int argc, char* argv[])
     };
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
-    int ncid;
 #ifdef FELTOR_MPI
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
@@ -314,7 +335,7 @@ int main( int argc, char* argv[])
     }
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    double time = 0, dt = p.dt;
+    double time = 0, dt_new = p.dt, dt =0;
     MPI_OUT std::cout << "First output ... \n";
     //first, update quantities in feltor
     {
@@ -373,8 +394,11 @@ int main( int argc, char* argv[])
 #endif //FELTOR_MPI
     MPI_OUT std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
-    dg::Adaptive< dg::ARKStep<std::array<std::array<DVec,2>,2>> > adaptive(
-        "ARK-4-2-3", y0, grid.size(), p.eps_time);
+    dg::Adaptive< dg::ERKStep<std::array<std::array<DVec,2>,2>> > adaptive(
+        "Bogacki-Shampine-4-2-3", y0);
+    adaptive.stepper().ignore_fsal();//necessary for splitting
+    dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>> dirk(
+        "Trapezoidal-2-2", y0, grid.size(), p.eps_time);
     dg::Timer t;
     t.tic();
     unsigned step = 0, failed_counter = 0;
@@ -392,7 +416,10 @@ int main( int argc, char* argv[])
                 try{
                     do
                     {
-                        adaptive.step( feltor, im, time, y0, time, y0, dt,
+                        //Strang splitting
+                        dt = dt_new;
+                        dirk.step( im, time, y0, time, y0, dt/2.);
+                        adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
                             dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                         if( adaptive.failed())
                         {
@@ -400,6 +427,7 @@ int main( int argc, char* argv[])
                             failed_counter++;
                         }
                     }while ( adaptive.failed());
+                    dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

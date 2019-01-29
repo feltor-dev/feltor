@@ -614,7 +614,7 @@ struct DIRKStep
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on output
-    *   unless \c freeze_time() was called, then it equals \c t0 on output, may alias \c t0)
+    *   may alias \c t0)
     * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
     * @param delta Contains error estimate on output (must have equal size as \c u0)
@@ -634,17 +634,11 @@ struct DIRKStep
         return m_rkI.num_stages();
     }
 
-    ///All subsequent calls to \c step method will not advance time
-    ///This is useful if you want to implement operator splitting
-    void freeze_time() { m_freeze_time=true;}
-    ///All subsequent calls to \c step method will advance time again
-    void unfreeze_time() { m_freeze_time=false;}
     private:
     SolverType m_solver;
     ContainerType m_rhs;
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
-    bool m_freeze_time = false;
 };
 
 template<class ContainerType, class SolverType>
@@ -655,7 +649,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     value_type tu = t0;
     //0 stage
     //rhs = u0
-    tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(0),dt, t0);
+    tu = DG_FMA( m_rkI.c(0),dt, t0);
     blas1::copy( u0, delta); //better init with rhs
     if( !(m_rkI.a(0,0)==0) )
         m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
@@ -665,7 +659,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     if( s>1){
         blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
                 dt*m_rkI.a(1,0), m_kI[0]);
-        tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(1),dt, t0);
+        tu = DG_FMA( m_rkI.c(1),dt, t0);
         //store solution in delta, init with last solution
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(1,1), rhs, tu, delta, m_rhs);
@@ -676,7 +670,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
         blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
                  dt*m_rkI.a(2,0), m_kI[0],
                  dt*m_rkI.a(2,1), m_kI[1]);
-        tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(2),dt, t0);
+        tu = DG_FMA( m_rkI.c(2),dt, t0);
         //just take last solution as init
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(2,2), rhs, tu, delta, m_rhs);
@@ -697,13 +691,13 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
             dg::blas1::copy( u0, m_rhs);
             for( unsigned j=0; j<i; j++)
                 dg::blas1::axpby( dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
-            tu = m_freeze_time ? t0 : DG_FMA( m_rkI.c(i),dt, t0);
+            tu = DG_FMA( m_rkI.c(i),dt, t0);
             blas1::copy( m_rhs, delta); //better init with rhs
             m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
             rhs(tu, delta, m_kI[i]);
         }
     }
-    t1 = m_freeze_time ? t0 : t0 + dt;
+    t1 = t0 + dt;
     //Now compute result and error estimate
     switch( s)
     {
@@ -774,11 +768,6 @@ struct ImplicitRungeKutta
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_delta;}
-    ///All subsequent calls to \c step method will not advance time
-    ///This is useful in an operator splitting
-    void freeze_time() { m_dirk.freeze_time();}
-    ///All subsequent calls to \c step method will advance time again
-    void unfreeze_time() { m_dirk.unfreeze_time();}
     /**
     * @brief Advance one step
     *
@@ -787,7 +776,7 @@ struct ImplicitRungeKutta
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on output
-    *   unless \c freeze_time() was called, then it equals \c t0 on output, may alias \c t0)
+    *   may alias \c t0)
     * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
     */

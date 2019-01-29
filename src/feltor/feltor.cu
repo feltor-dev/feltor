@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    dg::geo::TokamakMagneticField mag = dg::geo::createModifiedSolovevField(gp, 0.16, 0.1);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
@@ -151,15 +151,18 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0, dt_new = p.dt, dt =0;
     unsigned step = 0;
-    dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
-        "ARK-4-2-3", y0, grid.size(), p.eps_time);
+    dg::Adaptive< dg::ERKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
+        "Bogacki-Shampine-4-2-3", y0);
+    adaptive.stepper().ignore_fsal();//necessary for splitting
+    dg::ImplicitRungeKutta<std::array<std::array<dg::DVec,2>,2>> dirk(
+        "Trapezoidal-2-2", y0, grid.size(), p.eps_time);
 
     //since we map pointers we don't need to update those later
 
     std::map<std::string, const dg::DVec* > v4d;
     v4d["ne-1 / "] = &y0[0][0],               v4d["ni-1 / "] = &y0[0][1];
     v4d["Ue / "]   = &feltor.fields()[1][0],  v4d["Ui / "]   = &feltor.fields()[1][1];
-    v4d["Phi / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
+    v4d["Ome / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
     const feltor::Quantities& q = feltor.quantities();
     double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
     std::map<std::string, const double*> v0d{
@@ -225,10 +228,10 @@ int main( int argc, char* argv[])
         title << "t = "<<time<<"   ";
         for( auto pair : v4d)
         {
-            if(pair.first == "Phi / ")
+            if(pair.first == "Ome / ")
             {
-                //dg::blas2::gemv( laplacianM, *pair.second, dvisual);
-                //dg::assign( dvisual, hvisual);
+                dg::blas2::gemv( laplacianM, *pair.second, dvisual);
+                dg::assign( dvisual, hvisual);
                 dg::assign( *pair.second, hvisual);
             }
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
@@ -278,7 +281,9 @@ int main( int argc, char* argv[])
                     do
                     {
                         dt = dt_new;
-                        adaptive.step( feltor, im, time, y0, time, y0, dt_new,
+                        //Strang splitting
+                        dirk.step( im, time, y0, time, y0, dt/2.);
+                        adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
                             dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                         if( adaptive.failed())
                         {
@@ -286,6 +291,7 @@ int main( int argc, char* argv[])
                             std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
                         }
                     }while ( adaptive.failed());
+                    dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

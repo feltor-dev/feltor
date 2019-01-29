@@ -170,13 +170,12 @@ struct FixedPointSolver
             number++;
             error = sqrt( dg::blas1::dot( m_current, m_current));
         }while ( error > m_eps && number < m_max_iter);
-        //std::cout << " Error it "<<number<<" is "<<error<<"\n";
 #ifdef DG_BENCHMARK
         ti.toc();
 #ifdef MPI_VERSION
         if(rank==0)
 #endif//MPI
-        std::cout << "# of iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+        std::cout << "# of iterations time solver: "<<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
 #endif //DG_BENCHMARK
     }
     private:
