@@ -132,9 +132,12 @@ struct Gaussian
 };
 
 /**
- * @brief A blob that drops to zero
+ * @brief A bump that drops to zero and is infinitely continuously differentiable
  * \f[
-   f(x,y) = Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}}
+   f(x,y) = \begin{cases}
+   Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}} \text{ if } \frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} < 1\\
+   0 \text{ else}
+   \end{cases}
    \f]
  */
 struct Cauchy

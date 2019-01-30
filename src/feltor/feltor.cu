@@ -44,7 +44,8 @@ int main( int argc, char* argv[])
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::geo::TokamakMagneticField mag = dg::geo::createModifiedSolovevField(gp, 0.16, 0.1);
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";

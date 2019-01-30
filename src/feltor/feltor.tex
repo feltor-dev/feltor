@@ -91,13 +91,14 @@ Note that in any arbitrary coordinate system we have
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Coordinate system}\label{sec:cylmetric}
-We employ cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
+We employ cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle (clockwise if viewed from above) to
 obtain a right handed system. The parametric representation in Cartesian \((x,y,z)\) coordinates is therefore simply:
 \begin{align}
  x &= R \hspace{1 mm} \sin{(\varphi)}, &
  y &= R \hspace{1 mm} \cos{(\varphi)}, &
  z &= Z .
 \end{align}
+Note here that the angle $\varphi = 0$ corresponds to the Cartesian $y$-axis.
 Covariant
 basis vectors and metric tensor:
 \begin{align}
@@ -124,6 +125,7 @@ In cylindrical coordinates the general axisymmetric magnetic field normalized wi
  \psi_p}{\partial Z} \ehat_R -  \frac{\partial \psi_p}{\partial R} \ehat_Z\right] ,
 \end{align}
 which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
+Note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
 %The unit vectors are denoted by \(\ehat_{R}\), \(\ehat_{Z}\), \(\ehat_{\varphi}\).
@@ -357,6 +359,36 @@ q:=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=
 = \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) \d R\d Z
 \end{align}
 
+\subsection{ Modified $\psi_p$}
+Our computational domain is a box and in particular not aligned with the
+magnetic flux surfaces. This means that particularly in the corners of
+the domain the field lines enter and leave the box very quickly.
+It turns out that this behaviour is numerically disadvantageous in the
+computation of parallel derivatives. In order to remedy this situation
+we propse to modify the flux surfaces $\psi_p$ to a constant value
+if $\psi_p$ exceeds a certain critical value. In this way the poloidal
+field component vanishes in the corners of the domain.
+
+We define an approximation to the step function with width $\alpha$
+\begin{align}
+\Theta(\psi) := \begin{cases}
+0 &\text{ for } \psi < \psi_0 \\
+\cosh^{-2}\left( \frac{\psi-\psi_0}{\alpha}  \right) &\text{ else}
+\end{cases}
+\label{}
+\end{align}
+The integral of this function gives
+\begin{align}
+\theta(\psi) := \begin{cases}
+\psi &\text{ for } \psi < \psi_0 \\
+\alpha \tanh\left( \frac{\psi-\psi_0}{\alpha}  \right) &\text{ else}
+\end{cases}
+\label{eq:modified_psi}
+\end{align}
+
+We now use $\theta(\psi)$ instead of $\psi$ for the computation of the
+magnetic field, which introduces a shear layer at $\psi_0$ where the
+fieldlines are straightened to match $\ehat_\varphi$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -480,7 +512,8 @@ and initialize the electron density with
 \end{align}
 consisting of a toroidally symmetric background profile $n_{\text{prof}}(R,Z)$ and a perturbation
 $\tilde n(R,Z,\varphi)$.
-Let us define an approximate Heaviside function
+Note that we should take care to intitialize a smooth profile with ideally well-defined $\Delta^2_\perp n_e$.
+Let us define another approximation to the Heaviside function
 \begin{align}
   \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x-3\alpha}{ \alpha} \right) \right) \quad \Theta(x) \approx H(x)
   \label{eq:heaviside_profile}
@@ -492,6 +525,7 @@ We can then define a flux-aligned density profile as
   n_{\text{prof}}(R,Z)=
       n_0 + \triangle n_{peak}\frac{\psi_p(R,Z)}{\psi_p(R_0, 0)} \Theta( -\psi_p(R,Z)) H(Z-Z_X)
 \end{align}
+%NOTE: this profile is slightly below n_0 outside the LCFS! (not sure whether this does anything for nabla_parallel)
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
 X-point and avoids a profile in the private flux region.
 
@@ -537,7 +571,8 @@ We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
     (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
-    \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},
+    \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},\\
+    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_p(R_0,0)
 \end{align}
 with $0 < \rho_{s}<1$
 where $\omega_s$ is the source strength parameter.
@@ -552,14 +587,14 @@ Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity g
 by the particle source (cf.~Section~\ref{sec:conservation}). $S_{n_e}$ needs to be smooth
 so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 
-The idea for the terms $S_U$ is mainly to provide more numerical stability
-in the corner regions of the domain, where the parallel derivative may lead
-to unfavourable numerical instabilities.
-For both electrons and ions we choose
-\begin{align} \label{eq:velocity_source}
-  S_{U}(R,Z,\varphi, t) := -\omega_d U \Theta( \rho(R,Z) - \rho_d)
-\end{align}
-with $\rho_d > 1$.
+%The idea for the terms $S_U$ is mainly to provide more numerical stability
+%in the corner regions of the domain, where the parallel derivative may lead
+%to unfavourable numerical instabilities.
+%For both electrons and ions we choose
+%\begin{align} \label{eq:velocity_source}
+%  S_{U}(R,Z,\varphi, t) := -\omega_d U \Theta( \rho(R,Z) - \rho_d)
+%\end{align}
+%with $\rho_d > 1$.
 
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
@@ -791,11 +826,11 @@ posY       & float &0.0    & - & blob Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
-alpha       & float & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} \\
+alpha       & float & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} and \eqref{eq:modified_psi} \\
 source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
-damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
-rho\_damping& float & 0.2  & 1.2 & Friction region boundary $\rho_{d}>1$ in Eq.~\eqref{eq:velocity_source}  \\
+%damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
+rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psi}  \\
 %restart    & bool & false & false & If true, all input and geometry parameters except maxout,
 %    itstp and inner\_loop are ignored. Instead, the parameters and all fields are initialized from output.nc
 %    The actual output is then appended to output.nc This effectively continues an existing simulation.
@@ -842,7 +877,7 @@ z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
 Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
 Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
-Damping          & Dataset & 3 (z,y,x) & Damping profile $\Theta(\rho(R,Z) - \rho_{d} )$\\
+%Damping          & Dataset & 3 (z,y,x) & Damping profile $\Theta(\rho(R,Z) - \rho_{d} )$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\

@@ -46,6 +46,5 @@
     "alpha"       : 0.05,
     "source"      : 0,
     "rho_source"  : 0.2,
-    "damping"     : 0,
     "rho_damping" : 1.2
 }

@@ -139,7 +139,8 @@ int main( int argc, char* argv[])
         , comm
         #endif //FELTOR_MPI
         );
-    dg::geo::TokamakMagneticField mag = dg::geo::createModifiedSolovevField(gp, 0.16 ,0.1);
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha);
 
     //create RHS
     MPI_OUT std::cout << "Constructing Explicit...\n";
