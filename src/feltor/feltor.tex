@@ -99,12 +99,12 @@ obtain a right handed system. The parametric representation in Cartesian \((x,y,
  z &= Z .
 \end{align}
 Note here that the angle $\varphi = 0$ corresponds to the Cartesian $y$-axis.
-Covariant
-basis vectors and metric tensor:
+The unit
+basis vectors and metric tensor are:
 \begin{align}
  \ehat_R      &= (\sin{(\varphi)} ,   \cos{(\varphi)},0)^T, &
  \ehat_Z      &= ( 0 ,0 ,1 )^T, &
- \ehat_{\varphi} &= R ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
+ \ehat_{\varphi} &= ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
 \\
  g &= \begin{pmatrix}
   1 & 0 & 0 \\
@@ -147,19 +147,19 @@ $\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ )
 \end{align}
 from where we recover the Grad-Shafranov equation
 \begin{align}\label{eq:GSEdimless}
- -\Delta^*_\perp  \psi_p &= \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p }
+    -\Delta^*_\perp  \psi_p &= \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p } \equiv \frac{R}{R_0} j_{\hat\varphi}
 \end{align}
 with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
 Note that $R$ and $Z$ are normalized
 with $\rho_s$, $\psi_p$ with $\psi_{p0}$, $p$ with
 $p_0 := \psi_{p0}^2/\mu_0\rho_s^4$, $I$ with $I_0:=\psi_{p0}/\rho_s$,
 and $j_\varphi$ with $\j_{\varphi 0} = \psi_{p0}/\rho_s^3\mu_0$.
-The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0^3 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
+The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
 By integration over \(\psi_p\) we find
 \begin{align}\label{eq:solovevassumption}
- p(\psi_p) &= (A-1)\psi_p/R_0^3,  &
+ p(\psi_p) &= (A-1)\psi_p/R_0,  &
  I(\psi_p) &= \sqrt{-2 A \psi_p/R_0 + 1}, &
- j_\varphi &= \left[(A-1)R - A R_0^2 / R\right]/R_0^3.
+    j_{\hat\varphi} &= \left[(A-1)R^2/R_0^2 - A \right]/R.
 \end{align}
 Now, we introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
 and solve Equations~\eqref{eq:GSEdimless} and~\eqref{eq:solovevassumption} to obtain
@@ -365,30 +365,38 @@ magnetic flux surfaces. This means that particularly in the corners of
 the domain the field lines enter and leave the box very quickly.
 It turns out that this behaviour is numerically disadvantageous in the
 computation of parallel derivatives. In order to remedy this situation
-we propse to modify the flux surfaces $\psi_p$ to a constant value
+we propose to modify the flux surfaces $\psi_p$ to a constant value
 if $\psi_p$ exceeds a certain critical value. In this way the poloidal
 field component vanishes in the corners of the domain.
 
 We define an approximation to the step function with width $\alpha$
 \begin{align}
 \Theta(\psi) := \begin{cases}
-0 &\text{ for } \psi < \psi_0 \\
-\cosh^{-2}\left( \frac{\psi-\psi_0}{\alpha}  \right) &\text{ else}
+    1 & \text{ for } \psi < - \alpha  \\
+    \frac{1}{32 \alpha^7}  \left(16 \alpha^3+29 \alpha^2 \psi+20 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^4
+    &\text{ for } -\alpha<\psi<+\alpha \\
+    0 & \text{ for } \psi > \alpha 
 \end{cases}
-\label{}
+    \approx H(-\psi)
+\label{eq:approx_heaviside}
 \end{align}
-The integral of this function gives
+if $H(\psi)$ is the Heaviside step function.
+An integral of this function is
 \begin{align}
 \theta(\psi) := \begin{cases}
-\psi &\text{ for } \psi < \psi_0 \\
-\alpha \tanh\left( \frac{\psi-\psi_0}{\alpha}  \right) &\text{ else}
+\psi &\text{ for } \psi < -\alpha \\
+    - \frac{1}{256 \alpha^7} \left(35 \alpha^3+47 \alpha^2 \psi+25 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^5
+     &\text{ for } -\alpha<\psi<+\alpha \\
+    0 &\text{ for } \psi > \alpha
 \end{cases}
+    \approx \psi H(-\psi)
 \label{eq:modified_psi}
 \end{align}
 
-We now use $\theta(\psi)$ instead of $\psi$ for the computation of the
-magnetic field, which introduces a shear layer at $\psi_0$ where the
+We now use $\theta(\psi-\psi_0)+\psi_0$ instead of $\psi$ for the computation of the
+magnetic field, which introduces a shear layer around $\psi_0$ where the
 fieldlines are straightened to match $\ehat_\varphi$.
+Note that $\Theta(0) = 0.5$ and $\theta(0) = 35\alpha/256$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -513,17 +521,18 @@ and initialize the electron density with
 consisting of a toroidally symmetric background profile $n_{\text{prof}}(R,Z)$ and a perturbation
 $\tilde n(R,Z,\varphi)$.
 Note that we should take care to intitialize a smooth profile with ideally well-defined $\Delta^2_\perp n_e$.
-Let us define another approximation to the Heaviside function
-\begin{align}
-  \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x-3\alpha}{ \alpha} \right) \right) \quad \Theta(x) \approx H(x)
-  \label{eq:heaviside_profile}
-\end{align}
-where $H(x)$ is the actual Heaviside function and
-$\alpha$ is a (small) width parameter.
-We can then define a flux-aligned density profile as
+%Let us define another approximation to the Heaviside function
+%\begin{align}
+%  \Theta(x) := \frac{1}{2}\left( 1 + \tanh\left( \frac{x-3\alpha}{ \alpha} \right) \right) \quad \Theta(x) \approx H(x)
+%  \label{eq:heaviside_profile}
+%\end{align}
+%where $H(x)$ is the actual Heaviside function and
+%$\alpha$ is a (small) width parameter.
+
+Let us define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{\text{prof}}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z)}{\psi_p(R_0, 0)} \Theta( -\psi_p(R,Z)) H(Z-Z_X)
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta(\psi_p(R, Z)+\alpha)}{\psi_p(R_0,0)} H(Z-Z_X)
 \end{align}
 %NOTE: this profile is slightly below n_0 outside the LCFS! (not sure whether this does anything for nabla_parallel)
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an

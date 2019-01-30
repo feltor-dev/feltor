@@ -375,46 +375,46 @@ namespace mod
 struct Psip: public aCylindricalFunctor<Psip>
 {
     Psip( Parameters gp, double psi0, double alpha) :
-        m_isech2( psi0, alpha, -1), m_psip(gp)
+        m_ipoly( psi0, alpha, -1), m_psip(gp)
     { }
     double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
-        return m_isech2( psip);
+        return m_ipoly( psip);
     }
     private:
-    dg::ISech2 m_isech2;
+    dg::IPolynomialHeaviside m_ipoly;
     solovev::Psip m_psip;
 };
 struct PsipR: public aCylindricalFunctor<PsipR>
 {
     PsipR( Parameters gp, double psi0, double alpha) :
-        m_sech2( psi0, alpha, -1), m_psip(gp), m_psipR(gp)
+        m_poly( psi0, alpha, -1), m_psip(gp), m_psipR(gp)
     { }
     double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipR = m_psipR(R,Z);
-        return psipR*m_sech2( psip);
+        return psipR*m_poly( psip);
     }
     private:
-    dg::Sech2 m_sech2;
+    dg::PolynomialHeaviside m_poly;
     solovev::Psip m_psip;
     solovev::PsipR m_psipR;
 };
 struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
     PsipZ( Parameters gp, double psi0, double alpha) :
-        m_sech2( psi0, alpha, -1), m_psip(gp), m_psipZ(gp)
+        m_poly( psi0, alpha, -1), m_psip(gp), m_psipZ(gp)
     { }
     double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipZ = m_psipZ(R,Z);
-        return psipZ*m_sech2( psip);
+        return psipZ*m_poly( psip);
     }
     private:
-    dg::Sech2 m_sech2;
+    dg::PolynomialHeaviside m_poly;
     solovev::Psip m_psip;
     solovev::PsipZ m_psipZ;
 };
@@ -422,18 +422,18 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
 struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
     PsipZZ( Parameters gp, double psi0, double alpha) :
-        m_sech2( psi0, alpha, -1), m_dsech2( psi0, alpha, -1), m_psip(gp), m_psipZ(gp), m_psipZZ(gp)
+        m_poly( psi0, alpha, -1), m_dpoly( psi0, alpha, -1), m_psip(gp), m_psipZ(gp), m_psipZZ(gp)
     { }
     double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipZ = m_psipZ(R,Z);
         double psipZZ = m_psipZZ(R,Z);
-        return psipZZ*m_sech2( psip) + psipZ*psipZ*m_dsech2(psip);
+        return psipZZ*m_poly( psip) + psipZ*psipZ*m_dpoly(psip);
     }
     private:
-    dg::Sech2 m_sech2;
-    dg::DSech2 m_dsech2;
+    dg::PolynomialHeaviside m_poly;
+    dg::DPolynomialHeaviside m_dpoly;
     solovev::Psip m_psip;
     solovev::PsipZ m_psipZ;
     solovev::PsipZZ m_psipZZ;
@@ -441,18 +441,18 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 struct PsipRR: public aCylindricalFunctor<PsipRR>
 {
     PsipRR( Parameters gp, double psi0, double alpha) :
-        m_sech2( psi0, alpha, -1), m_dsech2( psi0, alpha, -1), m_psip(gp), m_psipR(gp), m_psipRR(gp)
+        m_poly( psi0, alpha, -1), m_dpoly( psi0, alpha, -1), m_psip(gp), m_psipR(gp), m_psipRR(gp)
     { }
     double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipR = m_psipR(R,Z);
         double psipRR = m_psipRR(R,Z);
-        return psipRR*m_sech2( psip) + psipR*psipR*m_dsech2(psip);
+        return psipRR*m_poly( psip) + psipR*psipR*m_dpoly(psip);
     }
     private:
-    dg::Sech2 m_sech2;
-    dg::DSech2 m_dsech2;
+    dg::PolynomialHeaviside m_poly;
+    dg::DPolynomialHeaviside m_dpoly;
     solovev::Psip m_psip;
     solovev::PsipR m_psipR;
     solovev::PsipRR m_psipRR;
@@ -460,7 +460,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
 struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
     PsipRZ( Parameters gp, double psi0, double alpha) :
-        m_sech2( psi0, alpha, -1), m_dsech2( psi0, alpha, -1), m_psip(gp), m_psipR(gp), m_psipZ(gp), m_psipRZ(gp)
+        m_poly( psi0, alpha, -1), m_dpoly( psi0, alpha, -1), m_psip(gp), m_psipR(gp), m_psipZ(gp), m_psipRZ(gp)
     { }
     double do_compute(double R, double Z) const
     {
@@ -468,11 +468,11 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
         double psipR = m_psipR(R,Z);
         double psipZ = m_psipZ(R,Z);
         double psipRZ = m_psipRZ(R,Z);
-        return psipRZ*m_sech2( psip) + psipR*psipZ*m_dsech2(psip);
+        return psipRZ*m_poly( psip) + psipR*psipZ*m_dpoly(psip);
     }
     private:
-    dg::Sech2 m_sech2;
-    dg::DSech2 m_dsech2;
+    dg::PolynomialHeaviside m_poly;
+    dg::DPolynomialHeaviside m_dpoly;
     solovev::Psip m_psip;
     solovev::PsipR m_psipR;
     solovev::PsipZ m_psipZ;
@@ -558,12 +558,12 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
  * Based on \c dg::geo::solovev::mod::Psip(gp) and
  * \c dg::geo::solovev::mod::Ipol(gp)
  * We modify psi above a certain value to a constant using the
- * \c dg::ISech2 function (an approximation to the integrated Heaviside
- * function with width alpha), i.e. we replace psi with ISech2(psi).
+ * \c dg::IPolynomialHeaviside function (an approximation to the integrated Heaviside
+ * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
  * This subsequently modifies all derivatives of psi and the poloidal
- * current of course.
+ * current.
  * @param gp Solovev parameters
- * @param psi0 above this value psi is modified to a constant
+ * @param psi0 above this value psi is modified to a constant psi0
  * @param alpha determines how quickly the modification acts (smaller is quicker)
  * @return A magnetic field object
  * @ingroup geom

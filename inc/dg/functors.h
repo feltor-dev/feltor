@@ -846,105 +846,122 @@ struct TanhProfX {
 };
 
 /**
- * @brief An approximation to Heaviside using cosh
+ * @brief An approximation to Heaviside using polynomials
      \f[ \begin{cases}
-        \cosh^{-2}((x-x_b)/\alpha)  \text{ if } x < x_b \\
-        1  \text{ else }
+     0 \text{ if } x < x_0-a \\
+        ((16 a^3 - 29 a^2 (x - x_0) + 20 a (x - x_0)^2 - 5 (x - x_0)^3) (a + x - 
+   x_0)^4)/(32 a^7) \text{ if } |x-x_0| < a \\
+        1  \text{ if } x > x_0 + a
      \end{cases}\f]
+
+     This function is 3 times continuously differentiable, takes the value 0.5 at x0 and
+     has a transition width a on both sides of x0.
  */
-struct Sech2 {
+struct PolynomialHeaviside {
     /**
-     * @brief Construct with xb, width and sign
+     * @brief Construct with x0, width and sign
      *
-     * @param xb boundary value
-     * @param width damping width \c alpha
-     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
-     * thus approximating H(xb-x) if H(x-xb) is the regular Heaviside function
+     * @param x0 boundary value
+     * @param a transition width
+     * @param sign either +1 (original) or -1 (the function is mirrored at the \c x=x0 axis: f(2x0-x))
      */
-    Sech2(double xb, double width, int sign = +1) :
-        m_xb(xb), m_w(width), m_s(sign){}
+    PolynomialHeaviside(double x0, double a, int sign = +1) :
+        x0(x0), a(a), m_s(sign){}
     DG_DEVICE
     double operator() (double x)const
     {
-        if( ( x > m_xb && m_s == 1 ) || (x < m_xb && m_s == -1 )) return 1;
-        return 1./cosh( (x-m_xb)/m_w)/cosh( (x-m_xb)/m_w);
+        if( m_s == -1) x = 2*x0-x; //mirror 
+        if ( x < x0-a) return 0;
+        if ( x > x0+a) return 1;
+        return ((16.*a*a*a - 29.*a*a*(x - x0)
+               + 20.*a*(x - x0)*(x - x0) 
+               - 5.*(x - x0)*(x-x0)*(x-x0))
+               *(a + x - x0)*(a + x - x0)
+               *(a + x - x0)*(a + x - x0))/(32.*a*a*a * a*a*a*a);
     }
-    DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
-    DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
-    double m_xb, m_w;
+    double x0, a;
     int m_s;
 };
 
 /**
- * @brief The integral of Sech2,  approximates the integrated Heaviside using tanh
+ * @brief The integral of PolynomialHeaviside approximates xH(x)
      \f[ \begin{cases}
-        x_b + \alpha \tanh((x-x_b)/\alpha)  \text{ if } x < x_b \\
-        x  \text{ else }
+     x_0 \text{ if } x < x_0-a \\
+     x_0 + ((35 a^3 - 47 a^2 (x - x0) + 25 a (x - x0)^2 - 5 (x - x0)^3) (a + x - x0)^5)/(256 a^7)
+        \text{ if } |x-x_0| < a \\
+        x  \text{ if } x > x_0 + a
      \end{cases}\f]
 
-     The maximum is at \c x_b+alpha
+     This function is 4 times continuously differentiable,
+     has a transition width \c a on both sides of \c x0, where it transitions from the
+     constant \c x0 to the linear function \c x.
  */
-struct ISech2 {
+struct IPolynomialHeaviside {
     /**
-     * @brief Construct with xb, width and sign
+     * @brief Construct with x0, width and sign
      *
-     * @param xb boundary value
-     * @param width damping width \c alpha
-     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
+     * @param x0 boundary value
+     * @param a transition width
+     * @param sign either +1 (original) or -1 (the function is point mirrored at \c x=x0: 2*x0-f(2x0-x))
      */
-    ISech2(double xb, double width, int sign = +1) :
-        m_xb(xb), m_w(width), m_s(sign){}
+    IPolynomialHeaviside(double x0, double a, int sign = +1) :
+        x0(x0), a(a), m_s(sign){}
     DG_DEVICE
     double operator() (double x)const
     {
-        if( ( x > m_xb && m_s == 1 ) || (x < m_xb && m_s == -1 )) return x;
-        return m_xb + m_w*tanh( (x-m_xb)/m_w);
+        if( m_s == -1) x = 2*x0-x; //mirror 
+        double result;
+        if ( x < x0-a) result =  x0;
+        else if ( x > x0+a) result =  x;
+        else
+            result =  x0 + ((35.* a*a*a - 47.* a*a*(x - x0) + 25.*a*(x - x0)*(x-x0)
+                - 5.*(x - x0)*(x-x0)*(x-x0))
+                *(a+x-x0)*(a+x-x0)*(a+x-x0)*(a+x-x0)*(a+x-x0))
+            /(256.*a*a*a * a*a*a*a);
+        if ( m_s == +1) return result;
+        return 2*x0 - result;
+
     }
-    DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
-    DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
-    double m_xb, m_w;
+    double x0, a;
     int m_s;
 };
 
 /**
- * @brief The derivative of Sech2
+ * @brief The derivative of PolynomialHeaviside approximates delta(x)
      \f[ \begin{cases}
-        -\frac{2}{\alpha} \cosh^{-2}((x-x_b)/\alpha)\tanh((x-x_b)/\alpha)  \text{ if } x < x_b \\
-        0  \text{ else }
+     0 \text{ if } x < x_0-a || x > x_0+a \\
+     (35 (a + x - x0)^3 (a - x + x0)^3)/(32 a^7)
+        \text{ if } |x-x_0| < a 
      \end{cases}\f]
+
+     This function is 2 times continuously differentiable, is symmetric around \c x0
+     and has a width \c a on both sides of \c x0.
+     The integral over this function yields 1.
  */
-struct DSech2 {
+struct DPolynomialHeaviside {
     /**
-     * @brief Construct with xb, width and sign
+     * @brief Construct with x0, width and sign
      *
-     * @param xb boundary value
-     * @param width damping width \c alpha
-     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
+     * @param x0 boundary value
+     * @param a transition width
+     * @param sign either +1 (original) or -1 (the function is mirrored at \c x=x0)
+     * (since this function is symmetric this parameter is ignored, it's there to be
+     * consistent with PolynomialHeaviside)
      */
-    DSech2(double xb, double width, int sign = +1) :
-        m_xb(xb), m_w(width), m_s(sign){}
+    DPolynomialHeaviside(double x0, double a, int sign = +1) :
+        x0(x0), a(a){}
     DG_DEVICE
     double operator() (double x)const
     {
-        if( ( x > m_xb && m_s == 1 ) || (x < m_xb && m_s == -1 )) return 0.;
-        return -2./m_w*tanh( (x-m_xb)/m_w)/cosh( (x-m_xb)/m_w)/cosh( (x-m_xb)/m_w);
+        if ( (x < x0-a) || (x > x0+a)) return 0;
+        return (35.*(a+x-x0)*(a+x-x0)*(a+x-x0)*(a-x+x0)*(a-x+x0)*(a-x+x0))
+            /(32.*a*a*a * a*a*a*a);
     }
-    DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
-    DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
-    double m_xb, m_w;
-    int m_s;
+    double x0, a;
 };
-
-
 
 
 /**

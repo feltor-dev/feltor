@@ -62,20 +62,20 @@ int main( int argc, char* argv[])
     if( gp.hasXpoint() )
         xpoint_damping = dg::pullback(
             dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
-    dg::HVec source_damping = dg::pullback(dg::geo::TanhDamping(
+    dg::HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift tanh
-        p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
-    dg::HVec damping_damping = dg::pullback(dg::geo::TanhDamping(
+        //then shift
+        p.rho_source, p.alpha, -1), grid);
+    dg::HVec damping_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift tanh
-        p.rho_damping, p.alpha, 1.), grid);
+        //then shift
+        p.rho_damping, p.alpha, +1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
 
-    dg::HVec profile_damping = dg::pullback( dg::geo::TanhDamping(
-        mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
+    dg::HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
+        mag.psip(), -p.alpha, p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
