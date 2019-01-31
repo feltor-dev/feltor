@@ -606,6 +606,11 @@ struct DIRKStep
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_kI[0];}
 
+    ///Write access to the internal solver for the implicit part
+    SolverType& solver() { return m_solver;}
+    ///Read access to the internal solver for the implicit part
+    const SolverType& solver() const { return m_solver;}
+
     /**
     * @brief Advance one step
     *
@@ -768,6 +773,10 @@ struct ImplicitRungeKutta
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_delta;}
+    ///Write access to the internal solver for the implicit part
+    SolverType& solver() { return m_dirk.solver();}
+    ///Read access to the internal solver for the implicit part
+    const SolverType& solver() const { return m_dirk.solver();}
     /**
     * @brief Advance one step
     *

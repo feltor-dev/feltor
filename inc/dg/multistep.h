@@ -218,6 +218,11 @@ struct Karniadakis
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return u_[0];}
 
+    ///Write access to the internal solver for the implicit part
+    SolverType& solver() { return m_solver;}
+    ///Read access to the internal solver for the implicit part
+    const SolverType& solver() const { return m_solver;}
+
     /**
      * @brief Initialize by integrating two timesteps backward in time
      *

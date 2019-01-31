@@ -276,7 +276,11 @@ struct MultigridCG2d
     ///(if the solution method returns this number, failure is indicated)
     unsigned max_iter() const{return m_cg[0].get_max();}
 
-private:
+    ///@brief Return an object of same size as the object used for construction on the finest grid
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const Container& copyable() const {return m_x[0];}
+
+  private:
 
 	void set_scheme(const int scheme_type)
 	{
@@ -368,5 +372,4 @@ private:
     unsigned m_startStage;
     std::vector<stepinfo> m_schemeLayout;
 };
-
 }//namespace dg

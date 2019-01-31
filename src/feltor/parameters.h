@@ -47,6 +47,7 @@ struct Parameters
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
     bool symmetric;
+    Parameters() = default;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();

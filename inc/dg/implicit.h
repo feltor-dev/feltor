@@ -10,7 +10,11 @@ template< class LinearOp, class ContainerType>
 struct Implicit
 {
     using value_type = get_value_type<ContainerType>;
+    Implicit(){}
     Implicit( value_type alpha, value_type t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
+    void construct( value_type alpha, value_type t, LinearOp& f){
+        f_ = f; alpha_=alpha; t_=t;
+    }
     void symv( const ContainerType& x, ContainerType& y)
     {
         if( alpha_ != 0)
@@ -88,7 +92,7 @@ struct DefaultSolver
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_rhs;}
 
-    template< class Implicit>
+    template< class Implicit> //going to be a reference type
     void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
         detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
