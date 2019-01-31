@@ -12,23 +12,6 @@ namespace feltor
 {
 
 namespace routines{
-//Resistivity (consistent density dependency,
-//parallel momentum conserving, quadratic current energy conservation dependency)
-struct AddResistivity{
-    AddResistivity( double eta, std::array<double,2> mu): m_eta(eta){
-        m_mu[0] = mu[0], m_mu[1] = mu[1];
-    }
-    DG_DEVICE
-    void operator()( double ne, double ni, double ue,
-        double ui, double& dtUe, double& dtUi) const{
-        double current = (ne)*(ui-ue);
-        dtUe += -m_eta/m_mu[0] * current;
-        dtUi += -m_eta/m_mu[1] * (ne)/(ni) * current;
-    }
-    private:
-    double m_eta;
-    double m_mu[2];
-};
 struct ComputePerpDrifts{
     ComputePerpDrifts( double mu, double tau, double beta):
         m_mu(mu), m_tau(tau), m_beta(beta){}
@@ -198,27 +181,27 @@ struct Quantities
     }
 };
 
-template< class Geometry, class IMatrix, class Matrix, class container >
+template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
     Explicit( const Geometry& g, feltor::Parameters p,
         dg::geo::TokamakMagneticField mag);
 
     //potential[0]: electron potential, potential[1]: ion potential
-    const std::array<container,2>& potential( ) const {
+    const std::array<Container,2>& potential( ) const {
         return m_phi;
     }
-    const container& induction() const {
+    const Container& induction() const {
         return m_apar;
     }
     //Given N_i-1 initialize n_e-1 such that phi=0
-    void initializene( const container& ni, container& ne);
+    void initializene( const Container& ni, Container& ne);
     //Given n_e-1 initialize N_i-1 such that phi=0
-    void initializeni( const container& ne, container& ni);
+    void initializeni( const Container& ne, Container& ni);
 
     void operator()( double t,
-        const std::array<std::array<container,2>,2>& y,
-        std::array<std::array<container,2>,2>& yp);
+        const std::array<std::array<Container,2>,2>& y,
+        std::array<std::array<Container,2>,2>& yp);
 
     // update quantities to the state of the last call to operator()
     // This is to possibly save some computation time in the timestepper
@@ -234,39 +217,36 @@ struct Explicit
     const Quantities& quantities( ) const{
         return m_q;
     }
-    const std::array<std::array<container,2>,2>& fields() const{
+    const std::array<std::array<Container,2>,2>& fields() const{
         return m_fields;
     }
-    const std::array<std::array<container,2>,2>& sources() const{
+    const std::array<std::array<Container,2>,2>& sources() const{
         return m_s;
     }
 
     //source strength, profile - 1
-    void set_source( container profile, double omega_source, container source,
-        double omega_damping, container damping)
+    void set_source( Container profile, double omega_source, Container source)
     {
         m_profne = profile;
         m_omega_source = omega_source;
         m_source = source;
-        m_omega_damping = omega_damping;
-        m_damping = damping;
     }
-    void compute_apar( double t, std::array<std::array<container,2>,2>& fields);
+    void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
-    void compute_phi( double t, const std::array<container,2>& y);
-    void compute_psi( double t, const std::array<container,2>& y);
+    void compute_phi( double t, const std::array<Container,2>& y);
+    void compute_psi( double t, const std::array<Container,2>& y);
     void compute_energies(
-        const std::array<std::array<container,2>,2>& fields);
+        const std::array<std::array<Container,2>,2>& fields);
     void compute_dissipation(
-        const std::array<std::array<container,2>,2>& fields);
+        const std::array<std::array<Container,2>,2>& fields);
     void compute_perp( double t,
-        const std::array<std::array<container,2>,2>& y,
-        const std::array<std::array<container,2>,2>& fields,
-        std::array<std::array<container,2>,2>& yp);
+        const std::array<std::array<Container,2>,2>& y,
+        const std::array<std::array<Container,2>,2>& fields,
+        std::array<std::array<Container,2>,2>& yp);
     void compute_parallel( double t,
-        const std::array<std::array<container,2>,2>& y,
-        const std::array<std::array<container,2>,2>& fields,
-        std::array<std::array<container,2>,2>& yp);
+        const std::array<std::array<Container,2>,2>& y,
+        const std::array<std::array<Container,2>,2>& fields,
+        std::array<std::array<Container,2>,2>& yp);
     void construct_mag( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);
     void construct_bhat( const Geometry&, feltor::Parameters,
@@ -274,48 +254,48 @@ struct Explicit
     void construct_invert( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);
 
-    container m_UE2;
-    container m_temp0, m_temp1, m_temp2;//helper variables
+    Container m_UE2;
+    Container m_temp0, m_temp1, m_temp2;//helper variables
 #ifdef DG_MANUFACTURED
-    container m_R, m_Z, m_P; //coordinates
+    Container m_R, m_Z, m_P; //coordinates
 #endif //DG_MANUFACTURED
 
     //these should be considered const
-    std::array<container,3> m_curv, m_curvKappa, m_b;
-    container m_divCurvKappa;
-    container m_binv, m_divb;
-    container m_source, m_profne, m_damping;
-    container m_vol3d;
+    std::array<Container,3> m_curv, m_curvKappa, m_b;
+    Container m_divCurvKappa;
+    Container m_binv, m_divb;
+    Container m_source, m_profne;
+    Container m_vol3d;
 
-    container m_apar, m_dxA, m_dyA, m_dzA;
-    std::array<container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
-    std::array<container,2> m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
-    std::array<container,2> m_dxU, m_dyU, m_dzU, m_dsU;
-    std::array<std::array<container,2>,2> m_fields, m_s;
+    Container m_apar, m_dxA, m_dyA, m_dzA;
+    std::array<Container,2> m_phi, m_dxPhi, m_dyPhi, m_dzPhi;
+    std::array<Container,2> m_logn, m_dxN, m_dyN, m_dzN, m_dsN;
+    std::array<Container,2> m_dxU, m_dyU, m_dzU, m_dsU;
+    std::array<std::array<Container,2>,2> m_fields, m_s;
 
-    std::vector<container> m_multi_chi;
+    std::vector<Container> m_multi_chi;
 
     //matrices and solvers
     Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
-    dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds_P, m_ds_N, m_ds_U;
-    dg::Elliptic3d< Geometry, Matrix, container> m_lapperpN, m_lapperpU;
-    std::vector<dg::Elliptic3d< Geometry, Matrix, container> > m_multi_pol;
-    std::vector<dg::Helmholtz3d<Geometry, Matrix, container> > m_multi_invgammaP,
+    dg::geo::DS<Geometry, IMatrix, Matrix, Container> m_ds_P, m_ds_N, m_ds_U;
+    dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU;
+    std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
+    std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
         m_multi_invgammaN, m_multi_induction;
 
-    dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
-    dg::Extrapolation<container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
+    dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
+    dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
 
-    dg::SparseTensor<container> m_hh;
+    dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
     Quantities m_q;
-    double m_omega_source = 0., m_omega_damping = 0.;
+    double m_omega_source = 0.;
 
 };
 
-template<class Grid, class IMatrix, class Matrix, class container>
-void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
+template<class Grid, class IMatrix, class Matrix, class Container>
+void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     //due to the various approximations bhat and mag not always correspond
@@ -348,8 +328,8 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_mag(
     dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
 
 }
-template<class Grid, class IMatrix, class Matrix, class container>
-void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
+template<class Grid, class IMatrix, class Matrix, class Container>
+void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     //in DS we take the true bhat
@@ -374,10 +354,10 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
-    dg::SparseTensor<container> metric = g.metric();
+    dg::SparseTensor<Container> metric = g.metric();
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
-    container vol = dg::tensor::volume( metric);
+    Container vol = dg::tensor::volume( metric);
     dg::blas1::pointwiseDivide( m_binv, vol, vol); //1/vol/B
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( vol, m_b[i], m_b[i]); //b_i/vol/B
@@ -387,8 +367,8 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_bhat(
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
 }
-template<class Grid, class IMatrix, class Matrix, class container>
-void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
+template<class Grid, class IMatrix, class Matrix, class Container>
+void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     /////////////////////////init elliptic and helmholtz operators/////////
@@ -402,7 +382,7 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
     m_multi_induction.resize(p.stages);
     for( unsigned u=0; u<p.stages; u++)
     {
-        dg::SparseTensor<container> hh = dg::geo::createProjectionTensor(
+        dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
             bhat, m_multigrid.grid(u));
         m_multi_pol[u].construct( m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, dg::not_normed,
@@ -419,8 +399,8 @@ void Explicit<Grid, IMatrix, Matrix, container>::construct_invert(
         m_multi_induction[u].elliptic().set_chi( hh);
     }
 }
-template<class Grid, class IMatrix, class Matrix, class container>
-Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
+template<class Grid, class IMatrix, class Matrix, class Container>
+Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     feltor::Parameters p, dg::geo::TokamakMagneticField mag):
 #ifdef DG_MANUFACTURED
     m_R( dg::pullback( dg::cooX3d, g)),
@@ -455,9 +435,9 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g,
     dg::assign( dg::create::volume(g), m_vol3d);
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::initializene(
-    const container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
+    const Container& src, Container& target)
 {
     // ne = Ni
     dg::blas1::copy( src, target);
@@ -466,12 +446,12 @@ void Explicit<Geometry, IMatrix, Matrix, container>::initializene(
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaN, target, src, m_p.eps_gamma);
         if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_gamma);
+            throw dg::Fail( m_p.eps_gamma);
     }
 }
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::initializeni(
-    const container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
+    const Container& src, Container& target)
 {
     // Ni = ne
     dg::blas1::copy( src, target);
@@ -482,9 +462,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::initializeni(
     }
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
-    double time, const std::array<container,2>& y)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
+    double time, const std::array<Container,2>& y)
 {
     //y[0]:= n_e - 1
     //y[1]:= N_i - 1
@@ -554,9 +534,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_phi(
     }
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
-    double time, const std::array<container,2>& y)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
+    double time, const std::array<Container,2>& y)
 {
     //-------Compute Psi and derivatives
     dg::blas2::symv( m_dx_P, m_phi[0], m_dxPhi[0]);
@@ -577,9 +557,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_psi(
     dg::blas2::symv( m_dy_P, m_phi[1], m_dyPhi[1]);
     if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[1], m_dzPhi[1]);
 }
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
-    double time, std::array<std::array<container,2>,2>& fields)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
+    double time, std::array<std::array<Container,2>,2>& fields)
 {
     //on input
     //fields[0][0] = n_e, fields[1][0]:= w_e
@@ -616,12 +596,12 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_apar(
     dg::blas1::axpby( 1., fields[1][1], -m_p.beta/m_p.mu[1], m_apar, fields[1][1]);
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
     double t,
-    const std::array<std::array<container,2>,2>& y,
-    const std::array<std::array<container,2>,2>& fields,
-    std::array<std::array<container,2>,2>& yp)
+    const std::array<std::array<Container,2>,2>& y,
+    const std::array<std::array<Container,2>,2>& fields,
+    std::array<std::array<Container,2>,2>& yp)
 {
     //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
@@ -664,34 +644,14 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_perp(
             );
         }
     }
-    //dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
-    //    y[0][0], y[0][1], fields[1][0], fields[1][1], yp[1][0], yp[1][1]);
-    // Add correction to perpendicular viscosity in W
-    //if( m_p.beta != 0)
-    //{
-    //    if( m_p.perp_diff == "viscous")
-    //    {
-    //        dg::blas2::gemv(  m_lapperpU, m_apar, m_temp0); //!minus
-    //    }
-    //    else
-    //    {
-    //        dg::blas2::gemv( m_lapperpU, m_apar, m_temp1);
-    //        dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0); //!plus
-    //    }
-    //    for( unsigned i=0; i<2; i++)
-    //    {
-    //        //-nu_perp*beta/mu Delta_perp A_par
-    //        dg::blas1::axpby( m_p.nu_perp*m_p.beta/m_p.mu[i], m_temp0, 1., yp[1][i]);
-    //    }
-    //}
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     double t,
-    const std::array<std::array<container,2>,2>& y,
-    const std::array<std::array<container,2>,2>& fields,
-    std::array<std::array<container,2>,2>& yp)
+    const std::array<std::array<Container,2>,2>& y,
+    const std::array<std::array<Container,2>,2>& fields,
+    std::array<std::array<Container,2>,2>& yp)
 {
     //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
@@ -725,9 +685,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_parallel(
     }
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
-    const std::array<std::array<container,2>,2>& fields)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_energies(
+    const std::array<std::array<Container,2>,2>& fields)
 {
     double z[2]    = {-1.0,1.0};
     m_q.mass = dg::blas1::dot( m_vol3d, fields[0][0]);
@@ -755,9 +715,9 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_energies(
                  + m_q.Tpar[0] + m_q.Tpar[1];
 }
 
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
-    const std::array<std::array<container,2>,2>& fields)
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_dissipation(
+    const std::array<std::array<Container,2>,2>& fields)
 {
     //alignement: lnN * Delta_s N
     m_q.aligned = dg::blas2::dot( m_logn[0], m_vol3d, m_dsN[0]);
@@ -829,11 +789,11 @@ void Explicit<Geometry, IMatrix, Matrix, container>::compute_dissipation(
    y[1][0] := w_e
    y[1][1] := W_i
 */
-template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     double t,
-    const std::array<std::array<container,2>,2>& y,
-    std::array<std::array<container,2>,2>& yp)
+    const std::array<std::array<Container,2>,2>& y,
+    std::array<std::array<Container,2>,2>& yp)
 {
     dg::Timer timer;
     timer.tic();
@@ -856,23 +816,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
 
     // Set perpendicular dynamics in yp
     compute_perp( t, y, m_fields, yp);
-    //------------------Add Apar correction terms----------------//
-    //if( m_p.beta != 0 )
-    //{
-    //    dg::blas1::pointwiseDot( 1., m_fields[0][0],m_fields[0][0],m_apar,
-    //                             0., m_temp0);
-    //    dg::blas1::pointwiseDivide( m_p.beta*m_p.eta/m_p.mu[0]*(
-    //        1./m_p.mu[1]-1./m_p.mu[0]), m_temp0, m_fields[0][0], 1., yp[1][0]);
-    //    dg::blas1::pointwiseDivide( m_p.beta*m_p.eta/m_p.mu[1]*(
-    //        1./m_p.mu[1]-1./m_p.mu[0]), m_temp0, m_fields[0][1], 1., yp[1][1]);
-    //    if( m_omega_damping != 0)
-    //    {
-    //        dg::blas1::pointwiseDot( m_omega_damping*m_p.beta/m_p.mu[0],
-    //            m_damping, m_apar, 1., yp[1][0]);
-    //        dg::blas1::pointwiseDot( m_omega_damping*m_p.beta/m_p.mu[1],
-    //            m_damping, m_apar, 1., yp[1][1]);
-    //    }
-    //}
 
 #else
 
@@ -897,14 +840,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
         dg::blas1::axpby( 1., m_s[0][0], 1.0, yp[0][0]);
         dg::blas1::axpby( 1., m_s[0][1], 1.0, yp[0][1]);
     }
-    if( m_omega_damping != 0)
-    {
-        //just compute m_s terms for energies, terms are implicit
-        dg::blas1::pointwiseDot( -m_omega_damping, m_fields[1][0],
-            m_damping, 0., m_s[1][0]);
-        dg::blas1::pointwiseDot( -m_omega_damping, m_fields[1][1],
-            m_damping, 0., m_s[1][1]);
-    }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -927,216 +862,4 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()(
     //#endif
     //std::cout << "#One rhs took "<<timer.diff()<<"s\n";
 }
-
-template<class Geometry, class IMatrix, class Matrix, class container>
-struct ImplicitDensity
-{
-    ImplicitDensity(){}
-
-    ImplicitDensity( const Geometry& g, feltor::Parameters p,
-            dg::geo::TokamakMagneticField mag)
-    {
-        construct( g, p, mag);
-    }
-
-    void construct( const Geometry& g, feltor::Parameters p,
-        dg::geo::TokamakMagneticField mag)
-    {
-        m_p = p;
-        m_lapM_perpN.construct( g, p.bcxN, p.bcyN,dg::PER, dg::normed, dg::centered);
-        dg::assign( dg::evaluate( dg::zero, g), m_temp);
-        auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
-        if( p.curvmode == "true")
-            bhat = dg::geo::createBHat(mag);
-        dg::SparseTensor<container> hh
-            = dg::geo::createProjectionTensor( bhat, g);
-        //set perpendicular projection tensor h
-        m_lapM_perpN.set_chi( hh);
-    }
-
-    void operator()( double t, const std::array<container,2>& y, std::array<container,2>& yp)
-    {
-#if FELTORPERP == 1
-        /* y[0][0] := N_e - 1
-           y[0][1] := N_i - 1
-        */
-        for( unsigned i=0; i<2; i++)
-        {
-            //dissipation acts on w!
-            if( m_p.perp_diff == "hyperviscous")
-            {
-                dg::blas2::symv( m_lapM_perpN, y[i],      m_temp);
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[i]);
-            }
-            else // m_p.perp_diff == "viscous"
-            {
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, y[i],  0., yp[i]);
-            }
-        }
-#else
-        dg::blas1::copy( 0, yp);
-#endif
-    }
-
-    const container& weights() const{
-        return m_lapM_perpN.weights();
-    }
-    const container& inv_weights() const {
-        return m_lapM_perpN.inv_weights();
-    }
-    const container& precond() const {
-        return m_lapM_perpN.precond();
-    }
-
-  private:
-    feltor::Parameters m_p;
-    container m_temp;
-    dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpN;
-};
-
-template<class Geometry, class IMatrix, class Matrix, class container>
-struct ImplicitVelocity
-{
-
-    ImplicitVelocity(){}
-    ImplicitVelocity( const Geometry& g, feltor::Parameters p,
-            dg::geo::TokamakMagneticField mag){
-        construct( g, p, mag);
-    }
-    void construct( const Geometry& g, feltor::Parameters p,
-            dg::geo::TokamakMagneticField mag)
-    {
-        m_p=p;
-        m_lapM_perpU.construct( g, p.bcxU,p.bcyU,dg::PER, dg::normed, dg::centered);
-        dg::assign( dg::evaluate( dg::zero, g), m_temp);
-        m_apar = m_temp;
-        m_fields[0][0] = m_fields[0][1] = m_temp;
-        m_fields[1][0] = m_fields[1][1] = m_temp;
-        auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
-        if( p.curvmode == "true")
-            bhat = dg::geo::createBHat(mag);
-        dg::SparseTensor<container> hh
-            = dg::geo::createProjectionTensor( bhat, g);
-        //set perpendicular projection tensor h
-        m_lapM_perpU.set_chi( hh);
-        m_induction.construct(  g,
-            p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
-        m_induction.elliptic().set_chi( hh);
-        m_invert.construct( m_temp, g.size(), p.eps_pol,1 );
-    }
-    void set_density( const std::array<container, 2>& dens){
-        dg::blas1::copy( dens, m_fields[0]);
-        dg::blas1::plus( m_fields[0][0], (+1));
-        dg::blas1::plus( m_fields[0][1], (+1));
-        dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_fields[0][1],
-                          -m_p.beta/m_p.mu[0], m_fields[0][0], m_temp);
-        m_induction.set_chi( m_temp);
-    }
-
-    void operator()( double t, const std::array<container,2>& y, std::array<container,2>& yp)
-    {
-#if FELTORPERP == 1
-        /*
-           y[0] := w_e
-           y[1] := W_i
-        */
-        dg::blas1::copy( y, m_fields[1]);
-        if( m_p.beta != 0){
-            dg::blas1::pointwiseDot(  1., m_fields[0][1], m_fields[1][1],
-                                     -1., m_fields[0][0], m_fields[1][0],
-                                      0., m_temp);
-            m_invert( m_induction, m_apar, m_temp, weights(),
-                inv_weights(), precond());
-            dg::blas1::axpby( 1., m_fields[1][0], -m_p.beta/m_p.mu[0],
-                m_apar, m_fields[1][0]);
-            dg::blas1::axpby( 1., m_fields[1][1], -m_p.beta/m_p.mu[1],
-                m_apar, m_fields[1][1]);
-        }
-
-        for( unsigned i=0; i<2; i++)
-        {
-            if( m_p.perp_diff == "hyperviscous")
-            {
-                dg::blas2::symv( m_lapM_perpU, m_fields[1][i],      m_temp);
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., yp[i]);
-            }
-            else // m_p.perp_diff == "viscous"
-            {
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_fields[1][i],  0., yp[i]);
-            }
-        }
-#else
-        dg::blas1::copy( 0, yp);
-#endif
-        //------------------Add Resistivity--------------------------//
-        //Note that this works because N converges independently of W
-        //and the term is linear in W for fixed N
-        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
-            m_fields[0][0], m_fields[0][1], m_fields[1][0], m_fields[1][1], yp[0], yp[1]);
-    }
-
-    const container& weights() const{
-        return m_lapM_perpU.weights();
-    }
-    const container& inv_weights() const {
-        return m_lapM_perpU.inv_weights();
-    }
-    const container& precond() const {
-        return m_lapM_perpU.precond();
-    }
-
-  private:
-    feltor::Parameters m_p;
-    container m_temp, m_apar;
-    dg::Invert<container> m_invert;
-    dg::Helmholtz3d<Geometry, Matrix, container> m_induction;
-    std::array<std::array<container,2>,2> m_fields;
-    dg::Elliptic3d<Geometry, Matrix, container> m_lapM_perpU;
-};
-
-
-/*!@brief Multigrid Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
-*
-*/
-template< class Implicit, class Geometry, class Matrix, class Container>
-struct MultigridCG2dSolver
-{
-    using geometry_type = Geometry;
-    using matrix_type = Matrix;
-    using container_type = Container;
-    using value_type = dg::get_value_type<Container>;//!< value type of vectors
-    ///No memory allocation
-    MultigridCG2dSolver(){}
-
-    template<class ...Params>
-    MultigridCG2dSolver( const Geometry& grid, const unsigned stages, Params&& ... ps):
-        m_multigrid(grid, stages, std::forward<Params>(ps)...),
-        m_multi_implicit(stages)
-    {
-    }
-
-    template<class ...Params>
-    void construct_implicit( Params&& ...ps)
-    {
-        for( unsigned u=0; u<m_multigrid.stages(); u++)
-            m_multi_implicit[u].construct( m_multigrid.grid(u), std::forward<Params>(ps)...);
-    }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const Container& copyable()const{ return m_multigrid.copyable();}
-
-    void solve( value_type alpha, Implicit& im, value_type t, Container& y, const Container& rhs)
-    {
-        std::vector<
-            dg::detail::Implicit<Implicit, Container>> implicit( m_multigrid.stages());
-        for( unsigned i=0; i<m_multigrid.stages(); i++)
-            implicit[i].construct( alpha, t, m_multi_implicit[i]);
-        m_multigrid.direct_solve( implicit, y, rhs, m_eps);
-    }
-    private:
-    dg::MultigridCG2d< Geometry, Matrix, Container> m_multigrid;
-    std::vector<Implicit> m_multi_implicit;
-    value_type m_eps;
-};
-
 } //namespace feltor

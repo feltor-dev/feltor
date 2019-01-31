@@ -13,6 +13,7 @@
 
 #include "dg/file/nc_utilities.h"
 #include "feltor.cuh"
+#include "implicit.h"
 
 #ifdef FELTOR_MPI
 using HVec = dg::MHVec;
@@ -146,7 +147,7 @@ int main( int argc, char* argv[])
     MPI_OUT std::cout << "Constructing Explicit...\n";
     feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     MPI_OUT std::cout << "Constructing Implicit...\n";
-    feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
+    feltor::Implicit< Geometry, DMatrix, DVec> im( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -174,9 +175,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
-    feltor.set_source( profile, p.omega_source, source_damping,
-        p.omega_damping, damping_damping);
-    im.set_damping( p.omega_damping, damping_damping);
+    feltor.set_source( profile, p.omega_source, source_damping);
 
     //Now perturbation
     HVec ntilde = dg::evaluate(dg::zero,grid);
@@ -398,8 +397,9 @@ int main( int argc, char* argv[])
     dg::Adaptive< dg::ERKStep<std::array<std::array<DVec,2>,2>> > adaptive(
         "Bogacki-Shampine-4-2-3", y0);
     adaptive.stepper().ignore_fsal();//necessary for splitting
-    dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>> dirk(
-        "Trapezoidal-2-2", y0, grid.size(), p.eps_time);
+    dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>,
+        feltor::FeltorSpecialSolver< Geometry, DMatrix, DVec>> dirk(
+            "Trapezoidal-2-2", grid, p, mag);
     dg::Timer t;
     t.tic();
     unsigned step = 0, failed_counter = 0;
@@ -424,8 +424,8 @@ int main( int argc, char* argv[])
                             dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                         if( adaptive.failed())
                         {
-                            MPI_OUT std::cout << "FAILED STEP! REPEAT!\n";
                             failed_counter++;
+                            MPI_OUT std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
                         }
                     }while ( adaptive.failed());
                     dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
@@ -441,9 +441,8 @@ int main( int argc, char* argv[])
                 step++;
             }
             double deltat = time - previous_time;
-
             feltor.update_quantities();
-            MPI_OUT std::cout << "Timestep "<<deltat<<"\n";
+            MPI_OUT std::cout << "Timestep "<<dt_new<<"\n";
             dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));

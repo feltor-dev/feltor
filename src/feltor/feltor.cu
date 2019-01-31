@@ -7,6 +7,7 @@
 #include "draw/host_window.h"
 
 #include "feltor.cuh"
+#include "implicit.h"
 
 int main( int argc, char* argv[])
 {
@@ -51,8 +52,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing Explicit...\n";
     feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
     std::cout << "Constructing Implicit...\n";
-    feltor::ImplicitDensity<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> im_dens( grid, p, mag);
-    feltor::ImplicitVelocity<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> im_velo( grid, p, mag);
+    feltor::Implicit<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> im( grid, p, mag);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -68,11 +68,6 @@ int main( int argc, char* argv[])
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
         //then shift
         p.rho_source, p.alpha, -1), grid);
-    dg::HVec damping_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift
-        p.rho_damping, p.alpha, +1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
 
     dg::HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
@@ -80,8 +75,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
-    feltor.set_source( profile, p.omega_source, source_damping,
-        p.omega_damping, damping_damping);
+    feltor.set_source( profile, p.omega_source, source_damping);
 
 
     //Now perturbation
@@ -155,11 +149,10 @@ int main( int argc, char* argv[])
     dg::Adaptive< dg::ERKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
         "Bogacki-Shampine-4-2-3", y0);
     adaptive.stepper().ignore_fsal();//necessary for splitting
-    dg::ImplicitRungeKutta<std::array<dg::DVec,2>> dirk_dens(
-        "Trapezoidal-2-2", y0[0], grid.size(), p.eps_time);
-    dg::ImplicitRungeKutta<std::array<dg::DVec,2>> dirk_velo(
-        "Trapezoidal-2-2", y0[0], grid.size(), p.eps_time);
-
+    dg::ImplicitRungeKutta<std::array<std::array<dg::DVec,2>,2>,
+        feltor::FeltorSpecialSolver<
+        dg::CylindricalGrid3d, dg::DMatrix, dg::DVec>> dirk(
+            "Trapezoidal-2-2", grid, p, mag);
     //since we map pointers we don't need to update those later
 
     std::map<std::string, const dg::DVec* > v4d;
@@ -277,17 +270,15 @@ int main( int argc, char* argv[])
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            double current_time = time;
+            double previous_time = time;
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
                     do
                     {
-                        dt = dt_new;
                         //Strang splitting
-                        dirk_dens.step( im_dens, time, y0[0], time, y0[0], dt/2.);
-                        im_velo.set_density( y0[0]);
-                        dirk_velo.step( im_velo, time-dt/2., y0[1], time, y0[1], dt/2.);
+                        dt = dt_new;
+                        dirk.step( im, time, y0, time, y0, dt/2.);
                         adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
                             dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                         if( adaptive.failed())
@@ -296,9 +287,7 @@ int main( int argc, char* argv[])
                             std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
                         }
                     }while ( adaptive.failed());
-                    dirk_dens.step( im_dens, time-dt/2., y0[0], time, y0[0], dt/2.);
-                    im_velo.set_density( y0[0]);
-                    dirk_velo.step( im_velo, time-dt/2., y0[1], time, y0[1], dt/2.);
+                    dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -308,10 +297,10 @@ int main( int argc, char* argv[])
                 }
                 step++;
             }
-            dt = time - current_time;
+            double deltat = time - previous_time;
             feltor.update_quantities();
             std::cout << "Timestep "<<dt_new<<"\n";
-            dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
+            dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
             accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
