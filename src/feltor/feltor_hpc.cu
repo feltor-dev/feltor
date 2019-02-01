@@ -170,7 +170,7 @@ int main( int argc, char* argv[])
         p.rho_damping, p.alpha, +1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
 
-    dg::HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
+    HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
         mag.psip(), -p.alpha, p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
