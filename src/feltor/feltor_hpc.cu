@@ -147,7 +147,7 @@ int main( int argc, char* argv[])
     MPI_OUT std::cout << "Constructing Explicit...\n";
     feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     MPI_OUT std::cout << "Constructing Implicit...\n";
-    feltor::Implicit< Geometry, DMatrix, DVec> im( grid, p, mag);
+    feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -398,7 +398,7 @@ int main( int argc, char* argv[])
         "Bogacki-Shampine-4-2-3", y0);
     adaptive.stepper().ignore_fsal();//necessary for splitting
     dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>,
-        feltor::FeltorSpecialSolver< Geometry, DMatrix, DVec>> dirk(
+        feltor::FeltorSpecialSolver< Geometry, IDMatrix, DMatrix, DVec>> dirk(
             "Trapezoidal-2-2", grid, p, mag);
     dg::Timer t;
     t.tic();

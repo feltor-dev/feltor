@@ -30,7 +30,7 @@ struct AddResistivity{
 };
 }//namespace routines
 
-template<class Geometry, class Matrix, class Container>
+template<class Geometry, class IMatrix, class Matrix, class Container>
 struct ImplicitDensity
 {
     ImplicitDensity() = default;
@@ -94,7 +94,7 @@ struct ImplicitDensity
     dg::Elliptic3d<Geometry, Matrix, Container> m_lapM_perpN;
 };
 
-template<class Geometry, class Matrix, class Container>
+template<class Geometry, class IMatrix, class Matrix, class Container>
 struct ImplicitVelocity
 {
     ImplicitVelocity() = default;
@@ -157,7 +157,6 @@ struct ImplicitVelocity
         /* fields[0] := u_e
            fields[1] := U_i
         */
-
         for( unsigned i=0; i<2; i++)
         {
             if( m_p.perp_diff == "hyperviscous")
@@ -197,13 +196,14 @@ struct ImplicitVelocity
     dg::Elliptic3d<Geometry, Matrix, Container> m_lapM_perpU;
 };
 
-template<class Geometry, class Matrix, class Container>
+template<class Geometry, class IMatrix, class Matrix, class Container>
 struct Implicit
 {
     Implicit() = default;
     Implicit( const Geometry& g, feltor::Parameters p,
             dg::geo::TokamakMagneticField mag):
             m_dens( g,p,mag), m_velo( g,p,mag){}
+
     void operator()( double t, const std::array<std::array<Container,2>,2>& y,
         std::array<std::array<Container,2>,2>& yp)
     {
@@ -212,46 +212,14 @@ struct Implicit
         m_velo( t,y[1], yp[1]);
     }
     private:
-    ImplicitDensity <Geometry, Matrix, Container> m_dens;
-    ImplicitVelocity<Geometry, Matrix, Container> m_velo;
-};
-
-//compute unnormalized y + alpha f(y,t)
-template< class LinearOp, class Container>
-struct Helmholtz
-{
-    using value_type = dg::get_value_type<Container>;
-    Helmholtz(){}
-    Helmholtz( value_type alpha, value_type t, LinearOp* f): f_(f), alpha_(alpha), t_(t){}
-    void construct( value_type alpha, value_type t, LinearOp* f){
-        f_ = f; alpha_=alpha; t_=t;
-    }
-    void symv( const std::array<Container,2>& x, std::array<Container,2>& y)
-    {
-        if( alpha_ != 0)
-            (*f_)(t_,x,y);
-        dg::blas1::axpby( 1., x, alpha_, y, y);
-        dg::blas2::symv( f_->weights(), y, y);
-    }
-    const Container& weights() const{
-        return f_->weights();
-    }
-    const Container& inv_weights() const {
-        return f_->inv_weights();
-    }
-    const Container& precond() const {
-        return f_->precond();
-    }
-  private:
-    LinearOp* f_;
-    value_type alpha_;
-    value_type t_;
+    ImplicitDensity <Geometry, IMatrix, Matrix, Container> m_dens;
+    ImplicitVelocity<Geometry, IMatrix, Matrix, Container> m_velo;
 };
 
 /*!@brief Multigrid Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
 *
 */
-template< class Geometry, class Matrix, class Container>
+template< class Geometry, class IMatrix, class Matrix, class Container>
 struct FeltorSpecialSolver
 {
     using geometry_type = Geometry;
@@ -261,84 +229,39 @@ struct FeltorSpecialSolver
     FeltorSpecialSolver(){}
 
     FeltorSpecialSolver( const Geometry& grid, Parameters p,
-        dg::geo::TokamakMagneticField mag ):
-        m_multigrid(grid, p.stages),
-        m_multi_imdens(p.stages),
-        m_multi_imvelo(p.stages)
+        dg::geo::TokamakMagneticField mag)
     {
-        for( unsigned u=0; u<m_multigrid.stages(); u++)
-        {
-            m_multi_imdens[u].construct( m_multigrid.grid(u),
-                p, mag);
-            m_multi_imvelo[u].construct( m_multigrid.grid(u),
-                p, mag);
-        }
         std::array<Container,2> temp = dg::construct<std::array<Container,2>>( dg::evaluate( dg::zero, grid));
-        m_multi_n = m_multigrid.project( temp);
         m_eps = p.eps_time;
+        m_solver = dg::DefaultSolver<std::array<Container,2>>(
+            temp, grid.size(), p.eps_time);
+        m_imdens.construct( grid, p, mag);
+        m_imvelo.construct( grid, p, mag);
     }
 
     //this must return the class used in the timestepper
     std::array<std::array<Container,2>,2> copyable()const{
-        return std::array<std::array<Container,2>,2>{ m_multi_n[0], m_multi_n[0]};
+
+        return std::array<std::array<Container,2>,2>{ m_solver.copyable(), m_solver.copyable()};
     }
 
     //Solve y + a I(t,y) = rho
     void solve( value_type alpha,
-        Implicit<Geometry, Matrix,Container>& im,
+        Implicit<Geometry, IMatrix, Matrix,Container>& im,
         value_type t,
         std::array<std::array<Container,2>,2>& y,
         const std::array<std::array<Container,2>,2>& rhs)
     {
-        //1. First construct Helmholtz type functor hierarchy
-        std::vector<
-          Helmholtz<ImplicitDensity<Geometry,Matrix,Container>,
-          Container>> multi_helm_dens( m_multigrid.stages());
-        std::vector<
-          Helmholtz<ImplicitVelocity<Geometry,Matrix,Container>,
-          Container>> multi_helm_velo(
-        m_multigrid.stages());
-        for( unsigned i=0; i<m_multigrid.stages(); i++)
-        {
-            multi_helm_dens[i].construct( alpha, t, &m_multi_imdens[i]);
-            multi_helm_velo[i].construct( alpha, t, &m_multi_imvelo[i]);
-        }
-        //2. Solve the density equation
 
-        std::vector<unsigned> number =
-            m_multigrid.direct_solve( multi_helm_dens, y[0], rhs[0], m_eps);
-        if(  number[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_eps);
-#ifdef DG_BENCHMARK
-        //std::cout << "# iterations implicit density:  "<<number[0]<<"\n";
-#endif
-        //3. project density to all grids and pass to velocity Equation
-        m_multigrid.project( y[0], m_multi_n);
-        for( unsigned i=0; i<m_multigrid.stages(); i++)
-            m_multi_imvelo[i].set_density( m_multi_n[i]);
-        //4. Solve Velocity equation
-        number = m_multigrid.direct_solve( multi_helm_velo, y[1], rhs[1], m_eps);
-        if(  number[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_eps);
-#ifdef DG_BENCHMARK
-        //std::cout << "# iterations implicit velocity: "<<number[0]<<"\n";
-#endif
-
+        m_solver.solve( alpha, m_imdens, t, y[0], rhs[0]);
+        m_imvelo.set_density( y[0]);
+        m_solver.solve( alpha, m_imvelo, t, y[1], rhs[1]);
     }
     private:
-    dg::MultigridCG2d< Geometry, Matrix, std::array<Container,2>> m_multigrid;
-    std::vector<ImplicitDensity<Geometry,Matrix,Container>> m_multi_imdens;
-    std::vector<ImplicitVelocity<Geometry,Matrix,Container>> m_multi_imvelo;
-    std::vector<std::array<Container,2>> m_multi_n;
+    dg::DefaultSolver<std::array<Container,2>> m_solver;
+    ImplicitDensity<Geometry,IMatrix, Matrix,Container> m_imdens;
+    ImplicitVelocity<Geometry,IMatrix, Matrix,Container> m_imvelo;
     value_type m_eps;
 };
 
 }//namespace feltor
-namespace dg{
-template< class M, class V>
-struct TensorTraits< feltor::Helmholtz<M, V> >
-{
-    using value_type = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-} //namespace dg

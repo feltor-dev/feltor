@@ -8,6 +8,9 @@
 #define FELTORPERP 1
 #endif
 
+
+//Latest measurement: m = 60.000 per step
+
 namespace feltor
 {
 

@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing Explicit...\n";
     feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
     std::cout << "Constructing Implicit...\n";
-    feltor::Implicit<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> im( grid, p, mag);
+    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> im( grid, p, mag);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -151,7 +151,7 @@ int main( int argc, char* argv[])
     adaptive.stepper().ignore_fsal();//necessary for splitting
     dg::ImplicitRungeKutta<std::array<std::array<dg::DVec,2>,2>,
         feltor::FeltorSpecialSolver<
-        dg::CylindricalGrid3d, dg::DMatrix, dg::DVec>> dirk(
+        dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>> dirk(
             "Trapezoidal-2-2", grid, p, mag);
     //since we map pointers we don't need to update those later
 

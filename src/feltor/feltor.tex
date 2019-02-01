@@ -765,9 +765,11 @@ discontinuous Galerkin on structured grid
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
     coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivatives & refined  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
+Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
 Curvature terms & direct dG & regular dG approximation of derivatives \\
-time & Adaptive ARKode stepper & $3rd$ order explicit, perpendicular diffusion and resistance/friction $3rd$ order implicit \\
+time & Strang Splitting & $2$nd order\\
+\qquad explicit & Bogacki-Shampine embedded & $3$rd order explicit\\
+\qquad implicit & Trapezoidal & perp. Diffusion and Resistive term. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
 \bottomrule
 \end{longtable}
 \section{Input/Output}
