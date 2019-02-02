@@ -250,6 +250,77 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     return max_iter;
 }
 ///@endcond
+//
+//implement the classical 3-term recursion with explicit residual
+template< class ContainerType>
+class ChebyshevIteration
+{
+  public:
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
+    ///@brief Allocate nothing, Call \c construct method before usage
+    ChebyshevIteration(){}
+    ///@copydoc construct()
+    ChebyshevIteration( const ContainerType& copyable):
+        m_r(copyable), m_x1(m_r){}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_r;}
+
+    /**
+     * @brief Allocate memory for the pcg method
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param max_iterations Maximum number of iterations to be used
+     */
+    void construct( const ContainerType& copyable) {
+        m_x1 = m_r = copyable;
+    }
+    /**
+     * @brief Solve the system A*x = b using Chebyshev iteration
+     *
+     * The iteration stops when the maximum number of iterations is reached
+     * @param A A symmetric, positive definit matrix
+     * @param x Contains an initial value on input and the solution on output.
+     * @param b The right hand side vector. x and b may be the same vector.
+     * @param lmin the minimum Eigenvalue
+     * @param lmax the minimum Eigenvalue
+     * @param num_iter the number of iterations
+     *
+     * @copydoc hide_matrix
+     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
+     */
+    template< class MatrixType, class ContainerType0, class ContainerType1>
+    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, double lmin, double lmax, unsigned num_iter)
+    {
+        assert ( lmin < lmax);
+        double a = (lmin+lmax)/2., c = (lmin-lmax)/2.;
+        double betan = -c*c/2./a;
+        double gamman = -a;
+        dg::blas1::copy( x, m_x1);
+        dg::blas2::symv( A, x, m_r);
+        dg::blas1::axpby( 1., b, -1., m_r);
+        //-(r0+a*x0)/gamma0, m_x1=0
+        dg::blas1::axpby( -1./gamman, m_r, -a/gamman, x);
+        dg::blas1::copy( 0., m_x1);
+        for ( unsigned u=1; u<num_iter; u++)
+        {
+            betan = (c/2.)*(c/2.)/gamman;
+            gamman = -(a+betan);
+
+            dg::blas2::symv( A, x, m_r);
+            dg::blas1::axpby( 1., b, -1., m_r);
+            dg::blas1::evaluate( m_x1, dg::equals(), PairSum(),
+                            -1./gamman, m_r,
+                            -a/gamman, x,
+                            -betan/gamman,m_x1);
+            x.swap(m_x1);
+        }
+    }
+    //version of CG where Preconditioner is not trivial
+  private:
+    ContainerType m_r, m_x1;
+};
 
 
 /**

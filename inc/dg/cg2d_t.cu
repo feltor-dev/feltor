@@ -48,7 +48,6 @@ int main()
     const double eps = 1e-6;
     std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps)<<std::endl;
 //! [doxygen]
-    //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<std::endl;
     std::cout << "For a precision of "<< eps<<std::endl;
     //compute error
     dg::HVec error( solution);
@@ -68,6 +67,31 @@ int main()
     res.d = sqrt(dg::blas2::dot( w2d, resi));
     std::cout << "L2 Norm of Residuum is        " << res.d<<"\t"<<res.i << std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
+    dg::blas1::copy( 0., x);
+    dg::ChebyshevIteration<dg::HVec> cheby( copyable_vector);
+    double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+    std::cout << "Type number of Chebyshev iterations\n";
+    unsigned num_iter;
+    std::cin >> num_iter;
+    cheby.solve( A, x, b, lmin, lmax, num_iter);
+    std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
+
+    dg::blas1::copy( solution, error);
+    dg::blas1::axpby( 1.,x,-1.,error);
+
+    dg::blas1::copy( b, resi);
+    dg::blas2::symv(  A, x, Ax);
+    dg::blas1::axpby( 1.,Ax,-1.,resi);
+
+    res.d = sqrt(dg::blas2::dot( w2d, x));
+    std::cout << "L2 Norm of x0 is              " << res.d<<"\n";
+    res.d = sqrt(dg::blas2::dot(w2d , solution));
+    std::cout << "L2 Norm of Solution is        " << res.d<<"\n";
+    res.d = sqrt(dg::blas2::dot(w2d , error));
+    std::cout << "L2 Norm of Error is           " << res.d<<"\n";
+    res.d = sqrt(dg::blas2::dot( w2d, resi));
+    std::cout << "L2 Norm of Residuum is        " << res.d<<"\n";
+
 
     return 0;
 }
