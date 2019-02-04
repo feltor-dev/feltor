@@ -70,6 +70,8 @@ int main()
     dg::blas1::copy( 0., x);
     dg::ChebyshevIteration<dg::HVec> cheby( copyable_vector);
     double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+    double hxhy = lx*ly/(n*n*Nx*Ny);
+    lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
     std::cout << "Type number of Chebyshev iterations\n";
     unsigned num_iter;
     std::cin >> num_iter;

@@ -159,7 +159,8 @@ struct MultigridCG2d
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
         m_cg[0].set_max(m_grids[0]->size());
-        number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(), op[0].inv_weights(), eps);
+        number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(),
+            op[0].inv_weights(), eps);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -223,7 +224,6 @@ struct MultigridCG2d
 
   private:
 
-    /*
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     void full_multigrid( std::vector<SymmetricOp>& op,
         ContainerType0& x, ContainerType1& b,
@@ -238,7 +238,9 @@ struct MultigridCG2d
             dg::blas2::gemv( m_interT[u], m_x[u], m_x[u+1]);
             dg::blas2::gemv( m_interT[u], m_b[u], m_b[u+1]);
         }
-        solve( op[m_stages-1], m_x[m_stages-1], m_b[m_stages-1], eps);
+        unsigned s = m_stages-1;
+        unsigned number = m_cg[s]( op[s], m_x[s], m_b[s], op[s].precond(),
+            op[s].inv_weights(), eps);
 
 		for( int p=m_stages-2; p>=0; p--)
         {
@@ -254,25 +256,30 @@ struct MultigridCG2d
         unsigned nu1, unsigned nu2, unsigned gamma, unsigned p, double eps)
     {
         // p < m_stages-1
-        // x[p]   initial condition on input, solution on output
-        // x[p+1] write only (solution of lower stage)
-        // b[p]   read only,
-        // b[p+1] write only (residual after Pre-smooting at lower stage)
-        // m_r[p] write only
-        // gamma: typically 1 (V-cycle) or 2 (W-cycle)
+        // x[p]    initial condition on input, solution on output
+        // x[p+1]  write only (solution of lower stage)
+        // b[p]    read only,
+        // b[p+1]  write only (residual after Pre-smooting at lower stage)
+        // m_r[p]  write only
+        //
+        // gamma:  typically 1 (V-cycle) or 2 (W-cycle)
         // nu1, nu2: typically in {0,1,2,3}
+        double lmin = 0, lmax = 1; //determine lmin and lmax
 
-        // 1. Pre-Smooth
-        smooth( op[p], x[p], b[p]); //nu1 times
+        // 1. Pre-Smooth nu1 times
+        m_cheby[p].solve( op[p], x[p], b[p], 0.1*lmax, 1.1*lmax, nu1);
         // 2. Residual
-        dg::blas2:symv( op[p], x[p], m_r[p]);
+        dg::blas2::symv( op[p], x[p], m_r[p]);
         dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         // 3. Coarsen
         dg::blas2::symv( m_interT[p], m_r[p], b[p+1]);
         // 4. Solve or recursive call to get x[p+1] with initial guess 0
         dg::blas1::scal( x[p+1], 0.);
         if( p+1 == m_stages-1)
-            solve ( op[p+1], x[p+1], b[p+1], eps);
+        {
+            m_cg[p+1]( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
+                op[p+1].inv_weights(), eps);
+        }
         else
         {
             //update x[p+1] gamma times
@@ -282,18 +289,18 @@ struct MultigridCG2d
 
         // 5. Correct
         dg::blas2::symv( 1., m_inter[p], x[p+1], 1., x[p]);
-        // 6. Post-Smooth
-        smooth( op[p], x[p], b[p]); //nu2 times
+        // 6. Post-Smooth nu2 times
+        m_cheby[p].solve( op[p], x[p], b[p], 0.1*lmax, 1.1*lmax, nu2);
     }
-    */
 
-private:
+  private:
     unsigned m_stages;
     std::vector< dg::ClonePtr< Geometry> > m_grids;
     std::vector< MultiMatrix<Matrix, Container> >  m_inter;
     std::vector< MultiMatrix<Matrix, Container> >  m_interT;
     std::vector< MultiMatrix<Matrix, Container> >  m_project;
     std::vector< CG<Container> > m_cg;
+    std::vector< ChebyshevIteration<Container>> m_cheby;
     std::vector< Container> m_x, m_r, m_b;
 
 };

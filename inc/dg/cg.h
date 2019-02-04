@@ -252,6 +252,23 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 ///@endcond
 //
 //implement the classical 3-term recursion with explicit residual
+/**
+* @brief Three-term recursion of the Chebyshev iteration for solving
+* \f[ Ax=b\f]
+*
+* Given the minimum and maximum Eigenvalue of the matrix A we define
+* \f[ a = (l_\min+l_\max)/2 \quad c = (l_\max - l_\min)/2 \\
+*     \beta_{-1} = 0\ \beta_0 = -c^2/2/a\ \gamma_0 = -a \\
+*     \beta_{n-1} = (c/2)^2/\gamma_{n-1} \quad \gamma_n = -(a+\beta_{n-1}) \\
+*     x_0 := x \ x_{-1} = r_{-1} = 0 \\
+*     x_{n+1} := -(r_n + ax_n + \beta_{n-1} x_{n-1})/\gamma_{n} \\
+*     r_{n+1} :=  b - Ax_{n+1}
+* \f]
+*
+* @ingroup invert
+*
+* @copydoc hide_ContainerType
+*/
 template< class ContainerType>
 class ChebyshevIteration
 {
@@ -291,7 +308,8 @@ class ChebyshevIteration
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, double lmin, double lmax, unsigned num_iter)
+    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
+        double lmin, double lmax, unsigned num_iter)
     {
         assert ( lmin < lmax);
         double a = (lmin+lmax)/2., c = (lmin-lmax)/2.;
