@@ -99,65 +99,6 @@ struct MultigridCG2d
             m_cg[u].construct(m_x[u], 1);
     }
 
-    /*
-	template<class SymmetricOp>
-	std::vector<unsigned> solve( std::vector<SymmetricOp>& op, Container& x, const Container& b, const double eps)
-	{
-        //project initial guess down to coarse grid
-        project(x, m_x);
-        dg::blas2::symv(op[0].weights(), b, m_b[0]);
-        // project b down to coarse grid
-        for( unsigned u=0; u<m_stages-1; u++)
-            dg::blas2::gemv( m_interT[u], m_b[u], m_b[u+1]);
-
-
-        unsigned int numStageSteps = m_schemeLayout.size();
-		std::vector<unsigned> number(numStageSteps);
-
-        unsigned u = m_startStage;
-
-        for (unsigned i = 0; i < numStageSteps; i++)
-        {
-            unsigned w = u + m_schemeLayout[i].m_step;
-            //
-            // iterate the solver on the system A x = b, with x = 0 as inital guess
-            m_cg[u].set_max(m_schemeLayout[i].m_niter);
-            number[i] = m_cg[u](op[u], m_x[u], m_b[u], op[u].precond(), op[u].inv_weights(), eps);
-
-            //
-            // debug print
-            //std::cout << "pass: " << i << ", stage: " << u << ", max iter: " << m_schemeLayout[i].m_niter << ", iter: " << number[i] << std::endl;
-
-            if (m_schemeLayout[i].m_step > 0)
-            {
-                //
-                // compute residual r = Wb - A x
-                dg::blas2::symv(op[u], m_x[u], m_r[u]);
-                dg::blas1::axpby(-1.0, m_r[u], 1.0, m_b[u], m_r[u]);
-                //
-                // transfer residual to the rhs of the coarser grid
-                dg::blas2::symv(m_interT[u], m_r[u], m_b[w]);
-                //dg::blas2::symv(m_project[u], m_x[u], m_x[w]);
-                //std::cout << "zeroed " << w << ", ";
-                dg::blas1::scal(m_x[w], 0.0);
-            }
-            else if (m_schemeLayout[i].m_step < 0)
-            {
-                //
-                // correct the solution vector of the finer grid
-                // x[w] = x[w] + P^{-1} x[u]
-                dg::blas2::symv(1., m_inter[w], m_x[u], 1., m_x[w]);
-                //dg::blas2::symv(m_inter[w], m_x[u], m_x[w]);
-            }
-
-            u = w;
-		}
-
-		m_x[0].swap(x);
-		return number;
-	}
-    */
-
     /**
      * @brief Nested iterations
      *
@@ -282,73 +223,69 @@ struct MultigridCG2d
 
   private:
 
-	void set_scheme(const int scheme_type)
-	{
-        assert(scheme_type <= 1 && scheme_type >= 0);
-
-        // initialize one conjugate-gradient for each grid size
-        for (unsigned u = 0; u < m_stages; u++)
-            m_cg[u].construct(m_x[u], 1);
-
-        switch (scheme_type)
-        {
-            // from coarse to fine
-        case(0):
-
-            //m_mode = nestediteration;
-            m_startStage = m_stages - 1;
-            for (int u = m_stages - 1; u >= 0; u--)
-                m_schemeLayout.push_back(stepinfo(-1, m_x[u].size()));
-            break;
-
-        case(1):
-
-            //m_mode = correctionscheme;
-            m_startStage = 0;
-            for (unsigned u = 0; u < m_stages-1; u++)
-                m_schemeLayout.push_back(stepinfo(1, 5));
-
-            m_schemeLayout.push_back(stepinfo(-1, 1000));
-
-            for (int u = m_stages - 2; u >= 0; u--)
-                m_schemeLayout.push_back(stepinfo(-1, 1000));
-
-            break;
-
-        default:
-            break;
-        }
-
-        // there is no step at the last stage so the step must be zero
-        m_schemeLayout.back().m_niter = m_x[0].size();
-        m_schemeLayout.back().m_step = 0;
-
-        //PrintScheme();
-
-        // checks:
-        // (0) the last entry should be the stage before the original grid
-        // (1) there can not be more than n-1 interpolations in succession
-
-        unsigned u = m_startStage;
-        assert( u <= m_stages - 1);
-        for (unsigned i = 0; i < m_schemeLayout.size(); i++)
-        {
-            u += m_schemeLayout[i].m_step;
-            assert( u <= m_stages - 1);
-        }
-        assert(u == 0);
-	}
-
-    void PrintScheme(void)
+    /*
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+    void full_multigrid( std::vector<SymmetricOp>& op,
+        ContainerType0& x, ContainerType1& b,
+        unsigned nu1, unsigned nu2, unsigned gamma, unsigned mu, double eps)
     {
-        std::cout << "Scheme: " << std::endl;
-        unsigned u = m_startStage;
-        for (unsigned i = 0; i < m_schemeLayout.size(); i++)
+        dg::blas2::symv(op[0].weights(), b, m_b[0]);
+        // project x down to coarse grid
+        dg::blas1::copy( x, m_x[0]);
+        dg::blas1::copy( b, m_b[0]);
+        for( unsigned u=0; u<m_stages-1; u++)
         {
-            std::cout << "num " << i << ", stage: " << u << ", iterations on current stage: " << m_schemeLayout[i].m_niter << ", step direction " << m_schemeLayout[i].m_step << std::endl;
-            u += m_schemeLayout[i].m_step;
+            dg::blas2::gemv( m_interT[u], m_x[u], m_x[u+1]);
+            dg::blas2::gemv( m_interT[u], m_b[u], m_b[u+1]);
+        }
+        solve( op[m_stages-1], m_x[m_stages-1], m_b[m_stages-1], eps);
+
+		for( int p=m_stages-2; p>=0; p--)
+        {
+            dg::blas2::gemv( m_inter[p], m_x[p+1],  m_x[p]);
+            for( unsigned u=0; u<mu; u++)
+                multigrid_cycle( op, m_x, m_b, nu1, nu2, gamma, p, eps);
         }
     }
+
+    template<class SymmetricOp>
+    void multigrid_cycle( std::vector<SymmetricOp>& op,
+        std::vector<Container>& x, std::vector<Container>& b,
+        unsigned nu1, unsigned nu2, unsigned gamma, unsigned p, double eps)
+    {
+        // p < m_stages-1
+        // x[p]   initial condition on input, solution on output
+        // x[p+1] write only (solution of lower stage)
+        // b[p]   read only,
+        // b[p+1] write only (residual after Pre-smooting at lower stage)
+        // m_r[p] write only
+        // gamma: typically 1 (V-cycle) or 2 (W-cycle)
+        // nu1, nu2: typically in {0,1,2,3}
+
+        // 1. Pre-Smooth
+        smooth( op[p], x[p], b[p]); //nu1 times
+        // 2. Residual
+        dg::blas2:symv( op[p], x[p], m_r[p]);
+        dg::blas1::axpby( 1., b[p], -1., m_r[p]);
+        // 3. Coarsen
+        dg::blas2::symv( m_interT[p], m_r[p], b[p+1]);
+        // 4. Solve or recursive call to get x[p+1] with initial guess 0
+        dg::blas1::scal( x[p+1], 0.);
+        if( p+1 == m_stages-1)
+            solve ( op[p+1], x[p+1], b[p+1], eps);
+        else
+        {
+            //update x[p+1] gamma times
+            for( unsigned u=0; u<gamma; u++)
+                multigrid_cycle( op, x, b, nu1, nu2, gamma, p+1, eps);
+        }
+
+        // 5. Correct
+        dg::blas2::symv( 1., m_inter[p], x[p+1], 1., x[p]);
+        // 6. Post-Smooth
+        smooth( op[p], x[p], b[p]); //nu2 times
+    }
+    */
 
 private:
     unsigned m_stages;
@@ -359,17 +296,6 @@ private:
     std::vector< CG<Container> > m_cg;
     std::vector< Container> m_x, m_r, m_b;
 
-    struct stepinfo
-    {
-        stepinfo(int step, const unsigned niter) : m_step(step), m_niter(niter)
-        {
-        };
-
-        int m_step; // {+1,-1}
-        unsigned int m_niter;
-    };
-
-    unsigned m_startStage;
-    std::vector<stepinfo> m_schemeLayout;
 };
+
 }//namespace dg
