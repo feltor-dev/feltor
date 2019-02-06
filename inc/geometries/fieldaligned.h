@@ -466,9 +466,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::split( m_hm_inv, m_temp, grid); //3d vector
     for( unsigned i=0; i<m_Nz; i++)
         dg::blas1::copy( m_hm, m_temp[i]);
-    dg::blas1::axpby( 1., m_hp_inv, -1., m_hm_inv, m_h0_inv);//hm is negative
-    dg::blas1::pointwiseDivide( -1., m_hm_inv, m_hm_inv);
-    dg::blas1::pointwiseDivide(  1., m_hp_inv, m_hp_inv);
+    dg::blas1::axpby( 1., m_hp_inv, -1., m_hm_inv, m_h0_inv); //hp-hm
+    dg::blas1::pointwiseDivide( -1., m_hm_inv, m_hm_inv); //0-hm
+    dg::blas1::pointwiseDivide(  1., m_hp_inv, m_hp_inv); //hp-0
     dg::blas1::pointwiseDivide(  1., m_h0_inv, m_h0_inv);
 }
 
@@ -497,9 +497,11 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
             unsigned rep = r*m_Nz + i0;
             for(unsigned k=0; k<rep; k++)
             {
-                dg::blas2::symv( m_plus, tempP, temp);
+                //!!! The value of f at the plus plane is I^- of the current plane
+                dg::blas2::symv( m_minus, tempP, temp);
                 temp.swap( tempP);
-                dg::blas2::symv( m_minus, tempM, temp);
+                //!!! The value of f at the minus plane is I^+ of the current plane
+                dg::blas2::symv( m_plus, tempM, temp);
                 temp.swap( tempM);
             }
             dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );

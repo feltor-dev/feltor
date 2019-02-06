@@ -25,6 +25,7 @@ struct Parameters
     double boxscaleZm, boxscaleZp;
     double amp, k_psi, bgprofamp, nprofileamp;
     double sigma, posX, posY;
+    double rho_damping, alpha;
     Parameters( const Json::Value& js){
         n = js.get("n",3).asUInt();
         Nx = js.get("Nx",100).asUInt();
@@ -41,6 +42,8 @@ struct Parameters
         sigma = js.get("sigma", 10).asDouble();
         posX = js.get("posX", 0.5).asDouble();
         posY = js.get("posY", 0.5).asDouble();
+        rho_damping = js.get("rho_damping", 1.2).asDouble();
+        alpha = js.get("alpha", 0.05).asDouble();
     }
     void display( std::ostream& os = std::cout ) const
     {
@@ -137,7 +140,8 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
     //Test coefficients
-    dg::geo::TokamakMagneticField c = dg::geo::createModifiedSolovevField(gp, 0.16, 0.05);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
+    c = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*c.psip()(c.R0(), 0.), p.alpha);
     const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     const double Z_X = -1.1*gp.elongation*gp.a;
     const double R_H = gp.R_0-gp.triangularity*gp.a;
