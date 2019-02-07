@@ -35,6 +35,14 @@ inline void doSubroutine( AnyScalarTag, Subroutine f, ContainerType&& x, Contain
     f(x,xs...);
 }
 
+template<class T, class ContainerType, class BinaryOp>
+inline T doReduce( AnyScalarTag, ContainerType x, T init, BinaryOp op)
+{
+    init = op( init, x);
+    return init;
+}
+
+
 } //namespace detail
 } //namespace blas1
 } //namespace dg

@@ -42,6 +42,8 @@ namespace blas1
 {
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
+template<class ContainerType, class BinaryOp>
+inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op);
 namespace detail
 {
 template< class ContainerType1, class ContainerType2>
@@ -95,6 +97,12 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             do_get_pointer_or_reference(std::forward<ContainerType>(x),get_tensor_category<ContainerType>()) ,
             do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),get_tensor_category<ContainerTypes>()) ...
             );
+}
+
+template<class T, class ContainerType, class BinaryOp>
+inline T doReduce( SharedVectorTag, const ContainerType& x, T init, BinaryOp op)
+{
+    return doReduce_dispatch( get_execution_policy<ContainerType>(), x.size(), thrust::raw_pointer_cast( x.data()), init, op);
 }
 
 } //namespace detail

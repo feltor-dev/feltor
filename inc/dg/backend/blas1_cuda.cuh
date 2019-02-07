@@ -1,5 +1,7 @@
 #ifndef _DG_BLAS_CUDA_
 #define _DG_BLAS_CUDA_
+#include <thrust/reduce.h>
+#include <thrust/system/cuda/execution_policy.h>
 #include "exblas/exdot_cuda.cuh"
 namespace dg
 {
@@ -45,9 +47,9 @@ template<class Subroutine, class PointerOrValue, class ...PointerOrValues>
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_is/grid_size is
     for( int i = thread_id; i<size; i += grid_size)
+        f(get_device_element(x,i), get_device_element(xs,i)...);
         //f(x[i], xs[i]...);
         //f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
-        f(get_device_element(x,i), get_device_element(xs,i)...);
 }
 
 template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
@@ -56,6 +58,22 @@ inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, PointerOrVal
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
     subroutine_kernel<Subroutine, PointerOrValue, PointerOrValues...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
+}
+
+template<class T, class PointerOrValue, class BinaryOp>
+ __global__ T reduction_kernel( int size, T init, PointerOrValue x, BinaryOp op)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+
+}
+
+template<class T, class Pointer, class BinaryOp>
+inline T doReduce_dispatch( CudaTag, int size, Pointer x, T init, BinaryOp op)
+{
+    return thrust::reduce(thrust::cuda::par, x, x+size, init, op);
 }
 
 

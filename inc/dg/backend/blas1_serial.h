@@ -42,6 +42,14 @@ inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, PointerOrV
     }
 }
 
+template<class T, class Pointer, class BinaryOp>
+inline T doReduce_dispatch( SerialTag, int size, Pointer x, T init, BinaryOp op)
+{
+    for(int i=0; i<size; i++)
+        init = op( init, x[i]);
+    return init;
+}
+
 
 }//namespace detail
 }//namespace blas1

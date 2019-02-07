@@ -45,6 +45,64 @@ namespace blas1
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  */
 
+/*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
+ *
+ * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
+ * @copydoc hide_iterations
+ *
+ * @note Our implementation guarantees binary reproducible results.
+ * The sum is computed with infinite precision and the result is rounded
+ * to the nearest double precision number.
+ * This is possible with the help of an adapted version of the \c ::exblas library.
+
+For example
+@code
+dg::DVec two( 100,2), three(100,3);
+double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
+@endcode
+ * @param x Left Container
+ * @param y Right Container may alias x
+ * @return Scalar product as defined above
+ * @note This routine is always executed synchronously due to the
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes
+ * @copydoc hide_ContainerType
+ */
+template< class ContainerType1, class ContainerType2>
+inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
+{
+    std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
+    return exblas::cpu::Round(acc.data());
+}
+
+/*! @brief \f$ x_0 \otimes x_1 \otimes \dots \otimes x_{N-1} \f$ Custom reduction
+ *
+ * This routine computes \f[ s = s_0 + x_0 \otimes x_1 \otimes \dots \otimes x_i \otimes \dots \otimes x_{N-1} \f]
+ * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ s_0\f$ is the initial value and
+ * @copydoc hide_iterations
+ *
+ * @note numerical addition/multiplication is **not** exactly associative
+ * which means that the associated reduction looses precision due to inexact arithmetic. For binary reproducible exactly rounded results use the dg::blas1::dot function.
+ * However, this function is more general and faster to execute than dg::blas1::dot.
+
+For example
+@code
+dg::DVec x( 100,2);
+double result = dg::blas1::reduce( x, 0., thrust::plus<double>()); // result = 200 ( 0 + 2 + 2 + ... + 2 ))
+@endcode
+ * @param x Left Container
+ * @param init initial value of the reduction
+ * @return Custom reduction as defined above
+ * @note This routine is always executed synchronously due to the
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes
+ * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type, value_type), must be associative and commutative
+ * @copydoc hide_ContainerType
+ */
+template< class ContainerType, class BinaryOp>
+inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op )
+{
+    return dg::blas1::detail::doReduce( dg::get_tensor_category<ContainerType>(), x, init, op);
+}
+
 /**
  * @brief \f$ y=x \f$
  *
@@ -513,36 +571,6 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
-}
-
-/*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
- *
- * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
- * @copydoc hide_iterations
- *
- * @note Our implementation guarantees binary reproducible results.
- * The sum is computed with infinite precision and the result is rounded
- * to the nearest double precision number.
- * This is possible with the help of an adapted version of the \c ::exblas library.
-
-For example
-@code
-dg::DVec two( 100,2), three(100,3);
-double temp = dg::blas1::dot( two, three); // temp = 30 (5*(2*3))
-@endcode
- * @param x Left ContainerType
- * @param y Right ContainerType may alias x
- * @return Scalar product as defined above
- * @note This routine is always executed synchronously due to the
-        implicit memcpy of the result. With mpi the result is broadcasted to all processes
- * @copydoc hide_ContainerType
- */
-template< class ContainerType1, class ContainerType2>
-inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
-{
-    std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
-    return exblas::cpu::Round(acc.data());
-//    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>(), get_tensor_category<ContainerType2>() );
 }
 
 ///@brief Deprecated: Use \c dg::construct<ContainerType>() instead
