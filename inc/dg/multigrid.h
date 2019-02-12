@@ -6,6 +6,8 @@
 #include "topology/interpolation.h"
 #include "blas.h"
 #include "cg.h"
+#include "chebyshev.h"
+#include "eve.h"
 #ifdef DG_BENCHMARK
 #include "backend/timer.h"
 #endif //DG_BENCHMARK
@@ -67,6 +69,7 @@ struct MultigridCG2d
 
 		m_grids.resize(stages);
         m_cg.resize(stages);
+        m_cheby.resize(stages);
 
         m_grids[0].reset( grid);
         //m_grids[0].get().display();
@@ -95,8 +98,12 @@ struct MultigridCG2d
         for( unsigned u=0; u<m_stages; u++)
             m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero, *m_grids[u]), std::forward<Params>(ps)...);
         m_r = m_b = m_x;
+        m_p = m_cgr = m_r[0];
         for (unsigned u = 0; u < m_stages; u++)
+        {
             m_cg[u].construct(m_x[u], 1);
+            m_cheby[u].construct(m_x[u]);
+        }
     }
 
     /**
@@ -222,39 +229,88 @@ struct MultigridCG2d
     ///@return A copyable object; what it contains is undefined, its size is important
     const Container& copyable() const {return m_x[0];}
 
-  private:
 
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
-    void full_multigrid( std::vector<SymmetricOp>& op,
-        ContainerType0& x, ContainerType1& b,
-        unsigned nu1, unsigned nu2, unsigned gamma, unsigned mu, double eps)
+    void solve( std::vector<SymmetricOp>& op,
+    ContainerType0& x, const ContainerType1& b, std::vector<double> ev, unsigned nu_pre, unsigned
+    nu_post, unsigned gamma, double eps)
     {
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
-        // project x down to coarse grid
-        dg::blas1::copy( x, m_x[0]);
-        dg::blas1::copy( b, m_b[0]);
-        for( unsigned u=0; u<m_stages-1; u++)
-        {
-            dg::blas2::gemv( m_interT[u], m_x[u], m_x[u+1]);
-            dg::blas2::gemv( m_interT[u], m_b[u], m_b[u+1]);
-        }
-        unsigned s = m_stages-1;
-        unsigned number = m_cg[s]( op[s], m_x[s], m_b[s], op[s].precond(),
-            op[s].inv_weights(), eps);
 
-		for( int p=m_stages-2; p>=0; p--)
-        {
-            dg::blas2::gemv( m_inter[p], m_x[p+1],  m_x[p]);
-            for( unsigned u=0; u<mu; u++)
-                multigrid_cycle( op, m_x, m_b, nu1, nu2, gamma, p, eps);
-        }
+        //FULL MULTIGRID
+        dg::blas1::copy( x, m_x[0]);
+        unsigned max_iter = 3;
+        for( unsigned u=0; u<max_iter; u++)
+            full_multigrid( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
+        dg::blas1::copy( m_x[0], x);
+
+        //MULTIGRID CYCLES
+        //unsigned max_iter = 3;
+        //dg::blas1::copy( x, m_x[0]);
+        //for( unsigned u=0; u<max_iter; u++)
+        //{
+        //    multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+        //}
+        //dg::blas1::copy( m_x[0], x);
+
+        //PCG WITH MULTIGRID CYCLE AS PRECONDITIONER
+        //unsigned max_iter_ = m_grids[0]->size();
+        //value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
+        //if( nrmb == 0)
+        //{
+        //    blas1::copy( m_b[0], x);
+        //    return;
+        //}
+        //blas2::symv( op[0],x,m_cgr);
+        //blas1::axpby( 1., m_b[0], -1., m_cgr);
+        ////if x happens to be the solution
+        //if( sqrt( blas2::dot(op[0].inv_weights(),m_cgr) )
+        //        < eps*(nrmb + 1))
+        //    return;
+        ////blas2::symv( P, r, p );//<-- compute p_0
+        ////dg::blas2::symv( op[0].precond(), m_cgr, m_p);
+        ////dg::blas1::copy( 0, m_p);
+        ////m_cheby[0].solve( op[0], m_p, m_cgr, 0.1*ev[0], 1.1*ev[0], nu_post+nu_pre);
+
+        //dg::blas1::copy( 0, m_x[0]);
+        //dg::blas1::copy( m_cgr, m_b[0]);
+        //full_multigrid( op,m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
+        //dg::blas1::copy( m_x[0], m_p);
+
+        ////and store the scalar product
+        //value_type nrmzr_old = blas1::dot( m_p,m_cgr);
+        //value_type alpha, nrmzr_new;
+        //for( unsigned i=2; i<max_iter_; i++)
+        //{
+        //    blas2::symv( op[0], m_p, m_x[0]);
+        //    alpha =  nrmzr_old/blas1::dot( m_p, m_x[0]);
+        //    blas1::axpby( alpha, m_p, 1., x);
+        //    blas1::axpby( -alpha, m_x[0], 1., m_cgr);
+        //    value_type error = sqrt( blas2::dot(op[0].inv_weights(), m_cgr))/(nrmb+1);
+        //    std::cout << "\t\t\tError at "<<i<<" is "<<error<<"\n";
+        //    if( error < eps)
+        //        return;
+        //    dg::blas2::symv( op[0].precond(), m_cgr, m_x[0]);
+        //    dg::blas1::copy( 0, m_x[0]);
+        //    m_cheby[0].solve( op[0], m_x[0], m_cgr, 0.1*ev[0], 1.1*ev[0], nu_post+nu_pre);
+        ////dg::blas1::copy( 0, m_x[0]);
+        ////dg::blas1::copy( m_cgr, m_b[0]);
+        ////multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+
+        //    nrmzr_new = blas1::dot( m_x[0], m_cgr);
+        //    blas1::axpby(1., m_x[0], nrmzr_new/nrmzr_old, m_p );
+        //    nrmzr_old=nrmzr_new;
+        //}
+
     }
 
     template<class SymmetricOp>
     void multigrid_cycle( std::vector<SymmetricOp>& op,
-        std::vector<Container>& x, std::vector<Container>& b,
+    std::vector<Container>& x, std::vector<Container>& b,
+    std::vector<double> ev,
         unsigned nu1, unsigned nu2, unsigned gamma, unsigned p, double eps)
     {
+        // 1 multigrid cycle beginning on grid p
         // p < m_stages-1
         // x[p]    initial condition on input, solution on output
         // x[p+1]  write only (solution of lower stage)
@@ -264,33 +320,77 @@ struct MultigridCG2d
         //
         // gamma:  typically 1 (V-cycle) or 2 (W-cycle)
         // nu1, nu2: typically in {0,1,2,3}
-        double lmin = 0, lmax = 1; //determine lmin and lmax
 
         // 1. Pre-Smooth nu1 times
-        m_cheby[p].solve( op[p], x[p], b[p], 0.1*lmax, 1.1*lmax, nu1);
-        // 2. Residual
+        //std::cout << "STAGE "<<p<<"\n";
+        //dg::blas2::symv( op[p], x[p], m_r[p]);
+        //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
+        //double norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
+        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1);
+        // 2. Residuum
         dg::blas2::symv( op[p], x[p], m_r[p]);
         dg::blas1::axpby( 1., b[p], -1., m_r[p]);
+        //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //std::cout<< " Norm residuum after  "<<norm_res<<"\n";
         // 3. Coarsen
         dg::blas2::symv( m_interT[p], m_r[p], b[p+1]);
         // 4. Solve or recursive call to get x[p+1] with initial guess 0
         dg::blas1::scal( x[p+1], 0.);
         if( p+1 == m_stages-1)
         {
+            m_cg[p+1].set_max(m_grids[p+1]->size());
             m_cg[p+1]( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
-                op[p+1].inv_weights(), eps);
+                op[p+1].inv_weights(), 1e-10);
+            //m_cheby[p+1].solve( op[p+1], x[p+1], b[p+1], 0.1*ev[p+1], 1.1*ev[p+1], nu1+nu2);
+            //dg::blas2::symv( op[p+1], x[p+1], m_r[p+1]);
+            //dg::blas1::axpby( 1., b[p+1], -1., m_r[p+1]);
+            //double norm_res = sqrt(dg::blas1::dot( m_r[p+1], m_r[p+1]));
+            //std::cout<< " Exact solution "<<norm_res<<"\n";
         }
         else
         {
             //update x[p+1] gamma times
             for( unsigned u=0; u<gamma; u++)
-                multigrid_cycle( op, x, b, nu1, nu2, gamma, p+1, eps);
+                multigrid_cycle( op, x, b, ev, nu1, nu2, gamma, p+1, eps);
         }
 
         // 5. Correct
         dg::blas2::symv( 1., m_inter[p], x[p+1], 1., x[p]);
+        //dg::blas2::symv( op[p], x[p], m_r[p]);
+        //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
+        //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
         // 6. Post-Smooth nu2 times
-        m_cheby[p].solve( op[p], x[p], b[p], 0.1*lmax, 1.1*lmax, nu2);
+        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2);
+        //dg::blas2::symv( op[p], x[p], m_r[p]);
+        //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
+        //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //std::cout<< " Norm residuum after "<<norm_res<<"\n";
+    }
+
+
+	template<class SymmetricOp>
+    void full_multigrid( std::vector<SymmetricOp>& op,
+        std::vector<Container>& x, std::vector<Container>& b, std::vector<double> ev,
+        unsigned nu1, unsigned nu2, unsigned gamma, unsigned mu, double eps)
+    {
+        //begins on coarsest level and cycles through to highest
+        for( unsigned u=0; u<m_stages-1; u++)
+        {
+            dg::blas2::gemv( m_interT[u], x[u], x[u+1]);
+            dg::blas2::gemv( m_interT[u], b[u], b[u+1]);
+        }
+        unsigned s = m_stages-1;
+        m_cg[s]( op[s], x[s], b[s], op[s].precond(),
+            op[s].inv_weights(), 1e-10);
+
+		for( int p=m_stages-2; p>=0; p--)
+        {
+            dg::blas2::gemv( m_inter[p], x[p+1],  x[p]);
+            for( unsigned u=0; u<mu; u++)
+                multigrid_cycle( op, x, b, ev, nu1, nu2, gamma, p, eps);
+        }
     }
 
   private:
@@ -300,8 +400,9 @@ struct MultigridCG2d
     std::vector< MultiMatrix<Matrix, Container> >  m_interT;
     std::vector< MultiMatrix<Matrix, Container> >  m_project;
     std::vector< CG<Container> > m_cg;
-    std::vector< ChebyshevIteration<Container>> m_cheby;
+    std::vector< Chebyshev<Container>> m_cheby;
     std::vector< Container> m_x, m_r, m_b;
+    Container  m_p, m_cgr;
 
 };
 

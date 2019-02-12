@@ -3,6 +3,7 @@
 
 #include "cg.h"
 #include "elliptic.h"
+#include "chebyshev.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -68,13 +69,11 @@ int main()
     std::cout << "L2 Norm of Residuum is        " << res.d<<"\t"<<res.i << std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
     dg::blas1::copy( 0., x);
-    dg::ChebyshevIteration<dg::HVec> cheby( copyable_vector);
+    dg::Chebyshev<dg::HVec> cheby( copyable_vector);
     double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
     double hxhy = lx*ly/(n*n*Nx*Ny);
     lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
-    std::cout << "Type number of Chebyshev iterations\n";
-    unsigned num_iter;
-    std::cin >> num_iter;
+    unsigned num_iter = 200;
     cheby.solve( A, x, b, lmin, lmax, num_iter);
     std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
 
