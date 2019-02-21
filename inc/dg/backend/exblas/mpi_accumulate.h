@@ -7,6 +7,7 @@
  */
 #pragma once
 #include <mpi.h>
+#include <vector>
 #include "accumulate.h"
 
 namespace exblas {
@@ -30,10 +31,10 @@ static void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm*
     MPI_Group group, reduce_group;
     MPI_Comm_group( comm, &group); //local call
     int reduce_size=(int)ceil((double)size/(double)mod);
-    int reduce_ranks[reduce_size];
+    std::vector<int> reduce_ranks(reduce_size);
     for( int i=0; i<reduce_size; i++)
         reduce_ranks[i] = i*mod;
-    MPI_Group_incl( group, reduce_size, reduce_ranks, &reduce_group); //local
+    MPI_Group_incl( group, reduce_size, reduce_ranks.data(), &reduce_group); //local
     MPI_Comm_create( comm, reduce_group, comm_mod_reduce); //collective
     MPI_Group_free( &group);
     MPI_Group_free( &reduce_group);
