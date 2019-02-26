@@ -265,7 +265,7 @@ int main( int argc, char* argv[])
 
     size_t steps;
     err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-    err = nc_inq_unlimdim( ncid, &timeID);
+    err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
     err = nc_inq_dimlen( ncid, timeID, &steps);
     err = nc_close( ncid); //close 3d file
 

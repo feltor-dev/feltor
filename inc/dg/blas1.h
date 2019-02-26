@@ -91,6 +91,7 @@ double result = dg::blas1::reduce( x, 0., thrust::plus<double>()); // result = 2
 @endcode
  * @param x Left Container
  * @param init initial value of the reduction
+ * @param op an associative and commutative binary operator
  * @return Custom reduction as defined above
  * @note This routine is always executed synchronously due to the
         implicit memcpy of the result. With mpi the result is broadcasted to all processes

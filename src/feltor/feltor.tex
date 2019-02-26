@@ -870,7 +870,7 @@ the value is not found,
 the program exits with an error message.
 
 \subsection{Output}
-Output file format: netcdf-4/hdf5
+Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
 %
 %Name | Type | Dimensionality | Description
 %---|---|---|---|
@@ -879,9 +879,9 @@ Output file format: netcdf-4/hdf5
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
 geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
-x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
-y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
+x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
 x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
 y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
@@ -892,14 +892,14 @@ Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{s} - \rho
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
-time             & Dataset & 1 & time at which fields are written (size: maxout$+1$ \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
 electrons        & Dataset & 4 (time, z, y, x) & electron density $n_e$ \\
 ions             & Dataset & 4 (time, z, y, x) & ion density $N_i$ \\
 Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
 Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
-energy\_time     & Dataset & 1 & timesteps at which 1d variables are written (size: itstp$\cdot$maxout$+1$ \\
+energy\_time     & Coord. Var. & 1 (energy\_time) & timesteps at which 1d variables are written (variable size: itstp$\cdot$maxout$+1$, dimension size: unlimited ) \\
 mass      & Dataset & 1 (energy\_time) & total mass integral Eq.~\eqref{eq:mass_conservation} \\
 diff      & Dataset & 1 (energy\_time) & total mass integral diffusion Eq.~\eqref{eq:mass_conservation} \\
 energy    & Dataset & 1 (energy\_time) & total energy integral Eq.~\eqref{eq:energy_conservation} \\
@@ -933,16 +933,17 @@ This program reads in the output file above and writes into another output file.
    L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
 \end{align}
 
-Output file format: netcdf-4/hdf5
+Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
 
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
 geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
-x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
-y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-psip1d           & Dataset & 1 & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
+x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+psip1d           & Coord. Var. & 1 (psip1d) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
 X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
 X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
