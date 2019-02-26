@@ -104,10 +104,11 @@ int main( int argc, char* argv[])
     Json::CharReaderBuilder parser;
     parser["collectComments"] = false;
     std::string errs;
-    if( argc != 4)
+    if( argc != 4 && argc != 5)
     {
         MPI_OUT std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
-                << argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
+                << argv[0]<<" [input.json] [geometry.json] [output.nc]\n OR \n"
+                << argv[0]<<" [input.json] [geometry.json] [output.nc] [initial.nc] \n";
         return -1;
     }
     else
@@ -150,7 +151,7 @@ int main( int argc, char* argv[])
     feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
-    /////////////////////The initial field///////////////////////////////////////////
+    //!///////////////////The profiles///////////////////////////////////////////
     //First the profile and the source (on the host since we want to output those)
     HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(),
         p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
@@ -177,68 +178,156 @@ int main( int argc, char* argv[])
 
     feltor.set_source( profile, p.omega_source, source_damping);
 
-    //Now perturbation
-    HVec ntilde = dg::evaluate(dg::zero,grid);
-    if( p.initne == "blob" || p.initne == "straight blob")
-    {
-        dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-        dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-        if( p.symmetric)
-            ntilde = dg::pullback( init0, grid);
-        else if( p.initne == "blob")//rounds =3 ->2*3-1
-        {
-            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-            //evaluate should always be used with mx,my > 1
-            ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
-        }
-        else if( p.initne == "straight blob")//rounds =1 ->2*1-1
-        {
-            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-            //evaluate should always be used with mx,my > 1
-            ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
-        }
-    }
-    else if( p.initne == "turbulence")
-    {
-        dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-        dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
-        if( p.symmetric)
-            ntilde = dg::pullback( init0, grid);
-        else
-        {
-            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-            //evaluate should always be used with mx,my > 1
-            ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
-        }
-        dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
-    }
-    else if( p.initne == "zonal")
-    {
-        dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
-        ntilde = dg::pullback( init0, grid);
-        dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
-    }
-    else
-        MPI_OUT std::cerr <<"WARNING: Unknown initial condition!\n";
+    //!///////////////////The initial field///////////////////////////////////////////
+    double time = 0;
     std::array<std::array<DVec,2>,2> y0;
-    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(profile);
-    dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
-    MPI_OUT std::cout << "initialize ni" << std::endl;
-    if( p.initphi == "zero")
-        feltor.initializeni( y0[0][0], y0[0][1]);
-    else if( p.initphi == "balance")
-        dg::blas1::copy( y0[0][0], y0[0][1]); //set N_i = n_e
-    else
-        MPI_OUT std::cerr <<"WARNING: Unknown initial condition for phi!\n";
+    if( argc == 4)
+    {
+        //Now perturbation
+        HVec ntilde = dg::evaluate(dg::zero,grid);
+        if( p.initne == "blob" || p.initne == "straight blob")
+        {
+            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
+            dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+            if( p.symmetric)
+                ntilde = dg::pullback( init0, grid);
+            else if( p.initne == "blob")//rounds =3 ->2*3-1
+            {
+                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+                //evaluate should always be used with mx,my > 1
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
+            }
+            else if( p.initne == "straight blob")//rounds =1 ->2*1-1
+            {
+                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+                //evaluate should always be used with mx,my > 1
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+            }
+        }
+        else if( p.initne == "turbulence")
+        {
+            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
+            dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
+            if( p.symmetric)
+                ntilde = dg::pullback( init0, grid);
+            else
+            {
+                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+                //evaluate should always be used with mx,my > 1
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+            }
+            dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
+        }
+        else if( p.initne == "zonal")
+        {
+            dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
+            ntilde = dg::pullback( init0, grid);
+            dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
+        }
+        else
+            MPI_OUT std::cerr <<"WARNING: Unknown initial condition!\n";
+        y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(profile);
+        dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
+        MPI_OUT std::cout << "initialize ni" << std::endl;
+        if( p.initphi == "zero")
+            feltor.initializeni( y0[0][0], y0[0][1]);
+        else if( p.initphi == "balance")
+            dg::blas1::copy( y0[0][0], y0[0][1]); //set N_i = n_e
+        else
+            MPI_OUT std::cerr <<"WARNING: Unknown initial condition for phi!\n";
 
-    dg::blas1::copy( 0., y0[1][0]); //set we = 0
-    dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
+        dg::blas1::copy( 0., y0[1][0]); //set we = 0
+        dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
+    }
+    if( argc == 5)
+    {
+        ///////////////////read in and show inputfile
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[4], NC_NOWRITE, &ncidIN);
+        size_t lengthIN;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+        std::string inputIN( lengthIN, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
+
+        Json::Value jsIN;
+        std::stringstream is(inputIN);
+        parseFromStream( parser, is, &jsIN, &errs); //read input without comments
+        const feltor::Parameters pIN(  jsIN);
+        MPI_OUT std::cout << "RESTART from file "<<argv[4]<< std::endl;
+        MPI_OUT std::cout << " file parameters:" << std::endl;
+        MPI_OUT pIN.display( std::cout);
+
+        // Now read in last timestep
+        Geometry grid_IN( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+            pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.symmetric ? 1 : pIN.Nz_out, pIN.bcxN, pIN.bcyN, dg::PER
+            #ifdef FELTOR_MPI
+            , comm
+            #endif //FELTOR_MPI
+            );
+        IHMatrix interpolateIN = dg::create::interpolation( grid, grid_IN);
+
+        #ifdef FELTOR_MPI
+        int dimsIN[3],  coordsIN[3];
+        MPI_Cart_get( comm, 3, dimsIN, periods, coordsIN);
+        size_t countIN[4] = {1, grid_IN.local().Nz(),
+            grid_out.n()*(grid_IN.local().Ny()),
+            grid_out.n()*(grid_IN.local().Nx())};
+        size_t startIN[4] = {0, coordsIN[2]*countIN[1],
+                                coordsIN[1]*countIN[2],
+                                coordsIN[0]*countIN[3]};
+        #else //FELTOR_MPI
+        size_t startIN[4] = {0, 0, 0, 0};
+        size_t countIN[4] = {1, grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
+            grid_IN.n()*grid_IN.Nx()};
+        #endif //FELTOR_MPI
+        std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid_IN));
+        HVec transferINH( dg::evaluate(dg::zero, grid_IN));
+
+        std::string namesIN[5] = {"electrons", "ions", "Ue", "Ui", "induction"};
+
+        int dataIDsIN[5];
+        int timeIDIN;
+        /////////////////////Get time length and initial data///////////////////////////
+        errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
+        errIN = nc_inq_dimlen(ncidIN, timeIDIN, &startIN[0]);
+        startIN[0] -= 1;
+        errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);
+        errIN = nc_get_vara_double( ncidIN, timeIDIN, startIN, countIN, &time);
+        MPI_OUT std::cout << " Current time = "<< time <<  std::endl;
+        for( unsigned i=0; i<5; i++)
+        {
+            errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataIDsIN[i]);
+            errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], startIN, countIN,
+                #ifdef FELTOR_MPI
+                    transferINH.data().data()
+                #else //FELTOR_MPI
+                    transferINH.data()
+                #endif //FELTOR_MPI
+                );
+            dg::blas2::gemv( interpolateIN, transferINH, transferINHvec[i]);
+        }
+        errIN = nc_close(ncidIN);
+        /// ///////////////Now Construct initial fields
+        //
+        //Convert to N-1 and W
+        dg::blas1::plus( transferINHvec[0], -1.);
+        dg::blas1::plus( transferINHvec[1], -1.);
+        dg::blas1::axpby( 1., transferINHvec[2], p.beta/p.mu[0], transferINHvec[4], transferINHvec[2]);
+        dg::blas1::axpby( 1., transferINHvec[3], p.beta/p.mu[1], transferINHvec[4], transferINHvec[3]);
+
+        dg::assign( transferINHvec[0], y0[0][0]); //ne-1
+        dg::assign( transferINHvec[1], y0[0][1]); //Ni-1
+        dg::assign( transferINHvec[2], y0[1][0]); //We
+        dg::assign( transferINHvec[3], y0[1][1]); //Wi
+
+    }
     ////////////map quantities to output/////////////////
     //since we map pointers we don't need to update those later
     std::map<std::string, const DVec* > v4d;
@@ -335,7 +424,7 @@ int main( int argc, char* argv[])
     }
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    double time = 0, dt_new = p.dt, dt =0;
+    double dt_new = p.dt, dt =0;
     MPI_OUT std::cout << "First output ... \n";
     //first, update quantities in feltor
     {
@@ -426,6 +515,8 @@ int main( int argc, char* argv[])
                         {
                             failed_counter++;
                             MPI_OUT std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
+                            time -= dt; // time has to be reset here
+                            // in case of failure diffusion is applied twice?
                         }
                     }while ( adaptive.failed());
                     dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
@@ -449,6 +540,7 @@ int main( int argc, char* argv[])
             accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
             #ifndef FELTOR_MPI
             err = nc_open(argv[3], NC_WRITE, &ncid);
+            //maybe MPI should use nc_open_par ? Or is problem if the ids are still the same?
             #endif //FELTOR_MPI
             Estart[0] = step;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);

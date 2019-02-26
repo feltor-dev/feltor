@@ -285,6 +285,8 @@ int main( int argc, char* argv[])
                         {
                             failed_counter++;
                             std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
+                            time -= dt; // time has to be reset here
+                            // in case of failure diffusion is applied twice?
                         }
                     }while ( adaptive.failed());
                     dirk.step( im, time-dt/2., y0, time, y0, dt/2.);

@@ -877,8 +877,8 @@ Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Data
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
-geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, no comments) \\
+geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
@@ -938,8 +938,8 @@ Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Data
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
-geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, no comments) \\
+geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psip1d           & Coord. Var. & 1 (psip1d) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
