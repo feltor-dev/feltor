@@ -772,14 +772,29 @@ time & Strang Splitting & $2$nd order\\
 \qquad implicit & Trapezoidal & perp. Diffusion and Resistive term. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
 \bottomrule
 \end{longtable}
-\section{Input/Output}
-The programs \texttt{feltor\_hpc.cu} and \texttt{feltor.cu} expect two input
-files. One is for the physical and numerical parameters of the model equations
-and the other one describes the Solov'ev equilibrium. Results are written into
-an output file in the first program and plotted on screen with glfw in the
-second.
+\section{Usage}
+Compilation:\\
+\texttt{make feltor device=\{gpu,omp\}} Compile \texttt{feltor.cu} (only shared memory)\\
+\texttt{make feltor\_hpc device=\{gpu,omp\}} Compile \texttt{feltor\_hpc.cu} for shared memory system.\\
+\texttt{make feltor\_mpi device=\{gpu,omp,skl,knl\}} Compile \texttt{feltor\_hpc.cu} for distributed memory systems.\\
+Usage:\\
+\texttt{./feltor\_hpc input.json geometry.json output.nc [initial.nc]} \\
+\texttt{./feltor\_mpi input.json geometry.json output.nc [initial.nc]} \\
+\texttt{./feltor input.json geometry.json } \\
 
-\subsection{Input file structure}
+The programs \texttt{feltor\_hpc.cu} and \texttt{feltor.cu} expect two input
+files \texttt{input.json} and \texttt{geometry.json}, described in Sections~\ref{sec:input_file} and \ref{sec:geometry_file}.
+The first is for the physical and numerical parameters of the model equations
+while the latter describes the Solov'ev equilibrium.
+ The program \texttt{feltor.cu} plots the results directly to the screen using \texttt{glfw3}.
+The program \texttt{feltor\_hpc.cu} writes results into
+the output file \texttt{output.nc}.
+ The output file is described in Section~\ref{sec:output_file}.
+ The optional file \texttt{initial.nc} can be used to initialize a simulation from an existing file.
+ This behavior is described in Section~\ref{sec:restart_file}.
+
+
+\subsection{Input file structure} \label{sec:input_file}
 Input file format: json
 
 %%This is a booktabs table
@@ -837,20 +852,17 @@ posY       & float &0.0    & - & blob Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
-alpha       & float & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} and \eqref{eq:modified_psi} \\
+alpha       & float & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:approx_heaviside} and \eqref{eq:modified_psi} \\
 source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
 rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psi}  \\
-%restart    & bool & false & false & If true, all input and geometry parameters except maxout,
-%    itstp and inner\_loop are ignored. Instead, the parameters and all fields are initialized from output.nc
-%    The actual output is then appended to output.nc This effectively continues an existing simulation.
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
 the value is not found,
 the program exits with an error message.
-\subsection{Geometry file structure}
+\subsection{Geometry file structure} \label{sec:geometry_file}
 File format: json
 
 %%This is a booktabs table
@@ -869,7 +881,7 @@ The default value is taken if the value name is not found in the input file. If 
 the value is not found,
 the program exits with an error message.
 
-\subsection{Output}
+\subsection{Output} \label{sec:output_file}
 Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
 %
 %Name | Type | Dimensionality | Description
@@ -882,6 +894,8 @@ geomfile   &     text attribute & - & verbose geometry input file as a string (v
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
+energy\_time     & Coord. Var. & 1 (energy\_time) & timesteps at which 1d variables are written (variable size: itstp$\cdot$maxout$+1$, dimension size: unlimited ) \\
 x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
 y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
@@ -892,14 +906,12 @@ Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{s} - \rho
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
-time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
 electrons        & Dataset & 4 (time, z, y, x) & electron density $n_e$ \\
 ions             & Dataset & 4 (time, z, y, x) & ion density $N_i$ \\
 Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
 Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
-energy\_time     & Coord. Var. & 1 (energy\_time) & timesteps at which 1d variables are written (variable size: itstp$\cdot$maxout$+1$, dimension size: unlimited ) \\
 mass      & Dataset & 1 (energy\_time) & total mass integral Eq.~\eqref{eq:mass_conservation} \\
 diff      & Dataset & 1 (energy\_time) & total mass integral diffusion Eq.~\eqref{eq:mass_conservation} \\
 energy    & Dataset & 1 (energy\_time) & total energy integral Eq.~\eqref{eq:energy_conservation} \\
@@ -915,23 +927,27 @@ accuracy  & Dataset & 1 (energy\_time) & accuracy of energy theorem in time  \\
 aligned   & Dataset & 1 (energy\_time) & Alignment parameter $\int\dV \ln n_e\Delta_\parallel n_e$\\
 \bottomrule
 \end{longtable}
+\subsection{Restart file} \label{sec:restart_file}
+The program \texttt{feltor\_hpc.cu} has the possibility to initialize time and the fields with
+the results of a previous simulation. This behaviour is enabled by giving an additional file \texttt{initial.nc}
+to the command line. In this case the \texttt{initne} and \texttt{initphi} parameters of the input
+file are ignored. Instead, the fields \texttt{electrons, ions, Ue, Ui, induction} at the latest timestep
+are read from the given file, interpolated to the current grid and used to initialize the simulation.
+Apart from that the behaviour of the program is unchanged i.e. the magnetic field, profiles, resolutions, etc.
+are all taken from the regular input files. This means that the user must take care that these are consistent
+with the paramters in the existing \texttt{initial.nc} file. Also note that we try to discourage
+appending new results to an exisiting file directly,
+because if for some reason the cluster crashes and the file is corrupted
+the whole simulation is lost. It is safer to just merge files afterwards with for example\\
+\texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
+Compilation\\
+\texttt{make feltordiag} \\
+Usage \\
+\texttt{./feltordiag input.nc output.nc} \\
 We have the program \texttt{feltor/diag/feltordiag.cu}.
-This program reads in the output file above and writes into another output file.
-
-\begin{align}
- \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + u_e \left(\bhat + \tilde{\vec b}\right)\right) \cdot \vec
- \nabla\psi_p \nonumber\\
- =& \beta n_eu_e\left( A_\parallel \mathcal
- K_\kappa(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
-  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
-   n_e\mathcal K_\kappa(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
-   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
-   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
-   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
-\end{align}
+This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows.
 
 Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
 
@@ -957,7 +973,20 @@ total\_flux      & Dataset & 1 (time) & $\int \dV f_e$\\
 X $\in$ \{ electrons, ions, Ue, Ui, potential,
 induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
     $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$, $-\Delta_\perp \phi$,
-    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\}
+    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\} with
+
+\begin{align}
+ \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ B} + u_e \left(\bhat + \tilde{\vec b}\right)\right) \cdot \vec
+ \nabla\psi_p \nonumber\\
+ =& \beta n_eu_e\left( A_\parallel \mathcal
+ K_\kappa(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
+  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
+   n_e\mathcal K_\kappa(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
+   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
+   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
+   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
+\end{align}
 
 
 

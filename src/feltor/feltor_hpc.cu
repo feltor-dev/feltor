@@ -292,7 +292,6 @@ int main( int argc, char* argv[])
 
         std::string namesIN[5] = {"electrons", "ions", "Ue", "Ui", "induction"};
 
-        int dataIDsIN[5];
         int timeIDIN;
         /////////////////////Get time length and initial data///////////////////////////
         errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
@@ -303,8 +302,9 @@ int main( int argc, char* argv[])
         MPI_OUT std::cout << " Current time = "<< time <<  std::endl;
         for( unsigned i=0; i<5; i++)
         {
-            errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataIDsIN[i]);
-            errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], startIN, countIN,
+            int dataID;
+            errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataID);
+            errIN = nc_get_vara_double( ncidIN, dataID, startIN, countIN,
                 #ifdef FELTOR_MPI
                     transferINH.data().data()
                 #else //FELTOR_MPI
@@ -533,7 +533,7 @@ int main( int argc, char* argv[])
             }
             double deltat = time - previous_time;
             feltor.update_quantities();
-            MPI_OUT std::cout << "Timestep "<<dt_new<<"\n";
+            MPI_OUT std::cout << "Time "<<time<<" Timestep "<<dt_new<<"\n";
             dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
@@ -542,7 +542,7 @@ int main( int argc, char* argv[])
             err = nc_open(argv[3], NC_WRITE, &ncid);
             //maybe MPI should use nc_open_par ? Or is problem if the ids are still the same?
             #endif //FELTOR_MPI
-            Estart[0] = step;
+            Estart[0]++;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             for( auto pair : v0d)
                 err = nc_put_vara_double( ncid, id0d.at(pair.first),
