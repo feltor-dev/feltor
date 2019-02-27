@@ -6,9 +6,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <vector>
-#include <thrust/random/linear_congruential_engine.h>
-#include <thrust/random/uniform_real_distribution.h>
-#include <thrust/random/normal_distribution.h>
+#include <random>
 #include "blas1.h"
 #include "topology/grid.h"
 #include "topology/evaluation.h"
@@ -1522,7 +1520,7 @@ struct Vortex
 };
 
 /**
-* @brief Makes a random bath in the RZ plane
+* @brief A random bath in the RZ plane
 *
 \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
 \f]
@@ -1568,9 +1566,9 @@ struct BathRZ{
         double N_kRh = N_kR_/2.;
         double N_kZh = N_kZ_/2.;
 
-        thrust::random::minstd_rand generator;
-        thrust::random::normal_distribution<double> ndistribution;
-        thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
+        std::minstd_rand generator;
+        std::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
+        std::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
         for (unsigned j=1;j<=N_kZ_;j++)
         {
             double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);
