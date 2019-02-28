@@ -36,15 +36,19 @@ using Geometry = dg::CylindricalGrid3d;
 int ncid = -1; //netcdf id (signal handler can close the file)
 
 #ifdef FELTOR_MPI
+//ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
 void sigterm_handler(int signal)
 {
-    file :: NC_Error_Handle err;
-    std::cout << "sigterm_handler, got signal " << signal << std::endl;
-    std::cout << "ncid = " << ncid << std::endl;
-    if(ncid != -1)
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    std::cout << " pid "<<rank<<" sigterm_handler, got signal " << signal << std::endl;
+    std::cout << " pid "<<rank<<" ncid = " << ncid << std::endl;
+    if( ncid != -1)
     {
+        file :: NC_Error_Handle err;
         err = nc_close(ncid);
-        std::cerr << "SIGTERM caught. Closing NetCDF file with id " << ncid << std::endl;
+        std::cout << " pid "<<rank<<" Closing NetCDF file with id " << ncid << std::endl;
+        ncid = -1;
     }
     MPI_Finalize();
     exit(signal);
