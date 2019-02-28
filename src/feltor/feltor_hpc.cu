@@ -287,7 +287,7 @@ int main( int argc, char* argv[])
         size_t countIN[4] = {1, grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
             grid_IN.n()*grid_IN.Nx()};
         #endif //FELTOR_MPI
-        std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid_IN));
+        std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid));
         HVec transferINH( dg::evaluate(dg::zero, grid_IN));
 
         std::string namesIN[5] = {"electrons", "ions", "Ue", "Ui", "induction"};
