@@ -14,7 +14,7 @@
     "curvature"  : 0.00015, 
     "tau"  : 1.0,        
     "nu_perp"  : 5e-3, 
-    "amplitude"  :0.05,
+    "amplitude"  :1.,
     "sigma"  : 10,     
     "posX"  : 0.5,     
     "posY"  : 0.5,     

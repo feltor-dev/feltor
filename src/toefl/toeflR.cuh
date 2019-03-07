@@ -232,7 +232,6 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
 
         multigrid.project( chi, multi_chi);
-//         dg::blas1::scal(chi, tau/4.);
         dg::blas1::pointwiseDot(tau/4., chi,binv,binv,0., chi);
         multigrid.project( chi, multi_iota);
         for( unsigned u=0; u<3; u++)

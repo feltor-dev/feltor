@@ -408,7 +408,7 @@ struct Helmholtz2
      {
         blas2::symv( m_laplaceM, x, temp1_);    // temp1_ = -nabla_perp^2 x
         blas1::pointwiseDot(temp1_, iota_, y);  //y = -iota*nabla_perp^2 x
-        blas2::symv( m_laplaceM, y, temp2_);    //temp2_ = nabla_perp^2 *iota*nabla_perp^2 x
+        blas2::symv( m_laplaceM, y, temp2_);    //temp2_ = nabla_perp^2 (iota*nabla_perp^2 x)
          
         m_laplaceM.set_chi(chi_);
         blas2::symv( m_laplaceM, x, temp1_);   // temp1_ = -nabla (chi nabl_perp x)
