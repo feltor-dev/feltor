@@ -376,57 +376,6 @@ struct Helmholtz2
     Container chi_;
     value_type alpha_;
 };
-
-
- template< class Geometry, class Matrix, class Container>
- struct ArbPol
- {
-     using container_type = Container;
-     using geometry_type = Geometry;
-     using matrix_type = Matrix;
-     using value_type = get_value_type<Container>;
-     ArbPol() {}
-     ArbPol( const Geometry& g, direction dir = dg::forward, value_type jfactor=1.)
-     {
-         construct( g, dir, jfactor);
-     }
-     ArbPol( const Geometry& g, bc bcx, bc bcy,  direction dir = dg::forward, value_type jfactor=1.)
-     {
-         construct( g, bcx, bcy, dir, jfactor);
-     }
-     void construct( const Geometry& g, bc bcx, bc bcy, direction dir = dg::forward, value_type jfactor = 1.)
-     {
-         m_laplaceM.construct( g, bcx, bcy, dg::normed, dir, jfactor);
-         dg::assign( dg::evaluate( dg::one, g), temp1_);
-         dg::assign( dg::evaluate( dg::one, g), temp2_);
-     }
-     void construct( const Geometry& g,  direction dir = dg::forward, value_type jfactor = 1.)
-     {
-         construct( g, g.bcx(), g.bcy(),  dir, jfactor);
-     }
-     void symv(const Container& x, Container& y)
-     {
-        blas2::symv( m_laplaceM, x, temp1_);    // temp1_ = -nabla_perp^2 x
-        blas1::pointwiseDot(temp1_, iota_, y);  //y = -iota*nabla_perp^2 x
-        blas2::symv( m_laplaceM, y, temp2_);    //temp2_ = nabla_perp^2 (iota*nabla_perp^2 x)
-         
-        m_laplaceM.set_chi(chi_);
-        blas2::symv( m_laplaceM, x, temp1_);   // temp1_ = -nabla (chi nabl_perp x)
-        blas1::axpby( 1., temp1_, 1., temp2_, y);
-        blas2::symv( m_laplaceM.weights(), y, y);
-     }
-     const Container& weights()const {return m_laplaceM.weights();}
-     const Container& inv_weights()const {return m_laplaceM.inv_weights();}
-     const Container& precond()const {return m_laplaceM.precond();}
-     void set_chi( const Container& chi) {chi_=chi; }
-     void set_iota( const Container& iota) {iota_=iota; }
-     const Container& chi()const {return chi_;}
-     const Container& iota()const {return iota_;}
-   private:
-     Elliptic<Geometry, Matrix, Container> m_laplaceM;
-     Container temp1_, temp2_;
-     Container chi_,iota_;
- };
 ///@cond
 
 
@@ -444,12 +393,6 @@ struct TensorTraits< Helmholtz<G, M, V> >
 };
 template< class G, class M, class V>
 struct TensorTraits< Helmholtz2<G, M, V> >
-{
-    using value_type  = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-template< class G, class M, class V>
-struct TensorTraits< ArbPol<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

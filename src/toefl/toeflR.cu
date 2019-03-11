@@ -65,8 +65,8 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////
 
 
-    //dg::Karniadakis< std::vector<dg::DVec> > stepper( y0, y0[0].size(), p.eps_time);
-    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::DVec> > stepper( y0, y0[0].size(), p.eps_time);
+//     dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
     //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    //stepper.init( ex, im, time, y0, p.dt);
+    stepper.init( ex, im, time, y0, p.dt);
     double dt = 1e-5;
     const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
@@ -131,12 +131,12 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            //try{ stepper.step( ex, im, time, y0);}
-            try{
-                //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
-                stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
-                //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
-            }
+            try{ stepper.step( ex, im, time, y0);}
+//             try{
+//                 //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
+//                 stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+//                 //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+//             }
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

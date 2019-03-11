@@ -17,6 +17,7 @@
 #include "topology/geometry.h"
 #include "blas.h"
 #include "helmholtz.h"
+#include "special.h"
 #include "cg.h"
 #include "functors.h"
 #include "multistep.h"
