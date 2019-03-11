@@ -50,19 +50,19 @@ namespace dg{
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ and \f$\iota\f$ is one
      */
-     ArbPol( const Geometry& g, bc bcx, bc bcy,  direction dir = dg::forward, value_type jfactor=1.)
+     ArbPol( const Geometry& g, bc bcx, bc bcy,  direction dir = dg::centered, value_type jfactor=1.)
      {
          construct( g, bcx, bcy, dir, jfactor);
      }
      ///@copydoc ArbPol::ArbPol(const Geometry&,bc,bc,value_type,direction,value_type)
-     void construct( const Geometry& g, bc bcx, bc bcy, direction dir = dg::forward, value_type jfactor = 1.)
+     void construct( const Geometry& g, bc bcx, bc bcy, direction dir = dg::centered, value_type jfactor = 1.)
      {
          m_laplaceM_chi.construct( g, bcx, bcy, dg::normed, dir, jfactor);
          m_laplaceM_iota.construct( g, bcx, bcy, dg::normed, dir, jfactor);
          dg::assign( dg::evaluate( dg::one, g), m_temp);
      }
      ///@copydoc ArbPol::ArbPo(const Geometry&,value_type,direction,value_type)
-     void construct( const Geometry& g,  direction dir = dg::forward, value_type jfactor = 1.)
+     void construct( const Geometry& g,  direction dir = dg::centered, value_type jfactor = 1.)
      {
          construct( g, g.bcx(), g.bcy(),  dir, jfactor);
      }
