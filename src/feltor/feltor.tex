@@ -24,7 +24,7 @@ Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B
 we can define various differential operations.
 %Let us further assume that $\bhat$ is perturbed by the parallel
 %vector potential $A_\parallel$ via
-%$\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
+%$\tilde{ \vec b }_\perp := ({\nabla \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
 %\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
@@ -48,20 +48,20 @@ we can define various differential operations.
     $ \Delta_\perp f:= \vec \nabla\cdot (\vec \nabla_\perp f)
     = \nabla\cdot( h\cdot\nabla f)$  \\
     Curl-b Curvature &
-    $\mathcal K_\kappa$ &
-    $\mathcal K_\kappa(f) := \vec{ \mathcal K_\kappa }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\
+    $\mathcal K_{\nabla\times\bhat}$ &
+    $\mathcal K_{\nabla\times\bhat}(f) := \vec{ \mathcal K_{\nabla\times\bhat} }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\
     Grad-B Curvature &
     $\mathcal K_{\nabla B} $ &
     $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\
     Curvature &
     $\mathcal K$ &
-    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right) = \mathcal K_\kappa(f) + \mathcal K_{\nabla B}(f)$,\\
+    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right) = \mathcal K_{\nabla\times\bhat}(f) + \mathcal K_{\nabla B}(f)$,\\
     Parallel derivative&
     $\nabla_\parallel $&
     $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
     %Perturbed parallel Derivative&
     %$\bar\nabla_\parallel$ &
-    %$\bar\nabla_\parallel f := (\bhat + \tilde{\vec b })\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_\kappa(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
+    %$\bar\nabla_\parallel f := (\bhat + \tilde{\vec b }_\perp)\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
     Parallel Laplacian&
     $\Delta_\parallel $&
     $\Delta_\parallel f:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f )$\\
@@ -73,10 +73,10 @@ Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
 Note that we have
 \begin{align}
-    \vec \nabla \cdot \vec{\mathcal K_\kappa}
-    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_\kappa}\cdot\nabla\ln B, \\
+    \vec \nabla \cdot \vec{\mathcal K_{\nabla\times\bhat}}
+    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_{\nabla\times\bhat}}\cdot\nabla\ln B, \\
     \vec\nabla\cdot\vec{ \mathcal K} &= 0, \\
-    \vec{ \mathcal K_\kappa} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
+    \vec{ \mathcal K_{\nabla\times\bhat}} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
     \nabla_\parallel \ln B &= -\vec\nabla\cdot\bhat.
     \label{eq:curl_curvature}
 \end{align}
@@ -241,18 +241,18 @@ The curl of $\bhat$ reduces to
 %end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \ehat_Z , &
+\vec{\mathcal{K}}_{{\nabla\times\bhat}}  &\approx  -  \frac{1}{B R} \ehat_Z , &
 \vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 %\ehat_\varphi \times \vec{\nabla} B, &
-\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{\kappa} ,
+\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{{\nabla\times\bhat}} ,
 %\\
-%\mathcal{K}_{\kappa}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
+%\mathcal{K}_{{\nabla\times\bhat}}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
 %\mathcal{K}_{\vec{\nabla}  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},&
 %\mathcal{K} (f) &\approx\frac{1}{B} \left[\ln B, f \right]_{RZ}-  \frac{1}{B R} \frac{\partial f}{\partial Z} ,
 \end{align}
 and
 \begin{align}
- \vec{\nabla} \cdot \vec{\mathcal{K}}_{\kappa} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z}.
+ \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z}.
 \end{align}
 which, results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
 
@@ -264,9 +264,9 @@ Note that in an actual toroidal field we have
 We then have $\bhat = \ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
-  \vec{ \mathcal K_\kappa} = \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z =
+  \vec{ \mathcal K_{\nabla\times\bhat}} = \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z =
 \vec{ \mathcal K}/2\\
-  \nabla\cdot\vec{\mathcal K_{\kappa}}=
+  \nabla\cdot\vec{\mathcal K_{{\nabla\times\bhat}}}=
     \nabla_\parallel \ln B = 0
     \label{}
 \end{align}
@@ -275,7 +275,7 @@ simplify to
 In this approximation we apply the toroidal field line approximation
 as in Section
 \ref{sec:torfieldlineapprox}
-but approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$
+but approximate the curvature operator $\mathcal K_{\nabla\times\bhat} \approx \bhat\times\vec \kappa$
   with
   $\vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
@@ -290,7 +290,8 @@ In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\mathcal{K}_{\kappa}(f)   &\approx  \mathcal{K}_{\vec{\nabla}  B}(f),  &
+\vec{\mathcal{K}_{{\nabla\times\bhat}}}(f) \approx
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 \mathcal{K} (f) &\approx 2\mathcal{K}_{\vec{\nabla}  B} (f) , &
  \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
 \end{align}
@@ -318,16 +319,16 @@ K_{\nabla B}^\varphi &= \frac{R_0}{B^3R^2}\left(
 \end{align}
 and
 \begin{align}
-K_\kappa^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
-K_\kappa^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
-K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
+K_{\nabla\times\bhat}^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
+K_{\nabla\times\bhat}^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
+K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 + \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
 + \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
 -R\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
 - \frac{\partial^2 \psi}{\partial Z^2}
 \right) \\
-\vec\nabla\cdot\vec{\mathcal K_\kappa} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}=
-    -\vec{\mathcal K_\kappa}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
+\vec\nabla\cdot\vec{\mathcal K_{\nabla\times\bhat}} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}=
+    -\vec{\mathcal K_{\nabla\times\bhat}}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
 %contravariant phi component
 \label{}
 \end{align}
@@ -410,28 +411,31 @@ Note that $\Theta(0) = 0.5$ and $\theta(0) = 35\alpha/256$.
 % Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL.
 % However, our isothermal model misses important core physics ingredients, such as the ion temperature gradient (ITG) and trapped electron mode (TEM)~\cite{Wesson07}. Thus the validity the global model is limited to certain
 % parameter regimes.\\
+We set up an isothermal 3d gyro-fluid model with up to 2nd order FLR effects
+on in the electric potential $\phi$ and 0th order FLR effects in the parallel magnetic
+potential $A_\parallel$.
 The continuity equation for the electron density \(n_e\) and the ion gyro-centre
 density \(N_i\) and the momentum conservation equation for
 the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
 (omitting species labels)~\cite{WiesenbergerPhD, HeldPhD}
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})\right)\right) = \Lambda_N + S_N \\
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
 mN \frac{\partial}{\partial t} U &+ mN \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})
+    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\left(\bhat + \tilde{\vec b}_\perp\right)
     \right)\cdot \vec\nabla U  \nonumber \\
-    &+ 2m\vec \nabla \cdot ( NU \vec v_\kappa)
-    -mNU\vec \nabla\cdot \vec v_\kappa
-    + mNU\mathcal K_\kappa(\phi) \nonumber\\
-    &= -T (\bhat + \tilde{\vec b})\cdot \nabla N -qN \left( (\bhat+\tilde{\vec b})\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) + mN R_{\eta_\parallel} + mN(\Lambda_U + S_U)
+    &+ 2m\vec \nabla \cdot ( NU \vec v_{\nabla\times\bhat})
+    -mNU\vec \nabla\cdot \vec v_{\nabla\times\bhat}
+    + mNU\mathcal K_{\nabla\times\bhat}(\psi) \nonumber\\
+    &= -T \left(\bhat + \tilde{\vec b}_\perp\right)\cdot \nabla N -qN \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) + mN R_{\eta_\parallel} + mN(\Lambda_U + S_U)
 \label{}
 \end{align}
 with
 \begin{align}
-\tilde{\vec b} = \frac{\nabla\times A_\parallel \bhat}{B}, \quad
+\tilde{\vec b}_\perp = \frac{\nabla\times A_\parallel \bhat}{B}, \quad
 \vec v_E := \frac{\bhat\times\nabla\psi}{B},\quad
-\vec v_C := \frac{T+mU^2}{q}\vec{\mathcal K_\kappa},\quad
-\vec v_\kappa := \frac{T}{q}\vec{\mathcal K_\kappa},\quad
+\vec v_C := \frac{T+mU^2}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
+\vec v_{\nabla\times\bhat} := \frac{T}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
 \vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
 \label{}
 \end{align}
@@ -482,7 +486,7 @@ Similarly, for the perpendicular dissipation we apply viscous or hyperviscous te
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
-\subsection{Boundary and Initial conditions}
+\subsection{Boundary and initial conditions}
 We define the simulation box as
 $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
@@ -519,7 +523,7 @@ and initialize the electron density with
     n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
 \end{align}
 consisting of a toroidally symmetric background profile $n_{\text{prof}}(R,Z)$ and a perturbation
-$\tilde n(R,Z,\varphi)$.
+$\tilde n(R,Z,\varphi)$, which breaks the toroidal symmetry.
 Note that we should take care to intitialize a smooth profile with ideally well-defined $\Delta^2_\perp n_e$.
 %Let us define another approximation to the Heaviside function
 %\begin{align}
@@ -636,9 +640,9 @@ boundary)
     +\frac{1}{2} m_i N_i \left(\frac{\vec\nabla_\perp\phi}{B}\right)^2 \right.\nonumber\\
     &\left.+\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
   \mathcal S = \sum_s \int \vec{\dA} \cdot &\left[ \left(
-  U(\bhat+\tilde{\vec b}) + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
+  U\left(\bhat+\tilde{\vec b}_\perp\right) + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
   \left(T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) \right. \nonumber\\
-  & \left . + \vec v_\kappa m NU^2  + (\bhat + \tilde{\vec b}) UNT\right], \\
+  & \left . + \vec v_{\nabla\times\bhat} m NU^2  + \left(\bhat + \tilde{\vec b}_\perp\right) UNT\right], \\
   \Lambda =  \int \dV & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
   \nonumber\\ &
 +\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
@@ -671,22 +675,22 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
     \frac{\partial}{\partial t} N =&
         - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
         - \bar \nabla_\parallel \left( NU\right)
-        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}\right)
+        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}_\perp\right)
         - \tau \mathcal K(N) \nonumber \\&
         - N \mathcal K(\psi)
-        -\mu \mathcal K_\kappa(NU^2)
-        -\mu NU^2\nabla\cdot \vec{ \mathcal K_\kappa}
+        -\mu \mathcal K_{\nabla\times\bhat}(NU^2)
+        -\mu NU^2\nabla\cdot \vec{ \mathcal K_{\nabla\times\bhat}}
         + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
     \frac{\partial}{\partial t} W =&
         - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
         - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
         - \frac{1}{2}\bar \nabla_\parallel U^2
         -\frac{\tau}{\mu} \bar \nabla_\parallel \ln N
-        - U\mathcal K_\kappa(\psi)
+        - U\mathcal K_{\nabla\times\bhat}(\psi)
         - \tau \mathcal K(U)
-        -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
-        - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
-        -2\tau U\mathcal K_\kappa(\ln N)
+        -\tau U\nabla\cdot\vec{ \mathcal K_{\nabla\times\bhat}}\nonumber\\&
+        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\nabla\times\bhat} (U)
+        -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
         + \nu_\perp\Delta_\perp W
         - \nu_\perp\frac{\beta}{\mu}\Delta_\perp A_\parallel
@@ -697,8 +701,8 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
-$\bar\nabla_\parallel f = \nabla_\parallel f + \beta A_\parallel \mathcal K_\kappa(f) + \frac{\beta}{B}[ f, A_\parallel]_\perp$
-and $\vec \nabla \cdot \tilde{ \vec b} = \beta A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K_\kappa}} - \beta \mathcal K_{\nabla B}(A_\parallel) $
+$\bar\nabla_\parallel f = \nabla_\parallel f + \beta A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{\beta}{B}[ f, A_\parallel]_\perp$
+and $\vec \nabla \cdot \tilde{ \vec b}_\perp = \beta A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \beta \mathcal K_{\nabla B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -977,12 +981,12 @@ induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
 
 \begin{align}
  \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + u_e \left(\bhat + \tilde{\vec b}\right)\right) \cdot \vec
+ B} + u_e \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
  \nabla\psi_p \nonumber\\
  =& \beta n_eu_e\left( A_\parallel \mathcal
- K_\kappa(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
   &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
-   n_e\mathcal K_\kappa(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
+   n_e\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
    f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
    L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
    L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
