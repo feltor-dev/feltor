@@ -100,13 +100,13 @@ obtain a right handed system. The parametric representation in Cartesian \((x,y,
 \end{align}
 Note here that the angle $\varphi = 0$ corresponds to the Cartesian $y$-axis.
 The unit
-basis vectors and metric tensor are:
+basis vectors and (covariant) metric tensor are:
 \begin{align}
  \ehat_R      &= (\sin{(\varphi)} ,   \cos{(\varphi)},0)^T, &
  \ehat_Z      &= ( 0 ,0 ,1 )^T, &
  \ehat_{\varphi} &= ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
 \\
- g &= \begin{pmatrix}
+    (g_{ij}) &= \begin{pmatrix}
   1 & 0 & 0 \\
   0 & 1 & 0 \\
   0 & 0 & R^2
@@ -119,13 +119,19 @@ With the help of the metric elements we get a well behaved volume element \(\sqr
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
-In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be written as
+In cylindrical coordinates the general axisymmetric  magnetic field can be written as (dimensionless)
 \begin{align}
  \vec{B} &= \frac{R_0}{R}\left[I(\psi) \ehat_{\varphi} + \frac{\partial
  \psi_p}{\partial Z} \ehat_R -  \frac{\partial \psi_p}{\partial R} \ehat_Z\right] ,
 \end{align}
-which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
-Note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
+which can obviously not be manipulated to be in Clebsch form.
+Hence we are dealing with a non-flux aligned coordinate system.
+We scaled $R$, $Z$ and $R_0$ with $\rho_s$, the magnetic field with $B_0$, the flux with $\psi_{p0} = B_0\rho_s \hat R_0$
+and $I_0 = B_0 \hat R_0$ (with $\hat R_0$ being the dimensional major radius).
+Note that this normalization is in line with the one later chosen for the gyrofluid
+equations but is unnatural for the MHD type equilibrium equations through the introduction
+of $\rho_s$.
+Also note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
 %The unit vectors are denoted by \(\ehat_{R}\), \(\ehat_{Z}\), \(\ehat_{\varphi}\).
@@ -135,7 +141,7 @@ Cartesian coordinates while straightening the field lines for large $R_0$
 we recover the familiar slab geometry.
 We have
 the equilibrium equations in toroidally symmetric, ideal MHD (
-$\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ )
+$\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ normalized with $p_0 = B_0^2/\mu_0$, and $j_0 = B_0/\rho_s/\mu_0$ )
 \begin{align}
     \vec\nabla\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
  j_\parallel &= \vec j\cdot \bhat = \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
@@ -150,10 +156,6 @@ from where we recover the Grad-Shafranov equation
     -\Delta^*_\perp  \psi_p &= \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p } \equiv \frac{R}{R_0} j_{\hat\varphi}
 \end{align}
 with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
-Note that $R$ and $Z$ are normalized
-with $\rho_s$, $\psi_p$ with $\psi_{p0}$, $p$ with
-$p_0 := \psi_{p0}^2/\mu_0\rho_s^4$, $I$ with $I_0:=\psi_{p0}/\rho_s$,
-and $j_\varphi$ with $\j_{\varphi 0} = \psi_{p0}/\rho_s^3\mu_0$.
 The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
 By integration over \(\psi_p\) we find
 \begin{align}\label{eq:solovevassumption}
@@ -282,32 +284,38 @@ For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P
 \(\beta = \frac{P}{B^2/(2 \mu_0) } \)
 we can rewrite the curvature to
 \begin{align}
- \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
+    \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
 \end{align}
 In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \begin{align}
- \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
+    \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
 \vec{\mathcal{K}_{{\nabla\times\bhat}}}(f) \approx
 \vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 \mathcal{K} (f) &\approx 2\mathcal{K}_{\vec{\nabla}  B} (f) , &
- \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
+    \vec{{\nabla\times\bhat}} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
 \end{align}
 The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
 In general, the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
 \subsubsection{True perpendicular terms}
+
 Without any approximations we have
 \begin{align}
 b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
 b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad 
 b^\varphi = \frac{I}{R}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \\
-\vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ}
+\vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ} \\
+\left({\nabla\times\bhat}\right) \cdot\bhat =
+    (I'(\nabla\psi_p)^2 - I \Delta_\perp^* \psi_p)\frac{ R_0^2}{R^2B^2} \propto 1/R_0
 \label{}
 \end{align}
-We then need to take the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
-We can explicitly write
+where for the last
+estimate we inserted the Grad-Shafranov equation and the Solov'ev assumptions.
+We can then insert $\bhat$ into the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
+
+For the curvature terms we can explicitly write
 \begin{align}
 K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
 K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
@@ -332,6 +340,7 @@ K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 %contravariant phi component
 \label{}
 \end{align}
+
 \subsection{Flux surface average and Safety factor}
 We define the toroidal average of a function $f(R,Z,\varphi)$ as
 \begin{align} \label{eq:phi_average}

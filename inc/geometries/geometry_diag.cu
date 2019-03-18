@@ -150,6 +150,7 @@ int main( int argc, char* argv[])
     const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
     const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
     const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
+    std::cout << "psip( 1, 0) "<<c.psip()(gp.R_0, 0)<<"\n";
     std::cout << "TEST ACCURACY OF PSI (values must be close to 0!)\n";
     if( gp.hasXpoint())
         std::cout << "    Equilibrium with X-point!\n";
