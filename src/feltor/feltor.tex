@@ -139,8 +139,8 @@ Note that with $\psi_p = I(\psi_p) \equiv 1$ we recover a purely toroidal field.
 With a subsequent identification of $x:=R-R_0$ and the transition to
 Cartesian coordinates while straightening the field lines for large $R_0$
 we recover the familiar slab geometry.
-We have
-the equilibrium equations in toroidally symmetric, ideal MHD (
+
+We have the equilibrium equations in toroidally symmetric, ideal MHD (
 $\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ normalized with $p_0 = B_0^2/\mu_0$, and $j_0 = B_0/\rho_s/\mu_0$ )
 \begin{align}
     \vec\nabla\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
@@ -201,7 +201,8 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
    & \\
 \bottomrule
 \end{longtable}
-The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field. It allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
+The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field, while $R_0$ appears as an artificial scaling factor (note here that a change in $\rho_s$ changes $R_0$ but not the form or size of the dimensional equilibrium magnetic field).
+Eq.~\eqref{eq:solovev} allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
 field reversed configurations and low and high beta tokamak equilbria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
 
 Note that
@@ -884,7 +885,7 @@ File format: json
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
     A      & float & 1 &  - & Solovev parameter in Eq.~\eqref{eq:solovev} \\
     C      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev}  \\
-    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} \\
+    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
     elongation    & float & 1 & - & Elongation $e$ \\
     triangularity & float & 0 & - & Triangularity $\delta$ \\
     inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ \\

@@ -216,8 +216,7 @@ struct Implicit
     ImplicitVelocity<Geometry, IMatrix, Matrix, Container> m_velo;
 };
 
-/*!@brief Multigrid Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
-*
+/*!@brief Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
 */
 template< class Geometry, class IMatrix, class Matrix, class Container>
 struct FeltorSpecialSolver

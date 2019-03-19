@@ -487,12 +487,17 @@ int main( int argc, char* argv[])
 #endif //FELTOR_MPI
     MPI_OUT std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
-    dg::Adaptive< dg::ERKStep<std::array<std::array<DVec,2>,2>> > adaptive(
-        "Bogacki-Shampine-4-2-3", y0);
-    adaptive.stepper().ignore_fsal();//necessary for splitting
-    dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>,
-        feltor::FeltorSpecialSolver< Geometry, IDMatrix, DMatrix, DVec>> dirk(
-            "Trapezoidal-2-2", grid, p, mag);
+    dg::Karniadakis< std::array<std::array<DVec,2>,2 >,
+        feltor::FeltorSpecialSolver<
+            Geometry, IDMatrix, DMatrix, DVec>
+        > karniadakis( grid, p, mag);
+    karniadakis.init( feltor, im, time, y0, p.dt);
+    //dg::Adaptive< dg::ERKStep<std::array<std::array<DVec,2>,2>> > adaptive(
+    //    "Bogacki-Shampine-4-2-3", y0);
+    //adaptive.stepper().ignore_fsal();//necessary for splitting
+    //dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>,
+    //    feltor::FeltorSpecialSolver< Geometry, IDMatrix, DMatrix, DVec>> dirk(
+    //        "Trapezoidal-2-2", grid, p, mag);
     dg::Timer t;
     t.tic();
     unsigned step = 0, failed_counter = 0;
@@ -508,22 +513,23 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    do
-                    {
-                        //Strang splitting
-                        dt = dt_new;
-                        dirk.step( im, time, y0, time, y0, dt/2.);
-                        adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
-                            dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                        if( adaptive.failed())
-                        {
-                            failed_counter++;
-                            MPI_OUT std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
-                            time -= dt; // time has to be reset here
-                            // in case of failure diffusion is applied twice?
-                        }
-                    }while ( adaptive.failed());
-                    dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
+                    karniadakis.step( feltor, im, time, y0);
+                    //do
+                    //{
+                    //    //Strang splitting
+                    //    dt = dt_new;
+                    //    dirk.step( im, time, y0, time, y0, dt/2.);
+                    //    adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
+                    //        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                    //    if( adaptive.failed())
+                    //    {
+                    //        failed_counter++;
+                    //        MPI_OUT std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
+                    //        time -= dt; // time has to be reset here
+                    //        // in case of failure diffusion is applied twice?
+                    //    }
+                    //}while ( adaptive.failed());
+                    //dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -537,7 +543,7 @@ int main( int argc, char* argv[])
             }
             double deltat = time - previous_time;
             feltor.update_quantities();
-            MPI_OUT std::cout << "Time "<<time<<" Timestep "<<dt_new<<"\n";
+            MPI_OUT std::cout << "Time "<<time<<" Current timestep "<<dt_new<<"\n";
             dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));

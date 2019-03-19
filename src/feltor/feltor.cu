@@ -146,13 +146,19 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0, dt_new = p.dt, dt =0;
     unsigned step = 0;
-    dg::Adaptive< dg::ERKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
-        "Bogacki-Shampine-4-2-3", y0);
-    adaptive.stepper().ignore_fsal();//necessary for splitting
-    dg::ImplicitRungeKutta<std::array<std::array<dg::DVec,2>,2>,
+    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
         feltor::FeltorSpecialSolver<
-        dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>> dirk(
-            "Trapezoidal-2-2", grid, p, mag);
+            dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+        > karniadakis( grid, p, mag);
+    karniadakis.init( feltor, im, time, y0, p.dt);
+
+    //dg::Adaptive< dg::ERKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
+    //    "Bogacki-Shampine-4-2-3", y0);
+    //adaptive.stepper().ignore_fsal();//necessary for splitting
+    //dg::ImplicitRungeKutta<std::array<std::array<dg::DVec,2>,2>,
+    //    feltor::FeltorSpecialSolver<
+    //    dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>> dirk(
+    //        "Trapezoidal-2-2", grid, p, mag);
     //since we map pointers we don't need to update those later
 
     std::map<std::string, const dg::DVec* > v4d;
@@ -274,22 +280,23 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    do
-                    {
-                        //Strang splitting
-                        dt = dt_new;
-                        dirk.step( im, time, y0, time, y0, dt/2.);
-                        adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
-                            dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                        if( adaptive.failed())
-                        {
-                            failed_counter++;
-                            std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
-                            time -= dt; // time has to be reset here
-                            // in case of failure diffusion is applied twice?
-                        }
-                    }while ( adaptive.failed());
-                    dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
+                    karniadakis.step( feltor, im, time, y0);
+                    //do
+                    //{
+                    //    //Strang splitting
+                    //    dt = dt_new;
+                    //    dirk.step( im, time, y0, time, y0, dt/2.);
+                    //    adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
+                    //        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+                    //    if( adaptive.failed())
+                    //    {
+                    //        failed_counter++;
+                    //        std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
+                    //        time -= dt; // time has to be reset here
+                    //        // in case of failure diffusion is applied twice?
+                    //    }
+                    //}while ( adaptive.failed());
+                    //dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
