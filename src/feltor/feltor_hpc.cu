@@ -39,7 +39,7 @@ int ncid = -1; //netcdf id (signal handler can close the file)
 //ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
 void sigterm_handler(int signal)
 {
-    int rank, size;
+    int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     std::cout << " pid "<<rank<<" sigterm_handler, got signal " << signal << std::endl;
     std::cout << " pid "<<rank<<" ncid = " << ncid << std::endl;
@@ -363,8 +363,19 @@ int main( int argc, char* argv[])
 #ifdef FELTOR_MPI
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
+    int dims[3],  coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
+    size_t count[4] = {1, grid_out.local().Nz(),
+        grid_out.n()*(grid_out.local().Ny()),
+        grid_out.n()*(grid_out.local().Nx())};
+    size_t start[4] = {0, coords[2]*count[1],
+                          coords[1]*count[2],
+                          coords[0]*count[3]};
 #else //FELTOR_MPI
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    size_t start[4] = {0, 0, 0, 0};
+    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(),
+        grid_out.n()*grid_out.Nx()};
 #endif //FELTOR_MPI
     {   //output 3d variables into file
         dg::geo::BFieldR fieldR(mag);
@@ -392,12 +403,12 @@ int main( int argc, char* argv[])
             #endif //FELTOR_MPI
             err = nc_enddef( ncid);
             dg::blas2::symv( project, *pair.second, transferH);
-            err = nc_put_var_double( ncid, vecID,
-            #ifdef FELTOR_MPI
+            err = nc_put_vara_double( ncid, vecID, &start[1], &count[1],
+                #ifdef FELTOR_MPI
                 transferH.data().data()
-            #else //FELTOR_MPI
+                #else //FELTOR_MPI
                 transferH.data()
-            #endif //FELTOR_MPI
+                #endif //FELTOR_MPI
             );
             err = nc_redef(ncid);
         }
@@ -428,7 +439,7 @@ int main( int argc, char* argv[])
     }
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    double dt_new = p.dt, dt =0;
+    double dt_new = p.dt;//, dt =0;
     MPI_OUT std::cout << "First output ... \n";
     //first, update quantities in feltor
     {
@@ -445,20 +456,6 @@ int main( int argc, char* argv[])
     }
     MPI_OUT q.display(std::cout);
     double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
-#ifdef FELTOR_MPI
-    int dims[3],  coords[3];
-    MPI_Cart_get( comm, 3, dims, periods, coords);
-    size_t count[4] = {1, grid_out.local().Nz(),
-        grid_out.n()*(grid_out.local().Ny()),
-        grid_out.n()*(grid_out.local().Nx())};
-    size_t start[4] = {0, coords[2]*count[1],
-                          coords[1]*count[2],
-                          coords[0]*count[3]};
-#else //FELTOR_MPI
-    size_t start[4] = {0, 0, 0, 0};
-    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(),
-        grid_out.n()*grid_out.Nx()};
-#endif //FELTOR_MPI
     DVec transferD( dg::evaluate(dg::zero, grid_out));
     HVec transferH( dg::evaluate(dg::zero, grid_out));
     IDMatrix project = dg::create::projection( grid_out, grid);
