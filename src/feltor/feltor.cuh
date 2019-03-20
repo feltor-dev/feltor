@@ -16,8 +16,8 @@ namespace feltor
 
 namespace routines{
 struct ComputePerpDrifts{
-    ComputePerpDrifts( double mu, double tau, double beta):
-        m_mu(mu), m_tau(tau), m_beta(beta){}
+    ComputePerpDrifts( double mu, double tau):
+        m_mu(mu), m_tau(tau){}
     DG_DEVICE
     void operator()(
             double N, double d0N, double d1N, double d2N,
@@ -94,16 +94,16 @@ struct ComputePerpDrifts{
         double PA = b_0*( d1P*d2A-d2P*d1A)+
                     b_1*( d2P*d0A-d0P*d2A)+
                     b_2*( d0P*d1A-d1P*d0A);
-        dtN +=  -m_beta*( A*N*KappaU + A*U*KappaN + N*UA + U*NA)
-                -m_beta*N*U*( A*divCurvKappa - KnablaBA);
-        dtU +=  -m_beta/m_mu*( A*KappaP + PA)
-                -m_beta*U*( A*KappaU + UA)
-                -m_beta*m_tau/m_mu/N*(A*KappaN + NA);
+        dtN +=  -( A*N*KappaU + A*U*KappaN + N*UA + U*NA)
+                -N*U*( A*divCurvKappa - KnablaBA);
+        dtU +=  -1./m_mu*( A*KappaP + PA)
+                -1.*U*( A*KappaU + UA)
+                -1.*m_tau/m_mu/N*(A*KappaN + NA);
 
 
     }
     private:
-    double m_mu, m_tau, m_beta;
+    double m_mu, m_tau;
 };
 struct ComputeChi{
     DG_DEVICE
@@ -575,8 +575,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
         m_multi_induction[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    dg::blas1::pointwiseDot(  1., fields[0][1], fields[1][1],
-                             -1., fields[0][0], fields[1][0], 0., m_temp0);
+    dg::blas1::pointwiseDot(  m_p.beta, fields[0][1], fields[1][1],
+                             -m_p.beta, fields[0][0], fields[1][0],
+                              0., m_temp0);
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
 #ifdef DG_MANUFACTURED
@@ -595,8 +596,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
     if(!m_p.symmetric) dg::blas2::symv( m_dz, m_apar, m_dzA);
 
     //----------Compute Velocities-----------------------------//
-    dg::blas1::axpby( 1., fields[1][0], -m_p.beta/m_p.mu[0], m_apar, fields[1][0]);
-    dg::blas1::axpby( 1., fields[1][1], -m_p.beta/m_p.mu[1], m_apar, fields[1][1]);
+    dg::blas1::axpby( 1., fields[1][0], -1./m_p.mu[0], m_apar, fields[1][0]);
+    dg::blas1::axpby( 1., fields[1][1], -1./m_p.mu[1], m_apar, fields[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -618,7 +619,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
         if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dzU[i]);
         if( m_p.beta == 0){
             dg::blas1::subroutine( routines::ComputePerpDrifts(
-                m_p.mu[i], m_p.tau[i], m_p.beta),
+                m_p.mu[i], m_p.tau[i]),
                 //species depdendent
                 fields[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
                 fields[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
@@ -632,7 +633,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
         }
         if( m_p.beta != 0){
             dg::blas1::subroutine( routines::ComputePerpDrifts(
-                m_p.mu[i], m_p.tau[i], m_p.beta),
+                m_p.mu[i], m_p.tau[i]),
                 //species depdendent
                 fields[0][i], m_dxN[i], m_dyN[i], m_dzN[i],
                 fields[1][i], m_dxU[i], m_dyU[i], m_dzU[i],
@@ -710,7 +711,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_energies(
         dg::blas1::subroutine( routines::ComputePsi(),
             m_temp0, m_dxA, m_dyA, m_dzA,
             m_temp0, m_temp1, m_temp2);
-        m_q.Apar = 0.5*m_p.beta*dg::blas1::dot( m_vol3d, m_temp0);
+        m_q.Apar = 0.5*dg::blas1::dot( m_vol3d, m_temp0);
     }
     //= 0.5 mu_i N_i u_E^2
     m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( fields[0][1], m_vol3d, m_UE2);

@@ -143,8 +143,8 @@ struct ImplicitVelocity
         dg::blas1::copy( w, m_fields[1]);
         if( m_p.beta != 0){
             //let us solve for apar
-            dg::blas1::pointwiseDot(  1., m_fields[0][1], m_fields[1][1],
-                                     -1., m_fields[0][0], m_fields[1][0],
+            dg::blas1::pointwiseDot(  m_p.beta, m_fields[0][1], m_fields[1][1],
+                                     -m_p.beta, m_fields[0][0], m_fields[1][0],
                                       0., m_temp);
             m_invert( m_induction, m_apar, m_temp, weights(),
                 inv_weights(), precond());
@@ -154,8 +154,8 @@ struct ImplicitVelocity
             dg::blas1::axpby( 1., m_fields[1][1], -m_p.beta/m_p.mu[1],
                 m_apar, m_fields[1][1]);
         }
-        /* fields[0] := u_e
-           fields[1] := U_i
+        /* fields[1][0] := u_e
+           fields[1][1] := U_i
         */
         for( unsigned i=0; i<2; i++)
         {

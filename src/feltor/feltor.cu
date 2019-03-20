@@ -144,7 +144,7 @@ int main( int argc, char* argv[])
     ////////////////////////create timer and timestepper
     //
     dg::Timer t;
-    double time = 0, dt_new = p.dt, dt =0;
+    double time = 0, dt_new = p.dt;//, dt =0;
     unsigned step = 0;
     dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
         feltor::FeltorSpecialSolver<

@@ -666,8 +666,7 @@ In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyrofrequency $\Omega_0 = eB_0/m_i$.
 The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
 The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with 
-$\hat A_\parallel = \beta \rho_s B_0$ (this particular choice for $\hat
-A_\parallel$ allows to easily recover the electrostatic limit $\beta = 0$).
+$\hat A_\parallel = \rho_s B_0$.
 We introduce the dimensionless parameters
 \begin{align}
   \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and } 
@@ -702,17 +701,16 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         - \left(2\tau + {\mu}U^2\right) \mathcal K_{\nabla\times\bhat} (U)
         -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
-        + \nu_\perp\Delta_\perp W
-        - \nu_\perp\frac{\beta}{\mu}\Delta_\perp A_\parallel
+        + \nu_\perp\Delta_\perp U
         + \nu_\parallel \Delta_\parallel U + S_U,
         \label{eq:EgyrofluidU} \\
-        W&:= \left( U + \frac{\beta}{\mu}A_\parallel\right)
+        W&:= \left( U + \frac{A_\parallel}{\mu}\right)
     \end{align}
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
-$\bar\nabla_\parallel f = \nabla_\parallel f + \beta A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{\beta}{B}[ f, A_\parallel]_\perp$
-and $\vec \nabla \cdot \tilde{ \vec b}_\perp = \beta A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \beta \mathcal K_{\nabla B}(A_\parallel) $
+$\bar\nabla_\parallel f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
+and $\vec \nabla \cdot \tilde{ \vec b}_\perp = A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \mathcal K_{\nabla B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -720,7 +718,7 @@ and
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
     \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\nabla_\perp\phi)^2}{B^2} \\
     \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
-    A_\parallel &= N_iW_i-n_e w_e
+    A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
   \end{align}
 \end{subequations}
 Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite. Also note the peculiar notation of the perpendicular viscosity on $U$.
@@ -728,7 +726,7 @@ We indicate that $\Delta_\perp W$ is treated implicitly while the correction $\D
 The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$ (with $z_e=-1$ and $z_i=+1$)
 \begin{align}
   \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
-  +\frac{\beta}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
+  +\frac{1}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
    +  \frac{1}{2} \mu_i N_i u_E^2  \right .\nonumber\\
    &\left. +\frac{1}{2} z_e\mu_e  n_e u_e^2
   +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
@@ -993,7 +991,7 @@ induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
  \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
  B} + u_e \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
  \nabla\psi_p \nonumber\\
- =& \beta n_eu_e\left( A_\parallel \mathcal
+ =& n_eu_e\left( A_\parallel \mathcal
  K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
   &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
    n_e\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
