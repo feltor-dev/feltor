@@ -1,5 +1,5 @@
 #pragma once
-//See also exblas/mylibm.hpp for more preprocessor configurations
+//See also exblas/config.h for more preprocessor configurations
 
 //%%%%%%%%%%%%define RESTRICT keyword for host compiler%%%%%%%%%%%%%%%%%%%%%%%%%
 #if defined(__INTEL_COMPILER)
@@ -59,11 +59,14 @@
 
 #include "mpi-ext.h"
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#pragma message( "Using CUDA-aware MPI support!")
 //Has cuda aware MPI support. Everything fine
 #elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#warning "CUDA aware MPI installation required!"
+#warning "NO CUDA aware MPI installation! Falling back to regular MPI!"
+#define _DG_CUDA_UNAWARE_MPI
 #else
-#pragma message( "Cannot determine CUDA-aware MPI support!")
+#pragma message( "Cannot determine CUDA-aware MPI support! Falling back to regular MPI!")
+#define _DG_CUDA_UNAWARE_MPI
 #endif //MPIX_CUDA
 
 #endif //THRUST = CUDA

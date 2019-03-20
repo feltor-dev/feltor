@@ -9,6 +9,7 @@
 #include "blas1_dispatch_shared.h"
 #include "mpi_communicator.h"
 #include "memory.h"
+#include "config.h"
 
 //TODO: should we catch the cases where outer_size \in {1,2,3} in NearestNeighborComm?
 namespace dg
@@ -262,7 +263,7 @@ struct NearestNeighborComm
     {
         unsigned size = buffer_size();
         //init pointers on host
-        const_pointer_type host_ptr[6];
+        const_pointer_type host_ptr[6]; //the ptr lives on the host but can point to device memory
         if(trivial_)
         {
             host_ptr[0] = thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]);
@@ -281,12 +282,13 @@ struct NearestNeighborComm
             host_ptr[4] = thrust::raw_pointer_cast(&internal_buffer_.data()[4*size]);
             host_ptr[5] = thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]);
         }
-        //copy to device
+        //copy pointers to device
         thrust::copy( host_ptr, host_ptr+6, buffer.begin());
+        //fill internal_buffer if !trivial
         do_global_gather_init( get_execution_policy<Vector>(), input, rqst);
         sendrecv( host_ptr[1], host_ptr[4],
-                  thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]),
-                  thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]),
+                  thrust::raw_pointer_cast(&internal_buffer_.data()[0*size]), //host_ptr is const!
+                  thrust::raw_pointer_cast(&internal_buffer_.data()[5*size]), //host_ptr is const!
                   rqst);
     }
     /**
@@ -300,6 +302,15 @@ struct NearestNeighborComm
     void global_gather_wait(const_pointer_type input, const buffer_type& buffer, MPI_Request rqst[4])const
     {
         MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
+#ifdef _DG_CUDA_UNAWARE_MPI
+        unsigned size = buffer_size();
+        cudaMemcpy( thrust::raw_pointer_cast(&internal_host_buffer_.data()[0*size],
+                    thrust::raw_pointer_cast(&internal_buffer_.data()[0*size],
+                    buffer_size*sizeof(get_value_type<V>), cudaMemcpyHostToDevice);
+        cudaMemcpy( thrust::raw_pointer_cast(&internal_host_buffer_.data()[5*size],
+                    thrust::raw_pointer_cast(&internal_buffer_.data()[5*size],
+                    buffer_size*sizeof(get_value_type<V>), cudaMemcpyHostToDevice);
+#endif
     }
     private:
     void do_global_gather_init( OmpTag, const_pointer_type, MPI_Request rqst[4])const;
@@ -314,6 +325,9 @@ struct NearestNeighborComm
     unsigned outer_size_ = 1; //size of vector in units of buffer_size
     Index gather_map_middle_;
     dg::Buffer<Vector> internal_buffer_;
+#ifdef _DG_CUDA_UNAWARE_MPI
+    dg::Buffer<thrust::host_vector<get_value_type<Vector>> internal_host_buffer_; //a copy of the data on the host
+#endif
 
     void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
     int m_source[2], m_dest[2];
@@ -386,6 +400,9 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
     }
     gather_map_middle_ = mid_gather; //transfer to device
     internal_buffer_.data().resize( 6*buffer_size() );
+#ifdef _DG_CUDA_UNAWARE_MPI
+    internal_host_buffer.data().resize( 6*buffer_size() );
+#endif
     }
 }
 
@@ -446,17 +463,26 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_t
 template<class I, class B, class V>
 void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_pointer_type sb2_ptr, pointer_type rb1_ptr, pointer_type rb2_ptr, MPI_Request rqst[4]) const
 {
-    MPI_Isend( sb1_ptr, buffer_size(),
+    unsigned size = buffer_size();
+#ifdef _DG_CUDA_UNAWARE_MPI
+    cudaMemcpy( thrust::raw_pointer_cast(&internal_host_buffer_.data()[1*size]), sb1_ptr, buffer_size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost);
+    cudaMemcpy( thrust::raw_pointer_cast(&internal_host_buffer_.data()[4*size]), sb2_ptr, buffer_size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost);
+    sb1_ptr = thrust::raw_pointer_cast(&internal_host_buffer_.data()[1*size]);
+    sb2_ptr = thrust::raw_pointer_cast(&internal_host_buffer_.data()[4*size]);
+    rb1_ptr = thrust::raw_pointer_cast(&internal_host_buffer_.data()[0*size]);
+    rb2_ptr = thrust::raw_pointer_cast(&internal_host_buffer_.data()[5*size]);
+#endif
+    MPI_Isend( sb1_ptr, size,
                getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[0], 3, comm_, &rqst[0]); //destination
-    MPI_Irecv( rb2_ptr, buffer_size(),
+    MPI_Irecv( rb2_ptr, size,
                getMPIDataType<get_value_type<V>>(), //receiver
                m_source[0], 3, comm_, &rqst[1]); //source
 
-    MPI_Isend( sb2_ptr, buffer_size(),
+    MPI_Isend( sb2_ptr, size,
                getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[1], 9, comm_, &rqst[2]);  //destination
-    MPI_Irecv( rb1_ptr, buffer_size(),
+    MPI_Irecv( rb1_ptr, size,
                getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, comm_, &rqst[3]); //source
 }
