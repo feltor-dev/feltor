@@ -119,16 +119,32 @@ struct ImplicitVelocity
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
         m_lapM_perpU.set_chi( hh);
-        m_induction.construct(  g,
-            p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
-        m_induction.elliptic().set_chi( hh);
-        m_invert.construct( m_temp, g.size(), p.eps_pol,1 );
+        //m_induction.construct(  g,
+        //    p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
+        //m_induction.elliptic().set_chi( hh);
+        //m_invert.construct( m_temp, g.size(), p.eps_pol,1 );
+        //Multigrid setup
+        m_multi_induction.resize(p.stages);
+        m_multigrid.construct( g, p.stages);
+        for( unsigned u=0; u<p.stages; u++)
+        {
+            dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
+                bhat, m_multigrid.grid(u));
+            m_multi_induction[u].construct(  m_multigrid.grid(u),
+                p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
+            m_multi_induction[u].elliptic().set_chi( hh);
+        }
+        m_multi_chi = m_multigrid.project( m_temp);
+        m_old_apar = dg::Extrapolation<Container>( 1, dg::evaluate( dg::zero, g));
     }
     void set_density( const std::array<Container, 2>& dens){
         dg::blas1::transform( dens, m_fields[0], dg::PLUS<double>(+1));
         dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_fields[0][1],
                           -m_p.beta/m_p.mu[0], m_fields[0][0], m_temp);
-        m_induction.set_chi( m_temp);
+        //m_induction.set_chi( m_temp);
+        m_multigrid.project( m_temp, m_multi_chi);
+        for( unsigned u=0; u<m_p.stages; u++)
+            m_multi_induction[u].set_chi( m_multi_chi[u]);
     }
 
     void operator()( double t, const std::array<Container,2>& w,
@@ -146,8 +162,15 @@ struct ImplicitVelocity
             dg::blas1::pointwiseDot(  m_p.beta, m_fields[0][1], m_fields[1][1],
                                      -m_p.beta, m_fields[0][0], m_fields[1][0],
                                       0., m_temp);
-            m_invert( m_induction, m_apar, m_temp, weights(),
-                inv_weights(), precond());
+            //m_invert( m_induction, m_apar, m_temp, weights(),
+            //    inv_weights(), precond());
+            m_old_apar.extrapolate( m_apar);
+            std::vector<unsigned> number = m_multigrid.direct_solve(
+                m_multi_induction, m_apar, m_temp, m_p.eps_pol);
+            m_old_apar.update( m_apar);
+            if(  number[0] == m_multigrid.max_iter())
+                throw dg::Fail( m_p.eps_pol);
+
             //compute u_e and U_i from w_e, W_i and apar
             dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],
                 m_apar, m_fields[1][0]);
@@ -190,8 +213,12 @@ struct ImplicitVelocity
   private:
     feltor::Parameters m_p;
     Container m_temp, m_apar;
-    dg::Invert<Container> m_invert;
-    dg::Helmholtz3d<Geometry, Matrix, Container> m_induction;
+    //dg::Invert<Container> m_invert;
+    //dg::Helmholtz3d<Geometry, Matrix, Container> m_induction;
+    dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
+    std::vector<dg::Helmholtz3d<Geometry, Matrix, Container>> m_multi_induction;
+    dg::Extrapolation<Container> m_old_apar;
+    std::vector<Container> m_multi_chi;
     std::array<std::array<Container,2>,2> m_fields;
     dg::Elliptic3d<Geometry, Matrix, Container> m_lapM_perpU;
 };
