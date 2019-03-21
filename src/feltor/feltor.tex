@@ -603,7 +603,7 @@ This will result in exponential adaption of the core and wall
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 For ions we use
 \begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2\right) S_{n_e}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \Delta_\perp\right) S_{n_e}
   \label{eq:ion_source}
 \end{align}
 Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
@@ -678,6 +678,7 @@ where $a\in\{e,i\}$ is the species label and $z$ is the charge number. Finally, 
   \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
     \label{eq:resistivity}
 \end{align}
+with $\ln \lambda \approx 10$.
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{subequations}
     \begin{align}
@@ -753,7 +754,7 @@ u_e(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/
 U_i(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_e(R,Z,\varphi,t) \\
 \phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
 \psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \Gamma \phi \\
-A_\parallel( R,Z,\varphi,t) &:= \sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
+A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
 \end{align*}
 We choose circular flux surfaces of the form
 \begin{align*}
@@ -845,7 +846,7 @@ curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true
 symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
-\qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\
+\qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$ and $A_\parallel$\\
 \qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$\\
     boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon^{R-}, \varepsilon^{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
     boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon^{Z-}, \varepsilon^{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
@@ -881,7 +882,7 @@ File format: json
 \begin{longtable}{llll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-    A      & float & 1 &  - & Solovev parameter in Eq.~\eqref{eq:solovev} \\
+    A      & float & 0 &  - & Solovev parameter in Eq.~\eqref{eq:solovev} \\
     C      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev}  \\
     R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
     elongation    & float & 1 & - & Elongation $e$ \\

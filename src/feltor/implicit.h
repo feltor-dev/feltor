@@ -148,10 +148,10 @@ struct ImplicitVelocity
                                       0., m_temp);
             m_invert( m_induction, m_apar, m_temp, weights(),
                 inv_weights(), precond());
-            //compute u_e and U_i
-            dg::blas1::axpby( 1., m_fields[1][0], -m_p.beta/m_p.mu[0],
+            //compute u_e and U_i from w_e, W_i and apar
+            dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],
                 m_apar, m_fields[1][0]);
-            dg::blas1::axpby( 1., m_fields[1][1], -m_p.beta/m_p.mu[1],
+            dg::blas1::axpby( 1., m_fields[1][1], -1./m_p.mu[1],
                 m_apar, m_fields[1][1]);
         }
         /* fields[1][0] := u_e
