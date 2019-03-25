@@ -382,7 +382,7 @@ field component vanishes in the corners of the domain.
 
 We define an approximation to the step function with width $\alpha$
 \begin{align}
-\Theta(\psi) := \begin{cases}
+\Theta_\alpha(\psi) := \begin{cases}
     1 & \text{ for } \psi < - \alpha  \\
     \frac{1}{32 \alpha^7}  \left(16 \alpha^3+29 \alpha^2 \psi+20 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^4
     &\text{ for } -\alpha<\psi<+\alpha \\
@@ -394,7 +394,7 @@ We define an approximation to the step function with width $\alpha$
 if $H(\psi)$ is the Heaviside step function.
 An integral of this function is
 \begin{align}
-\theta(\psi) := \begin{cases}
+\theta_\alpha(\psi) := \begin{cases}
 \psi &\text{ for } \psi < -\alpha \\
     - \frac{1}{256 \alpha^7} \left(35 \alpha^3+47 \alpha^2 \psi+25 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^5
      &\text{ for } -\alpha<\psi<+\alpha \\
@@ -404,10 +404,10 @@ An integral of this function is
 \label{eq:modified_psi}
 \end{align}
 
-We now use $\theta(\psi-\psi_0)+\psi_0$ instead of $\psi$ for the computation of the
+We now use $\theta_\alpha(\psi-\psi_0)+\psi_0$ instead of $\psi$ for the computation of the
 magnetic field, which introduces a shear layer around $\psi_0$ where the
 fieldlines are straightened to match $\ehat_\varphi$.
-Note that $\Theta(0) = 0.5$ and $\theta(0) = 35\alpha/256$.
+Note that $\Theta_\alpha(0) = 0.5$ and $\theta_\alpha(0) = 35\alpha/256$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -546,11 +546,13 @@ Note that we should take care to intitialize a smooth profile with ideally well-
 Let us define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{\text{prof}}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta(\psi_p(R, Z)+\alpha)}{\psi_p(R_0,0)} H(Z-Z_X)
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{4\alpha}(\psi_p(R, Z)+4\alpha) H(Z-Z_X)
 \end{align}
 %NOTE: this profile is slightly below n_0 outside the LCFS! (not sure whether this does anything for nabla_parallel)
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
-X-point and avoids a profile in the private flux region.
+X-point and avoids a profile in the private flux region. The factor $4\alpha$ provides a smooth transition
+zone that avoids numerical oscillations.
+
 
 We have two possibilities to initialize the ion density
 \begin{align} \label{eq:initphi}
@@ -577,14 +579,14 @@ We either follow fieldlines around the torus several times (``blob'') or only on
 We can initialize the R-Z plane with a turbulent bath with a certain amplitude $A$.
 Again, we transform this to all poloidal planes along the magnetic field lines and multiply the bath with
 \begin{align} \label{eq:initial_turbulent}
-\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta(-\psi_p)H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{4\alpha}(\psi_p(R, Z)+4\alpha) H(Z-Z_X)
 \end{align}
 \subsubsection{Zonal flows}
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \begin{align} \label{eq:initial_zonal_flow}
     \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
-\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta(-\psi_p)H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{4\alpha}(\psi_p(R, Z)+4\alpha) H(Z-Z_X)
 \end{align}
 
 \subsection{Sinks and sources} \label{sec:sources}
@@ -773,16 +775,16 @@ Unfortunately, we were unable to find a closed solution for the energy integrals
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
-\begin{longtable}{p{3cm}l>{\RaggedRight}p{7cm}}
+\begin{longtable}{p{3cm}l>{\RaggedRight}p{8cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
     coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
 Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
 Curvature terms & direct dG & regular dG approximation of derivatives \\
-time & Strang Splitting & $2$nd order\\
-\qquad explicit & Bogacki-Shampine embedded & $3$rd order explicit\\
-\qquad implicit & Trapezoidal & perp. Diffusion and Resistive term. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
+time & Multistep "Karniadakis" & \\
+\qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
+\qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
 \bottomrule
 \end{longtable}
 \section{Usage}
@@ -817,7 +819,7 @@ Input file format: json
 n      & integer & 3 & - &Number of Gaussian nodes in R and Z \\
 Nx     & integer &52& - &Number of grid points in R \\
 Ny     & integer &52& - &Number of grid points in Z \\
-Nz     & integer &16& - &Number of grid points in $\varphi$ \\
+Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt since parallel velocity dominates timestep) \\
 dt     & integer &1e-2& - &initial time stepsize in units of $c_s/\rho_s$ \\
 compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
     (has to divde Nx evenly), and n*Ny/c[1] points in y,
@@ -825,9 +827,9 @@ compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing poin
 inner\_loop & integer & 2  & 1 & Number of time steps between each energy output \\
 itstp       & integer & 2  & - & Number of energy outputs for each fields outputs \\
 maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is maxout$\cdot$itstp$\cdot$inner\_loop) \\
-eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper \\
+eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper (if too low, you'll see oscillations in ue) \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
-eps\_pol    & float & 1e-5  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. \\
+eps\_pol    & float & 1e-5  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. (should not be too far from eps\_time for $\beta\neq  0$ ) \\
 jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
 eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
@@ -914,7 +916,7 @@ y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi
 z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
 Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
-Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
+Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
 %Damping          & Dataset & 3 (z,y,x) & Damping profile $\Theta(\rho(R,Z) - \rho_{d} )$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
