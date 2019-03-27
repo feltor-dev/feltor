@@ -361,7 +361,7 @@ A numerically tractable approximation to the $\delta$-function reads
 \delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
 \exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
 \end{align}
-where $\epsilon$ is a small, free parameter. In the dG framework the integrals
+where $\epsilon$ is a small, free parameter. In the DG framework the integrals
 in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
 
 If we write $B_p:=R_0|\nabla\psi_p|/R$, we can define the safety factor (in two dimensions) as
@@ -546,11 +546,11 @@ Note that we should take care to intitialize a smooth profile with ideally well-
 Let us define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{\text{prof}}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{4\alpha}(\psi_p(R, Z)+4\alpha) H(Z-Z_X)
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
 \end{align}
 %NOTE: this profile is slightly below n_0 outside the LCFS! (not sure whether this does anything for nabla_parallel)
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
-X-point and avoids a profile in the private flux region. The factor $4\alpha$ provides a smooth transition
+X-point and avoids a profile in the private flux region. The factor $\alpha$ provides a smooth transition
 zone that avoids numerical oscillations.
 
 
@@ -579,14 +579,14 @@ We either follow fieldlines around the torus several times (``blob'') or only on
 We can initialize the R-Z plane with a turbulent bath with a certain amplitude $A$.
 Again, we transform this to all poloidal planes along the magnetic field lines and multiply the bath with
 \begin{align} \label{eq:initial_turbulent}
-\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{4\alpha}(\psi_p(R, Z)+4\alpha) H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
 \end{align}
 \subsubsection{Zonal flows}
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \begin{align} \label{eq:initial_zonal_flow}
     \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
-\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{4\alpha}(\psi_p(R, Z)+4\alpha) H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
 \end{align}
 
 \subsection{Sinks and sources} \label{sec:sources}
@@ -767,7 +767,7 @@ with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times
 We then symbolically compute (with the help of Mathematica) source terms that we insert to the right hand side of
 the corresponding equation in code (\texttt{manufactured.h}) and simulate from $t=0...10^{-3}$.
 By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
-the convergence of the dG discretized terms from our parallel derivative
+the convergence of the DG discretized terms from our parallel derivative
 we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
 
 Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
@@ -781,7 +781,7 @@ discontinuous Galerkin on structured grid
     coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
 Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
-Curvature terms & direct dG & regular dG approximation of derivatives \\
+Curvature terms & direct DG & regular DG approximation of derivatives \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
 \qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
