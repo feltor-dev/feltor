@@ -150,7 +150,8 @@ int main( int argc, char* argv[])
     const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
     const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
     const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
-    std::cout << "psip( 1, 0) "<<c.psip()(gp.R_0, 0)<<"\n";
+    const double psip0 = c.psip()(gp.R_0, 0);
+    std::cout << "psip( 1, 0) "<<psip0<<"\n";
     std::cout << "TEST ACCURACY OF PSI (values must be close to 0!)\n";
     if( gp.hasXpoint())
         std::cout << "    Equilibrium with X-point!\n";
@@ -174,7 +175,6 @@ int main( int argc, char* argv[])
     std::cout << "psipZZ( 1-e,0)         "<<c.psipZZ()(gp.R_0-gp.a,0.)+N2*c.psipR()(gp.R_0-gp.a,0)<<"\n";
     std::cout << "psipRR( 1-de,ke)       "<<c.psipRR()(R_H,Z_H)+N3*c.psipZ()(R_H,Z_H)<<"\n";
 
-    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     dg::HVec hvisual;
     //allocate mem for visual
@@ -226,16 +226,20 @@ int main( int argc, char* argv[])
             M_PI, p.sigma, p.sigma, p.sigma, p.amp)}
     };
     //Compute flux average
+    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( c.psip(), grid2d);
-    double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
+    dg::HVec xpoint_damping = dg::evaluate( dg::one, grid2d);
+    if( gp.hasXpoint() )
+        xpoint_damping = dg::evaluate( dg::geo::ZCutter(Z_X), grid2d);
+    double psipmin = psip0;//(float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
+    double psipmax = 0;//(float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::maximum<double>()  );
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
-    psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
-    dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    dg::geo::SafetyFactor     qprof(grid2d, c);
-    dg::HVec sf         = dg::evaluate( qprof,    grid1d);
+    //psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
+    dg::Grid1d grid1d(psipmin + 0.05 , psipmax, npsi ,Npsi,dg::NEU);
+    dg::geo::SafetyFactor     qprof(grid2d, c, xpoint_damping);
+    dg::HVec sf         = dg::evaluate( qprof,      grid1d);
     dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
-
-
+    dg::blas1::axpby( -1./psip0, abs, +1., 1., abs); //transform psi to rho
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -252,7 +256,7 @@ int main( int argc, char* argv[])
     //write 1d vectors
     int avgID[2];
     err = nc_def_var( ncid, "q-profile", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[0]);
-    err = nc_def_var( ncid, "psip1d", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[1]);
+    err = nc_def_var( ncid, "rho", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[1]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, avgID[0], sf.data());
     err = nc_put_var_double( ncid, avgID[1], abs.data());

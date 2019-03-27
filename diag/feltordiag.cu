@@ -12,8 +12,8 @@
 #include "feltor/parameters.h"
 
 struct RadialElectricFlux{
-    RadialElectricFlux( double beta, double tau, double mu):
-        m_beta(beta), m_tau(tau), m_mu(mu){
+    RadialElectricFlux( double tau, double mu):
+        m_tau(tau), m_mu(mu){
     }
 
     DG_DEVICE double operator()( double ne, double ue, double A,
@@ -32,17 +32,16 @@ struct RadialElectricFlux{
         double PS = b_0*( d1P*d2S-d2P*d1S)+
                     b_1*( d2P*d0S-d0P*d2S)+
                     b_2*( d0P*d1S-d1P*d0S);
-        double sqrtPsi = sqrt( d0S*d0S + d1S*d1S );
         double JPsi =
-            ne*ue*m_beta * (A*curvKappaS + SA )
+            ne*ue* (A*curvKappaS + SA )
             + ne * PS
             + ne * (m_tau + m_mu*ue*ue)*curvKappaS
             + ne * m_tau*curvNablaS;
-        return JPsi  / sqrtPsi;
+        return JPsi;
 
     }
     private:
-    double m_beta, m_tau, m_mu;
+    double m_tau, m_mu;
 };
 
 int main( int argc, char* argv[])
@@ -83,10 +82,11 @@ int main( int argc, char* argv[])
     gp.display();
     //-------------------Construct grids-------------------------------------//
 
-    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    const double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    const double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    const double Rmax=gp.R_0+p.boxscaleRp*gp.a;
+    const double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    const double Z_X = -1.1*gp.elongation*gp.a;
 
     dg::CylindricalGrid3d g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
@@ -94,11 +94,13 @@ int main( int argc, char* argv[])
         p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    const double psip0 = mag.psip()(gp.R_0, 0);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*psip0, p.alpha);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
-    double psipmin = (double)thrust::reduce(
-        psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>() );
-    double psipmax = (double)thrust::reduce(
-        psipog2d.begin(), psipog2d.end(), psipmin,thrust::maximum<double>() );
+    //double psipmin = (double)thrust::reduce(
+    //    psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>() );
+    double psipmin = dg::blas1::reduce( psipog2d, 0,thrust::minimum<double>() );
+    double psipmax = dg::blas1::reduce( psipog2d, -1000,thrust::maximum<double>() );
 
     unsigned Npsi = 50;//set number of psivalues
     dg::Grid1d g1d_out(psipmin, psipmax, 3, Npsi, dg::NEU);
@@ -178,8 +180,8 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( binv, vol, vol); //1/vol/B
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( vol, bhat[i], bhat[i]); //b_i/vol/B
-    dg::DMatrix dxA = dg::create::dx( g3d_out, p.bcxA);
-    dg::DMatrix dyA = dg::create::dy( g3d_out, p.bcyA);
+    dg::DMatrix dxA = dg::create::dx( g3d_out, p.bcxU);
+    dg::DMatrix dyA = dg::create::dy( g3d_out, p.bcyU);
     dg::DMatrix dxP = dg::create::dx( g3d_out, p.bcxP);
     dg::DMatrix dyP = dg::create::dy( g3d_out, p.bcyP);
     dg::DMatrix dxN = dg::create::dx( g3d_out, p.bcxN);
@@ -218,8 +220,8 @@ int main( int argc, char* argv[])
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
-    int dim_ids1d[2] = {dim_ids[0],dim_ids[0]};
-    err = file::define_dimension( ncid_out, "psip1d", &dim_ids1d[1], g1d_out);
+    int dim_ids1d[2] = {dim_ids[0],dim_ids[1]}; //time , psi
+    err = file::define_dimension( ncid_out, "psi", &dim_ids1d[1], g1d_out);
 
     std::map<std::string, int> id0d, id1d, id2d;
     for( auto pair : v3d)
@@ -249,14 +251,21 @@ int main( int argc, char* argv[])
     size_t count3d[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3d[4] = {0, 0, 0, 0};
 
-    //put safety factor into file
+    //put safety factor and rho into file
     std::cout << "Compute safety factor   "<< "\n";
-    dg::geo::SafetyFactor qprofile(g2d_out, mag);
+    dg::HVec xpoint_damping = dg::evaluate( dg::one, g2d_out);
+    if( gp.hasXpoint())
+        xpoint_damping = dg::evaluate( dg::geo::ZCutter(Z_X), g2d_out);
+    dg::geo::SafetyFactor qprofile(g2d_out, mag, xpoint_damping);
     dg::HVec sf = dg::evaluate(qprofile, g1d_out);
-    int qID;
+    int qID, rhoID;
     err = nc_def_var( ncid_out, "q", NC_DOUBLE, 1, &dim_ids1d[1], &qID);
+    err = nc_def_var( ncid_out, "rho", NC_DOUBLE, 1, &dim_ids1d[1], &rhoID);
     err = nc_enddef(ncid_out);
     err = nc_put_vara_double( ncid_out, qID, &start1d[1], &count1d[1], sf.data());
+    dg::HVec rho = dg::evaluate( dg::cooX1d, g1d_out);//evaluate psi
+    dg::blas1::axpby( -1./psip0, rho, +1., 1., rho); //transform psi to rho
+    err = nc_put_vara_double( ncid_out, rhoID, &start1d[1], &count1d[1], rho.data());
     err = nc_close(ncid_out);
 
     /////////////////////////////////////////////////////////////////////////
@@ -270,6 +279,7 @@ int main( int argc, char* argv[])
     err = nc_close( ncid); //close 3d file
 
     dg::Average<dg::DVec> toroidal_average( g3d_out, dg::coo3d::z);
+    dg::geo::FluxSurfaceAverage<dg::DVec> fsa(g2d_out, mag, t2d, dg::DVec(xpoint_damping) );
 
     for( unsigned i=0; i<steps; i++)//timestepping
     {
@@ -303,7 +313,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( dyP, v3d["potential"], dy_P);
         dg::blas2::symv( dz , v3d["potential"], dz_P);
         dg::blas1::evaluate( v3d["fluxe"], dg::equals(),
-            RadialElectricFlux( p.beta, p.tau[0], p.mu[0]),
+            RadialElectricFlux( p.tau[0], p.mu[0]),
             v3d["electrons"], v3d["Ue"], v3d["induction"],
             dx_A, dy_A, dz_A, dx_P, dy_P, dz_P, psipR, psipZ, psipP,
             bhat[0], bhat[1], bhat[2],
@@ -345,6 +355,7 @@ int main( int argc, char* argv[])
         v0d["correlationNPhi"] = dg::blas2::dot( t3d, w3d, v3d["electrons"])
             /norm1/norm2;  //<e^phi, N>/||e^phi||/||N||
 
+
         //now write out 2d and 1d quantities
         err = nc_open(argv[2], NC_WRITE, &ncid_out);
         for( auto pair : v3d)// {name, DVec}
@@ -355,9 +366,11 @@ int main( int argc, char* argv[])
                 start2d, count2d, transfer2d.data());
 
             //computa fsa of quantities
-            dg::geo::FluxSurfaceAverage<dg::DVec> fsa(g2d_out, mag, t2d );
-            t1d = dg::evaluate(fsa, g1d_out);
-            dg::assign( t1d, transfer1d);
+            if(pair.first == "fluxe")
+                fsa.set_container(t2d, false);
+            else
+                fsa.set_container(t2d, true);
+            transfer1d = dg::evaluate(fsa, g1d_out);
             err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsa"),
                 start1d, count1d, transfer1d.data());
 
@@ -367,6 +380,7 @@ int main( int argc, char* argv[])
                 pair.second.begin() + (kmp+1)*g2d_out.size() );
 
             //compute delta f on midplane : df = f_mp - <f>
+            dg::assign( transfer1d, t1d);
             dg::blas2::gemv(fsaonrzmatrix, t1d, t2d); //fsa on RZ grid
             dg::blas1::axpby( 1.0, t2d_mp, -1.0, t2d);
             dg::assign( t2d, transfer2d);

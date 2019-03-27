@@ -342,34 +342,6 @@ K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 \label{}
 \end{align}
 
-\subsection{Flux surface average and Safety factor}
-We define the toroidal average of a function $f(R,Z,\varphi)$ as
-\begin{align} \label{eq:phi_average}
-\langle f\rangle_\varphi := \frac{1}{2\pi}\oint f\d \varphi
-\end{align}
-The flux surface average
-of a function $f(R,Z,\varphi)$ is given by the formula
-\begin{align}\label{eq:fsa}
-\langle f \rangle_{\psi_{p0}} :=
-\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} =
-\frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| \dV}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|\dV}
-\end{align}
-with $\dV := \d R\d Z\d \varphi$ (we define the average in computational space and omit one $R$).
-A numerically tractable approximation to the $\delta$-function reads
-\begin{align}\label{eq:delta}
-\delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
-\exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
-\end{align}
-where $\epsilon$ is a small, free parameter. In the DG framework the integrals
-in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
-
-If we write $B_p:=R_0|\nabla\psi_p|/R$, we can define the safety factor (in two dimensions) as
-\begin{align}
-q:=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
-= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) \d R\d Z
-\end{align}
-
 \subsection{ Modified $\psi_p$}
 Our computational domain is a box and in particular not aligned with the
 magnetic flux surfaces. This means that particularly in the corners of
@@ -957,6 +929,56 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 \texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
+\subsection{Flux surface average and Safety factor}
+We define the toroidal average of a function $f(R,Z,\varphi)$ as
+\begin{align} \label{eq:phi_average}
+\langle f\rangle_\varphi := \frac{1}{2\pi}\oint f\d \varphi
+\end{align}
+The flux surface average
+of a function $f(R,Z,\varphi)$ is given by the formula
+\begin{align}\label{eq:fsa}
+\langle f \rangle_{\psi_{p0}} :=
+\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} =
+\frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| H(R,Z)\dV}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|H(R,Z)\dV}
+\end{align}
+with $\dV := \d R\d Z\d \varphi$ (we define the average in computational space and omit one $R$)
+and we use the Heaviside function $H(R,Z) = H(Z-Z_X)$ to cut away contributions from below the X-point
+in our domain.
+
+A numerically tractable approximation to the $\delta$-function reads
+\begin{align}\label{eq:delta}
+\delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
+\exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
+\end{align}
+where $\epsilon$ is a small, free parameter. In the DG framework the integrals
+in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
+
+If we write $B_p:=R_0|\nabla\psi_p|/R$, we can define the safety factor (in two dimensions) as
+\begin{align}
+q:=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
+\end{align}
+\subsection{ Radial flux}
+Let us define
+
+\begin{align}
+ \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ B} + u_e \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ \nabla\psi_p \nonumber\\
+ =& n_eu_e\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
+  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
+   n_e\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
+   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
+   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
+   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
+\end{align}
+
+Note that the toroidal average of $f_e$ is ill-defined since $\nabla\psi$ vanishes at the X-point.
+Instead we output the average of $\vec j_e\cdot\nabla\psi_p$.
+
+\subsection{Program and files}
 Compilation\\
 \texttt{make feltordiag} \\
 Usage \\
@@ -973,12 +995,14 @@ inputfile  &     text attribute & - & verbose input file as a string (valid JSON
 geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-psip1d           & Coord. Var. & 1 (psip1d) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
+psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
+q                & Dataset & 1 (psi) & The safety factor \\
+$\rho$           & Dataset & 1 (psi) & The flux label $\rho:= (\psi_{p,0} - \psi_p)/\psi_{p,0}$ \\
 X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
 X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
-X\_fsa           & Dataset & 2 (time, psip1d) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
+X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
 aligned          & Dataset & 1 (time) & $\int \dV (\nabla_\parallel n_e)^2 /n_e$ \\
 perp\_aligned    & Dataset & 1 (time) & $\int \dV (\vec\nabla_\perp n_e)^2 /n_e$ \\
 correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^\phi||||n_e||$\\
@@ -988,22 +1012,7 @@ total\_flux      & Dataset & 1 (time) & $\int \dV f_e$\\
 X $\in$ \{ electrons, ions, Ue, Ui, potential,
 induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
     $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$, $-\Delta_\perp \phi$,
-    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\} with
-
-\begin{align}
- \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + u_e \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- \nabla\psi_p \nonumber\\
- =& n_eu_e\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
-  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
-   n_e\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
-   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
-   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
-   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
-\end{align}
-
-
+    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\}.
 
 
 
