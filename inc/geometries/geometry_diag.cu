@@ -237,9 +237,11 @@ int main( int argc, char* argv[])
     //psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin + 0.05 , psipmax, npsi ,Npsi,dg::NEU);
     dg::geo::SafetyFactor     qprof(grid2d, c, xpoint_damping);
+    dg::geo::FluxSurfaceAverage<dg::HVec>  fsa( grid2d, c, psipog2d, xpoint_damping);
+    dg::HVec psi_fsa    = dg::evaluate( fsa,        grid1d);
     dg::HVec sf         = dg::evaluate( qprof,      grid1d);
-    dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
-    dg::blas1::axpby( -1./psip0, abs, +1., 1., abs); //transform psi to rho
+    dg::HVec psi        = dg::evaluate( dg::cooX1d, grid1d), rho(psi);
+    dg::blas1::axpby( -1./psip0, rho, +1., 1., rho); //transform psi to rho
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -254,12 +256,16 @@ int main( int argc, char* argv[])
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
-    int avgID[2];
+    int avgID[4];
     err = nc_def_var( ncid, "q-profile", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[0]);
     err = nc_def_var( ncid, "rho", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[1]);
+    err = nc_def_var( ncid, "psip1d", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[2]);
+    err = nc_def_var( ncid, "psi_fsa", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[3]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, avgID[0], sf.data());
-    err = nc_put_var_double( ncid, avgID[1], abs.data());
+    err = nc_put_var_double( ncid, avgID[1], rho.data());
+    err = nc_put_var_double( ncid, avgID[2], psi.data());
+    err = nc_put_var_double( ncid, avgID[3], psi_fsa.data());
     err = nc_redef(ncid);
 
     //write 2d vectors

@@ -117,8 +117,9 @@ struct FluxSurfaceAverage
      * @param c contains psip, psipR and psipZ
      * @param f container for global safety factor
      * @param weights Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point)
+     * @param multiplyByGradPsi if true multiply f with GradPsi, else not
      */
-    FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, const container& weights) :
+    FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, const container& weights, bool multiplyByGradPsi = true) :
     m_f(f), m_deltafog2d(f),
     m_deltaf(c, 0.,0.),
     m_w2d ( dg::create::weights( g2d)),
@@ -138,6 +139,8 @@ struct FluxSurfaceAverage
         dg::blas1::pointwiseDot( 1., psipRog2d, psipRog2d, 1., psipZog2d, psipZog2d, 0., psipRog2d);
         dg::blas1::transform( psipRog2d, psipRog2d, dg::SQRT<double>());
         dg::assign( psipRog2d, m_gradpsi);
+        if(multiplyByGradPsi)
+            dg::blas1::pointwiseDot( m_f, m_gradpsi, m_f);
     }
 
     /**
@@ -149,9 +152,7 @@ struct FluxSurfaceAverage
     void set_container( const container& f, bool multiplyByGradPsi=true){
         dg::blas1::copy( f, m_f);
         if(multiplyByGradPsi)
-        {
             dg::blas1::pointwiseDot( m_f, m_gradpsi, m_f);
-        }
     }
     /**
      * @brief Calculate the Flux Surface Average
