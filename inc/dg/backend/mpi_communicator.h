@@ -144,7 +144,9 @@ struct aCommunicator
     * In Feltor the vector v is distributed equally among processes and the local size
     * of v is the same for all processes. However, the buffer size might be different for each process.
     * @return buffer size (may be different for each process)
-    * @note may return 0 to indicate that no MPI communication is needed
+    * @note may return 0
+    * @attention it is NOT enough to check for zero buffer size if you want to find out whether a given process
+    * needs to send MPI messages or not. See \c isCommunicating() for an explanation
     * @sa local_size() isCommunicating()
     */
     unsigned buffer_size() const{return do_size();}
@@ -163,18 +165,25 @@ struct aCommunicator
     /**
      * @brief True if the gather/scatter operation involves actual MPI communication
      *
+     * This is more than just a test for zero message size.
+     * This is because even if a process has zero message size indicating that it
+     * technically does not need to send any data at all it might still need to participate in an MPI communication (sending an empty message to
+     * indicate that a certain point in execution has been reached). Only if NONE of the processes in the process group has anything to send will
+     * this function return false.
      * This test can be used to avoid the gather operation alltogether in e.g. the construction of a MPI distributed matrix.
+     * @note this check involves MPI communication itself, because a process needs to check if itself or any other process in its
+     * group is communicating.
+     *
      * @return False, if the global gather can be done without MPI communication (i.e. the indices are all local to each calling process). True else.
      * @sa buffer_size()
      */
     bool isCommunicating() const{
-        if( do_size() == 0) return false;
         return do_isCommunicating();
     }
     /**
     * @brief The internal MPI communicator used
     *
-    * e.g. used to assert that communicators of matrix and vector are the same
+    * can be e.g. used to assert that communicators of matrix and vector are the same
     * @return MPI Communicator
     */
     MPI_Comm communicator() const{return do_communicator();}
