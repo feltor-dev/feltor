@@ -174,7 +174,7 @@ struct aCommunicator
      * @note this check involves MPI communication itself, because a process needs to check if itself or any other process in its
      * group is communicating.
      *
-     * @return False, if the global gather can be done without MPI communication (i.e. the indices are all local to each calling process). True else.
+     * @return False, if the global gather can be done without MPI communication (i.e. the indices are all local to each calling process), or if the communicator is \c MPI_COMM_NULL. True else.
      * @sa buffer_size()
      */
     bool isCommunicating() const{

@@ -206,8 +206,9 @@ struct BijectiveComm : public aCommunicator<Vector>
     virtual BijectiveComm* clone() const override final {return new BijectiveComm(*this);}
     private:
     virtual bool do_isCommunicating() const override final{
+        if( m_p.communicator()  == MPI_COMM_NULL) return false;
         int rank;
-        MPI_Comm_rank( do_communicator(), &rank);
+        MPI_Comm_rank( m_p.communicator(), &rank);
         bool local_communicating = false, global_communicating=false;
         for( unsigned i=0; i<m_pids.size(); i++)
             if( m_pids[i] != rank)
