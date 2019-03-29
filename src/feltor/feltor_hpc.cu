@@ -323,8 +323,8 @@ int main( int argc, char* argv[])
         //Convert to N-1 and W
         dg::blas1::plus( transferINHvec[0], -1.);
         dg::blas1::plus( transferINHvec[1], -1.);
-        dg::blas1::axpby( 1., transferINHvec[2], p.beta/p.mu[0], transferINHvec[4], transferINHvec[2]);
-        dg::blas1::axpby( 1., transferINHvec[3], p.beta/p.mu[1], transferINHvec[4], transferINHvec[3]);
+        dg::blas1::axpby( 1., transferINHvec[2], 1./p.mu[0], transferINHvec[4], transferINHvec[2]);
+        dg::blas1::axpby( 1., transferINHvec[3], 1./p.mu[1], transferINHvec[4], transferINHvec[3]);
 
         dg::assign( transferINHvec[0], y0[0][0]); //ne-1
         dg::assign( transferINHvec[1], y0[0][1]); //Ni-1
