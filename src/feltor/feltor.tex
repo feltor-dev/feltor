@@ -345,12 +345,15 @@ K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 \subsection{ Modified $\psi_p$}
 Our computational domain is a box and in particular not aligned with the
 magnetic flux surfaces. This means that particularly in the corners of
-the domain the field lines enter and leave the box very quickly.
-It turns out that this behaviour is numerically disadvantageous in the
+the domain the field lines inside the domain are very short (in the
+sense that the distance between the enter point and leave point is short).
+It turns out that this behaviour is numerically disadvantageous (may
+blow up the simulation in the worst case) in the
 computation of parallel derivatives. In order to remedy this situation
 we propose to modify the flux surfaces $\psi_p$ to a constant value
 if $\psi_p$ exceeds a certain critical value. In this way the poloidal
-field component vanishes in the corners of the domain.
+field component vanishes in the corners of the domain at the cost
+of introducing a strong shear layer limiting the scrape-off layer width.
 
 We define an approximation to the step function with width $\alpha$
 \begin{align}
@@ -549,6 +552,9 @@ We either follow fieldlines around the torus several times (``blob'') or only on
 (``straight blob'').
 \subsubsection{Turbulent bath}
 We can initialize the R-Z plane with a turbulent bath with a certain amplitude $A$.
+This especially has the goal to destabilize the edge region right inside the
+last closed flux surface. Notice that the core region is rather stable
+and quickly damps away fluctuations.
 Again, we transform this to all poloidal planes along the magnetic field lines and multiply the bath with
 \begin{align} \label{eq:initial_turbulent}
 \tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
@@ -929,36 +935,87 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 \texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
-\subsection{Flux surface average and Safety factor}
-We define the toroidal average of a function $f(R,Z,\varphi)$ as
-\begin{align} \label{eq:phi_average}
-\langle f\rangle_\varphi := \frac{1}{2\pi}\oint f\d \varphi
+\subsection{Preliminary}
+Recall that the {\bf Dirac delta-function} has the property (in any dimension):
+\begin{align} \label{eq:dirac_delta}
+\int_V f(\vec x) \delta(h(\vec x) - h') \dV = \int_{h=h'} \frac{f(\vec x)}{|\nabla h|} \dA
 \end{align}
-The flux surface average
+which means that the delta-function can be used to express area integrals of the
+submanifold given as a contour of the function $h(\vec x)$.
+A numerically tractable approximation to the delta-function reads
+\begin{align}\label{eq:delta}
+\delta(h(\vec x)-h') = \frac{1}{2\pi \epsilon^2}
+\exp\left( - \frac{\left(h(\vec x)-h'\right)^2}{2\epsilon^2}\right)
+\end{align}
+where $\epsilon$ is a small, free parameter.
+In the DG framework the left-hand side
+of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
+via Gauss-Legendre quadrature, which gives us an easy means to compute area
+integrals even if our coordinate system is not aligned to the area.
+
+Furthermore, recall the {\bf coarea formula}
+\begin{align} \label{eq:coarea}
+\int_{\Omega_0} f(\vec x) \dV =
+\int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
+\end{align}
+where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
+The coarea formula can be viewd as a change of variables in the
+volume integral.
+
+We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
+\begin{align} \label{eq:phi_average}
+\langle f\rangle_\varphi(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
+\end{align}
+
+\subsection{Flux surface average}
+
+The {\bf flux surface average}
 of a function $f(R,Z,\varphi)$ is given by the formula
 \begin{align}\label{eq:fsa}
-\langle f \rangle_{\psi_{p0}} :=
-\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} =
-\frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| H(R,Z)\dV}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|H(R,Z)\dV}
+\langle f \rangle_{\psi_{p0}} :=&
+\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} \nonumber \\
+=& \frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| H(Z-Z_X)\ R \d R \d Z\d\varphi}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|H(Z-Z_X)\ R \d R \d Z\d\varphi}
 \end{align}
-with $\dV := \d R\d Z\d \varphi$ (we define the average in computational space and omit one $R$)
-and we use the Heaviside function $H(R,Z) = H(Z-Z_X)$ to cut away contributions from below the X-point
+%with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
+and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
 in our domain.
 
-A numerically tractable approximation to the $\delta$-function reads
-\begin{align}\label{eq:delta}
-\delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
-\exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
-\end{align}
-where $\epsilon$ is a small, free parameter. In the DG framework the integrals
-in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
-
-If we write $B_p:=R_0|\nabla\psi_p|/R$, we can define the safety factor (in two dimensions) as
+The {\bf total flux} of a given flux density $\vec j$ though the
+flux surface $\psi_p = \psi_{p0}$ is given by
 \begin{align}
-q:=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+\oint_{\psi_p=\psi_{p0}} \vec j\cdot \vec{\dA} =
+\int \vec j\cdot \vec\nabla\psi_p \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z\d\varphi
+\label{eq:total_flux}
+\end{align}
+
+\subsection{The safety factor}
+Assume that we pick a random field line and follow it (integrate it) for exactly one
+poloidal turn. The {\bf safety factor} is defined as the ratio between
+the resulting toroidal angle to the poloidal angle ($2\pi$)
+\begin{align}
+q := \frac{\Delta\varphi}{2\pi}
+\label{}
+\end{align}
+Since our magnetic field is symmetric in $\varphi$ and we used one
+full poloidal turn this definition is independent of which
+fieldline we pick inside a given flux surface.
+
+Let us define the poloidal length $s$ as the fieldline following
+parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
+and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
+We can then express the safety factor as the line integral
+\begin{align}
+q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
 = \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
 \end{align}
+where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
+last equality and thus arrive at a numerical tractable expression
+to evaluate the safety factor.
+
+Notice that the safety factor diverges on the last closed flux
+surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa}
+remain finite due to the $\nabla\psi$ factor.
 \subsection{ Radial flux}
 Let us define
 
