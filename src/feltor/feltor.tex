@@ -603,13 +603,19 @@ so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 \subsubsection{Mass conservation}
 Integrating the density equation we directly get
 \begin{align} \label{eq:mass_conservation}
-  \frac{\partial}{\partial t} \int \dV n_e =  \int dV (\Lambda_{n_e}+S_{n_e})
+  \frac{\partial}{\partial t} \int_\Omega \dV n_e
+  + \int_{\partial\Omega} \vec\dA\cdot\vec{ j_{n_e}}
+  =  \int_\Omega \dV (\Lambda_{n_e}+S_{n_e})
+\end{align}
+with the particle flux
+\begin{align} \label{eq:mass_flux}
+\vec{ j_{n_e}} := n_e\left(\vec v_E + \vec v_C + \vec v_{\nabla B} + U (\bhat + \vec{\tilde b}_\perp)\right)
 \end{align}
 \subsubsection{Charge/vorticity conservation}
 Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
 and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
 \begin{align} \label{eq:charge_conservation}
-  \frac{\partial}{\partial t} \int \dV \vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) =  - \int \dV (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i})
+  \frac{\partial}{\partial t} \int_\Omega \dV \vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) =  - \int_\Omega \dV (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i})
 \end{align}
 Note that if the integrand on the left hand side is interpreted as the \ExB vorticity
 density
@@ -617,35 +623,46 @@ $\zeta := \vec \nabla\cdot( m_iN_i\vec \nabla_\perp\phi/e B^2)$
 and if we further assume that $\Gamma_{1,i} \Lambda_{N_i} \equiv \Lambda_{\Gamma_{1,i}N_i}$,
 we get the vorticity conservation
 \begin{align} \label{eq:vorticity_conservation}
-  \frac{\partial}{\partial t} \int \dV \zeta =  - \int \dV\Lambda_{\zeta}
+  \frac{\partial}{\partial t} \int_\Omega \dV \zeta =  - \int_\Omega \dV\Lambda_{\zeta}
 \end{align}
 
 \subsubsection{Energy theorem}
-The terms of the energy theorem $\partial_t \mathcal E + \mathcal S =
-\Lambda$ are derived to (if either $\psi$ or $\nabla\psi$ vanishes at the
-boundary)
-\begin{align} \label{eq:energy_conservation}
-  \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+
-    \frac{(\vec \nabla_\perp A_\parallel)^2}{2\mu_0} 
-    +\frac{1}{2} m_i N_i \left(\frac{\vec\nabla_\perp\phi}{B}\right)^2 \right.\nonumber\\
-    &\left.+\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
-  \mathcal S = \sum_s \int \vec{\dA} \cdot &\left[ \left(
-  U\left(\bhat+\tilde{\vec b}_\perp\right) + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
-  \left(T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) \right. \nonumber\\
-  & \left . + \vec v_{\nabla\times\bhat} m NU^2  + \left(\bhat + \tilde{\vec b}_\perp\right) UNT\right], \\
-  \Lambda =  \int \dV & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
-  \nonumber\\ &
-+\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
-\nonumber \\ &
-+ m_e u_e n_e (\Lambda_{u_e}+S_{u_e})+m_iU_i N_i (\Lambda_{U_i}+S_{U_i})- \eta_\parallel J_{\parallel,s}^2\bigg\}.
+The terms of the energy theorem are
+\begin{align} \label{eq:energy_theorem}
+\partial_t \int_\Omega \dV \mathcal E +
+\oint_{\partial\Omega} \vec\dA \cdot \vec j_{\mathcal E}
+= \int_\Omega \dV \left( \Lambda_{\mathcal E}
++  S_{\mathcal E}
+-  R_{\mathcal E} \right)
 \end{align}
-The energy consists of the Helmholtz free energy density for electrons and ions, the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
+with
+\begin{align} \label{eq:energy_conservation}
+  \mathcal E = &
+  t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}
+    +\frac{1}{2} m_i N_i \left(\frac{\vec\nabla_\perp\phi}{B}\right)^2 \nonumber\\
+    &+\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2
+    + \frac{(\vec \nabla_\perp A_\parallel)^2}{2\mu_0}, \\
+  \vec j_{\mathcal E} =& \sum_s \left[ N\left(
+  \vec v_E + \vec v_C + \vec v_{\nabla B} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right)
+  \left(T \ln N + \frac{1}{2}m U^2 + q\psi  \right) \right. \nonumber\\
+  &\qquad \left . + mNU^2\vec v_{\nabla\times\bhat} + \left(\bhat + \tilde{\vec b}_\perp\right) NUT\right], \\
+  \Lambda_{\mathcal E} =&  \sum_s \left[\left(T\left( 1+\ln{N}\right) +q \psi + \frac{1}{2} m U^2 \right)\Lambda_{N}  + mNU \Lambda_U\right]
+\nonumber \\
+  S_{\mathcal E} =&  \sum_s  \left[\left(T\left( 1+\ln{N}\right) +q \psi + \frac{1}{2} m U^2 \right)S_{N}  + mNU S_U\right]
+\nonumber \\
+  R_{\mathcal E} =&  \eta_\parallel  \left[e n_e(U_i-u_e)\right]^2.
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric and magnetic potentials and we sum over all species.
+The energy density $\mathcal E$ consists of the Helmholtz free energy density for electrons and ions,
+the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
 In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dimensionless form}
-We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyrofrequency $\Omega_0 = eB_0/m_i$.
+We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyro-frequency $\Omega_0 = eB_0/m_i$.
 The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
-The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with 
+The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with
 $\hat A_\parallel = \rho_s B_0$.
 We introduce the dimensionless parameters
 \begin{align}
@@ -702,29 +719,55 @@ and
     A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
   \end{align}
 \end{subequations}
-Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite. Also note the peculiar notation of the perpendicular viscosity on $U$.
-We indicate that $\Delta_\perp W$ is treated implicitly while the correction $\Delta_\perp A_\parallel$ is treated explicitly.
-The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$ (with $z_e=-1$ and $z_i=+1$)
+Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
+
+The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
 \begin{align}
-  \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
+  \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
   +\frac{1}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
-   +  \frac{1}{2} \mu_i N_i u_E^2  \right .\nonumber\\
-   &\left. +\frac{1}{2} z_e\mu_e  n_e u_e^2
-  +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
-  %\mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
-  %(z\tau N\ln N + \frac{1}{2}z\mu NU^2 + \psi N \right) + \vec v_C' z\mu NU^2 + \bhat UNT \right], \\
-  \Lambda =  \int \dV & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right]
-    \left(\nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e + S_{n_e}\right)
-  \nonumber\\ &
-+z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right]
-    \left(\nu_\perp\Delta_\perp N_i + \nu_\parallel\Delta_\parallel N_i +S_{N_i}\right)
-\nonumber \\ &
-    +z_e\mu_e u_e n_e \left(\nu_\perp\Delta_\perp u_e + \nu_\parallel \Delta_\parallel u_e + S_{u_e}\right)\nonumber \\ &
-    +z_i\mu_i U_i N_i \left(\nu_\perp\Delta_\perp U_i + \nu_\parallel \Delta_\parallel U_i + S_{U_i}\right)% \nonumber \\ &
-    - \eta \left(n_e(U_i-u_e)\right)^2\bigg\}.
+   +  \frac{1}{2} \mu_i N_i u_E^2  \nonumber\\
+   & +\frac{1}{2} z_e\mu_e  n_e u_e^2
+  +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
+  \vec j_{\mathcal E} =& \sum_s z\left[ N\left(
+  \vec v_E + \vec v_C + \vec v_{\nabla B} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right)
+  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right) \right. \nonumber\\
+  &\qquad \left . + \mu NU^2\vec v_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
+  \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
+  \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
+\nonumber \\
+  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U^2 \right)S_{N}  + \mu NU S_U\right]
+\nonumber \\
+  R_{\mathcal E} =&  \eta_\parallel  \left[ n_e(U_i-u_e)\right]^2.
 \end{align}
 Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
 for the diffusion terms in the above equations.
+
+Let us here also derive the particle and energy fluxes through a flux surface
+\begin{align} \label{eq:particle_flux}
+ \vec j_{N}\cdot \vec \nabla\psi_p =& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ \nabla\psi_p \nonumber\\
+ =&
+  N\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   N\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau N \mathcal K_{\nabla B}(\psi_p) \nonumber\\
+ &+ NU\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\end{align}
+\begin{align} \label{eq:energy_flux}
+ \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
+ %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
+ %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\vec j_N \cdot \vec\nabla\psi_p
+ %\nonumber\\
+ %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
+ %=
+\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
++ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
+&+ z \tau NU
+ \left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\end{align}
 \subsection{Manufactured Solution}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
@@ -1016,32 +1059,21 @@ to evaluate the safety factor.
 Notice that the safety factor diverges on the last closed flux
 surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa}
 remain finite due to the $\nabla\psi$ factor.
-\subsection{ Radial flux}
+\subsection{ Length scales}
 Let us define
 
 \begin{align}
- \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + u_e \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- \nabla\psi_p \nonumber\\
- =& n_eu_e\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
-  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
-   n_e\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
-   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
    L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
    L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
 \end{align}
 
-Note that the toroidal average of $f_e$ is ill-defined since $\nabla\psi$ vanishes at the X-point.
-Instead we output the average of $\vec j_e\cdot\nabla\psi_p$.
-
 \subsection{Program and files}
+We have the program \texttt{feltor/diag/feltordiag.cu}.
+This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
 Compilation\\
 \texttt{make feltordiag} \\
 Usage \\
 \texttt{./feltordiag input.nc output.nc} \\
-We have the program \texttt{feltor/diag/feltordiag.cu}.
-This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows.
 
 Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
 
@@ -1058,7 +1090,7 @@ q                & Dataset & 1 (psi) & The safety factor \\
 $\rho$           & Dataset & 1 (psi) & The flux label $\rho:= (\psi_{p,0} - \psi_p)/\psi_{p,0}$ \\
 X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
-X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
+X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi\equiv 0$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
 X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
 aligned          & Dataset & 1 (time) & $\int \dV (\nabla_\parallel n_e)^2 /n_e$ \\
 perp\_aligned    & Dataset & 1 (time) & $\int \dV (\vec\nabla_\perp n_e)^2 /n_e$ \\
