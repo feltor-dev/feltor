@@ -236,7 +236,8 @@ int main( int argc, char* argv[])
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
     //psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin + 0.05 , psipmax, npsi ,Npsi,dg::NEU);
-    dg::geo::SafetyFactor     qprof(grid2d, c, xpoint_damping);
+    dg::geo::SafetyFactor     qprof(grid2d, c);
+    qprof.set_weights( xpoint_damping);
     dg::geo::FluxSurfaceAverage<dg::HVec>  fsa( grid2d, c, psipog2d, xpoint_damping);
     dg::HVec psi_fsa    = dg::evaluate( fsa,        grid1d);
     dg::HVec sf         = dg::evaluate( qprof,      grid1d);

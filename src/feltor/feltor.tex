@@ -989,7 +989,7 @@ Furthermore, recall the {\bf coarea formula}
 \int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
 \end{align}
 where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
-The coarea formula can be viewd as a change of variables in the
+The coarea formula can be viewed as a change of variables in the
 volume integral.
 
 We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
@@ -1004,20 +1004,21 @@ of a function $f(R,Z,\varphi)$ is given by the formula
 \begin{align}\label{eq:fsa}
 \langle f \rangle_{\psi_{p0}} :=&
 \frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} \nonumber \\
-=& \frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| H(Z-Z_X)\ R \d R \d Z\d\varphi}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|H(Z-Z_X)\ R \d R \d Z\d\varphi}
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p0})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p0})H(Z-Z_X)\ R \d R \d Z}
 \end{align}
 %with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
 and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
-in our domain.
+in our domain $\Omega$.
 
 The {\bf total flux} of a given flux density $\vec j$ though the
 flux surface $\psi_p = \psi_{p0}$ is given by
 \begin{align}
 \oint_{\psi_p=\psi_{p0}} \vec j\cdot \vec{\dA} =
-\int \vec j\cdot \vec\nabla\psi_p \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z\d\varphi
+2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
 \label{eq:total_flux}
 \end{align}
+where we used $\vec \dA = (\vec\nabla\psi_p/|\nabla \psi_p|) \dA$.
 
 \subsection{The safety factor}
 Assume that we pick a random field line and follow it (integrate it) for exactly one
@@ -1049,16 +1050,14 @@ remain finite due to the $\nabla\psi$ factor.
 \subsection{ Fluxes and length scales}
 Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
 \begin{align} \label{eq:particle_flux}
- \vec j_{N}\cdot \vec \nabla\psi_p =& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- \nabla\psi_p \nonumber\\
+ \vec j_{N}\cdot \vec \nabla\psi_p %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\nabla\psi_p \nonumber\\
  =&
-  N\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
-   N\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau N \mathcal K_{\nabla B}(\psi_p) \nonumber\\
- &+ NU\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
-\end{align}
-\begin{align} \label{eq:energy_flux}
+  N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
+ &+ NU\left [\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
  \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
  %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
  %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
@@ -1072,6 +1071,7 @@ Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservati
 &+ z \tau NU
  \left( A_\parallel \mathcal
  K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\label{eq:energy_flux}
 \end{align}
 Let us define
 

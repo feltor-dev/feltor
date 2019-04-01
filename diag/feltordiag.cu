@@ -256,7 +256,8 @@ int main( int argc, char* argv[])
     dg::HVec xpoint_damping = dg::evaluate( dg::one, g2d_out);
     if( gp.hasXpoint())
         xpoint_damping = dg::evaluate( dg::geo::ZCutter(Z_X), g2d_out);
-    dg::geo::SafetyFactor qprofile(g2d_out, mag, xpoint_damping);
+    dg::geo::SafetyFactor qprofile(g2d_out, mag);
+    qprofile.set_weights( xpoint_damping);
     dg::HVec sf = dg::evaluate(qprofile, g1d_out);
     int qID, rhoID;
     err = nc_def_var( ncid_out, "q", NC_DOUBLE, 1, &dim_ids1d[1], &qID);
@@ -366,10 +367,7 @@ int main( int argc, char* argv[])
                 start2d, count2d, transfer2d.data());
 
             //computa fsa of quantities
-            if(pair.first == "fluxe")
-                fsa.set_container(t2d, false);
-            else
-                fsa.set_container(t2d, true);
+            fsa.set_container(t2d);
             transfer1d = dg::evaluate(fsa, g1d_out);
             err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsa"),
                 start1d, count1d, transfer1d.data());
