@@ -602,7 +602,7 @@ so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
 Integrating the density equation we directly get
-\begin{align} \label{eq:mass_conservation}
+\begin{align} \label{eq:mass_theorem}
   \frac{\partial}{\partial t} \int_\Omega \dV n_e
   + \int_{\partial\Omega} \vec\dA\cdot\vec{ j_{n_e}}
   =  \int_\Omega \dV (\Lambda_{n_e}+S_{n_e})
@@ -636,7 +636,7 @@ The terms of the energy theorem are
 -  R_{\mathcal E} \right)
 \end{align}
 with
-\begin{align} \label{eq:energy_conservation}
+\begin{align} \label{eq:energy_conservation_dimensional}
   \mathcal E = &
   t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}
     +\frac{1}{2} m_i N_i \left(\frac{\vec\nabla_\perp\phi}{B}\right)^2 \nonumber\\
@@ -721,17 +721,30 @@ and
 \end{subequations}
 Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
 
+The terms of the particle conservation read
+\begin{align} \label{eq:mass_conservation}
+  n_e= & n_e,\\
+  \vec j_{n_e} =& n_e\left(
+  \vec v_E + \vec v_C + \vec v_{\nabla B} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
+  =& n_e \left(\frac{\bhat\times \nabla\phi}{B} 
+  + (\tau_e +\mu_e u_e^2)\vec K_{\nabla\times\bhat} 
+  + \tau_e \vec K_{\vec \nabla B} + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
+  \Lambda_{n_e} =&
+  \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
+\\
+  S_{n_e} =&  S_{n_e}
+\end{align}
+
 The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
-\begin{align}
+\begin{align} \label{eq:energy_conservation}
   \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
   +\frac{1}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
    +  \frac{1}{2} \mu_i N_i u_E^2  \nonumber\\
    & +\frac{1}{2} z_e\mu_e  n_e u_e^2
   +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
-  \vec j_{\mathcal E} =& \sum_s z\left[ N\left(
-  \vec v_E + \vec v_C + \vec v_{\nabla B} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right)
-  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right) \right. \nonumber\\
-  &\qquad \left . + \mu NU^2\vec v_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
+  \vec j_{\mathcal E} =& \sum_s z\left[
+  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right) \vec j_N 
+  + \mu \tau NU^2\vec K_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
   \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
 \nonumber \\
@@ -742,32 +755,6 @@ The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
 Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
 for the diffusion terms in the above equations.
 
-Let us here also derive the particle and energy fluxes through a flux surface
-\begin{align} \label{eq:particle_flux}
- \vec j_{N}\cdot \vec \nabla\psi_p =& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- \nabla\psi_p \nonumber\\
- =&
-  N\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
-   N\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau N \mathcal K_{\nabla B}(\psi_p) \nonumber\\
- &+ NU\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
-\end{align}
-\begin{align} \label{eq:energy_flux}
- \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
- %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
- %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\vec j_N \cdot \vec\nabla\psi_p
- %\nonumber\\
- %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
- %=
-\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
-+ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
-&+ z \tau NU
- \left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
-\end{align}
 \subsection{Manufactured Solution}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
@@ -1035,14 +1022,14 @@ flux surface $\psi_p = \psi_{p0}$ is given by
 \subsection{The safety factor}
 Assume that we pick a random field line and follow it (integrate it) for exactly one
 poloidal turn. The {\bf safety factor} is defined as the ratio between
-the resulting toroidal angle to the poloidal angle ($2\pi$)
+the resulting toroidal angle ($\Delta\varphi$) to the poloidal angle ($2\pi$)
 \begin{align}
 q := \frac{\Delta\varphi}{2\pi}
 \label{}
 \end{align}
 Since our magnetic field is symmetric in $\varphi$ and we used one
 full poloidal turn this definition is independent of which
-fieldline we pick inside a given flux surface.
+fieldline we pick on a given flux surface.
 
 Let us define the poloidal length $s$ as the fieldline following
 parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
@@ -1059,7 +1046,33 @@ to evaluate the safety factor.
 Notice that the safety factor diverges on the last closed flux
 surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa}
 remain finite due to the $\nabla\psi$ factor.
-\subsection{ Length scales}
+\subsection{ Fluxes and length scales}
+Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
+\begin{align} \label{eq:particle_flux}
+ \vec j_{N}\cdot \vec \nabla\psi_p =& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ \nabla\psi_p \nonumber\\
+ =&
+  N\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   N\mathcal K_{\nabla\times\bhat}(\psi_p) + \tau N \mathcal K_{\nabla B}(\psi_p) \nonumber\\
+ &+ NU\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\end{align}
+\begin{align} \label{eq:energy_flux}
+ \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
+ %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
+ %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\vec j_N \cdot \vec\nabla\psi_p
+ %\nonumber\\
+ %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
+ %=
+\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
++ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
+&+ z \tau NU
+ \left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\end{align}
 Let us define
 
 \begin{align}
