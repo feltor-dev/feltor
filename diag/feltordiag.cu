@@ -256,8 +256,7 @@ int main( int argc, char* argv[])
     dg::HVec xpoint_damping = dg::evaluate( dg::one, g2d_out);
     if( gp.hasXpoint())
         xpoint_damping = dg::evaluate( dg::geo::ZCutter(Z_X), g2d_out);
-    dg::geo::SafetyFactor qprofile(g2d_out, mag);
-    qprofile.set_weights( xpoint_damping);
+    dg::geo::SafetyFactor qprofile(mag);
     dg::HVec sf = dg::evaluate(qprofile, g1d_out);
     int qID, rhoID;
     err = nc_def_var( ncid_out, "q", NC_DOUBLE, 1, &dim_ids1d[1], &qID);

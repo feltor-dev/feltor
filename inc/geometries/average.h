@@ -3,6 +3,7 @@
 #include <thrust/host_vector.h>
 #include "dg/topology/weights.h"
 #include "magnetic_field.h"
+#include "flux.h"
 
 /*!@file
  *
@@ -72,7 +73,7 @@ struct FluxSurfaceIntegral
      * f and g are default initialized to 1
      * @param g2d grid
      * @param c contains psip, psipR and psipZ
-     * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
+     * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c 0.15*h*GradPsi*width_factor)
      */
     FluxSurfaceIntegral(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.):
             m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_delta(m_f),
@@ -83,7 +84,7 @@ struct FluxSurfaceIntegral
         thrust::host_vector<double> psipZ  = dg::evaluate( c.psipZ(), g2d);
         double psipRmax = dg::blas1::reduce( psipR, 0., dg::AbsMax<double>()  );
         double psipZmax = dg::blas1::reduce( psipZ, 0., dg::AbsMax<double>()  );
-        double deltapsi = (psipZmax*g2d.hy() +psipRmax*g2d.hx())/2.;
+        double deltapsi = 0.15*(psipZmax*g2d.hy() +psipRmax*g2d.hx());
         m_eps = deltapsi*width_factor;
     }
 
@@ -141,14 +142,14 @@ struct FluxSurfaceAverage
      * @param weights Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point and/or contain a volume form without dg weights)
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
      */
-    FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, const container& weights, double width_factor = 1.) :
+    FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, container weights, double width_factor = 1.) :
     m_avg( g2d,c, width_factor), m_area( g2d, c, width_factor)
     {
+        m_avg.set_left( f);
         container gradpsi  = dg::evaluate( dg::geo::GradPsip( c), g2d);
-        container weights_ = weights;
-        dg::blas1::pointwiseDot( weights_, gradpsi, weights_);
-        m_avg.set_right( weights_);
-        m_area.set_right( weights_);
+        dg::blas1::pointwiseDot( weights, gradpsi, weights);
+        m_avg.set_right( weights);
+        m_area.set_right( weights);
     }
 
     /**
@@ -174,7 +175,7 @@ struct FluxSurfaceAverage
 };
 
 /**
- * @brief Class for the evaluation of the safety factor q
+ * @brief Class for the evaluation of the safety factor q based on a flux-surface integral
  * \f[ q(\psi_0) = \frac{1}{2\pi} \int dRdZ \frac{I(\psi_p)}{R} \delta(\psi_p - \psi_0)H(R,Z) \f]
 
 where \c H is a weights function that can optionally be used to cut away parts of the domain e.g. below the X-point.
@@ -182,16 +183,16 @@ where \c H is a weights function that can optionally be used to cut away parts o
  * @ingroup misc_geo
  *
  */
-struct SafetyFactor
+struct SafetyFactorAverage
 {
      /**
      * @brief Construct from a field and a grid
      * @param g2d 2d grid
-     * @param c contains psip, psipR and psipZ
+     * @param c contains psip, psipR and psipZ and Ipol
      * @param weights Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point)
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
      */
-    SafetyFactor(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.) :
+    SafetyFactorAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.) :
         m_fsi( g2d, c, width_factor)
     {
         thrust::host_vector<double> alpha = dg::evaluate( c.ipol(), g2d);
@@ -213,6 +214,36 @@ struct SafetyFactor
     }
     private:
     FluxSurfaceIntegral<thrust::host_vector<double> > m_fsi;
+};
+
+
+
+/**
+ * @brief Evaluation of the safety factor q based on direct integration of
+ * \f[ q(\psi_0) = \frac{1}{2\pi} \int d\Theta \frac{B^\varphi}{B^\Theta} \f]
+
+ * @attention Return value undefined if evaluated outside the closed fieldline region, but the function always returns, it won't throw an error or something
+ * @copydoc hide_container
+ * @ingroup misc_geo
+ *
+ */
+struct SafetyFactor
+{
+    SafetyFactor( const TokamakMagneticField& c):
+        m_fpsi( c.get_psip(), c.get_ipol(), c.R0(), 0.,false){}
+
+    /**
+     * @brief Calculate q(psip0)
+     * @param psip0 the flux surface
+     * @return q(psip0)
+     */
+    double operator()( double psip0)
+    {
+        return 1./m_fpsi( psip0);
+    }
+private:
+    dg::geo::flux::detail::Fpsi m_fpsi;
+
 };
 
 }//namespace geo

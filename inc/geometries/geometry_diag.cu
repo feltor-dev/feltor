@@ -17,6 +17,7 @@
 #include "magnetic_field.h"
 #include "average.h"
 #include "testfunctors.h"
+#include "flux.h" //to compute Safety factor
 
 struct Parameters
 {
@@ -219,6 +220,7 @@ int main( int argc, char* argv[])
         {"ZonalFlow", dg::geo::ZonalFlow(c.psip(), p.amp, 0., 2.*M_PI*p.k_psi )},
         {"PsiLimiter", dg::geo::PsiLimiter(c.psip(), gp.psipmaxlim)},
         {"Nprofile", dg::geo::Nprofile(c.psip(), p.nprofileamp/c.psip()(c.R0(),0.), p.bgprofamp )},
+        {"Delta", dg::geo::DeltaFunction( c, gp.alpha*gp.alpha, psip0*0.2)},
         {"TanhDamping", dg::geo::TanhDamping(c.psip(), -3*gp.alpha, gp.alpha, -1)},
         ////
         {"BathRZ", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,5., p.amp)},
@@ -228,21 +230,42 @@ int main( int argc, char* argv[])
     //Compute flux average
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( c.psip(), grid2d);
-    dg::HVec xpoint_damping = dg::evaluate( dg::one, grid2d);
+    dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
     if( gp.hasXpoint() )
-        xpoint_damping = dg::evaluate( dg::geo::ZCutter(Z_X), grid2d);
+        dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
     double psipmin = psip0;//(float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
-    double psipmax = 0;//(float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::maximum<double>()  );
+    double psipmax = 0.;//dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()  );
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
     //psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
-    dg::Grid1d grid1d(psipmin + 0.05 , psipmax, npsi ,Npsi,dg::NEU);
-    dg::geo::SafetyFactor     qprof(grid2d, c);
-    qprof.set_weights( xpoint_damping);
-    dg::geo::FluxSurfaceAverage<dg::HVec>  fsa( grid2d, c, psipog2d, xpoint_damping);
+    dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
+    dg::geo::SafetyFactor     qprof( c);
+    dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, c, psipog2d, xpoint_weights);
     dg::HVec psi_fsa    = dg::evaluate( fsa,        grid1d);
     dg::HVec sf         = dg::evaluate( qprof,      grid1d);
     dg::HVec psi        = dg::evaluate( dg::cooX1d, grid1d), rho(psi);
     dg::blas1::axpby( -1./psip0, rho, +1., 1., rho); //transform psi to rho
+
+    //other flux labels
+    dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, c);
+    fsi.set_right( xpoint_weights);
+    dg::HVec vol_psip = dg::evaluate( fsi, grid1d);
+    dg::HVec w1d = dg::create::weights( grid1d);
+    double volumeRZ = 2.*M_PI*dg::blas1::dot( vol_psip, w1d);
+
+    //area
+    fsi.set_left( dg::evaluate( dg::geo::GradPsip(c), grid2d));
+    dg::HVec area_psip = dg::evaluate( fsi, grid1d);
+
+    dg::geo::Pupil pupil( c.psip(), 0.);
+    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
+    xpoint_weights = dg::evaluate( dg::cooX2d, g2dC);
+    if( gp.hasXpoint() )
+        dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), g2dC), xpoint_weights);
+    dg::HVec vec  = dg::evaluate( pupil, g2dC);
+    dg::HVec g2d_weights = dg::create::weights( g2dC);
+    double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, xpoint_weights);
+    std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeRZ<<" "<<volumeRZP
+              <<" rel error = "<<fabs(volumeRZ-volumeRZP)/volumeRZP<<"\n";
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -257,16 +280,18 @@ int main( int argc, char* argv[])
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
-    int avgID[4];
+    int avgID[5];
     err = nc_def_var( ncid, "q-profile", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[0]);
     err = nc_def_var( ncid, "rho", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[1]);
     err = nc_def_var( ncid, "psip1d", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[2]);
     err = nc_def_var( ncid, "psi_fsa", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[3]);
+    err = nc_def_var( ncid, "area", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[4]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, avgID[0], sf.data());
     err = nc_put_var_double( ncid, avgID[1], rho.data());
     err = nc_put_var_double( ncid, avgID[2], psi.data());
     err = nc_put_var_double( ncid, avgID[3], psi_fsa.data());
+    err = nc_put_var_double( ncid, avgID[4], area_psip.data());
     err = nc_redef(ncid);
 
     //write 2d vectors

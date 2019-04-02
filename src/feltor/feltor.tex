@@ -1032,17 +1032,26 @@ Since our magnetic field is symmetric in $\varphi$ and we used one
 full poloidal turn this definition is independent of which
 fieldline we pick on a given flux surface.
 
-Let us define the poloidal length $s$ as the fieldline following
-parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
-and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
-We can then express the safety factor as the line integral
+%Let us define the poloidal length $s$ as the fieldline following
+%parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
+%and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
+%We can then express the safety factor as the line integral
+%\begin{align}
+%q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+%= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
+%\end{align}
+%where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
+%last equality and thus arrive at a numerical tractable expression
+%to evaluate the safety factor.
+Let us define the geometric poloidal angle $\Theta$ as the fieldline following
+parameter i.e. $\vec B\cdot\nabla\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
+We can then directly integrate the safety factor as
 \begin{align}
-q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
-= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
+\frac{\d R}{\d\Theta} = \frac{B^R}{B^\Theta}\quad 
+\frac{\d Z}{\d\Theta} = \frac{B^Z}{B^\Theta}\quad 
+\frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
+q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
 \end{align}
-where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
-last equality and thus arrive at a numerical tractable expression
-to evaluate the safety factor.
 
 Notice that the safety factor diverges on the last closed flux
 surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa}
