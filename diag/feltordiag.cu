@@ -11,8 +11,8 @@
 #include "feltor/feltor.cuh"
 #include "feltor/parameters.h"
 
-struct RadialElectricFlux{
-    RadialElectricFlux( double tau, double mu):
+struct RadialParticleFlux{
+    RadialParticleFlux( double tau, double mu):
         m_tau(tau), m_mu(mu){
     }
 
@@ -38,7 +38,40 @@ struct RadialElectricFlux{
             + ne * (m_tau + m_mu*ue*ue)*curvKappaS
             + ne * m_tau*curvNablaS;
         return JPsi;
+    }
+    private:
+    double m_tau, m_mu;
+};
+struct RadialEnergyFlux{
+    RadialEnergyFlux( double tau, double mu):
+        m_tau(tau), m_mu(mu){
+    }
 
+    DG_DEVICE double operator()( double ne, double ue, double A, double P,
+        double d0A, double d1A, double d2A,
+        double d0P, double d1P, double d2P, //Phi
+        double d0S, double d1S, double d2S, //Psip
+        double b_0,         double b_1,         double b_2,
+        double curvNabla0,  double curvNabla1,  double curvNabla2,
+        double curvKappa0,  double curvKappa1,  double curvKappa2
+        ){
+        double curvKappaS = curvKappa0*d0S+curvKappa1*d1S+curvKappa2*d2S;
+        double curvNablaS = curvNabla0*d0S+curvNabla1*d1S+curvNabla2*d2S;
+        double SA = b_0*( d1S*d2A-d2S*d1A)+
+                    b_1*( d2S*d0A-d0S*d2A)+
+                    b_2*( d0S*d1A-d1S*d0A);
+        double PS = b_0*( d1P*d2S-d2P*d1S)+
+                    b_1*( d2P*d0S-d0P*d2S)+
+                    b_2*( d0P*d1S-d1P*d0S);
+        double JN =
+            ne*ue* (A*curvKappaS + SA )
+            + ne * PS
+            + ne * (m_tau + m_mu*ue*ue)*curvKappaS
+            + ne * m_tau*curvNablaS;
+        double Je = (m_tau * log(ne) + 0.5*m_mu*ue*ue + P)*JN
+            + m_mu*m_tau*ne*ue*ue*curvKappaS
+            + m_tau*ne*ue* (A*curvKappaS + SA );
+        return Je;
     }
     private:
     double m_tau, m_mu;
@@ -313,7 +346,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( dyP, v3d["potential"], dy_P);
         dg::blas2::symv( dz , v3d["potential"], dz_P);
         dg::blas1::evaluate( v3d["fluxe"], dg::equals(),
-            RadialElectricFlux( p.tau[0], p.mu[0]),
+            RadialParticleFlux( p.tau[0], p.mu[0]),
             v3d["electrons"], v3d["Ue"], v3d["induction"],
             dx_A, dy_A, dz_A, dx_P, dy_P, dz_P, psipR, psipZ, psipP,
             bhat[0], bhat[1], bhat[2],

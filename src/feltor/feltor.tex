@@ -1046,7 +1046,7 @@ fieldline we pick on a given flux surface.
 Let us define the geometric poloidal angle $\Theta$ as the fieldline following
 parameter i.e. $\vec B\cdot\nabla\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
 We can then directly integrate the safety factor as
-\begin{align}
+\begin{align}\label{eq:safety_factor}
 \frac{\d R}{\d\Theta} = \frac{B^R}{B^\Theta}\quad 
 \frac{\d Z}{\d\Theta} = \frac{B^Z}{B^\Theta}\quad 
 \frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
@@ -1082,12 +1082,6 @@ Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservati
  K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
 \label{eq:energy_flux}
 \end{align}
-Let us define
-
-\begin{align}
-   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
-   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
-\end{align}
 
 \subsection{Program and files}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
@@ -1108,22 +1102,47 @@ x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, co
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-q                & Dataset & 1 (psi) & The safety factor \\
-$\rho$           & Dataset & 1 (psi) & The flux label $\rho:= (\psi_{p,0} - \psi_p)/\psi_{p,0}$ \\
-X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
-    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
-X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi\equiv 0$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
-X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
+mass             & Dataset & 1 (time) & Mass inside LCFS $\int_\Omega \dV n_e$ \\
+mass\_loss       & Dataset & 1 (time) & Mass flux through LCFS $\int_{\psi_p = 0} \vec \dA \cdot \vec j_{n_e}$\\
+mass\_diffusion  & Dataset & 1 (time) & Mass diffusion inside LCFS $\int_\Omega \dV \Lambda_{n_e}$ \\
+energy           & Dataset & 1 (time) & Energy inside LCFS $\int_\Omega \dV \mathcal E$ \\
+energy\_loss     & Dataset & 1 (time) & Energy flux through LCFS $\int_{\psi_p = 0} \vec \dA \cdot \vec j_{\mathcal E}$ \\
+energy\_diffusion& Dataset & 1 (time) & Energy diffusion inside LCFS $\int_\Omega \dV \Lambda_{\mathcal E}$ \\
+energy\_dissipation& Dataset & 1 (time) & Energy dissipation inside LCFS$\int_\Omega \dV R_{\mathcal E}$ \\
 aligned          & Dataset & 1 (time) & $\int \dV (\nabla_\parallel n_e)^2 /n_e$ \\
 perp\_aligned    & Dataset & 1 (time) & $\int \dV (\vec\nabla_\perp n_e)^2 /n_e$ \\
 correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^\phi||||n_e||$\\
-total\_flux      & Dataset & 1 (time) & $\int \dV f_e$\\
+correlationNTildePhi  & Dataset & 1 (time) & $\left( \int\dV \phi \tilde n_e \right)/ ||\phi||||\tilde n_e||$ with $n_e \equiv \langle n_e \rangle_{\psi_p} ( 1 + \tilde n_e)$\\
+q                & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
+psip1d           & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
+rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,0} - \psi_p)/\psi_{p,0}$ \\
+area             & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\nabla\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
+X                & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
+X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
+    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
+X\_fluc       & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
+X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa} \\
+particle\_flux   & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{n_e} \cdot \vec \dA$ Eq.~\eqref{eq:particle_flux} \\
+energy\_flux     & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{\mathcal E} \cdot \vec \dA$ Eq.~\eqref{eq:energy_flux} \\
 \bottomrule
 \end{longtable}
-X $\in$ \{ electrons, ions, Ue, Ui, potential,
-induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
-    $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$, $-\Delta_\perp \phi$,
-    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\}.
+where X $\in$ \{ electrons, ions, Ue, Ui, potential,
+induction, vorticity, maxwell, Lperpinv, Lparallelinv,
+current, momentum
+\} corresponding to \{
+    $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$,
+    $-\Delta_\perp \phi$, $-\Delta_\perp A_\parallel$,
+    $L_\perp^{-1}$, $L_\parallel^{-1}$,
+    $j_\parallel$, $j_\rho$
+    \}
+and we define
+
+\begin{align}
+   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
+   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e} \\
+   j_\parallel := N_iU_i-n_e u_e \quad
+   j_{\parallel,\rho} := \mu_i N_iU_i + \mu_e n_e u_e
+\end{align}
 
 
 
