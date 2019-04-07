@@ -997,28 +997,75 @@ We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
 \langle f\rangle_\varphi(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
 \end{align}
 
+In arbitrary coordinates the area integral is defined by the pull back
+of the flux 2-form and the metric
+\begin{align}
+\label{}
+\dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\nabla \psi_p}{|\nabla \psi_p|}
+\end{align}
+to a parameterization of the flux-surface.
+In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have with $\hat\zeta = \hat \psi_p$
+\begin{align}
+\dA = \sqrt{g} |\nabla \zeta| \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA
+\label{}
+\end{align}
+where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2$
+
 \subsection{Flux surface average}
 
-The {\bf flux surface average}
+There is two possible ways to introduce a flux-surface average.
+The first one is the straightforward average on the actual area of the
+flux-surface.
+The {\bf area average}
 of a function $f(R,Z,\varphi)$ is given by the formula
-\begin{align}\label{eq:fsa}
-\langle f \rangle_{\psi_{p0}} :=&
-\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} \nonumber \\
-=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p0})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p0})H(Z-Z_X)\ R \d R \d Z}
+\begin{align}\label{eq:fsa_area}
+\langle f \rangle^{area}_{\psi_{p}} :=&
+\frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
 \end{align}
 %with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
 and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
 in our domain $\Omega$.
 
-The {\bf total flux} of a given flux density $\vec j$ though the
+The second one (the {\bf volume average} after \cite{haeseleer}) defines an average on a
+small volume - a shell centered around the flux-surface.
+If we define $v(\psi) := \int_0^\psi \dV$ as the volume
+flux label, we define
+\begin{align} \label{eq:fsa_vol}
+\langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
+ = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+\end{align}
+where we used the coarea formula Eq.~\eqref{eq:coarea} for the second
+identiy. We immediately see that this definition differs from the first
+Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$.
+
+Both averages fullfill the basic identities
+\begin{align}
+\label{eq:fsa_identities}
+\langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
+\langle f(\psi_p) \rangle &= f(\psi_p)
+\end{align}
+
+
+The volume average is better suited for density-like quantities
+than the area average as we can see with the following identiy.
+Assume we have a quantity $X$ with $\partial_t X + \nabla \vec j_X = \Lambda_X$. Then we can use the volume average to write
+\begin{align}
+\frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
+  \partial v} J_X  = \langle \Lambda_X\rangle^{vol}
+\label{eq:fsa_balance}
+\end{align}
+where again $v=v(\psi_p)$ is the volume flux label.
+The {\bf total flux} of a given flux density $\vec j_X$ though the
 flux surface $\psi_p = \psi_{p0}$ is given by
 \begin{align}
-\oint_{\psi_p=\psi_{p0}} \vec j\cdot \vec{\dA} =
+J_X:=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
 2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
 \label{eq:total_flux}
 \end{align}
-where we used $\vec \dA = (\vec\nabla\psi_p/|\nabla \psi_p|) \dA$.
 
 \subsection{The safety factor}
 Assume that we pick a random field line and follow it (integrate it) for exactly one
@@ -1054,7 +1101,7 @@ q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
 \end{align}
 
 Notice that the safety factor diverges on the last closed flux
-surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa}
+surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
 remain finite due to the $\nabla\psi$ factor.
 \subsection{ Fluxes and length scales}
 Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
@@ -1121,7 +1168,7 @@ X                & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
 X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
 X\_fluc       & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
-X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa} \\
+X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
 particle\_flux   & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{n_e} \cdot \vec \dA$ Eq.~\eqref{eq:particle_flux} \\
 energy\_flux     & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{\mathcal E} \cdot \vec \dA$ Eq.~\eqref{eq:energy_flux} \\
 \bottomrule
