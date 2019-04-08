@@ -405,9 +405,9 @@ the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity
 (omitting species labels)~\cite{WiesenbergerPhD, HeldPhD}
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
+    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
 mN \frac{\partial}{\partial t} U &+ mN \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U\left(\bhat + \tilde{\vec b}_\perp\right)
+    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)
     \right)\cdot \vec\nabla U  \nonumber \\
     &+ 2m\vec \nabla \cdot ( NU \vec v_{\nabla\times\bhat})
     -mNU\vec \nabla\cdot \vec v_{\nabla\times\bhat}
@@ -417,11 +417,11 @@ mN \frac{\partial}{\partial t} U &+ mN \left(
 \end{align}
 with
 \begin{align}
-\tilde{\vec b}_\perp = \frac{\nabla\times A_\parallel \bhat}{B}, \quad
 \vec v_E := \frac{\bhat\times\nabla\psi}{B},\quad
-\vec v_C := \frac{T+mU^2}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
+\vec v_{K} := \frac{T}{q}\left(\vec{\mathcal K_{\nabla B}} + \vec{\mathcal K_{\nabla\times\bhat}}\right)=\frac{T}{q}\vec{\mathcal K}  ,\nonumber\\
+\vec v_C := \frac{mU^2}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
 \vec v_{\nabla\times\bhat} := \frac{T}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
-\vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
+\tilde{\vec b}_\perp = \frac{\nabla\times A_\parallel \bhat}{B}.
 \label{}
 \end{align}
 
@@ -436,6 +436,13 @@ Given $\phi$ we define the generalised electric potential
 \begin{align}
     \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i }{2 e}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
 \end{align}
+\subsection{Relation to diamagnetic drift}
+Notice that the term $\nabla (n_e \vec v_K ) \equiv -\nabla (T_e n_e \vec K /e) $
+forms the familiar form of the divergence of the diamagnetic flux.
+\begin{align}
+\nabla\cdot\left( n_e \frac{\bhat \times \nabla n_e T_e}{en_e B}\right) \equiv  \nabla\cdot \left(\frac{T_e n_e}{e} \vec K\right)
+\end{align}
+which is evident with the identities in Section~\ref{sec:magnetic}.
 
 \subsection{Parallel Resistivity and diffusion}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
@@ -609,22 +616,25 @@ Integrating the density equation we directly get
 \end{align}
 with the particle flux
 \begin{align} \label{eq:mass_flux}
-\vec{ j_{n_e}} := n_e\left(\vec v_E + \vec v_C + \vec v_{\nabla B} + U (\bhat + \vec{\tilde b}_\perp)\right)
+\vec{ j_{n_e}} := n_e\left(\vec v_E + \vec v_C + \vec v_{K} + U (\bhat + \vec{\tilde b}_\perp)\right)
 \end{align}
 \subsubsection{Charge/vorticity conservation}
 Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
 and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
 \begin{align} \label{eq:charge_conservation}
-  \frac{\partial}{\partial t} \int_\Omega \dV \vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) =  - \int_\Omega \dV (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i})
+  \frac{\partial}{\partial t} \int_\Omega \dV \mathcal W
+  + \int_{\partial\Omega} \vec\dA\cdot\vec{ j_{\mathcal W}}
+  =  \int_\Omega \dV \Lambda_{\mathcal W} \nonumber\\
 \end{align}
-Note that if the integrand on the left hand side is interpreted as the \ExB vorticity
-density
-$\zeta := \vec \nabla\cdot( m_iN_i\vec \nabla_\perp\phi/e B^2)$
-and if we further assume that $\Gamma_{1,i} \Lambda_{N_i} \equiv \Lambda_{\Gamma_{1,i}N_i}$,
-we get the vorticity conservation
-\begin{align} \label{eq:vorticity_conservation}
-  \frac{\partial}{\partial t} \int_\Omega \dV \zeta =  - \int_\Omega \dV\Lambda_{\zeta}
+with the definitions
+\begin{align}
+\mathcal W &:= \vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) \nonumber\\
+\vec{j_{\mathcal W}} &:= \vec j_{n_e} - \vec j_{N_i} \nonumber\\
+\Lambda_{\mathcal W} &:= \Lambda_{n_e} - \Lambda_{N_i}
 \end{align}
+where the polarization charge density is approximately related to the \ExB vorticity through
+$\mathcal W = -\vec{\nabla} \cdot\left(\frac{m_iN_i}{e B} \bhat \times \vec u_E\right) \approx \bhat\cdot\left(\vec\nabla \times\frac{m_iN_i}{e B}  \vec u_E\right)$
+and we used that $\Gamma_{1,i}^\dagger 1 = 1$.
 
 \subsubsection{Energy theorem}
 The terms of the energy theorem are
@@ -643,7 +653,7 @@ with
     &+\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2
     + \frac{(\vec \nabla_\perp A_\parallel)^2}{2\mu_0}, \\
   \vec j_{\mathcal E} =& \sum_s \left[ N\left(
-  \vec v_E + \vec v_C + \vec v_{\nabla B} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right)
+  \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right)
   \left(T \ln N + \frac{1}{2}m U^2 + q\psi  \right) \right. \nonumber\\
   &\qquad \left . + mNU^2\vec v_{\nabla\times\bhat} + \left(\bhat + \tilde{\vec b}_\perp\right) NUT\right], \\
   \Lambda_{\mathcal E} =&  \sum_s \left[\left(T\left( 1+\ln{N}\right) +q \psi + \frac{1}{2} m U^2 \right)\Lambda_{N}  + mNU \Lambda_U\right]
@@ -725,7 +735,7 @@ The terms of the particle conservation read
 \begin{align} \label{eq:mass_conservation}
   n_e= & n_e,\\
   \vec j_{n_e} =& n_e\left(
-  \vec v_E + \vec v_C + \vec v_{\nabla B} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
+  \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
   =& n_e \left(\frac{\bhat\times \nabla\phi}{B} 
   + (\tau_e +\mu_e u_e^2)\vec K_{\nabla\times\bhat} 
   + \tau_e \vec K_{\vec \nabla B} + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
@@ -733,6 +743,12 @@ The terms of the particle conservation read
   \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
 \\
   S_{n_e} =&  S_{n_e}
+\end{align}
+and the vorticity conservation
+\begin{align} \label{eq:vorticity_conservation}
+\mathcal W &= \vec{\nabla} \cdot\left(\frac{N_i}{B^2} \vec{\nabla}_\perp \phi\right) \nonumber\\
+\vec{j_{\mathcal W}} &= \vec j_{n_e} - \vec j_{N_i} \nonumber\\
+\Lambda_{\mathcal W} &= \Lambda_{n_e} - \Lambda_{N_i}
 \end{align}
 
 The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
@@ -1022,7 +1038,7 @@ of a function $f(R,Z,\varphi)$ is given by the formula
 \langle f \rangle^{area}_{\psi_{p}} :=&
 \frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
 =& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
 \end{align}
 %with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
 and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
@@ -1036,11 +1052,13 @@ flux label, we define
 \langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
  = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
 =& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
+ =& \frac{1}{\int \sqrt{g}\d\eta\d\varphi } \int_0^{2\pi} f(\zeta,\eta, \varphi) \sqrt{g}\d\eta\d\varphi
 \end{align}
 where we used the coarea formula Eq.~\eqref{eq:coarea} for the second
 identiy. We immediately see that this definition differs from the first
-Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$.
+Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$ and that it is particularly easy to compute
+in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
 
 Both averages fullfill the basic identities
 \begin{align}
@@ -1052,7 +1070,7 @@ Both averages fullfill the basic identities
 
 The volume average is better suited for density-like quantities
 than the area average as we can see with the following identiy.
-Assume we have a quantity $X$ with $\partial_t X + \nabla \vec j_X = \Lambda_X$. Then we can use the volume average to write
+Assume we have a quantity $X$ with $\partial_t X + \nabla \cdot \vec j_X = \Lambda_X$. Then we can use the volume average to write
 \begin{align}
 \frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
   \partial v} J_X  = \langle \Lambda_X\rangle^{vol}
@@ -1066,6 +1084,80 @@ J_X:=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
 2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
 \label{eq:total_flux}
 \end{align}
+\subsection{ Particle, energy and vorticity fluxes}
+Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
+\begin{align} \label{eq:particle_flux}
+ \vec j_{N}\cdot \vec \nabla\psi_p %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\nabla\psi_p \nonumber\\
+ =&
+  N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
+ &+ NU\left [\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
+ \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
+ %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
+ %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\vec j_N \cdot \vec\nabla\psi_p
+ %\nonumber\\
+ %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
+ %=
+\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
++ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
+&+ z \tau NU
+ \left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\label{eq:energy_flux}
+\end{align}
+
+In order to discuss poloidal flows let us first define orthogonal unit vectors $\{\hat\zeta, \hat\eta,\bhat\}$
+\begin{align}
+\hat \eta = \bhat \times\hat \zeta
+\end{align}
+which points in the anti-clockwise poloidal direction with our choice of the magnetic field direction.
+From where we get $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
+with $\partial_{\hat\zeta}:= \zeta\cdot\nabla$.
+Notice that $\hat \eta$ in general has a (small) toroidal component in addition to the dominant poloidal component.
+Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ we can derive
+\begin{align}
+u^{\hat\eta} &= \frac{\partial_{\hat\zeta} \phi}{B} \\
+u^{\hat\zeta} &= -\frac{\partial_{\hat\eta} \phi}{B}
+\end{align}
+where $u^{\hat\zeta} := \hat\zeta\cdot\vec u_E$
+
+Now, let us integrate the vorticity density over a flux aligned volume to get
+\begin{align}
+\int \dV \mathcal W = \int \dA u^{\hat \eta} \frac{N_i}{B}
+\end{align}
+from where we get the flux-surface (area) integrated vorticity conservation
+\begin{align}
+\frac{\partial}{\partial t}\int\frac{N_iu^{\hat \eta}}{B}\dA
+ = \int( \vec j \times\bhat)\cdot\hat\eta \dA
+ + \int\dV \Lambda_{n_e} - \Lambda_{N_i}
+ \end{align}
+ with
+\begin{align}
+ \left(\vec j \times \bhat\right)\cdot\hat \eta =
+\hat\zeta\cdot (\vec j_{N_i} - \vec j_{n_e})  =
+   \left(N_i u_{E,i}^{\hat\zeta} - n_e u_{E,e}^{\hat\zeta}\right) \nonumber\\
+ + \left( \mu_iN_i U_i^2 - \mu_e n_e u_e^2\right) K_{\nabla\times\bhat}^{\hat\zeta}
+ + \left(\tau_i N_i - \tau_e n_e  \right) \left(K_{\nabla B}^{\hat\zeta} + K^{\hat\zeta}_{\nabla\times\bhat} \right)
+ + \left(N_i U_i - n_eu_e )\right)\tilde b^{\hat\zeta}_\perp
+\end{align}
+This equation describes that a current through a flux surface feels the Lorentz force pointing
+in the perpendicular direction and thus drives a poloidal flux.
+In the first term of the Lorentz force density integral we find the terms related to the Reynolds/Favre stress.
+The remaining terms describe the currents related to the curvature drifts. Notice
+that the prefactors are always negative since $\tau_e$ and $\mu_e$ are negative.
+Also note that the curvature vectors align with $\hat \zeta$ on the top and bottom of the tokamak.
+(Is this related to the X-point orbit loss mechanism? Chang, Ku, et al. )
+
+A surplus of electrons in the domain will lead to counter-clockwise poloidal acceleration, while positive
+charge leads to clockwise poloidal acceleration.
+
+
+
 
 \subsection{The safety factor}
 Assume that we pick a random field line and follow it (integrate it) for exactly one
@@ -1103,33 +1195,6 @@ q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
 Notice that the safety factor diverges on the last closed flux
 surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
 remain finite due to the $\nabla\psi$ factor.
-\subsection{ Fluxes and length scales}
-Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
-\begin{align} \label{eq:particle_flux}
- \vec j_{N}\cdot \vec \nabla\psi_p %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\nabla\psi_p \nonumber\\
- =&
-  N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
-   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
- &+ NU\left [\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
- \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
- %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
- %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\vec j_N \cdot \vec\nabla\psi_p
- %\nonumber\\
- %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
- %=
-\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
-+ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
-&+ z \tau NU
- \left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
-\label{eq:energy_flux}
-\end{align}
-
 \subsection{Program and files}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
 This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
