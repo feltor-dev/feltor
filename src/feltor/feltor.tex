@@ -440,7 +440,7 @@ Given $\phi$ we define the generalised electric potential
 Notice that the term $\nabla (n_e \vec v_K ) \equiv -\nabla (T_e n_e \vec K /e) $
 forms the familiar form of the divergence of the diamagnetic flux.
 \begin{align}
-\nabla\cdot\left( n_e \frac{\bhat \times \nabla n_e T_e}{en_e B}\right) \equiv  \nabla\cdot \left(\frac{T_e n_e}{e} \vec K\right)
+\nabla\cdot\left( n_e \frac{\bhat \times \nabla n_e T_e}{en_e B}\right) \equiv  \nabla\cdot \left(\frac{T_e n_e}{e} \vec{ \mathcal K}\right)
 \end{align}
 which is evident with the identities in Section~\ref{sec:magnetic}.
 
@@ -999,13 +999,13 @@ of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
 via Gauss-Legendre quadrature, which gives us an easy means to compute area
 integrals even if our coordinate system is not aligned to the area.
 
-Furthermore, recall the {\bf coarea formula}
+Furthermore, recall the {\bf co-area formula}
 \begin{align} \label{eq:coarea}
 \int_{\Omega_0} f(\vec x) \dV =
 \int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
 \end{align}
 where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
-The coarea formula can be viewed as a change of variables in the
+The co-area formula can be viewed as a change of variables in the
 volume integral.
 
 We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
@@ -1045,7 +1045,7 @@ and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from belo
 in our domain $\Omega$.
 
 The second one (the {\bf volume average} after \cite{haeseleer}) defines an average on a
-small volume - a shell centered around the flux-surface.
+small volume - a shell centered around the flux-surface - defined by two neighboring flux-surfaces.
 If we define $v(\psi) := \int_0^\psi \dV$ as the volume
 flux label, we define
 \begin{align} \label{eq:fsa_vol}
@@ -1053,14 +1053,14 @@ flux label, we define
  = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
 =& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
 {\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
- =& \frac{1}{\int \sqrt{g}\d\eta\d\varphi } \int_0^{2\pi} f(\zeta,\eta, \varphi) \sqrt{g}\d\eta\d\varphi
+ =& \frac{1}{\int \sqrt{g}\d\eta } \int_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
 \end{align}
-where we used the coarea formula Eq.~\eqref{eq:coarea} for the second
-identiy. We immediately see that this definition differs from the first
+where we used the co-area formula Eq.~\eqref{eq:coarea} for the second
+identity. We immediately see that this definition differs from the first
 Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$ and that it is particularly easy to compute
 in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
 
-Both averages fullfill the basic identities
+Both averages fulfill the basic identities
 \begin{align}
 \label{eq:fsa_identities}
 \langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
@@ -1069,7 +1069,7 @@ Both averages fullfill the basic identities
 
 
 The volume average is better suited for density-like quantities
-than the area average as we can see with the following identiy.
+than the area average as we can see with the following identity.
 Assume we have a quantity $X$ with $\partial_t X + \nabla \cdot \vec j_X = \Lambda_X$. Then we can use the volume average to write
 \begin{align}
 \frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
@@ -1113,44 +1113,48 @@ Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservati
 
 In order to discuss poloidal flows let us first define orthogonal unit vectors $\{\hat\zeta, \hat\eta,\bhat\}$
 \begin{align}
-\hat \eta = \bhat \times\hat \zeta
+\hat\zeta := \frac{\nabla\psi_p}{|\nabla\psi_p|} \quad
+\hat \eta := \bhat \times\hat \zeta
 \end{align}
-which points in the anti-clockwise poloidal direction with our choice of the magnetic field direction.
-From where we get $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
-with $\partial_{\hat\zeta}:= \zeta\cdot\nabla$.
+where $\hat\eta$
+points in the counter-clockwise poloidal direction with our choice of the magnetic field direction.
+We then have $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
+with $\partial_{\hat\zeta}:= \hat\zeta\cdot\nabla$ and $\partial_{\hat\eta}:=\hat\eta\cdot\nabla$.
 Notice that $\hat \eta$ in general has a (small) toroidal component in addition to the dominant poloidal component.
 Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ we can derive
 \begin{align}
 u^{\hat\eta} &= \frac{\partial_{\hat\zeta} \phi}{B} \\
 u^{\hat\zeta} &= -\frac{\partial_{\hat\eta} \phi}{B}
 \end{align}
-where $u^{\hat\zeta} := \hat\zeta\cdot\vec u_E$
+where $u^{\hat\zeta} := \hat\zeta\cdot\vec u_E$ and $u^{\hat\eta}:=\hat\eta\cdot\vec u_E$.
+Again, we emphasize that $u^{\hat\eta}$ has a toroidal component and is not a purely poloidal flow.
 
 Now, let us integrate the vorticity density over a flux aligned volume to get
 \begin{align}
-\int \dV \mathcal W = \int \dA u^{\hat \eta} \frac{N_i}{B}
+\int \dV \mathcal W =\int \dV \nabla\cdot\left(\frac{N_i\nabla_\perp\phi}{B^2}\right)  =  \int \dA u^{\hat \eta} \frac{N_i}{B}
 \end{align}
 from where we get the flux-surface (area) integrated vorticity conservation
 \begin{align}
 \frac{\partial}{\partial t}\int\frac{N_iu^{\hat \eta}}{B}\dA
- = \int( \vec j \times\bhat)\cdot\hat\eta \dA
+ = \int\frac{( \vec j \times\vec B)\cdot\hat\eta}{B} \dA
  + \int\dV \Lambda_{n_e} - \Lambda_{N_i}
  \end{align}
- with
+ with $(\vec j\times \vec B)\cdot\hat \eta/B =(\vec j_{N_i} - \vec j_{n_e})\cdot \hat\zeta $ and
 \begin{align}
- \left(\vec j \times \bhat\right)\cdot\hat \eta =
-\hat\zeta\cdot (\vec j_{N_i} - \vec j_{n_e})  =
-   \left(N_i u_{E,i}^{\hat\zeta} - n_e u_{E,e}^{\hat\zeta}\right) \nonumber\\
- + \left( \mu_iN_i U_i^2 - \mu_e n_e u_e^2\right) K_{\nabla\times\bhat}^{\hat\zeta}
- + \left(\tau_i N_i - \tau_e n_e  \right) \left(K_{\nabla B}^{\hat\zeta} + K^{\hat\zeta}_{\nabla\times\bhat} \right)
- + \left(N_i U_i - n_eu_e )\right)\tilde b^{\hat\zeta}_\perp
+ (\vec j_{N_i} - \vec j_{n_e})\cdot\vec \nabla\psi_p  =
+ \frac{N_i}{B}[\psi,\psi_p]_\perp - \frac{n_e}{B}[\phi,\psi_p]_\perp
+ \nonumber\\
+ + \left( \mu_iN_i U_i^2 - \mu_e n_e u_e^2\right) \mathcal K_{\nabla\times\bhat}(\psi_p)
+ + \left(\tau_i N_i - \tau_e n_e  \right) \mathcal K(\psi_p)
+ + \left(N_i U_i - n_eu_e \right)\vec{\tilde b_\perp}\cdot\vec\nabla\psi_p
 \end{align}
-This equation describes that a current through a flux surface feels the Lorentz force pointing
-in the perpendicular direction and thus drives a poloidal flux.
-In the first term of the Lorentz force density integral we find the terms related to the Reynolds/Favre stress.
+This equation describes that a current through a flux surface feels the Lorentz force
+and thus drives a poloidal flux.
+In the first two terms of the Lorentz force density integral we find the terms related to the Reynolds/Favre stress.
 The remaining terms describe the currents related to the curvature drifts. Notice
-that the prefactors are always negative since $\tau_e$ and $\mu_e$ are negative.
-Also note that the curvature vectors align with $\hat \zeta$ on the top and bottom of the tokamak.
+that the prefactors are always positive since $\tau_e$ and $\mu_e$ are negative.
+The curvature vectors counter-align with $\hat \zeta$ ($\mathcal K(\psi_p) < 0$, decelerate) on the top 
+and align ($\mathcal K(\psi_p) > 0$, accelerate) on the bottom of the tokamak.
 (Is this related to the X-point orbit loss mechanism? Chang, Ku, et al. )
 
 A surplus of electrons in the domain will lead to counter-clockwise poloidal acceleration, while positive
