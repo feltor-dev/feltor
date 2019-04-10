@@ -710,6 +710,7 @@ struct Iris
 {
     Iris( double psi_min, double psi_max ):
         m_psimin(psi_min), m_psimax(psi_max) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > m_psimax) return 0.;
@@ -730,6 +731,7 @@ struct Pupil
 {
     Pupil( double psimax):
         psimax_(psimax) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > psimax_) return 0.;
@@ -749,6 +751,7 @@ struct PsiPupil
 {
     PsiPupil(double psimax):
         psimax_(psimax){ }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > psimax_) return psimax_;
@@ -771,12 +774,13 @@ struct Heaviside
      * @brief Construct with xb and sign
      *
      * @param xb boundary value
-     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
-     * thus approximating H(xb-x) if H(x-xb) is the regular Heaviside function
+     * @param sign either +1 or -1, If -1, we swap 1 and 0 in the definition,
+     * thus mirror the Heaviside at the \c x=x_b axis
      */
     Heaviside( double xb, int sign = +1):
-        m_xb(xb){ }
+        m_xb(xb), m_s(sign){ }
 
+    DG_DEVICE
     double operator()(double x)const
     {
         if( (x < m_xb && m_s == 1) || (x > m_xb && m_s == -1)) return 0.;
@@ -800,6 +804,7 @@ struct GaussianDamping
 {
     GaussianDamping( double psimax, double alpha):
         m_psimax(psimax), m_alpha(alpha) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > m_psimax + 4.*m_alpha) return 0.;

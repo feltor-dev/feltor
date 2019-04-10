@@ -581,7 +581,7 @@ We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
     (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
-    \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},\\
+    \rho(R,Z) &:= \frac{\psi_{p\min}- \psi_p(R,Z) }{\psi_{p,\min}})},\\
     \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_p(R_0,0)
 \end{align}
 with $0 < \rho_{s}<1$
@@ -1231,7 +1231,7 @@ correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^
 correlationNTildePhi  & Dataset & 1 (time) & $\left( \int\dV \phi \tilde n_e \right)/ ||\phi||||\tilde n_e||$ with $n_e \equiv \langle n_e \rangle_{\psi_p} ( 1 + \tilde n_e)$\\
 q                & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
 psip1d           & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
-rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,0} - \psi_p)/\psi_{p,0}$ \\
+rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
 area             & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\nabla\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
 X                & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
 X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X

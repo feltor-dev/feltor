@@ -61,7 +61,7 @@ struct DeltaFunction
  * @brief Flux surface integral of the form
  \f[ \int dR dZ f(R,Z) \delta(\psi_p(R,Z)-\psi_0) g(R,Z) \f]
 
- where for the \c epsilon in \c DeltaFunction we use the maximum of \c h*GradPsip
+ where for the width of the Gaussian shaped delta function we use the maximum of \c 0.5*h*GradPsip
      where \c h is the cell size in the grid
  * @ingroup misc_geo
  */
@@ -73,7 +73,7 @@ struct FluxSurfaceIntegral
      * f and g are default initialized to 1
      * @param g2d grid
      * @param c contains psip, psipR and psipZ
-     * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c 0.15*h*GradPsi*width_factor)
+     * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c 0.5*h*GradPsi*width_factor)
      */
     FluxSurfaceIntegral(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.):
             m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_delta(m_f),
@@ -84,9 +84,10 @@ struct FluxSurfaceIntegral
         thrust::host_vector<double> psipZ  = dg::evaluate( c.psipZ(), g2d);
         double psipRmax = dg::blas1::reduce( psipR, 0., dg::AbsMax<double>()  );
         double psipZmax = dg::blas1::reduce( psipZ, 0., dg::AbsMax<double>()  );
-        double deltapsi = 0.15*(psipZmax*g2d.hy() +psipRmax*g2d.hx());
+        double deltapsi = 0.5*(psipZmax*g2d.hy() +psipRmax*g2d.hx())/g2d.n();
         m_eps = deltapsi*width_factor;
     }
+    double get_deltapsi() const{return m_eps;}
 
     /**
      * @brief Set the left function to integrate
@@ -123,11 +124,71 @@ struct FluxSurfaceIntegral
     const container m_w2d;
 };
 
+//This method for computing volumes is tested against flux-aligned grids in e.g. flux_t.cu
 /**
- * @brief Flux surface average over quantity
- \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dR dZ \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z)H(R,Z) \f]
+ * @brief Flux volume integral of the form
+ \f[ \int dR dZ f(R,Z) \Theta(\psi_p(R,Z)-\psi_0) g(R,Z) \f]
 
- with \f$ A = \int dRdZ \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|H(R,Z)\f$
+ where \c Theta is the Heaviside function
+ * @ingroup misc_geo
+ */
+template<class container>
+struct FluxVolumeIntegral
+{
+     /**
+     * @brief Construct from a grid and a magnetic field
+     * f and g are default initialized to 1
+     * @param g2d grid
+     * @param c contains psip
+     */
+    FluxVolumeIntegral(const dg::Grid2d& g2d, const TokamakMagneticField& c):
+            m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_heavi(m_f),
+            m_psi( dg::evaluate( c.psip(), g2d)),
+            m_w2d ( dg::create::weights( g2d))
+    {
+    }
+
+    /**
+     * @brief Set the left function to integrate
+     *
+     * @param f the container containing the discretized function
+     */
+    void set_left( const container& f){
+        dg::blas1::copy( f, m_f);
+    }
+    /**
+     * @brief Set the right function to integrate
+     *
+     * @param f the container containing the discretized function
+     */
+    void set_right( const container& g){
+        dg::blas1::copy( g, m_g);
+    }
+    /**
+     * @brief Calculate the Flux Volume Integral
+     *
+     * @param psip0 the actual psi value of the flux surface
+     * @return Int_0^psip0 (f,g)
+     */
+    double operator()(double psip0)
+    {
+        dg::Heaviside heavi( psip0, -1);
+        dg::blas1::evaluate( m_heavi, dg::equals(), heavi, m_psi);
+        dg::blas1::pointwiseDot( 1., m_heavi, m_f, m_g, 0., m_heavi);
+        return dg::blas1::dot( m_heavi, m_w2d);
+    }
+    private:
+    double m_eps;
+    container m_f, m_g, m_heavi, m_psi;
+    const container m_w2d;
+};
+
+
+/**
+ * @brief Flux surface average (differential volume average) over quantity
+ \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dR dZ \delta(\psi_p(R,Z)-\psi_0) f(R,Z)H(R,Z) \f]
+
+ with \f$ A = \int dRdZ \delta(\psi_p(R,Z)-\psi_0)H(R,Z)\f$
  where \c H is a weight function that can be used to e.g. cut away parts of the domain below the X-point or contain a volume form
  * @ingroup misc_geo
  */
@@ -142,15 +203,17 @@ struct FluxSurfaceAverage
      * @param weights Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point and/or contain a volume form without dg weights)
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
      */
-    FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, container weights, double width_factor = 1.) :
+    FluxSurfaceAverage( const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, container weights, double width_factor = 1.) :
     m_avg( g2d,c, width_factor), m_area( g2d, c, width_factor)
     {
         m_avg.set_left( f);
-        container gradpsi  = dg::evaluate( dg::geo::GradPsip( c), g2d);
-        dg::blas1::pointwiseDot( weights, gradpsi, weights);
+        //    container gradpsi  = dg::evaluate( dg::geo::GradPsip( c), g2d);
+        //    dg::blas1::pointwiseDot( weights, gradpsi, weights);
         m_avg.set_right( weights);
         m_area.set_right( weights);
     }
+
+    double get_deltapsi() const{return m_avg.get_deltapsi;}
 
     /**
      * @brief Reset the function to average
@@ -173,6 +236,10 @@ struct FluxSurfaceAverage
     private:
     FluxSurfaceIntegral<container> m_avg, m_area;
 };
+
+
+
+
 
 /**
  * @brief Class for the evaluation of the safety factor q based on a flux-surface integral

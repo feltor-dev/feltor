@@ -17,7 +17,8 @@
 #include "magnetic_field.h"
 #include "average.h"
 #include "testfunctors.h"
-#include "flux.h" //to compute Safety factor
+#include "curvilinearX.h"
+#include "separatrix_orthogonal.h"
 
 struct Parameters
 {
@@ -153,6 +154,12 @@ int main( int argc, char* argv[])
     const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
     const double psip0 = c.psip()(gp.R_0, 0);
     std::cout << "psip( 1, 0) "<<psip0<<"\n";
+    double R_O = gp.R_0, Z_O = 0.;
+    dg::geo::findXpoint( c.get_psip(), R_O, Z_O);
+    const double psipmin = c.psip()(R_O, Z_O);
+
+    std::cout << "O-point "<<R_O<<" "<<Z_O<<" with Psip = "<<psipmin<<std::endl;
+
     std::cout << "TEST ACCURACY OF PSI (values must be close to 0!)\n";
     if( gp.hasXpoint())
         std::cout << "    Equilibrium with X-point!\n";
@@ -233,39 +240,48 @@ int main( int argc, char* argv[])
     dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
     if( gp.hasXpoint() )
         dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
-    double psipmin = psip0;//(float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
     double psipmax = 0.;//dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()  );
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
-    //psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
     dg::geo::SafetyFactor     qprof( c);
     dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, c, psipog2d, xpoint_weights);
     dg::HVec psi_fsa    = dg::evaluate( fsa,        grid1d);
     dg::HVec sf         = dg::evaluate( qprof,      grid1d);
     dg::HVec psi        = dg::evaluate( dg::cooX1d, grid1d), rho(psi);
-    dg::blas1::axpby( -1./psip0, rho, +1., 1., rho); //transform psi to rho
+    dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
 
     //other flux labels
     dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, c);
     fsi.set_right( xpoint_weights);
     dg::HVec vol_psip = dg::evaluate( fsi, grid1d);
     dg::HVec w1d = dg::create::weights( grid1d);
-    double volumeRZ = 2.*M_PI*dg::blas1::dot( vol_psip, w1d);
+    double volumeCoarea = 2.*M_PI*dg::blas1::dot( vol_psip, w1d);
 
     //area
     fsi.set_left( dg::evaluate( dg::geo::GradPsip(c), grid2d));
     dg::HVec area_psip = dg::evaluate( fsi, grid1d);
 
-    dg::geo::Pupil pupil( c.psip(), 0.);
-    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
-    xpoint_weights = dg::evaluate( dg::cooX2d, g2dC);
-    if( gp.hasXpoint() )
-        dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), g2dC), xpoint_weights);
-    dg::HVec vec  = dg::evaluate( pupil, g2dC);
-    dg::HVec g2d_weights = dg::create::weights( g2dC);
-    double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, xpoint_weights);
-    std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeRZ<<" "<<volumeRZP
-              <<" rel error = "<<fabs(volumeRZ-volumeRZP)/volumeRZP<<"\n";
+    //dg::geo::Pupil pupil( c.psip(), 0.);
+    dg::geo::FluxVolumeIntegral<dg::HVec> fvi( grid2d, c);
+    std::cout << "Delta Rho for Flux surface integrals = "<<-fsi.get_deltapsi()/psipmin<<"\n";
+
+    fvi.set_right( xpoint_weights);
+    dg::HVec psi_vol = dg::evaluate( fvi, grid1d);
+    dg::blas1::scal(psi_vol, 2.*M_PI);
+    double volumeFVI = 2.*M_PI*fvi(0);
+    std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
+              <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
+    ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
+    std::cout << "Generate X-point flux-aligned grid!\n";
+    double RX = gp.R_0-1.1*gp.triangularity*gp.a;
+    double ZX = -1.1*gp.elongation*gp.a;
+    c = dg::geo::createSolovevField(gp);
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), RX, ZX) ;
+    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psipmin, R_X, Z_X, c.R0(), 0, 0, true);
+    double fx_0 = 1./8.;
+    double psi_1 = -fx_0/(1.-fx_0)*psipmin;
+    std::cout << "psi 1 is          "<<psi_1<<"\n";
+    dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., 3, 64, 160, dg::DIR, dg::NEU);
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -280,18 +296,20 @@ int main( int argc, char* argv[])
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
-    int avgID[5];
+    int avgID[6];
     err = nc_def_var( ncid, "q-profile", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[0]);
     err = nc_def_var( ncid, "rho", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[1]);
     err = nc_def_var( ncid, "psip1d", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[2]);
     err = nc_def_var( ncid, "psi_fsa", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[3]);
-    err = nc_def_var( ncid, "area", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[4]);
+    err = nc_def_var( ncid, "psi_area", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[4]);
+    err = nc_def_var( ncid, "psi_vol", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[5]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, avgID[0], sf.data());
     err = nc_put_var_double( ncid, avgID[1], rho.data());
     err = nc_put_var_double( ncid, avgID[2], psi.data());
     err = nc_put_var_double( ncid, avgID[3], psi_fsa.data());
     err = nc_put_var_double( ncid, avgID[4], area_psip.data());
+    err = nc_put_var_double( ncid, avgID[5], psi_vol.data());
     err = nc_redef(ncid);
 
     //write 2d vectors

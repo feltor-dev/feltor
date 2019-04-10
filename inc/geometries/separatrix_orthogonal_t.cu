@@ -97,9 +97,9 @@ int main( int argc, char* argv[])
     double psi_0 = -20;
     std::cin >> psi_0;
     std::cout << "Typed "<<psi_0<<"\n";
-    //std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
+    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) 1/4, 1/22 \n";
     double fx_0=1./4., fy_0=1./22.;
-    //std::cin >> fx_0>> fy_0;
+    std::cin >> fx_0>> fy_0;
     std::cout << "Typed "<<fx_0<<" "<<fy_0<<"\n";
 
     std::cout << "Type add_x and add_y \n";
@@ -111,7 +111,10 @@ int main( int argc, char* argv[])
     t.tic();
     //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
+    double R_O = gp.R_0, Z_O = 0.;
+    dg::geo::findXpoint( c.get_psip(), R_O, Z_O);
+    const double psipmin = c.psip()(R_O, Z_O);
+    std::cout << "Psi min "<<psipmin<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
@@ -189,7 +192,7 @@ int main( int argc, char* argv[])
     err = nc_close( ncid);
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e2, 5e2, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
     dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);

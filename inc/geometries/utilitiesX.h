@@ -9,13 +9,14 @@ namespace dg
 namespace geo
 {
 /**
- * @brief This function finds the X-point via Newton iteration applied to the gradient of psi
+ * @brief This function finds the X-point (or O-point for that matter) via Newton iteration applied to the gradient of psi
  *
  * The inverse of the Hessian matrix is computed analytically
  * @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
  * @ingroup misc_geo
+ * @note also finds the O-point or any other point with vanishing gradient
  */
 static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
@@ -23,7 +24,7 @@ static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, 
     std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
     X[0] = R_X, X[1] = Z_X;
     double eps = 1e10, eps_old= 2e10;
-    while( (eps < eps_old || eps > 1e-7) && eps > 1e-13)
+    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10)
     {
         X_OLD = X; eps= eps_old;
         hessianRZtau.newton_iteration( X, XN);
