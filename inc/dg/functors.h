@@ -766,6 +766,7 @@ struct PsiPupil
         0  \text{ if } x < x_b \\
         1  \text{ else}
      \end{cases}\f]
+  @note the 1 is inclusive i.e if x==x_b the functor always returns 1
  */
 struct Heaviside
 {
@@ -774,8 +775,8 @@ struct Heaviside
      * @brief Construct with xb and sign
      *
      * @param xb boundary value
-     * @param sign either +1 or -1, If -1, we swap 1 and 0 in the definition,
-     * thus mirror the Heaviside at the \c x=x_b axis
+     * @param sign either +1 or -1, If -1, we mirror the Heaviside at
+     *  the \c x=x_b axis, i.e. we swap the < sign in the definition to >
      */
     Heaviside( double xb, int sign = +1):
         m_xb(xb), m_s(sign){ }

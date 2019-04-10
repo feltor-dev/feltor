@@ -141,10 +141,11 @@ struct FluxVolumeIntegral
      * @param g2d grid
      * @param c contains psip
      */
-    FluxVolumeIntegral(const dg::Grid2d& g2d, const TokamakMagneticField& c):
-            m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_heavi(m_f),
-            m_psi( dg::evaluate( c.psip(), g2d)),
-            m_w2d ( dg::create::weights( g2d))
+    template<class Geometry2d>
+    FluxVolumeIntegral(const Geometry2d& g2d, const TokamakMagneticField& c):
+        m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_heavi(m_f),
+        m_psi( dg::pullback( c.psip(), g2d)),
+        m_w2d ( dg::create::volume( g2d))
     {
     }
 

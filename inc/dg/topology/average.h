@@ -11,12 +11,21 @@
 namespace dg{
 
 /**
- * @brief Class for average computations in a Cartesian topology
+ * @brief Topological average computations in a Cartesian topology
  *
+ * \f[
+ * \langle f \rangle_x := \frac{1}{L_x}\int_0^{L_x}dx f \quad
+ * \langle f \rangle_y := \frac{1}{L_y}\int_0^{L_y}dy f \quad
+ * \langle f \rangle_z := \frac{1}{L_z}\int_0^{L_z}dz f \\
+ * \langle f \rangle_{xy} := \frac{1}{L_xL_y}\int_0^{L_x}\int_0^{L_y}dxdy f \quad
+ * \langle f \rangle_{xz} := \frac{1}{L_xL_z}\int_0^{L_x}\int_0^{L_z}dxdz f \quad
+ * \langle f \rangle_{yz} := \frac{1}{L_yL_z}\int_0^{L_y}\int_0^{L_z}dydz f \quad
+ * \f]
  * Given a Cartesian topology it is possible to define a partial reduction of a given vector.
  * In two dimensions for example we can define a reduction over all points that are neighbors in the x (or y) direction.
  * We are then left with Ny (Nx) points. In three dimensions we can define the reduction along the x, y, z directions
  * but also over all points in the xy (xz or yz) planes. We are left with two- (respectively three-)dimensional vectors.
+ * @note The integrals include the dG weights but not the volume element (does not know about geometry)
  * @snippet topology/average_t.cu doxygen
  * @ingroup utilities
  */

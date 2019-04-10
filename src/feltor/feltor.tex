@@ -581,8 +581,8 @@ We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
     (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
-    \rho(R,Z) &:= \frac{\psi_{p\min}- \psi_p(R,Z) }{\psi_{p,\min}})},\\
-    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_p(R_0,0)
+    \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}},\\
+    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_{p,\min}
 \end{align}
 with $0 < \rho_{s}<1$
 where $\omega_s$ is the source strength parameter.
@@ -1022,7 +1022,7 @@ of the flux 2-form and the metric
 to a parameterization of the flux-surface.
 In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have with $\hat\zeta = \hat \psi_p$
 \begin{align}
-\dA = \sqrt{g} |\nabla \zeta| \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA
+\dA = \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA
 \label{}
 \end{align}
 where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2$
