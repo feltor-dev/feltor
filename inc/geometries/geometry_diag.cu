@@ -261,7 +261,11 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( volX2d, psip_X, psip_X);
     avg_eta( psip_X, map1d["X_psip1d"], false);
     avg_eta( volX2d, area_psip_X, false);
-    dg::blas1::pointwiseDivide( map1d.at("X_psip1d"), area_psip_X, map1d.at("X_psip1d"));
+    dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
+    map1d["X_psi_vol"] = dg::integrate( area_psip_X, gX1d);
+    dg::blas1::scal( map1d.at("X_psi_vol"), 4.*M_PI*M_PI);
+    dg::blas1::pointwiseDivide( map1d.at("X_psip1d"), area_psip_X,
+        map1d.at("X_psip1d"));
 
     //NOTE: VOLUME is WITHIN cells while AREA is ON gridpoints
     dg::HVec gradPsipX = metricX.value(0,0);
@@ -270,24 +274,19 @@ int main( int argc, char* argv[])
     avg_eta( gradPsipX, map1d["X_psi_area"], false);
     dg::blas1::scal( map1d.at("X_psi_area"), 4.*M_PI*M_PI);
 
-    dg::geo::FluxVolumeIntegral<dg::HVec> fvi_X( gX2d, c);
-    fvi_X.set_left( coordsX[0]);
-    dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
-    map1d["X_psi_vol"] = dg::evaluate( fvi_X, grid1d);
-    dg::blas1::scal( map1d.at("X_psi_vol"), 2.*M_PI);
-
-
     ///////////////////Compute flux average////////////////////
     dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
     if( gp.hasXpoint() )
         dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
     dg::geo::SafetyFactor     qprof( c);
     dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, c, psipog2d, xpoint_weights);
+    dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
     map1d["psi_fsa"]    = dg::evaluate( fsa,        grid1d);
     map1d["q-profile"]  = dg::evaluate( qprof,      grid1d);
     map1d["psip1d"]     = dg::evaluate( dg::cooX1d, grid1d);
     map1d["rho"] = map1d.at("psip1d");
-    dg::blas1::axpby( -1./psipmin, map1d.at("rho"), +1., 1., map1d.at("rho")); //transform psi to rho
+    dg::blas1::axpby( -1./psipmin, map1d.at("rho"), +1., 1.,
+        map1d.at("rho")); //transform psi to rho
 
     //other flux labels
     dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, c);
@@ -309,7 +308,7 @@ int main( int argc, char* argv[])
     map1d["psi_vol"] = dg::evaluate( fvi, grid1d);
     dg::blas1::scal(map1d["psi_vol"], 2.*M_PI);
     double volumeFVI = 2.*M_PI*fvi(psipmax);
-    double volumeFVIX = 2.*M_PI*fvi_X(psipmax);
+    double volumeFVIX = dg::interpolate( map1d.at("X_psi_vol"), gX1d.x1(), gX1d);
     std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
               <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
     std::cout << "VOLUME TEST WITH X Grid FORMULA: "<<volumeFVIX<<" "<<volumeFVI

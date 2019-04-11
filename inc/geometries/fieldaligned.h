@@ -72,9 +72,9 @@ struct DSField
         dg::blas1::pointwiseDivide(v_zeta, v_phi, v_zeta);
         dg::blas1::pointwiseDivide(v_eta, v_phi, v_eta);
         dg::blas1::pointwiseDivide(1.,    v_phi, v_phi);
-        dzetadphi_  = dg::create::forward_transform( v_zeta, g );
-        detadphi_   = dg::create::forward_transform( v_eta, g );
-        dsdphi_     = dg::create::forward_transform( v_phi, g );
+        dzetadphi_  = dg::forward_transform( v_zeta, g );
+        detadphi_   = dg::forward_transform( v_eta, g );
+        dsdphi_     = dg::forward_transform( v_phi, g );
     }
     //interpolate the vectors given in the constructor on the given point
     //if point lies outside of grid boundaries zero is returned
@@ -82,16 +82,10 @@ struct DSField
     {
         double R = y[0], Z = y[1];
         g_->shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
-        if( !g_->contains( R, Z))
         {
-            yp[0] = yp[1] = 0; //Let's hope this never happens?
-        }
-        else
-        {
-            //else interpolate
-            yp[0] = interpolate( R, Z, dzetadphi_, *g_);
-            yp[1] = interpolate( R, Z, detadphi_,  *g_);
-            yp[2] = interpolate( R, Z, dsdphi_,    *g_);
+            yp[0] = interpolate(dg::lspace, dzetadphi_, R, Z, *g_);
+            yp[1] = interpolate(dg::lspace, detadphi_,  R, Z, *g_);
+            yp[2] = interpolate(dg::lspace, dsdphi_,    R, Z, *g_);
         }
     }
     private:

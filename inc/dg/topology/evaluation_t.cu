@@ -41,10 +41,10 @@ int main()
 {
     std::cout << "This program tests the exblas::dot function. The tests succeed only if the evaluation and grid functions but also the weights and especially the exblas::dot function are correctly implemented and compiled. Furthermore, the compiler implementation of the exp function in the math library must be consistent across platforms to get reproducible results\n";
     std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
-    unsigned n = 1, Nx = 12, Ny = 28, Nz = 100;
+    unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
     std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
 
-    dg::Grid1d g1d( 0, M_PI/2., n, Nx);
+    dg::Grid1d g1d( 1, 2, n, Nx);
     dg::Grid2d g2d( 1, 2, 3, 4, n, Nx, Ny);
     dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
 
@@ -106,7 +106,7 @@ int main()
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
 
     //TEST OF INTEGRAL
-    dg::HVec integral_num = dg::create::integral( dg::evaluate( cos, g1d), g1d);
+    dg::HVec integral_num = dg::integrate( cos, g1d);
     dg::HVec integral_ana = dg::evaluate( sin, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x0()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);

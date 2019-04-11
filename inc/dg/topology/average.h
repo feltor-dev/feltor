@@ -43,23 +43,30 @@ struct Average
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
         m_w=dg::construct<ContainerType>(dg::create::weights(g, direction));
-        m_temp1d = m_temp = m_w;
+        m_temp = m_w;
         m_transpose = false;
+        unsigned size1d = 0;
         if( direction == coo2d::x)
+        {
             dg::blas1::scal( m_w, 1./g.lx());
+            size1d = m_ny;
+        }
         else
         {
             m_transpose = true;
             dg::blas1::scal( m_temp, 1./g.ly());
             dg::transpose( m_nx, m_ny, m_temp, m_w);
+            size1d = m_nx;
         }
+        thrust::host_vector<double> t1d( size1d);
+        m_temp1d = dg::construct<ContainerType>( t1d);
     }
 
     ///@copydoc Average()
     Average( const aTopology3d& g, enum coo3d direction)
     {
         m_w = dg::construct<ContainerType>(dg::create::weights(g, direction));
-        m_temp1d = m_temp = m_w;
+        m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
         if( direction == coo3d::x) {
@@ -84,6 +91,12 @@ struct Average
         }
         else
             std::cerr << "Warning: this direction is not implemented\n";
+        if(!m_transpose)
+            m_temp1d = dg::construct<ContainerType>(
+                thrust::host_vector<double>( m_ny,0.));
+        else
+            m_temp1d = dg::construct<ContainerType>(
+                thrust::host_vector<double>( m_nx,0.));
     }
     /**
      * @brief Compute the average as configured in the constructor
@@ -100,6 +113,7 @@ struct Average
     {
         if( !m_transpose)
         {
+            //temp1d has size m_ny
             dg::average( m_nx, m_ny, src, m_w, m_temp1d);
             if( extend )
                 dg::extend_column( m_nx, m_ny, m_temp1d, res);
@@ -108,6 +122,7 @@ struct Average
         }
         else
         {
+            //temp1d has size m_nx
             dg::transpose( m_nx, m_ny, src, m_temp);
             dg::average( m_ny, m_nx, m_temp, m_w, m_temp1d);
             if( extend )
