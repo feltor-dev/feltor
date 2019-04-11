@@ -2,6 +2,7 @@
 
 #include <thrust/host_vector.h>
 #include "grid.h"
+#include "operator.h"
 #include "../enums.h"
 
 /*! @file
@@ -54,6 +55,47 @@ thrust::host_vector<real_type> inv_weights( const RealGrid1d<real_type>& g)
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
+}
+
+/*!@brief Create the integral of a function on a grid
+ * \f[ F_h(x) = \int_a^x f_h(x') dx' \f]
+ *
+ * This function computes the indefinite integral of a given input
+ * @param in Host vector discretized on g
+ * @param g The grid
+ * @return integral of in on the grid g
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ */
+template<class real_type>
+thrust::host_vector<real_type> integral( const thrust::host_vector<real_type>& in, const RealGrid1d<real_type>& g)
+{
+    double h = g.h();
+    unsigned n = g.n();
+    thrust::host_vector<real_type> out(in.size(), 0);
+    dg::Operator<real_type> forward = g.dlt().forward();
+    dg::Operator<real_type> backward = g.dlt().backward();
+    dg::Operator<real_type> ninj = create::ninj<real_type>( n );
+    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    t *= h/2.;
+    ninj = backward*t*ninj*forward;
+    real_type constant = 0.;
+
+    for( unsigned i=0; i<g.N(); i++)
+    {
+        for( unsigned k=0; k<n; k++)
+        {
+            for( unsigned l=0; l<n; l++)
+            {
+                out[ i*n + k] += ninj(k,l)*in[ i*n + l];
+            }
+            out[ i*n + k] += constant;
+        }
+        for( unsigned l=0; l<n; l++)
+            constant += h*forward(0,l)*in[i*n+l];
+    }
+    return out;
+
+
 }
 
 ///@cond
