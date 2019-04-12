@@ -239,40 +239,46 @@ int main( int argc, char* argv[])
     dg::DVec psipog2d   = dg::evaluate( c.psip(), grid2d);
     std::map<std::string, dg::HVec> map1d;
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
-    std::cout << "Generate X-point flux-aligned grid!\n";
-    double RX = gp.R_0-1.1*gp.triangularity*gp.a;
-    double ZX = -1.1*gp.elongation*gp.a;
-    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), RX, ZX) ;
-    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psipmin, R_X, Z_X, c.R0(), 0, 0, true);
-    double fx_0 = 1./8.;
-    double psipmax = -fx_0/(1.-fx_0)*psipmin;
-    std::cout << "psi 1 is          "<<psipmax<<"\n";
-    unsigned npsi = 3, Npsi = 32;//set number of psivalues
-    dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., npsi, Npsi, 160, dg::DIR, dg::NEU);
-    std::cout << "DONE! Generate X-point flux-aligned grid!\n";
-    dg::Average<dg::HVec > avg_eta( gX2d.grid(), dg::coo2d::y);
-    std::vector<dg::HVec> coordsX = gX2d.map();
-    dg::SparseTensor<dg::HVec> metricX = gX2d.metric();
-    dg::HVec volX2d = dg::tensor::volume2d( metricX);
-    dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
-    dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
-    dg::HVec psip_X = dg::evaluate( dg::one, gX2d), area_psip_X;
-    dg::blas2::symv( grid2gX2d, (dg::HVec)psipog2d, psip_X);
-    dg::blas1::pointwiseDot( volX2d, psip_X, psip_X);
-    avg_eta( psip_X, map1d["X_psip1d"], false);
-    avg_eta( volX2d, area_psip_X, false);
-    dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
-    map1d["X_psi_vol"] = dg::integrate( area_psip_X, gX1d);
-    dg::blas1::scal( map1d.at("X_psi_vol"), 4.*M_PI*M_PI);
-    dg::blas1::pointwiseDivide( map1d.at("X_psip1d"), area_psip_X,
-        map1d.at("X_psip1d"));
+    unsigned npsi = 3, Npsi = 64;//set number of psivalues (NPsi % 8 == 0)
+    double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
+    double volumeXGrid;
+    if( gp.hasXpoint())
+    {
+        std::cout << "Generate X-point flux-aligned grid!\n";
+        double RX = gp.R_0-1.1*gp.triangularity*gp.a;
+        double ZX = -1.1*gp.elongation*gp.a;
+        dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), RX, ZX) ;
+        dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psipmin, R_X, Z_X, c.R0(), 0, 0, true);
+        double fx_0 = 1./8.;
+        psipmax = -fx_0/(1.-fx_0)*psipmin;
+        std::cout << "psi 1 is          "<<psipmax<<"\n";
+        dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., npsi, Npsi, 160, dg::DIR, dg::NEU);
+        std::cout << "DONE! Generate X-point flux-aligned grid!\n";
+        dg::Average<dg::HVec > avg_eta( gX2d.grid(), dg::coo2d::y);
+        std::vector<dg::HVec> coordsX = gX2d.map();
+        dg::SparseTensor<dg::HVec> metricX = gX2d.metric();
+        dg::HVec volX2d = dg::tensor::volume2d( metricX);
+        dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
+        dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
+        dg::HVec psip_X = dg::evaluate( dg::one, gX2d), area_psip_X;
+        dg::blas2::symv( grid2gX2d, (dg::HVec)psipog2d, psip_X);
+        dg::blas1::pointwiseDot( volX2d, psip_X, psip_X);
+        avg_eta( psip_X, map1d["X_psip1d"], false);
+        avg_eta( volX2d, area_psip_X, false);
+        dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
+        map1d["X_psi_vol"] = dg::integrate( area_psip_X, gX1d);
+        dg::blas1::scal( map1d.at("X_psi_vol"), 4.*M_PI*M_PI);
+        dg::blas1::pointwiseDivide( map1d.at("X_psip1d"), area_psip_X,
+            map1d.at("X_psip1d"));
 
-    //NOTE: VOLUME is WITHIN cells while AREA is ON gridpoints
-    dg::HVec gradPsipX = metricX.value(0,0);
-    dg::blas1::transform( gradPsipX, gradPsipX, dg::SQRT<double>());
-    dg::blas1::pointwiseDot( volX2d, gradPsipX, gradPsipX); //R\sqrt{g}|\nabla\zeta|
-    avg_eta( gradPsipX, map1d["X_psi_area"], false);
-    dg::blas1::scal( map1d.at("X_psi_area"), 4.*M_PI*M_PI);
+        //NOTE: VOLUME is WITHIN cells while AREA is ON gridpoints
+        dg::HVec gradPsipX = metricX.value(0,0);
+        dg::blas1::transform( gradPsipX, gradPsipX, dg::SQRT<double>());
+        dg::blas1::pointwiseDot( volX2d, gradPsipX, gradPsipX); //R\sqrt{g}|\nabla\zeta|
+        avg_eta( gradPsipX, map1d["X_psi_area"], false);
+        dg::blas1::scal( map1d.at("X_psi_area"), 4.*M_PI*M_PI);
+        volumeXGrid = dg::interpolate( map1d.at("X_psi_vol"), gX1d.x1(), gX1d);
+    }
 
     ///////////////////Compute flux average////////////////////
     dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
@@ -308,11 +314,12 @@ int main( int argc, char* argv[])
     map1d["psi_vol"] = dg::evaluate( fvi, grid1d);
     dg::blas1::scal(map1d["psi_vol"], 2.*M_PI);
     double volumeFVI = 2.*M_PI*fvi(psipmax);
-    double volumeFVIX = dg::interpolate( map1d.at("X_psi_vol"), gX1d.x1(), gX1d);
     std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
               <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
-    std::cout << "VOLUME TEST WITH X Grid FORMULA: "<<volumeFVIX<<" "<<volumeFVI
-              <<" rel error = "<<fabs(volumeFVIX-volumeFVI)/volumeFVI<<"\n";
+    if(gp.hasXpoint()){
+        std::cout << "VOLUME TEST WITH X Grid FORMULA: "<<volumeXGrid<<" "<<volumeFVI
+                  <<" rel error = "<<fabs(volumeXGrid-volumeFVI)/volumeFVI<<"\n";
+    };
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;

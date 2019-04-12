@@ -618,7 +618,24 @@ with the particle flux
 \begin{align} \label{eq:mass_flux}
 \vec{ j_{n_e}} := n_e\left(\vec v_E + \vec v_C + \vec v_{K} + U (\bhat + \vec{\tilde b}_\perp)\right)
 \end{align}
-\subsubsection{Charge/vorticity conservation}
+\subsubsection{Vorticity density}
+First of all let us formally re-express $N_i = \Gamma_{1,i}\Gamma^{-1}_{1,i}N_i = \Gamma_{1,i} N_i- \frac{T_i}{2 m_i \Omega_0^2} \Gamma_{1,i}\Delta_\perp  N_i$.
+With this identiy we can write the polarisation equation as
+\begin{align}\label{eq:general_polarisation}
+\nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right) 
++ \frac{1}{2} \frac{T_i}{m_i\Omega_0^2} \Gamma_{1,i}\Delta_\perp N_i
+= n_e - N_i 
+\end{align}
+Let us now define
+\begin{align}
+\mathcal W_E &:= \Omega_{i0} \nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right)
+=
+\frac{\Omega_{i0}}{\Omega_i}\bhat \cdot(\nabla\times N_i \vec u_E) - \Omega_{i0} N_i \vec{\mathcal K} \cdot \vec u_E
+\\
+\mathcal W_d &:= \frac{T_i}{m_i\Omega_{i0}} \Gamma_{1,i}\Delta_\perp N_i
+\end{align}
+which are the generalized \ExB and diamagnetic vorticity densities.
+
 Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
 and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
 \begin{align} \label{eq:charge_conservation}
@@ -996,7 +1013,7 @@ A numerically tractable approximation to the delta-function reads
 where $\epsilon$ is a small, free parameter.
 In the DG framework the left-hand side
 of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
-via Gauss-Legendre quadrature, which gives us an easy means to compute area
+via Gauss-Legendre quadrature, which we propse as a first method to compute area
 integrals even if our coordinate system is not aligned to the area.
 
 Furthermore, recall the {\bf co-area formula}
@@ -1022,10 +1039,14 @@ of the flux 2-form and the metric
 to a parameterization of the flux-surface.
 In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have with $\hat\zeta = \hat \psi_p$
 \begin{align}
-\dA = \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA
+\dA = \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA,\quad
+\hat\zeta=\frac{\nabla\psi_p}{|\nabla\psi_p|}
 \label{}
 \end{align}
-where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2$
+where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2 = f_0^2(\nabla\psi_p)^2$.
+Notice that numerically we can integrate in flux-aligned coordinates by generating a corresponding
+grid and pulling back (interpolating) the relevant fields to this grid. This is the second method
+to numerically compute area integrals.
 
 \subsection{Flux surface average}
 
@@ -1039,6 +1060,8 @@ of a function $f(R,Z,\varphi)$ is given by the formula
 \frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
 =& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
 {\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
+=& \frac{\oint \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g g^{\zeta\zeta}}\d\eta}
+         { \oint \sqrt{g g^{\zeta\zeta}}\d\eta}
 \end{align}
 %with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
 and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
