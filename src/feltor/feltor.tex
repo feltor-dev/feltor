@@ -618,40 +618,80 @@ with the particle flux
 \begin{align} \label{eq:mass_flux}
 \vec{ j_{n_e}} := n_e\left(\vec v_E + \vec v_C + \vec v_{K} + U (\bhat + \vec{\tilde b}_\perp)\right)
 \end{align}
-\subsubsection{Vorticity density}
-First of all let us formally re-express $N_i = \Gamma_{1,i}\Gamma^{-1}_{1,i}N_i = \Gamma_{1,i} N_i- \frac{T_i}{2 m_i \Omega_0^2} \Gamma_{1,i}\Delta_\perp  N_i$.
+\subsubsection{Polarisation charge density}
+First of all let us approximate FLR effects in the long wavelength limit (LWL)
+$\Gamma_{1,i}N_i \approx N_i + \frac{T_i}{2 m_i \Omega_0^2} \Delta_\perp  N_i$.
 With this identiy we can write the polarisation equation as
 \begin{align}\label{eq:general_polarisation}
 \nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right) 
-+ \frac{1}{2} \frac{T_i}{m_i\Omega_0^2} \Gamma_{1,i}\Delta_\perp N_i
++ \frac{1}{2} \frac{T_i}{m_i\Omega_0^2} \Delta_\perp N_i
 = n_e - N_i 
 \end{align}
 Let us now define
 \begin{align}
-\mathcal W_E &:= \Omega_{i0} \nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right)
+\rho_E &:= -\nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right)
+\equiv \nabla\cdot\left(\frac{N_i}{\Omega_i} \bhat\times\vec u_E\right)
 =
-\frac{\Omega_{i0}}{\Omega_i}\bhat \cdot(\nabla\times N_i \vec u_E) - \Omega_{i0} N_i \vec{\mathcal K} \cdot \vec u_E
+-\frac{\Omega_{i0}}{\Omega_i}\bhat \cdot(\nabla\times N_i \vec u_E)
++ \Omega_{i0} N_i \vec{\mathcal K} \cdot \vec u_E
 \\
-\mathcal W_d &:= \frac{T_i}{m_i\Omega_{i0}} \Gamma_{1,i}\Delta_\perp N_i
+\mathcal \rho_D &:= -\frac{T_i}{m_i\Omega^2_{i0}} \Delta_\perp N_i
+\equiv \nabla\cdot\left( \frac{N_i}{\Omega_{i0}} \bhat\times \vec v_{d0}\right) \quad \vec v_{d0} := \frac{\bhat\times \nabla T_i N_i}{eB_0N_i}
 \end{align}
 which are the generalized \ExB and diamagnetic vorticity densities.
 
-Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
-and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
-\begin{align} \label{eq:charge_conservation}
-  \frac{\partial}{\partial t} \int_\Omega \dV \mathcal W
-  + \int_{\partial\Omega} \vec\dA\cdot\vec{ j_{\mathcal W}}
-  =  \int_\Omega \dV \Lambda_{\mathcal W} \nonumber\\
-\end{align}
-with the definitions
+Now, we take the time derivative of Eq.~\eqref{eq:general_polarisation}
+to get (neglecting terms in the LWL, \fixme{Confirm, units!})
 \begin{align}
-\mathcal W &:= \vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) \nonumber\\
-\vec{j_{\mathcal W}} &:= \vec j_{n_e} - \vec j_{N_i} \nonumber\\
-\Lambda_{\mathcal W} &:= \Lambda_{n_e} - \Lambda_{N_i}
+ &\frac{\partial}{\partial t}\left[
+\rho_E + \rho_D
+\right]
++ \nabla\cdot\left( \vec u_E \left[
+\rho_E + \rho_D
+\right]
+\right)
+- \nabla\cdot(N_i \vec u_P)
+\nonumber\\
+&= \nabla\cdot\left( \frac{\bhat\times\vec\nabla (t_e n_e + T_i N_i)}{eN_iB}N_i\right)
+\nonumber\\
+&+ \nabla\cdot\left( \frac{\nabla\times\bhat}{B}\frac{1}{2}\left(m_e n_e u_e^2 + m_i N_i U_i^2\right) \right)
+\nonumber\\
+&+ \nabla\cdot\left(\bhat j_\parallel\right)
++ \nabla\cdot\left(\frac{\nabla\times A_\parallel \bhat}{B} \Delta_\perp A_\parallel\right)
++ \Lambda_{N_i} - \Lambda_{n_e}
+\\
+\vec u_P &:=\frac{\bhat\times \nabla u_E^2/2}{\Omega_i}\nonumber \\
+&\nabla\cdot \left(\vec j_{pol} + \vec j_D + \vec j_{\nabla\times\bhat} + \vec j_\parallel + \vec j_{MW} + \vec j_{Diff}\right) = 0
+\label{eq:current_divergence}
 \end{align}
-where the polarization charge density is approximately related to the \ExB vorticity through
-$\mathcal W = -\vec{\nabla} \cdot\left(\frac{m_iN_i}{e B} \bhat \times \vec u_E\right) \approx \bhat\cdot\left(\vec\nabla \times\frac{m_iN_i}{e B}  \vec u_E\right)$
-and we used that $\Gamma_{1,i}^\dagger 1 = 1$.
+Notice that this equation is exact for $T_i=0$ and holds in the LWL
+otherwise. Furthermore, we assumed $\Gamma_{1,i}S_{N_i} = S_{n_e}$.
+In slab geometry $\bhat\equiv \hat z$ and $B=B(x)$ this equation reduces
+to the familiar drift-fluid quasineutrality equation \fixme{recompute, units!}
+\begin{align}
+ &\nabla\cdot\frac{\partial}{\partial t}\left[
+\frac{\zhat\times \nabla\cdot( N_i (\vec u_E ))}{\Omega_i}
++
+\frac{\zhat\times \nabla\cdot( N_i (\vec u_{d0}))}{\Omega_{i0}}
+\right]
++ \nabla\cdot\left(
+\frac{\zhat\times\vec \nabla\cdot(N_i\vec u_E \vec u_E)}{\Omega_i} 
++
+\frac{\zhat\times\vec \nabla\cdot(N_i\vec u_E \vec u_{d0})}{\Omega_{i0}} 
+\right)
+\nonumber\\
+&= \nabla\cdot\left( \frac{\zhat\times\vec\nabla (t_e n_e + T_i N_i)}{eN_iB}N_i\right)
+\nonumber\\
+%&+ \nabla\cdot\left( \frac{\nabla\times\bhat}{B}\frac{1}{2}\left(m_e n_e u_e^2 + m_i N_i U_i^2\right) \right)
+%\nonumber\\
+&+ \nabla\cdot\left(\zhat j_\parallel\right)
++ \nabla\cdot\left(\frac{\zhat\times \vec\nabla\cdot\left(
+\tilde{\vec B}_\perp\tilde{\vec B}_\perp\right)}{B_0} \right)
+\quad
+\tilde{\vec B}_\perp := \nabla \times A_\parallel \zhat
+%\label{eq:slab_divergence}
+\end{align}
+\fixme{use Mathematika for maybe slab/toroidal equation in 3d geometry}
 
 \subsubsection{Energy theorem}
 The terms of the energy theorem are
@@ -763,9 +803,9 @@ The terms of the particle conservation read
 \end{align}
 and the vorticity conservation
 \begin{align} \label{eq:vorticity_conservation}
-\mathcal W &= \vec{\nabla} \cdot\left(\frac{N_i}{B^2} \vec{\nabla}_\perp \phi\right) \nonumber\\
-\vec{j_{\mathcal W}} &= \vec j_{n_e} - \vec j_{N_i} \nonumber\\
-\Lambda_{\mathcal W} &= \Lambda_{n_e} - \Lambda_{N_i}
+\mathcal \rho_{pol} &= -\vec{\nabla} \cdot\left(\frac{N_i}{B^2} \vec{\nabla}_\perp \phi\right)  - \tau_i \Delta_\perp N_i\nonumber\\
+\vec{j_{pol}} &= \vec j_{N_i} - \vec j_{n_e} \nonumber\\
+\Lambda_{ pol} &= \Lambda_{N_i} - \Lambda_{n_e}
 \end{align}
 
 The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
@@ -1157,15 +1197,18 @@ Now, let us integrate the vorticity density over a flux aligned volume to get
 \int \dV \mathcal W =\int \dV \nabla\cdot\left(\frac{N_i\nabla_\perp\phi}{B^2}\right)  =  \int \dA u^{\hat \eta} \frac{N_i}{B}
 \end{align}
 from where we get the flux-surface (area) integrated vorticity conservation
+\fixme{This is the Eq for the radial current / or radial Force? / or poloidal/toroidal flux}
 \begin{align}
-\frac{\partial}{\partial t}\int\frac{N_iu^{\hat \eta}}{B}\dA
- = \int\frac{( \vec j \times\vec B)\cdot\hat\eta}{B} \dA
+\frac{\partial}{\partial t}\int\vec\dA\cdot\left(\frac{N_i\vec\nabla_\perp\phi}{B^2} +
+\vec \nabla_\perp N_i\right)
+ = \int \vec j  \cdot\vec \dA
  + \int\dV \Lambda_{n_e} - \Lambda_{N_i}
  \end{align}
  with $(\vec j\times \vec B)\cdot\hat \eta/B =(\vec j_{N_i} - \vec j_{n_e})\cdot \hat\zeta $ and
 \begin{align}
  (\vec j_{N_i} - \vec j_{n_e})\cdot\vec \nabla\psi_p  =
- \frac{N_i}{B}[\psi,\psi_p]_\perp - \frac{n_e}{B}[\phi,\psi_p]_\perp
+ \frac{\rho_E + \rho_d}{B}[\phi,\psi_p]_\perp 
+ - \frac{N_i}{B}[u_E^2/2,\psi_p]_\perp
  \nonumber\\
  + \left( \mu_iN_i U_i^2 - \mu_e n_e u_e^2\right) \mathcal K_{\nabla\times\bhat}(\psi_p)
  + \left(\tau_i N_i - \tau_e n_e  \right) \mathcal K(\psi_p)
@@ -1179,10 +1222,12 @@ that the prefactors are always positive since $\tau_e$ and $\mu_e$ are negative.
 The curvature vectors counter-align with $\hat \zeta$ ($\mathcal K(\psi_p) < 0$, decelerate) on the top 
 and align ($\mathcal K(\psi_p) > 0$, accelerate) on the bottom of the tokamak.
 (Is this related to the X-point orbit loss mechanism? Chang, Ku, et al. )
-
 A surplus of electrons in the domain will lead to counter-clockwise poloidal acceleration, while positive
 charge leads to clockwise poloidal acceleration.
 
+Notice that $\hat\zeta\cdot\nabla N_i < 0$.
+This means that a radial
+pressure gradient balances the radial electric field.
 
 
 
