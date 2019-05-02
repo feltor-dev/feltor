@@ -55,7 +55,8 @@ we can define various differential operations.
     $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\
     Curvature &
     $\mathcal K$ &
-    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right) = \mathcal K_{\nabla\times\bhat}(f) + \mathcal K_{\nabla B}(f)$,\\
+    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = 
+     \nabla\times\frac{\bhat}{B}\cdot\nabla f$,\\
     Parallel derivative&
     $\nabla_\parallel $&
     $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
@@ -76,6 +77,9 @@ Note that we have
     \vec \nabla \cdot \vec{\mathcal K_{\nabla\times\bhat}}
     &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_{\nabla\times\bhat}}\cdot\nabla\ln B, \\
     \vec\nabla\cdot\vec{ \mathcal K} &= 0, \\
+    \vec{\mathcal K} &=
+    \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right)
+    = \mathcal K_{\nabla\times\bhat}(f) + \mathcal K_{\nabla B}(f),\\
     \vec{ \mathcal K_{\nabla\times\bhat}} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
     \nabla_\parallel \ln B &= -\vec\nabla\cdot\bhat.
     \label{eq:curl_curvature}
