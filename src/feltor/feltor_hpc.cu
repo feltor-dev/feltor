@@ -239,12 +239,7 @@ int main( int argc, char* argv[])
         y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(profile);
         dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
         MPI_OUT std::cout << "initialize ni" << std::endl;
-        if( p.initphi == "zero")
-            feltor.initializeni( y0[0][0], y0[0][1]);
-        else if( p.initphi == "balance")
-            dg::blas1::copy( y0[0][0], y0[0][1]); //set N_i = n_e
-        else
-            MPI_OUT std::cerr <<"WARNING: Unknown initial condition for phi!\n";
+        feltor.initializeni( y0[0][0], y0[0][1]);
 
         dg::blas1::copy( 0., y0[1][0]); //set we = 0
         dg::blas1::copy( 0., y0[1][1]); //set Wi = 0

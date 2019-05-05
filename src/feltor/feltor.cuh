@@ -454,14 +454,30 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
-    const Container& src, Container& target)
+    const Container& src, Container& target, std::string initphi)
 {
     // Ni = ne
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
-        //add FLR correction -0.5*tau*mu*Delta n_e
-        dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
-            m_lapperpN, src, 1.0, target);
+        if( p.initphi == "zero")
+        {
+            //add FLR correction -0.5*tau*mu*Delta n_e
+            dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
+                m_lapperpN, src, 1.0, target);
+        }
+        else if( p.initphi == "balance")
+            //add FLR correction +0.5*tau*mu*Delta n_e
+            dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
+                m_lapperpN, src, 1.0, target);
+        else
+        {
+            #ifdef MPI_VERSION
+                int rank;
+                MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+                if(rank==0)
+            #endif
+            std::cerr <<"WARNING: Unknown initial condition for phi!\n";
+        }
     }
 }
 
@@ -703,7 +719,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_energies(
         m_q.Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot(
             fields[0][i], m_vol3d, m_temp0);
     }
-    //= 0.5 beta (grad_perp Apar)^2
+    //= 0.5 beta^{-1} (grad_perp Apar)^2
     if( m_p.beta != 0)
     {
         dg::tensor::multiply3d( m_hh, m_dxA, m_dyA, m_dzA,
@@ -711,7 +727,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_energies(
         dg::blas1::subroutine( routines::ComputePsi(),
             m_temp0, m_dxA, m_dyA, m_dzA,
             m_temp0, m_temp1, m_temp2);
-        m_q.Apar = 0.5*dg::blas1::dot( m_vol3d, m_temp0);
+        m_q.Apar = 0.5*dg::blas1::dot( m_vol3d, m_temp0)/m_beta;
     }
     //= 0.5 mu_i N_i u_E^2
     m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( fields[0][1], m_vol3d, m_UE2);

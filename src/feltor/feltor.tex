@@ -6,13 +6,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
-\title{The feltor project}
-\author{ M.~Held and M.~Wiesenberger}
+\title{
+The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
+\author{ M.~Wiesenberger and M.~Held}
 \maketitle
 
 \begin{abstract}
-The full-F electromagnetic model in toroidal geoemtry (\textsc{Feltor}).
-This is a program for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
+The purpose of this document is to describe the programs
+\texttt{feltor\_hpc.cu, feltor.cu, feltor\_diag.cu} and to an extend
+\texttt{geometry\_diag.cu}. The goal is to provide
+enough information such that the user never needs to look
+into the actual codes on the one side and to be able to connect
+the presented formulas to relevant journal publications on the other.
+
+The program \texttt{feltor/inc/geometries/geometry\_diag.cu}
+analyses the magnetic field geometry.
+\texttt{feltor\_hpc.cu} and \texttt{feltor.cu} are programs for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
+\texttt{feltor/diag/feltor\_diag.cu} is a program to analyse the output
+file(s) of \texttt{feltor\_hpc.cu}.
+
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -49,14 +61,14 @@ we can define various differential operations.
     = \nabla\cdot( h\cdot\nabla f)$  \\
     Curl-b Curvature &
     $\mathcal K_{\nabla\times\bhat}$ &
-    $\mathcal K_{\nabla\times\bhat}(f) := \vec{ \mathcal K_{\nabla\times\bhat} }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\
+    $\mathcal K_{\nabla\times\bhat}(f) := \vec{ \mathcal K_{\nabla\times\bhat} }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\[4pt]
     Grad-B Curvature &
     $\mathcal K_{\nabla B} $ &
-    $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\
+    $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\[4pt]
     Curvature &
     $\mathcal K$ &
-    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = 
-     \nabla\times\frac{\bhat}{B}\cdot\nabla f$,\\
+    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f =
+     \vec{\nabla}\cdot\left(\frac{\bhat\times\vec{\nabla} f}{B}\right)$,\\[4pt]
     Parallel derivative&
     $\nabla_\parallel $&
     $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
@@ -78,7 +90,7 @@ Note that we have
     &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_{\nabla\times\bhat}}\cdot\nabla\ln B, \\
     \vec\nabla\cdot\vec{ \mathcal K} &= 0, \\
     \vec{\mathcal K} &=
-    \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right)
+     \nabla\times\frac{\bhat}{B}\cdot\nabla f
     = \mathcal K_{\nabla\times\bhat}(f) + \mathcal K_{\nabla B}(f),\\
     \vec{ \mathcal K_{\nabla\times\bhat}} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
     \nabla_\parallel \ln B &= -\vec\nabla\cdot\bhat.
@@ -350,7 +362,7 @@ K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 Our computational domain is a box and in particular not aligned with the
 magnetic flux surfaces. This means that particularly in the corners of
 the domain the field lines inside the domain are very short (in the
-sense that the distance between the enter point and leave point is short).
+sense that the distance between the entry point and leave point is short).
 It turns out that this behaviour is numerically disadvantageous (may
 blow up the simulation in the worst case) in the
 computation of parallel derivatives. In order to remedy this situation
@@ -390,41 +402,47 @@ Note that $\Theta_\alpha(0) = 0.5$ and $\theta_\alpha(0) = 35\alpha/256$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
-\subsection{Dimensional Equations}
-% \(n_e\) is the electron density, \(N_i\) is the ion gyro-centre density, \(\phi\) is the electric potential,
-% \\
-% This model is an isothermal 3D gyro-fluid model, which exploits the toroidal field line approximation in the curvature operator terms (cf.~\ref{sec:torfieldlineapprox}).
-% It incorporates a Solov'ev equilibrium (cf.~\ref{sec:solovev}) for the magnetic field, which allows a
-% realistically shaped axisymmetric magnetic field. The coordinate system of choice is a non-aligned  cylindrical coordinate system (cf.~\ref{sec:cylmetric} and~\ref{sec:nonparallelalignedmetric}), which allows
-% the correct numerical treatment of singular points (e.g. X- and O- Points). These points occur naturally in realistic magnetic field configurations.
-% Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL.
-% However, our isothermal model misses important core physics ingredients, such as the ion temperature gradient (ITG) and trapped electron mode (TEM)~\cite{Wesson07}. Thus the validity the global model is limited to certain
-% parameter regimes.\\
-We set up an isothermal 3d gyro-fluid model with up to 2nd order FLR effects
-on in the electric potential $\phi$ and 0th order FLR effects in the parallel magnetic
-potential $A_\parallel$.
-The continuity equation for the electron density \(n_e\) and the ion gyro-centre
-density \(N_i\) and the momentum conservation equation for
-the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
-(omitting species labels)~\cite{WiesenbergerPhD, HeldPhD}
+\subsection{Conservative form}
+We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyro-frequency $\Omega_0 = eB_0/m_i$.
+The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
+The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with
+$\hat A_\parallel = \rho_s B_0$.
+We introduce the dimensionless parameters
+\begin{align}
+  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and } 
+  \beta:=\frac{\mu_0 n_0 T_e}{B_0^2}
+  \label{}
+\end{align}
+where $a\in\{e,i\}$ is the species label and $z$ is the charge number. We define with 
+$\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}$
+\begin{align}
+  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1},
+    \label{eq:resistivity}
+\end{align}
+with $\ln \lambda \approx 10$.
+ The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_i - u_e\right)\)
+ determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
+Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
     \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
-mN \frac{\partial}{\partial t} U &+ mN \left(
+\mu N \frac{\partial}{\partial t} U &+ \mu N \left(
     \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)
     \right)\cdot \vec\nabla U  \nonumber \\
-    &+ 2m\vec \nabla \cdot ( NU \vec v_{\nabla\times\bhat})
-    -mNU\vec \nabla\cdot \vec v_{\nabla\times\bhat}
-    + mNU\mathcal K_{\nabla\times\bhat}(\psi) \nonumber\\
-    &= -T \left(\bhat + \tilde{\vec b}_\perp\right)\cdot \nabla N -qN \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) + mN R_{\eta_\parallel} + mN(\Lambda_U + S_U)
+    &+ 2\mu \vec \nabla \cdot ( NU \vec v_{\nabla\times\bhat})
+    -\mu NU\vec \nabla\cdot \vec v_{\nabla\times\bhat}
+    + \mu NU\mathcal K_{\nabla\times\bhat}(\psi) \nonumber\\
+    &= -\tau \left(\bhat + \tilde{\vec b}_\perp\right)\cdot \nabla N 
+    -N \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) 
+    - \eta n_e^2(U_i-u_e) + \mu N(\Lambda_U + S_U)
 \label{}
 \end{align}
 with
 \begin{align}
 \vec v_E := \frac{\bhat\times\nabla\psi}{B},\quad
-\vec v_{K} := \frac{T}{q}\left(\vec{\mathcal K_{\nabla B}} + \vec{\mathcal K_{\nabla\times\bhat}}\right)=\frac{T}{q}\vec{\mathcal K}  ,\nonumber\\
-\vec v_C := \frac{mU^2}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
-\vec v_{\nabla\times\bhat} := \frac{T}{q}\vec{\mathcal K_{\nabla\times\bhat}},\quad
+\vec v_{K} := \tau \left(\vec{\mathcal K_{\nabla B}} + \vec{\mathcal K_{\nabla\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
+\vec v_C := \mu U^2\vec{\mathcal K_{\nabla\times\bhat}},\quad
+\vec v_{\nabla\times\bhat} := \tau\vec{\mathcal K_{\nabla\times\bhat}},\quad
 \tilde{\vec b}_\perp = \frac{\nabla\times A_\parallel \bhat}{B}.
 \label{}
 \end{align}
@@ -432,33 +450,23 @@ with
 The electric potential \(\phi\) and parallel magnetic vector potential \(A_\parallel\) are
 computed by the polarisation and induction equations (with $q_e=-e$ and $q_i=+e$)
 \begin{align}
- -\vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2e^2 B_0^2} \Delta_\perp , \\
-  -\frac{1}{\mu_0} \Delta_\perp A_\parallel &= e\left(N_i U_i-n_e u_e \right)
+ -\vec{\nabla} \cdot\left(\frac{\mu_iN_i}{B^2} \vec{\nabla}_\perp \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{1}{2}\mu_i\tau_i\Delta_\perp , \\
+  -\frac{1}{\beta} \Delta_\perp A_\parallel &= \left(N_i U_i-n_e u_e \right)
   \label{eq:polarisation_dimensional}
 \end{align}
 Given $\phi$ we define the generalised electric potential
 \begin{align}
-    \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i }{2 e}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
+    \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{\mu_i }{2}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
 \end{align}
-\subsection{Relation to diamagnetic drift}
-Notice that the term $\nabla (n_e \vec v_K ) \equiv -\nabla (T_e n_e \vec K /e) $
-forms the familiar form of the divergence of the diamagnetic flux.
-\begin{align}
-\nabla\cdot\left( n_e \frac{\bhat \times \nabla n_e T_e}{en_e B}\right) \equiv  \nabla\cdot \left(\frac{T_e n_e}{e} \vec{ \mathcal K}\right)
-\end{align}
-which is evident with the identities in Section~\ref{sec:magnetic}.
+In total 
+we have an isothermal 3d gyro-fluid model with up to 2nd order FLR effects
+on in the electric potential $\phi$ and 0th order FLR effects in the parallel magnetic
+potential $A_\parallel$.
+We have the continuity equation for the electron density \(n_e\) and the ion gyro-centre
+density \(N_i\) and the momentum conservation equation for
+the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\)~\cite{WiesenbergerPhD, HeldPhD}.
 
-\subsection{Parallel Resistivity and diffusion}\label{sec:dissres}
-The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
-The parallel Spitzer resistivity
-\begin{align}
-\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}
-\end{align}
-and the approximate Spitzer current \(J_{\parallel,s}:= e n_e \left(U_i - u_e\right)\) determine the parallel resistive terms to:
-\begin{align}
-  R_{e,\eta_\parallel} &=  en_e\eta_\parallel J_{\parallel,s}/(m_en_e)  &
-  R_{i,\eta_\parallel} &=- en_e\eta_\parallel J_{\parallel,s}/(m_iN_i)
-\end{align}
+\subsection{Diffusive terms}\label{sec:dissres}
 The dissipative terms can be decomposed into perpendicular and parallel components
 \begin{align}
  \Lambda_{n_e} &= \Lambda_{n_e,\perp}+\Lambda_{n_e,\parallel}, &
@@ -542,10 +550,11 @@ zone that avoids numerical oscillations.
 
 We have two possibilities to initialize the ion density
 \begin{align} \label{eq:initphi}
-  N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = n_e
+  N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = \Gamma_{1,i}n_e\approx \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e
 \end{align}
-In the first case the potential $\phi= 0$ while in the second case
-the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
+In the first case the potential $\phi= 0$ while in the second (prefered)
+case
+the $E\times B$ and ion diamagnetic vorticity coincide $\Delta_\perp N_i \propto \Delta_\perp \phi$ in the long-wavelength limit.
 We can choose between several initial conditions for $\tilde n$:
 
 \subsubsection{Blob and Straight blob}
@@ -594,7 +603,7 @@ This will result in exponential adaption of the core and wall
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 For ions we use
 \begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \Delta_\perp\right) S_{n_e}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e}
   \label{eq:ion_source}
 \end{align}
 Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
@@ -610,6 +619,52 @@ so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 %\end{align}
 %with $\rho_d > 1$.
 
+\subsection{Implemented form}
+The form that we implement avoids derivatives on the product of
+two functions for which we have no boundary conditions
+\begin{subequations}
+    \begin{align}
+    \frac{\partial}{\partial t} N =&
+        - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
+        - \bar \nabla_\parallel \left( NU\right)
+        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}_\perp\right)
+        - \tau \mathcal K(N) \nonumber \\&
+        - N \mathcal K(\psi)
+        -\mu \mathcal K_{\nabla\times\bhat}(NU^2)
+        -\mu NU^2\nabla\cdot \vec{ \mathcal K_{\nabla\times\bhat}}
+        + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
+    \frac{\partial}{\partial t} W =&
+        - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
+        - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
+        - \frac{1}{2}\bar \nabla_\parallel U^2
+        -\frac{\tau}{\mu} \bar \nabla_\parallel \ln N
+        - U\mathcal K_{\nabla\times\bhat}(\psi)
+        - \tau \mathcal K(U)
+        -\tau U\nabla\cdot\vec{ \mathcal K_{\nabla\times\bhat}}\nonumber\\&
+        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\nabla\times\bhat} (U)
+        -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
+        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
+        + \nu_\perp\Delta_\perp U
+        + \nu_\parallel \Delta_\parallel U + S_U,
+        \label{eq:EgyrofluidU} \\
+        W&:= \left( U + \frac{A_\parallel}{\mu}\right)
+    \end{align}
+    \label{eq:Egyrofluid}
+\end{subequations}
+together with
+$\bar\nabla_\parallel f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
+and $\vec \nabla \cdot \tilde{ \vec b}_\perp = A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \mathcal K_{\nabla B}(A_\parallel) $
+and
+\begin{subequations} \label{eq:elliptic}
+  \begin{align}
+    -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
+    \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
+    \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\nabla_\perp\phi)^2}{B^2} \\
+    \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
+    A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
+  \end{align}
+\end{subequations}
+Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
 Integrating the density equation we directly get
@@ -618,10 +673,27 @@ Integrating the density equation we directly get
   + \int_{\partial\Omega} \vec\dA\cdot\vec{ j_{n_e}}
   =  \int_\Omega \dV (\Lambda_{n_e}+S_{n_e})
 \end{align}
-with the particle flux
-\begin{align} \label{eq:mass_flux}
-\vec{ j_{n_e}} := n_e\left(\vec v_E + \vec v_C + \vec v_{K} + U (\bhat + \vec{\tilde b}_\perp)\right)
+The terms of the particle conservation thus read
+\begin{align} \label{eq:mass_conservation}
+  n_e= & n_e,\\
+  \vec j_{n_e} =& n_e\left(
+  \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
+  =& n_e \left(\frac{\bhat\times \nabla\phi}{B} 
+  + \tau_e \frac{\bhat\times\nabla n_e}{n_eB} 
+  + \mu_e u_e^2\vec K_{\nabla\times\bhat} 
+  + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
+  \Lambda_{n_e} =&
+  \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
+\\
+  S_{n_e} =&  S_{n_e}
 \end{align}
+Notice that we used
+\begin{align}
+n_e \vec K = n_e\nabla\times\frac{\bhat}{B} = \nabla\times n_e\frac{\bhat}{B} + \frac{\bhat\times\nabla n_e}{B}
+\label{}
+\end{align}
+such that we can define the diamagnetic flux in the particle flux since
+the rotation vanishes under the divergence.
 \subsubsection{Polarisation charge density}
 First of all let us approximate FLR effects in the long wavelength limit (LWL)
 $\Gamma_{1,i}N_i \approx N_i + \frac{T_i}{2 m_i \Omega_0^2} \Delta_\perp  N_i$.
@@ -697,6 +769,13 @@ to the familiar drift-fluid quasineutrality equation \fixme{recompute, units!}
 \end{align}
 \fixme{use Mathematika for maybe slab/toroidal equation in 3d geometry}
 
+and the vorticity conservation
+\begin{align} \label{eq:vorticity_conservation}
+\mathcal \rho_{pol} &= -\vec{\nabla} \cdot\left(\frac{N_i}{B^2} \vec{\nabla}_\perp \phi\right)  - \tau_i \Delta_\perp N_i\nonumber\\
+\vec{j_{pol}} &= \vec j_{N_i} - \vec j_{n_e} \nonumber\\
+\Lambda_{ pol} &= \Lambda_{N_i} - \Lambda_{n_e}
+\end{align}
+
 \subsubsection{Energy theorem}
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
@@ -706,122 +785,18 @@ The terms of the energy theorem are
 +  S_{\mathcal E}
 -  R_{\mathcal E} \right)
 \end{align}
-with
-\begin{align} \label{eq:energy_conservation_dimensional}
-  \mathcal E = &
-  t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}
-    +\frac{1}{2} m_i N_i \left(\frac{\vec\nabla_\perp\phi}{B}\right)^2 \nonumber\\
-    &+\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2
-    + \frac{(\vec \nabla_\perp A_\parallel)^2}{2\mu_0}, \\
-  \vec j_{\mathcal E} =& \sum_s \left[ N\left(
-  \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right)
-  \left(T \ln N + \frac{1}{2}m U^2 + q\psi  \right) \right. \nonumber\\
-  &\qquad \left . + mNU^2\vec v_{\nabla\times\bhat} + \left(\bhat + \tilde{\vec b}_\perp\right) NUT\right], \\
-  \Lambda_{\mathcal E} =&  \sum_s \left[\left(T\left( 1+\ln{N}\right) +q \psi + \frac{1}{2} m U^2 \right)\Lambda_{N}  + mNU \Lambda_U\right]
-\nonumber \\
-  S_{\mathcal E} =&  \sum_s  \left[\left(T\left( 1+\ln{N}\right) +q \psi + \frac{1}{2} m U^2 \right)S_{N}  + mNU S_U\right]
-\nonumber \\
-  R_{\mathcal E} =&  \eta_\parallel  \left[e n_e(U_i-u_e)\right]^2.
-\end{align}
-where in the energy flux $\vec j_{\mathcal E}$
-we neglect terms  containing time derivatives
-of the eletric and magnetic potentials and we sum over all species.
-The energy density $\mathcal E$ consists of the Helmholtz free energy density for electrons and ions,
-the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
-In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Dimensionless form}
-We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyro-frequency $\Omega_0 = eB_0/m_i$.
-The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
-The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with
-$\hat A_\parallel = \rho_s B_0$.
-We introduce the dimensionless parameters
-\begin{align}
-  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and } 
-  \beta:=\frac{\mu_0 n_0 T_e}{B_0^2}
-  \label{}
-\end{align}
-where $a\in\{e,i\}$ is the species label and $z$ is the charge number. Finally, we define
-\begin{align}
-  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
-    \label{eq:resistivity}
-\end{align}
-with $\ln \lambda \approx 10$.
-Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
-\begin{subequations}
-    \begin{align}
-    \frac{\partial}{\partial t} N =&
-        - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
-        - \bar \nabla_\parallel \left( NU\right)
-        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}_\perp\right)
-        - \tau \mathcal K(N) \nonumber \\&
-        - N \mathcal K(\psi)
-        -\mu \mathcal K_{\nabla\times\bhat}(NU^2)
-        -\mu NU^2\nabla\cdot \vec{ \mathcal K_{\nabla\times\bhat}}
-        + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
-    \frac{\partial}{\partial t} W =&
-        - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
-        - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
-        - \frac{1}{2}\bar \nabla_\parallel U^2
-        -\frac{\tau}{\mu} \bar \nabla_\parallel \ln N
-        - U\mathcal K_{\nabla\times\bhat}(\psi)
-        - \tau \mathcal K(U)
-        -\tau U\nabla\cdot\vec{ \mathcal K_{\nabla\times\bhat}}\nonumber\\&
-        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\nabla\times\bhat} (U)
-        -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
-        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
-        + \nu_\perp\Delta_\perp U
-        + \nu_\parallel \Delta_\parallel U + S_U,
-        \label{eq:EgyrofluidU} \\
-        W&:= \left( U + \frac{A_\parallel}{\mu}\right)
-    \end{align}
-    \label{eq:Egyrofluid}
-\end{subequations}
-together with
-$\bar\nabla_\parallel f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
-and $\vec \nabla \cdot \tilde{ \vec b}_\perp = A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \mathcal K_{\nabla B}(A_\parallel) $
-and
-\begin{subequations} \label{eq:elliptic}
-  \begin{align}
-    -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
-    \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
-    \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\nabla_\perp\phi)^2}{B^2} \\
-    \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
-    A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
-  \end{align}
-\end{subequations}
-Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
-
-The terms of the particle conservation read
-\begin{align} \label{eq:mass_conservation}
-  n_e= & n_e,\\
-  \vec j_{n_e} =& n_e\left(
-  \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
-  =& n_e \left(\frac{\bhat\times \nabla\phi}{B} 
-  + (\tau_e +\mu_e u_e^2)\vec K_{\nabla\times\bhat} 
-  + \tau_e \vec K_{\vec \nabla B} + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
-  \Lambda_{n_e} =&
-  \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
-\\
-  S_{n_e} =&  S_{n_e}
-\end{align}
-and the vorticity conservation
-\begin{align} \label{eq:vorticity_conservation}
-\mathcal \rho_{pol} &= -\vec{\nabla} \cdot\left(\frac{N_i}{B^2} \vec{\nabla}_\perp \phi\right)  - \tau_i \Delta_\perp N_i\nonumber\\
-\vec{j_{pol}} &= \vec j_{N_i} - \vec j_{n_e} \nonumber\\
-\Lambda_{ pol} &= \Lambda_{N_i} - \Lambda_{n_e}
-\end{align}
-
-The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
+with ( $z_e=-1$ and $z_i=+1$)
 \begin{align} \label{eq:energy_conservation}
   \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
-  +\frac{1}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
-   +  \frac{1}{2} \mu_i N_i u_E^2  \nonumber\\
+  +\frac{1}{2\beta}\left(\vec \nabla_\perp A_\parallel\right)^2
+   +  \frac{1}{2} z_i \mu_i N_i u_E^2  \nonumber\\
    & +\frac{1}{2} z_e\mu_e  n_e u_e^2
   +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
   \vec j_{\mathcal E} =& \sum_s z\left[
-  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right) \vec j_N 
-  + \mu \tau NU^2\vec K_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
+  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right)N\left(
+  \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \right]
+  \nonumber\\
+  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
   \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
 \nonumber \\
@@ -829,8 +804,17 @@ The terms of the energy theorem read (with $z_e=-1$ and $z_i=+1$)
 \nonumber \\
   R_{\mathcal E} =&  \eta_\parallel  \left[ n_e(U_i-u_e)\right]^2.
 \end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric and magnetic potentials and we sum over all species.
+The energy density $\mathcal E$ consists of the Helmholtz free energy density for electrons and ions,
+the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
+In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
 for the diffusion terms in the above equations.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 \subsection{Manufactured Solution}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
@@ -1267,6 +1251,9 @@ We can then directly integrate the safety factor as
 \frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
 q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
 \end{align}
+We integrate this equation with the help of one of our grid
+construction algorithms, i.e. we use a high-order Runge-Kutta method
+and refine the stepsize until machine-precision is reached.
 
 Notice that the safety factor diverges on the last closed flux
 surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
