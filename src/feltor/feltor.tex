@@ -399,6 +399,163 @@ We now use $\theta_\alpha(\psi-\psi_0)+\psi_0$ instead of $\psi$ for the computa
 magnetic field, which introduces a shear layer around $\psi_0$ where the
 fieldlines are straightened to match $\ehat_\varphi$.
 Note that $\Theta_\alpha(0) = 0.5$ and $\theta_\alpha(0) = 35\alpha/256$.
+\section{Flux surface averaging and safety factor}
+\subsection{Preliminary}
+Recall that the {\bf Dirac delta-function} has the property (in any dimension):
+\begin{align} \label{eq:dirac_delta}
+\int_V f(\vec x) \delta(h(\vec x) - h') \dV = \int_{h=h'} \frac{f(\vec x)}{|\nabla h|} \dA
+\end{align}
+which means that the delta-function can be used to express area integrals of the
+submanifold given as a contour of the function $h(\vec x)$.
+A numerically tractable approximation to the delta-function reads
+\begin{align}\label{eq:delta}
+\delta(h(\vec x)-h') = \frac{1}{2\pi \epsilon^2}
+\exp\left( - \frac{\left(h(\vec x)-h'\right)^2}{2\epsilon^2}\right)
+\end{align}
+where $\epsilon$ is a small, free parameter.
+In the DG framework the left-hand side
+of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
+via Gauss-Legendre quadrature, which we propse as a first method to compute area
+integrals even if our coordinate system is not aligned to the area.
+
+Furthermore, recall the {\bf co-area formula}
+\begin{align} \label{eq:coarea}
+\int_{\Omega_0} f(\vec x) \dV =
+\int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
+\end{align}
+where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
+The co-area formula can be viewed as a change of variables in the
+volume integral.
+
+We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
+\begin{align} \label{eq:phi_average}
+\langle f\rangle_\varphi(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
+\end{align}
+
+In arbitrary coordinates the area integral is defined by the pull back
+of the flux 2-form and the metric
+\begin{align}
+\label{}
+\dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\nabla \psi_p}{|\nabla \psi_p|}
+\end{align}
+to a parameterization of the flux-surface.
+In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have with $\hat\zeta = \hat \psi_p$
+\begin{align}
+\dA = \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA,\quad
+\hat\zeta=\frac{\nabla\psi_p}{|\nabla\psi_p|}
+\label{}
+\end{align}
+where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2 = f_0^2(\nabla\psi_p)^2$.
+Notice that numerically we can integrate in flux-aligned coordinates by generating a corresponding
+grid and pulling back (interpolating) the relevant fields to this grid. This is the second method
+to numerically compute area integrals.
+
+\subsection{Flux surface average}
+
+There is two possible ways to introduce a flux-surface average.
+The first one is the straightforward average on the actual area of the
+flux-surface.
+The {\bf area average}
+of a function $f(R,Z,\varphi)$ is given by the formula
+\begin{align}\label{eq:fsa_area}
+\langle f \rangle^{area}_{\psi_{p}} :=&
+\frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
+=& \frac{\oint \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g g^{\zeta\zeta}}\d\eta}
+         { \oint \sqrt{g g^{\zeta\zeta}}\d\eta}
+\end{align}
+%with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
+and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
+in our domain $\Omega$.
+
+The second one (the {\bf volume average} after \cite{haeseleer}) defines an average on a
+small volume - a shell centered around the flux-surface - defined by two neighboring flux-surfaces.
+If we define $v(\psi) := \int_0^\psi \dV$ as the volume
+flux label, we define
+\begin{align} \label{eq:fsa_vol}
+\langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
+ = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
+ =& \frac{1}{\int \sqrt{g}\d\eta } \int_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
+\end{align}
+where we used the co-area formula Eq.~\eqref{eq:coarea} for the second
+identity. We immediately see that this definition differs from the first
+Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$ and that it is particularly easy to compute
+in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
+
+Both averages fulfill the basic identities
+\begin{align}
+\label{eq:fsa_identities}
+\langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
+\langle f(\psi_p) \rangle &= f(\psi_p)
+\end{align}
+
+
+The volume average is better suited for density-like quantities
+than the area average as we can see with the following identity.
+Assume we have a quantity $X$ with $\partial_t X + \nabla \cdot \vec j_X = \Lambda_X$. Then we can use the volume average to write
+\begin{align}
+\frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
+  \partial v} \langle \vec j_X\cdot \nabla v\rangle^{vol}  = \langle \Lambda_X\rangle^{vol}
+\label{eq:fsa_balance}
+\end{align}
+where again $v=v(\psi_p)$ is the volume flux label.
+The {\bf total flux} of a given flux density $\vec j_X$ though the
+flux surface $\psi_p = \psi_{p0}$ is given by
+\begin{align}
+J_X:=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
+ \left\langle\vec j_X\cdot\nabla v\right\rangle^{vol} = \frac{\d v}{\d\psi_p} \langle \vec j_X\cdot\nabla\psi_p \rangle^{vol}
+%2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
+\label{eq:total_flux}
+\end{align}
+Once we have the flux-surface averaged equation we can easily get the volume integrated version
+\begin{align}
+\frac{\partial}{\partial t} \int_0^{v(\psi_p)}\langle X \rangle^{vol} \d v 
++ \langle \vec j_X\cdot \nabla v\rangle^{vol}(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle^{vol}\d v
+\label{eq:integral_balance}
+\end{align}
+
+\subsection{The safety factor}
+Assume that we pick a random field line and follow it (integrate it) for exactly one
+poloidal turn. The {\bf safety factor} is defined as the ratio between
+the resulting toroidal angle ($\Delta\varphi$) to the poloidal angle ($2\pi$)
+\begin{align}
+q := \frac{\Delta\varphi}{2\pi}
+\label{}
+\end{align}
+Since our magnetic field is symmetric in $\varphi$ and we used one
+full poloidal turn this definition is independent of which
+fieldline we pick on a given flux surface.
+
+%Let us define the poloidal length $s$ as the fieldline following
+%parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
+%and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
+%We can then express the safety factor as the line integral
+%\begin{align}
+%q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+%= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
+%\end{align}
+%where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
+%last equality and thus arrive at a numerical tractable expression
+%to evaluate the safety factor.
+Let us define the geometric poloidal angle $\Theta$ as the fieldline following
+parameter i.e. $\vec B\cdot\nabla\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
+We can then directly integrate the safety factor as
+\begin{align}\label{eq:safety_factor}
+\frac{\d R}{\d\Theta} = \frac{B^R}{B^\Theta}\quad 
+\frac{\d Z}{\d\Theta} = \frac{B^Z}{B^\Theta}\quad 
+\frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
+q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
+\end{align}
+We integrate this equation with the help of one of our grid
+construction algorithms, i.e. we use a high-order Runge-Kutta method
+and refine the stepsize until machine-precision is reached.
+
+Notice that the safety factor diverges on the last closed flux
+surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
+remain finite due to the $\nabla\psi$ factor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -667,11 +824,11 @@ and
 Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
-Integrating the density equation we directly get
+The density equation directly yields the particle conservation
 \begin{align} \label{eq:mass_theorem}
-  \frac{\partial}{\partial t} \int_\Omega \dV n_e
-  + \int_{\partial\Omega} \vec\dA\cdot\vec{ j_{n_e}}
-  =  \int_\Omega \dV (\Lambda_{n_e}+S_{n_e})
+  \frac{\partial}{\partial t} n_e
+  + \nabla\cdot\vec{ j_{n_e}}
+  =  \Lambda_{n_e}+S_{n_e}
 \end{align}
 The terms of the particle conservation thus read
 \begin{align} \label{eq:mass_conservation}
@@ -694,96 +851,15 @@ n_e \vec K = n_e\nabla\times\frac{\bhat}{B} = \nabla\times n_e\frac{\bhat}{B} + 
 \end{align}
 such that we can define the diamagnetic flux in the particle flux since
 the rotation vanishes under the divergence.
-\subsubsection{Polarisation charge density}
-First of all let us approximate FLR effects in the long wavelength limit (LWL)
-$\Gamma_{1,i}N_i \approx N_i + \frac{T_i}{2 m_i \Omega_0^2} \Delta_\perp  N_i$.
-With this identiy we can write the polarisation equation as
-\begin{align}\label{eq:general_polarisation}
-\nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right) 
-+ \frac{1}{2} \frac{T_i}{m_i\Omega_0^2} \Delta_\perp N_i
-= n_e - N_i 
-\end{align}
-Let us now define
-\begin{align}
-\rho_E &:= -\nabla\cdot\left(\frac{N_i}{\Omega_i B}\nabla_\perp\phi\right)
-\equiv \nabla\cdot\left(\frac{N_i}{\Omega_i} \bhat\times\vec u_E\right)
-=
--\frac{\Omega_{i0}}{\Omega_i}\bhat \cdot(\nabla\times N_i \vec u_E)
-+ \Omega_{i0} N_i \vec{\mathcal K} \cdot \vec u_E
-\\
-\mathcal \rho_D &:= -\frac{T_i}{m_i\Omega^2_{i0}} \Delta_\perp N_i
-\equiv \nabla\cdot\left( \frac{N_i}{\Omega_{i0}} \bhat\times \vec v_{d0}\right) \quad \vec v_{d0} := \frac{\bhat\times \nabla T_i N_i}{eB_0N_i}
-\end{align}
-which are the generalized \ExB and diamagnetic vorticity densities.
-
-Now, we take the time derivative of Eq.~\eqref{eq:general_polarisation}
-to get (neglecting terms in the LWL, \fixme{Confirm, units!})
-\begin{align}
- &\frac{\partial}{\partial t}\left[
-\rho_E + \rho_D
-\right]
-+ \nabla\cdot\left( \vec u_E \left[
-\rho_E + \rho_D
-\right]
-\right)
-- \nabla\cdot(N_i \vec u_P)
-\nonumber\\
-&= \nabla\cdot\left( \frac{\bhat\times\vec\nabla (t_e n_e + T_i N_i)}{eN_iB}N_i\right)
-\nonumber\\
-&+ \nabla\cdot\left( \frac{\nabla\times\bhat}{B}\frac{1}{2}\left(m_e n_e u_e^2 + m_i N_i U_i^2\right) \right)
-\nonumber\\
-&+ \nabla\cdot\left(\bhat j_\parallel\right)
-+ \nabla\cdot\left(\frac{\nabla\times A_\parallel \bhat}{B} \Delta_\perp A_\parallel\right)
-+ \Lambda_{N_i} - \Lambda_{n_e}
-\\
-\vec u_P &:=\frac{\bhat\times \nabla u_E^2/2}{\Omega_i}\nonumber \\
-&\nabla\cdot \left(\vec j_{pol} + \vec j_D + \vec j_{\nabla\times\bhat} + \vec j_\parallel + \vec j_{MW} + \vec j_{Diff}\right) = 0
-\label{eq:current_divergence}
-\end{align}
-Notice that this equation is exact for $T_i=0$ and holds in the LWL
-otherwise. Furthermore, we assumed $\Gamma_{1,i}S_{N_i} = S_{n_e}$.
-In slab geometry $\bhat\equiv \hat z$ and $B=B(x)$ this equation reduces
-to the familiar drift-fluid quasineutrality equation \fixme{recompute, units!}
-\begin{align}
- &\nabla\cdot\frac{\partial}{\partial t}\left[
-\frac{\zhat\times \nabla\cdot( N_i (\vec u_E ))}{\Omega_i}
-+
-\frac{\zhat\times \nabla\cdot( N_i (\vec u_{d0}))}{\Omega_{i0}}
-\right]
-+ \nabla\cdot\left(
-\frac{\zhat\times\vec \nabla\cdot(N_i\vec u_E \vec u_E)}{\Omega_i} 
-+
-\frac{\zhat\times\vec \nabla\cdot(N_i\vec u_E \vec u_{d0})}{\Omega_{i0}} 
-\right)
-\nonumber\\
-&= \nabla\cdot\left( \frac{\zhat\times\vec\nabla (t_e n_e + T_i N_i)}{eN_iB}N_i\right)
-\nonumber\\
-%&+ \nabla\cdot\left( \frac{\nabla\times\bhat}{B}\frac{1}{2}\left(m_e n_e u_e^2 + m_i N_i U_i^2\right) \right)
-%\nonumber\\
-&+ \nabla\cdot\left(\zhat j_\parallel\right)
-+ \nabla\cdot\left(\frac{\zhat\times \vec\nabla\cdot\left(
-\tilde{\vec B}_\perp\tilde{\vec B}_\perp\right)}{B_0} \right)
-\quad
-\tilde{\vec B}_\perp := \nabla \times A_\parallel \zhat
-%\label{eq:slab_divergence}
-\end{align}
-\fixme{use Mathematika for maybe slab/toroidal equation in 3d geometry}
-
-and the vorticity conservation
-\begin{align} \label{eq:vorticity_conservation}
-\mathcal \rho_{pol} &= -\vec{\nabla} \cdot\left(\frac{N_i}{B^2} \vec{\nabla}_\perp \phi\right)  - \tau_i \Delta_\perp N_i\nonumber\\
-\vec{j_{pol}} &= \vec j_{N_i} - \vec j_{n_e} \nonumber\\
-\Lambda_{ pol} &= \Lambda_{N_i} - \Lambda_{n_e}
-\end{align}
 
 \subsubsection{Energy theorem}
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
-\partial_t \int_\Omega \dV \mathcal E +
-\oint_{\partial\Omega} \vec\dA \cdot \vec j_{\mathcal E}
-= \int_\Omega \dV \left( \Lambda_{\mathcal E}
+\partial_t \mathcal E +
+\nabla \cdot \vec j_{\mathcal E}
+= \Lambda_{\mathcal E}
 +  S_{\mathcal E}
--  R_{\mathcal E} \right)
+-  R_{\mathcal E}
 \end{align}
 with ( $z_e=-1$ and $z_i=+1$)
 \begin{align} \label{eq:energy_conservation}
@@ -812,6 +888,70 @@ the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for
 In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
 for the diffusion terms in the above equations.
+
+\subsection{ Particle, energy and vorticity fluxes}
+Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
+\begin{align} \label{eq:particle_flux}
+ \vec j_{N}\cdot \vec \nabla\psi_p %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\nabla\psi_p \nonumber\\
+ =&
+  N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
+ &+ NU\left [\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
+ \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
+ %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
+ %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\vec j_N \cdot \vec\nabla\psi_p
+ %\nonumber\\
+ %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
+ %=
+\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
++ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
+&+ z \tau NU
+ \left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\label{eq:energy_flux}
+\end{align}
+
+In order to discuss poloidal flows let us first define orthogonal vectors $\{\vec{ \hat\zeta}, \vec{\hat\eta},\bhat\}$
+\begin{align}
+\vec{\hat\zeta} := \nabla\psi_p,\quad
+\vec{\hat \eta} := \frac{\bhat \times\hat \zeta}{B}
+\end{align}
+where $\vec{\hat\eta}$
+points in the counter-clockwise poloidal direction with our choice of the magnetic field direction.
+Notice that $\vec{\hat \eta}$ in general has a (small) toroidal component in addition to the dominant poloidal component.
+
+%We then have $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
+%with $\partial_{\hat\zeta}:= \hat\zeta\cdot\nabla$ and $\partial_{\hat\eta}:=\hat\eta\cdot\nabla$.
+Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ and $\vec u_d = \tau_i \bhat\times\nabla \ln N_i$
+we can derive
+\begin{align}
+u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2} \\
+u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi \\
+u_d^{\hat\eta} &:= \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \\
+u_d^{\hat\zeta}&:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i
+\end{align}
+With this we write the force balance equation
+\begin{align}
+\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
+\frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) \right\rangle
++ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
++ \tau_i \partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel \right\rangle
+\nonumber\\
+= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
+\end{align}
+Notice that 
+\begin{align}
+\left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p\right\rangle
+= \left\langle \frac{ \bhat\times \nabla (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cdot\nabla\psi_p\right\rangle
+= -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
+\end{align}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -856,6 +996,7 @@ time & Multistep "Karniadakis" & \\
 \qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
 \bottomrule
 \end{longtable}
+
 \section{Usage}
 Compilation:\\
 \texttt{make feltor device=\{gpu,omp\}} Compile \texttt{feltor.cu} (only shared memory)\\
@@ -1026,238 +1167,6 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 \texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
-\subsection{Preliminary}
-Recall that the {\bf Dirac delta-function} has the property (in any dimension):
-\begin{align} \label{eq:dirac_delta}
-\int_V f(\vec x) \delta(h(\vec x) - h') \dV = \int_{h=h'} \frac{f(\vec x)}{|\nabla h|} \dA
-\end{align}
-which means that the delta-function can be used to express area integrals of the
-submanifold given as a contour of the function $h(\vec x)$.
-A numerically tractable approximation to the delta-function reads
-\begin{align}\label{eq:delta}
-\delta(h(\vec x)-h') = \frac{1}{2\pi \epsilon^2}
-\exp\left( - \frac{\left(h(\vec x)-h'\right)^2}{2\epsilon^2}\right)
-\end{align}
-where $\epsilon$ is a small, free parameter.
-In the DG framework the left-hand side
-of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
-via Gauss-Legendre quadrature, which we propse as a first method to compute area
-integrals even if our coordinate system is not aligned to the area.
-
-Furthermore, recall the {\bf co-area formula}
-\begin{align} \label{eq:coarea}
-\int_{\Omega_0} f(\vec x) \dV =
-\int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
-\end{align}
-where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
-The co-area formula can be viewed as a change of variables in the
-volume integral.
-
-We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
-\begin{align} \label{eq:phi_average}
-\langle f\rangle_\varphi(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
-\end{align}
-
-In arbitrary coordinates the area integral is defined by the pull back
-of the flux 2-form and the metric
-\begin{align}
-\label{}
-\dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\nabla \psi_p}{|\nabla \psi_p|}
-\end{align}
-to a parameterization of the flux-surface.
-In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have with $\hat\zeta = \hat \psi_p$
-\begin{align}
-\dA = \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi, \quad \vec\dA := \hat\zeta \dA,\quad
-\hat\zeta=\frac{\nabla\psi_p}{|\nabla\psi_p|}
-\label{}
-\end{align}
-where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2 = f_0^2(\nabla\psi_p)^2$.
-Notice that numerically we can integrate in flux-aligned coordinates by generating a corresponding
-grid and pulling back (interpolating) the relevant fields to this grid. This is the second method
-to numerically compute area integrals.
-
-\subsection{Flux surface average}
-
-There is two possible ways to introduce a flux-surface average.
-The first one is the straightforward average on the actual area of the
-flux-surface.
-The {\bf area average}
-of a function $f(R,Z,\varphi)$ is given by the formula
-\begin{align}\label{eq:fsa_area}
-\langle f \rangle^{area}_{\psi_{p}} :=&
-\frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
-=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
-=& \frac{\oint \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g g^{\zeta\zeta}}\d\eta}
-         { \oint \sqrt{g g^{\zeta\zeta}}\d\eta}
-\end{align}
-%with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
-and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
-in our domain $\Omega$.
-
-The second one (the {\bf volume average} after \cite{haeseleer}) defines an average on a
-small volume - a shell centered around the flux-surface - defined by two neighboring flux-surfaces.
-If we define $v(\psi) := \int_0^\psi \dV$ as the volume
-flux label, we define
-\begin{align} \label{eq:fsa_vol}
-\langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
- = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
-=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
- =& \frac{1}{\int \sqrt{g}\d\eta } \int_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
-\end{align}
-where we used the co-area formula Eq.~\eqref{eq:coarea} for the second
-identity. We immediately see that this definition differs from the first
-Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$ and that it is particularly easy to compute
-in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
-
-Both averages fulfill the basic identities
-\begin{align}
-\label{eq:fsa_identities}
-\langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
-\langle f(\psi_p) \rangle &= f(\psi_p)
-\end{align}
-
-
-The volume average is better suited for density-like quantities
-than the area average as we can see with the following identity.
-Assume we have a quantity $X$ with $\partial_t X + \nabla \cdot \vec j_X = \Lambda_X$. Then we can use the volume average to write
-\begin{align}
-\frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
-  \partial v} J_X  = \langle \Lambda_X\rangle^{vol}
-\label{eq:fsa_balance}
-\end{align}
-where again $v=v(\psi_p)$ is the volume flux label.
-The {\bf total flux} of a given flux density $\vec j_X$ though the
-flux surface $\psi_p = \psi_{p0}$ is given by
-\begin{align}
-J_X:=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
-2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
-\label{eq:total_flux}
-\end{align}
-\subsection{ Particle, energy and vorticity fluxes}
-Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
-\begin{align} \label{eq:particle_flux}
- \vec j_{N}\cdot \vec \nabla\psi_p %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\nabla\psi_p \nonumber\\
- =&
-  N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
-   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
- &+ NU\left [\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
- \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
- %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
- %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\vec j_N \cdot \vec\nabla\psi_p
- %\nonumber\\
- %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
- %=
-\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
-+ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
-&+ z \tau NU
- \left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
-\label{eq:energy_flux}
-\end{align}
-
-In order to discuss poloidal flows let us first define orthogonal unit vectors $\{\hat\zeta, \hat\eta,\bhat\}$
-\begin{align}
-\hat\zeta := \frac{\nabla\psi_p}{|\nabla\psi_p|} \quad
-\hat \eta := \bhat \times\hat \zeta
-\end{align}
-where $\hat\eta$
-points in the counter-clockwise poloidal direction with our choice of the magnetic field direction.
-We then have $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
-with $\partial_{\hat\zeta}:= \hat\zeta\cdot\nabla$ and $\partial_{\hat\eta}:=\hat\eta\cdot\nabla$.
-Notice that $\hat \eta$ in general has a (small) toroidal component in addition to the dominant poloidal component.
-Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ we can derive
-\begin{align}
-u^{\hat\eta} &= \frac{\partial_{\hat\zeta} \phi}{B} \\
-u^{\hat\zeta} &= -\frac{\partial_{\hat\eta} \phi}{B}
-\end{align}
-where $u^{\hat\zeta} := \hat\zeta\cdot\vec u_E$ and $u^{\hat\eta}:=\hat\eta\cdot\vec u_E$.
-Again, we emphasize that $u^{\hat\eta}$ has a toroidal component and is not a purely poloidal flow.
-
-Now, let us integrate the vorticity density over a flux aligned volume to get
-\begin{align}
-\int \dV \mathcal W =\int \dV \nabla\cdot\left(\frac{N_i\nabla_\perp\phi}{B^2}\right)  =  \int \dA u^{\hat \eta} \frac{N_i}{B}
-\end{align}
-from where we get the flux-surface (area) integrated vorticity conservation
-\fixme{This is the Eq for the radial current / or radial Force? / or poloidal/toroidal flux}
-\begin{align}
-\frac{\partial}{\partial t}\int\vec\dA\cdot\left(\frac{N_i\vec\nabla_\perp\phi}{B^2} +
-\vec \nabla_\perp N_i\right)
- = \int \vec j  \cdot\vec \dA
- + \int\dV \Lambda_{n_e} - \Lambda_{N_i}
- \end{align}
- with $(\vec j\times \vec B)\cdot\hat \eta/B =(\vec j_{N_i} - \vec j_{n_e})\cdot \hat\zeta $ and
-\begin{align}
- (\vec j_{N_i} - \vec j_{n_e})\cdot\vec \nabla\psi_p  =
- \frac{\rho_E + \rho_d}{B}[\phi,\psi_p]_\perp 
- - \frac{N_i}{B}[u_E^2/2,\psi_p]_\perp
- \nonumber\\
- + \left( \mu_iN_i U_i^2 - \mu_e n_e u_e^2\right) \mathcal K_{\nabla\times\bhat}(\psi_p)
- + \left(\tau_i N_i - \tau_e n_e  \right) \mathcal K(\psi_p)
- + \left(N_i U_i - n_eu_e \right)\vec{\tilde b_\perp}\cdot\vec\nabla\psi_p
-\end{align}
-This equation describes that a current through a flux surface feels the Lorentz force
-and thus drives a poloidal flux.
-In the first two terms of the Lorentz force density integral we find the terms related to the Reynolds/Favre stress.
-The remaining terms describe the currents related to the curvature drifts. Notice
-that the prefactors are always positive since $\tau_e$ and $\mu_e$ are negative.
-The curvature vectors counter-align with $\hat \zeta$ ($\mathcal K(\psi_p) < 0$, decelerate) on the top 
-and align ($\mathcal K(\psi_p) > 0$, accelerate) on the bottom of the tokamak.
-(Is this related to the X-point orbit loss mechanism? Chang, Ku, et al. )
-A surplus of electrons in the domain will lead to counter-clockwise poloidal acceleration, while positive
-charge leads to clockwise poloidal acceleration.
-
-Notice that $\hat\zeta\cdot\nabla N_i < 0$.
-This means that a radial
-pressure gradient balances the radial electric field.
-
-
-
-\subsection{The safety factor}
-Assume that we pick a random field line and follow it (integrate it) for exactly one
-poloidal turn. The {\bf safety factor} is defined as the ratio between
-the resulting toroidal angle ($\Delta\varphi$) to the poloidal angle ($2\pi$)
-\begin{align}
-q := \frac{\Delta\varphi}{2\pi}
-\label{}
-\end{align}
-Since our magnetic field is symmetric in $\varphi$ and we used one
-full poloidal turn this definition is independent of which
-fieldline we pick on a given flux surface.
-
-%Let us define the poloidal length $s$ as the fieldline following
-%parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
-%and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
-%We can then express the safety factor as the line integral
-%\begin{align}
-%q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
-%= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
-%\end{align}
-%where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
-%last equality and thus arrive at a numerical tractable expression
-%to evaluate the safety factor.
-Let us define the geometric poloidal angle $\Theta$ as the fieldline following
-parameter i.e. $\vec B\cdot\nabla\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
-We can then directly integrate the safety factor as
-\begin{align}\label{eq:safety_factor}
-\frac{\d R}{\d\Theta} = \frac{B^R}{B^\Theta}\quad 
-\frac{\d Z}{\d\Theta} = \frac{B^Z}{B^\Theta}\quad 
-\frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
-q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
-\end{align}
-We integrate this equation with the help of one of our grid
-construction algorithms, i.e. we use a high-order Runge-Kutta method
-and refine the stepsize until machine-precision is reached.
-
-Notice that the safety factor diverges on the last closed flux
-surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
-remain finite due to the $\nabla\psi$ factor.
 \subsection{Program and files}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
 This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
