@@ -4,6 +4,7 @@
 #include <fstream>
 #include <functional>
 #include <sstream>
+#include <ctime>
 #include <cmath>
 
 #include "json/json.h"
@@ -325,8 +326,28 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( newfilename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
-    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    /// Set global attributes
+    std::map<std::string, std::string> att;
+    att["title"] = "Output file of feltor/inc/geometries/geometry_diag.cu";
+    att["Conventions"] = "CF-1.7";
+    ///Get local time and begin file history
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    std::ostringstream oss;
+    ///time string  + program-name + args
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    for( int i=0; i<argc; i++) oss << " "<<argv[i];
+    att["history"] = oss.str();
+    att["comment"] = "Find more info in feltor/src/feltor.tex";
+    att["source"] = "FELTOR library";
+    att["references"] = "https://github.com/feltor-dev/feltor";
+    att["inputfile"] = input;
+    att["geomfile"] = geom;
+    for( auto pair : att)
+        err = nc_put_att_text( ncid, NC_GLOBAL,
+            pair.first.data(), pair.second.size(), pair.second.data());
+
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
     err = file::define_dimension( ncid,"psi", &dim1d_ids[0], grid1d);
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
@@ -359,10 +380,40 @@ int main( int argc, char* argv[])
     dg::HVec vecR = dg::evaluate( dg::geo::BFieldR(c), grid3d);
     dg::HVec vecZ = dg::evaluate( dg::geo::BFieldZ(c), grid3d);
     dg::HVec vecP = dg::evaluate( dg::geo::BFieldP(c), grid3d);
+    std::string vec_long[3] = {"R-component of magnetic field", "Z-component of magnetic field", "Phi-component of magnetic field"};
     int vecID[3];
     err = nc_def_var( ncid, "B_R", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
     err = nc_def_var( ncid, "B_Z", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
     err = nc_def_var( ncid, "B_P", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
+    for(int i=0; i<3; i++)
+    {
+        err = nc_put_att_text( ncid, vecID[i], "long_name", vec_long[i].size(), vec_long[i].data());
+        std::string coordinates = "zc yc xc";
+        err = nc_put_att_text( ncid, vecID[i], "coordinates", coordinates.size(), coordinates.data());
+    }
+    err = nc_enddef( ncid);
+    err = nc_put_var_double( ncid, vecID[0], vecR.data());
+    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+    err = nc_put_var_double( ncid, vecID[2], vecP.data());
+    err = nc_redef(ncid);
+    vecR = dg::evaluate( dg::cooX3d, grid3d);
+    vecZ = dg::evaluate( dg::cooZ3d, grid3d);
+    vecP = dg::evaluate( dg::cooY3d, grid3d);
+    for( unsigned i=0; i<vecR.size(); i++)
+    {
+        double xc = vecR[i]*sin(vecZ[i]);
+        double yc = vecR[i]*cos(vecZ[i]);
+        vecR[i] = xc;
+        vecZ[i] = yc;
+    }
+    vec_long[0] = "x-coordinate in Cartesian coordinate system",
+    vec_long[1] = "y-coordinate in Cartesian coordinate system",
+    vec_long[2] = "z-coordinate in Cartesian coordinate system";
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
+    err = nc_def_var( ncid, "zc", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
+    for(int i=0; i<3; i++)
+        err = nc_put_att_text( ncid, vecID[i], "long_name", vec_long[i].size(), vec_long[i].data());
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, vecID[0], vecR.data());
     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
