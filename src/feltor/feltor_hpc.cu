@@ -15,6 +15,16 @@
 #include "feltor.cuh"
 #include "implicit.h"
 
+struct Cylindrical2Cartesian{
+    void operator()( double R, double Z, double P, double& x, double& y, double& z)
+    {
+        //inplace possible
+        double xx = R*sin(P);
+        double yy = R*cos(P);
+        x = xx, y = yy, z = Z;
+    }
+};
+
 #ifdef FELTOR_MPI
 using HVec = dg::MHVec;
 using DVec = dg::MDVec;
@@ -239,7 +249,7 @@ int main( int argc, char* argv[])
         y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(profile);
         dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
         MPI_OUT std::cout << "initialize ni" << std::endl;
-        feltor.initializeni( y0[0][0], y0[0][1]);
+        feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
 
         dg::blas1::copy( 0., y0[1][0]); //set we = 0
         dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -352,8 +362,28 @@ int main( int argc, char* argv[])
 #else //FELTOR_MPI
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
 #endif //FELTOR_MPI
-    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    /// Set global attributes
+    std::map<std::string, std::string> att;
+    att["title"] = "Output file of feltor/src/feltor_hpc.cu";
+    att["Conventions"] = "CF-1.7";
+    ///Get local time and begin file history
+    auto ttt = std::time(nullptr);
+    auto tm = *std::localtime(&ttt);
+
+    std::ostringstream oss;
+    ///time string  + program-name + args
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    for( int i=0; i<argc; i++) oss << " "<<argv[i];
+    att["history"] = oss.str();
+    att["comment"] = "Find more info in feltor/src/feltor.tex";
+    att["source"] = "FELTOR";
+    att["references"] = "https://github.com/feltor-dev/feltor";
+    att["inputfile"] = input;
+    att["geomfile"] = geom;
+    for( auto pair : att)
+        err = nc_put_att_text( ncid, NC_GLOBAL,
+            pair.first.data(), pair.second.size(), pair.second.data());
+
     int dim_ids[4], tvarID;
 #ifdef FELTOR_MPI
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
@@ -381,23 +411,40 @@ int main( int argc, char* argv[])
         HVec vecZ = dg::pullback( fieldZ, grid);
         HVec vecP = dg::pullback( fieldP, grid);
         HVec psip = dg::pullback( mag.psip(), grid);
-        std::map<std::string, const HVec*> v3d{
-            {"BR", &vecR}, {"BZ", &vecZ}, {"BP", &vecP},
-            {"Psip", &psip}, {"Nprof", &profile },
-            {"Source", &source_damping }, {"Damping", &damping_damping}
-        };
+        HVec xc = dg::evaluate( dg::cooX3d, grid);
+        HVec yc = dg::evaluate( dg::cooY3d, grid);
+        HVec zc = dg::evaluate( dg::cooZ3d, grid);
+        dg::blas1::subroutine( Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+
+        std::vector<std::tuple<std::string, const HVec*, std::string> > v3d;
+        v3d.emplace_back( "BR", &vecR,
+            "R-component of magnetic field in cylindrical coordinates");
+        v3d.emplace_back( "BZ", &vecZ,
+            "Z-component of magnetic field in cylindrical coordinates");
+        v3d.emplace_back( "BP", &vecP,
+            "P-component of magnetic field in cylindrical coordinates");
+        v3d.emplace_back( "Psip", &psip, "Flux-function psi");
+        v3d.emplace_back( "Nprof", &profile, "Density profile");
+        v3d.emplace_back( "Source", &source_damping, "Source region");
+        v3d.emplace_back( "Damping", &damping_damping, "Damping region");
+        v3d.emplace_back( "xc", &xc, "x-coordinate in Cartesian coordinate system");
+        v3d.emplace_back( "yc", &yc, "y-coordinate in Cartesian coordinate system");
+        v3d.emplace_back( "zc", &zc, "z-coordinate in Cartesian coordinate system");
+
         IHMatrix project = dg::create::projection( grid_out, grid);
         HVec transferH( dg::evaluate(dg::zero, grid_out));
-        for( auto pair : v3d)
+        for( auto tp : v3d)
         {
             int vecID;
-            err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 3,
+            err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
                 &dim_ids[1], &vecID);
+            err = nc_put_att_text( ncid, vecID,
+                "long_name", std::get<2>(tp).size(), std::get<2>(tp).data());
             #ifdef FELTOR_MPI
             err = nc_var_par_access( ncid, vecID, NC_COLLECTIVE);
             #endif //FELTOR_MPI
             err = nc_enddef( ncid);
-            dg::blas2::symv( project, *pair.second, transferH);
+            dg::blas2::symv( project, *std::get<1>(tp), transferH);
             err = nc_put_vara_double( ncid, vecID, &start[1], &count[1],
                 #ifdef FELTOR_MPI
                 transferH.data().data()

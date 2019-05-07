@@ -200,7 +200,7 @@ struct Explicit
     //Given N_i-1 initialize n_e-1 such that phi=0
     void initializene( const Container& ni, Container& ne);
     //Given n_e-1 initialize N_i-1 such that phi=0
-    void initializeni( const Container& ne, Container& ni);
+    void initializeni( const Container& ne, Container& ni, std::string initphi);
 
     void operator()( double t,
         const std::array<std::array<Container,2>,2>& y,
@@ -459,13 +459,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
     // Ni = ne
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
-        if( p.initphi == "zero")
+        if( m_p.initphi == "zero")
         {
             //add FLR correction -0.5*tau*mu*Delta n_e
             dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
         }
-        else if( p.initphi == "balance")
+        else if( m_p.initphi == "balance")
             //add FLR correction +0.5*tau*mu*Delta n_e
             dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
@@ -727,7 +727,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_energies(
         dg::blas1::subroutine( routines::ComputePsi(),
             m_temp0, m_dxA, m_dyA, m_dzA,
             m_temp0, m_temp1, m_temp2);
-        m_q.Apar = 0.5*dg::blas1::dot( m_vol3d, m_temp0)/m_beta;
+        m_q.Apar = 0.5*dg::blas1::dot( m_vol3d, m_temp0)/m_p.beta;
     }
     //= 0.5 mu_i N_i u_E^2
     m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( fields[0][1], m_vol3d, m_UE2);

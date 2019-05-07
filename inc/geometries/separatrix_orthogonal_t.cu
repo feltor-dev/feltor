@@ -151,8 +151,8 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
     err = nc_def_var( ncid, "num_solution", NC_DOUBLE, 3, dim3d, &gxxID);
     err = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 3, dim3d, &gyyID);
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 3, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 3, dim3d, &coordsID[1]);
 
     thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
     g2d.display();

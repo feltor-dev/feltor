@@ -238,7 +238,7 @@ int main( int argc, char* argv[])
     };
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( c.psip(), grid2d);
-    std::map<std::string, dg::HVec> map1d;
+    std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
     unsigned npsi = 3, Npsi = 64;//set number of psivalues (NPsi % 8 == 0)
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
@@ -261,24 +261,29 @@ int main( int argc, char* argv[])
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
         dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
-        dg::HVec psip_X = dg::evaluate( dg::one, gX2d), area_psip_X;
+        dg::HVec psip_X = dg::evaluate( dg::one, gX2d), area_psip_X, X_psip1d;
         dg::blas2::symv( grid2gX2d, (dg::HVec)psipog2d, psip_X);
         dg::blas1::pointwiseDot( volX2d, psip_X, psip_X);
-        avg_eta( psip_X, map1d["X_psip1d"], false);
+        avg_eta( psip_X, X_psip1d, false);
         avg_eta( volX2d, area_psip_X, false);
         dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
-        map1d["X_psi_vol"] = dg::integrate( area_psip_X, gX1d);
-        dg::blas1::scal( map1d.at("X_psi_vol"), 4.*M_PI*M_PI);
-        dg::blas1::pointwiseDivide( map1d.at("X_psip1d"), area_psip_X,
-            map1d.at("X_psip1d"));
+        dg::HVec X_psi_vol = dg::integrate( area_psip_X, gX1d);
+        dg::blas1::scal( X_psi_vol, 4.*M_PI*M_PI);
+        map1d.emplace_back( "X_psi_vol", X_psi_vol,
+            "Flux volume on X-point grid");
+        dg::blas1::pointwiseDivide( X_psip1d, area_psip_X, X_psip1d);
+        map1d.emplace_back( "X_psip_fsa", X_psip1d,
+            "Flux surface average of psi on X-point grid");
 
         //NOTE: VOLUME is WITHIN cells while AREA is ON gridpoints
-        dg::HVec gradPsipX = metricX.value(0,0);
+        dg::HVec gradPsipX = metricX.value(0,0), X_psi_area;
         dg::blas1::transform( gradPsipX, gradPsipX, dg::SQRT<double>());
         dg::blas1::pointwiseDot( volX2d, gradPsipX, gradPsipX); //R\sqrt{g}|\nabla\zeta|
-        avg_eta( gradPsipX, map1d["X_psi_area"], false);
-        dg::blas1::scal( map1d.at("X_psi_area"), 4.*M_PI*M_PI);
-        volumeXGrid = dg::interpolate( map1d.at("X_psi_vol"), gX1d.x1(), gX1d);
+        avg_eta( gradPsipX, X_psi_area, false);
+        dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
+        map1d.emplace_back( "X_psi_area", X_psi_area,
+            "Flux area on X-point grid");
+        volumeXGrid = dg::interpolate( X_psi_vol, gX1d.x1(), gX1d);
     }
 
     ///////////////////Compute flux average////////////////////
@@ -288,12 +293,16 @@ int main( int argc, char* argv[])
     dg::geo::SafetyFactor     qprof( c);
     dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, c, psipog2d, xpoint_weights);
     dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
-    map1d["psi_fsa"]    = dg::evaluate( fsa,        grid1d);
-    map1d["q-profile"]  = dg::evaluate( qprof,      grid1d);
-    map1d["psip1d"]     = dg::evaluate( dg::cooX1d, grid1d);
-    map1d["rho"] = map1d.at("psip1d");
-    dg::blas1::axpby( -1./psipmin, map1d.at("rho"), +1., 1.,
-        map1d.at("rho")); //transform psi to rho
+    map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
+        "Flux surface average of psi with delta function");
+    map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
+        "q-profile using direct integration");
+    map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
+        "Flux label psi evaluated on grid1d");
+    dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
+    dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
+    map1d.emplace_back("rho", rho,
+        "Alternative flux label rho = -psi/psimin + 1");
 
     //other flux labels
     dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, c);
@@ -305,15 +314,19 @@ int main( int argc, char* argv[])
 
     //area
     fsi.set_left( dg::evaluate( dg::geo::GradPsip(c), grid2d));
-    map1d["psi_area"] = dg::evaluate( fsi, grid1d);
-    dg::blas1::scal( map1d.at("psi_area"), 2.*M_PI);
+    dg::HVec psi_area = dg::evaluate( fsi, grid1d);
+    dg::blas1::scal(psi_area, 2.*M_PI);
+    map1d.emplace_back( "psi_area", psi_area,
+        "Flux area with delta function");
 
     dg::geo::FluxVolumeIntegral<dg::HVec> fvi( (dg::CartesianGrid2d)grid2d, c);
     std::cout << "Delta Rho for Flux surface integrals = "<<-fsi.get_deltapsi()/psipmin<<"\n";
 
     fvi.set_right( xpoint_weights);
-    map1d["psi_vol"] = dg::evaluate( fvi, grid1d);
-    dg::blas1::scal(map1d["psi_vol"], 2.*M_PI);
+    dg::HVec psi_vol = dg::evaluate( fvi, grid1d);
+    dg::blas1::scal(psi_vol, 2.*M_PI);
+    map1d.emplace_back( "psi_vol", psi_vol,
+        "Flux volume with delta function");
     double volumeFVI = 2.*M_PI*fvi(psipmax);
     std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
               <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
@@ -340,7 +353,7 @@ int main( int argc, char* argv[])
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     att["history"] = oss.str();
     att["comment"] = "Find more info in feltor/src/feltor.tex";
-    att["source"] = "FELTOR library";
+    att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = input;
     att["geomfile"] = geom;
@@ -349,19 +362,24 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    err = file::define_dimension( ncid,"psi", &dim1d_ids[0], grid1d);
+    err = file::define_dimension( ncid, "psi", &dim1d_ids[0], grid1d);
+    std::string psi_long_name = "Flux surface label";
+    err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
+        psi_long_name.size(), psi_long_name.data());
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     err = file::define_dimensions( ncid, &dim3d_ids[0], grid3d);
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
-    for( auto pair : map1d)
+    for( auto tp : map1d)
     {
         int vid;
-        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 1,
+        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1,
             &dim1d_ids[0], &vid);
+        err = nc_put_att_text( ncid, vid, "long_name",
+            std::get<2>(tp).size(), std::get<2>(tp).data());
         err = nc_enddef( ncid);
-        err = nc_put_var_double( ncid, vid, pair.second.data());
+        err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
         err = nc_redef(ncid);
     }
     //write 2d vectors
@@ -380,7 +398,8 @@ int main( int argc, char* argv[])
     dg::HVec vecR = dg::evaluate( dg::geo::BFieldR(c), grid3d);
     dg::HVec vecZ = dg::evaluate( dg::geo::BFieldZ(c), grid3d);
     dg::HVec vecP = dg::evaluate( dg::geo::BFieldP(c), grid3d);
-    std::string vec_long[3] = {"R-component of magnetic field", "Z-component of magnetic field", "Phi-component of magnetic field"};
+    std::string vec_long[3] = {"R-component of magnetic field",
+        "Z-component of magnetic field", "Phi-component of magnetic field"};
     int vecID[3];
     err = nc_def_var( ncid, "B_R", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
     err = nc_def_var( ncid, "B_Z", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);

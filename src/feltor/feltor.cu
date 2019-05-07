@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<dg::DVec>(profile);
     dg::blas1::axpby( 1., dg::construct<dg::DVec>(ntilde), 1., y0[0][0]);
     std::cout << "initialize ni" << std::endl;
-    feltor.initializeni( y0[0][0], y0[0][1]);
+    feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
 
     dg::blas1::copy( 0., y0[1][0]); //set we = 0
     dg::blas1::copy( 0., y0[1][1]); //set Wi = 0

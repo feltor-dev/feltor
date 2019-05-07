@@ -85,8 +85,8 @@ int main(int argc, char**argv)
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, g2d_fine.grid());
     int coordsID[2], psiID, functionID, function2ID;
-    ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
+    ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
+    ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
     ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
     ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
     ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
