@@ -261,17 +261,18 @@ int main( int argc, char* argv[])
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
         dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
-        dg::HVec psip_X = dg::evaluate( dg::one, gX2d), area_psip_X, X_psip1d;
+        dg::HVec psip_X = dg::evaluate( dg::one, gX2d), dvdzeta, X_psip1d;
         dg::blas2::symv( grid2gX2d, (dg::HVec)psipog2d, psip_X);
         dg::blas1::pointwiseDot( volX2d, psip_X, psip_X);
         avg_eta( psip_X, X_psip1d, false);
-        avg_eta( volX2d, area_psip_X, false);
+        dg::blas1::scal( X_psip1d, 4.*M_PI*M_PI);
+        avg_eta( volX2d, dvdzeta, false);
+        dg::blas1::scal( dvdzeta, 4.*M_PI*M_PI);
         dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
-        dg::HVec X_psi_vol = dg::integrate( area_psip_X, gX1d);
-        dg::blas1::scal( X_psi_vol, 4.*M_PI*M_PI);
+        dg::HVec X_psi_vol = dg::integrate( dvdzeta, gX1d);
         map1d.emplace_back( "X_psi_vol", X_psi_vol,
             "Flux volume on X-point grid");
-        dg::blas1::pointwiseDivide( X_psip1d, area_psip_X, X_psip1d);
+        dg::blas1::pointwiseDivide( X_psip1d, dvdzeta, X_psip1d);
         map1d.emplace_back( "X_psip_fsa", X_psip1d,
             "Flux surface average of psi on X-point grid");
 
@@ -296,7 +297,7 @@ int main( int argc, char* argv[])
     map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
         "Flux surface average of psi with delta function");
     map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
-        "q-profile using direct integration");
+        "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
         "Flux label psi evaluated on grid1d");
     dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);

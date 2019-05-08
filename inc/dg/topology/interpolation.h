@@ -135,7 +135,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         detail::mirror( negative, X, g.x0(), g.x1(), bcx);
 
         //determine which cell (x) lies in
-        real_type xnn = (x[i]-g.x0())/g.h();
+        real_type xnn = (X-g.x0())/g.h();
         unsigned n = (unsigned)floor(xnn);
         //determine normalized coordinates
         real_type xn = 2.*xnn - (real_type)(2*n+1);
