@@ -1209,23 +1209,25 @@ q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:s
 psip1d           & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
 psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\nabla\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
-X                & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
-X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
+X\_plane         & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
+X\_ta            & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
-X\_fluc       & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta X := X(R,Z,0) - \langle X\rangle_{\psi_{p}}$ \\
+X\_fluc          & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta X := X(R,Z,0) - \langle X\rangle_{\psi_{p}}$ \\
+X\_fsa2          & Dataset & 3 (time, y,x) & Flux surface average $\langle X\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
 X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
+X\_fsi           & Dataset & 2 (time, psi) & Flux surface integral $\int\d v\langle X\rangle_{\psi_p}$ \\
+X\_fsi\_lcfs     & Dataset & 1 (time) & Flux surface integral evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle X\rangle_{\psi_p}$ \\
 particle\_flux   & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{n_e} \cdot \vec \dA$ Eq.~\eqref{eq:particle_flux} \\
 energy\_flux     & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{\mathcal E} \cdot \vec \dA$ Eq.~\eqref{eq:energy_flux} \\
 \bottomrule
 \end{longtable}
-where X $\in$ \{ electrons, ions, Ue, Ui, potential,
-induction, vorticity, maxwell, Lperpinv, Lparallelinv,
-current, momentum
+where X $\in$ \{ electrons, ions, neue, NiUi, neuebphi, NiUibphi,
+potential,
+induction, vorticity, apar\_vorticity, Lperpinv, Lparallelinv
 \} corresponding to \{
-    $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$,
+    $n_e$, $N_i$, $n_eu_e$, $N_iU_i$, $\phi$, $A_\parallel$,
     $-\Delta_\perp \phi$, $-\Delta_\perp A_\parallel$,
     $L_\perp^{-1}$, $L_\parallel^{-1}$,
-    $j_\parallel$, $j_\rho$
     \}
 and we define
 

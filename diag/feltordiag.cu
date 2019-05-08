@@ -148,9 +148,9 @@ int main( int argc, char* argv[])
     dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, R_X, Z_X, mag.R0(), 0, 0, true);
     double fx_0 = 1./8.;
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
-    std::cout << "psi max is          "<<psipmax<<"\n";
+    std::cout << "psi max is            "<<psipmax<<"\n";
     psipmax = -fx_0/(1.-fx_0)*psipmin;
-    std::cout << "psi max is          "<<psipmax<<"\n";
+    std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
     dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, 160, dg::DIR_NEU, dg::NEU);
     std::cout << "DONE!\n";
     //Create 1d grids, one for psi and one for x
@@ -273,6 +273,7 @@ int main( int argc, char* argv[])
     dg::DVec vol = dg::tensor::volume( metric);
     const dg::DVec binv = dg::evaluate( dg::geo::InvB(mag) , g3d_out) ;
     dg::blas1::pointwiseDivide( binv, vol, vol); //1/vol/B
+    dg::DVec bphi = bhat[2];//save bphi for momentum conservation
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( vol, bhat[i], bhat[i]); //b_i/vol/B
     dg::DMatrix dxA = dg::create::dx( g3d_out, p.bcxU);
@@ -294,16 +295,13 @@ int main( int argc, char* argv[])
         "electrons","ions","Ue","Ui", "potential","induction"
     };
     std::vector<std::string> names_derived{
-        "vorticity","fluxe","Lperpinv","Lparallelinv"
+        "vorticity", "apar_vorticity", "neue", "NiUi",
+        "neuebphi", "NiUibphi", "fluxe",
+        "Lperpinv","Lparallelinv"
     };
     std::vector<std::string> names_0d{
         "aligned", "perp_aligned", "correlationNPhi", "total_flux"
     };
-    std::map<std::string, dg::DVec> v3d;
-    for( auto name : names_direct)
-        v3d[name] = t3d;
-    for( auto name : names_derived)
-        v3d[name] = t3d;
 
     // Create Netcdf output file and ids
     int ncid_out;
@@ -339,25 +337,43 @@ int main( int argc, char* argv[])
         psi_long_name.size(), psi_long_name.data());
 
     std::map<std::string, int> id0d, id1d, id2d;
+    // construct 0d variables
+    std::map<std::string, double> v0d;
+    for( auto name : names_0d)
+    {
+        v0d[name] = 0.;
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 1, dim_ids,
+            &id0d[name]);
+    }
+
+    // construct 3d and 2d and add to 0d variables
+    std::map<std::string, dg::DVec> v3d;
+    for( auto name : names_direct)
+        v3d[name] = t3d;
+    for( auto name : names_derived)
+        v3d[name] = t3d;
     for( auto pair : v3d)
     {
-        std::string name = pair.first + "_avg";
+        std::string name = pair.first + "_ta";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
-        name = pair.first;
+        name = pair.first + "_plane";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
         name = pair.first + "_fluc";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
+        name = pair.first + "_fsa2";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id2d[name]);
         name = pair.first + "_fsa";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
             &id1d[name]);
-    }
-    std::map<std::string, double> v0d;
-    for( auto name : names_0d)
-    {
-        v0d[name] = 0.;
+        name = pair.first + "_fsi";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+            &id1d[name]);
+        name = pair.first + "_fsi_lcfs";
+        v0d.at(name) = 0.; //this needs to go into v0d
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 1, dim_ids,
             &id0d[name]);
     }
@@ -403,7 +419,7 @@ int main( int argc, char* argv[])
         start1d[0] = i;
         err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
         err = nc_get_vara_double( ncid, timeID, start3d, count3d, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << "\n";
+        std::cout << "Timestep = " << i << "  time = " << time << "\t";
         //read in Ne,Ni,Ue,Ui,Phi,Apar
         for( auto name : names_direct)
         {
@@ -417,29 +433,44 @@ int main( int argc, char* argv[])
 
         //----------------vorticity computation
 
-        dg::blas2::gemv( laplacianM, v3d["potential"], v3d["vorticity"]);
+        dg::blas2::gemv( laplacianM, v3d.at("potential"), v3d.at("vorticity"));
+        dg::blas2::gemv( laplacianM, v3d.at("induction"), v3d.at("apar_vorticity"));
+        //----------------currents
+        //
+        dg::blas1::pointwiseDot( v3d.at("electrons"), v3d.at("Ue"), v3d.at("neue"));
+        dg::blas1::pointwiseDot( v3d.at("ions"), v3d.at("Ui"), v3d.at("NiUi"));
+        dg::blas1::pointwiseDot( v3d.at("neue"), bphi, v3d.at("neuebphi"));
+        dg::blas1::pointwiseDot( v3d.at("NiUi"), bphi, v3d.at("NiUibphi"));
+
+        //----------------Test if induction equation holds
+        dg::blas1::axpbypgz( p.beta, v3d.at("neue"), -p.beta, v3d.at("NiUi"),
+            0., t3d);
+        double norm  = dg::blas2::dot( t3d, w3d, t3d);
+        dg::blas1::axpby( -1., v3d.at("apar_vorticity"), 1., t3d);
+        double error = dg::blas2::dot( t3d, w3d, t3d);
+        std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
 
         //----------------radial flux computation
 
-        dg::blas2::symv( dxA, v3d["induction"], dx_A);
-        dg::blas2::symv( dyA, v3d["induction"], dy_A);
-        dg::blas2::symv( dz , v3d["induction"], dz_A);
-        dg::blas2::symv( dxP, v3d["potential"], dx_P);
-        dg::blas2::symv( dyP, v3d["potential"], dy_P);
-        dg::blas2::symv( dz , v3d["potential"], dz_P);
-        dg::blas1::evaluate( v3d["fluxe"], dg::equals(),
+        dg::blas2::symv( dxA, v3d.at("induction"), dx_A);
+        dg::blas2::symv( dyA, v3d.at("induction"), dy_A);
+        dg::blas2::symv( dz , v3d.at("induction"), dz_A);
+        dg::blas2::symv( dxP, v3d.at("potential"), dx_P);
+        dg::blas2::symv( dyP, v3d.at("potential"), dy_P);
+        dg::blas2::symv( dz , v3d.at("potential"), dz_P);
+        dg::blas1::evaluate( v3d.at("fluxe"), dg::equals(),
             RadialParticleFlux( p.tau[0], p.mu[0]),
-            v3d["electrons"], v3d["Ue"], v3d["induction"],
+            v3d.at("electrons"), v3d.at("Ue"), v3d.at("induction"),
             dx_A, dy_A, dz_A, dx_P, dy_P, dz_P, psipR, psipZ, psipP,
             bhat[0], bhat[1], bhat[2],
             curvNabla[0], curvNabla[1], curvNabla[2],
             curvKappa[0], curvKappa[1], curvKappa[2]
         );
-        v0d["total_flux"] = dg::blas1::dot( w3d, v3d["fluxe"]);
+        v0d.at("total_flux") = dg::blas1::dot( w3d, v3d.at("fluxe"));
 
         //----------------perp length scale computation
 
-        dg::blas1::axpby( 1., v3d["electrons"], -1., 1., t3d);
+        dg::blas1::axpby( 1., v3d.at("electrons"), -1., 1., t3d);
         dg::blas2::symv( dxN, t3d, dx_N);
         dg::blas2::symv( dyN, t3d, dy_N);
         dg::blas2::symv( dz , t3d, dz_N);
@@ -447,27 +478,27 @@ int main( int argc, char* argv[])
             dx_N, dy_N, dz_N, dx_A, dy_A, dz_A);
         dg::blas1::subroutine( feltor::routines::ComputePsi(),
             t3d, dx_N, dy_N, dz_N, dx_A, dy_A, dz_A);
-        dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
-        v0d["perp_aligned"] = dg::blas1::dot( t3d, w3d);
-        dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
-        dg::blas1::transform( t3d, v3d["Lperpinv"], dg::SQRT<double>());
+        dg::blas1::pointwiseDivide( t3d, v3d.at("electrons"), t3d);
+        v0d.at("perp_aligned") = dg::blas1::dot( t3d, w3d);
+        dg::blas1::pointwiseDivide( t3d, v3d.at("electrons"), t3d);
+        dg::blas1::transform( t3d, v3d.at("Lperpinv"), dg::SQRT<double>());
 
         //----------------parallel length scale computation
 
-        dg::blas1::axpby( 1., v3d["electrons"], -1., 1., t3d);
+        dg::blas1::axpby( 1., v3d.at("electrons"), -1., 1., t3d);
         dsN.centered( t3d, dx_N);
         dg::blas1::pointwiseDot ( dx_N, dx_N, t3d);
-        dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
-        v0d["aligned"] = dg::blas1::dot( t3d, w3d);
-        dg::blas1::pointwiseDivide( t3d, v3d["electrons"], t3d);
-        dg::blas1::transform( t3d, v3d["Lparallelinv"], dg::SQRT<double>());
+        dg::blas1::pointwiseDivide( t3d, v3d.at("electrons"), t3d);
+        v0d.at("aligned") = dg::blas1::dot( t3d, w3d);
+        dg::blas1::pointwiseDivide( t3d, v3d.at("electrons"), t3d);
+        dg::blas1::transform( t3d, v3d.at("Lparallelinv"), dg::SQRT<double>());
 
         //------------------correlation------------//
 
-        dg::blas1::transform( v3d["potential"], t3d, dg::EXP<double>());
+        dg::blas1::transform( v3d.at("potential"), t3d, dg::EXP<double>());
         double norm1 = sqrt(dg::blas2::dot(t3d, w3d, t3d));
-        double norm2 = sqrt(dg::blas2::dot(v3d["electrons"], w3d, v3d["electrons"]));
-        v0d["correlationNPhi"] = dg::blas2::dot( t3d, w3d, v3d["electrons"])
+        double norm2 = sqrt(dg::blas2::dot(v3d.at("electrons"), w3d, v3d.at("electrons")));
+        v0d.at("correlationNPhi") = dg::blas2::dot( t3d, w3d, v3d.at("electrons"))
             /norm1/norm2;  //<e^phi, N>/||e^phi||/||N||
 
 
@@ -478,7 +509,7 @@ int main( int argc, char* argv[])
             //toroidal average
             toroidal_average( pair.second, t2d, false);
             dg::blas1::transfer( t2d, transfer2d);
-            err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_avg"),
+            err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_ta"),
                 start2d, count2d, transfer2d.data());
 
             //flux surface average
@@ -490,18 +521,31 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsa"),
                 start1d, count1d, transfer1d.data());
 
-            // 2d data of plane phi = 0
+
+            // 2d data of plane varphi = 0
             unsigned kmp = 0; //g3d_out.Nz()/2;
             dg::HVec t2d_mp(pair.second.begin() + kmp*g2d_out.size(),
                 pair.second.begin() + (kmp+1)*g2d_out.size() );
-            err = nc_put_vara_double( ncid_out, id2d.at(pair.first),
+            err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_plane"),
                 start2d, count2d, t2d_mp.data() );
 
-            // delta f on midplane : df = f_mp - <f>
+            // fsa on 2d plane : <f>
             dg::blas2::gemv(fsaonrzmatrix, transfer1d, transfer2d); //fsa on RZ grid
+            err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_fsa2"),
+                start2d, count2d, transfer2d.data() );
+
+            // delta f on midplane : df = f_mp - <f>
             dg::blas1::axpby( 1.0, t2d_mp, -1.0, transfer2d);
             err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_fluc"),
                 start2d, count2d, transfer2d.data() );
+
+            //flux surface integral
+            transfer1d = dg::integrate( transfer1d, g1d_out);
+            dg::blas1::pointwiseDot( dvdpsip, transfer1d, transfer1d);
+            err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsi"),
+                start1d, count1d, transfer1d.data());
+            //flux surface integral on last closed flux surface
+            v0d.at(pair.first+"fsi_lcfs") = dg::interpolate( transfer1d, 0., g1d_out);
 
         }
         //and the 0d quantities
