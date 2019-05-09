@@ -15,9 +15,7 @@ struct RadialParticleFlux{
     RadialParticleFlux( double tau, double mu):
         m_tau(tau), m_mu(mu){
     }
-
-    DG_DEVICE double operator()( double ne, double ue, double A,
-        double d0A, double d1A, double d2A,
+    DG_DEVICE double operator()( double ne, double ue,
         double d0P, double d1P, double d2P, //Phi
         double d0S, double d1S, double d2S, //Psip
         double b_0,         double b_1,         double b_2,
@@ -26,17 +24,27 @@ struct RadialParticleFlux{
         ){
         double curvKappaS = curvKappa0*d0S+curvKappa1*d1S+curvKappa2*d2S;
         double curvNablaS = curvNabla0*d0S+curvNabla1*d1S+curvNabla2*d2S;
-        double SA = b_0*( d1S*d2A-d2S*d1A)+
-                    b_1*( d2S*d0A-d0S*d2A)+
-                    b_2*( d0S*d1A-d1S*d0A);
         double PS = b_0*( d1P*d2S-d2P*d1S)+
                     b_1*( d2P*d0S-d0P*d2S)+
                     b_2*( d0P*d1S-d1P*d0S);
         double JPsi =
-            ne*ue* (A*curvKappaS + SA )
             + ne * PS
             + ne * (m_tau + m_mu*ue*ue)*curvKappaS
             + ne * m_tau*curvNablaS;
+        return JPsi;
+    }
+    DG_DEVICE double operator()( double ne, double ue, double A,
+        double d0A, double d1A, double d2A,
+        double d0S, double d1S, double d2S, //Psip
+        double b_0,         double b_1,         double b_2,
+        double curvKappa0,  double curvKappa1,  double curvKappa2
+        ){
+        double curvKappaS = curvKappa0*d0S+curvKappa1*d1S+curvKappa2*d2S;
+        double SA = b_0*( d1S*d2A-d2S*d1A)+
+                    b_1*( d2S*d0A-d0S*d2A)+
+                    b_2*( d0S*d1A-d1S*d0A);
+        double JPsi =
+            ne*ue* (A*curvKappaS + SA );
         return JPsi;
     }
     private:
@@ -78,7 +86,6 @@ struct RadialEnergyFlux{
 };
 
 struct Record{
-
 };
 
 int main( int argc, char* argv[])
@@ -133,6 +140,7 @@ int main( int argc, char* argv[])
     const double psip0 = mag.psip()(gp.R_0, 0);
     mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*psip0, p.alpha);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
+    dg::HVec psipog3d = dg::evaluate( mag.psip(), g3d_out);
 
     //Find O-point
     double R_O = gp.R_0, Z_O = 0.;
@@ -205,7 +213,7 @@ int main( int argc, char* argv[])
 
     dg::HVec transfer2dX = dg::evaluate( dg::zero, gridX2d);
 
-    dg::DVec t1d = dg::evaluate( dg::zero, g1d_out);
+    dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::DVec t2d = dg::evaluate( dg::zero, g2d_out);
     dg::DVec t3d = dg::evaluate( dg::zero, g3d_out);
 
@@ -216,8 +224,15 @@ int main( int argc, char* argv[])
     dg::IHMatrix grid2gridX2d  = dg::create::interpolation(
         coordsX[0], coordsX[1], g2d_out);
     // interpolate fsa back to 2d or 3d grid
-    dg::IHMatrix fsaonrzmatrix = dg::create::interpolation(
+    dg::IHMatrix fsa2rzmatrix = dg::create::interpolation(
         psipog2d, g1d_out, dg::DIR_NEU);
+    dg::DVec dvdpsip3d;
+    {
+        dg::IHMatrix fsa2rzpmatrix = dg::create::interpolation(
+            psipog3d, g1d_out, dg::DIR_NEU);
+        dg::blas2::symv(fsa2rzpmatrix, dvdpsip, transfer3d);
+        dg::assign( transfer3d, dvdpsip3d);
+    };//save some storage by deleting matrix immediately
 
     //perp laplacian for computation of vorticity
 
@@ -283,6 +298,8 @@ int main( int argc, char* argv[])
     dg::DMatrix dxN = dg::create::dx( g3d_out, p.bcxN);
     dg::DMatrix dyN = dg::create::dy( g3d_out, p.bcyN);
     dg::DMatrix dz = dg::create::dz( g3d_out, dg::PER);
+    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU);
+
     dg::DVec dx_A( t3d), dy_A(t3d), dz_A(t3d);
     dg::DVec dx_P( t3d), dy_P(t3d), dz_P(t3d);
     dg::DVec dx_N( t3d), dy_N(t3d), dz_N(t3d);
@@ -291,16 +308,29 @@ int main( int argc, char* argv[])
     const dg::DVec psipP =  t3d; //zero
 
     /////////////////// Construct names to output /////////////
-    std::vector<std::string> names_direct{
-        "electrons","ions","Ue","Ui", "potential","induction"
+    std::map<std::string, std::string> names_direct{
+        {"electrons",   "Electron density"},
+        {"ions",        "Ion gyrocentre density"},
+        {"Ue",          "Electron parallel velocity"},
+        {"Ui",          "Ion parallel velocity"},
+        {"potential",   "Electric potential"},
+        {"induction",   "Magnetic potential"}
     };
-    std::vector<std::string> names_derived{
-        "vorticity", "apar_vorticity", "neue", "NiUi",
-        "neuebphi", "NiUibphi", "fluxe",
-        "Lperpinv","Lparallelinv"
+    std::map<std::string, std::string> names_derived{
+        {"vorticity",       "Minus Lap_perp of electric potential"},
+        {"apar_vorticity",  "Minus Lap_perp of magnetic potential"},
+        {"neue",            "Product of electron density and velocity"},
+        {"NiUi",            "Product of ion gyrocentre density and velocity"},
+        {"neuebphi",        "Product of neue and covariant phi component of magnetic field unit vector"},
+        {"NiUibphi",        "Product of NiUi and covariant phi component of magnetic field unit vector"},
+        {"Lperpinv",        "Perpendicular density gradient length scale"},
+        {"Lparallelinv",    "Parallel density gradient length scale"},
+        {"jvne",            "Radial electron flux without induction contribution"},
+        {"jvneA",           "Radial electron flux: induction contribution"},
     };
+    names_derived.insert( names_direct.begin(), names_direct.end());
     std::vector<std::string> names_0d{
-        "aligned", "perp_aligned", "correlationNPhi", "total_flux"
+        "aligned", "perp_aligned", "correlationNPhi"
     };
 
     // Create Netcdf output file and ids
@@ -346,36 +376,62 @@ int main( int argc, char* argv[])
             &id0d[name]);
     }
 
-    // construct 3d and 2d and add to 0d variables
+    // construct a vector for each name in the list
     std::map<std::string, dg::DVec> v3d;
-    for( auto name : names_direct)
-        v3d[name] = t3d;
-    for( auto name : names_derived)
-        v3d[name] = t3d;
-    for( auto pair : v3d)
+    for( auto pair : names_derived)
+        v3d[pair.first] = t3d;
+    //now create the variables in the netcdf file
+    for( auto pair : names_derived)
     {
-        std::string name = pair.first + "_ta";
+        std::string name = pair.first + "_ta2d";
+        std::string long_name = pair.second + " (Toroidal average)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
-        name = pair.first + "_plane";
+        err = nc_put_att_text( ncid, id2d[name], "long_name", pair.second.size(),
+            long_name.data());
+
+        name = pair.first + "_2d";
+        long_name = pair.second + " (Evaluated on phi = 0 plane)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
-        name = pair.first + "_fluc";
+        err = nc_put_att_text( ncid, id2d[name], "long_name", pair.second.size(),
+            long_name.data());
+
+        name = pair.first + "_fluc2d";
+        long_name = pair.second + " (Fluctuations wrt fsa on phi = 0 plane)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
-        name = pair.first + "_fsa2";
+        err = nc_put_att_text( ncid, id2d[name], "long_name", pair.second.size(),
+            long_name.data());
+
+        name = pair.first + "_fsa2d";
+        long_name = pair.second + " (Flux surface average interpolated to 2d plane)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
+        err = nc_put_att_text( ncid, id2d[name], "long_name", pair.second.size(),
+            long_name.data());
+
         name = pair.first + "_fsa";
+        long_name = pair.second + " (Flux surface average)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
             &id1d[name]);
-        name = pair.first + "_fsi";
+        err = nc_put_att_text( ncid, id1d[name], "long_name", pair.second.size(),
+            long_name.data());
+
+        name = pair.first + "_ifs";
+        long_name = pair.second + " (Integrated Flux surface average unless it is a current then it is the derived flux surface average)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
             &id1d[name]);
-        name = pair.first + "_fsi_lcfs";
+        err = nc_put_att_text( ncid, id1d[name], "long_name", pair.second.size(),
+            long_name.data());
+
+        name = pair.first + "_ifs_lcfs";
+        long_name = pair.second + " (Integrated Flux surface average evaluated on last closed flux surface unless it is a current then it is the fsa evaluated)";
         v0d.at(name) = 0.; //this needs to go into v0d
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 1, dim_ids,
             &id0d[name]);
+        err = nc_put_att_text( ncid, id0d[name], "long_name", pair.second.size(),
+            long_name.data());
     }
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
@@ -424,10 +480,10 @@ int main( int argc, char* argv[])
         for( auto name : names_direct)
         {
             int dataID;
-            err = nc_inq_varid(ncid, name.data(), &dataID);
+            err = nc_inq_varid(ncid, name.first.data(), &dataID);
             err = nc_get_vara_double( ncid, dataID, start3d, count3d,
                 transfer3d.data());
-            dg::assign( transfer3d, v3d[name]);
+            dg::assign( transfer3d, v3d[name.first]);
         }
         err = nc_close(ncid);  //close 3d file
 
@@ -458,15 +514,23 @@ int main( int argc, char* argv[])
         dg::blas2::symv( dxP, v3d.at("potential"), dx_P);
         dg::blas2::symv( dyP, v3d.at("potential"), dy_P);
         dg::blas2::symv( dz , v3d.at("potential"), dz_P);
-        dg::blas1::evaluate( v3d.at("fluxe"), dg::equals(),
+        dg::blas1::evaluate( t3d, dg::equals(),
             RadialParticleFlux( p.tau[0], p.mu[0]),
-            v3d.at("electrons"), v3d.at("Ue"), v3d.at("induction"),
-            dx_A, dy_A, dz_A, dx_P, dy_P, dz_P, psipR, psipZ, psipP,
+            v3d.at("electrons"), v3d.at("Ue"),
+            dx_P, dy_P, dz_P, psipR, psipZ, psipP,
             bhat[0], bhat[1], bhat[2],
             curvNabla[0], curvNabla[1], curvNabla[2],
             curvKappa[0], curvKappa[1], curvKappa[2]
         );
-        v0d.at("total_flux") = dg::blas1::dot( w3d, v3d.at("fluxe"));
+        dg::blas1::pointwiseDot( t3d, dvdpsip3d, v3d.at("jvne"));
+        dg::blas1::evaluate( t3d, dg::equals(),
+            RadialParticleFlux( p.tau[0], p.mu[0]),
+            v3d.at("electrons"), v3d.at("Ue"), v3d.at("induction"),
+            dx_A, dy_A, dz_A, psipR, psipZ, psipP,
+            bhat[0], bhat[1], bhat[2],
+            curvKappa[0], curvKappa[1], curvKappa[2]
+        );
+        dg::blas1::pointwiseDot( t3d, dvdpsip3d, v3d.at("jvneA"));
 
         //----------------perp length scale computation
 
@@ -515,11 +579,11 @@ int main( int argc, char* argv[])
             //flux surface average
             dg::blas2::symv( grid2gridX2d, transfer2d, transfer2dX); //interpolate onto X-point grid
             dg::blas1::pointwiseDot( transfer2dX, volX2d, transfer2dX); //multiply by sqrt(g)
-            poloidal_average( transfer2dX, transfer1d, false); //average over eta
-            dg::blas1::scal( transfer1d, 4*M_PI*M_PI*f0); //
-            dg::blas1::pointwiseDivide( transfer1d, dvdpsip, transfer1d );
+            poloidal_average( transfer2dX, t1d, false); //average over eta
+            dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
+            dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
             err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsa"),
-                start1d, count1d, transfer1d.data());
+                start1d, count1d, fsa1d.data());
 
 
             // 2d data of plane varphi = 0
@@ -530,7 +594,7 @@ int main( int argc, char* argv[])
                 start2d, count2d, t2d_mp.data() );
 
             // fsa on 2d plane : <f>
-            dg::blas2::gemv(fsaonrzmatrix, transfer1d, transfer2d); //fsa on RZ grid
+            dg::blas2::gemv(fsa2rzmatrix, fsa1d, transfer2d); //fsa on RZ grid
             err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_fsa2"),
                 start2d, count2d, transfer2d.data() );
 
@@ -539,13 +603,22 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid_out, id2d.at(pair.first+"_fluc"),
                 start2d, count2d, transfer2d.data() );
 
-            //flux surface integral
-            transfer1d = dg::integrate( transfer1d, g1d_out);
-            dg::blas1::pointwiseDot( dvdpsip, transfer1d, transfer1d);
-            err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_fsi"),
+            //flux surface integral/derivative
+            if( pair.first[0] == 'j') //j indicates a flux
+            {
+                v0d.at(pair.first+"ifs_lcfs") = dg::interpolate( fsa1d, 0., g1d_out);
+                dg::blas2::symv( dpsi, fsa1d, t1d);
+                dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
+            }
+            else
+            {
+                t1d = dg::integrate( fsa1d, g1d_out);
+                dg::blas1::pointwiseDot( t1d, dvdpsip, transfer1d);
+                v0d.at(pair.first+"ifs_lcfs") = dg::interpolate( transfer1d, 0., g1d_out);
+            }
+            err = nc_put_vara_double( ncid_out, id1d.at(pair.first+"_ifs"),
                 start1d, count1d, transfer1d.data());
-            //flux surface integral on last closed flux surface
-            v0d.at(pair.first+"fsi_lcfs") = dg::interpolate( transfer1d, 0., g1d_out);
+            //flux surface integral/derivative on last closed flux surface
 
         }
         //and the 0d quantities
