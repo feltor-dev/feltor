@@ -860,6 +860,19 @@ n_e \vec K = n_e\nabla\times\frac{\bhat}{B} = \nabla\times n_e\frac{\bhat}{B} + 
 such that we can define the diamagnetic flux in the particle flux since
 the rotation vanishes under the divergence.
 
+Let us here also derive the particle flux \eqref{eq:mass_conservation} through a flux surface
+\begin{align} \label{eq:particle_flux}
+ \vec j_{N}\cdot \vec \nabla v %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\nabla\psi_p \nonumber\\
+ =
+  \frac{\d v}{\d \psi_p} &N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
+ &+ NU\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
+\end{align}
+
+
 \subsubsection{Energy theorem}
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
@@ -897,26 +910,10 @@ In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
 for the diffusion terms in the above equations.
 
-\subsection{ Particle, energy and vorticity fluxes}
-Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservation} and \eqref{eq:energy_conservation} through a flux surface
-\begin{align} \label{eq:particle_flux}
- \vec j_{N}\cdot \vec \nabla\psi_p %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\nabla\psi_p \nonumber\\
- =&
-  N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
-   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
- &+ NU\left [\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
- \vec j_{\mathcal E}\cdot \vec \nabla\psi_p =&
- %\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right)
- %N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\vec j_N \cdot \vec\nabla\psi_p
- %\nonumber\\
- %+ z\left(\mu NU^2 \vec v_{\nabla\times \bhat} + \tau NU(\bhat+\tilde{\vec b}_\perp )\right) \cdot\vec \nabla\psi_p \nonumber\\
- %=
-\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
+We have the energy flux through a flux surface
+\begin{align}
+ \vec j_{\mathcal E}\cdot \vec \nabla v =&%\frac{\d v}{\d \psi_p} \vec j_{\mathcal E}\cdot \vec \nabla \psi_p  =
+\frac{\d v}{\d \psi_p}\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
 + z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
 &+ z \tau NU
  \left( A_\parallel \mathcal
@@ -924,6 +921,7 @@ Let us here also derive the particle and energy fluxes \eqref{eq:mass_conservati
 \label{eq:energy_flux}
 \end{align}
 
+\subsection{ Force balance equation}
 In order to discuss poloidal flows let us first define orthogonal vectors $\{\vec{ \hat\zeta}, \vec{\hat\eta},\bhat\}$
 \begin{align}
 \vec{\hat\zeta} := \nabla\psi_p,\quad
@@ -938,25 +936,37 @@ Notice that $\vec{\hat \eta}$ in general has a (small) toroidal component in add
 Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ and $\vec u_d = \tau_i \bhat\times\nabla \ln N_i$
 we can derive
 \begin{align}
-u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2} \\
-u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi \\
-u_d^{\hat\eta} &:= \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \\
-u_d^{\hat\zeta}&:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i
+u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2}
+&&u_d^{\hat\eta} := \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \\
+u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi
+&&u_d^{\hat\zeta}:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i
 \end{align}
-With this we write the force balance equation
+With this we write the force balance equation (in the LWL)
 \begin{align}
-\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
+&\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
 \frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) \right\rangle
-+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
+\nonumber\\
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
 + \tau_i \partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel \right\rangle
 \nonumber\\
-= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
+&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
 \end{align}
+where the right hand side represents the Lorentz force $\vec j\times\vec B$.
 Notice that 
 \begin{align}
 \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p\right\rangle
 = \left\langle \frac{ \bhat\times \nabla (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cdot\nabla\psi_p\right\rangle
 = -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
+\end{align}
+We can interpret the force balance as the flux surface average of a 
+continuity equation 
+with
+\begin{align}
+&\partial_t \Omega + \nabla\cdot \vec j_\Omega = S_\Omega \\
+\Omega &:= \mu_i N_i \left(\frac{\nabla\psi_p\cdot\nabla\phi}{B^2} + \tau_i \nabla\psi_p \cdot\nabla \ln N_i\right) \\
+\vec j_{\Omega} &:= -\mu_i N_i \Omega \vec u_E 
+    - \frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel \frac{\bhat\times\nabla A_\parallel}{B} \\
+    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
 \end{align}
 
 
