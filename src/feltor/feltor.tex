@@ -15,8 +15,8 @@ The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
 The purpose of this document is to describe the programs
 \texttt{feltor\_hpc.cu, feltor.cu, feltor\_diag.cu} and to an extend
 \texttt{geometry\_diag.cu}. The goal is to provide
-enough information such that the user never needs to look
-into the actual codes on the one side and to be able to connect
+information such that a user can avoid to look
+into the actual codes on the one side and connect
 the presented formulas to relevant journal publications on the other.
 
 The program \texttt{feltor/inc/geometries/geometry\_diag.cu}
@@ -865,8 +865,8 @@ Let us here also derive the particle flux \eqref{eq:mass_conservation} through a
  \vec j_{N}\cdot \vec \nabla v %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
  %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
  %\nabla\psi_p \nonumber\\
- =
-  \frac{\d v}{\d \psi_p} &N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+ =&
+  \frac{\d v}{\d \psi_p} N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
    \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
  &+ NU\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
  K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
