@@ -230,6 +230,7 @@ std::vector<Record> records_list = {
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
     },
+    /// ------------------ Density terms ------------------------//
     {"jvne", "Radial electron particle flux without induction contribution",
         []( dg::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
@@ -256,7 +257,77 @@ std::vector<Record> records_list = {
             );
             dg::blas1::pointwiseDot( result, v.dvdpsip3d, result);
         }
+    },
+    {"lneperp", "Perpendicular particle diffusion",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::copy( v.f.lapMperpN(0), result);
+            dg::blas1::scal( result, -v.p.nu_perp);
+        }
+    },
+    {"lneparallel", "Parallel particle diffusion",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::copy( v.f.lapParallelN(0), result);
+            dg::blas1::scal( result, v.p.nu_parallel);
+        }
+    },
+    /// ------------------- Energy terms ------------------------//
+    {"nelnne", "Entropy electrons",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::transform( v.f.density(0), result, dg::LN<double>());
+            dg::blas1::pointwiseDot( result, v.f.density(0), result);
+        }
+    },
+    {"NilnNi", "Entropy ions",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::transform( v.f.density(1), result, dg::LN<double>());
+            dg::blas1::pointwiseDot( v.p.tau[1], result, v.f.density(1), 0., result);
+        }
+    },
+    {"aperp2", "Magnetic energy",
+        []( dg::DVec& result, Variables& v ) {
+            if( v.p.beta == 0)
+            {
+                dg::blas1::scal( result, 0.);
+            }
+            else
+            {
+                dg::tensor::multiply3d( v.f.projection(), //grad_perp
+                    v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
+                    v.f.tmp[0], v.f.tmp[1], v.f.tmp[2])
+                dot( v.f.tmp, v.f.gradA(), result);
+                dg::blas1::scal( result, 1./2./v.p.beta);
+            }
+        }
+    },
+    {"UE2", "ExB energy",
+        []( dg::DVec& result, Variables& v ) {
+            dg::tensor::multiply3d( v.f.projection(), //grad_perp
+                v.f.gradP(0)[0], v.f.gradP(0)[1], v.f.gradP(0)[2],
+                v.f.tmp[0], v.f.tmp[1], v.f.tmp[2])
+            dot( v.f.tmp, v.f.gradP(), result);
+            dg::blas1::pointwiseDot( 0.5, v.f.density(1), result, 0., result);
+        }
+    },
+    {"neue2", "Parallel electron energy",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( -0.5*v.p.mu[0], v.f.density(0),
+                v.f.velocity(0), v.f.velocity(0), 0., result);
+        }
+    },
+    {"NiUi2", "Parallel ion energy",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( 0.5*v.p.mu[1], v.f.density(1),
+                v.f.velocity(1), v.f.velocity(1), 0., result);
+        }
+    },
+    {"resistivity", "Energy dissipation through resistivity",
+        []( dg::DVec& result, Variables& v ) {
+            dg::blas1::axpby( 1., v.f.velocity(1), -1., v.f.velocity(0), result);
+            dg::blas1::pointwiseDot( v.p.eta, v.f.density(0), result, result, 0., result)
+        }
     }
+
+
 };
 
 void create_records_in_file( int ncid,

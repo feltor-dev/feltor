@@ -294,6 +294,21 @@ struct Explicit
     const Container & dsN (int i) const {
         return m_dsN[i];
     }
+    const Container& lapParallelN( int i){
+        dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);
+        m_ds_N.dss( m_temp0, m_temp1);
+        dg::blas1::pointwiseDot( 1., m_divb, m_dsN[i],
+                                 0., m_temp0);
+        dg::blas1::axpby( 1., m_temp1, 1., m_temp0);
+        return m_temp0;
+    }
+    const Container& lapParallelU( int i){
+        m_ds_N.dss( m_fields[1][i], m_temp1);
+        dg::blas1::pointwiseDot( 1., m_divb, m_dsN[i],
+                                 0., m_temp0);
+        dg::blas1::axpby( 1., m_temp1, 1., m_temp0);
+        return m_temp0;
+    }
     const dg::SparseTensor<Container>& projection() const{
         return m_hh;
     }
