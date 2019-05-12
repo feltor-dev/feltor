@@ -256,29 +256,46 @@ struct Explicit
         dg::blas2::symv( m_dx_N, m_temp0, m_dN[0][0]);
         dg::blas2::symv( m_dy_N, m_temp0, m_dN[0][1]);
         if(!m_p.symmetric) dg::blas2::symv( m_dz, m_temp0, m_dN[0][2]);
+        m_ds_N.centered( m_temp0, m_dsN[0]);
         dg::blas1::axpby( 1., Ni, -1., 1., m_temp0);
         dg::blas2::symv( m_dx_N, m_temp0, m_dN[1][0]);
         dg::blas2::symv( m_dy_N, m_temp0, m_dN[1][1]);
         if(!m_p.symmetric) dg::blas2::symv( m_dz, m_temp0, m_dN[1][2]);
+        m_ds_N.centered( m_temp0, m_dsN[1]);
 
         for( unsigned i=0; i<2; i++)
         {
-            dg::blas2::symv( m_dx_U, fields[1][i], m_dU[i][0]);
-            dg::blas2::symv( m_dy_U, fields[1][i], m_dU[i][1]);
-            if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dU[i][2]);
+            dg::blas2::symv( m_dx_U, m_fields[1][i], m_dU[i][0]);
+            dg::blas2::symv( m_dy_U, m_fields[1][i], m_dU[i][1]);
+            if(!m_p.symmetric) dg::blas2::symv( m_dz, m_fields[1][i], m_dU[i][2]);
         }
 
      }
 
     const Container& uE2() const {return m_UE2;}
-    const std::array<Container, 3> & dN (int i) const {
+    const Container& density(int i)const{
+        return m_fields[0][i];
+    }
+    const Container& velocity(int i)const{
+        return m_fields[1][i];
+    }
+    const std::array<Container, 3> & gradN (int i) const {
         return m_dN[i];
     }
-    const std::array<Container, 3> & dP (int i) const {
+    const std::array<Container, 3> & gradU (int i) const {
+        return m_dU[i];
+    }
+    const std::array<Container, 3> & gradP (int i) const {
         return m_dP[i];
     }
-    const std::array<Container, 3> & dA () const {
+    const std::array<Container, 3> & gradA () const {
         return m_dA;
+    }
+    const Container & dsN (int i) const {
+        return m_dsN[i];
+    }
+    const dg::SparseTensor<Container>& projection() const{
+        return m_hh;
     }
     const std::array<Container, 3> & curv () const {
         return m_curv;
@@ -291,6 +308,29 @@ struct Explicit
     const std::array<Container, 3> & bhatgB () const {
         return m_b;
     }
+    const Container& lapMperpN (int i)
+    {
+        dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);
+        dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
+        return m_temp1;
+    }
+    const Container& lapMperpU (int i)
+    {
+        dg::blas1::axpby( 1., m_fields[1][i], -1., 1., m_temp0);
+        dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
+        return m_temp1;
+    }
+    const Container& lapMperpP (int i)
+    {
+        dg::blas2::gemv( m_lapperpP, m_phi[i], m_temp1);
+        return m_temp1;
+    }
+    const Container& lapMperpA ()
+    {
+        dg::blas2::gemv( m_lapperpU, m_apar, m_temp1);
+        return m_temp1;
+    }
+    /////////////////////////DIAGNOSTICS END////////////////////////////////
 
     //source strength, profile - 1
     void set_source( Container profile, double omega_source, Container source)
@@ -339,7 +379,7 @@ struct Explicit
     std::array<Container,2> m_phi, m_logn, m_dsN, m_dsU;
     std::array<Container,3> m_dA;
     std::array<std::array<Container,3>,2> m_dP, m_dN, m_dU;
-    std::array<std::array<Container,2>,2> m_fields, m_s;
+    std::array<std::array<Container,2>,2> m_fields, m_s; //fields, sources
 
     std::vector<Container> m_multi_chi;
 
