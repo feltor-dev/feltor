@@ -9,6 +9,65 @@
 #include "dg/file/nc_utilities.h"
 #include "feltordiag.h"
 
+void create_records_in_file( int ncid,
+    int dim_ids[3], int dim_ids1d[2],
+    std::map<std::string, int>& id0d,
+    std::map<std::string, int>& id1d,
+    std::map<std::string, int>& id2d)
+{
+    file::NC_Error_Handle err;
+    for( auto record : feltor::records_list)
+    {
+        std::string name = record.name + "_ta2d";
+        std::string long_name = record.long_name + " (Toroidal average)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id2d[name]);//creates a new id2d entry
+        err = nc_put_att_text( ncid, id2d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_2d";
+        long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id2d[name]);
+        err = nc_put_att_text( ncid, id2d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_fluc2d";
+        long_name = record.long_name + " (Fluctuations wrt fsa on phi = 0 plane)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id2d[name]);
+        err = nc_put_att_text( ncid, id2d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_fsa2d";
+        long_name = record.long_name + " (Flux surface average interpolated to 2d plane)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id2d[name]);
+        err = nc_put_att_text( ncid, id2d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_fsa";
+        long_name = record.long_name + " (Flux surface average)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, dim_ids1d,
+            &id1d[name]);
+        err = nc_put_att_text( ncid, id1d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_ifs";
+        long_name = record.long_name + " (Integrated Flux surface average unless it is a current then it is the derived flux surface average)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, dim_ids1d,
+            &id1d[name]);
+        err = nc_put_att_text( ncid, id1d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_ifs_lcfs";
+        long_name = record.long_name + " (Integrated Flux surface average evaluated on last closed flux surface unless it is a current then it is the fsa evaluated)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, dim_ids,
+            &id0d[name]);
+        err = nc_put_att_text( ncid, id0d[name], "long_name", long_name.size(),
+            long_name.data());
+    }
+}
 
 int main( int argc, char* argv[])
 {
@@ -103,10 +162,10 @@ int main( int argc, char* argv[])
     dg::DVec t3d = dg::evaluate( dg::zero, g3d_out);
     dg::DVec result(t3d);
 
-    std::array<dg::DVec, 3> dpsip;
-    dpsip[0] =  dg::evaluate( mag.psipR(), g3d_out);
-    dpsip[1] =  dg::evaluate( mag.psipZ(), g3d_out);
-    dpsip[2] =  t3d; //zero
+    std::array<dg::DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), g3d_out);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), g3d_out);
+    gradPsip[2] =  t3d; //zero
 
     ///--------------- Construct X-point grid ---------------------//
     //Find O-point
@@ -194,7 +253,7 @@ int main( int argc, char* argv[])
     dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU);
     /// Construct Feltor Variables object
     feltor::Variables var = {
-        feltor::Feltor( g3d_out, p, mag), p, dpsip, dpsip, dvdpsip3d
+        feltor::Feltor( g3d_out, p, mag), p, gradPsip, gradPsip, dvdpsip3d
     };
 
     // define 2d and 1d and 0d dimensions and variables
@@ -224,7 +283,7 @@ int main( int argc, char* argv[])
     for( auto name : names_input)
         v3d[name] = t3d;
     //now create the variables in the netcdf file
-    feltor::create_records_in_file( ncid_out, dim_ids, dim_ids1d, id0d, id1d, id2d);
+    create_records_in_file( ncid_out, dim_ids, dim_ids1d, id0d, id1d, id2d);
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t start1d[2] = {0, 0};

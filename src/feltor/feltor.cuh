@@ -319,21 +319,10 @@ struct Explicit
         return m_curvKappa;
     }
     const Container& bphi( ) const { return m_bphi; }
+    const Container& binv( ) const { return m_binv; }
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
         return m_b;
-    }
-    const Container& lapMperpN (int i)
-    {
-        dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);
-        dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
-        return m_temp1;
-    }
-    const Container& lapMperpU (int i)
-    {
-        dg::blas1::axpby( 1., m_fields[1][i], -1., 1., m_temp0);
-        dg::blas2::gemv( m_lapperpU, m_temp0, m_temp1);
-        return m_temp1;
     }
     const Container& lapMperpP (int i)
     {
@@ -355,6 +344,34 @@ struct Explicit
         m_source = source;
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
+    void compute_diffusive_lapMperpN( const Container& density, Container& temp0, Container& result ){
+        // compute the negative diffusion contribution -Lambda N
+        // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
+        if( m_p.perp_diff == "viscous")
+        {
+            dg::blas1::transform( density, temp0, dg::PLUS<double>(-1));
+            dg::blas2::gemv( m_lapperpN, temp0, result); //!minus
+        }
+        else
+        {
+            dg::blas1::transform( density, result, dg::PLUS<double>(-1));
+            dg::blas2::gemv( m_lapperpN, result, temp0);
+            dg::blas2::gemv( m_lapperpN, temp0, result); //!plus
+        }
+    }
+    void compute_diffusive_lapMperpU( const Container& velocity, Container& temp0, Container& result ){
+        // compute the negative diffusion contribution -Lambda U
+        // perp dissipation for U: nu_perp Delta_p U or -nu_perp Delta_p**2 U
+        if( m_p.perp_diff == "viscous")
+        {
+            dg::blas2::gemv( m_lapperpU, velocity, result); //!minus
+        }
+        else
+        {
+            dg::blas2::gemv( m_lapperpU, velocity, temp0);
+            dg::blas2::gemv( m_lapperpU, temp0, result); //!plus
+        }
+    }
   private:
     void compute_phi( double t, const std::array<Container,2>& y);
     void compute_psi( double t);
@@ -885,17 +902,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_dissipation(
         m_q.Dpar[i] = m_p.nu_parallel*dg::blas2::dot(
                         m_temp2, m_vol3d, m_dsN[i]);
         // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
-        if( m_p.perp_diff == "viscous")
-        {
-            dg::blas1::transform( fields[0][i], m_temp1, dg::PLUS<double>(-1));
-            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0); //!minus
-        }
-        else
-        {
-            dg::blas1::transform( fields[0][i], m_temp0, dg::PLUS<double>(-1));
-            dg::blas2::gemv( m_lapperpN, m_temp0, m_temp1);
-            dg::blas2::gemv( m_lapperpN, m_temp1, m_temp0); //!plus
-        }
+        compute_diffusive_lapMperpN( fields[0][i], m_temp1, m_temp0);
         if( i==0)
             m_q.diff += -m_p.nu_perp*dg::blas1::dot( m_vol3d, m_temp0);
         m_q.Dperp[i] = -m_p.nu_perp*dg::blas2::dot(
@@ -910,15 +917,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_dissipation(
         m_q.Dpar[i+2] = m_p.nu_parallel*dg::blas2::dot(
             m_temp2, m_vol3d, m_dsU[i]);
         // perp dissipation for U: nu_perp Delta_p U or -nu_perp Delta_p**2 U
-        if( m_p.perp_diff == "viscous")
-        {
-            dg::blas2::gemv( m_lapperpU, fields[1][i], m_temp0); //!minus
-        }
-        else
-        {
-            dg::blas2::gemv( m_lapperpU, fields[1][i], m_temp1);
-            dg::blas2::gemv( m_lapperpU, m_temp1, m_temp0); //!plus
-        }
+        compute_diffusive_lapMperpU( fields[1][i], m_temp1, m_temp0);
         m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
             m_temp2, m_vol3d, m_temp0);
     }

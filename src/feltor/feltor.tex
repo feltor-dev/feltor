@@ -958,13 +958,12 @@ Notice that
 = \left\langle \frac{ \bhat\times \nabla (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cdot\nabla\psi_p\right\rangle
 = -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
 \end{align}
-We can interpret the force balance as the flux surface average of a 
-continuity equation 
-with
+We can interpret the force balance as the flux surface average of a
+continuity equation
 \begin{align}
 &\partial_t \Omega + \nabla\cdot \vec j_\Omega = S_\Omega \\
 \Omega &:= \mu_i N_i \left(\frac{\nabla\psi_p\cdot\nabla\phi}{B^2} + \tau_i \nabla\psi_p \cdot\nabla \ln N_i\right) \\
-\vec j_{\Omega} &:= -\mu_i N_i \Omega \vec u_E 
+\vec j_{\Omega} &:= -\Omega \vec u_E 
     - \frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel \frac{\bhat\times\nabla A_\parallel}{B} \\
     S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
 \end{align}
@@ -1204,15 +1203,6 @@ x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, co
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-mass             & Dataset & 1 (time) & Mass inside LCFS $\int_\Omega \dV n_e$ \\
-mass\_loss       & Dataset & 1 (time) & Mass flux through LCFS $\int_{\psi_p = 0} \vec \dA \cdot \vec j_{n_e}$\\
-mass\_diffusion  & Dataset & 1 (time) & Mass diffusion inside LCFS $\int_\Omega \dV \Lambda_{n_e}$ \\
-energy           & Dataset & 1 (time) & Energy inside LCFS $\int_\Omega \dV \mathcal E$ \\
-energy\_loss     & Dataset & 1 (time) & Energy flux through LCFS $\int_{\psi_p = 0} \vec \dA \cdot \vec j_{\mathcal E}$ \\
-energy\_diffusion& Dataset & 1 (time) & Energy diffusion inside LCFS $\int_\Omega \dV \Lambda_{\mathcal E}$ \\
-energy\_dissipation& Dataset & 1 (time) & Energy dissipation inside LCFS$\int_\Omega \dV R_{\mathcal E}$ \\
-aligned          & Dataset & 1 (time) & $\int \dV (\nabla_\parallel n_e)^2 /n_e$ \\
-perp\_aligned    & Dataset & 1 (time) & $\int \dV (\vec\nabla_\perp n_e)^2 /n_e$ \\
 correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^\phi||||n_e||$\\
 correlationNTildePhi  & Dataset & 1 (time) & $\left( \int\dV \phi \tilde n_e \right)/ ||\phi||||\tilde n_e||$ with $n_e \equiv \langle n_e \rangle_{\psi_p} ( 1 + \tilde n_e)$\\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
@@ -1227,25 +1217,66 @@ X\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle X\ran
 X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
 X\_ifs           & Dataset & 2 (time, psi) & Integrated flux surface average $\int\d v\langle X\rangle_{\psi_p}$ unless X is a current, then it is the derived flux-surface average $\partial_v \langle X\rangle_{\psi_p}$ \\
 X\_ifs\_lcfs     & Dataset & 1 (time) & Integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle X\rangle_{\psi_p}$ unless X is a current, then it is the fsa evaluated \\
-particle\_flux   & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{n_e} \cdot \vec \dA$ Eq.~\eqref{eq:particle_flux} \\
-energy\_flux     & Dataset & 2 (time, psi) & Integrated particle flux $\int_{\psi_p = \psi_{p0}}\vec j_{\mathcal E} \cdot \vec \dA$ Eq.~\eqref{eq:energy_flux} \\
 \bottomrule
 \end{longtable}
-where X $\in$ \{ electrons $n_e$, ions $N_i$, Ue $u_e$, Ui $U_i$,
-neue $n_e u_e$, NiUi $N_i U_i$, neuebphi $n_eu_eb_\varphi$,
-NiUibphi $N_iU_ib_\varphi$, potential $\phi$,
-induction $A_\parallel$, vorticity $-\Delta_\perp\phi$,
-apar\_vorticity $-\Delta_\perp A_\parallel$, Lperpinv $L_\perp^{-1}$,
-Lparallelinv $L_\parallel^{-1}$
-\}
-and we define
-
-\begin{align}
-   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
-   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e} \\
-   j_\parallel := N_iU_i-n_e u_e \quad
-   j_{\parallel,\rho} := \mu_i N_iU_i + \mu_e n_e u_e
-\end{align}
+where X $\in$
+\begin{longtable}{ll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
+\midrule
+    electrons &$n_e$ \\
+    ions &$N_i$ \\
+    Ue &$u_e$ \\
+    Ui &$U_i$ \\
+    potential &$\phi$ \\
+    psi &$\psi$ \\
+    induction &$A_\parallel$ \\
+    vorticity &$-\Delta_\perp\phi$ \\
+    apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
+    neue &$n_e u_e$ \\
+    niui &$N_i U_i$ \\
+    neuebphi &$n_eu_eb_\varphi$ \\
+    niuibphi &$N_iU_ib_\varphi$ \\
+    lperpinv &$L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}$ \\
+    perpaligned &$\frac{\vec\nabla_\perp n_e)^2}{n_e}$ \\
+    lparallelinv &$L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}$ \\
+    aligned &$\frac{\nabla_\parallel n_e)^2}{n_e}$ \\
+    jvne &$ n_e (\vec v_E + \vec v_K + \vec v_C )\cdot\nabla v$ \\
+    jvneA &$ n_e u_e \vec{\tilde b}_\perp  \cdot\nabla v$ \\
+    lneperp &$ \Lambda_{\perp,n_e}$ \\
+    lneparallel &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
+    nelnne &$ z_e\tau_e n_e \ln n_e$ \\
+    nilnni &$ z_i\tau_i N_i \ln N_i$ \\
+    aperp2 &$ (\nabla_\perp A_\parallel)^2/2/\beta$ \\
+    ue2   &$z_i\mu_i N_i u_E^2 /2$ \\
+    neue2 &$ z_e\mu_e n_e u_e^2/2$ \\
+    niui2 &$ z_i\mu_i N_i U_i^2/2$ \\
+    resistivity &$\eta_\parallel n_e^2 (U_i-u_e)^2$ \\
+    jvee &$z_e(\tau_e \ln n_e + \mu_e u_e^2/2 + \phi)n_e(\vec v_E + \vec v_C + \vec v_K)\cdot\nabla v
+        + z_e \tau_e n_e u_e^2 \vec K_{\nabla\times\bhat}\cdot\nabla v$ \\
+    jvei &$z_i(\tau_i \ln N_i + \mu_i U_i^2/2 + \psi_i)N_i(\vec v_E^i + \vec v_C + \vec v_K)\cdot\nabla v
+        + z_i \tau_i N_i U_i^2 \vec K_{\nabla\times\bhat}\cdot\nabla v$ \\
+    jveea &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec {\tilde b}_\perp\cdot\nabla v
+        + z_e \tau_e n_e u_e \vec{\tilde b}_\perp \cdot \nabla v $ \\
+    jveia &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec {\tilde b}_\perp\cdot\nabla v
+        + z_i \tau_i N_i U_i \vec{\tilde b}_\perp \cdot \nabla v $ \\
+    leeperp &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\perp \Delta_\perp n_e + z_e\mu_e n_e u_e \nu_\perp \Delta_\perp u_e$ \\
+    leiperp &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_i \nu_\perp \Delta_\perp U_i$ \\
+    leeparallel &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_e \nu_\parallel \Delta_\parallel u_e$ \\
+    leiparallel &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_i \nu_\parallel \Delta_\parallel U_i$ \\
+    oexbi &$\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2$ \\
+    oexbe &$\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2$ \\
+    odiai &$\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i$ \\
+    odiae &$\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e$ \\
+    jvoexbi &$-(\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i)  \vec u_E\cdot\nabla\psi_p$ \\
+    jvoexbe &$-(\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e) \vec u_E\cdot\nabla\psi_p$ \\
+    jvoapar &$ \nabla\psi_p\cdot\nabla A_\parallel \bhat\times\nabla A_\parallel/B/\beta$ \\
+    socurve &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
+    socurvi &$z_i\tau_i N_i \mathcal K(\psi_p)$ \\
+    socurvkappae &$z_e\mu_e n_eu_e^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
+    socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
+\bottomrule
+\end{longtable}
 
 
 
