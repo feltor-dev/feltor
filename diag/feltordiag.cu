@@ -341,15 +341,18 @@ int main( int argc, char* argv[])
             v3d.at("Ui"), v3d.at("potential"), v3d.at("induction") );
 
         //----------------Test if induction equation holds
-        dg::blas1::copy(var.f.lapMperpA(), result);
-        dg::blas1::pointwiseDot(
-            var.f.density(0), var.f.velocity(0), t3d);
-        dg::blas1::pointwiseDot( p.beta,
-            var.f.density(1), var.f.velocity(1), -p.beta, t3d);
-        double norm  = dg::blas2::dot( result, w3d, result);
-        dg::blas1::axpby( -1., result, 1., t3d);
-        double error = dg::blas2::dot( t3d, w3d, t3d);
-        std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
+        if( p.beta != 0)
+        {
+            dg::blas1::copy(var.f.lapMperpA(), result);
+            dg::blas1::pointwiseDot(
+                var.f.density(0), var.f.velocity(0), t3d);
+            dg::blas1::pointwiseDot( p.beta,
+                var.f.density(1), var.f.velocity(1), -p.beta, t3d);
+            double norm  = dg::blas2::dot( result, w3d, result);
+            dg::blas1::axpby( -1., result, 1., t3d);
+            double error = dg::blas2::dot( t3d, w3d, t3d);
+            std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
+        }
 
         //------------------correlation------------//
 
@@ -358,6 +361,8 @@ int main( int argc, char* argv[])
         double norm2 = sqrt(dg::blas2::dot(v3d.at("electrons"), w3d, v3d.at("electrons")));
         v0d.at("correlationNPhi") = dg::blas2::dot( t3d, w3d, v3d.at("electrons"))
             /norm1/norm2;  //<e^phi, N>/||e^phi||/||N||
+        v0d.at("correlationNTildePhi") = dg::blas2::dot( t3d, w3d, v3d.at("electrons"))
+            /norm1/norm2;  //<phi, n-<n> >/||phi||/||n-<n>||
 
 
         //now write out 2d and 1d quantities
@@ -368,7 +373,7 @@ int main( int argc, char* argv[])
             //toroidal average
             toroidal_average( t3d, t2d, false);
             dg::blas1::transfer( t2d, transfer2d);
-            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_ta"),
+            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_ta2d"),
                 start2d, count2d, transfer2d.data());
 
             //flux surface average
@@ -385,23 +390,23 @@ int main( int argc, char* argv[])
             unsigned kmp = 0; //g3d_out.Nz()/2;
             dg::HVec t2d_mp(t3d.begin() + kmp*g2d_out.size(),
                 t3d.begin() + (kmp+1)*g2d_out.size() );
-            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_plane"),
+            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_2d"),
                 start2d, count2d, t2d_mp.data() );
 
             // fsa on 2d plane : <f>
             dg::blas2::gemv(fsa2rzmatrix, fsa1d, transfer2d); //fsa on RZ grid
-            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_fsa2"),
+            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_fsa2d"),
                 start2d, count2d, transfer2d.data() );
 
             // delta f on midplane : df = f_mp - <f>
             dg::blas1::axpby( 1.0, t2d_mp, -1.0, transfer2d);
-            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_fluc"),
+            err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_fluc2d"),
                 start2d, count2d, transfer2d.data() );
 
             //flux surface integral/derivative
             if( record.name[0] == 'j') //j indicates a flux
             {
-                v0d[record.name+"ifs_lcfs"] = dg::interpolate( fsa1d, 0., g1d_out); //create a new entry
+                v0d[record.name+"_ifs_lcfs"] = dg::interpolate( fsa1d, 0., g1d_out); //create a new entry
                 dg::blas2::symv( dpsi, fsa1d, t1d);
                 dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
             }
@@ -409,7 +414,7 @@ int main( int argc, char* argv[])
             {
                 t1d = dg::integrate( fsa1d, g1d_out);
                 dg::blas1::pointwiseDot( t1d, dvdpsip, transfer1d);
-                v0d[record.name+"ifs_lcfs"] = dg::interpolate( transfer1d, 0., g1d_out); //create a new entry
+                v0d[record.name+"_ifs_lcfs"] = dg::interpolate( transfer1d, 0., g1d_out); //create a new entry
             }
             err = nc_put_vara_double( ncid_out, id1d.at(record.name+"_ifs"),
                 start1d, count1d, transfer1d.data());
@@ -418,8 +423,10 @@ int main( int argc, char* argv[])
         }
         //and the 0d quantities
         for( auto pair : v0d) //{name, double}
+        {
             err = nc_put_vara_double( ncid_out, id0d.at(pair.first),
                 start2d, count2d, &pair.second );
+        }
         //write time data
         err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
         //and close file
