@@ -1203,8 +1203,14 @@ x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, co
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^\phi||||n_e||$\\
-correlationNTildePhi  & Dataset & 1 (time) & $\left( \int\dV \phi \tilde n_e \right)/ ||\phi||||\tilde n_e||$ with $n_e \equiv \langle n_e \rangle_{\psi_p} ( 1 + \tilde n_e)$\\
+correlationNTildePhi  & Dataset & 1 (time) & $ \int\d v \langle \tilde \phi \tilde n_e\rangle / ||\tilde \phi||||\tilde n_e||$
+with $\tilde n_e \equiv (n_e - \langle n_e \rangle)/\langle n_e\rangle$, 
+$\tilde\phi = \phi - \langle\phi\rangle$
+and $||\phi|| = \left( \int \d v \langle \phi^2 \rangle\right)^{1/2}$
+\\
+covarianceNTildePhi  & Dataset & 1 (time) & $ \int\d v \langle \tilde \phi \tilde n_e\rangle $
+\\
+correlationNPhi  & Dataset & 1 (time) & $\int\d v \langle e^\phi n_e\rangle/ ||e^\phi||||n_e||$\\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
 psip1d           & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
@@ -1237,13 +1243,13 @@ where X $\in$
     niui &$N_i U_i$ \\
     neuebphi &$n_eu_eb_\varphi$ \\
     niuibphi &$N_iU_ib_\varphi$ \\
-    lperpinv &$L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}$ \\
-    perpaligned &$\frac{\vec\nabla_\perp n_e)^2}{n_e}$ \\
-    lparallelinv &$L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}$ \\
-    aligned &$\frac{\nabla_\parallel n_e)^2}{n_e}$ \\
+    lperpinv &$L_\perp^{-1} := |\vec\nabla_\perp n_e|/n_e$ \\
+    perpaligned &$(\vec\nabla_\perp n_e)^2/n_e$ \\
+    lparallelinv &$L_\parallel^{-1} := |\nabla_\parallel n_e|/n_e$ \\
+    aligned &$ (\nabla_\parallel n_e)^2/n_e$ \\
     jvne &$ n_e (\vec v_E + \vec v_K + \vec v_C )\cdot\nabla v$ \\
     jvneA &$ n_e u_e \vec{\tilde b}_\perp  \cdot\nabla v$ \\
-    lneperp &$ \Lambda_{\perp,n_e}$ \\
+    lneperp &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ \\
     lneparallel &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
     nelnne &$ z_e\tau_e n_e \ln n_e$ \\
     nilnni &$ z_i\tau_i N_i \ln N_i$ \\
