@@ -165,6 +165,38 @@ static inline int define_dimension( int ncid, const char* name, int* dimID, cons
     return define_dimension( ncid, name, dimID, points.data(), points.size());
 }
 
+///@cond
+namespace detail{
+static inline int define_x_dimension( int ncid, int* dimID, const dg::Grid1d& g)
+{
+    int retval;
+    std::string long_name = "x-coordinate in Computational coordinate system";
+    if( (retval = define_dimension( ncid, "x", dimID, g))){ return retval;}
+    retval = nc_put_att_text( ncid, *dimID, "axis", 1, "X");
+    retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());
+    return retval;
+}
+static inline int define_y_dimension( int ncid, int* dimID, const dg::Grid1d& g)
+{
+    int retval;
+    std::string long_name = "y-coordinate in Computational coordinate system";
+    if( (retval = define_dimension( ncid, "y", dimID, g))){ return retval;}
+    retval = nc_put_att_text( ncid, *dimID, "axis", 1, "Y");
+    retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());
+    return retval;
+}
+static inline int define_z_dimension( int ncid, int* dimID, const dg::Grid1d& g)
+{
+    int retval;
+    std::string long_name = "z-coordinate in Computational coordinate system";
+    if( (retval = define_dimension( ncid, "z", dimID, g))){ return retval;}
+    retval = nc_put_att_text( ncid, *dimID, "axis", 1, "Z");
+    retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());
+    return retval;
+}
+}//namespace detail
+///@endcond
+
 /**
  * @brief Define a 1d time-dependent dimension variable together with its data points
  *
@@ -179,7 +211,7 @@ static inline int define_dimension( int ncid, const char* name, int* dimID, cons
 static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
 {
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g))){ return retval;}
+    if( (retval = detail::define_x_dimension( ncid, &dimsIDs[1], g))){ return retval;}
     if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
 
     return retval;
@@ -200,8 +232,8 @@ static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], gx))){ return retval;}
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[0], gy))){ return retval;}
+    if( (retval = detail::define_x_dimension( ncid, &dimsIDs[1], gx))){ return retval;}
+    if( (retval = detail::define_y_dimension( ncid, &dimsIDs[0], gy))){ return retval;}
 
     return retval;
 }
@@ -222,8 +254,8 @@ static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const 
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = detail::define_x_dimension( ncid, &dimsIDs[2], gx))){ return retval;}
+    if( (retval = detail::define_y_dimension( ncid, &dimsIDs[1], gy))){ return retval;}
     if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
 
     return retval;
@@ -247,8 +279,8 @@ static inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvar
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = detail::define_x_dimension( ncid, &dimsIDs[2], gx)));
+    if( (retval = detail::define_y_dimension( ncid, &dimsIDs[1], gy)));
     if( (retval = define_limited_time( ncid, "time", size, &dimsIDs[0], tvarID)) ){ return retval;}
 
     return retval;
@@ -270,9 +302,9 @@ static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     dg::Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
-    if( (retval = define_dimension( ncid, "z", &dimsIDs[0], gz)));
+    if( (retval = detail::define_x_dimension( ncid, &dimsIDs[2], gx)));
+    if( (retval = detail::define_y_dimension( ncid, &dimsIDs[1], gy)));
+    if( (retval = detail::define_z_dimension( ncid, &dimsIDs[0], gz)));
     return retval;
 }
 

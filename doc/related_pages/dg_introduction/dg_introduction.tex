@@ -144,8 +144,8 @@ via Gauss--Legendre quadrature
 \end{align}
 \label{eq:gausslegendre}
 \end{subequations}
-With these formulas we have a simple, accurate, and fast 
-method to evaluate integrals. This is applied, for example, to compute
+With these formulas we have a simple, accurate, and fast
+method to evaluate integrals on the entire domain. This is applied, for example, to compute
 errors in the $L_2$-norm.
 
 We now define some useful quantities that simplify our notation (note that $i,j=0,\dots,P-1$) 
@@ -206,7 +206,42 @@ matrices is simplified to a large extent.
 %\end{align}
 %
 
+\subsection{Indefinite Integrals}\label{sec:integrals}
+The approximation of an indefinite integral $\int_a^x f_h(x')\dx'$ is a bit more involved since the integration
+boundary $x$ does not need to coincide with a cell boundary.
+First, integrating the Legendre differential equation
+$\frac{\d}{\dx}\left[ (1-x^2) \frac{\d}{\dx}p_j(x) \right] + j(j+1)p_j(x) = 0$
+and with the help of Eq.~\eqref{eq:recursion} and a second recursion for Legendre-Polynomials
+$(x^2-1) \d p_j(x)/\dx = jxp_j(x) - j p_{j-1}(x)$
+we compute
+\begin{align}
+\int_{-1}^{x} p_0(x')\dx' = p_1(x)+p_0(x) \quad \int_{-1}^{x} p_j(x') \dx'  = \frac{ p_{j+1}(x) - p_{j-1}(x)}{2j+1}\quad \forall\ j>0
+\end{align}
+Notice that the integral of a polynomial of order $P$ yields a polynomial of order $P+1$.
+The projection integral onto a base polynomial $p_i(x)$ yields
+\begin{align}
+ N_{00} &:= \int_{-1}^{1} p_0(x) \int_{-1}^{x} p_0(x') \dx' \dx = 2\quad
+ %N_{i0} := \int_{-1}^{1} p_i(x) \int_{-1}^{x} p_0(x') \dx' \dx = \frac{2}{2i+1}\delta_{i1}\quad
+ \nonumber\\
+ N_{ij} &:= \int_{-1}^{1} p_i(x) \int_{-1}^{x} p_j(x') \dx' \dx
+= \frac{2}{(2i+1)(2j+1)}\left[\delta_{i(j+1)}-\delta_{i(j-1)}\right] \quad i,j\neq 0,0
+\end{align}
 
+Our idea is to split the integral $F_h(x) = \int_a^x f_h(x')\dx'$ into two parts:
+\begin{align}
+F_h(x):=\int_a^x f_h(x') \dx' = \int_a^{x_{n-1/2}} f_h(x')\dx' + \int_{x_{n-1/2}}^x f_h(x') \dx'
+\end{align}
+where $n$ is the cell number such that $x_{n-1/2}\leq x < x_{n+1/2}$.
+Inserting $f_h(x) = \bar f_{nj} p_{nj}(x)$ and projecting onto a base polynomial $p_{ni}(x)$ yields
+\begin{align}
+\bar F_{nk} := T_{ki}\int_{x_{n-1/2}}^{x_{n+1/2}} p_{ni}(x) \int_a^x f_h(x') \dx'\dx
+= \delta_{k0} \sum_{m=1}^{n-1} h\bar f_{m0} + \frac{h^2}{4}T_{ki}N_{ij} \bar f_{nj}
+\end{align}
+where we choose the proper normalization $h^2/4$ due to the double integrals in $N_{ij}$.
+Notice that if $f_h(x)$ is discretized using $P$ polynomial coefficients $F_h(x)$ would in
+principle need $P+1$ coefficients to be the exact integral.
+However, we usually truncate the coefficients at $P$ to match the order of the discretization.
+Numerical tests show that the corresponding truncation error is extremely small.
 
 \subsection{ Discretization of first derivatives} \label{sec:firstderivatives}
 From here on we write

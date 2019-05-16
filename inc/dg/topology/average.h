@@ -11,12 +11,21 @@
 namespace dg{
 
 /**
- * @brief Class for average computations in a Cartesian topology
+ * @brief Topological average computations in a Cartesian topology
  *
+ * \f[
+ * \langle f \rangle_x := \frac{1}{L_x}\int_0^{L_x}dx f \quad
+ * \langle f \rangle_y := \frac{1}{L_y}\int_0^{L_y}dy f \quad
+ * \langle f \rangle_z := \frac{1}{L_z}\int_0^{L_z}dz f \\
+ * \langle f \rangle_{xy} := \frac{1}{L_xL_y}\int_0^{L_x}\int_0^{L_y}dxdy f \quad
+ * \langle f \rangle_{xz} := \frac{1}{L_xL_z}\int_0^{L_x}\int_0^{L_z}dxdz f \quad
+ * \langle f \rangle_{yz} := \frac{1}{L_yL_z}\int_0^{L_y}\int_0^{L_z}dydz f \quad
+ * \f]
  * Given a Cartesian topology it is possible to define a partial reduction of a given vector.
  * In two dimensions for example we can define a reduction over all points that are neighbors in the x (or y) direction.
  * We are then left with Ny (Nx) points. In three dimensions we can define the reduction along the x, y, z directions
  * but also over all points in the xy (xz or yz) planes. We are left with two- (respectively three-)dimensional vectors.
+ * @note The integrals include the dG weights but not the volume element (does not know about geometry)
  * @snippet topology/average_t.cu doxygen
  * @ingroup utilities
  */
@@ -34,23 +43,30 @@ struct Average
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
         m_w=dg::construct<ContainerType>(dg::create::weights(g, direction));
-        m_temp1d = m_temp = m_w;
+        m_temp = m_w;
         m_transpose = false;
+        unsigned size1d = 0;
         if( direction == coo2d::x)
+        {
             dg::blas1::scal( m_w, 1./g.lx());
+            size1d = m_ny;
+        }
         else
         {
             m_transpose = true;
             dg::blas1::scal( m_temp, 1./g.ly());
             dg::transpose( m_nx, m_ny, m_temp, m_w);
+            size1d = m_nx;
         }
+        thrust::host_vector<double> t1d( size1d);
+        m_temp1d = dg::construct<ContainerType>( t1d);
     }
 
     ///@copydoc Average()
     Average( const aTopology3d& g, enum coo3d direction)
     {
         m_w = dg::construct<ContainerType>(dg::create::weights(g, direction));
-        m_temp1d = m_temp = m_w;
+        m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
         if( direction == coo3d::x) {
@@ -75,6 +91,12 @@ struct Average
         }
         else
             std::cerr << "Warning: this direction is not implemented\n";
+        if(!m_transpose)
+            m_temp1d = dg::construct<ContainerType>(
+                thrust::host_vector<double>( m_ny,0.));
+        else
+            m_temp1d = dg::construct<ContainerType>(
+                thrust::host_vector<double>( m_nx,0.));
     }
     /**
      * @brief Compute the average as configured in the constructor
@@ -91,6 +113,7 @@ struct Average
     {
         if( !m_transpose)
         {
+            //temp1d has size m_ny
             dg::average( m_nx, m_ny, src, m_w, m_temp1d);
             if( extend )
                 dg::extend_column( m_nx, m_ny, m_temp1d, res);
@@ -99,6 +122,7 @@ struct Average
         }
         else
         {
+            //temp1d has size m_nx
             dg::transpose( m_nx, m_ny, src, m_temp);
             dg::average( m_ny, m_nx, m_temp, m_w, m_temp1d);
             if( extend )

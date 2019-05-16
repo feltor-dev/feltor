@@ -842,7 +842,7 @@ enum tableau_identifier{
     HEUN_EULER_2_1_2,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
     BOGACKI_SHAMPINE_4_2_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine-4-2-3</a>
     ARK324L2SA_ERK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
-    ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+    ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
     ARK436L2SA_ERK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
     SAYFY_ABURUB_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy-Aburub-6-3-4</a>
     CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
@@ -1005,7 +1005,7 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
  *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
  *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
- *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+ *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
  *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
  *   Sayfy_Aburub-6-3-4     | dg::SAYFY_ABURUB_6_3_4     | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy_Aburub_6_3_4</a>
  *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>

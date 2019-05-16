@@ -638,6 +638,20 @@ struct GradBHatP: public aCylindricalFunctor<GradBHatP>
     Divb divb_;
     TokamakMagneticField mag_;
 };
+
+///@brief \f$ |\nabla\psi_p| \f$
+struct GradPsip: public aCylindricalFunctor<GradPsip>
+{
+    GradPsip( const TokamakMagneticField& mag): m_mag(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
+        return sqrt(psipR*psipR +psipZ*psipZ);
+    }
+    private:
+    TokamakMagneticField m_mag;
+
+};
 ///@}
 
 } //namespace geo

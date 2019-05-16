@@ -65,13 +65,13 @@ class CG
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is
-     * a correction factor to the absolute error
+     * the absolute error in units of \f$ \epsilon\f$
      * @param A A symmetric, positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
      * @param eps The relative error to be respected
-     * @param nrmb_correction Correction factor C for norm of b
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * @attention This version uses the Preconditioner to compute the norm for the error condition (this safes one scalar product)
      *
      * @return Number of iterations used to achieve desired precision
@@ -90,14 +90,14 @@ class CG
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
-     * a correction factor to the absolute error and \f$ S \f$ defines a square norm
+     * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
      * @param A A symmetric positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
      * @param S Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
-     * @param nrmb_correction Correction factor C for norm of b
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      *
      * @return Number of iterations used to achieve desired precision
      * @note Required memops per iteration (\c P and \c S are assumed vectors):
@@ -576,7 +576,7 @@ struct Invert
      * @param eps relative error in conjugate gradient
      * @param extrapolationType number of last values to use for extrapolation of the current guess
      * @param multiplyWeights if true the rhs shall be multiplied by the weights before cg is applied
-     * @param nrmb_correction Correction factor for norm of b (cf. CG)
+     * @param nrmb_correction the absolute error \c C in units of \c eps in conjugate gradient
      */
     void construct( const ContainerType& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.)
     {
@@ -601,8 +601,8 @@ struct Invert
     /**
      * @brief Set accuracy parameters for following inversions
      *
-     * @param eps
-     * @param nrmb_correction
+     * @param eps the relative error in conjugate gradient
+     * @param nrmb_correction the absolute error \c C in units of \c eps in conjugate gradient
      */
     void set_accuracy( value_type eps, value_type nrmb_correction = 1.) {
         eps_ = eps;

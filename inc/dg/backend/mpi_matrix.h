@@ -215,7 +215,7 @@ enum dist_type
 * @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes.
 Gather all points (including the ones that the process already has) necessary for the local matrix-vector
 product into one vector, such that the local matrix can be applied.
-If \c buffer_size()==0 the global_gather and global_scatter_reduce functions won't be called and
+If \c !isCommunicating() the global_gather and global_scatter_reduce functions won't be called and
 only the local matrix is applied.
 */
 template<class LocalMatrix, class Collective >
@@ -264,7 +264,7 @@ struct MPIDistMat
     void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( m_c->buffer_size() == 0) //no communication needed
+        if( !m_c->isCommunicating()) //no communication needed
         {
             dg::blas2::symv( alpha, m_m, x.data(), beta, y.data());
             return;
@@ -290,7 +290,7 @@ struct MPIDistMat
     void symv( const ContainerType1& x, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( m_c->buffer_size() == 0) //no communication needed
+        if( !m_c->isCommunicating()) //no communication needed
         {
             dg::blas2::symv( m_m, x.data(), y.data());
             return;

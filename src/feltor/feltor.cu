@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
 
     dg::HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
-        mag.psip(), -p.alpha, p.alpha, -1), grid);
+        mag.psip(), -1*p.alpha, 1*p.alpha, -1), grid);
     dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
     dg::blas1::pointwiseDot( profile_damping, profile, profile);
 
@@ -131,26 +131,23 @@ int main( int argc, char* argv[])
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<dg::DVec>(profile);
     dg::blas1::axpby( 1., dg::construct<dg::DVec>(ntilde), 1., y0[0][0]);
     std::cout << "initialize ni" << std::endl;
-    if( p.initphi == "zero")
-        feltor.initializeni( y0[0][0], y0[0][1]);
-    else if( p.initphi == "balance")
-        dg::blas1::copy( y0[0][0], y0[0][1]); //set N_i = n_e
-    else
-        std::cerr <<"WARNING: Unknown initial condition for phi!\n";
+    feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
 
     dg::blas1::copy( 0., y0[1][0]); //set we = 0
     dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
+    std::cout << "Initialize Timestepper" << std::endl;
 
     ////////////////////////create timer and timestepper
     //
     dg::Timer t;
-    double time = 0, dt_new = p.dt, dt =0;
+    double time = 0, dt_new = p.dt;//, dt =0;
     unsigned step = 0;
     dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
         feltor::FeltorSpecialSolver<
             dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
         > karniadakis( grid, p, mag);
     karniadakis.init( feltor, im, time, y0, p.dt);
+    std::cout << "Done!" << std::endl;
 
     //dg::Adaptive< dg::ERKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
     //    "Bogacki-Shampine-4-2-3", y0);

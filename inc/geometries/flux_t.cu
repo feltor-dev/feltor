@@ -88,8 +88,8 @@ int main( int argc, char* argv[])
     int dim2d[2];
     err = file::define_dimensions(  ncid, dim2d, g2d_periodic);
     int coordsID[2];
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
     dg::HVec X=dg::pullback(dg::cooX2d, g2d), Y=dg::pullback(dg::cooY2d, g2d); //P = dg::pullback( dg::coo3, g);
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
@@ -145,7 +145,7 @@ int main( int argc, char* argv[])
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
-    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,3, 2e2, 2e2, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::HVec onesC = dg::evaluate( dg::one, g2dC);

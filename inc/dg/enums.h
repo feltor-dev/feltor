@@ -91,6 +91,12 @@ enum direction{
     centered //!< centered derivative
 };
 
+///@brief Space of DG coefficients
+enum space{
+    lspace, //!< DG Polynomial space
+    xspace //!< Configuration space
+};
+
 ///@brief 2d coordinates
 enum class coo2d : char
 {
