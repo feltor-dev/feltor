@@ -293,9 +293,11 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
             unsigned rep = r*globalNz + i0;
             for(unsigned k=0; k<rep; k++)
             {
-                dg::blas2::symv( m_plus, tempP, temp);
+                //!!! The value of f at the plus plane is I^- of the current plane
+                dg::blas2::symv( m_minus, tempP, temp);
                 temp.swap( tempP);
-                dg::blas2::symv( m_minus, tempM, temp);
+                //!!! The value of f at the minus plane is I^+ of the current plane
+                dg::blas2::symv( m_plus, tempM, temp);
                 temp.swap( tempM);
             }
             dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );

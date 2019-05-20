@@ -539,7 +539,7 @@ int main( int argc, char* argv[])
     //        "Trapezoidal-2-2", grid, p, mag);
     dg::Timer t;
     t.tic();
-    unsigned step = 0, failed_counter = 0;
+    unsigned step = 0;//, failed_counter = 0;
     MPI_OUT q.display(std::cout);
     for( unsigned i=1; i<=p.maxout; i++)
     {
@@ -616,8 +616,8 @@ int main( int argc, char* argv[])
                     << p.inner_loop*p.itstp*p.maxout << " at time "<<time;
         MPI_OUT std::cout << "\n\t Average time for one step: "
                     << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
-        MPI_OUT std::cout << "\n\t Total number of failed steps: "
-                    << failed_counter;
+        //MPI_OUT std::cout << "\n\t Total number of failed steps: "
+        //            << failed_counter;
         ti.tic();
         //////////////////////////write fields////////////////////////
         start[0] = i;

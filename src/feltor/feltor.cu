@@ -220,7 +220,7 @@ int main( int argc, char* argv[])
     std::cout << std::scientific << std::setprecision( 2);
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     title << std::setprecision(2) << std::scientific;
-    unsigned failed_counter = 0;
+    //unsigned failed_counter = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         title << std::fixed;
@@ -325,7 +325,7 @@ int main( int argc, char* argv[])
         t.toc();
         std::cout << "\n\t Step "<<step << " at time  "<<time;
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop;
-        std::cout << "\n\t Total # of failed steps:   "<<failed_counter<<"\n\n";
+        //std::cout << "\n\t Total # of failed steps:   "<<failed_counter<<"\n\n";
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////

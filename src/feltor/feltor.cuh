@@ -9,7 +9,7 @@
 #endif
 
 
-//Latest measurement: m = 60.000 per step
+//Latest measurement: m = 10.000 per step
 
 namespace feltor
 {
