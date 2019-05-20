@@ -305,12 +305,13 @@ struct NearestNeighborComm
         MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
 #ifdef _DG_CUDA_UNAWARE_MPI
         unsigned size = buffer_size();
-        cudaMemcpy( thrust::raw_pointer_cast(&internal_host_buffer_.data()[0*size],
-                    thrust::raw_pointer_cast(&internal_buffer_.data()[0*size],
-                    buffer_size*sizeof(get_value_type<V>), cudaMemcpyHostToDevice);
-        cudaMemcpy( thrust::raw_pointer_cast(&internal_host_buffer_.data()[5*size],
-                    thrust::raw_pointer_cast(&internal_buffer_.data()[5*size],
-                    buffer_size*sizeof(get_value_type<V>), cudaMemcpyHostToDevice);
+        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
+                    thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]), //src
+                    size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
+
+        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
+                    thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]), //src
+                    size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
 #endif
     }
     private:
@@ -327,7 +328,8 @@ struct NearestNeighborComm
     Index m_gather_map_middle;
     dg::Buffer<Vector> m_internal_buffer;
 #ifdef _DG_CUDA_UNAWARE_MPI
-    dg::Buffer<thrust::host_vector<get_value_type<Vector>> m_internal_host_buffer; //a copy of the data on the host
+    //a copy of the data on the host (we need to send data manually through the host)
+    dg::Buffer<thrust::host_vector<get_value_type<Vector>>> m_internal_host_buffer;
 #endif
 
     void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
@@ -402,7 +404,7 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
     m_gather_map_middle = mid_gather; //transfer to device
     m_internal_buffer.data().resize( 6*buffer_size() );
 #ifdef _DG_CUDA_UNAWARE_MPI
-    internal_host_buffer.data().resize( 6*buffer_size() );
+    m_internal_host_buffer.data().resize( 6*buffer_size() );
 #endif
     }
 }
@@ -466,23 +468,26 @@ void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_poi
 {
     unsigned size = buffer_size();
 #ifdef _DG_CUDA_UNAWARE_MPI
-    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]), sb1_ptr, buffer_size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost);
-    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]), sb2_ptr, buffer_size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost);
+    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
+        sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
+    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
+        sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
     sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
     sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
     rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
     rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
+//This is a mistake if called with a host_vector
 #endif
     MPI_Isend( sb1_ptr, size,
                getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[0], 3, comm_, &rqst[0]); //destination
+               m_dest[0], 3, m_comm, &rqst[0]); //destination
     MPI_Irecv( rb2_ptr, size,
                getMPIDataType<get_value_type<V>>(), //receiver
                m_source[0], 3, m_comm, &rqst[1]); //source
 
     MPI_Isend( sb2_ptr, size,
                getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[1], 9, comm_, &rqst[2]);  //destination
+               m_dest[1], 9, m_comm, &rqst[2]);  //destination
     MPI_Irecv( rb1_ptr, size,
                getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, m_comm, &rqst[3]); //source

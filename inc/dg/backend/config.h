@@ -69,5 +69,5 @@
 #define _DG_CUDA_UNAWARE_MPI
 #endif //MPIX_CUDA
 
-#endif //THRUST = CUDA
+#endif //THRUST == CUDA
 #endif //MPI_VERSION
