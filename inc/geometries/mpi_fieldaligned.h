@@ -156,6 +156,10 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
     unsigned m_coords2, m_sizeZ; //number of processes in z
+#ifdef _DG_CUDA_UNAWARE_MPI
+    //we need to manually send data through the host
+    thrust::host_vector<double> m_send_buffer, m_recv_buffer; //2d size
+#endif
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
@@ -184,6 +188,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
     dg::assign( dg::evaluate(zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
+#ifdef _DG_CUDA_UNAWARE_MPI
+    m_recv_buffer = m_send_buffer = m_ghostP.data();
+#endif
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
     dg::Timer t;
@@ -360,8 +367,14 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
     if( m_sizeZ != 1)
     {
         unsigned i0 = m_Nz-1;
+#ifdef _DG_CUDA_UNAWARE_MPI
+        thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_send_buffer.begin());
+        detail::sendBackward( m_send_buffer, m_recv_buffer, m_g->communicator());
+        thrust::copy( m_recv_buffer.cbegin(), m_recv_buffer.cend(), m_temp[i0].data().begin());
+#else
         detail::sendBackward( m_temp[i0].data(), m_ghostM.data(), m_g->communicator());
         dg::blas1::copy( m_ghostM, m_temp[i0]);
+#endif //_DG_CUDA_UNAWARE_MPI
     }
 
     //3. apply right boundary conditions in last plane
@@ -400,8 +413,14 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     if( m_sizeZ != 1)
     {
         unsigned i0 = 0;
+#ifdef _DG_CUDA_UNAWARE_MPI
+        thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_send_buffer.begin());
+        detail::sendForward( m_send_buffer, m_recv_buffer, m_g->communicator());
+        thrust::copy( m_recv_buffer.cbegin(), m_recv_buffer.cend(), m_temp[i0].data().begin());
+#else
         detail::sendForward( m_temp[i0].data(), m_ghostP.data(), m_g->communicator());
         dg::blas1::copy( m_ghostP, m_temp[i0]);
+#endif //_DG_CUDA_UNAWARE_MPI
     }
 
     //3. apply left boundary conditions in first plane

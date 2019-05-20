@@ -59,6 +59,7 @@ struct Collective
         thrust::exclusive_scan( sendTo.begin(),   sendTo.end(),   accS.begin());
         thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
         m_sendTo=sendTo, m_recvFrom=recvFrom, m_accS=accS, m_accR=accR;
+    
     }
     /**
      * @brief Number of processes in the communicator
@@ -89,18 +90,36 @@ struct Collective
     private:
     unsigned sendTo( unsigned pid) const {return m_sendTo[pid];}
     unsigned recvFrom( unsigned pid) const {return m_recvFrom[pid];}
+#ifdef _DG_CUDA_UNAWARE_MPI
+    thrust::host_vector<int> m_sendTo,   m_accS;
+    thrust::host_vector<int> m_recvFrom, m_accR;
+    dg::Buffer<thrust::host_vector<get_value_type<Vector> >> m_values, m_store;
+#else
     Index m_sendTo,   m_accS; //accumulated send
     Index m_recvFrom, m_accR; //accumulated recv
+#endif // _DG_CUDA_UNAWARE_MPI
     MPI_Comm m_comm;
 };
 
 template< class Index, class Device>
 void Collective<Index, Device>::scatter( const Device& values, Device& store) const
 {
-    assert( store.size() == store_size() );
+    //assert( store.size() == store_size() );
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     cudaDeviceSynchronize(); //needs to be called
 #endif //THRUST_DEVICE_SYSTEM
+#ifdef _DG_CUDA_UNAWARE_MPI
+    m_values.data() = values;
+    m_store.data().resize( store.size());
+    MPI_Alltoallv(
+            thrust::raw_pointer_cast( m_values.data().data()),
+            thrust::raw_pointer_cast( m_sendTo.data()),
+            thrust::raw_pointer_cast( m_accS.data()), getMPIDataType<get_value_type<Device> >(),
+            thrust::raw_pointer_cast( m_store.data().data()),
+            thrust::raw_pointer_cast( m_recvFrom.data()),
+            thrust::raw_pointer_cast( m_accR.data()), getMPIDataType<get_value_type<Device> >(), m_comm);
+    store = m_store.data();
+#else
     MPI_Alltoallv(
             thrust::raw_pointer_cast( values.data()),
             thrust::raw_pointer_cast( m_sendTo.data()),
@@ -108,16 +127,29 @@ void Collective<Index, Device>::scatter( const Device& values, Device& store) co
             thrust::raw_pointer_cast( store.data()),
             thrust::raw_pointer_cast( m_recvFrom.data()),
             thrust::raw_pointer_cast( m_accR.data()), getMPIDataType<get_value_type<Device> >(), m_comm);
+#endif //_DG_CUDA_UNAWARE_MPI
 }
 
 template< class Index, class Device>
 void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values) const
 {
-    assert( gatherFrom.size() == store_size() );
+    //assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     cudaDeviceSynchronize(); //needs to be called
 #endif //THRUST_DEVICE_SYSTEM
+#ifdef _DG_CUDA_UNAWARE_MPI
+    m_store.data() = gatherFrom;
+    m_values.data().resize( values.size());
+    MPI_Alltoallv(
+            thrust::raw_pointer_cast( m_store.data().data()),
+            thrust::raw_pointer_cast( m_recvFrom.data()),
+            thrust::raw_pointer_cast( m_accR.data()), getMPIDataType<get_value_type<Device> >(),
+            thrust::raw_pointer_cast( m_values.data().data()),
+            thrust::raw_pointer_cast( m_sendTo.data()),
+            thrust::raw_pointer_cast( m_accS.data()), getMPIDataType<get_value_type<Device> >(), m_comm);
+    values = m_values.data();
+#else
     MPI_Alltoallv(
             thrust::raw_pointer_cast( gatherFrom.data()),
             thrust::raw_pointer_cast( m_recvFrom.data()),
@@ -125,6 +157,7 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
             thrust::raw_pointer_cast( values.data()),
             thrust::raw_pointer_cast( m_sendTo.data()),
             thrust::raw_pointer_cast( m_accS.data()), getMPIDataType<get_value_type<Device> >(), m_comm);
+#endif //_DG_CUDA_UNAWARE_MPI
 }
 //BijectiveComm ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird.
 ///@endcond
