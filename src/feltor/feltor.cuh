@@ -943,8 +943,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
-    //dg::Timer timer;
-    //timer.tic();
 
     // set m_phi[0]
     compute_phi( t, y[0]);
@@ -972,6 +970,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #endif
 
     // Add parallel dynamics --- needs m_logn
+    dg::Timer timer;
+    timer.tic();
 #if FELTORPARALLEL == 1
     compute_parallel( t, y, m_fields, yp);
 #endif
@@ -1002,12 +1002,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
-    //timer.toc();
-    //#ifdef MPI_VERSION
-    //    int rank;
-    //    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    //    if(rank==0)
-    //#endif
-    //std::cout << "#One rhs took "<<timer.diff()<<"s\n";
+    timer.toc();
+    #ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if(rank==0)
+    #endif
+    std::cout << "#Add parallel dynamics took "<<timer.diff()<<"s\n";
 }
 } //namespace feltor
