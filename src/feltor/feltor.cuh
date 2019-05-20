@@ -609,11 +609,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
             //add FLR correction -0.5*tau*mu*Delta n_e
             dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
+            //wird stark negativ falls alpha klein!!
         }
         else if( m_p.initphi == "balance")
             //add FLR correction +0.5*tau*mu*Delta n_e
             dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
+            //wird stark negativ falls alpha klein!!
         else
         {
             #ifdef MPI_VERSION

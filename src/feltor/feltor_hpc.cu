@@ -155,8 +155,10 @@ int main( int argc, char* argv[])
         , comm
         #endif //FELTOR_MPI
         );
+    DVec vol3d = dg::create::volume( grid);
+    DVec temp(vol3d); //needed for Apar test
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
     MPI_OUT std::cout << "Constructing Explicit...\n";
@@ -250,6 +252,13 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
         MPI_OUT std::cout << "initialize ni" << std::endl;
         feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
+        double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
+        if( minimalni <= -1)
+        {
+            MPI_OUT std::cerr << "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n";
+            MPI_OUT std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;
+            return -1;
+        }
 
         dg::blas1::copy( 0., y0[1][0]); //set we = 0
         dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -426,7 +435,7 @@ int main( int argc, char* argv[])
         v3d.emplace_back( "Psip", &psip, "Flux-function psi");
         v3d.emplace_back( "Nprof", &profile, "Density profile");
         v3d.emplace_back( "Source", &source_damping, "Source region");
-        v3d.emplace_back( "Damping", &damping_damping, "Damping region");
+        v3d.emplace_back( "Damping", &profile_damping, "Damping region for initial profile");
         v3d.emplace_back( "xc", &xc, "x-coordinate in Cartesian coordinate system");
         v3d.emplace_back( "yc", &yc, "y-coordinate in Cartesian coordinate system");
         v3d.emplace_back( "zc", &zc, "z-coordinate in Cartesian coordinate system");
@@ -596,6 +605,9 @@ int main( int argc, char* argv[])
             for( auto pair : v0d)
                 err = nc_put_vara_double( ncid, id0d.at(pair.first),
                     Estart, Ecount, pair.second);
+            #ifndef FELTOR_MPI
+            err = nc_close(ncid);
+            #endif //FELTOR_MPI
 
             MPI_OUT q.display(std::cout);
             MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
@@ -606,10 +618,18 @@ int main( int argc, char* argv[])
             MPI_OUT std::cout <<" d M/dt = " << dMdt
                       <<" Lambda = " << *v0d["diff"]
                       <<" -> Accuracy: " << accuracyM << "\n";
-            #ifndef FELTOR_MPI
-            err = nc_close(ncid);
-            #endif //FELTOR_MPI
-
+            //----------------Test if induction equation holds
+            if( p.beta != 0)
+            {
+                dg::blas1::pointwiseDot(
+                    feltor.density(0), feltor.velocity(0), temp);
+                dg::blas1::pointwiseDot( p.beta,
+                    feltor.density(1), feltor.velocity(1), -p.beta, temp);
+                double norm  = dg::blas2::dot( temp, vol3d, temp);
+                dg::blas1::axpby( -1., feltor.lapMperpA(), 1., temp);
+                double error = dg::blas2::dot( temp, vol3d, temp);
+                MPI_OUT std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
+            }
         }
         ti.toc();
         MPI_OUT std::cout << "\n\t Step "<<step <<" of "

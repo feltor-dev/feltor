@@ -45,8 +45,9 @@ int main( int argc, char* argv[])
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
+    dg::DVec vol3d = dg::create::volume( grid);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
@@ -132,6 +133,13 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., dg::construct<dg::DVec>(ntilde), 1., y0[0][0]);
     std::cout << "initialize ni" << std::endl;
     feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
+    double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
+    if( minimalni <= -1)
+    {
+        std::cerr << "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n";
+        std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;
+        return -1;
+    }
 
     dg::blas1::copy( 0., y0[1][0]); //set we = 0
     dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -193,15 +201,6 @@ int main( int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual), avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-    //perp laplacian for computation of vorticity
-
-    dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec>
-        laplacianM(grid, p.bcxP, p.bcyP, dg::PER, dg::normed, dg::centered);
-    auto bhatF = dg::geo::createEPhi();
-    if( p.curvmode == "true")
-        bhatF = dg::geo::createBHat( mag);
-    dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor( bhatF, grid);
-    laplacianM.set_chi( hh);
 
     /////////glfw initialisation ////////////////////////////////////////////
     //
@@ -229,8 +228,8 @@ int main( int argc, char* argv[])
         {
             if(pair.first == "Ome / ")
             {
-                dg::blas2::gemv( laplacianM, *pair.second, dvisual);
-                dg::assign( dvisual, hvisual);
+                //dg::blas2::gemv( laplacianM, *pair.second, dvisual);
+                dg::assign( feltor.lapMperpP(0), hvisual);
                 dg::assign( *pair.second, hvisual);
             }
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
@@ -320,6 +319,18 @@ int main( int argc, char* argv[])
             std::cout <<" d M/dt = " << dMdt
                       <<" Lambda = " << *v0d["diff"]
                       <<" -> Accuracy: " << accuracyM << "\n";
+            //----------------Test if induction equation holds
+            if( p.beta != 0)
+            {
+                dg::blas1::pointwiseDot(
+                    feltor.density(0), feltor.velocity(0), dvisual);
+                dg::blas1::pointwiseDot( p.beta,
+                    feltor.density(1), feltor.velocity(1), -p.beta, dvisual);
+                double norm  = dg::blas2::dot( dvisual, vol3d, dvisual);
+                dg::blas1::axpby( -1., feltor.lapMperpA(), 1., dvisual);
+                double error = dg::blas2::dot( dvisual, vol3d, dvisual);
+                std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
+            }
 
         }
         t.toc();

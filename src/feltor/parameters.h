@@ -27,7 +27,7 @@ struct Parameters
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
-    double alpha, beta;
+    double alpha_mag, alpha, beta;
     double rho_source, rho_damping;
 
     double nu_perp, nu_parallel;
@@ -92,7 +92,8 @@ struct Parameters
         nprofamp  = js["nprofileamp"].asDouble();
         omega_source  = js.get("source", 0.).asDouble();
         omega_damping = js.get("damping", 0.).asDouble();
-        alpha        = js.get("alpha", 0.02).asDouble();
+        alpha_mag    = js.get("alpha_mag", 0.05).asDouble();
+        alpha        = js.get("alpha", 0.2).asDouble();
         rho_source   = js.get("rho_source", 0.2).asDouble();
         rho_damping  = js.get("rho_damping", 1.2).asDouble();
 
@@ -141,6 +142,7 @@ struct Parameters
             <<"     rho_source:                   "<<rho_source<<"\n"
             <<"     omega_damping:                "<<omega_damping<<"\n"
             <<"     rho_damping:                  "<<rho_damping<<"\n"
+            <<"     alpha_mag:                    "<<alpha_mag<<"\n"
             <<"     alpha:                        "<<alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"

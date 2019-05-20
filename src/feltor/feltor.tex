@@ -392,10 +392,14 @@ An integral of this function is
     0 &\text{ for } \psi > \alpha
 \end{cases}
     \approx \psi H(-\psi)
-\label{eq:modified_psi}
 \end{align}
 
-We now use $\theta_\alpha(\psi-\psi_0)+\psi_0$ instead of $\psi$ for the computation of the
+We now use 
+\begin{align}
+\theta_\alpha(\psi-\psi_0)+\psi_0
+\label{eq:modified_psip}
+\end{align}
+instead of $\psi$ for the computation of the
 magnetic field, which introduces a shear layer around $\psi_0$ where the
 fieldlines are straightened to match $\ehat_\varphi$.
 Note that $\Theta_\alpha(0) = 0.5$ and $\theta_\alpha(0) = 35\alpha/256$.
@@ -1094,11 +1098,12 @@ posY       & float &0.0    & - & blob Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
-alpha       & float & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:approx_heaviside} and \eqref{eq:modified_psi} \\
+alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}\\
+alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes) \\
 source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
-rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psi}  \\
+rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psip}  \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and

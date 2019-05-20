@@ -28,7 +28,7 @@ struct Parameters
     double boxscaleZm, boxscaleZp;
     double amp, k_psi, bgprofamp, nprofileamp;
     double sigma, posX, posY;
-    double rho_damping, alpha;
+    double rho_damping, alpha_mag;
     Parameters( const Json::Value& js){
         n = js.get("n",3).asUInt();
         Nx = js.get("Nx",100).asUInt();
@@ -46,7 +46,7 @@ struct Parameters
         posX = js.get("posX", 0.5).asDouble();
         posY = js.get("posY", 0.5).asDouble();
         rho_damping = js.get("rho_damping", 1.2).asDouble();
-        alpha = js.get("alpha", 0.05).asDouble();
+        alpha_mag = js.get("alpha_mag", 0.05).asDouble();
     }
     void display( std::ostream& os = std::cout ) const
     {
@@ -144,7 +144,7 @@ int main( int argc, char* argv[])
 
     //Test coefficients
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
     const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     const double Z_X = -1.1*gp.elongation*gp.a;
     const double R_H = gp.R_0-gp.triangularity*gp.a;
@@ -242,7 +242,7 @@ int main( int argc, char* argv[])
     dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
-    unsigned npsi = 3, Npsi = 128;//set number of psivalues (NPsi % 8 == 0)
+    unsigned npsi = 3, Npsi = 64;//set number of psivalues (NPsi % 8 == 0)
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     double volumeXGrid;
     /// -------  Elements for fsa of curvature operators ----------------
