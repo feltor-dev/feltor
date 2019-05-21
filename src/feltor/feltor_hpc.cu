@@ -253,6 +253,7 @@ int main( int argc, char* argv[])
         MPI_OUT std::cout << "initialize ni" << std::endl;
         feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
         double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
+        MPI_OUT std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;
         if( minimalni <= -1)
         {
             MPI_OUT std::cerr << "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n";

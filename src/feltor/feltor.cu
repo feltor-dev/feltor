@@ -134,6 +134,7 @@ int main( int argc, char* argv[])
     std::cout << "initialize ni" << std::endl;
     feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
     double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
+    std::cout << "Minimum Ni value "<<minimalni+1<<std::endl;
     if( minimalni <= -1)
     {
         std::cerr << "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n";
@@ -335,7 +336,7 @@ int main( int argc, char* argv[])
         }
         t.toc();
         std::cout << "\n\t Step "<<step << " at time  "<<time;
-        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop;
+        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop<<"\n\n";
         //std::cout << "\n\t Total # of failed steps:   "<<failed_counter<<"\n\n";
     }
     glfwTerminate();
