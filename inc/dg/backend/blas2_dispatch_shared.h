@@ -80,7 +80,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
         exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
         imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(acc[i][0]), imin, imax);
-        for( int k=exblas::IMIN; k<exblas::IMAX; k++)
+        for( int k=exblas::IMIN; k<=exblas::IMAX; k++)
             acc[0][k] += acc[i][k];
     }
     return acc[0];
