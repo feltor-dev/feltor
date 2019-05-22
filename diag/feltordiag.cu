@@ -10,12 +10,22 @@
 #include "feltordiag.h"
 
 void create_records_in_file( int ncid,
-    int dim_ids[3], int dim_ids1d[2],
+    int dim_ids4d[4], int dim_ids[3], int dim_ids1d[2],
     std::map<std::string, int>& id0d,
     std::map<std::string, int>& id1d,
-    std::map<std::string, int>& id2d)
+    std::map<std::string, int>& id2d,
+    std::map<std::string, int>& id3d)
 {
     file::NC_Error_Handle err;
+    for( auto record : feltor::records3d_list)
+    {
+        std::string name = record.name;
+        std::string long_name = record.long_name;
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids4d,
+            &id3d[name]);//creates a new id3d entry
+        err = nc_put_att_text( ncid, id3d[name], "long_name", long_name.size(),
+            long_name.data());
+    }
     for( auto record : feltor::records_list)
     {
         std::string name = record.name + "_ta2d";
@@ -148,7 +158,7 @@ int main( int argc, char* argv[])
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     const double psip0 = mag.psip()(gp.R_0, 0);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*psip0, p.alpha);
+    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*psip0, p.alpha_mag);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     dg::HVec psipog3d = dg::evaluate( mag.psip(), g3d_out);
     // Construct weights and temporaries
@@ -257,15 +267,24 @@ int main( int argc, char* argv[])
     };
 
     // define 2d and 1d and 0d dimensions and variables
-    int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
-    int dim_ids1d[2] = {dim_ids[0],dim_ids[1]}; //time , psi
+    int dim_ids4d[4], tvar4dID, tvarID;
+    err = file::define_dimensions( ncid_out, dim_ids4d, &tvarID, g3d_out);
+    int dim_ids[3] = {dim_ids4d[0], dim_ids4d[2], dim_ids4d[3]};
+    int dim_ids1d[2] = {dim_ids[0], 0}; //time , psi
     err = file::define_dimension( ncid_out, "psi", &dim_ids1d[1], g1d_out);
-    std::string psi_long_name = "Flux surface label";
+    err = file::define_time( ncid_out, "time3d", &dim_ids4d[0], &tvar4dID);
+    //Write long description
+    std::string long_name = "Time at which 2d fields are written";
+    err = nc_put_att_text( ncid, tvarID, "long_name", long_name.size(),
+            long_name.data());
+    long_name = "Time at which 3d fields are written";
+    err = nc_put_att_text( ncid, tvar4dID, "long_name", long_name.size(),
+            long_name.data());
+    long_name = "Flux surface label";
     err = nc_put_att_text( ncid, dim_ids1d[1], "long_name",
-        psi_long_name.size(), psi_long_name.data());
+        long_name.size(), long_name.data());
 
-    std::map<std::string, int> id0d, id1d, id2d;
+    std::map<std::string, int> id0d, id1d, id2d, id3d;
     /// Construct 0d names to output
     std::vector<std::string> names_0d{
         "correlationNPhi", "correlationNTildePhi"
@@ -283,7 +302,7 @@ int main( int argc, char* argv[])
     for( auto name : names_input)
         v3d[name] = t3d;
     //now create the variables in the netcdf file
-    create_records_in_file( ncid_out, dim_ids, dim_ids1d, id0d, id1d, id2d);
+    create_records_in_file( ncid_out, dim_ids4d, dim_ids, dim_ids1d, id0d, id1d, id2d, id3d);
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t start1d[2] = {0, 0};
@@ -291,6 +310,7 @@ int main( int argc, char* argv[])
     size_t start2d[3] = {0, 0, 0};
     size_t count3d[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3d[4] = {0, 0, 0, 0};
+    size_t start3d_out[4] = {0,0,0,0};
 
     //write 1d static vectors (psi, q-profile, ...) into file
     for( auto tp : map1d)
@@ -303,6 +323,28 @@ int main( int argc, char* argv[])
         err = nc_enddef( ncid);
         err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
         err = nc_redef(ncid);
+    }
+    //and the Cartesian 3d coordinates
+    {
+        std::vector<std::tuple<std::string, const dg::HVec*, std::string> > c3d;
+        dg::HVec xc = dg::evaluate( dg::cooX3d, g3d_out);
+        dg::HVec yc = dg::evaluate( dg::cooY3d, g3d_out);
+        dg::HVec zc = dg::evaluate( dg::cooZ3d, g3d_out);
+        dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+        c3d.emplace_back( "xc", &xc, "x-coordinate in Cartesian coordinate system");
+        c3d.emplace_back( "yc", &yc, "y-coordinate in Cartesian coordinate system");
+        c3d.emplace_back( "zc", &zc, "z-coordinate in Cartesian coordinate system");
+        for( auto tp : c3d)
+        {
+            int vecID;
+            err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
+                &dim_ids4d[1], &vecID);
+            err = nc_put_att_text( ncid, vecID,
+                "long_name", std::get<2>(tp).size(), std::get<2>(tp).data());
+            err = nc_enddef( ncid);
+            err = nc_put_var_double( ncid, vecID, std::get<1>(tp)->data());
+            err = nc_redef(ncid);
+        }
     }
     err = nc_close(ncid_out);
 
@@ -318,7 +360,7 @@ int main( int argc, char* argv[])
 
     dg::Average<dg::DVec> toroidal_average( g3d_out, dg::coo3d::z);
 
-    steps = 3;
+    //steps = 3;
     for( unsigned i=0; i<steps; i++)//timestepping
     {
         start3d[0] = i;
@@ -326,7 +368,7 @@ int main( int argc, char* argv[])
         start1d[0] = i;
         err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
         err = nc_get_vara_double( ncid, timeID, start3d, count3d, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << "\t";
+        std::cout << "Timestep = " << i << "  time = " << time << std::endl;
         //read in Ne,Ni,Ue,Ui,Phi,Apar
         for( auto name : names_input)
         {
@@ -365,9 +407,23 @@ int main( int argc, char* argv[])
             /norm1/norm2;  //<phi, n-<n> >/||phi||/||n-<n>||
 
 
-        //now write out 2d and 1d quantities
+        //now write out quantities
         err = nc_open(argv[2], NC_WRITE, &ncid_out);
-        for( auto record : feltor::records_list)// {name, DVec}
+        if( i%10 == 0) //write 3d fields only every 10th timestep
+        {
+            start3d_out[0] = i/10;
+            for( auto record : feltor::records3d_list)
+            {
+                record.function( t3d, var);
+                //toroidal average
+                dg::blas1::transfer( t3d, transfer3d);
+                err = nc_put_vara_double( ncid_out, id3d.at(record.name),
+                    start3d_out, count3d, transfer3d.data());
+            }
+            //write time for 3d fields
+            err = nc_put_vara_double( ncid_out, tvar4dID, start3d_out, count3d, &time);
+        }
+        for( auto record : feltor::records_list)
         {
             record.function( t3d, var);
             //toroidal average
@@ -427,7 +483,7 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid_out, id0d.at(pair.first),
                 start2d, count2d, &pair.second );
         }
-        //write time data
+        //write time
         err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
         //and close file
         err = nc_close(ncid_out);

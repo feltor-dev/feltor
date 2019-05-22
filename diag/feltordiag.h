@@ -143,6 +143,38 @@ struct Record{
     std::function<void( dg::DVec&, Variables&)> function;
 };
 
+std::vector<Record> records3d_list = {
+    {"dppne", "2nd varphi derivative of electron density",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.dppN(0), result);
+        }
+    },
+    {"dppphi", "2nd varphi derivative of electric potential",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.dppP(0), result);
+        }
+    },
+    {"dppue", "2nd varphi derivative of electron velocity",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.dppU(0), result);
+        }
+    },
+    {"dssne", "2nd fieldaligned derivative of electron density",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.dssN(0), result);
+        }
+    },
+    {"dssphi", "2nd fieldaligned derivative of electric potential",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.dssP(0), result);
+        }
+    },
+    {"dssue", "2nd fieldaligned derivative of electron velocity",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.dssU(0), result);
+        }
+    }
+};
 
 std::vector<Record> records_list = {
     {"electrons", "Electron density",

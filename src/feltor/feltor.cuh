@@ -15,6 +15,16 @@ namespace feltor
 {
 
 namespace routines{
+struct Cylindrical2Cartesian{
+    void operator()( double R, double Z, double P, double& x, double& y, double& z)
+    {
+        //inplace possible
+        double xx = R*sin(P);
+        double yy = R*cos(P);
+        x = xx, y = yy, z = Z;
+    }
+};
+
 struct ComputePerpDrifts{
     ComputePerpDrifts( double mu, double tau):
         m_mu(mu), m_tau(tau){}
@@ -293,6 +303,34 @@ struct Explicit
     }
     const Container & dsN (int i) const {
         return m_dsN[i];
+    }
+    const Container & dssN(int i) { //2nd fieldaligned derivative
+        dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);
+        m_ds_N.dss( m_temp0, m_temp1);
+        return m_temp1;
+    }
+    const Container & dssP(int i) {
+        m_ds_P.dss( m_phi[i], m_temp1);
+        return m_temp1;
+    }
+    const Container & dssU(int i) {
+        m_ds_U.dss( m_fields[1][i], m_temp1);
+        return m_temp1;
+    }
+    const Container & dppN(int i) { //2nd varphi derivative
+        dg::blas2::symv( m_dz, m_fields[0][i], m_temp0);
+        dg::blas2::symv( m_dz, m_temp0, m_temp1);
+        return m_temp1;
+    }
+    const Container & dppP(int i) {
+        dg::blas2::symv( m_dz, m_phi[i], m_temp0);
+        dg::blas2::symv( m_dz, m_temp0, m_temp1);
+        return m_temp1;
+    }
+    const Container & dppU(int i) {
+        dg::blas2::symv( m_dz, m_fields[1][i], m_temp0);
+        dg::blas2::symv( m_dz, m_temp0, m_temp1);
+        return m_temp1;
     }
     const Container& lapParallelN( int i){
         dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);

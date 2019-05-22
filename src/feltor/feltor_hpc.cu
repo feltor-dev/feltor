@@ -15,16 +15,6 @@
 #include "feltor.cuh"
 #include "implicit.h"
 
-struct Cylindrical2Cartesian{
-    void operator()( double R, double Z, double P, double& x, double& y, double& z)
-    {
-        //inplace possible
-        double xx = R*sin(P);
-        double yy = R*cos(P);
-        x = xx, y = yy, z = Z;
-    }
-};
-
 #ifdef FELTOR_MPI
 using HVec = dg::MHVec;
 using DVec = dg::MDVec;
@@ -424,7 +414,7 @@ int main( int argc, char* argv[])
         HVec xc = dg::evaluate( dg::cooX3d, grid);
         HVec yc = dg::evaluate( dg::cooY3d, grid);
         HVec zc = dg::evaluate( dg::cooZ3d, grid);
-        dg::blas1::subroutine( Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+        dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
 
         std::vector<std::tuple<std::string, const HVec*, std::string> > v3d;
         v3d.emplace_back( "BR", &vecR,
