@@ -8,7 +8,6 @@
 
 #ifdef FELTOR_MPI
 #include <mpi.h>
-#include "netcdf_par.h"
 #endif //FELTOR_MPI
 
 #include "dg/file/nc_utilities.h"
@@ -33,8 +32,6 @@ using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
-int ncid = -1; //netcdf id (signal handler can close the file)
-
 #ifdef FELTOR_MPI
 //ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
 void sigterm_handler(int signal)
@@ -42,14 +39,6 @@ void sigterm_handler(int signal)
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     std::cout << " pid "<<rank<<" sigterm_handler, got signal " << signal << std::endl;
-    std::cout << " pid "<<rank<<" ncid = " << ncid << std::endl;
-    if( ncid != -1)
-    {
-        file :: NC_Error_Handle err;
-        err = nc_close(ncid);
-        std::cout << " pid "<<rank<<" Closing NetCDF file with id " << ncid << std::endl;
-        ncid = -1;
-    }
     MPI_Finalize();
     exit(signal);
 }
@@ -68,6 +57,7 @@ int main( int argc, char* argv[])
 #endif
     int periods[3] = {false, false, true}; //non-, non-, periodic
     int rank, size;
+    MPI_Status status;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -78,6 +68,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     int device = rank % num_devices; //assume # of gpus/node is fixed
+    std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
     cudaSetDevice( device);
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     int np[3];
@@ -356,12 +347,9 @@ int main( int argc, char* argv[])
     };
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
-#ifdef FELTOR_MPI
-    MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
-#else //FELTOR_MPI
-    err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
-#endif //FELTOR_MPI
+    std::string file_name = argv[3];
+    int ncid=-1;
+    MPI_OUT err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
     std::map<std::string, std::string> att;
     att["title"] = "Output file of feltor/src/feltor_hpc.cu";
@@ -381,21 +369,17 @@ int main( int argc, char* argv[])
     att["inputfile"] = input;
     att["geomfile"] = geom;
     for( auto pair : att)
-        err = nc_put_att_text( ncid, NC_GLOBAL,
+        MPI_OUT err = nc_put_att_text( ncid, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim_ids[4], tvarID;
 #ifdef FELTOR_MPI
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
-    err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
-    int dims[3],  coords[3];
-    MPI_Cart_get( comm, 3, dims, periods, coords);
+    int coords[3];
+    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
+    size_t start[4] = {0, 0, 0, 0};
     size_t count[4] = {1, grid_out.local().Nz(),
         grid_out.n()*(grid_out.local().Ny()),
         grid_out.n()*(grid_out.local().Nx())};
-    size_t start[4] = {0, coords[2]*count[1],
-                          coords[1]*count[2],
-                          coords[0]*count[3]};
 #else //FELTOR_MPI
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     size_t start[4] = {0, 0, 0, 0};
@@ -436,50 +420,55 @@ int main( int argc, char* argv[])
         for( auto tp : v3d)
         {
             int vecID;
-            err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
+            MPI_OUT err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
                 &dim_ids[1], &vecID);
-            err = nc_put_att_text( ncid, vecID,
+            MPI_OUT err = nc_put_att_text( ncid, vecID,
                 "long_name", std::get<2>(tp).size(), std::get<2>(tp).data());
-            #ifdef FELTOR_MPI
-            err = nc_var_par_access( ncid, vecID, NC_COLLECTIVE);
-            #endif //FELTOR_MPI
-            err = nc_enddef( ncid);
+            MPI_OUT err = nc_enddef( ncid);
             dg::blas2::symv( project, *std::get<1>(tp), transferH);
+#ifdef FELTOR_MPI
+            if(rank==0)
+            {
+                for( int rrank=0; rrank<size; rrank++)
+                {
+                    if(rrank!=0)
+                        MPI_Recv( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, grid_out.communicator(), &status);
+                    MPI_Cart_coords( grid_out.communicator(), rrank, 3, coords);
+                    start[1] = coords[2]*count[1],
+                    start[2] = coords[1]*count[2],
+                    start[3] = coords[0]*count[3];
+                    err = nc_put_vara_double( ncid, vecID, &start[1], &count[1],
+                        transferH.data().data());
+                }
+            }
+            else
+                MPI_Send( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
+                          0, rank, grid_out.communicator());
+            MPI_Barrier( grid_out.communicator());
+#else
             err = nc_put_vara_double( ncid, vecID, &start[1], &count[1],
-                #ifdef FELTOR_MPI
-                transferH.data().data()
-                #else //FELTOR_MPI
-                transferH.data()
-                #endif //FELTOR_MPI
-            );
-            err = nc_redef(ncid);
+                transferH.data());
+#endif // FELTOR_MPI
+            MPI_OUT err = nc_redef(ncid);
         }
     }
 
     //field IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-#ifdef FELTOR_MPI
-    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
-#endif //FELTOR_MPI
+    MPI_OUT err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     std::map<std::string, int> id0d, id4d;
     for( auto pair : v0d)
     {
-        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 1,
+        MPI_OUT err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 1,
             &EtimeID, &id0d[pair.first]);
-#ifdef FELTOR_MPI
-        err = nc_var_par_access( ncid, id0d[pair.first], NC_COLLECTIVE);
-#endif //FELTOR_MPI
     }
     for( auto pair : v4d)
     {
-        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 4,
+        MPI_OUT err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 4,
             dim_ids, &id4d[pair.first]);
-#ifdef FELTOR_MPI
-        err = nc_var_par_access( ncid, id4d[pair.first], NC_COLLECTIVE);
-#endif //FELTOR_MPI
     }
-    err = nc_enddef(ncid);
+    MPI_OUT err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     double dt_new = p.dt;//, dt =0;
     MPI_OUT std::cout << "First output ... \n";
@@ -491,7 +480,7 @@ int main( int argc, char* argv[])
         } catch( dg::Fail& fail) {
             MPI_OUT std::cerr << "CG failed to converge in first step to "
                               <<fail.epsilon()<<"\n";
-            err = nc_close(ncid);
+            MPI_OUT err = nc_close(ncid);
             return -1;
         }
         feltor.update_quantities();
@@ -505,25 +494,40 @@ int main( int argc, char* argv[])
     {
         dg::blas2::symv( project, *pair.second, transferD);
         dg::assign( transferD, transferH);
-        err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
-            #ifdef FELTOR_MPI
-            transferH.data().data()
-            #else //FELTOR_MPI
-            transferH.data()
-            #endif //FELTOR_MPI
-        );
+#ifdef FELTOR_MPI
+            if(rank==0)
+            {
+                for( int rrank=0; rrank<size; rrank++)
+                {
+                    if(rrank!=0)
+                        MPI_Recv( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, grid_out.communicator(), &status);
+                    MPI_Cart_coords( grid_out.communicator(), rrank, 3, coords);
+                    start[1] = coords[2]*count[1],
+                    start[2] = coords[1]*count[2],
+                    start[3] = coords[0]*count[3];
+                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+                        transferH.data().data());
+                }
+            }
+            else
+                MPI_Send( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
+                          0, rank, grid_out.communicator());
+            MPI_Barrier( grid_out.communicator());
+#else
+            err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+                transferH.data());
+#endif // FELTOR_MPI
     }
-    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+    MPI_OUT err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    MPI_OUT err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     for( auto pair : v0d)
-        err = nc_put_vara_double( ncid, id0d.at(pair.first),
+        MPI_OUT err = nc_put_vara_double( ncid, id0d.at(pair.first),
             Estart, Ecount, pair.second);
-#ifndef FELTOR_MPI
-    err = nc_close(ncid);
-#endif //FELTOR_MPI
+    MPI_OUT err = nc_close(ncid);
     MPI_OUT std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Karniadakis< std::array<std::array<DVec,2>,2 >,
@@ -531,15 +535,9 @@ int main( int argc, char* argv[])
             Geometry, IDMatrix, DMatrix, DVec>
         > karniadakis( grid, p, mag);
     karniadakis.init( feltor, im, time, y0, p.dt);
-    //dg::Adaptive< dg::ERKStep<std::array<std::array<DVec,2>,2>> > adaptive(
-    //    "Bogacki-Shampine-4-2-3", y0);
-    //adaptive.stepper().ignore_fsal();//necessary for splitting
-    //dg::ImplicitRungeKutta<std::array<std::array<DVec,2>,2>,
-    //    feltor::FeltorSpecialSolver< Geometry, IDMatrix, DMatrix, DVec>> dirk(
-    //        "Trapezoidal-2-2", grid, p, mag);
     dg::Timer t;
     t.tic();
-    unsigned step = 0;//, failed_counter = 0;
+    unsigned step = 0;
     MPI_OUT q.display(std::cout);
     for( unsigned i=1; i<=p.maxout; i++)
     {
@@ -553,29 +551,10 @@ int main( int argc, char* argv[])
             {
                 try{
                     karniadakis.step( feltor, im, time, y0);
-                    //do
-                    //{
-                    //    //Strang splitting
-                    //    dt = dt_new;
-                    //    dirk.step( im, time, y0, time, y0, dt/2.);
-                    //    adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
-                    //        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                    //    if( adaptive.failed())
-                    //    {
-                    //        failed_counter++;
-                    //        MPI_OUT std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
-                    //        time -= dt; // time has to be reset here
-                    //        // in case of failure diffusion is applied twice?
-                    //    }
-                    //}while ( adaptive.failed());
-                    //dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                     MPI_OUT std::cerr << "Does Simulation respect CFL condition?\n";
-                    #ifdef FELTOR_MPI
-                    err = nc_close(ncid);
-                    #endif //FELTOR_MPI
                     return -1;
                 }
                 step++;
@@ -587,18 +566,14 @@ int main( int argc, char* argv[])
             E0 = *v0d["energy"], M0 = *v0d["mass"];
             accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
             accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
-            #ifndef FELTOR_MPI
-            err = nc_open(argv[3], NC_WRITE, &ncid);
-            //maybe MPI should use nc_open_par ? Or is problem if the ids are still the same?
-            #endif //FELTOR_MPI
+            MPI_OUT err = nc_open(file_name.data(), NC_WRITE, &ncid);
             Estart[0]++;
-            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+            MPI_OUT err = nc_put_vara_double( ncid, EtimevarID,
+                Estart, Ecount, &time);
             for( auto pair : v0d)
-                err = nc_put_vara_double( ncid, id0d.at(pair.first),
+                MPI_OUT err = nc_put_vara_double( ncid, id0d.at(pair.first),
                     Estart, Ecount, pair.second);
-            #ifndef FELTOR_MPI
-            err = nc_close(ncid);
-            #endif //FELTOR_MPI
+            MPI_OUT err = nc_close(ncid);
 
             MPI_OUT q.display(std::cout);
             MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
@@ -627,30 +602,41 @@ int main( int argc, char* argv[])
                     << p.inner_loop*p.itstp*p.maxout << " at time "<<time;
         MPI_OUT std::cout << "\n\t Average time for one step: "
                     << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
-        //MPI_OUT std::cout << "\n\t Total number of failed steps: "
-        //            << failed_counter;
         ti.tic();
         //////////////////////////write fields////////////////////////
         start[0] = i;
-        #ifndef FELTOR_MPI
-        err = nc_open(argv[3], NC_WRITE, &ncid);
-        #endif //FELTOR_MPI
-        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        MPI_OUT err = nc_open(file_name.data(), NC_WRITE, &ncid);
+        MPI_OUT err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         for( auto pair : v4d)
         {
             dg::blas2::symv( project, *pair.second, transferD);
             dg::assign( transferD, transferH);
+#ifdef FELTOR_MPI
+            if(rank==0)
+            {
+                for( int rrank=0; rrank<size; rrank++)
+                {
+                    if(rrank!=0)
+                        MPI_Recv( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, grid_out.communicator(), &status);
+                    MPI_Cart_coords( grid_out.communicator(), rrank, 3, coords);
+                    start[1] = coords[2]*count[1],
+                    start[2] = coords[1]*count[2],
+                    start[3] = coords[0]*count[3];
+                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+                        transferH.data().data());
+                }
+            }
+            else
+                MPI_Send( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
+                          0, rank, grid_out.communicator());
+            MPI_Barrier( grid_out.communicator());
+#else
             err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
-                #ifdef FELTOR_MPI
-                transferH.data().data()
-                #else //FELTOR_MPI
-                transferH.data()
-                #endif //FELTOR_MPI
-            );
+                transferH.data());
+#endif // FELTOR_MPI
         }
-        #ifndef FELTOR_MPI
-        err = nc_close(ncid);
-        #endif //FELTOR_MPI
+        MPI_OUT err = nc_close(ncid);
         ti.toc();
         MPI_OUT std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
     }
@@ -662,7 +648,6 @@ int main( int argc, char* argv[])
     MPI_OUT std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     MPI_OUT std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout/p.inner_loop<<"s/step\n";
 #ifdef FELTOR_MPI
-    err = nc_close(ncid);
     MPI_Finalize();
 #endif //FELTOR_MPI
 
