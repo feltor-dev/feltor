@@ -53,6 +53,8 @@ struct ImplicitDensity
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
         m_lapM_perpN.set_chi( hh);
+        if( p.curvmode != "true")
+            m_lapM_perpN.set_compute_in_2d( true);
     }
 
     void operator()( double t, const std::array<Container,2>& y,
@@ -119,6 +121,8 @@ struct ImplicitVelocity
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
         m_lapM_perpU.set_chi( hh);
+        if( p.curvmode != "true")
+            m_lapM_perpU.set_compute_in_2d(true);
         //m_induction.construct(  g,
         //    p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
         //m_induction.elliptic().set_chi( hh);
@@ -133,6 +137,8 @@ struct ImplicitVelocity
             m_multi_induction[u].construct(  m_multigrid.grid(u),
                 p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
             m_multi_induction[u].elliptic().set_chi( hh);
+            if( p.curvmode != "true")
+                m_multi_induction[u].elliptic().set_compute_in_2d(true);
         }
         m_multi_chi = m_multigrid.project( m_temp);
         m_old_apar = dg::Extrapolation<Container>( 1, dg::evaluate( dg::zero, g));

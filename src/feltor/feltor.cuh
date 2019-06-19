@@ -547,6 +547,12 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
     m_lapperpP.set_chi( m_hh);
+    if( p.curvmode != "true")
+    {
+        m_lapperpN.set_compute_in_2d(true);
+        m_lapperpU.set_compute_in_2d(true);
+        m_lapperpP.set_compute_in_2d(true);
+    }
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
@@ -563,21 +569,28 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     m_multi_induction.resize(p.stages);
     for( unsigned u=0; u<p.stages; u++)
     {
-        dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
-            bhat, m_multigrid.grid(u));
         m_multi_pol[u].construct( m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, dg::not_normed,
             dg::centered, p.jfactor);
-        m_multi_pol[u].set_chi( hh);
         m_multi_invgammaP[u].construct(  m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
-        m_multi_invgammaP[u].elliptic().set_chi( hh);
         m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
             p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
-        m_multi_invgammaN[u].elliptic().set_chi( hh);
         m_multi_induction[u].construct(  m_multigrid.grid(u),
             p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
+
+        dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
+            bhat, m_multigrid.grid(u));
+        m_multi_pol[u].set_chi( hh);
+        m_multi_invgammaP[u].elliptic().set_chi( hh);
+        m_multi_invgammaN[u].elliptic().set_chi( hh);
         m_multi_induction[u].elliptic().set_chi( hh);
+        if(p.curvmode != "true"){
+            m_multi_pol[u].set_compute_in_2d( true);
+            m_multi_invgammaP[u].elliptic().set_compute_in_2d( true);
+            m_multi_invgammaN[u].elliptic().set_compute_in_2d( true);
+            m_multi_induction[u].elliptic().set_compute_in_2d( true);
+        }
     }
 }
 template<class Grid, class IMatrix, class Matrix, class Container>

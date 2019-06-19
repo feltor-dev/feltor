@@ -429,6 +429,17 @@ class Elliptic3d
     ///@copydoc Elliptic::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
 
+    /**
+     * @brief Restrict the problem to the first 2 dimensions
+     *
+     * This effectively makes the behaviour of dg::Elliptic3d
+     * identical to the dg::Elliptic class.
+     * @param compute_in_2d if true, the symv function avoids the derivative in z, false reverts to the original behaviour.
+     */
+    void set_compute_in_2d( bool compute_in_2d ) {
+        m_multiplyZ = !compute_in_2d;
+    }
+
     ///@copydoc Elliptic::symv(const ContainerType0&,ContainerType1&)
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y){
@@ -441,14 +452,21 @@ class Elliptic3d
         //compute gradient
         dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
-        dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
+        if( m_multiplyZ )
+        {
+            dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
 
-        //multiply with tensor (note the alias)
-        dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
-
-        //now take divergence
-        dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
-        dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+            //multiply with tensor (note the alias)
+            dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
+            //now take divergence
+            dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
+            dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+        }
+        else
+        {
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas2::symv( -1.,m_lefty, m_tempy, 0., m_temp);
+        }
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
 
         //add jump terms
@@ -482,6 +500,7 @@ class Elliptic3d
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
+    bool m_multiplyZ = true;
 };
 ///@cond
 template< class G, class M, class V>
