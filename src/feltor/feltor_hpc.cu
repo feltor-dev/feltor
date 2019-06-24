@@ -208,7 +208,7 @@ int main( int argc, char* argv[])
         else if( p.initne == "turbulence")
         {
             dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-            dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
+            dg::BathRZ init0(16,16,Rmin,Zmin, 30.,2.,p.amp);
             if( p.symmetric)
                 ntilde = dg::pullback( init0, grid);
             else

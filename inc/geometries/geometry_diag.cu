@@ -234,7 +234,7 @@ int main( int argc, char* argv[])
         {"Delta", "A flux aligned delta function", dg::geo::DeltaFunction( mag, gp.alpha*gp.alpha, psip0*0.2)},
         {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::geo::TanhDamping(mag.psip(), -3*gp.alpha, gp.alpha, -1)},
         ////
-        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,5., p.amp)},
+        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
         {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
             M_PI, p.sigma, p.sigma, p.sigma, p.amp)}
     };

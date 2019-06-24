@@ -443,7 +443,7 @@ int main( int argc, char* argv[])
 
 
             // 2d data of plane varphi = 0
-            unsigned kmp = 0; //g3d_out.Nz()/2;
+            unsigned kmp = g3d_out.Nz()/2;
             dg::HVec t2d_mp(t3d.begin() + kmp*g2d_out.size(),
                 t3d.begin() + (kmp+1)*g2d_out.size() );
             err = nc_put_vara_double( ncid_out, id2d.at(record.name+"_2d"),
