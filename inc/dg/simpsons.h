@@ -5,32 +5,76 @@
 #include "blas1.h"
 
 /*! @file
- * @brief Equidistant time-integrators
+ * @brief Equidistant time-integrator
  */
-
 namespace dg{
 
+/**
+* @brief Time integration based on Simpson's rule
+*
+* The intention of this class is to provide a means to continuously
+* integrate a sample of \f$( t_i, u_i)\f$ pairs that become available
+* one after the
+* other (e.g. from the integration of an ODE) and approximate
+*
+ \f[ \int_{t_0}^T u(t) dt \f]
+
+ @note The algorithm simply integrates the Lagrange-polynomial through up to three data points. For equidistant Data points this equals either the Trapezoidal (linear) or the Simpson's rule (quadratic)
+* @sa For an explanation of Simpson's rule: https://en.wikipedia.org/wiki/Simpson%27s_rule
+
+The class works by first calling the init function to set the left-side
+boundary and then adding values as they become available.
+* @snippet simpsons_t.cu docu
+* @copydoc hide_ContainerType
+* @ingroup time
+*/
 template<class ContainerType>
 struct SimpsonsRule
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    SimpsonsRule() = default;
-    SimpsonsRule( const ContainerType& copyable):
-        m_counter(0), m_integral( copyable),
-        m_t(2,0.), m_u( 2, copyable)
+    /*! @brief Set integration order without initializing values
+     * @param order number of vectors to use for integration.
+         Choose 2 (linear) or 3 (parabola) integration.
+     */
+    SimpsonsRule( unsigned order = 3): m_counter(0), m_order(order)
     {
+        set_order(order);
     }
-    const ContainerType& copyable() const{ return m_integral;}
+    ///@copydoc SimpsonsRule(unsigned)
+    void set_order( unsigned order){
+        m_order=order;
+        m_t.resize( order-1);
+        m_u.resize(order-1);
+        if( !(order == 2 || order == 3))
+            throw dg::Error(dg::Message()<<"Integration order must be either 2 or 3!");
+    }
+    ///Access current integration order
+    unsigned get_order() const{return m_order;}
+    /*! @brief Initialize the left-side boundary of the integration
+     * @param t0 left-side time
+     * @param u0 left-side value
+     */
     void init(  value_type t0, const ContainerType& u0) {
-        dg::blas1::copy( u0, m_u.front());
+        m_integral = u0;
+        for( auto& u: m_u)
+            u = u0;
+        for( auto& t: m_t)
+            t = 0;
         m_t.front() = t0;
         flush();
     }
+    /*! @brief Reset the integral to zero and the last (t,u) pair in the add function as the new left-side
+     */
     void flush() {
         m_counter = 0;
         dg::blas1::scal( m_integral, 0.);
     }
+    /*! @brief Add a new (t,u) pair to the time integral
+     * @param t_new time
+     * @param u_new value (must have the same size as \c u0 in the init function)
+     * @attention the \c init function must be called before you can add values to the integral
+     */
     void add( value_type t_new, const ContainerType& u_new){
         if( t_new < m_t.front())
             throw dg::Error(dg::Message()<<"New time must be strictly larger than old time!");
@@ -39,7 +83,7 @@ struct SimpsonsRule
         auto pu0 = m_u.begin();
         auto pu1 = std::next( pu0);
         value_type t0 = *pt1, t1 = *pt0, t2 = t_new;
-        if( m_counter % 2 == 0)
+        if( m_counter % 2 == 0 || m_order == 2)
         {
             //Trapezoidal rule
             dg::blas1::axpbypgz( 0.5*(t2 - t1), u_new,
@@ -53,24 +97,29 @@ struct SimpsonsRule
             value_type pre2 = (t0-3.*t1+2.*t2)*(t0-t2)/(6.*(t1-t2));
 
             dg::blas1::axpby( pre2, u_new, 1., m_integral);
-            //Also subtract old Trapezoidal rule
             dg::blas1::axpbypgz(
-                pre1-0.5*(t1-t0), *pu0,
+                pre1-0.5*(t1-t0), *pu0, //subtract last Trapezoidal step
                 pre0-0.5*(t1-t0), *pu1,
                 1., m_integral);
         }
-        m_t.splice( pt0, m_t, pt1, m_t.end());
+        //splice does not copy or move anything, only the internal pointers of the list nodes are re-pointed
+        m_t.splice( pt0, m_t, pt1, m_t.end());//permute elements
         m_u.splice( pu0, m_u, pu1, m_u.end());
-        m_t.front() = t_new; //and now remove zeroth element (it is moved now!)
+        m_t.front() = t_new; //and now remove zeroth element
         dg::blas1::copy( u_new, m_u.front());
         m_counter++;
     }
-    const ContainerType& get_sum() const{
+
+    /*! @brief Access the current value of the time integral
+     * @return the current integral
+     */
+    const ContainerType& get_integral() const{
         return m_integral;
     }
     private:
-    unsigned m_counter;
+    unsigned m_counter, m_order;
     ContainerType m_integral;
+    //we use a list here to avoid explicitly calling the swap function
     std::list<value_type> m_t;
     std::list<ContainerType> m_u;
 };

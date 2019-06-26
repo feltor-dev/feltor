@@ -755,6 +755,7 @@ You can provide your own coefficients or use one of our predefined methods:
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
+* @copydoc hide_SolverType
 */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct ImplicitRungeKutta

@@ -899,6 +899,7 @@ EXAMPLE_PATH           = cg2d_t.cu \
                          elliptic_b.cu \
                          elliptic2d_b.cu \
                          runge_kutta_t.cu \
+                         simpsons_t.cu \
                          adaptive_t.cu \
                          multistep_t.cu \
                          helmholtzg2_b.cu \
