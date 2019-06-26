@@ -32,45 +32,37 @@ struct SimpsonsRule
         dg::blas1::scal( m_integral, 0.);
     }
     void add( value_type t_new, const ContainerType& u_new){
-        std::cout << "Time "<<t_new<<" Value "<<u_new<<"\n";
         if( t_new < m_t.front())
             throw dg::Error(dg::Message()<<"New time must be strictly larger than old time!");
         auto pt0 = m_t.begin();
         auto pt1 = std::next( pt0);
         auto pu0 = m_u.begin();
         auto pu1 = std::next( pu0);
-        //if(true)
+        value_type t0 = *pt1, t1 = *pt0, t2 = t_new;
         if( m_counter % 2 == 0)
         {
             //Trapezoidal rule
-            dg::blas1::axpbypgz( 0.5*(t_new - *pt0), u_new,
-                0.5*(t_new - *pt0), *pu0 , 1., m_integral);
-            m_t.splice( pt0, m_t, pt1, m_t.end());
-            m_u.splice( pu0, m_u, pu1, m_u.end());
-            m_t.front() = t_new; //and now remove zeroth element (it is moved now!)
-            dg::blas1::copy( u_new, m_u.front());
+            dg::blas1::axpbypgz( 0.5*(t2 - t1), u_new,
+                0.5*(t2 - t1), *pu0 , 1., m_integral);
         }
         else
         {
             //Simpson's rule
-            value_type t0 = *pt1, t1 = *pt0, t2 = t_new;
-            value_type pre = (t2-t0)/6./(t0-t1)/(t1-t2);
-            value_type pre2 = t0*t0+3.*t1*t1+2.*t0*t2-4.*t0*t1-2.*t1*t2;
-            value_type pre1 = -(t0-t2)*(t0-t2);
-            value_type pre0 = t2*t2+3.*t1*t1+2.*t0*t2-4.*t1*t2-2.*t0*t1;
-            std::cout << "pre "<<pre*pre0<<" "<<pre*pre1<<" "<<pre*pre2<<std::endl;
+            value_type pre0 = (2.*t0-3.*t1+t2)*(t2-t0)/(6.*(t0-t1));
+            value_type pre1 = (t2-t0)*(t2-t0)*(t2-t0)/(6.*(t0-t1)*(t1-t2));
+            value_type pre2 = (t0-3.*t1+2.*t2)*(t0-t2)/(6.*(t1-t2));
 
-            dg::blas1::axpby( pre2*pre, u_new, 1., m_integral);
+            dg::blas1::axpby( pre2, u_new, 1., m_integral);
             //Also subtract old Trapezoidal rule
             dg::blas1::axpbypgz(
-                pre1*pre-0.5*(t1-t0), *pu0,
-                pre0*pre-0.5*(t1-t0), *pu1,
+                pre1-0.5*(t1-t0), *pu0,
+                pre0-0.5*(t1-t0), *pu1,
                 1., m_integral);
-            m_t.splice( pt0, m_t, pt1, m_t.end());
-            m_u.splice( pu0, m_u, pu1, m_u.end());
-            m_t.front() = t_new; //and now remove zeroth element (it is moved now!)
-            dg::blas1::copy( u_new, m_u.front());
         }
+        m_t.splice( pt0, m_t, pt1, m_t.end());
+        m_u.splice( pu0, m_u, pu1, m_u.end());
+        m_t.front() = t_new; //and now remove zeroth element (it is moved now!)
+        dg::blas1::copy( u_new, m_u.front());
         m_counter++;
     }
     const ContainerType& get_sum() const{
