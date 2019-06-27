@@ -191,13 +191,6 @@ struct Explicit
     Explicit( const Geometry& g, feltor::Parameters p,
         dg::geo::TokamakMagneticField mag);
 
-    //potential[0]: electron potential, potential[1]: ion potential
-    const std::array<Container,2>& potential( ) const {
-        return m_phi;
-    }
-    const Container& induction() const {
-        return m_apar;
-    }
     //Given N_i-1 initialize n_e-1 such that phi=0
     void initializene( const Container& ni, Container& ne);
     //Given n_e-1 initialize N_i-1 such that phi=0
@@ -215,6 +208,7 @@ struct Explicit
     }
 
     /// ///////////////////DIAGNOSTIC MEMBERS //////////////////////
+    //potential[0]: electron potential, potential[1]: ion potential
     const Container& uE2() const {
         return m_UE2;
     }
@@ -223,6 +217,12 @@ struct Explicit
     }
     const Container& velocity(int i)const{
         return m_fields[1][i];
+    }
+    const Container& potential(int i) const {
+        return m_phi[i];
+    }
+    const Container& induction() const {
+        return m_apar;
     }
     const std::array<Container, 3> & gradN (int i) const {
         return m_dN[i];
@@ -239,12 +239,11 @@ struct Explicit
     const Container & dsN (int i) const {
         return m_dsN[i];
     }
+    const Container & dsU (int i) const {
+        return m_dsU[i];
+    }
     const Container & dssN(int i) { //2nd fieldaligned derivative
         return m_dssN[i];
-    }
-    const Container & compute_dssP(int i) {
-        m_ds_P.dss( m_phi[i], m_temp1);
-        return m_temp1;
     }
     const Container & dssU(int i) {
         return m_dssU[i];
@@ -291,15 +290,6 @@ struct Explicit
         return m_temp1;
     }
     /////////////////////////DIAGNOSTICS END////////////////////////////////
-
-    //source strength, profile - 1
-    void set_source( Container profile, double omega_source, Container source)
-    {
-        m_profne = profile;
-        m_omega_source = omega_source;
-        m_source = source;
-    }
-    void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
     void compute_diffusive_lapMperpN( const Container& density, Container& temp0, Container& result ){
         // compute the negative diffusion contribution -Lambda N
         // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
@@ -328,6 +318,15 @@ struct Explicit
             dg::blas2::gemv( m_lapperpU, temp0, result); //!plus
         }
     }
+
+    //source strength, profile - 1
+    void set_source( Container profile, double omega_source, Container source)
+    {
+        m_profne = profile;
+        m_omega_source = omega_source;
+        m_source = source;
+    }
+    void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
     void compute_phi( double t, const std::array<Container,2>& y);
     void compute_psi( double t);

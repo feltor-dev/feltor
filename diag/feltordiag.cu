@@ -17,7 +17,7 @@ void create_records_in_file( int ncid,
     std::map<std::string, int>& id3d)
 {
     file::NC_Error_Handle err;
-    for( auto record : feltor::records3d_list)
+    for( auto record& : feltor::records3d_list)
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
@@ -26,7 +26,7 @@ void create_records_in_file( int ncid,
         err = nc_put_att_text( ncid, id3d[name], "long_name", long_name.size(),
             long_name.data());
     }
-    for( auto record : feltor::records_list)
+    for( auto record& : feltor::records_list)
     {
         std::string name = record.name + "_ta2d";
         std::string long_name = record.long_name + " (Toroidal average)";
@@ -412,7 +412,7 @@ int main( int argc, char* argv[])
         if( i%10 == 0) //write 3d fields only every 10th timestep
         {
             start3d_out[0] = i/10;
-            for( auto record : feltor::records3d_list)
+            for( auto record& : feltor::records3d_list)
             {
                 record.function( t3d, var);
                 //toroidal average
@@ -423,7 +423,7 @@ int main( int argc, char* argv[])
             //write time for 3d fields
             err = nc_put_vara_double( ncid_out, tvar4dID, start3d_out, count3d, &time);
         }
-        for( auto record : feltor::records_list)
+        for( auto record& : feltor::records_list)
         {
             record.function( t3d, var);
             //toroidal average

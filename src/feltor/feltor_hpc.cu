@@ -130,7 +130,7 @@ int main( int argc, char* argv[])
         , comm
         #endif //FELTOR_MPI
         );
-    Geometry grid_out( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+    Geometry g3d_out( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, p.symmetric ? 1 : p.Nz_out, p.bcxN, p.bcyN, dg::PER
         #ifdef FELTOR_MPI
         , comm
@@ -277,8 +277,8 @@ int main( int argc, char* argv[])
         int dimsIN[3],  coordsIN[3];
         MPI_Cart_get( comm, 3, dimsIN, periods, coordsIN);
         size_t countIN[4] = {1, grid_IN.local().Nz(),
-            grid_out.n()*(grid_IN.local().Ny()),
-            grid_out.n()*(grid_IN.local().Nx())};
+            g3d_out.n()*(grid_IN.local().Ny()),
+            g3d_out.n()*(grid_IN.local().Nx())};
         size_t startIN[4] = {0, coordsIN[2]*countIN[1],
                                 coordsIN[1]*countIN[2],
                                 coordsIN[0]*countIN[3]};
@@ -375,18 +375,18 @@ int main( int argc, char* argv[])
     int dim_ids[4], tvarID;
 #ifdef FELTOR_MPI
     int coords[3];
-    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
-    size_t start[4] = {0, 0, 0, 0};
-    size_t count[4] = {1, grid_out.local().Nz(),
-        grid_out.n()*(grid_out.local().Ny()),
-        grid_out.n()*(grid_out.local().Nx())};
+    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out.global());
+    size_t start4d[4] = {0, 0, 0, 0};
+    size_t count4d[4] = {1, g3d_out.local().Nz(),
+        g3d_out.n()*(g3d_out.local().Ny()),
+        g3d_out.n()*(g3d_out.local().Nx())};
 #else //FELTOR_MPI
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-    size_t start[4] = {0, 0, 0, 0};
-    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(),
-        grid_out.n()*grid_out.Nx()};
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out);
+    size_t start4d[4] = {0, 0, 0, 0};
+    size_t count4d[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(),
+        g3d_out.n()*g3d_out.Nx()};
 #endif //FELTOR_MPI
-    {   //output 3d variables into file
+    {   //output static 3d variables into file
         dg::geo::BFieldR fieldR(mag);
         dg::geo::BFieldZ fieldZ(mag);
         dg::geo::BFieldP fieldP(mag);
@@ -415,8 +415,8 @@ int main( int argc, char* argv[])
         v3d.emplace_back( "yc", &yc, "y-coordinate in Cartesian coordinate system");
         v3d.emplace_back( "zc", &zc, "z-coordinate in Cartesian coordinate system");
 
-        IHMatrix project = dg::create::projection( grid_out, grid);
-        HVec transferH( dg::evaluate(dg::zero, grid_out));
+        IHMatrix project = dg::create::projection( g3d_out, grid);
+        HVec transferH( dg::evaluate(dg::zero, g3d_out));
         for( auto tp : v3d)
         {
             int vecID;
@@ -432,22 +432,22 @@ int main( int argc, char* argv[])
                 for( int rrank=0; rrank<size; rrank++)
                 {
                     if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, grid_out.communicator(), &status);
-                    MPI_Cart_coords( grid_out.communicator(), rrank, 3, coords);
-                    start[1] = coords[2]*count[1],
-                    start[2] = coords[1]*count[2],
-                    start[3] = coords[0]*count[3];
-                    err = nc_put_vara_double( ncid, vecID, &start[1], &count[1],
+                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, g3d_out.communicator(), &status);
+                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
+                    start4d[1] = coords[2]*count4d[1],
+                    start4d[2] = coords[1]*count4d[2],
+                    start4d[3] = coords[0]*count4d[3];
+                    err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
                         transferH.data().data());
                 }
             }
             else
-                MPI_Send( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
-                          0, rank, grid_out.communicator());
-            MPI_Barrier( grid_out.communicator());
+                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                          0, rank, g3d_out.communicator());
+            MPI_Barrier( g3d_out.communicator());
 #else
-            err = nc_put_vara_double( ncid, vecID, &start[1], &count[1],
+            err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
                 transferH.data());
 #endif // FELTOR_MPI
             MPI_OUT err = nc_redef(ncid);
@@ -457,16 +457,31 @@ int main( int argc, char* argv[])
     //field IDs
     int EtimeID, EtimevarID;
     MPI_OUT err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    std::map<std::string, int> id0d, id4d;
-    for( auto pair : v0d)
+    std::map<std::string, int> id3d, id4d;
+    for( auto record& : feltor::diagnostics3d_list)
     {
-        MPI_OUT err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 1,
-            &EtimeID, &id0d[pair.first]);
+        std::string name = record.name;
+        std::string long_name = record.long_name;
+        MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
+            &id4d[name]);//creates a new id4d entry
+        MPI_OUT err = nc_put_att_text( ncid, id4d[name], "long_name", long_name.size(),
+            long_name.data());
     }
-    for( auto pair : v4d)
+    for( auto record& : feltor::diagnostics2d_list)
     {
-        MPI_OUT err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 4,
-            dim_ids, &id4d[pair.first]);
+        std::string name = record.name + "_ta2d";
+        std::string long_name = record.long_name + " (Toroidal average)";
+        MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id3d[name]);//creates a new id3d entry
+        MPI_OUT err = nc_put_att_text( ncid, id3d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record.name + "_2d";
+        long_name = record.long_name + " (Evaluated on phi = pi plane)";
+        err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id3d[name]);
+        err = nc_put_att_text( ncid, id3d[name], "long_name", long_name.size(),
+            long_name.data());
     }
     MPI_OUT err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
@@ -487,12 +502,26 @@ int main( int argc, char* argv[])
     }
     MPI_OUT q.display(std::cout);
     double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
-    DVec transferD( dg::evaluate(dg::zero, grid_out));
-    HVec transferH( dg::evaluate(dg::zero, grid_out));
-    IDMatrix project = dg::create::projection( grid_out, grid);
-    for( auto pair : v4d)
+    DVec transferD( dg::evaluate(dg::zero, g3d_out));
+    HVec transferH( dg::evaluate(dg::zero, g3d_out));
+    DVec transfer2dD = dg::evaluate( dg::zero, g2d_out);
+    HVec transfer2dH = dg::evaluate( dg::zero, g2d_out);
+    //fast_projection is an undocumented secret feltor function...
+    IDMatrix project = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    /// Construct feltor::Variables object for diagnostics
+    DVec result = dg::evaluate( dg::zero, grid);
+
+    std::array<DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  result; //zero
+    feltor::Variables var = {
+        feltor, p, gradPsip, gradPsip
+    };
+    for( auto record& : diagnostics3d_list)
     {
-        dg::blas2::symv( project, *pair.second, transferD);
+        record.function( result, var);
+        dg::blas2::symv( project, result, transferD);
         dg::assign( transferD, transferH);
 #ifdef FELTOR_MPI
             if(rank==0)
@@ -500,27 +529,27 @@ int main( int argc, char* argv[])
                 for( int rrank=0; rrank<size; rrank++)
                 {
                     if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, grid_out.communicator(), &status);
-                    MPI_Cart_coords( grid_out.communicator(), rrank, 3, coords);
-                    start[1] = coords[2]*count[1],
-                    start[2] = coords[1]*count[2],
-                    start[3] = coords[0]*count[3];
-                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, g3d_out.communicator(), &status);
+                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
+                    start4d[1] = coords[2]*count4d[1],
+                    start4d[2] = coords[1]*count4d[2],
+                    start4d[3] = coords[0]*count4d[3];
+                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
                         transferH.data().data());
                 }
             }
             else
-                MPI_Send( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
-                          0, rank, grid_out.communicator());
-            MPI_Barrier( grid_out.communicator());
+                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                          0, rank, g3d_out.communicator());
+            MPI_Barrier( g3d_out.communicator());
 #else
-            err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+            err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
                 transferH.data());
 #endif // FELTOR_MPI
     }
-    MPI_OUT err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    MPI_OUT err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+    MPI_OUT err = nc_put_vara_double( ncid, tvarID, start4d, count4d, &time);
+    MPI_OUT err = nc_put_vara_double( ncid, EtimevarID, start4d, count4d, &time);
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
@@ -604,12 +633,13 @@ int main( int argc, char* argv[])
                     << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
         ti.tic();
         //////////////////////////write fields////////////////////////
-        start[0] = i;
+        start4d[0] = i;
         MPI_OUT err = nc_open(file_name.data(), NC_WRITE, &ncid);
-        MPI_OUT err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        for( auto pair : v4d)
+        MPI_OUT err = nc_put_vara_double( ncid, tvarID, start4d, count4d, &time);
+        for( auto record& : diagnostics3d_list)
         {
-            dg::blas2::symv( project, *pair.second, transferD);
+            record.function( result, var);
+            dg::blas2::symv( project, result, transferD);
             dg::assign( transferD, transferH);
 #ifdef FELTOR_MPI
             if(rank==0)
@@ -617,22 +647,64 @@ int main( int argc, char* argv[])
                 for( int rrank=0; rrank<size; rrank++)
                 {
                     if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, grid_out.communicator(), &status);
-                    MPI_Cart_coords( grid_out.communicator(), rrank, 3, coords);
-                    start[1] = coords[2]*count[1],
-                    start[2] = coords[1]*count[2],
-                    start[3] = coords[0]*count[3];
-                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, g3d_out.communicator(), &status);
+                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
+                    start4d[1] = coords[2]*count4d[1],
+                    start4d[2] = coords[1]*count4d[2],
+                    start4d[3] = coords[0]*count4d[3];
+                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
                         transferH.data().data());
                 }
             }
             else
-                MPI_Send( transferH.data().data(), grid_out.local().size(), MPI_DOUBLE,
-                          0, rank, grid_out.communicator());
-            MPI_Barrier( grid_out.communicator());
+                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                          0, rank, g3d_out.communicator());
+            MPI_Barrier( g3d_out.communicator());
 #else
-            err = nc_put_vara_double( ncid, id4d.at(pair.first), start, count,
+            err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
+                transferH.data());
+#endif // FELTOR_MPI
+        }
+        for( auto record& : diagnostics2d_list)
+        {
+            record.function( result, var);
+            dg::blas2::symv( project, result, transferD);
+            //toroidal average
+            toroidal_average( transferD, result, false);
+            dg::blas1::transfer( transfer2dD, transfer2dH);
+            err = nc_put_vara_double( ncid_out, id3d.at(record.name+"_ta2d"),
+                start2d, count2d, transfer2dH.data());
+
+            // 2d data of plane varphi = 0
+            unsigned kmp = g3d_out.Nz()/2;
+            dg::HVec t2d_mp(result.data().begin() + kmp*g2d_out.size(),
+                result.data().begin() + (kmp+1)*g2d_out.size() );
+            err = nc_put_vara_double( ncid_out, id3d.at(record.name+"_2d"),
+                start2d, count2d, t2d_mp.data() );
+
+#ifdef FELTOR_MPI
+            if(rank==0)
+            {
+                for( int rrank=0; rrank<size; rrank++)
+                {
+                    if(rrank!=0)
+                        MPI_Recv( transferH.data().data(), g2d_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, g2d_out.communicator(), &status);
+                    MPI_Cart_coords( g2d_out.communicator(), rrank, 3, coords);
+                    start4d[1] = coords[2]*count4d[1],
+                    start4d[2] = coords[1]*count4d[2],
+                    start4d[3] = coords[0]*count4d[3];
+                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
+                        transferH.data().data());
+                }
+            }
+            else
+                MPI_Send( transferH.data().data(), g2d_out.local().size(), MPI_DOUBLE,
+                          0, rank, g2d_out.communicator());
+            MPI_Barrier( g2d_out.communicator());
+#else
+            err = nc_put_vara_double( ncid, id3d.at(pair.first), start4d, count4d,
                 transferH.data());
 #endif // FELTOR_MPI
         }
