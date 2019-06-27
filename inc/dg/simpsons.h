@@ -54,6 +54,7 @@ struct SimpsonsRule
     /*! @brief Initialize the left-side boundary of the integration
      * @param t0 left-side time
      * @param u0 left-side value
+     * @note The integral itself is initialized to zero
      */
     void init(  value_type t0, const ContainerType& u0) {
         m_integral = u0;
@@ -71,7 +72,9 @@ struct SimpsonsRule
         dg::blas1::scal( m_integral, 0.);
     }
     /*! @brief Add a new (t,u) pair to the time integral
-     * @param t_new time
+     *
+     * The times in subsequent calls must strictly increase
+     * @param t_new time (must be strictly larger than in the previous call)
      * @param u_new value (must have the same size as \c u0 in the init function)
      * @attention the \c init function must be called before you can add values to the integral
      */

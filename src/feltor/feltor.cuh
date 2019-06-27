@@ -141,15 +141,6 @@ struct ComputePsi{
         GammaPhi = GammaPhi - 0.5*HdxPhi;
     }
 };
-struct ComputeDiss{
-    ComputeDiss( double z, double mu, double tau):m_z(z), m_mu(mu), m_tau(tau){}
-    DG_DEVICE
-    void operator()( double& energy, double logN, double phi, double U) const{
-        energy = m_z*(m_tau*(1.+logN) + phi + 0.5*m_mu*U*U);
-    }
-    private:
-    double m_z, m_mu, m_tau;
-};
 struct ComputeLogN{
     DG_DEVICE
     void operator()( double tilde_n, double& npe, double& logn) const{
@@ -216,20 +207,6 @@ struct Explicit
         const std::array<std::array<Container,2>,2>& y,
         std::array<std::array<Container,2>,2>& yp);
 
-    // update quantities to the state of the last call to operator()
-    // This is to possibly save some computation time in the timestepper
-    void update_quantities() {
-        // set energy quantities in m_q, --- needs m_apar, m_logn and m_UE2
-        compute_energies( m_fields);
-
-        // remaining of m_q --- needs Delta_par U, N, m_logn
-        compute_dissipation( m_fields);
-    }
-
-    // get a link to the internal storage for quantities
-    const Quantities& quantities( ) const{
-        return m_q;
-    }
     const std::array<std::array<Container,2>,2>& fields() const{
         return m_fields;
     }
@@ -238,51 +215,9 @@ struct Explicit
     }
 
     /// ///////////////////DIAGNOSTIC MEMBERS //////////////////////
-    // Set the internal fields and derivatives (for diagnostics)
-    void set_fields( double time, const Container& ne, const Container& Ni,
-        const Container& ue, const Container& Ui, const Container& potential,
-        const Container& induction){
-
-        dg::blas1::copy( potential, m_phi[0]);
-
-        // set m_phi[1], m_d*phi[0], m_d*phi[1] and m_UE2 --- needs m_phi[0]
-        compute_psi( time);
-
-        dg::blas1::copy( ne, m_fields[0][0]);
-        dg::blas1::copy( Ni, m_fields[0][1]);
-        dg::blas1::transform( m_fields[0], m_logn, dg::LN<double>());
-
-        dg::blas1::copy( ue, m_fields[1][0]);
-        dg::blas1::copy( Ui, m_fields[1][1]);
-        if( m_p.beta != 0)
-        {
-            dg::blas1::copy( induction, m_apar);
-            //----------Compute Derivatives----------------------------//
-            dg::blas2::symv( m_dx_U, m_apar, m_dA[0]);
-            dg::blas2::symv( m_dy_U, m_apar, m_dA[1]);
-            if(!m_p.symmetric) dg::blas2::symv( m_dz, m_apar, m_dA[2]);
-        }
-        dg::blas1::axpby( 1., ne, -1., 1., m_temp0);
-        dg::blas2::symv( m_dx_N, m_temp0, m_dN[0][0]);
-        dg::blas2::symv( m_dy_N, m_temp0, m_dN[0][1]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, m_temp0, m_dN[0][2]);
-        m_ds_N.centered( m_temp0, m_dsN[0]);
-        dg::blas1::axpby( 1., Ni, -1., 1., m_temp0);
-        dg::blas2::symv( m_dx_N, m_temp0, m_dN[1][0]);
-        dg::blas2::symv( m_dy_N, m_temp0, m_dN[1][1]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, m_temp0, m_dN[1][2]);
-        m_ds_N.centered( m_temp0, m_dsN[1]);
-
-        for( unsigned i=0; i<2; i++)
-        {
-            dg::blas2::symv( m_dx_U, m_fields[1][i], m_dU[i][0]);
-            dg::blas2::symv( m_dy_U, m_fields[1][i], m_dU[i][1]);
-            if(!m_p.symmetric) dg::blas2::symv( m_dz, m_fields[1][i], m_dU[i][2]);
-        }
-
-     }
-
-    const Container& uE2() const {return m_UE2;}
+    const Container& uE2() const {
+        return m_UE2;
+    }
     const Container& density(int i)const{
         return m_fields[0][i];
     }
@@ -305,47 +240,29 @@ struct Explicit
         return m_dsN[i];
     }
     const Container & dssN(int i) { //2nd fieldaligned derivative
-        dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);
-        m_ds_N.dss( m_temp0, m_temp1);
-        return m_temp1;
+        return m_dssN[i];
     }
-    const Container & dssP(int i) {
+    const Container & compute_dssP(int i) {
         m_ds_P.dss( m_phi[i], m_temp1);
         return m_temp1;
     }
     const Container & dssU(int i) {
-        m_ds_U.dss( m_fields[1][i], m_temp1);
-        return m_temp1;
+        return m_dssU[i];
     }
-    const Container & dppN(int i) { //2nd varphi derivative
+    const Container & compute_dppN(int i) { //2nd varphi derivative
         dg::blas2::symv( m_dz, m_fields[0][i], m_temp0);
         dg::blas2::symv( m_dz, m_temp0, m_temp1);
         return m_temp1;
     }
-    const Container & dppP(int i) {
+    const Container & compute_dppP(int i) {
         dg::blas2::symv( m_dz, m_phi[i], m_temp0);
         dg::blas2::symv( m_dz, m_temp0, m_temp1);
         return m_temp1;
     }
-    const Container & dppU(int i) {
+    const Container & compute_dppU(int i) {
         dg::blas2::symv( m_dz, m_fields[1][i], m_temp0);
         dg::blas2::symv( m_dz, m_temp0, m_temp1);
         return m_temp1;
-    }
-    const Container& lapParallelN( int i){
-        dg::blas1::axpby( 1., m_fields[0][i], -1., 1., m_temp0);
-        m_ds_N.dss( m_temp0, m_temp1);
-        dg::blas1::pointwiseDot( 1., m_divb, m_dsN[i],
-                                 0., m_temp0);
-        dg::blas1::axpby( 1., m_temp1, 1., m_temp0);
-        return m_temp0;
-    }
-    const Container& lapParallelU( int i){
-        m_ds_N.dss( m_fields[1][i], m_temp1);
-        dg::blas1::pointwiseDot( 1., m_divb, m_dsN[i],
-                                 0., m_temp0);
-        dg::blas1::axpby( 1., m_temp1, 1., m_temp0);
-        return m_temp0;
     }
     const dg::SparseTensor<Container>& projection() const{
         return m_hh;
@@ -358,6 +275,7 @@ struct Explicit
     }
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
+    const Container& divb( ) const { return m_divb; }
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
         return m_b;
@@ -413,10 +331,6 @@ struct Explicit
   private:
     void compute_phi( double t, const std::array<Container,2>& y);
     void compute_psi( double t);
-    void compute_energies(
-        const std::array<std::array<Container,2>,2>& fields);
-    void compute_dissipation(
-        const std::array<std::array<Container,2>,2>& fields);
     void compute_perp( double t,
         const std::array<std::array<Container,2>,2>& y,
         const std::array<std::array<Container,2>,2>& fields,
@@ -446,7 +360,7 @@ struct Explicit
     Container m_vol3d;
 
     Container m_apar;
-    std::array<Container,2> m_phi, m_logn, m_dsN, m_dsU;
+    std::array<Container,2> m_phi, m_logn, m_dsN, m_dsU, m_dssN, m_dssU;
     std::array<Container,3> m_dA;
     std::array<std::array<Container,3>,2> m_dP, m_dN, m_dU;
     std::array<std::array<Container,2>,2> m_fields, m_s; //fields, sources
@@ -467,7 +381,6 @@ struct Explicit
     dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
-    Quantities m_q;
     double m_omega_source = 0.;
 
 };
@@ -619,7 +532,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_apar = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
-    m_dsN = m_dsU =  m_logn = m_phi;
+    m_dssN = m_dssU = m_dsN = m_dsU =  m_logn = m_phi;
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
     m_dN = m_dU = m_dP;
@@ -884,8 +797,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         //density: + nu_par Delta_par N
         dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
                                  1., yp[0][i]);
-        m_ds_N.dss( y[0][i], m_dsN[i]);
-        dg::blas1::axpby( m_p.nu_parallel, m_dsN[i], 1., yp[0][i]);
+        m_ds_N.dss( y[0][i], m_dssN[i]);
+        dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
         dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
@@ -897,90 +810,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         // diffusion: + nu_par Delta_par U
         dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
                                 1., yp[1][i]);
-        m_ds_U.dss( fields[1][i], m_dsU[i]);
-        dg::blas1::axpby( m_p.nu_parallel, m_dsU[i], 1., yp[1][i]);
+        m_ds_U.dss( fields[1][i], m_dssU[i]);
+        dg::blas1::axpby( m_p.nu_parallel, m_dssU[i], 1., yp[1][i]);
     }
-}
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_energies(
-    const std::array<std::array<Container,2>,2>& fields)
-{
-    double z[2]    = {-1.0,1.0};
-    m_q.mass = dg::blas1::dot( m_vol3d, fields[0][0]);
-    for(unsigned i=0; i<2; i++)
-    {
-        m_q.S[i] = z[i]*m_p.tau[i]*dg::blas2::dot(
-            m_logn[i], m_vol3d, fields[0][i]);
-        dg::blas1::pointwiseDot( fields[1][i], fields[1][i], m_temp0); //U^2
-        m_q.Tpar[i] = z[i]*0.5*m_p.mu[i]*dg::blas2::dot(
-            fields[0][i], m_vol3d, m_temp0);
-    }
-    //= 0.5 beta^{-1} (grad_perp Apar)^2
-    if( m_p.beta != 0)
-    {
-        dg::tensor::multiply3d( m_hh, m_dA[0], m_dA[1], m_dA[2],
-            m_temp0, m_temp1, m_temp2);
-        dg::blas1::subroutine( routines::ComputePsi(),
-            m_temp0, m_dA[0], m_dA[1], m_dA[2],
-            m_temp0, m_temp1, m_temp2);
-        m_q.Apar = 0.5*dg::blas1::dot( m_vol3d, m_temp0)/m_p.beta;
-    }
-    //= 0.5 mu_i N_i u_E^2
-    m_q.Tperp = 0.5*m_p.mu[1]*dg::blas2::dot( fields[0][1], m_vol3d, m_UE2);
-    m_q.energy = m_q.S[0] + m_q.S[1] + m_q.Tperp + m_q.Apar
-                 + m_q.Tpar[0] + m_q.Tpar[1];
-}
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_dissipation(
-    const std::array<std::array<Container,2>,2>& fields)
-{
-    //alignement: lnN * Delta_s N
-    m_q.aligned = dg::blas2::dot( m_logn[0], m_vol3d, m_dsN[0]);
-    /////////////////DISSIPATION TERMS//////////////////////////////
-    m_q.diff = m_p.nu_parallel*dg::blas1::dot( m_vol3d, m_dsN[0]);
-    m_q.diff += dg::blas1::dot( m_vol3d, m_s[0][0]); //particle sources
-    // energy dissipation through diffusion
-    double z[2] = {-1.0,1.0};
-    for( unsigned i=0; i<2;i++)
-    {
-        //Compute dissipation for N
-        // Z*(tau (1+lnN )+psi + 0.5 mu U^2)
-        dg::blas1::subroutine( routines::ComputeDiss(z[i], m_p.mu[i], m_p.tau[i]),
-                m_temp2, m_logn[i], m_phi[i], fields[1][i]);
-        // Dissipation through sink/source terms
-        m_q.source[i] = dg::blas2::dot( m_temp2, m_vol3d, m_s[0][i]);
-        // parallel dissipation for N: nu_parallel *(Delta_s N)
-        m_q.Dpar[i] = m_p.nu_parallel*dg::blas2::dot(
-                        m_temp2, m_vol3d, m_dsN[i]);
-        // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
-        compute_diffusive_lapMperpN( fields[0][i], m_temp1, m_temp0);
-        if( i==0)
-            m_q.diff += -m_p.nu_perp*dg::blas1::dot( m_vol3d, m_temp0);
-        m_q.Dperp[i] = -m_p.nu_perp*dg::blas2::dot(
-                        m_temp2, m_vol3d, m_temp0);
-        //Compute dissipation for U
-        //Z*mu*N*U
-        dg::blas1::pointwiseDot( z[i]*m_p.mu[i], fields[0][i], fields[1][i],
-                0, m_temp2);
-        // Dissipation through sink/source terms
-        m_q.source[i+2] = dg::blas2::dot( m_temp2, m_vol3d, m_s[1][i]);
-        // parallel dissipation for U: nu_parallel *(Delta_s U)
-        m_q.Dpar[i+2] = m_p.nu_parallel*dg::blas2::dot(
-            m_temp2, m_vol3d, m_dsU[i]);
-        // perp dissipation for U: nu_perp Delta_p U or -nu_perp Delta_p**2 U
-        compute_diffusive_lapMperpU( fields[1][i], m_temp1, m_temp0);
-        m_q.Dperp[i+2] = -m_p.nu_perp *dg::blas2::dot(
-            m_temp2, m_vol3d, m_temp0);
-    }
-    // resistive energy (quadratic current): -C (n_e (U_i-u_e))**2
-    dg::blas1::pointwiseDot(1., fields[0][0], fields[1][1],
-        -1., fields[0][0], fields[1][0], 0., m_temp0);
-    m_q.Dres = -m_p.eta*dg::blas2::dot(m_temp0, m_vol3d, m_temp0);
-    m_q.ediff = m_q.Dres + m_q.source[0] + m_q.source[1]
-        + m_q.Dpar[0]+m_q.Dperp[0]+m_q.Dpar[1]+m_q.Dperp[1]
-        + m_q.Dpar[2]+m_q.Dperp[2]+m_q.Dpar[3]+m_q.Dperp[3];
 }
 
 /* y[0][0] := n_e - 1
@@ -1004,7 +836,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     // Transform n-1 to n and n to logn
     dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
 
-    // Compute Apar and m_U if necessary --- reads and updates m_fields
+    // Compute Apar and m_U if necessary --- reads and updates m_fields[1]
     dg::blas1::copy( y[1], m_fields[1]);
     if( m_p.beta != 0)
         compute_apar( t, m_fields);

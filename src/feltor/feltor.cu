@@ -9,6 +9,13 @@
 #include "feltor.cuh"
 #include "implicit.h"
 
+using HVec = dg::HVec;
+using DVec = dg::DVec;
+using DMatrix = dg::DMatrix;
+using IDMatrix = dg::IDMatrix;
+using IHMatrix = dg::IHMatrix;
+using Geometry = dg::CylindricalGrid3d;
+
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
@@ -51,9 +58,9 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     std::cout << "Constructing Implicit...\n";
-    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> im( grid, p, mag);
+    feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -89,16 +96,16 @@ int main( int argc, char* argv[])
             ntilde = dg::pullback( init0, grid);
         else if( p.initne == "blob")//rounds =3 ->2*3-1
         {
-            dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix,
-                dg::HVec> fieldaligned( mag, grid, p.bcxN, p.bcyN,
+            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                fieldaligned( mag, grid, p.bcxN, p.bcyN,
                 dg::geo::NoLimiter(), p.rk4eps, 5, 5);
             //evaluate should always be used with mx,my > 1
             ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
         }
         else if( p.initne == "straight blob")//rounds =1 ->2*1-1
         {
-            dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix,
-                dg::HVec> fieldaligned( mag, grid, p.bcxN, p.bcyN,
+            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                fieldaligned( mag, grid, p.bcxN, p.bcyN,
                 dg::geo::NoLimiter(), p.rk4eps, 5, 5);
             //evaluate should always be used with mx,my > 1
             ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
@@ -112,8 +119,8 @@ int main( int argc, char* argv[])
             ntilde = dg::pullback( init0, grid);
         else
         {
-            dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix,
-                dg::HVec> fieldaligned( mag, grid, p.bcxN, p.bcyN,
+            dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                fieldaligned( mag, grid, p.bcxN, p.bcyN,
                 dg::geo::NoLimiter(), p.rk4eps, 5, 5);
             //evaluate should always be used with mx,my > 1
             ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
@@ -153,7 +160,7 @@ int main( int argc, char* argv[])
     unsigned step = 0;
     dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
         feltor::FeltorSpecialSolver<
-            dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+            Geometry, IDMatrix, DMatrix, DVec>
         > karniadakis( grid, p, mag);
     karniadakis.init( feltor, im, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
