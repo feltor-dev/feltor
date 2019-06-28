@@ -37,7 +37,7 @@ struct SimpsonsRule
      * @param order number of vectors to use for integration.
          Choose 2 (linear) or 3 (parabola) integration.
      */
-    SimpsonsRule( unsigned order = 3): m_counter(0), m_order(order)
+    SimpsonsRule( unsigned order = 3): m_counter(0), m_order(order), m_t0(0)
     {
         set_order(order);
     }
@@ -64,12 +64,14 @@ struct SimpsonsRule
             t = 0;
         m_t.front() = t0;
         flush();
+        m_t0 = t0;
     }
     /*! @brief Reset the integral to zero and the last (t,u) pair in the add function as the new left-side
      */
     void flush() {
-        m_counter = 0;
+        m_counter = 0; //since the counter becomes zero we do not need to touch m_u and m_t since the next add triggers the Trapezoidal rule
         dg::blas1::scal( m_integral, 0.);
+        m_t0 = m_t.front();
     }
     /*! @brief Add a new (t,u) pair to the time integral
      *
@@ -119,12 +121,22 @@ struct SimpsonsRule
     const ContainerType& get_integral() const{
         return m_integral;
     }
+    /*! @brief Access the left and right boundary in time
+     *
+     * associated with the current value of the integral
+     * @return the current integral boundaries
+     */
+    std::array<value_type,2> get_boundaries() const{
+        std::array<value_type,2> times{ m_t0, m_t.front()};
+        return times;
+    }
     private:
     unsigned m_counter, m_order;
     ContainerType m_integral;
     //we use a list here to avoid explicitly calling the swap function
     std::list<value_type> m_t;
     std::list<ContainerType> m_u;
+    value_type m_t0;
 };
 
 }//namespace dg

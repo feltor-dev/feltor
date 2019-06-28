@@ -33,6 +33,9 @@ int main()
     double integral = simpsons.get_integral();
     std::cout << "Error Simpsons is "<<fabs(integral-1.)<<std::endl;
     //![docu]
+    //
+    std::array<double,2> boundaries = simpsons.get_boundaries();
+    std::cout << "Integrated from "<<boundaries[0]<<" (0) to "<<boundaries[1]<<" ("<<M_PI/2.<<") "<<std::endl;
 
     g1d = dg::Grid1d( M_PI/2., M_PI, 3, N );
     times = dg::evaluate( dg::cooX1d, g1d);
@@ -44,6 +47,8 @@ int main()
     simpsons.add( M_PI, -1.);
     integral = simpsons.get_integral();
     std::cout << "Error Trapezoidal is "<<fabs(integral+1.)<<std::endl;
+    boundaries = simpsons.get_boundaries();
+    std::cout << "Integrated from "<<boundaries[0]<<" ("<<M_PI/2.<<") to "<<boundaries[1]<<" ("<<M_PI<<") "<<std::endl;
 
 
     return 0;
