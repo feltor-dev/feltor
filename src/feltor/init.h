@@ -46,7 +46,10 @@ struct Initialize
         dg::blas1::pointwiseDot( xpoint_damping(), profile_damping, profile_damping);
         return profile_damping;
     }
-    std::array<std::array<DVec,2>,2> init_from_parameters(){
+    template<class Feltor>
+    std::array<std::array<DVec,2>,2> init_from_parameters(Feltor& feltor){
+        HVec profile = profile();
+        HVec profile_damping = profile_damping();
         std::array<std::array<DVec,2>,2> y0;
         //Now perturbation
         HVec ntilde = dg::evaluate(dg::zero,grid);

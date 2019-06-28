@@ -15,6 +15,7 @@ using DMatrix = dg::DMatrix;
 using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
+#define MPI_OUT
 
 #include "init.h"
 #include "feltordiag.h"
@@ -70,7 +71,7 @@ int main( int argc, char* argv[])
     std::array<std::array<DVec,2>,2> y0;
     feltor::Initialize init( grid, p, mag);
     if( argc == 4)
-        y0 = init.init_from_parameters();
+        y0 = init.init_from_parameters(feltor);
     if( argc == 5)
         y0 = init.init_from_file(argv[4]);
     feltor.set_source( init.profile(), p.omega_source, init.source_damping());
@@ -79,7 +80,7 @@ int main( int argc, char* argv[])
     ////////////////////////create timer and timestepper
     //
     dg::Timer t;
-    double time = 0, dt_new = p.dt;//, dt =0;
+    double time = 0.;
     unsigned step = 0;
     dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
         feltor::FeltorSpecialSolver<
@@ -88,45 +89,12 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, im, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
 
-    //dg::Adaptive< dg::ERKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
-    //    "Bogacki-Shampine-4-2-3", y0);
-    //adaptive.stepper().ignore_fsal();//necessary for splitting
-    //dg::ImplicitRungeKutta<std::array<std::array<dg::DVec,2>,2>,
-    //    feltor::FeltorSpecialSolver<
-    //    dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>> dirk(
-    //        "Trapezoidal-2-2", grid, p, mag);
-    //since we map pointers we don't need to update those later
-
     std::map<std::string, const dg::DVec* > v4d;
     v4d["ne-1 / "] = &y0[0][0],               v4d["ni-1 / "] = &y0[0][1];
     v4d["Ue / "]   = &feltor.fields()[1][0],  v4d["Ui / "]   = &feltor.fields()[1][1];
     v4d["Ome / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
-    const feltor::Quantities& q = feltor.quantities();
-    double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
-    std::map<std::string, const double*> v0d{
-        {"energy", &q.energy}, {"ediff", &q.ediff},
-        {"mass", &q.mass}, {"diff", &q.diff}, {"Apar", &q.Apar},
-        {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
-        {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
-        {"dEdt", &dEdt}, {"accuracy", &accuracy},
-        {"aligned", &q.aligned}
-    };
-
-    //first, update quantities in feltor
-
-    {
-        std::array<std::array<dg::DVec,2>,2> y1(y0);
-        try{
-            feltor( time, y0, y1);
-        } catch( dg::Fail& fail) {
-            std::cerr << "CG failed to converge in first step to "
-                      << fail.epsilon()<<"\n";
-            return -1;
-        }
-        feltor.update_quantities();
-    }
-    q.display( std::cout );
-    double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
+    double dEdt = 0, accuracy = 0;
+    double E0 = 0.;
     /////////////////////////set up transfer for glfw
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual), avisual(hvisual);
@@ -151,6 +119,8 @@ int main( int argc, char* argv[])
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     title << std::setprecision(2) << std::scientific;
     //unsigned failed_counter = 0;
+    std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
+    std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
     while ( !glfwWindowShouldClose( w ))
     {
         title << std::fixed;
@@ -208,22 +178,6 @@ int main( int argc, char* argv[])
             {
                 try{
                     karniadakis.step( feltor, im, time, y0);
-                    //do
-                    //{
-                    //    //Strang splitting
-                    //    dt = dt_new;
-                    //    dirk.step( im, time, y0, time, y0, dt/2.);
-                    //    adaptive.step( feltor, time-dt/2., y0, time, y0, dt_new,
-                    //        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                    //    if( adaptive.failed())
-                    //    {
-                    //        failed_counter++;
-                    //        std::cout << "FAILED STEP # "<<failed_counter<<" ! REPEAT!\n";
-                    //        time -= dt; // time has to be reset here
-                    //        // in case of failure diffusion is applied twice?
-                    //    }
-                    //}while ( adaptive.failed());
-                    //dirk.step( im, time-dt/2., y0, time, y0, dt/2.);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -234,22 +188,29 @@ int main( int argc, char* argv[])
                 step++;
             }
             double deltat = time - previous_time;
-            feltor.update_quantities();
-            std::cout << "Timestep "<<dt_new<<"\n";
-            dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
-            E0 = *v0d["energy"], M0 = *v0d["mass"];
-            accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
-            accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
+            double energy = 0, ediff = 0.;
+            for( auto record& : diagnostics2d_list)
+            {
+                if( std::find( energies.begin(), energies.end(), record.name) != energies.end())
+                {
+                    record.function( result, var);
+                    energy += dg::blas1::dot( result, feltor.vol3d());
+                }
+                if( std::find( energy_diff.begin(), energy_diff.end(), record.name) != energy_diff.end())
+                {
+                    record.function( result, var);
+                    ediff += dg::blas1::dot( result, feltor.vol3d());
+                }
 
-            q.display(std::cout);
-            std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
-            std::cout << "(E_tot-E_0)/E_0: "<< (*v0d["energy"]-energy0)/energy0<<"\t";
+            }
+            dEdt = (energy - E0)/deltat;
+            E0 = energy;
+            accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
+
+            std::cout << "Time "<<time<<"\n";
             std::cout <<" d E/dt = " << dEdt
-              <<" Lambda = " << *v0d["ediff"]
+              <<" Lambda = " << ediff
               <<" -> Accuracy: " << accuracy << "\n";
-            std::cout <<" d M/dt = " << dMdt
-                      <<" Lambda = " << *v0d["diff"]
-                      <<" -> Accuracy: " << accuracyM << "\n";
             //----------------Test if induction equation holds
             if( p.beta != 0)
             {

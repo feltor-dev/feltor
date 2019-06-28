@@ -21,6 +21,7 @@ using DMatrix = dg::MDMatrix;
 using IDMatrix = dg::MIDMatrix;
 using IHMatrix = dg::MIHMatrix;
 using Geometry = dg::CylindricalMPIGrid3d;
+using Geometry2d = dg::CartesianMPIGrid2d;
 #define MPI_OUT if(rank==0)
 #else //FELTOR_MPI
 using HVec = dg::HVec;
@@ -29,6 +30,7 @@ using DMatrix = dg::DMatrix;
 using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
+using Geometry2d = dg::CartesianGrid2d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
@@ -139,8 +141,8 @@ int main( int argc, char* argv[])
         , comm
         #endif //FELTOR_MPI
         );
-    DVec vol3d = dg::create::volume( grid);
-    DVec temp(vol3d); //needed for Apar test
+    std::unique_ptr<Geometry2d> g2d_out_ptr = g3d_out.perp_grid();
+
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
@@ -151,34 +153,40 @@ int main( int argc, char* argv[])
     feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
+    // helper variables for various stuff
+    std::array<DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  result; //zero
+    feltor::Variables var = {
+        feltor, p, gradPsip, gradPsip
+    };
+    std::map<std::string, dg::Simpsons<DVec>> time_integrals;
+    dg::Average<DVec> toroidal_average( g3d_out, dg::coo3d::z);
+    dg::MultiMatrix<IHMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    dg::MultiMatrix<IDMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    HVec transferH( dg::evaluate(dg::zero, g3d_out));
+    DVec transferD( dg::evaluate(dg::zero, g3d_out));
+    DVec transfer2dD = dg::evaluate( dg::zero, g2d_out);
+    HVec transfer2dH = dg::evaluate( dg::zero, g2d_out);
+    /// Construct feltor::Variables object for diagnostics
+    DVec result = dg::evaluate( dg::zero, grid);
+    HVec resultH( dg::evaluate( dg::zero, grid));
+
+    double dEdt = 0, accuracy = 0;
+    double E0 = 0.;
+
     //!///////////////////The initial field///////////////////////////////////////////
     double time = 0;
     std::array<std::array<DVec,2>,2> y0;
     feltor::Initialize init( grid, p, mag);
     if( argc == 4)
-        y0 = init.init_from_parameters();
+        y0 = init.init_from_parameters(feltor);
     if( argc == 5)
         y0 = init.init_from_file(argv[4]);
     feltor.set_source( init.profile(), p.omega_source, init.source_damping());
 
-    ////////////map quantities to output/////////////////
-    //since we map pointers we don't need to update those later
-    std::map<std::string, const DVec* > v4d;
-    v4d["electrons"] = &feltor.fields()[0][0], v4d["ions"] = &feltor.fields()[0][1];
-    v4d["Ue"] = &feltor.fields()[1][0],        v4d["Ui"] = &feltor.fields()[1][1];
-    v4d["potential"] = &feltor.potential()[0];
-    v4d["induction"] = &feltor.induction();
-    const feltor::Quantities& q = feltor.quantities();
-    double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
-    std::map<std::string, const double*> v0d{
-        {"energy", &q.energy}, {"ediff", &q.ediff},
-        {"mass", &q.mass}, {"diff", &q.diff}, {"Apar", &q.Apar},
-        {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
-        {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
-        {"dEdt", &dEdt}, {"accuracy", &accuracy},
-        {"aligned", &q.aligned}
-    };
-    /////////////////////////////set up netcdf/////////////////////////////////////
+    /// //////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     std::string file_name = argv[3];
     int ncid=-1;
@@ -205,6 +213,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_put_att_text( ncid, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
 
+    // Define dimensions (t,z,y,x)
     int dim_ids[4], tvarID;
 #ifdef FELTOR_MPI
     int coords[3];
@@ -220,11 +229,7 @@ int main( int argc, char* argv[])
         g3d_out.n()*g3d_out.Nx()};
 #endif //FELTOR_MPI
 
-    //output static 3d variables into file
-    dg::MultiMatrix<IHMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
-    dg::MultiMatrix<IDMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
-    HVec transferH( dg::evaluate(dg::zero, g3d_out));
-    HVec resultH(dg::evaluate( dg::zero, grid));
+    //create & output static 3d variables into file
     for ( auto record& diagnostics3d_static_list)
     {
         int vecID;
@@ -233,7 +238,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_put_att_text( ncid, vecID,
             "long_name", record.long_name.size(), record.long_name.data());
         MPI_OUT err = nc_enddef( ncid);
-        record.function( resultH, var, grid, p, gp, mag);
+        record.function( resultH, var, grid, gp, mag);
         dg::blas2::symv( projectH, resultH, transferH);
 #ifdef FELTOR_MPI
         if(rank==0)
@@ -262,9 +267,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_redef(ncid);
     }
 
-    //field IDs
-    int EtimeID, EtimevarID;
-    MPI_OUT err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    //Create field IDs
     std::map<std::string, int> id3d, id4d;
     for( auto record& : feltor::diagnostics3d_list)
     {
@@ -279,6 +282,10 @@ int main( int argc, char* argv[])
     {
         std::string name = record.name + "_ta2d";
         std::string long_name = record.long_name + " (Toroidal average)";
+        if( record.integral){
+            name += "_tt";
+            long_name+= " (Time average)";
+        }
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
             &id3d[name]);//creates a new id3d entry
         MPI_OUT err = nc_put_att_text( ncid, id3d[name], "long_name", long_name.size(),
@@ -286,6 +293,10 @@ int main( int argc, char* argv[])
 
         name = record.name + "_2d";
         long_name = record.long_name + " (Evaluated on phi = pi plane)";
+        if( record.integral){
+            name += "_tt";
+            long_name+= " (Time average)";
+        }
         err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
             &id3d[name]);
         err = nc_put_att_text( ncid, id3d[name], "long_name", long_name.size(),
@@ -293,9 +304,8 @@ int main( int argc, char* argv[])
     }
     MPI_OUT err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    double dt_new = p.dt;//, dt =0;
     MPI_OUT std::cout << "First output ... \n";
-    //first, update quantities in feltor
+    //first, update feltor (to get potential ....)
     {
         std::array<std::array<DVec,2>,2> y1(y0);
         try{
@@ -306,24 +316,8 @@ int main( int argc, char* argv[])
             MPI_OUT err = nc_close(ncid);
             return -1;
         }
-        feltor.update_quantities();
     }
-    MPI_OUT q.display(std::cout);
-    double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
-    DVec transferD( dg::evaluate(dg::zero, g3d_out));
-    HVec transferH( dg::evaluate(dg::zero, g3d_out));
-    DVec transfer2dD = dg::evaluate( dg::zero, g2d_out);
-    HVec transfer2dH = dg::evaluate( dg::zero, g2d_out);
-    /// Construct feltor::Variables object for diagnostics
-    DVec result = dg::evaluate( dg::zero, grid);
 
-    std::array<DVec, 3> gradPsip;
-    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
-    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
-    gradPsip[2] =  result; //zero
-    feltor::Variables var = {
-        feltor, p, gradPsip, gradPsip
-    };
     for( auto record& : diagnostics3d_list)
     {
         record.function( result, var);
@@ -354,14 +348,37 @@ int main( int argc, char* argv[])
                 transferH.data());
 #endif // FELTOR_MPI
     }
+    for( auto record& : diagnostics2d_list)
+    {
+        record.function( result, var);
+        dg::blas2::symv( projectD, result, transferD);
+        dg::assign( transferD, transferH);
+#ifdef FELTOR_MPI
+            if(rank==0)
+            {
+                for( int rrank=0; rrank<size; rrank++)
+                {
+                    if(rrank!=0)
+                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                              rrank, rrank, g3d_out.communicator(), &status);
+                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
+                    start4d[1] = coords[2]*count4d[1],
+                    start4d[2] = coords[1]*count4d[2],
+                    start4d[3] = coords[0]*count4d[3];
+                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
+                        transferH.data().data());
+                }
+            }
+            else
+                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                          0, rank, g3d_out.communicator());
+            MPI_Barrier( g3d_out.communicator());
+#else
+            err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
+                transferH.data());
+#endif // FELTOR_MPI
+    }
     MPI_OUT err = nc_put_vara_double( ncid, tvarID, start4d, count4d, &time);
-    MPI_OUT err = nc_put_vara_double( ncid, EtimevarID, start4d, count4d, &time);
-
-    size_t Estart[] = {0};
-    size_t Ecount[] = {1};
-    for( auto pair : v0d)
-        MPI_OUT err = nc_put_vara_double( ncid, id0d.at(pair.first),
-            Estart, Ecount, pair.second);
     MPI_OUT err = nc_close(ncid);
     MPI_OUT std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -373,7 +390,8 @@ int main( int argc, char* argv[])
     dg::Timer t;
     t.tic();
     unsigned step = 0;
-    MPI_OUT q.display(std::cout);
+    std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
+    std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
@@ -394,31 +412,47 @@ int main( int argc, char* argv[])
                 }
                 step++;
             }
+            Timer tti;
+            tti.tic();
             double deltat = time - previous_time;
-            feltor.update_quantities();
-            MPI_OUT std::cout << "Time "<<time<<" Current timestep "<<dt_new<<"\n";
-            dEdt = (*v0d["energy"] - E0)/deltat, dMdt = (*v0d["mass"] - M0)/deltat;
-            E0 = *v0d["energy"], M0 = *v0d["mass"];
-            accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
-            accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
-            MPI_OUT err = nc_open(file_name.data(), NC_WRITE, &ncid);
-            Estart[0]++;
-            MPI_OUT err = nc_put_vara_double( ncid, EtimevarID,
-                Estart, Ecount, &time);
-            for( auto pair : v0d)
-                MPI_OUT err = nc_put_vara_double( ncid, id0d.at(pair.first),
-                    Estart, Ecount, pair.second);
-            MPI_OUT err = nc_close(ncid);
+            double energy = 0, ediff = 0.;
+            for( auto record& : diagnostics2d_list)
+            {
+                if( std::find( energies.begin(), energies.end(), record.name) != energies.end())
+                {
+                    record.function( result, var);
+                    energy += dg::blas1::dot( result, feltor.vol3d());
+                }
+                if( std::find( energy_diff.begin(), energy_diff.end(), record.name) != energy_diff.end())
+                {
+                    record.function( result, var);
+                    ediff += dg::blas1::dot( result, feltor.vol3d());
+                }
+                if( record.integral)
+                {
+                    record.function( result, var);
+                    dg::blas2::symv( projectD, result, transferD);
+                    //toroidal average and add to time integral
+                    toroidal_average( transferD, transfer2dD);
+                    time_integrals.at(record.name+"_ta2d_tt").add( time, transfer2dD);
 
-            MPI_OUT q.display(std::cout);
-            MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
-            MPI_OUT std::cout << "(E_tot-E_0)/E_0: "<< (*v0d["energy"]-energy0)/energy0<<"\t";
+                    // 2d data of plane varphi = 0
+                    unsigned kmp = g3d_out.Nz()/2;
+                    dg::HVec t2d_mp(result.data().begin() + kmp*g2d_out.size(),
+                        result.data().begin() + (kmp+1)*g2d_out.size() );
+                    time_integrals.at(record.name+"_2d_tt").add( time, transfer2dD);
+                }
+
+            }
+
+            dEdt = (energy - E0)/deltat;
+            E0 = energy;
+            accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
+
+            MPI_OUT std::cout << "Time "<<time<<"\n";
             MPI_OUT std::cout <<" d E/dt = " << dEdt
-                      <<" Lambda = " << *v0d["ediff"]
+                      <<" Lambda = " << ediff
                       <<" -> Accuracy: " << accuracy << "\n";
-            MPI_OUT std::cout <<" d M/dt = " << dMdt
-                      <<" Lambda = " << *v0d["diff"]
-                      <<" -> Accuracy: " << accuracyM << "\n";
             //----------------Test if induction equation holds
             if( p.beta != 0)
             {
@@ -426,11 +460,13 @@ int main( int argc, char* argv[])
                     feltor.density(0), feltor.velocity(0), temp);
                 dg::blas1::pointwiseDot( p.beta,
                     feltor.density(1), feltor.velocity(1), -p.beta, temp);
-                double norm  = dg::blas2::dot( temp, vol3d, temp);
+                double norm  = dg::blas2::dot( temp, feltor.vol3d(), temp);
                 dg::blas1::axpby( -1., feltor.lapMperpA(), 1., temp);
-                double error = dg::blas2::dot( temp, vol3d, temp);
+                double error = dg::blas2::dot( temp, feltor.vol3d(), temp);
                 MPI_OUT std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
             }
+            tti.tic();
+            std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
         }
         ti.toc();
         MPI_OUT std::cout << "\n\t Step "<<step <<" of "
@@ -474,22 +510,29 @@ int main( int argc, char* argv[])
         }
         for( auto record& : diagnostics2d_list)
         {
-            record.function( result, var);
-            dg::blas2::symv( projectD, result, transferD);
-            //toroidal average
-            toroidal_average( transferD, transfer2dD, false);
-            dg::assign( transfer2dD, transfer2dH);
-            err = nc_put_vara_double( ncid_out, id3d.at(record.name+"_ta2d"),
-                start2d, count2d, transfer2dH.data());
+            if(!record.integral)
+            {
+                record.function( result, var);
+                dg::blas2::symv( projectD, result, transferD);
+                //toroidal average
+                toroidal_average( transferD, transfer2dD);
+                dg::assign( transfer2dD, transfer2dH);
 
-            // 2d data of plane varphi = 0
-            unsigned kmp = g3d_out.Nz()/2;
-            dg::HVec t2d_mp(result.data().begin() + kmp*g2d_out.size(),
-                result.data().begin() + (kmp+1)*g2d_out.size() );
-            err = nc_put_vara_double( ncid_out, id3d.at(record.name+"_2d"),
-                start2d, count2d, t2d_mp.data() );
-
-    void output( int ncid, HVec& transferH, Geometry grid, int varID)
+                // 2d data of plane varphi = 0
+                unsigned kmp = g3d_out.Nz()/2;
+                dg::HVec t2d_mp(result.data().begin() + kmp*g2d_out.size(),
+                    result.data().begin() + (kmp+1)*g2d_out.size() );
+            }
+            else //manage the time integrators
+            {
+                transfer2dD = time_integrals.at(record.name+"_ta2d_tt").get_integral( );
+                std::array<double,2> bb = time_integrals.at(record.name+"_ta2d_tt").get_boundaries( );
+                dg::scal( transfer2dD, 1./(bb[1]-bb[0]));
+                time_integrals.at(record.name+"_ta2d_tt").flush( );
+                transfer2dD = time_integrals.at(record.name+"_2d_tt").get_integral( );
+                std::array<double,2> bb = time_integrals.at(record.name+"_2d_tt").get_boundaries( );
+                dg::scal( transfer2dD, 1./(bb[1]-bb[0]));
+                time_integrals.at(record.name+"_2d_tt").flush( );
 #ifdef FELTOR_MPI
             if(rank==0)
             {

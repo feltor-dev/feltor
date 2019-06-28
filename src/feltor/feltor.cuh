@@ -158,33 +158,6 @@ struct ComputeSource{
 };
 }//namespace routines
 
-
-struct Quantities
-{
-    double mass = 0, diff = 0; //mass and mass diffusion
-    double energy = 0, ediff = 0; //total energy and energy diffusion
-    //entropy parallel and perp energies
-    double S[2] = {0,0}, Tpar[2] = {0,0}, Tperp = 0, Apar = 0;
-    //resisitive and diffusive terms
-    double Dres = 0, Dpar[4] = {0,0,0,0}, Dperp[4] = {0,0,0,0};
-    double aligned = 0; //alignment parameter
-    double source[4] = {0,0,0,0}; //source terms
-    void display( std::ostream& os = std::cout ) const
-    {
-        os << "Quantities: \n"
-           << "    Mass: "<<std::setw(11)<< mass  <<" Mass diffusion   "<<diff<<"\n"
-           << "  Energy: "<<std::setw(11)<<energy <<" Energy diffusion "<<ediff<<"\n"
-           << "       S: ["<<S[0]<<", "<<S[1]<<"]\n"
-           << "   Tperp: "<<Tperp<<"  Apar: "<<Apar<<"\n"
-           << "    Tpar: ["<<Tpar[0]<<", "<<Tpar[1]<<"]\n"
-           << "    Dres: "<<Dres<<"\n"
-           << "    Dpar: ["<<Dpar[0]<<", "<<Dpar[1]<<", "<<Dpar[2]<<", "<<Dpar[3]<<"]\n"
-           << "   Dperp: ["<<Dperp[0]<<", "<<Dperp[1]<<", "<<Dperp[2]<<", "<<Dperp[3]<<"]\n"
-           << " Sources: ["<<source[0]<<", "<<source[1]<<", "<<source[2]<<", "<<source[3]<<"]\n"
-           << " aligned: "<<aligned<<"\n";
-    }
-};
-
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
@@ -275,6 +248,7 @@ struct Explicit
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }
+    const Container& vol3d() const { return m_vol3d;}
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
         return m_b;
