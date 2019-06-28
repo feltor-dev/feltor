@@ -8,6 +8,8 @@
 #include "feltor/feltor.cuh"
 #include "feltor/parameters.h"
 
+#include "feltor/init.h"
+
 namespace feltor{
 
 // This file constitutes the diagnostics module of feltor
@@ -150,6 +152,85 @@ struct Record{
     bool integral;
     std::function<void( DVec&, Variables&)> function;
 };
+
+struct Record_static{
+    std::string name;
+    std::string long_name;
+    bool integral;
+    std::function<void( HVec&, Variables&, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag)> function;
+};
+
+//Here is a list of static (time-independent) 3d variables that go into the output
+std::vector<Record_static> dianostics3d_static_list = {
+    { "BR", "R-component of magnetic field in cylindrical coordinates",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            dg::geo::BFieldR fieldR(mag);
+            result = dg::pullback( fieldR, grid);
+        }
+    },
+    { "BZ", "Z-component of magnetic field in cylindrical coordinates",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            dg::geo::BFieldZ fieldZ(mag);
+            result = dg::pullback( fieldZ, grid);
+        }
+    },
+    { "BP", "Contravariant P-component of magnetic field in cylindrical coordinates",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            dg::geo::BFieldP fieldP(mag);
+            result = dg::pullback( fieldP, grid);
+        }
+    },
+    { "Psip", "Flux-function psi",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+             result = dg::pullback( mag.psip(), grid);
+        }
+    },
+    { "Nprof", "Density profile",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            Initialize init;
+            result = init.profile();
+        }
+    },
+    { "Source", "Source region",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            Initialize init;
+            result = init.source_damping();
+        }
+    },
+    { "Damping", "Damping region for initial profile",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            Initialize init;
+            result = init.profile_damping();
+        }
+    },
+    { "xc", "x-coordinate in Cartesian coordinate system",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            HVec xc = dg::evaluate( dg::cooX3d, grid);
+            HVec yc = dg::evaluate( dg::cooY3d, grid);
+            HVec zc = dg::evaluate( dg::cooZ3d, grid);
+            dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+            result = xc;
+        }
+    },
+    { "yc", "y-coordinate in Cartesian coordinate system",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            HVec xc = dg::evaluate( dg::cooX3d, grid);
+            HVec yc = dg::evaluate( dg::cooY3d, grid);
+            HVec zc = dg::evaluate( dg::cooZ3d, grid);
+            dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+            result = yc;
+        }
+    },
+    { "zc", "z-coordinate in Cartesian coordinate system",
+        []( HVec& result, Variables& v, Geometry& grid, feltor::Parameters p, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+            HVec xc = dg::evaluate( dg::cooX3d, grid);
+            HVec yc = dg::evaluate( dg::cooY3d, grid);
+            HVec zc = dg::evaluate( dg::cooZ3d, grid);
+            dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+            result = zc;
+        }
+    },
+}
 
 // Here are all 3d outputs we want to have
 std::vector<Record> diagnostics3d_list = {

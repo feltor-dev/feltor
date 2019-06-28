@@ -32,6 +32,9 @@ using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
+#include "init.h"
+#include "feltordiag.h"
+
 #ifdef FELTOR_MPI
 //ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
 void sigterm_handler(int signal)
@@ -148,186 +151,16 @@ int main( int argc, char* argv[])
     feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
-    //!///////////////////The profiles///////////////////////////////////////////
-    //First the profile and the source (on the host since we want to output those)
-    HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(),
-        p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
-    HVec xpoint_damping = dg::evaluate( dg::one, grid);
-    if( gp.hasXpoint() )
-        xpoint_damping = dg::pullback(
-            dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
-    HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift
-        p.rho_source, p.alpha, -1), grid);
-    HVec damping_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift
-        p.rho_damping, p.alpha, +1), grid);
-    dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
-
-    HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
-        mag.psip(), -p.alpha, p.alpha, -1), grid);
-    dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
-    dg::blas1::pointwiseDot( profile_damping, profile, profile);
-
-    feltor.set_source( profile, p.omega_source, source_damping);
-
     //!///////////////////The initial field///////////////////////////////////////////
     double time = 0;
     std::array<std::array<DVec,2>,2> y0;
+    feltor::Initialize init( grid, p, mag);
     if( argc == 4)
-    {
-        //Now perturbation
-        HVec ntilde = dg::evaluate(dg::zero,grid);
-        if( p.initne == "blob" || p.initne == "straight blob")
-        {
-            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-            dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-            if( p.symmetric)
-                ntilde = dg::pullback( init0, grid);
-            else if( p.initne == "blob")//rounds =3 ->2*3-1
-            {
-                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
-            }
-            else if( p.initne == "straight blob")//rounds =1 ->2*1-1
-            {
-                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
-            }
-        }
-        else if( p.initne == "turbulence")
-        {
-            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-            dg::BathRZ init0(16,16,Rmin,Zmin, 30.,2.,p.amp);
-            if( p.symmetric)
-                ntilde = dg::pullback( init0, grid);
-            else
-            {
-                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
-            }
-            dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
-        }
-        else if( p.initne == "zonal")
-        {
-            dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
-            ntilde = dg::pullback( init0, grid);
-            dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
-        }
-        else
-            MPI_OUT std::cerr <<"WARNING: Unknown initial condition!\n";
-        y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(profile);
-        dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
-        MPI_OUT std::cout << "initialize ni" << std::endl;
-        feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
-        double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
-        MPI_OUT std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;
-        if( minimalni <= -1)
-        {
-            MPI_OUT std::cerr << "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n";
-            MPI_OUT std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;
-            return -1;
-        }
-
-        dg::blas1::copy( 0., y0[1][0]); //set we = 0
-        dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
-    }
+        y0 = init.init_from_parameters();
     if( argc == 5)
-    {
-        ///////////////////read in and show inputfile
-        file::NC_Error_Handle errIN;
-        int ncidIN;
-        errIN = nc_open( argv[4], NC_NOWRITE, &ncidIN);
-        size_t lengthIN;
-        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-        std::string inputIN( lengthIN, 'x');
-        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
+        y0 = init.init_from_file(argv[4]);
+    feltor.set_source( init.profile(), p.omega_source, init.source_damping());
 
-        Json::Value jsIN;
-        std::stringstream is(inputIN);
-        parseFromStream( parser, is, &jsIN, &errs); //read input without comments
-        const feltor::Parameters pIN(  jsIN);
-        MPI_OUT std::cout << "RESTART from file "<<argv[4]<< std::endl;
-        MPI_OUT std::cout << " file parameters:" << std::endl;
-        MPI_OUT pIN.display( std::cout);
-
-        // Now read in last timestep
-        Geometry grid_IN( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
-            pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.symmetric ? 1 : pIN.Nz_out, pIN.bcxN, pIN.bcyN, dg::PER
-            #ifdef FELTOR_MPI
-            , comm
-            #endif //FELTOR_MPI
-            );
-        IHMatrix interpolateIN = dg::create::interpolation( grid, grid_IN);
-
-        #ifdef FELTOR_MPI
-        int dimsIN[3],  coordsIN[3];
-        MPI_Cart_get( comm, 3, dimsIN, periods, coordsIN);
-        size_t countIN[4] = {1, grid_IN.local().Nz(),
-            g3d_out.n()*(grid_IN.local().Ny()),
-            g3d_out.n()*(grid_IN.local().Nx())};
-        size_t startIN[4] = {0, coordsIN[2]*countIN[1],
-                                coordsIN[1]*countIN[2],
-                                coordsIN[0]*countIN[3]};
-        #else //FELTOR_MPI
-        size_t startIN[4] = {0, 0, 0, 0};
-        size_t countIN[4] = {1, grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
-            grid_IN.n()*grid_IN.Nx()};
-        #endif //FELTOR_MPI
-        std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid));
-        HVec transferINH( dg::evaluate(dg::zero, grid_IN));
-
-        std::string namesIN[5] = {"electrons", "ions", "Ue", "Ui", "induction"};
-
-        int timeIDIN;
-        /////////////////////Get time length and initial data///////////////////////////
-        errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
-        errIN = nc_inq_dimlen(ncidIN, timeIDIN, &startIN[0]);
-        startIN[0] -= 1;
-        errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);
-        errIN = nc_get_vara_double( ncidIN, timeIDIN, startIN, countIN, &time);
-        MPI_OUT std::cout << " Current time = "<< time <<  std::endl;
-        for( unsigned i=0; i<5; i++)
-        {
-            int dataID;
-            errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataID);
-            errIN = nc_get_vara_double( ncidIN, dataID, startIN, countIN,
-                #ifdef FELTOR_MPI
-                    transferINH.data().data()
-                #else //FELTOR_MPI
-                    transferINH.data()
-                #endif //FELTOR_MPI
-                );
-            dg::blas2::gemv( interpolateIN, transferINH, transferINHvec[i]);
-        }
-        errIN = nc_close(ncidIN);
-        /// ///////////////Now Construct initial fields
-        //
-        //Convert to N-1 and W
-        dg::blas1::plus( transferINHvec[0], -1.);
-        dg::blas1::plus( transferINHvec[1], -1.);
-        dg::blas1::axpby( 1., transferINHvec[2], 1./p.mu[0], transferINHvec[4], transferINHvec[2]);
-        dg::blas1::axpby( 1., transferINHvec[3], 1./p.mu[1], transferINHvec[4], transferINHvec[3]);
-
-        dg::assign( transferINHvec[0], y0[0][0]); //ne-1
-        dg::assign( transferINHvec[1], y0[0][1]); //Ni-1
-        dg::assign( transferINHvec[2], y0[1][0]); //We
-        dg::assign( transferINHvec[3], y0[1][1]); //Wi
-
-    }
     ////////////map quantities to output/////////////////
     //since we map pointers we don't need to update those later
     std::map<std::string, const DVec* > v4d;
@@ -386,72 +219,47 @@ int main( int argc, char* argv[])
     size_t count4d[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(),
         g3d_out.n()*g3d_out.Nx()};
 #endif //FELTOR_MPI
-    {   //output static 3d variables into file
-        dg::geo::BFieldR fieldR(mag);
-        dg::geo::BFieldZ fieldZ(mag);
-        dg::geo::BFieldP fieldP(mag);
 
-        HVec vecR = dg::pullback( fieldR, grid);
-        HVec vecZ = dg::pullback( fieldZ, grid);
-        HVec vecP = dg::pullback( fieldP, grid);
-        HVec psip = dg::pullback( mag.psip(), grid);
-        HVec xc = dg::evaluate( dg::cooX3d, grid);
-        HVec yc = dg::evaluate( dg::cooY3d, grid);
-        HVec zc = dg::evaluate( dg::cooZ3d, grid);
-        dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
-
-        std::vector<std::tuple<std::string, const HVec*, std::string> > v3d;
-        v3d.emplace_back( "BR", &vecR,
-            "R-component of magnetic field in cylindrical coordinates");
-        v3d.emplace_back( "BZ", &vecZ,
-            "Z-component of magnetic field in cylindrical coordinates");
-        v3d.emplace_back( "BP", &vecP,
-            "P-component of magnetic field in cylindrical coordinates");
-        v3d.emplace_back( "Psip", &psip, "Flux-function psi");
-        v3d.emplace_back( "Nprof", &profile, "Density profile");
-        v3d.emplace_back( "Source", &source_damping, "Source region");
-        v3d.emplace_back( "Damping", &profile_damping, "Damping region for initial profile");
-        v3d.emplace_back( "xc", &xc, "x-coordinate in Cartesian coordinate system");
-        v3d.emplace_back( "yc", &yc, "y-coordinate in Cartesian coordinate system");
-        v3d.emplace_back( "zc", &zc, "z-coordinate in Cartesian coordinate system");
-
-        IHMatrix project = dg::create::projection( g3d_out, grid);
-        HVec transferH( dg::evaluate(dg::zero, g3d_out));
-        for( auto tp : v3d)
-        {
-            int vecID;
-            MPI_OUT err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
-                &dim_ids[1], &vecID);
-            MPI_OUT err = nc_put_att_text( ncid, vecID,
-                "long_name", std::get<2>(tp).size(), std::get<2>(tp).data());
-            MPI_OUT err = nc_enddef( ncid);
-            dg::blas2::symv( project, *std::get<1>(tp), transferH);
+    //output static 3d variables into file
+    dg::MultiMatrix<IHMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    dg::MultiMatrix<IDMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    HVec transferH( dg::evaluate(dg::zero, g3d_out));
+    HVec resultH(dg::evaluate( dg::zero, grid));
+    for ( auto record& diagnostics3d_static_list)
+    {
+        int vecID;
+        MPI_OUT err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 3,
+            &dim_ids[1], &vecID);
+        MPI_OUT err = nc_put_att_text( ncid, vecID,
+            "long_name", record.long_name.size(), record.long_name.data());
+        MPI_OUT err = nc_enddef( ncid);
+        record.function( resultH, var, grid, p, gp, mag);
+        dg::blas2::symv( projectH, resultH, transferH);
 #ifdef FELTOR_MPI
-            if(rank==0)
+        if(rank==0)
+        {
+            for( int rrank=0; rrank<size; rrank++)
             {
-                for( int rrank=0; rrank<size; rrank++)
-                {
-                    if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, g3d_out.communicator(), &status);
-                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
-                    start4d[1] = coords[2]*count4d[1],
-                    start4d[2] = coords[1]*count4d[2],
-                    start4d[3] = coords[0]*count4d[3];
-                    err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
-                        transferH.data().data());
-                }
+                if(rrank!=0)
+                    MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                          rrank, rrank, g3d_out.communicator(), &status);
+                MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
+                start4d[1] = coords[2]*count4d[1],
+                start4d[2] = coords[1]*count4d[2],
+                start4d[3] = coords[0]*count4d[3];
+                err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
+                    transferH.data().data());
             }
-            else
-                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                          0, rank, g3d_out.communicator());
-            MPI_Barrier( g3d_out.communicator());
-#else
-            err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
-                transferH.data());
-#endif // FELTOR_MPI
-            MPI_OUT err = nc_redef(ncid);
         }
+        else
+            MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
+                      0, rank, g3d_out.communicator());
+        MPI_Barrier( g3d_out.communicator());
+#else
+        err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
+            transferH.data());
+#endif // FELTOR_MPI
+        MPI_OUT err = nc_redef(ncid);
     }
 
     //field IDs
@@ -506,8 +314,6 @@ int main( int argc, char* argv[])
     HVec transferH( dg::evaluate(dg::zero, g3d_out));
     DVec transfer2dD = dg::evaluate( dg::zero, g2d_out);
     HVec transfer2dH = dg::evaluate( dg::zero, g2d_out);
-    //fast_projection is an undocumented secret feltor function...
-    IDMatrix project = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
     /// Construct feltor::Variables object for diagnostics
     DVec result = dg::evaluate( dg::zero, grid);
 
@@ -521,7 +327,7 @@ int main( int argc, char* argv[])
     for( auto record& : diagnostics3d_list)
     {
         record.function( result, var);
-        dg::blas2::symv( project, result, transferD);
+        dg::blas2::symv( projectD, result, transferD);
         dg::assign( transferD, transferH);
 #ifdef FELTOR_MPI
             if(rank==0)
@@ -639,7 +445,7 @@ int main( int argc, char* argv[])
         for( auto record& : diagnostics3d_list)
         {
             record.function( result, var);
-            dg::blas2::symv( project, result, transferD);
+            dg::blas2::symv( projectD, result, transferD);
             dg::assign( transferD, transferH);
 #ifdef FELTOR_MPI
             if(rank==0)
@@ -669,10 +475,10 @@ int main( int argc, char* argv[])
         for( auto record& : diagnostics2d_list)
         {
             record.function( result, var);
-            dg::blas2::symv( project, result, transferD);
+            dg::blas2::symv( projectD, result, transferD);
             //toroidal average
-            toroidal_average( transferD, result, false);
-            dg::blas1::transfer( transfer2dD, transfer2dH);
+            toroidal_average( transferD, transfer2dD, false);
+            dg::assign( transfer2dD, transfer2dH);
             err = nc_put_vara_double( ncid_out, id3d.at(record.name+"_ta2d"),
                 start2d, count2d, transfer2dH.data());
 
@@ -683,6 +489,7 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid_out, id3d.at(record.name+"_2d"),
                 start2d, count2d, t2d_mp.data() );
 
+    void output( int ncid, HVec& transferH, Geometry grid, int varID)
 #ifdef FELTOR_MPI
             if(rank==0)
             {
