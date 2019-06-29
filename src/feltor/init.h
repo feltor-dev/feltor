@@ -65,7 +65,7 @@ struct Initialize
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
                 //evaluate should always be used with mx,my > 1
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 3);
             }
             else if( p.initne == "straight blob")//rounds =1 ->2*1-1
             {
@@ -73,7 +73,7 @@ struct Initialize
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
                 //evaluate should always be used with mx,my > 1
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
         }
         else if( p.initne == "turbulence")
@@ -88,7 +88,7 @@ struct Initialize
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
                 //evaluate should always be used with mx,my > 1
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
         }

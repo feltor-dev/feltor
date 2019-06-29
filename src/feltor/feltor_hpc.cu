@@ -21,7 +21,6 @@ using DMatrix = dg::MDMatrix;
 using IDMatrix = dg::MIDMatrix;
 using IHMatrix = dg::MIHMatrix;
 using Geometry = dg::CylindricalMPIGrid3d;
-using Geometry2d = dg::CartesianMPIGrid2d;
 #define MPI_OUT if(rank==0)
 #else //FELTOR_MPI
 using HVec = dg::HVec;
@@ -30,7 +29,6 @@ using DMatrix = dg::DMatrix;
 using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
-using Geometry2d = dg::CartesianGrid2d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
@@ -62,7 +60,6 @@ int main( int argc, char* argv[])
 #endif
     int periods[3] = {false, false, true}; //non-, non-, periodic
     int rank, size;
-    MPI_Status status;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -141,7 +138,6 @@ int main( int argc, char* argv[])
         , comm
         #endif //FELTOR_MPI
         );
-    std::unique_ptr<Geometry2d> g2d_out_ptr = g3d_out.perp_grid();
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
@@ -167,8 +163,8 @@ int main( int argc, char* argv[])
     dg::MultiMatrix<IDMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
     HVec transferH( dg::evaluate(dg::zero, g3d_out));
     DVec transferD( dg::evaluate(dg::zero, g3d_out));
-    DVec transfer2dD = dg::evaluate( dg::zero, g2d_out);
-    HVec transfer2dH = dg::evaluate( dg::zero, g2d_out);
+    DVec transferD2d = dg::evaluate( dg::zero, g2d_out);
+    HVec transferH2d = dg::evaluate( dg::zero, g2d_out);
     /// Construct feltor::Variables object for diagnostics
     DVec result = dg::evaluate( dg::zero, grid);
     HVec resultH( dg::evaluate( dg::zero, grid));
@@ -191,6 +187,7 @@ int main( int argc, char* argv[])
     std::string file_name = argv[3];
     int ncid=-1;
     MPI_OUT err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    feltor::ManageOutput output(g3d_out);
     /// Set global attributes
     std::map<std::string, std::string> att;
     att["title"] = "Output file of feltor/src/feltor_hpc.cu";
@@ -216,17 +213,9 @@ int main( int argc, char* argv[])
     // Define dimensions (t,z,y,x)
     int dim_ids[4], tvarID;
 #ifdef FELTOR_MPI
-    int coords[3];
     MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out.global());
-    size_t start4d[4] = {0, 0, 0, 0};
-    size_t count4d[4] = {1, g3d_out.local().Nz(),
-        g3d_out.n()*(g3d_out.local().Ny()),
-        g3d_out.n()*(g3d_out.local().Nx())};
 #else //FELTOR_MPI
     err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out);
-    size_t start4d[4] = {0, 0, 0, 0};
-    size_t count4d[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(),
-        g3d_out.n()*g3d_out.Nx()};
 #endif //FELTOR_MPI
 
     //create & output static 3d variables into file
@@ -240,30 +229,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_enddef( ncid);
         record.function( resultH, var, grid, gp, mag);
         dg::blas2::symv( projectH, resultH, transferH);
-#ifdef FELTOR_MPI
-        if(rank==0)
-        {
-            for( int rrank=0; rrank<size; rrank++)
-            {
-                if(rrank!=0)
-                    MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                          rrank, rrank, g3d_out.communicator(), &status);
-                MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
-                start4d[1] = coords[2]*count4d[1],
-                start4d[2] = coords[1]*count4d[2],
-                start4d[3] = coords[0]*count4d[3];
-                err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
-                    transferH.data().data());
-            }
-        }
-        else
-            MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                      0, rank, g3d_out.communicator());
-        MPI_Barrier( g3d_out.communicator());
-#else
-        err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
-            transferH.data());
-#endif // FELTOR_MPI
+        output.output_static3d( ncid, vecID, transferH);
         MPI_OUT err = nc_redef(ncid);
     }
 
@@ -305,7 +271,7 @@ int main( int argc, char* argv[])
     MPI_OUT err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     MPI_OUT std::cout << "First output ... \n";
-    //first, update feltor (to get potential ....)
+    //first, update feltor (to get potential etc.)
     {
         std::array<std::array<DVec,2>,2> y1(y0);
         try{
@@ -318,67 +284,29 @@ int main( int argc, char* argv[])
         }
     }
 
+    size_t start = 0, count = 1;
     for( auto record& : diagnostics3d_list)
     {
         record.function( result, var);
         dg::blas2::symv( projectD, result, transferD);
         dg::assign( transferD, transferH);
-#ifdef FELTOR_MPI
-            if(rank==0)
-            {
-                for( int rrank=0; rrank<size; rrank++)
-                {
-                    if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, g3d_out.communicator(), &status);
-                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
-                    start4d[1] = coords[2]*count4d[1],
-                    start4d[2] = coords[1]*count4d[2],
-                    start4d[3] = coords[0]*count4d[3];
-                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                        transferH.data().data());
-                }
-            }
-            else
-                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                          0, rank, g3d_out.communicator());
-            MPI_Barrier( g3d_out.communicator());
-#else
-            err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                transferH.data());
-#endif // FELTOR_MPI
+        output.output_dynamic3d( ncid, id4d.at(record.name), start, transferH);
     }
     for( auto record& : diagnostics2d_list)
     {
         record.function( result, var);
         dg::blas2::symv( projectD, result, transferD);
-        dg::assign( transferD, transferH);
-#ifdef FELTOR_MPI
-            if(rank==0)
-            {
-                for( int rrank=0; rrank<size; rrank++)
-                {
-                    if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, g3d_out.communicator(), &status);
-                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
-                    start4d[1] = coords[2]*count4d[1],
-                    start4d[2] = coords[1]*count4d[2],
-                    start4d[3] = coords[0]*count4d[3];
-                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                        transferH.data().data());
-                }
-            }
-            else
-                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                          0, rank, g3d_out.communicator());
-            MPI_Barrier( g3d_out.communicator());
-#else
-            err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                transferH.data());
-#endif // FELTOR_MPI
+        //toroidal average
+        toroidal_average( transferD, transfer2dD);
+        dg::assign( transfer2dD, transfer2dH);
+
+        // 2d data of plane varphi = 0
+        dg::HVec t2d_mp(result.data().begin(),
+            result.data().begin() + g2d_out.size() );
+        //compute toroidal average and extract 2d field
+        output.output_dynamic2d( ncid, id3d.at(name), start, transferH2d);
     }
-    MPI_OUT err = nc_put_vara_double( ncid, tvarID, start4d, count4d, &time);
+    MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
     MPI_OUT err = nc_close(ncid);
     MPI_OUT std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -390,8 +318,6 @@ int main( int argc, char* argv[])
     dg::Timer t;
     t.tic();
     unsigned step = 0;
-    std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-    std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
@@ -418,12 +344,12 @@ int main( int argc, char* argv[])
             double energy = 0, ediff = 0.;
             for( auto record& : diagnostics2d_list)
             {
-                if( std::find( energies.begin(), energies.end(), record.name) != energies.end())
+                if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
                     record.function( result, var);
                     energy += dg::blas1::dot( result, feltor.vol3d());
                 }
-                if( std::find( energy_diff.begin(), energy_diff.end(), record.name) != energy_diff.end())
+                if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
                 {
                     record.function( result, var);
                     ediff += dg::blas1::dot( result, feltor.vol3d());
@@ -433,13 +359,12 @@ int main( int argc, char* argv[])
                     record.function( result, var);
                     dg::blas2::symv( projectD, result, transferD);
                     //toroidal average and add to time integral
-                    toroidal_average( transferD, transfer2dD);
-                    time_integrals.at(record.name+"_ta2d_tt").add( time, transfer2dD);
+                    toroidal_average( transferD, transferD2d);
+                    time_integrals.at(record.name+"_ta2d_tt").add( time, transferD2d);
 
                     // 2d data of plane varphi = 0
-                    unsigned kmp = g3d_out.Nz()/2;
-                    dg::HVec t2d_mp(result.data().begin() + kmp*g2d_out.size(),
-                        result.data().begin() + (kmp+1)*g2d_out.size() );
+                    dg::HVec t2d_mp(result.data().begin(),
+                        result.data().begin() + g2d_out.size() );
                     time_integrals.at(record.name+"_2d_tt").add( time, transfer2dD);
                 }
 
@@ -483,30 +408,7 @@ int main( int argc, char* argv[])
             record.function( result, var);
             dg::blas2::symv( projectD, result, transferD);
             dg::assign( transferD, transferH);
-#ifdef FELTOR_MPI
-            if(rank==0)
-            {
-                for( int rrank=0; rrank<size; rrank++)
-                {
-                    if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, g3d_out.communicator(), &status);
-                    MPI_Cart_coords( g3d_out.communicator(), rrank, 3, coords);
-                    start4d[1] = coords[2]*count4d[1],
-                    start4d[2] = coords[1]*count4d[2],
-                    start4d[3] = coords[0]*count4d[3];
-                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                        transferH.data().data());
-                }
-            }
-            else
-                MPI_Send( transferH.data().data(), g3d_out.local().size(), MPI_DOUBLE,
-                          0, rank, g3d_out.communicator());
-            MPI_Barrier( g3d_out.communicator());
-#else
-            err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                transferH.data());
-#endif // FELTOR_MPI
+            output.output_dynamic3d( ncid, id4d.at(record.name), start, transferH);
         }
         for( auto record& : diagnostics2d_list)
         {
@@ -519,44 +421,26 @@ int main( int argc, char* argv[])
                 dg::assign( transfer2dD, transfer2dH);
 
                 // 2d data of plane varphi = 0
-                unsigned kmp = g3d_out.Nz()/2;
-                dg::HVec t2d_mp(result.data().begin() + kmp*g2d_out.size(),
-                    result.data().begin() + (kmp+1)*g2d_out.size() );
+                dg::HVec t2d_mp(result.data().begin(),
+                    result.data().begin() + g2d_out.size() );
             }
             else //manage the time integrators
             {
-                transfer2dD = time_integrals.at(record.name+"_ta2d_tt").get_integral( );
-                std::array<double,2> bb = time_integrals.at(record.name+"_ta2d_tt").get_boundaries( );
+                std::string name = record.name+"_ta2d_tt";
+                transfer2dD = time_integrals.at(name).get_integral( );
+                std::array<double,2> bb = time_integrals.at(name).get_boundaries( );
                 dg::scal( transfer2dD, 1./(bb[1]-bb[0]));
-                time_integrals.at(record.name+"_ta2d_tt").flush( );
-                transfer2dD = time_integrals.at(record.name+"_2d_tt").get_integral( );
-                std::array<double,2> bb = time_integrals.at(record.name+"_2d_tt").get_boundaries( );
-                dg::scal( transfer2dD, 1./(bb[1]-bb[0]));
-                time_integrals.at(record.name+"_2d_tt").flush( );
-#ifdef FELTOR_MPI
-            if(rank==0)
-            {
-                for( int rrank=0; rrank<size; rrank++)
-                {
-                    if(rrank!=0)
-                        MPI_Recv( transferH.data().data(), g2d_out.local().size(), MPI_DOUBLE,
-                              rrank, rrank, g2d_out.communicator(), &status);
-                    MPI_Cart_coords( g2d_out.communicator(), rrank, 3, coords);
-                    start4d[1] = coords[2]*count4d[1],
-                    start4d[2] = coords[1]*count4d[2],
-                    start4d[3] = coords[0]*count4d[3];
-                    err = nc_put_vara_double( ncid, id4d.at(pair.first), start4d, count4d,
-                        transferH.data().data());
-                }
-            }
-            else
-                MPI_Send( transferH.data().data(), g2d_out.local().size(), MPI_DOUBLE,
-                          0, rank, g2d_out.communicator());
-            MPI_Barrier( g2d_out.communicator());
-#else
-            err = nc_put_vara_double( ncid, id3d.at(pair.first), start4d, count4d,
-                transferH.data());
-#endif // FELTOR_MPI
+                time_integrals.at(name).flush( );
+                dg::assign( transferD2d, transferH2d);
+                output.output_dynamic2d( ncid, id3d.at(name), start, transferH2d);
+
+                name = record.name+"_2d_tt";
+                transfer2dD = time_integrals.at(name).get_integral( );
+                std::array<double,2> bb = time_integrals.at(name).get_boundaries( );
+                dg::scal( transferD2d, 1./(bb[1]-bb[0]));
+                time_integrals.at(name).flush( );
+                dg::assign( transferD2d, transferH2d);
+                output.output_dynamic2d( ncid, id3d.at(name), start, transferH2d);
         }
         MPI_OUT err = nc_close(ncid);
         ti.toc();

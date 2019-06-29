@@ -698,4 +698,6 @@ std::vector<Record> diagnostics2d_list = {
 
 };
 
+std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
+std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
 }//namespace feltor
