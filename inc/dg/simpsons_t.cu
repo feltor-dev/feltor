@@ -17,7 +17,7 @@ int main()
     dg::HVec times = dg::evaluate( dg::cooX1d, g1d);
     dg::HVec values = dg::evaluate( cos, g1d);
 
-    dg::SimpsonsRule<double> simpsons;
+    dg::Simpsons<double> simpsons;
 
     //Init the left side boundary
     simpsons.init( 0., 1.);

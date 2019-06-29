@@ -156,55 +156,54 @@ struct Record{
 struct Record_static{
     std::string name;
     std::string long_name;
-    bool integral;
-    std::function<void( HVec&, Variables&, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag)> function;
+    std::function<void( HVec&, Variables&, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag)> function;
 };
 
 //Here is a list of static (time-independent) 3d variables that go into the output
-std::vector<Record_static> dianostics3d_static_list = {
+std::vector<Record_static> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             dg::geo::BFieldR fieldR(mag);
             result = dg::pullback( fieldR, grid);
         }
     },
     { "BZ", "Z-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             dg::geo::BFieldZ fieldZ(mag);
             result = dg::pullback( fieldZ, grid);
         }
     },
     { "BP", "Contravariant P-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             dg::geo::BFieldP fieldP(mag);
             result = dg::pullback( fieldP, grid);
         }
     },
     { "Psip", "Flux-function psi",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
              result = dg::pullback( mag.psip(), grid);
         }
     },
     { "Nprof", "Density profile",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             Initialize init(v.p, gp, mag);
             result = init.profile(grid);
         }
     },
     { "Source", "Source region",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             Initialize init(v.p, gp, mag);
             result = init.source_damping(grid);
         }
     },
     { "Damping", "Damping region for initial profile",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             Initialize init(v.p, gp, mag);
             result = init.profile_damping(grid);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -213,7 +212,7 @@ std::vector<Record_static> dianostics3d_static_list = {
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -222,7 +221,7 @@ std::vector<Record_static> dianostics3d_static_list = {
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -698,6 +697,7 @@ std::vector<Record> diagnostics2d_list = {
 
 };
 
+// These two lists signify the quantities for accuracy computation
 std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
 std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
 }//namespace feltor

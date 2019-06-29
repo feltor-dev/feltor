@@ -29,7 +29,7 @@ boundary and then adding values as they become available.
 * @ingroup time
 */
 template<class ContainerType>
-struct SimpsonsRule
+struct Simpsons
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
@@ -37,7 +37,7 @@ struct SimpsonsRule
      * @param order number of vectors to use for integration.
          Choose 2 (linear) or 3 (parabola) integration.
      */
-    SimpsonsRule( unsigned order = 3): m_counter(0), m_order(order), m_t0(0)
+    Simpsons( unsigned order = 3): m_counter(0), m_order(order), m_t0(0)
     {
         set_order(order);
     }
