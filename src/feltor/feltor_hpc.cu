@@ -150,13 +150,6 @@ int main( int argc, char* argv[])
     MPI_OUT std::cout << "Done!\n";
 
     // helper variables for various stuff
-    std::array<DVec, 3> gradPsip;
-    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
-    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
-    gradPsip[2] =  result; //zero
-    feltor::Variables var = {
-        feltor, p, gradPsip, gradPsip
-    };
     std::map<std::string, dg::Simpsons<DVec>> time_integrals;
     dg::Average<DVec> toroidal_average( g3d_out, dg::coo3d::z);
     dg::MultiMatrix<IHMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
@@ -165,21 +158,29 @@ int main( int argc, char* argv[])
     DVec transferD( dg::evaluate(dg::zero, g3d_out));
     DVec transferD2d = dg::evaluate( dg::zero, g2d_out);
     HVec transferH2d = dg::evaluate( dg::zero, g2d_out);
-    /// Construct feltor::Variables object for diagnostics
     DVec result = dg::evaluate( dg::zero, grid);
     HVec resultH( dg::evaluate( dg::zero, grid));
+
+    /// Construct feltor::Variables object for diagnostics
+    std::array<DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  result; //zero
+    feltor::Variables var = {
+        feltor, p, gradPsip, gradPsip
+    };
 
     double dEdt = 0, accuracy = 0;
     double E0 = 0.;
 
-    //!///////////////////The initial field///////////////////////////////////////////
-    double time = 0;
+    /// //////////////////The initial field///////////////////////////////////////////
+    double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
     feltor::Initialize init( grid, p, mag);
     if( argc == 4)
         y0 = init.init_from_parameters(feltor);
     if( argc == 5)
-        y0 = init.init_from_file(argv[4]);
+        y0 = init.init_from_file(argv[4], grid, time);
     feltor.set_source( init.profile(), p.omega_source, init.source_damping());
 
     /// //////////////////////////set up netcdf/////////////////////////////////////

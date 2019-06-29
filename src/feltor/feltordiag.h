@@ -157,54 +157,54 @@ struct Record_static{
     std::string name;
     std::string long_name;
     bool integral;
-    std::function<void( HVec&, Variables&, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag)> function;
+    std::function<void( HVec&, Variables&, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag)> function;
 };
 
 //Here is a list of static (time-independent) 3d variables that go into the output
 std::vector<Record_static> dianostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
             dg::geo::BFieldR fieldR(mag);
             result = dg::pullback( fieldR, grid);
         }
     },
     { "BZ", "Z-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
             dg::geo::BFieldZ fieldZ(mag);
             result = dg::pullback( fieldZ, grid);
         }
     },
     { "BP", "Contravariant P-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
             dg::geo::BFieldP fieldP(mag);
             result = dg::pullback( fieldP, grid);
         }
     },
     { "Psip", "Flux-function psi",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
              result = dg::pullback( mag.psip(), grid);
         }
     },
     { "Nprof", "Density profile",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
-            Initialize init;
-            result = init.profile();
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+            Initialize init(v.p, gp, mag);
+            result = init.profile(grid);
         }
     },
     { "Source", "Source region",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
-            Initialize init;
-            result = init.source_damping();
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+            Initialize init(v.p, gp, mag);
+            result = init.source_damping(grid);
         }
     },
     { "Damping", "Damping region for initial profile",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
-            Initialize init;
-            result = init.profile_damping();
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
+            Initialize init(v.p, gp, mag);
+            result = init.profile_damping(grid);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -213,7 +213,7 @@ std::vector<Record_static> dianostics3d_static_list = {
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -222,7 +222,7 @@ std::vector<Record_static> dianostics3d_static_list = {
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid, dg::geo::solovev::Parameters gp, dg::geo::TokamakMagneticField& mag ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -230,7 +230,7 @@ std::vector<Record_static> dianostics3d_static_list = {
             result = zc;
         }
     },
-}
+};
 
 // Here are all 3d outputs we want to have
 std::vector<Record> diagnostics3d_list = {
@@ -390,7 +390,7 @@ std::vector<Record> diagnostics2d_list = {
     {"jsne", "Radial electron particle flux without induction contribution", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
+                routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
                 v.f.density(0), v.f.velocity(0),
                 v.f.gradP(0)[0], v.f.gradP(0)[1], v.f.gradP(0)[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
@@ -403,7 +403,7 @@ std::vector<Record> diagnostics2d_list = {
     {"jsneA", "Radial electron particle flux: induction contribution", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
+                routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
                 v.f.density(0), v.f.velocity(0), v.f.induction(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
@@ -488,8 +488,8 @@ std::vector<Record> diagnostics2d_list = {
     {"jsee", "Radial electron energy flux without induction contribution", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
-                v.f.density(0), v.f.velocity(0), v.f.potential()[0],
+                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.f.gradP(0)[0], v.f.gradP(0)[1], v.f.gradP(0)[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -501,8 +501,8 @@ std::vector<Record> diagnostics2d_list = {
     {"jseea", "Radial electron energy flux: induction contribution", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
-                v.f.density(0), v.f.velocity(0), v.f.potential()[0], v.f.induction(),
+                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                v.f.density(0), v.f.velocity(0), v.f.potential(0), v.f.induction(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -513,8 +513,8 @@ std::vector<Record> diagnostics2d_list = {
     {"jsei", "Radial ion energy flux without induction contribution", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
-                v.f.density(1), v.f.velocity(1), v.f.potential()[1],
+                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.f.gradP(1)[0], v.f.gradP(1)[1], v.f.gradP(1)[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -526,8 +526,8 @@ std::vector<Record> diagnostics2d_list = {
     {"jseia", "Radial ion energy flux: induction contribution", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
-                v.f.density(1), v.f.velocity(1), v.f.potential()[1], v.f.induction(),
+                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                v.f.density(1), v.f.velocity(1), v.f.potential(1), v.f.induction(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -541,8 +541,8 @@ std::vector<Record> diagnostics2d_list = {
             v.f.compute_diffusive_lapMperpN( v.f.density(0), result, v.tmp[0]);
             v.f.compute_diffusive_lapMperpU( v.f.velocity(0), result, v.tmp[1]);
             dg::blas1::evaluate( result, dg::times_equals(),
-                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], 1.),
-                v.f.density(0), v.f.velocity(0), v.f.potential()[0],
+                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], 1.),
+                v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
             dg::blas1::scal( result, -v.p.nu_perp);
@@ -553,8 +553,8 @@ std::vector<Record> diagnostics2d_list = {
             v.f.compute_diffusive_lapMperpN( v.f.density(1), result, v.tmp[0]);
             v.f.compute_diffusive_lapMperpU( v.f.velocity(1), result, v.tmp[1]);
             dg::blas1::evaluate( result, dg::times_equals(),
-                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
-                v.f.density(1), v.f.velocity(1), v.f.potential()[1],
+                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
             );
             dg::blas1::scal( result, -v.p.nu_perp);
@@ -569,8 +569,8 @@ std::vector<Record> diagnostics2d_list = {
                                      0., v.tmp[0]);
             dg::blas1::axpby( 1., v.f.dssU(0), 1., v.tmp[1]);
             dg::blas1::evaluate( result, dg::times_equals(),
-                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
-                v.f.density(0), v.f.velocity(0), v.f.potential()[0],
+                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
             dg::blas1::scal( result, v.p.nu_parallel);
@@ -585,8 +585,8 @@ std::vector<Record> diagnostics2d_list = {
                                      0., v.tmp[0]);
             dg::blas1::axpby( 1., v.f.dssU(1), 1., v.tmp[1]);
             dg::blas1::evaluate( result, dg::times_equals(),
-                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
-                v.f.density(1), v.f.velocity(1), v.f.potential()[1],
+                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
             );
             dg::blas1::scal( result, v.p.nu_parallel);

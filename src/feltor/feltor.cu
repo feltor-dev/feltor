@@ -56,7 +56,6 @@ int main( int argc, char* argv[])
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::DVec vol3d = dg::create::volume( grid);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
@@ -67,32 +66,41 @@ int main( int argc, char* argv[])
     feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     std::cout << "Done!\n";
 
+    DVec result = dg::evaluate( dg::zero, grid);
+    /// Construct feltor::Variables object for diagnostics
+    std::array<DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  result; //zero
+    feltor::Variables var = {
+        feltor, p, gradPsip, gradPsip
+    };
+
+
+
     /////////////////////The initial field///////////////////////////////////////////
+    double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
-    feltor::Initialize init( grid, p, mag);
-    if( argc == 4)
-        y0 = init.init_from_parameters(feltor);
-    if( argc == 5)
-        y0 = init.init_from_file(argv[4]);
-    feltor.set_source( init.profile(), p.omega_source, init.source_damping());
-    std::cout << "Initialize Timestepper" << std::endl;
+    feltor::Initialize init( p, gp, mag);
+    y0 = init.init_from_parameters(feltor, grid);
+    feltor.set_source( init.profile(grid), p.omega_source, init.source_damping(grid));
 
     ////////////////////////create timer and timestepper
     //
     dg::Timer t;
-    double time = 0.;
     unsigned step = 0;
     dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
         feltor::FeltorSpecialSolver<
             Geometry, IDMatrix, DMatrix, DVec>
         > karniadakis( grid, p, mag);
+    std::cout << "Initialize Timestepper" << std::endl;
     karniadakis.init( feltor, im, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
 
     std::map<std::string, const dg::DVec* > v4d;
     v4d["ne-1 / "] = &y0[0][0],               v4d["ni-1 / "] = &y0[0][1];
     v4d["Ue / "]   = &feltor.fields()[1][0],  v4d["Ui / "]   = &feltor.fields()[1][1];
-    v4d["Ome / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
+    v4d["Ome / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.induction();
     double dEdt = 0, accuracy = 0;
     double E0 = 0.;
     /////////////////////////set up transfer for glfw
@@ -119,8 +127,6 @@ int main( int argc, char* argv[])
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     title << std::setprecision(2) << std::scientific;
     //unsigned failed_counter = 0;
-    std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-    std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
     while ( !glfwWindowShouldClose( w ))
     {
         title << std::fixed;
@@ -136,7 +142,7 @@ int main( int argc, char* argv[])
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
             {
                 dg::assign( *pair.second, hvisual);
-                dg::blas1::axpby( 1., hvisual, -1., init.profile(), hvisual);
+                dg::blas1::axpby( 1., hvisual, -1., init.profile(grid), hvisual);
             }
             else
                 dg::assign( *pair.second, hvisual);
@@ -189,14 +195,14 @@ int main( int argc, char* argv[])
             }
             double deltat = time - previous_time;
             double energy = 0, ediff = 0.;
-            for( auto record& : diagnostics2d_list)
+            for( auto& record : feltor::diagnostics2d_list)
             {
-                if( std::find( energies.begin(), energies.end(), record.name) != energies.end())
+                if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
                     record.function( result, var);
                     energy += dg::blas1::dot( result, feltor.vol3d());
                 }
-                if( std::find( energy_diff.begin(), energy_diff.end(), record.name) != energy_diff.end())
+                if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
                 {
                     record.function( result, var);
                     ediff += dg::blas1::dot( result, feltor.vol3d());
@@ -218,9 +224,9 @@ int main( int argc, char* argv[])
                     feltor.density(0), feltor.velocity(0), dvisual);
                 dg::blas1::pointwiseDot( p.beta,
                     feltor.density(1), feltor.velocity(1), -p.beta, dvisual);
-                double norm  = dg::blas2::dot( dvisual, vol3d, dvisual);
+                double norm  = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
                 dg::blas1::axpby( -1., feltor.lapMperpA(), 1., dvisual);
-                double error = dg::blas2::dot( dvisual, vol3d, dvisual);
+                double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
                 std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
             }
 
@@ -228,7 +234,6 @@ int main( int argc, char* argv[])
         t.toc();
         std::cout << "\n\t Step "<<step << " at time  "<<time;
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop<<"\n\n";
-        //std::cout << "\n\t Total # of failed steps:   "<<failed_counter<<"\n\n";
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////
