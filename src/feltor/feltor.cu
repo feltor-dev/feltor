@@ -6,7 +6,7 @@
 
 #include "draw/host_window.h"
 
-#include "feltor.cuh"
+#include "feltor.h"
 #include "implicit.h"
 
 using HVec = dg::HVec;

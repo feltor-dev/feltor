@@ -10,16 +10,16 @@ INCLUDE+= -I../../inc   # other project libraries
 
 all: feltor_hpc manufactured
 
-manufactured: manufactured.cu manufactured.h feltor.cuh
+manufactured: manufactured.cu manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
 
-feltor: feltor.cu feltor.cuh
+feltor: feltor.cu feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -g -DDG_BENCHMARK
 
-feltor_hpc: feltor_hpc.cu feltor.cuh
+feltor_hpc: feltor_hpc.cu feltor.h
 	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 
-feltor_mpi: feltor_hpc.cu feltor.cuh
+feltor_mpi: feltor_hpc.cu feltor.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DFELTOR_MPI -DDG_BENCHMARK
 
 .PHONY: clean

@@ -12,7 +12,7 @@
 #define FELTORPERP 1
 
 #include "manufactured.h"
-#include "feltor.cuh"
+#include "feltor.h"
 #include "implicit.h"
 
 int main( int argc, char* argv[])

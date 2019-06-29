@@ -11,7 +11,7 @@
 #endif //FELTOR_MPI
 
 #include "dg/file/nc_utilities.h"
-#include "feltor.cuh"
+#include "feltor.h"
 #include "implicit.h"
 
 #ifdef FELTOR_MPI
