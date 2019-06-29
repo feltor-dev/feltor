@@ -375,8 +375,8 @@ int main( int argc, char* argv[])
             E0 = energy;
             accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
 
-            MPI_OUT std::cout << "Time "<<time<<"\n";
-            MPI_OUT std::cout <<" d E/dt = " << dEdt
+            MPI_OUT std::cout << "\tTime "<<time<<"\n";
+            MPI_OUT std::cout <<"\td E/dt = " << dEdt
                       <<" Lambda = " << ediff
                       <<" -> Accuracy: " << accuracy << "\n";
             //----------------Test if induction equation holds
@@ -389,7 +389,7 @@ int main( int argc, char* argv[])
                 double norm  = dg::blas2::dot( temp, feltor.vol3d(), temp);
                 dg::blas1::axpby( -1., feltor.lapMperpA(), 1., temp);
                 double error = dg::blas2::dot( temp, feltor.vol3d(), temp);
-                MPI_OUT std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
+                MPI_OUT std::cout << "\tRel. Error Induction "<<sqrt(error/norm) <<"\n";
             }
             tti.tic();
             std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";

@@ -200,12 +200,17 @@ int main( int argc, char* argv[])
                 if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
                     record.function( result, var);
-                    energy += dg::blas1::dot( result, feltor.vol3d());
+                    double norm = dg::blas1::dot( result, feltor.vol3d());
+                    energy += norm;
+                    std::cout << record.name<<" : "<<norm<<std::endl;
+
                 }
                 if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
                 {
                     record.function( result, var);
-                    ediff += dg::blas1::dot( result, feltor.vol3d());
+                    double norm = dg::blas1::dot( result, feltor.vol3d());
+                    ediff += norm;
+                    std::cout << record.name<<" : "<<norm<<std::endl;
                 }
 
             }
@@ -213,8 +218,8 @@ int main( int argc, char* argv[])
             E0 = energy;
             accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
 
-            std::cout << "Time "<<time<<"\n";
-            std::cout <<" d E/dt = " << dEdt
+            std::cout << "\tTime "<<time<<"\n";
+            std::cout <<"\td E/dt = " << dEdt
               <<" Lambda = " << ediff
               <<" -> Accuracy: " << accuracy << "\n";
             //----------------Test if induction equation holds
@@ -227,7 +232,7 @@ int main( int argc, char* argv[])
                 double norm  = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
                 dg::blas1::axpby( -1., feltor.lapMperpA(), 1., dvisual);
                 double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
-                std::cout << " Rel. Error Induction "<<sqrt(error/norm) <<"\n";
+                std::cout << "\tRel. Error Induction "<<sqrt(error/norm) <<"\n";
             }
 
         }

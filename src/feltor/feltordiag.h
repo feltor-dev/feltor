@@ -481,7 +481,7 @@ std::vector<Record> diagnostics2d_list = {
         []( DVec& result, Variables& v ) {
             dg::blas1::axpby( 1., v.f.velocity(1), -1., v.f.velocity(0), result);
             dg::blas1::pointwiseDot( result, v.f.density(0), result);
-            dg::blas1::pointwiseDot( v.p.eta, result, result, 0., result);
+            dg::blas1::pointwiseDot( -v.p.eta, result, result, 0., result);
         }
     },
     /// ------------------ Energy flux terms ------------------------//
@@ -540,8 +540,8 @@ std::vector<Record> diagnostics2d_list = {
         []( DVec& result, Variables& v ) {
             v.f.compute_diffusive_lapMperpN( v.f.density(0), result, v.tmp[0]);
             v.f.compute_diffusive_lapMperpU( v.f.velocity(0), result, v.tmp[1]);
-            dg::blas1::evaluate( result, dg::times_equals(),
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], 1.),
+            dg::blas1::evaluate( result, dg::equals(),
+                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
@@ -552,7 +552,7 @@ std::vector<Record> diagnostics2d_list = {
         []( DVec& result, Variables& v ) {
             v.f.compute_diffusive_lapMperpN( v.f.density(1), result, v.tmp[0]);
             v.f.compute_diffusive_lapMperpU( v.f.velocity(1), result, v.tmp[1]);
-            dg::blas1::evaluate( result, dg::times_equals(),
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
@@ -566,9 +566,9 @@ std::vector<Record> diagnostics2d_list = {
                                      0., v.tmp[0]);
             dg::blas1::axpby( 1., v.f.dssN(0), 1., v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsU(0),
-                                     0., v.tmp[0]);
+                                     0., v.tmp[1]);
             dg::blas1::axpby( 1., v.f.dssU(0), 1., v.tmp[1]);
-            dg::blas1::evaluate( result, dg::times_equals(),
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
@@ -582,9 +582,9 @@ std::vector<Record> diagnostics2d_list = {
                                      0., v.tmp[0]);
             dg::blas1::axpby( 1., v.f.dssN(1), 1., v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsU(1),
-                                     0., v.tmp[0]);
+                                     0., v.tmp[1]);
             dg::blas1::axpby( 1., v.f.dssU(1), 1., v.tmp[1]);
-            dg::blas1::evaluate( result, dg::times_equals(),
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
