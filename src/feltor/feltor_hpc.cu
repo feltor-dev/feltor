@@ -252,9 +252,10 @@ int main( int argc, char* argv[])
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
+        id4d[name] = 0;//creates a new id4d entry
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
-            &id4d[name]);//creates a new id4d entry
-        MPI_OUT err = nc_put_att_text( ncid, id4d[name], "long_name", long_name.size(),
+            &id4d.at(name));
+        MPI_OUT err = nc_put_att_text( ncid, id4d.at(name), "long_name", long_name.size(),
             long_name.data());
     }
     for( auto& record : feltor::diagnostics2d_list)
@@ -265,8 +266,9 @@ int main( int argc, char* argv[])
             name += "_tt";
             long_name+= " (Time average)";
         }
+        id3d[name] = 0;
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-            &id3d[name]);//creates a new id3d entry
+            &id3d.at(name));//creates a new id3d entry
         MPI_OUT err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
             long_name.data());
 
@@ -276,8 +278,9 @@ int main( int argc, char* argv[])
             name += "_tt";
             long_name+= " (Time average)";
         }
+        id3d[name] = 0;
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-            &id3d[name]);
+            &id3d.at(name));
         MPI_OUT err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
             long_name.data());
     }
