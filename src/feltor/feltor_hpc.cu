@@ -159,8 +159,8 @@ int main( int argc, char* argv[])
     MPI_OUT std::cout << "Done!\n";
 
     // helper variables for output computations
-    std::map<std::string, dg::Simpsons<DVec>> time_integrals;
-    dg::Average<DVec> toroidal_average( g3d_out, dg::coo3d::z);
+    std::map<std::string, dg::Simpsons<HVec>> time_integrals;
+    dg::Average<HVec> toroidal_average( g3d_out, dg::coo3d::z);
     dg::MultiMatrix<HMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
     dg::MultiMatrix<DMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
     HVec transferH( dg::evaluate(dg::zero, g3d_out));
@@ -252,7 +252,7 @@ int main( int argc, char* argv[])
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
-        id4d[name] = 0;//creates a new id4d entry
+        id4d[name] = 0;//creates a new id4d entry for all processes
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
             &id4d.at(name));
         MPI_OUT err = nc_put_att_text( ncid, id4d.at(name), "long_name", long_name.size(),
@@ -266,9 +266,9 @@ int main( int argc, char* argv[])
             name += "_tt";
             long_name+= " (Time average)";
         }
-        id3d[name] = 0;
+        id3d[name] = 0;//creates a new id3d entry for all processes
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-            &id3d.at(name));//creates a new id3d entry
+            &id3d.at(name));
         MPI_OUT err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
             long_name.data());
 
@@ -311,31 +311,41 @@ int main( int argc, char* argv[])
     }
     for( auto& record : feltor::diagnostics2d_list)
     {
+        dg::Timer tti;
+        tti.tic();
         record.function( resultD, var);
         dg::blas2::symv( projectD, resultD, transferD);
 
         //toroidal average
         std::string name = record.name + "_ta2d";
-        toroidal_average( transferD, transferD2d, false);
+        dg::assign( transferD, transferH);
+        toroidal_average( transferH, transferH2d, false);
         //create and init Simpsons for time integrals
         if( record.integral)
         {
             name += "_tt";
-            time_integrals[name].init( time, transferD2d);
+            time_integrals[name].init( time, transferH2d);
         }
-        dg::assign( transferD2d, transferH2d);
+        tti.toc();
+        MPI_OUT std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+        tti.tic();
         output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+        tti.toc();
+        MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        tti.tic();
 
         // and a slice
         name = record.name + "_2d";
         feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+        dg::assign( transferD2d, transferH2d);
         if( record.integral)
         {
             name += "_tt";
-            time_integrals[name].init( time, transferD2d);
+            time_integrals[name].init( time, transferH2d);
         }
-        dg::assign( transferD2d, transferH2d);
         output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+        tti.toc();
+        MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
     }
     MPI_OUT err = nc_close(ncid);
     MPI_OUT std::cout << "First write successful!\n";
@@ -389,12 +399,14 @@ int main( int argc, char* argv[])
                     record.function( resultD, var);
                     dg::blas2::symv( projectD, resultD, transferD);
                     //toroidal average and add to time integral
-                    toroidal_average( transferD, transferD2d, false);
-                    time_integrals.at(record.name+"_ta2d_tt").add( time, transferD2d);
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    time_integrals.at(record.name+"_ta2d_tt").add( time, transferH2d);
 
                     // 2d data of plane varphi = 0
                     feltor::slice_vector3d( transferD, transferD2d, local_size2d);
-                    time_integrals.at(record.name+"_2d_tt").add( time, transferD2d);
+                    dg::assign( transferD2d, transferH2d);
+                    time_integrals.at(record.name+"_2d_tt").add( time, transferH2d);
                 }
 
             }
@@ -420,7 +432,7 @@ int main( int argc, char* argv[])
                 MPI_OUT std::cout << "\tRel. Error Induction "<<sqrt(error/norm) <<"\n";
             }
             tti.toc();
-            std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
+            MPI_OUT std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
         }
         ti.toc();
         MPI_OUT std::cout << "\n\t Step "<<step <<" of "
@@ -444,19 +456,17 @@ int main( int argc, char* argv[])
             if(record.integral) // we already computed the output...
             {
                 std::string name = record.name+"_ta2d_tt";
-                transferD2d = time_integrals.at(name).get_integral();
+                transferH2d = time_integrals.at(name).get_integral();
                 std::array<double,2> tt = time_integrals.at(name).get_boundaries();
                 dg::blas1::scal( transferD2d, 1./(tt[1]-tt[0]));
                 time_integrals.at(name).flush();
-                dg::assign( transferD2d, transferH2d);
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
 
                 name = record.name+"_2d_tt";
-                transferD2d = time_integrals.at(name).get_integral( );
+                transferH2d = time_integrals.at(name).get_integral( );
                 tt = time_integrals.at(name).get_boundaries( );
                 dg::blas1::scal( transferD2d, 1./(tt[1]-tt[0]));
                 time_integrals.at(name).flush( );
-                dg::assign( transferD2d, transferH2d);
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
             }
             else //manage the time integrators
@@ -465,8 +475,8 @@ int main( int argc, char* argv[])
                 dg::blas2::symv( projectD, resultD, transferD);
 
                 std::string name = record.name+"_ta2d";
-                toroidal_average( transferD, transferD2d, false);
-                dg::assign( transferD2d, transferH2d);
+                dg::assign( transferD, transferH);
+                toroidal_average( transferH, transferH2d, false);
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
 
                 // 2d data of plane varphi = 0

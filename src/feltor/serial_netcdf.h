@@ -137,8 +137,9 @@ struct ManageOutput
                           rrank, rrank, m_comm2d, &status);
                 start3d[1] = m_coords2d[2*rrank+1]*m_count3d[1],
                 start3d[2] = m_coords2d[2*rrank+0]*m_count3d[2];
-                err = nc_put_vara_double( ncid, vecID, start3d, m_count3d,
-                    transferH2d.data().data());
+                if(m_rank3d==0)//only global rank 0 writes out
+                    err = nc_put_vara_double( ncid, vecID, start3d, m_count3d,
+                        transferH2d.data().data());
             }
         }
         else
