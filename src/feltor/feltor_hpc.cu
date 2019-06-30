@@ -306,10 +306,6 @@ int main( int argc, char* argv[])
         dg::assign( transferD, transferH);
         output.output_dynamic3d( ncid, id4d.at(record.name), start, transferH);
     }
-    MPI_OUT err = nc_close(ncid);
-
-    std::cin >> count;
-    MPI_OUT err = nc_open(file_name.data(), NC_WRITE, &ncid);
     for( auto& record : feltor::diagnostics2d_list)
     {
         record.function( resultD, var);
@@ -317,14 +313,13 @@ int main( int argc, char* argv[])
 
         //toroidal average
         std::string name = record.name + "_ta2d";
-        toroidal_average( transferD, transferD2d);
-        //create and init Simspons for time integrals
+        toroidal_average( transferD, transferD2d, false);
+        //create and init Simpsons for time integrals
         if( record.integral)
         {
             name += "_tt";
             time_integrals[name].init( time, transferD2d);
         }
-        std::cout << "Output "<<name<<"\n";
         dg::assign( transferD2d, transferH2d);
         output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
 
@@ -391,7 +386,7 @@ int main( int argc, char* argv[])
                     record.function( resultD, var);
                     dg::blas2::symv( projectD, resultD, transferD);
                     //toroidal average and add to time integral
-                    toroidal_average( transferD, transferD2d);
+                    toroidal_average( transferD, transferD2d, false);
                     time_integrals.at(record.name+"_ta2d_tt").add( time, transferD2d);
 
                     // 2d data of plane varphi = 0
@@ -467,7 +462,7 @@ int main( int argc, char* argv[])
                 dg::blas2::symv( projectD, resultD, transferD);
 
                 std::string name = record.name+"_ta2d";
-                toroidal_average( transferD, transferD2d);
+                toroidal_average( transferD, transferD2d, false);
                 dg::assign( transferD2d, transferH2d);
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
 

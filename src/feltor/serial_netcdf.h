@@ -147,12 +147,8 @@ struct ManageOutput
         MPI_Barrier( m_comm2d);
         MPI_Barrier( m_comm3d); //all processes synchronize
 #else
-        std::cout << " Size "<<m_count3d[0]*m_count3d[1]*m_count3d[2]<<" "<<transferH2d.size()<<std::endl;
-        std::cout << " Start"<<start3d[0]<<" "<<start3d[1]<<" "<<start3d[2]<<"\n";
-        std::cout << "ncid "<<ncid<<" vecId "<<vecID<<std::endl;
-        HVec test( 3304, 0.);
         err = nc_put_vara_double( ncid, vecID, start3d, m_count3d,
-            test.data());
+            transferH2d.data());
 #endif // FELTOR_MPI
     }
     private:
