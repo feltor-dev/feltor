@@ -49,6 +49,8 @@ struct Initialize
     }
     template<class Feltor>
     std::array<std::array<DVec,2>,2> init_from_parameters(Feltor& feltor, const Geometry& grid){
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         std::array<std::array<DVec,2>,2> y0;
         //Now perturbation
         HVec ntilde = dg::evaluate(dg::zero,grid);
@@ -118,6 +120,8 @@ struct Initialize
 
     //everyone reads their portion of the input data
     std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Geometry& grid, double& time){
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         std::array<std::array<DVec,2>,2> y0;
         ///////////////////read in and show inputfile
         file::NC_Error_Handle errIN;
@@ -150,6 +154,7 @@ struct Initialize
 
         #ifdef FELTOR_MPI
         int dimsIN[3],  coordsIN[3];
+        int periods[3] = {false, false, true}; //non-, non-, periodic
         MPI_Cart_get( grid.communicator(), 3, dimsIN, periods, coordsIN);
         size_t countIN[4] = {1, grid_IN.local().Nz(),
             grid_IN.n()*(grid_IN.local().Ny()),

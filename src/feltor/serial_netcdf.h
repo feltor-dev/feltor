@@ -61,7 +61,7 @@ struct ManageOutput
 #endif //FELTOR_MPI
     }
     //must enddef first
-    void output_static3d(int ncid, int vecID, const HVec& transferH) const
+    void output_static3d(int ncid, int vecID, HVec& transferH) const
     {
         file::NC_Error_Handle err;
         size_t start4d[4] = {0,0,0,0};
@@ -77,7 +77,7 @@ struct ManageOutput
                 start4d[1] = m_coords[3*rrank+2]*m_count4d[1],
                 start4d[2] = m_coords[3*rrank+1]*m_count4d[2],
                 start4d[3] = m_coords[3*rrank+0]*m_count4d[3];
-                err = nc_put_vara_double( ncid, vecID, &start4d[1], &count4d[1],
+                err = nc_put_vara_double( ncid, vecID, &start4d[1], &m_count4d[1],
                     transferH.data().data());
             }
         }
@@ -90,7 +90,7 @@ struct ManageOutput
             transferH.data());
 #endif // FELTOR_MPI
     }
-    void output_dynamic3d(int ncid, int vecID, unsigned start, const HVec& transferH) const
+    void output_dynamic3d(int ncid, int vecID, unsigned start, HVec& transferH) const
     {
         size_t start4d[4] = {start, 0, 0, 0};
         file::NC_Error_Handle err;
@@ -106,7 +106,7 @@ struct ManageOutput
                 start4d[1] = m_coords[3*rrank+2]*m_count4d[1],
                 start4d[2] = m_coords[3*rrank+1]*m_count4d[2],
                 start4d[3] = m_coords[3*rrank+0]*m_count4d[3];
-                err = nc_put_vara_double( ncid, vecID, start4d, count4d,
+                err = nc_put_vara_double( ncid, vecID, start4d, m_count4d,
                     transferH.data().data());
             }
         }
@@ -121,7 +121,7 @@ struct ManageOutput
     }
 
 //all send to their rank2d 0 but only rank3d 0 writes into file
-    void output_dynamic2d_slice(int ncid, int vecID, unsigned start, const HVec& transferH2d) const
+    void output_dynamic2d_slice(int ncid, int vecID, unsigned start, HVec& transferH2d) const
     {
         file::NC_Error_Handle err;
         size_t start3d[3] = {start, 0, 0};
@@ -133,11 +133,11 @@ struct ManageOutput
             for( int rrank=0; rrank<m_size2d; rrank++)
             {
                 if(rrank!=0)
-                    MPI_Recv( transferH.data().data(), m_local_size2d, MPI_DOUBLE,
+                    MPI_Recv( transferH2d.data().data(), m_local_size2d, MPI_DOUBLE,
                           rrank, rrank, m_comm2d, &status);
                 start3d[1] = m_coords2d[2*rrank+1]*m_count3d[1],
                 start3d[2] = m_coords2d[2*rrank+0]*m_count3d[2];
-                err = nc_put_vara_double( ncid, vecID, start3d, count3d,
+                err = nc_put_vara_double( ncid, vecID, start3d, m_count3d,
                     transferH2d.data().data());
             }
         }
