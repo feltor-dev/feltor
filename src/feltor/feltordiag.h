@@ -385,8 +385,27 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
     },
+    /// ------------------ Correlation terms --------------------//
+    {"ne2", "Square of electron density", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(
+                v.f.density(0), v.f.density(0), result);
+        }
+    },
+    {"phi2", "Square of electron potential", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(
+                v.f.potential(0), v.f.potential(0), result);
+        }
+    },
+    {"nephi", "Product of electron potential and electron density", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(
+                v.f.potential(0), v.f.density(0), result);
+        }
+    },
     /// ------------------ Density terms ------------------------//
-    {"jsne", "Radial electron particle flux without induction contribution", true,
+    {"jsne_tt", "Radial electron particle flux without induction contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
@@ -399,7 +418,7 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"jsneA", "Radial electron particle flux: induction contribution", true,
+    {"jsneA_tt", "Radial electron particle flux: induction contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
@@ -411,13 +430,13 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"lneperp", "Perpendicular electron diffusion", true,
+    {"lneperp_tt", "Perpendicular electron diffusion (Time average)", true,
         []( DVec& result, Variables& v ) {
             v.f.compute_diffusive_lapMperpN( v.f.density(0), v.tmp[0], result);
             dg::blas1::scal( result, -v.p.nu_perp);
         }
     },
-    {"lneparallel", "Parallel electron diffusion", true,
+    {"lneparallel_tt", "Parallel electron diffusion (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.nu_parallel, v.f.divb(), v.f.dsN(0),
                                      0., result);
@@ -476,7 +495,7 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// ------------------- Energy dissipation ----------------------//
-    {"resistivity", "Energy dissipation through resistivity", true,
+    {"resistivity_tt", "Energy dissipation through resistivity (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::axpby( 1., v.f.velocity(1), -1., v.f.velocity(0), result);
             dg::blas1::pointwiseDot( result, v.f.density(0), result);
@@ -484,7 +503,7 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// ------------------ Energy flux terms ------------------------//
-    {"jsee", "Radial electron energy flux without induction contribution", true,
+    {"jsee_tt", "Radial electron energy flux without induction contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
@@ -497,7 +516,7 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"jseea", "Radial electron energy flux: induction contribution", true,
+    {"jseea_tt", "Radial electron energy flux: induction contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
@@ -509,7 +528,7 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"jsei", "Radial ion energy flux without induction contribution", true,
+    {"jsei_tt", "Radial ion energy flux without induction contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
@@ -522,7 +541,7 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"jseia", "Radial ion energy flux: induction contribution", true,
+    {"jseia_tt", "Radial ion energy flux: induction contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
@@ -535,7 +554,7 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// ------------------------ Energy dissipation terms ------------------//
-    {"leeperp", "Perpendicular electron energy dissipation", true,
+    {"leeperp_tt", "Perpendicular electron energy dissipation (Time average)", true,
         []( DVec& result, Variables& v ) {
             v.f.compute_diffusive_lapMperpN( v.f.density(0), result, v.tmp[0]);
             v.f.compute_diffusive_lapMperpU( v.f.velocity(0), result, v.tmp[1]);
@@ -547,7 +566,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::scal( result, -v.p.nu_perp);
         }
     },
-    {"leiperp", "Perpendicular ion energy dissipation", true,
+    {"leiperp_tt", "Perpendicular ion energy dissipation (Time average)", true,
         []( DVec& result, Variables& v ) {
             v.f.compute_diffusive_lapMperpN( v.f.density(1), result, v.tmp[0]);
             v.f.compute_diffusive_lapMperpU( v.f.velocity(1), result, v.tmp[1]);
@@ -559,7 +578,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::scal( result, -v.p.nu_perp);
         }
     },
-    {"leeparallel", "Parallel electron energy dissipation", true,
+    {"leeparallel_tt", "Parallel electron energy dissipation (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsN(0),
                                      0., v.tmp[0]);
@@ -575,7 +594,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::scal( result, v.p.nu_parallel);
         }
     },
-    {"leiparallel", "Parallel ion energy dissipation", true,
+    {"leiparallel_tt", "Parallel ion energy dissipation (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsN(1),
                                      0., v.tmp[0]);
@@ -619,7 +638,7 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// --------------------- Vorticity flux terms ---------------------------//
-    {"jsoexbi", "ExB vorticity flux term with ion density", true,
+    {"jsoexbi_tt", "ExB vorticity flux term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
             // - ExB Dot GradPsi
             routines::jacobian( v.f.bhatgB(), v.gradPsip, v.f.gradP(0), result);
@@ -636,7 +655,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
         }
     },
-    {"jsoexbe", "ExB vorticity flux term with electron density", true,
+    {"jsoexbe_tt", "ExB vorticity flux term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
             // - ExB Dot GradPsi
             routines::jacobian( v.f.bhatgB(), v.gradPsip, v.f.gradP(0), result);
@@ -653,7 +672,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
         }
     },
-    {"jsoapar", "A parallel vorticity flux term (Maxwell stress)", true,
+    {"jsoapar_tt", "A parallel vorticity flux term (Maxwell stress) (Time average)", true,
         []( DVec& result, Variables& v){
             if( v.p.beta == 0)
                 dg::blas1::scal( result, 0.);
@@ -667,26 +686,26 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// --------------------- Vorticity source terms ---------------------------//
-    {"socurve", "Vorticity source term electron curvature", true,
+    {"socurve_tt", "Vorticity source term electron curvature (Time average)", true,
         []( DVec& result, Variables& v) {
             routines::dot( v.f.curv(), v.gradPsip, result);
             dg::blas1::pointwiseDot( -v.p.tau[0], v.f.density(0), result, 0., result);
         }
     },
-    {"socurvi", "Vorticity source term ion curvature", true,
+    {"socurvi_tt", "Vorticity source term ion curvature (Time average)", true,
         []( DVec& result, Variables& v) {
             routines::dot( v.f.curv(), v.gradPsip, result);
             dg::blas1::pointwiseDot( v.p.tau[1], v.f.density(1), result, 0., result);
         }
     },
-    {"socurvkappae", "Vorticity source term electron kappa curvature", true,
+    {"socurvkappae_tt", "Vorticity source term electron kappa curvature (Time average)", true,
         []( DVec& result, Variables& v) {
             routines::dot( v.f.curvKappa(), v.gradPsip, result);
             dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), v.f.velocity(0), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( -v.p.mu[0], v.tmp[0], result, 0., result);
         }
     },
-    {"socurvkappai", "Vorticity source term ion kappa curvature", true,
+    {"socurvkappai_tt", "Vorticity source term ion kappa curvature (Time average)", true,
         []( DVec& result, Variables& v) {
             routines::dot( v.f.curvKappa(), v.gradPsip, result);
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.velocity(1), 0., v.tmp[0]);

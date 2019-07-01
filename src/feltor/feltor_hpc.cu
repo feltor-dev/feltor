@@ -262,10 +262,6 @@ int main( int argc, char* argv[])
     {
         std::string name = record.name + "_ta2d";
         std::string long_name = record.long_name + " (Toroidal average)";
-        if( record.integral){
-            name += "_tt";
-            long_name+= " (Time average)";
-        }
         id3d[name] = 0;//creates a new id3d entry for all processes
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
             &id3d.at(name));
@@ -274,10 +270,6 @@ int main( int argc, char* argv[])
 
         name = record.name + "_2d";
         long_name = record.long_name + " (Evaluated on phi = 0 plane)";
-        if( record.integral){
-            name += "_tt";
-            long_name+= " (Time average)";
-        }
         id3d[name] = 0;
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
             &id3d.at(name));
@@ -321,11 +313,6 @@ int main( int argc, char* argv[])
         dg::assign( transferD, transferH);
         toroidal_average( transferH, transferH2d, false);
         //create and init Simpsons for time integrals
-        if( record.integral)
-        {
-            name += "_tt";
-            time_integrals[name].init( time, transferH2d);
-        }
         tti.toc();
         MPI_OUT std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
         tti.tic();
@@ -338,11 +325,6 @@ int main( int argc, char* argv[])
         name = record.name + "_2d";
         feltor::slice_vector3d( transferD, transferD2d, local_size2d);
         dg::assign( transferD2d, transferH2d);
-        if( record.integral)
-        {
-            name += "_tt";
-            time_integrals[name].init( time, transferH2d);
-        }
         output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
@@ -401,12 +383,12 @@ int main( int argc, char* argv[])
                     //toroidal average and add to time integral
                     dg::assign( transferD, transferH);
                     toroidal_average( transferH, transferH2d, false);
-                    time_integrals.at(record.name+"_ta2d_tt").add( time, transferH2d);
+                    time_integrals.at(record.name+"_ta2d").add( time, transferH2d);
 
                     // 2d data of plane varphi = 0
                     feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                     dg::assign( transferD2d, transferH2d);
-                    time_integrals.at(record.name+"_2d_tt").add( time, transferH2d);
+                    time_integrals.at(record.name+"_2d").add( time, transferH2d);
                 }
 
             }
@@ -455,14 +437,14 @@ int main( int argc, char* argv[])
         {
             if(record.integral) // we already computed the output...
             {
-                std::string name = record.name+"_ta2d_tt";
+                std::string name = record.name+"_ta2d";
                 transferH2d = time_integrals.at(name).get_integral();
                 std::array<double,2> tt = time_integrals.at(name).get_boundaries();
                 dg::blas1::scal( transferD2d, 1./(tt[1]-tt[0]));
                 time_integrals.at(name).flush();
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
 
-                name = record.name+"_2d_tt";
+                name = record.name+"_2d";
                 transferH2d = time_integrals.at(name).get_integral( );
                 tt = time_integrals.at(name).get_boundaries( );
                 dg::blas1::scal( transferD2d, 1./(tt[1]-tt[0]));

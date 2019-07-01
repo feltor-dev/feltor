@@ -13,6 +13,9 @@ all: feltor_hpc manufactured
 manufactured: manufactured.cu manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
 
+feltordiag: feltordiag.cu
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+
 feltor: feltor.cu feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -g -DDG_BENCHMARK
 
@@ -25,4 +28,4 @@ feltor_mpi: feltor_hpc.cu feltor.h
 .PHONY: clean
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi manufactured
+	rm -f feltor feltor_hpc feltor_mpi manufactured feltordiag
