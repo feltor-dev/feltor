@@ -1058,9 +1058,9 @@ compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing poin
 inner\_loop & integer & 2  & 1 & Number of time steps between each energy output \\
 itstp       & integer & 2  & - & Number of energy outputs for each fields outputs \\
 maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is maxout$\cdot$itstp$\cdot$inner\_loop) \\
-eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper (if too low, you'll see oscillations in ue) \\
+eps\_time   & float & 1e-7  & - & Accuracy of solver for implicit part in time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$) \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
-eps\_pol    & float & 1e-5  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. (should not be too far from eps\_time for $\beta\neq  0$ ) \\
+eps\_pol    & float & 1e-6  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ ) \\
 jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
 eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
@@ -1075,7 +1075,7 @@ nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$ \\
 perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$\\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
+curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true": no approximation - requires significantly more resolution in Nz, "toroidal": toroidal field approx - elliptic equation does not need communication in z)  \\
 symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
@@ -1089,13 +1089,13 @@ perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})\\
 initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
-electric potential, "balance": $n_e=N_i$, ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
+electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
 \\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
 sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
 posX       & float &0.3    & - & blob R-position in units of $a$\\
 posY       & float &0.0    & - & blob Z-position in units of $a$ \\
-sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
+sigma\_z    & float &0.25   & - & variance in units of $R_0$ of the fieldline-following initialization \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}\\

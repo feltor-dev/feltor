@@ -313,6 +313,7 @@ int main( int argc, char* argv[])
         dg::assign( transferD, transferH);
         toroidal_average( transferH, transferH2d, false);
         //create and init Simpsons for time integrals
+        if( record.integral) time_integrals[name].init( time, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
         tti.tic();
@@ -325,6 +326,7 @@ int main( int argc, char* argv[])
         name = record.name + "_2d";
         feltor::slice_vector3d( transferD, transferD2d, local_size2d);
         dg::assign( transferD2d, transferH2d);
+        if( record.integral) time_integrals[name].init( time, transferH2d);
         output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
