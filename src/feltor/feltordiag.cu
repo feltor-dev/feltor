@@ -64,7 +64,7 @@ int main( int argc, char* argv[])
 
     /// Set global attributes
     std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/diag/feltordiag.cu";
+    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
     auto ttt = std::time(nullptr);
@@ -80,7 +80,7 @@ int main( int argc, char* argv[])
     att["inputfile"] = input;
     att["geomfile"] = geom;
     for( auto pair : att)
-        err = nc_put_att_text( ncid, NC_GLOBAL,
+        err = nc_put_att_text( ncid_out, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
 
     //-------------------Construct grids-------------------------------------//
@@ -187,10 +187,10 @@ int main( int argc, char* argv[])
     err = file::define_dimension( ncid_out, "psi", &dim_ids1d[1], g1d_out);
     //Write long description
     std::string long_name = "Time at which 2d fields are written";
-    err = nc_put_att_text( ncid, tvarID, "long_name", long_name.size(),
+    err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
     long_name = "Flux surface label";
-    err = nc_put_att_text( ncid, dim_ids1d[1], "long_name",
+    err = nc_put_att_text( ncid_out, dim_ids1d[1], "long_name",
         long_name.size(), long_name.data());
 
     std::map<std::string, int> id0d, id1d, id2d;
@@ -204,28 +204,15 @@ int main( int argc, char* argv[])
     for( auto tp : map1d)
     {
         int vid;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1,
+        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1,
             &dim_ids1d[1], &vid);
-        err = nc_put_att_text( ncid, vid, "long_name",
+        err = nc_put_att_text( ncid_out, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
         err = nc_enddef( ncid);
-        err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid);
+        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
+        err = nc_redef(ncid_out);
     }
-    err = nc_close(ncid_out);
 
-    /////////////////////////////////////////////////////////////////////////
-    int timeID;
-    double time=0.;
-
-    size_t steps;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-    err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
-    err = nc_inq_dimlen( ncid, timeID, &steps);
-    err = nc_close( ncid); //close 3d file
-
-    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-    //read in Ne,Ni,Ue,Ui,Phi,Apar
     for( auto& record : feltor::diagnostics2d_list)
     {
         std::string record_name = record.name;
@@ -266,6 +253,14 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id0d[name], "long_name", long_name.size(),
             long_name.data());
     }
+    /////////////////////////////////////////////////////////////////////////
+    int timeID;
+    double time=0.;
+
+    size_t steps;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+    err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
+    err = nc_inq_dimlen( ncid, timeID, &steps);
     //steps = 3;
     for( unsigned i=0; i<steps; i++)//timestepping
     {
@@ -281,7 +276,9 @@ int main( int argc, char* argv[])
             if( record_name[0] == 'j')
                 record_name[1] = 'v';
             //1. Read toroidal average
-            err = nc_get_vara_double( ncid, id2d.at(record_name+"_ta2d"),
+            int dataID =0;
+            err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
+            err = nc_get_vara_double( ncid, dataID,
                 start2d, count2d, transferH2d.data());
             //2. Compute fsa and output fsa
             dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
@@ -299,7 +296,10 @@ int main( int argc, char* argv[])
                 start2d, count2d, transferH2d.data() );
 
             //4. Read 2d variable and compute fluctuations
-            err = nc_get_vara_double( ncid, id2d.at(record.name+"_2d"), start2d, count2d,
+            err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
+            err = nc_get_vara_double( ncid, dataID,
+                start2d, count2d, transferH2d.data());
+            err = nc_get_vara_double( ncid, dataID, start2d, count2d,
                 t2d_mp.data());
             if( record_name[0] == 'j')
                 dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
@@ -333,6 +333,7 @@ int main( int argc, char* argv[])
 
 
     } //end timestepping
+    err = nc_close(ncid);
     err = nc_close(ncid_out);
 
     return 0;
