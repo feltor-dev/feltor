@@ -421,6 +421,10 @@ In the DG framework the left-hand side
 of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
 via Gauss-Legendre quadrature, which we propse as a first method to compute area
 integrals even if our coordinate system is not aligned to the area.
+Note: in order for this to work the Delta function needs to be numerically
+resolved and cannot be made arbitrarily small.
+This introduces a smoothing effect
+over neighboring contour lines which is given by the grid distance.
 
 Furthermore, recall the {\bf co-area formula}
 \begin{align} \label{eq:coarea}
@@ -711,7 +715,6 @@ Let us define a flux-aligned density profile as
   n_{\text{prof}}(R,Z)=
       n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
 \end{align}
-%NOTE: this profile is slightly below n_0 outside the LCFS! (not sure whether this does anything for nabla_parallel)
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
 X-point and avoids a profile in the private flux region. The factor $\alpha$ provides a smooth transition
 zone that avoids numerical oscillations.
@@ -721,9 +724,9 @@ We have two possibilities to initialize the ion density
 \begin{align} \label{eq:initphi}
   N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = \Gamma_{1,i}n_e\approx \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e
 \end{align}
-In the first case the potential $\phi= 0$ while in the second (prefered)
-case
+In the first case the potential $\phi= 0$ while in the second case
 the $E\times B$ and ion diamagnetic vorticity coincide $\Delta_\perp N_i \propto \Delta_\perp \phi$ in the long-wavelength limit.
+Note that $\alpha$ must not be too small to avoid $N_i < 0$.
 We can choose between several initial conditions for $\tilde n$:
 
 \subsubsection{Blob and Straight blob}
@@ -757,14 +760,14 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \end{align}
 
 \subsection{Sinks and sources} \label{sec:sources}
-The idea for the source terms $S_N$ is to fix the profile $n_{prof}$ in the
+The idea for the source terms $S_N$ is to fix the profile $n_{\text{prof}}$ in the
 core of our domain, where our model does not apply.
 We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
     \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}},\\
-    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_{p,\min},\quad \text{In general we have }\psi_{p,\min} = \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
+    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_{p,\min},\quad \text{In general }\psi_{p,\min} = \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
 \end{align}
 with $0 < \rho_{s}<1$
 where $\omega_s$ is the source strength parameter and $R_O$, $Z_O$ are the coordinates of the O-point.
@@ -981,11 +984,11 @@ continuity equation
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
 n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
-N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \Gamma N_i  \\
+N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \gamma_{ N_i}  \\
 u_e(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
 U_i(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_e(R,Z,\varphi,t) \\
 \phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
-\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \Gamma \phi \\
+\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \gamma_{\phi} \\
 A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
 \end{align*}
 We choose circular flux surfaces of the form
@@ -1019,10 +1022,11 @@ time & Multistep "Karniadakis" & \\
 \end{longtable}
 
 \section{Usage}
+
 Compilation:\\
 \texttt{make feltor device=\{gpu,omp\}} Compile \texttt{feltor.cu} (only shared memory)\\
-\texttt{make feltor\_hpc device=\{gpu,omp\}} Compile \texttt{feltor\_hpc.cu} for shared memory system.\\
-\texttt{make feltor\_mpi device=\{gpu,omp,skl,knl\}} Compile \texttt{feltor\_hpc.cu} for distributed memory systems.\\
+\texttt{make feltor\_hpc device=\{gpu,omp\}} Compile \texttt{feltor\_hpc.cu} for shared memory system. Needs {\it serial netcdf} \\
+\texttt{make feltor\_mpi device=\{gpu,omp,skl,knl\}} Compile \texttt{feltor\_hpc.cu} for distributed memory systems. Also needs {\it serial netcdf}\\
 Usage:\\
 \texttt{./feltor\_hpc input.json geometry.json output.nc [initial.nc]} \\
 \texttt{./feltor\_mpi input.json geometry.json output.nc [initial.nc]} \\
@@ -1055,8 +1059,8 @@ dt     & integer &1e-2& - &initial time stepsize in units of $c_s/\rho_s$ \\
 compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
     (has to divde Nx evenly), and n*Ny/c[1] points in y,
     (has to divde Ny evenly)\\
-inner\_loop & integer & 2  & 1 & Number of time steps between each energy output \\
-itstp       & integer & 2  & - & Number of energy outputs for each fields outputs \\
+inner\_loop & integer & 2  & 1 & Number of time steps between diagnostics updates \\
+itstp       & integer & 2  & - & Number of updates for one output \\
 maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is maxout$\cdot$itstp$\cdot$inner\_loop) \\
 eps\_time   & float & 1e-7  & - & Accuracy of solver for implicit part in time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$) \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
@@ -1142,14 +1146,13 @@ x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, co
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-energy\_time     & Coord. Var. & 1 (energy\_time) & timesteps at which 1d variables are written (variable size: itstp$\cdot$maxout$+1$, dimension size: unlimited ) \\
 xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
 yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
 Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
 Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
-%Damping          & Dataset & 3 (z,y,x) & Damping profile $\Theta(\rho(R,Z) - \rho_{d} )$\\
+Damping          & Dataset & 3 (z,y,x) & Damping profile for initial profile \\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
@@ -1159,19 +1162,9 @@ Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
 Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
-mass      & Dataset & 1 (energy\_time) & total mass integral Eq.~\eqref{eq:mass_conservation} \\
-diff      & Dataset & 1 (energy\_time) & total mass integral diffusion Eq.~\eqref{eq:mass_conservation} \\
-energy    & Dataset & 1 (energy\_time) & total energy integral Eq.~\eqref{eq:energy_conservation} \\
-ediff     & Dataset & 1 (energy\_time) & total energy integral diffusion Eq.~\eqref{eq:energy_conservation} \\
-Se        & Dataset & 1 (energy\_time) & total electron entropy integral Eq.~\eqref{eq:energy_conservation} \\
-Si        & Dataset & 1 (energy\_time) & total ion entropy integral Eq.~\eqref{eq:energy_conservation} \\
-Upare        & Dataset & 1 (energy\_time) & total electron parallel energy integral Eq.~\eqref{eq:energy_conservation} \\
-Upari        & Dataset & 1 (energy\_time) & total ion parallel energy integral Eq.~\eqref{eq:energy_conservation} \\
-Uperp     & Dataset & 1 (energy\_time) & total perpendicular energy integral Eq.~\eqref{eq:energy_conservation} \\
-Apar     & Dataset & 1 (energy\_time) & total magnetic energy integral Eq.~\eqref{eq:energy_conservation} \\
-dEdt      & Dataset & 1 (energy\_time) & change of energy per time  \\
-accuracy  & Dataset & 1 (energy\_time) & accuracy of energy theorem in time  \\
-aligned   & Dataset & 1 (energy\_time) & Alignment parameter $\int\dV \ln n_e\Delta_\parallel n_e$\\
+X\_2d            & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
+X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\langle X
+    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
 \bottomrule
 \end{longtable}
 \subsection{Restart file} \label{sec:restart_file}
@@ -1209,31 +1202,15 @@ y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, co
 z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, compressed size: $N_z$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-time3d           & Coord. Var. & 1 (time3d)& time at which 3d fields are written (variable size: maxout$/10+1$, dimension size: unlimited) \\
 xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
 yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
-dssne        & Dataset & 4 (time3d,z,y,x) & $\nabla_\parallel^2n_e$ \\
-dssue        & Dataset & 4 (time3d,z,y,x) & $\nabla_\parallel^2u_e$ \\
-dssphi       & Dataset & 4 (time3d,z,y,x) & $\nabla_\parallel^2\phi$ \\
-dppne        & Dataset & 4 (time3d,z,y,x) & $\partial_\varphi^2n_e$ \\
-dppue        & Dataset & 4 (time3d,z,y,x) & $\partial_\varphi^2u_e$ \\
-dppphi       & Dataset & 4 (time3d,z,y,x) & $\partial_\varphi^2\phi$ \\
-correlationNTildePhi  & Dataset & 1 (time) & $ \int\d v \langle \tilde \phi \tilde n_e\rangle / ||\tilde \phi||||\tilde n_e||$
-with $\tilde n_e \equiv (n_e - \langle n_e \rangle)/\langle n_e\rangle$, 
-$\tilde\phi = \phi - \langle\phi\rangle$
-and $||\phi|| = \left( \int \d v \langle \phi^2 \rangle\right)^{1/2}$
-\\
-covarianceNTildePhi  & Dataset & 1 (time) & $ \int\d v \langle \tilde \phi \tilde n_e\rangle $
-\\
-correlationNPhi  & Dataset & 1 (time) & $\int\d v \langle e^\phi n_e\rangle/ ||e^\phi||||n_e||$\\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
-psip1d           & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
+psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
 psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\nabla\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
-X\_2d            & Dataset & 3 (time,y,x) & Selected plane ($\varphi=0$) \\
-X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\langle X
-    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
+psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
+dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 X\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta X := X(R,Z,0) - \langle X\rangle_{\psi_{p}}$ \\
 X\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle X\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
 X\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle X\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
