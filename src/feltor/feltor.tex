@@ -1245,7 +1245,7 @@ and the sources and currents Y $\in$
     leiparallel &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_i \nu_\parallel \Delta_\parallel U_i$ \\
     jsoexbi &$-(\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i)  \vec u_E\cdot\nabla \psi_p$ \\
     jsoexbe &$-(\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e) \vec u_E\cdot\nabla \psi_p$ \\
-    jsoapar &$ \nabla\psi_p\cdot\nabla A_\parallel \bhat\times\nabla A_\parallel/B/\beta$ \\
+    jsoapar &$ \nabla\psi_p\cdot\nabla A_\parallel \bhat\times\nabla A_\parallel\cdot\nabla \psi_p/B/\beta$ \\
     socurve &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
     socurvi &$z_i\tau_i N_i \mathcal K(\psi_p)$ \\
     socurvkappae &$z_e\mu_e n_eu_e^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
@@ -1299,8 +1299,9 @@ dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \langle Z\rangle_{\psi_{p}}$ \\
 Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle Z\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
 Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle Z\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
-Z\_ifs           & Dataset & 2 (time, psi) & Integrated flux surface average $\int\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the derived flux-surface average $\partial_v \langle Z\rangle_{\psi_p}$ \\
-Z\_ifs\_lcfs     & Dataset & 1 (time) & Integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the fsa evaluated \\
+Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \langle Z\rangle_{\psi_p}$ \\
+Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the fsa evaluated $\langle j_v\rangle_{\psi_p}(0)$ \\
+Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average, unless Z is a current, then it is the square derivative of the flux surface average \\
 \bottomrule
 \end{longtable}
 where Z $\in$ \{X, Y\_tt\}

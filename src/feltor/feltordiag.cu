@@ -110,9 +110,10 @@ int main( int argc, char* argv[])
     const double psipmin = mag.psip()(R_O, Z_O);
 
 
-    std::cout << "Type X-point grid resolution (n(3), Npsi(64), Neta(160)) Must be divisible by 8\n";
+    std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
     unsigned npsi = 3, Npsi = 32, Neta = 320;//set number of psivalues (NPsi % 8 == 0)
     std::cin >> npsi >> Npsi >> Neta;
+    std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
     std::cout << "Generate X-point flux-aligned grid!\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
@@ -242,14 +243,27 @@ int main( int argc, char* argv[])
             long_name.data());
 
         name = record_name + "_ifs";
-        long_name = record.long_name + " (wrt. vol integrated Flux surface average unless it is a current then it is the derived flux surface average)";
+        long_name = record.long_name + " (wrt. vol integrated flux surface average)";
+        if( record_name[0] == 'j')
+            long_name = record.long_name + " (wrt. vol derivative of the flux surface average)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
 
         name = record_name + "_ifs_lcfs";
-        long_name = record.long_name + " (wrt. vol integrated Flux surface average evaluated on last closed flux surface unless it is a current then it is the fsa evaluated)";
+        long_name = record.long_name + " (wrt. vol integrated flux surface average evaluated on last closed flux surface)";
+        if( record_name[0] == 'j')
+            long_name = record.long_name + " (flux surface average evaluated on the last closed flux surface)";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 1, dim_ids,
+            &id0d[name]);
+        err = nc_put_att_text( ncid_out, id0d[name], "long_name", long_name.size(),
+            long_name.data());
+
+        name = record_name + "_ifs_norm";
+        long_name = record.long_name + " (wrt. vol integrated square flux surface average from 0 to lcfs)";
+        if( record_name[0] == 'j')
+            long_name = record.long_name + " (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 1, dim_ids,
             &id0d[name]);
         err = nc_put_att_text( ncid_out, id0d[name], "long_name", long_name.size(),
@@ -320,8 +334,8 @@ int main( int argc, char* argv[])
             }
             else
             {
-                dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d);
-                transfer1d = dg::integrate( fsa1d, g1d_out);
+                dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
+                transfer1d = dg::integrate( t1d, g1d_out);
 
                 result = dg::interpolate( transfer1d, 0., g1d_out);
             }
@@ -329,6 +343,28 @@ int main( int argc, char* argv[])
                 start1d, count1d, transfer1d.data());
             //flux surface integral/derivative on last closed flux surface
             err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
+                start2d, count2d, &result );
+            //6. Compute norm of time-integral terms to get relative importance
+            if( record_name[0] == 'j') //j indicates a flux
+            {
+                dg::blas2::symv( dpsi, fsa1d, t1d);
+                dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
+                dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
+                dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
+                transfer1d = dg::integrate( t1d, g1d_out);
+                result = dg::interpolate( transfer1d, 0., g1d_out);
+                result = sqrt(result);
+            }
+            else
+            {
+                dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
+                dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
+                transfer1d = dg::integrate( t1d, g1d_out);
+
+                result = dg::interpolate( transfer1d, 0., g1d_out);
+                result = sqrt(result);
+            }
+            err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
                 start2d, count2d, &result );
 
         }
