@@ -718,5 +718,5 @@ std::vector<Record> diagnostics2d_list = {
 
 // These two lists signify the quantities for accuracy computation
 std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-std::vector<std::string> energy_diff = { "resistivity", "leeperp", "leiperp", "leeparallel", "leiparallel"};
+std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt"};
 }//namespace feltor

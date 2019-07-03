@@ -1171,15 +1171,16 @@ induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\p
 X\_2d            & Dataset & 3 (time,y,x) & Selected plane $X(\varphi=0)$ \\
 X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
-Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time averaged selected plane
-$\langle Y(\varphi=0) \rangle_{\Delta t}$
-where $\Delta t = $dt*inner\_loop*itstp \\
-Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time averaged toroidal average
-$\langle\langle Y \rangle_\varphi\rangle_{\Delta t}$
-where $\Delta t = $dt*inner\_loop*itstp, Eq.~\eqref{eq:phi_average}\\
+Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs) selected plane
+$\int_{t_0}^{t_1}\d t Y(\varphi=0) $
+where $t_1 - t_0 = $dt*inner\_loop*itstp\\
+Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs) toroidal average (Eq.~\eqref{eq:phi_average})
+$\int_{t_0}^{t_1}\d t \langle Y \rangle_\varphi$
+where $t_1 - t_0 = $dt*inner\_loop*itstp\\
 \bottomrule
 \end{longtable}
-where X $\in$
+where the time integrals are computed with the help of Simpson's rule
+and X $\in$
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation}\\
@@ -1251,7 +1252,6 @@ and the sources and currents Y $\in$
     socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
 \bottomrule
 \end{longtable}
-The time averages are computed with the help of Simpson's rule.
 \subsection{Restart file} \label{sec:restart_file}
 The program \texttt{feltor\_hpc.cu} has the possibility to initialize time and the fields with
 the results of a previous simulation. This behaviour is enabled by giving an additional file \texttt{initial.nc}

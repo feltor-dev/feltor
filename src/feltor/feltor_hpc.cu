@@ -441,15 +441,11 @@ int main( int argc, char* argv[])
             {
                 std::string name = record.name+"_ta2d";
                 transferH2d = time_integrals.at(name).get_integral();
-                std::array<double,2> tt = time_integrals.at(name).get_boundaries();
-                dg::blas1::scal( transferD2d, 1./(tt[1]-tt[0]));
                 time_integrals.at(name).flush();
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
 
                 name = record.name+"_2d";
                 transferH2d = time_integrals.at(name).get_integral( );
-                tt = time_integrals.at(name).get_boundaries( );
-                dg::blas1::scal( transferD2d, 1./(tt[1]-tt[0]));
                 time_integrals.at(name).flush( );
                 output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
             }

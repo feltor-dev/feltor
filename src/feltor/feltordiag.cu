@@ -110,7 +110,9 @@ int main( int argc, char* argv[])
     const double psipmin = mag.psip()(R_O, Z_O);
 
 
-    unsigned npsi = 3, Npsi = 64;//set number of psivalues (NPsi % 8 == 0)
+    std::cout << "Type X-point grid resolution (n(3), Npsi(64), Neta(160)) Must be divisible by 8\n";
+    unsigned npsi = 3, Npsi = 32, Neta = 320;//set number of psivalues (NPsi % 8 == 0)
+    std::cin >> npsi >> Npsi >> Neta;
     std::cout << "Generate X-point flux-aligned grid!\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
@@ -121,7 +123,7 @@ int main( int argc, char* argv[])
     std::cout << "psi max is            "<<psipmax<<"\n";
     psipmax = -fx_0/(1.-fx_0)*psipmin;
     std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
-    dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, 160, dg::DIR_NEU, dg::NEU);
+    dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
     std::cout << "DONE!\n";
     //Create 1d grid
     dg::Grid1d g1d_out(psipmin, psipmax, 3, Npsi, dg::DIR_NEU); //inner value is always 0
@@ -264,12 +266,12 @@ int main( int argc, char* argv[])
     //steps = 3;
     for( unsigned i=0; i<steps; i++)//timestepping
     {
-        err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << std::endl;
-        //write time
-        err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
         start2d[0] = i;
         start1d[0] = i;
+        // read and write time
+        err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
+        std::cout << "Timestep = " << i << "  time = " << time << std::endl;
+        err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
         for( auto& record : feltor::diagnostics2d_list)
         {
             std::string record_name = record.name;
