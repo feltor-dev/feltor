@@ -145,8 +145,13 @@ int main( int argc, char* argv[])
     //Test coefficients
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
-    const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    const double Z_X = -1.1*gp.elongation*gp.a;
+    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    double Z_X = -1.1*gp.elongation*gp.a;
+    if( gp.hasXpoint())
+    {
+        dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
+        std::cout <<  "X-point found at "<<R_X << " "<<Z_X<<"\n";
+    }
     const double R_H = gp.R_0-gp.triangularity*gp.a;
     const double Z_H = gp.elongation*gp.a;
     const double alpha_ = asin(gp.triangularity);

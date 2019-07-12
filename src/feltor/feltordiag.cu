@@ -117,6 +117,7 @@ int main( int argc, char* argv[])
     std::cout << "Generate X-point flux-aligned grid!\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
+    dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
     dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
     dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, R_X, Z_X, mag.R0(), 0, 0, true);
     double fx_0 = 1./8.;
@@ -313,8 +314,6 @@ int main( int argc, char* argv[])
 
             //4. Read 2d variable and compute fluctuations
             err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
-            err = nc_get_vara_double( ncid, dataID,
-                start2d, count2d, transferH2d.data());
             err = nc_get_vara_double( ncid, dataID, start2d, count2d,
                 t2d_mp.data());
             if( record_name[0] == 'j')
