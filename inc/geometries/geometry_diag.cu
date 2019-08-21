@@ -23,7 +23,7 @@
 
 struct Parameters
 {
-    unsigned n, Nx, Ny, Nz;
+    unsigned n, Nx, Ny, Nz, Npsi;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
     double amp, k_psi, bgprofamp, nprofileamp;
@@ -34,6 +34,7 @@ struct Parameters
         Nx = js.get("Nx",100).asUInt();
         Ny = js.get("Ny",100).asUInt();
         Nz = js.get("Nz", 1).asUInt();
+        Npsi = js.get("Npsi", 16).asUInt();
         boxscaleRm = js.get("boxscaleRm", 1.1).asDouble();
         boxscaleRp = js.get("boxscaleRp", 1.1).asDouble();
         boxscaleZm = js.get("boxscaleZm", 1.2).asDouble();
@@ -55,6 +56,7 @@ struct Parameters
             <<" Nx            = "<<Nx<<"\n"
             <<" Ny            = "<<Ny<<"\n"
             <<" Nz            = "<<Nz<<"\n"
+            <<" Npsi          = "<<Npsi<<"\n"
             <<" boxscaleRm    = "<<boxscaleRm<<"\n"
             <<" boxscaleRp    = "<<boxscaleRp<<"\n"
             <<" boxscaleZm    = "<<boxscaleZm<<"\n"
@@ -144,7 +146,7 @@ int main( int argc, char* argv[])
 
     //Test coefficients
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
+    //mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     if( gp.hasXpoint())
@@ -204,8 +206,8 @@ int main( int argc, char* argv[])
         {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
         {"GradLnB", "The parallel derivative of LnB", dg::geo::GradLnB(mag)},
         {"Divb", "The divergence of the magnetic unit vector", dg::geo::Divb(mag)},
-        {"BR", "Derivative of Bmodule in R", dg::geo::BR(mag)},
-        {"BZ", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
+        {"B_R", "Derivative of Bmodule in R", dg::geo::BR(mag)},
+        {"B_Z", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
         {"CurvatureNablaBR",  "R-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBR(mag)},
         {"CurvatureNablaBZ",  "Z-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBZ(mag)},
         {"CurvatureKappaR",   "R-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaR(mag)},
@@ -247,7 +249,7 @@ int main( int argc, char* argv[])
     dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
-    unsigned npsi = 3, Npsi = 64;//set number of psivalues (NPsi % 8 == 0)
+    unsigned npsi = 3, Npsi = p.Npsi;//set number of psivalues (NPsi % 8 == 0)
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     double volumeXGrid;
     /// -------  Elements for fsa of curvature operators ----------------
@@ -336,16 +338,26 @@ int main( int argc, char* argv[])
     }
 
     ///////////////////Compute flux average////////////////////
+    std::cout << "Compute flux averages\n";
     dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
     if( gp.hasXpoint() )
         dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
-    dg::geo::SafetyFactor     qprof( mag);
     dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, mag, psipog2d, xpoint_weights);
     dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
     map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
         "Flux surface average of psi with delta function");
-    map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
-        "q-profile (Safety factor) using direct integration");
+    if( gp.equilibrium == "solovev")
+    {
+        dg::geo::SafetyFactor     qprof( mag);
+        map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
+            "q-profile (Safety factor) using direct integration");
+    }
+    else
+    {
+        dg::geo::SafetyFactorAverage     qprof( grid2d, mag);
+        map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
+            "q-profile (Safety factor) using average integration");
+    }
     map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
         "Flux label psi evaluated on grid1d");
     dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
@@ -462,9 +474,9 @@ int main( int argc, char* argv[])
         "Z-component of the magnetic field vector (3d version of BFieldZ)",
         "Contravariant Phi-component of the magnetic field vector (3d version of BFieldP)"};
     int vecID[3];
-    err = nc_def_var( ncid, "B_R", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
-    err = nc_def_var( ncid, "B_Z", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
-    err = nc_def_var( ncid, "B_P", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
+    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
+    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
+    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
     for(int i=0; i<3; i++)
     {
         err = nc_put_att_text( ncid, vecID[i], "long_name", vec_long[i].size(), vec_long[i].data());

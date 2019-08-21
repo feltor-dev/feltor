@@ -182,8 +182,9 @@ By integration over \(\psi_p\) we find
 Now, we introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
 and solve Equations~\eqref{eq:GSEdimless} and~\eqref{eq:solovevassumption} to obtain
 \begin{align}\label{eq:solovev}
- \psi_p (R,Z) &= R_0 \left[ \frac{1}{8}\bar{R}^4 + A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}} 
-   - \frac{1}{8}\bar{R}^4\right) + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],
+ \psi_p (R,Z) &= R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
+   - \frac{1}{8}\bar{R}^4\right)+ B\frac{1}{8}\bar{R}^4 
+   + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],
 \end{align}
 with
 \rowcolors{2}{gray!25}{white}
@@ -218,6 +219,7 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
 \bottomrule
 \end{longtable}
 The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field, while $R_0$ appears as an artificial scaling factor (note here that a change in $\rho_s$ changes $R_0$ but not the form or size of the dimensional equilibrium magnetic field).
+Note that $B$ is not part of the original work ($B=1$ per default) and has been added for additional flexibility in fitting the coefficients to an existing experimental equilibrium.
 Eq.~\eqref{eq:solovev} allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
 field reversed configurations and low and high beta tokamak equilbria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
 
@@ -1120,8 +1122,9 @@ File format: json
 \begin{longtable}{llll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-    A      & float & 0 &  - & Solovev parameter in Eq.~\eqref{eq:solovev} \\
-    C      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev}  \\
+    A      & float & 0 &  0 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
+    B      & float & 1 &  1 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
+    c      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev} \\
     R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
     elongation    & float & 1 & - & Elongation $e$ \\
     triangularity & float & 0 & - & Triangularity $\delta$ \\

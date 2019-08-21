@@ -257,7 +257,6 @@ struct SafetyFactorAverage
      * @brief Construct from a field and a grid
      * @param g2d 2d grid
      * @param c contains psip, psipR and psipZ and Ipol
-     * @param weights Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point)
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
      */
     SafetyFactorAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.) :
@@ -268,6 +267,7 @@ struct SafetyFactorAverage
         dg::blas1::pointwiseDivide( alpha, R, alpha);
         m_fsi.set_left( alpha);
     }
+    /// Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point)
     void set_weights( const thrust::host_vector<double>& weights){
         m_fsi.set_right( weights);
     }
