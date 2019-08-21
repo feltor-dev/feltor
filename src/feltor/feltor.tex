@@ -768,13 +768,30 @@ We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s
     (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
-    \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}},\\
-    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_{p,\min},\quad \text{In general }\psi_{p,\min} = \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
+    \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}}, \quad
+    \psi_p(R,Z):= (1-\rho(R,Z))\psi_{p,\min},\\ \text{In general }\psi_{p,\min} &= \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
 \end{align}
 with $0 < \rho_{s}<1$
 where $\omega_s$ is the source strength parameter and $R_O$, $Z_O$ are the coordinates of the O-point.
-This will result in exponential adaption of the core and wall
+This will result in exponential adaption of the core
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
+
+As an alternative we can also choose a constant influx
+\begin{align} \label{eq:electron_source_influx}
+  S_{n_e}(R,Z,\varphi, t) &= \omega_s\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)
+\end{align}
+or a Torpex inspired source profile
+\begin{align} \label{eq:electron_source_torpex}
+  S_{n_e}(R,Z,\varphi, t) &= \omega_s
+  \begin{cases}
+    \exp\left( - \frac{(R-R_0)^2}{a^2 }- \frac{(Z-Z_0)^2}{b^2}\right) \text{ if} R > R_0 \\
+    \frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} -2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \\
+  +\frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} +2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \text{ else}
+              \end{cases}
+\end{align}
+with $a=0.0335$m, $b=0.05$m, $c=565m^{-2}$, $R_0=0.98$m and $Z_0=-0.02$m.
+
+
 For ions we use
 \begin{align}
     S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e}
@@ -1107,7 +1124,10 @@ nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq
 alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}\\
 alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes) \\
 source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
-rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
+source\_type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
+"influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx}, "torpex": Torpex inspired
+source profile Eq.~\eqref{eq:electron_source_torpex}\\
+rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
 rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psip}  \\
 \bottomrule

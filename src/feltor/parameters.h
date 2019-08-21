@@ -46,6 +46,7 @@ struct Parameters
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
+    std::string source_type;
     bool symmetric;
     Parameters() = default;
     Parameters( const Json::Value& js) {
@@ -91,6 +92,7 @@ struct Parameters
 
         nprofamp  = js["nprofileamp"].asDouble();
         omega_source  = js.get("source", 0.).asDouble();
+        source_type  = js.get("source_type", "profile").asString();
         omega_damping = js.get("damping", 0.).asDouble();
         alpha_mag    = js.get("alpha_mag", 0.05).asDouble();
         alpha        = js.get("alpha", 0.2).asDouble();

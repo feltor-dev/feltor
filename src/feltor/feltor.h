@@ -835,8 +835,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //Add source terms
     if( m_omega_source != 0)
     {
-        dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
-            m_profne, m_source, m_omega_source);
+        if( m_p.source_type == "profile")
+            dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
+                m_profne, m_source, m_omega_source);
+        else
+            dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
         //compute FLR correction
         dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
