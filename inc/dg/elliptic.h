@@ -192,6 +192,18 @@ class Elliptic
      * @return  The current scale factor for jump terms
      */
     value_type get_jfactor() const {return m_jfactor;}
+    /**
+     * @brief Compute elliptic term and store in output
+     *
+     * i.e. \c y=M*x
+     * @param x left-hand-side
+     * @param y result
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void operator()( const ContainerType0& x, ContainerType1& y){
+        symv( 1, x, 0, y);
+    }
 
     /**
      * @brief Compute elliptic term and store in output

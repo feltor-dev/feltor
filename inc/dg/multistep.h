@@ -258,7 +258,7 @@ struct Karniadakis
     }
     SolverType m_solver;
     std::array<ContainerType,3> m_u, m_f;
-    value_type t_, m_dt;
+    value_type m_t, m_dt;
     value_type a[3];
     value_type b[3], g0 = 6./11.;
 };
@@ -269,7 +269,7 @@ template< class RHS, class Diffusion>
 void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
 {
     //operator splitting using explicit Euler for both explicit and implicit part
-    t_ = t0, m_dt = dt;
+    m_t = t0, m_dt = dt;
     blas1::copy(  u0, m_u[0]);
     f( t0, u0, m_f[0]); //f may not destroy u0
     blas1::axpby( 1., m_u[0], -dt, m_f[0], m_f[1]); //Euler step
@@ -300,165 +300,133 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, valu
     value_type alpha[2] = {2., -1.};
     //value_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], m_u[1], alpha[1],  m_u[2], u); //extrapolate previous solutions
-    t = t_ = t_+ m_dt;
+    t = m_t = m_t + m_dt;
     m_solver.solve( -m_dt*g0, diff, t, u, m_u[0]);
     blas1::copy( u, m_u[0]); //store result
-    f(t_, m_u[0], m_f[0]); //call f on new point
+    f(m_t, m_u[0], m_f[0]); //call f on new point
 }
 ///@endcond
-/*
-template<class ContainerType,class RHS> // , class RHS
-struct BDF{
-    using value_type = dg::get_value_type<ContainerType>;
-    using container_type = ContainerType;
 
+/**
+* @brief Struct for Backward differentiation formula implicit multistep time-integration
+* \f[
+* \begin{align}
+    v^{n+1} = \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1})\right]
+    \end{align}
+    \f]
+
+    which discretizes
+    \f[
+    \frac{\partial v}{\partial t} = \hat I(t,v)
+    \f]
+    where \f$ \hat I \f$ represents the right hand side of the equations.
+    The coefficients for up to order 6 can be found at
+    https://en.wikipedia.org/wiki/Backward_differentiation_formula
+*
+* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
+* Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$). For nonlinear right hand side we recommend the AndersonSolver
+*
+* @note In our experience the implicit treatment of diffusive or hyperdiffusive
+terms can significantly reduce the required number of time steps. This
+outweighs the increased computational cost of the additional inversions.
+* @copydoc hide_note_multistep
+* @copydoc hide_SolverType
+* @copydoc hide_ContainerType
+* @ingroup time
+*/
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct BDF
+{
+
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
     BDF(){}
 
-    //template<class RHS>
-    BDF( unsigned order, const ContainerType& copyable, RHS& rhs, value_type dt):rhs_(rhs){ //
-        construct( order, copyable, rhs, dt); //rhs, 
+    ///@copydoc construct()
+    template<class ...SolverParams>
+    BDF( unsigned order, SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...), m_u( order, m_solver.copyable()), m_f(m_solver.copyable()) {
+        init_coeffs(order);
+        m_k = order;
     }
 
-    //template<class RHS>
-    void construct(unsigned order, const ContainerType& copyable, RHS& rhs, value_type dt){ // 
-        //RHS& rhs_ = rhs;
-        //rhs_ = rhs;
+    /*! @brief Reserve memory for integration and construct Solver
+     *
+     * @param order Order of the BDF formula (1 <= order <= 6)
+     * @param ps Parameters that are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     */
+    template<class ...SolverParams>
+    void construct(unsigned order, SolverParams&& ...ps)
+    {
+        m_solver = SolverType( std::forward<SolverParams>(ps)...);
+        init_coeffs(order);
         m_k = order;
-        u_.assign( order, copyable);
-        f_ = copyable;
-        sum_prev_x = copyable;
-        dt_ = dt;
-        //Construct Newton
-        
+        m_u.assign( order, m_solver.copyable());
+        m_f = m_solver.copyable();
+    }
+
+    ///@copydoc AdamsBashforth::init()
+    template<class RHS>
+    void init(RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+
+    ///@copydoc AdamsBashforth::step()
+    template<class RHS>
+    void step(RHS& rhs, value_type& t0, container_type& u0);
+    private:
+    void init_coeffs(unsigned order){
         switch (order){
-            case 1: 
-            m_bdf = {1.}; 
-            f_factor = 1.;
-            break;
-            case 2: 
-            m_bdf = {4./3., -1./3.}; 
-            f_factor = 2./3.;
-            break;
-            case 3: 
-            m_bdf = { 18./11., -9./11., 2./11.}; 
-            f_factor = 6./11.;
-            break;
-            case 4: 
-            m_bdf = {48./25., -36./25., 16./25., -3./25.}; 
-            f_factor = 12./25.;
-            break;
-            case 5: 
-            m_bdf = { 300./137., -300./137., 200./137., -75./137., 12./137.}; 
-            f_factor = 60/137.;
-            break;
-            case 6: 
-            m_bdf = { 360./147., -450./147., 400./147., -225./147., 172./147., -10./147.}; 
-            f_factor = 60/147.;
-            break;
+            case 1: m_bdf = {1.}; m_beta = 1.; break;
+            case 2: m_bdf = {4./3., -1./3.}; m_beta = 2./3.; break;
+            case 3: m_bdf = { 18./11., -9./11., 2./11.}; m_beta = 6./11.; break;
+            case 4: m_bdf = {48./25., -36./25., 16./25., -3./25.}; m_beta = 12./25.; break;
+            case 5: m_bdf = { 300./137., -300./137., 200./137., -75./137., 12./137.}; m_beta = 60/137.; break;
+            case 6: m_bdf = { 360./147., -450./147., 400./147., -225./147., 172./147., -10./147.}; m_beta = 60/147.; break;
             default: throw dg::Error(dg::Message()<<"Order not implemented in BDF!");
         }
-        std::cout << "Hello, i'm the BDF constructor :) " << std::endl;
     }
-
-    void func(const ContainerType& uin, ContainerType& uout);           //Function to find root of.
-
-    void init(value_type t0, const ContainerType& u0);                  //Initialise
-
-    void set_mMax(int input_mMax){
-        mMax = input_mMax;
-    }
-
-    void set_itmax(int input_itmax){
-        itmax = input_itmax;
-    }
-
-    void set_AAstart(int input_AAstart){
-        AAstart = input_AAstart;
-    }    
-
-    void step(value_type t0, value_type& t1, container_type& u, value_type rtol, value_type atol, int solver, value_type damping, value_type beta);
-    private:
-        int mMax = 10;
-        int itmax = 100;
-        int AAstart = 0;
-        RHS& rhs_;
-        value_type tu_, dt_, f_factor;
-        std::vector<ContainerType> u_;
-        ContainerType f_;
-        ContainerType sum_prev_x;
-        std::vector<value_type> m_bdf;
-        unsigned m_k;
+    SolverType m_solver;
+    value_type m_tu, m_dt;
+    std::vector<ContainerType> m_u;
+    ContainerType m_f;
+    std::vector<value_type> m_bdf;
+    value_type m_beta;
+    unsigned m_k;
 };
 
-template< class ContainerType, class RHS>
-void BDF<ContainerType, RHS>::func(const ContainerType& x, ContainerType& fval){ //Function to pass to JFNK
-    rhs_(tu_,x,fval);                                                   //fval = rhs(x,t) //tu_ needs to be set
-    dg::blas1::scal(fval,dt_);                                          //fval = fx*dt
-    dg::blas1::axpby(1.,sum_prev_x,f_factor,fval);                      //fval = sum_x_prev + f_factor*fval where sum_x_prev = sum_order x_order
-    dg::blas1::axpby(1.,x,-1.,fval);                                    //fx = x-fx... 
-}
-
-template< class ContainerType, class RHS>
-void BDF<ContainerType, RHS>::init(value_type t0, const ContainerType& u0){
+template< class ContainerType, class SolverType>
+template<class RHS>
+void BDF<ContainerType, SolverType>::init(RHS& rhs, value_type t0,
+    const ContainerType& u0, value_type dt)
+{
+    m_tu = t0, m_dt = dt;
+    dg::blas1::copy(u0, m_u[0]);
     //Perform a number of backward euler steps
-    std::cout << "Initialising method" << std::endl;
-    ContainerType fout(u0);
-    dg::blas1::copy(u0, u_[0]);
-    std::cout << "l2norm of u0 = " << std::setprecision(15) << dg::l2norm(u0) << std::endl;
-    for (unsigned i = 0; i<m_bdf.size()-1; i++){
-        rhs_(t0-i*dt_,u_[i],fout);
-        dg::blas1::axpby(-dt_,fout,1.,u_[i],u_[i+1]);
-        std::cout << "l2norm of u0 = " << std::setprecision(15) << dg::l2norm(u_[i+1]) << std::endl;
+    for (unsigned i = 0; i<m_k-1; i++){
+        rhs(t0-i*dt,m_u[i], m_f);
+        dg::blas1::axpby(-dt,m_f,1.,m_u[i],m_u[i+1]);
     }
-    
+    rhs( t0, u0, m_f); // and set state in f to (t0,u0)
 }
 
-template< class ContainerType, class RHS>
-void BDF<ContainerType, RHS>::step(value_type t0, value_type& t1, container_type& u, value_type rtol, value_type atol, int solver, value_type damping, value_type beta){
-    dg::blas1::axpby(m_bdf[0],u_[0],0.,sum_prev_x);
-    for (unsigned i = 1; i < m_bdf.size(); i++){
-        dg::blas1::axpby(m_bdf[i],u_[i],1.,sum_prev_x);
+template< class ContainerType, class SolverType>
+template<class RHS>
+void BDF<ContainerType, SolverType>::step(RHS& rhs, value_type& t, container_type& u)
+{
+    dg::blas1::axpby( m_bdf[0], m_u[0], 0., m_f);
+    for (unsigned i = 1; i < m_k; i++){
+        dg::blas1::axpby( m_bdf[i], m_u[i], 1., m_f);
     }
-    tu_ = t1 = t0+dt_;
-    ContainerType upred(u);
-    ContainerType uout(u);
-    ContainerType diff(u);
+    t = m_tu = m_tu + m_dt;
+
     value_type alpha[2] = {2., -1.};
-    dg::blas1::axpby( alpha[0], u_[0], alpha[1],  u_[1], u);
-    std::cout << "AAstart = " << AAstart << std::endl;
-    std::cout << "mMax = " << mMax << std::endl;
-    std::cout << "itmax = " << itmax << std::endl;
-    using namespace std::placeholders;
-    auto fun = std::bind(&BDF<ContainerType, RHS>::func,*this,_1,_2);
-    if (solver == 0) {
-        std::cout << "You have chosen the Anderson Acceleration" << std::endl;
-        andacc<ContainerType>(fun, u, mMax, itmax, atol, rtol, beta, AAstart, damping);
-    } else if (solver == 1){
-        std::cout << "You have chosen the Nonlinear GMRES" << std::endl;
-        ngmres<ContainerType>(fun, u, mMax, itmax, atol, rtol, damping);
-    } else if (solver == 2){
-        std::cout << "You have chosen the de Sterck Nonlinear GMRES" << std::endl;
-        dsngmres<ContainerType>(fun, u, mMax, itmax, atol, rtol, damping);
-    } else if (solver == 3){
-        std::cout << "You have chosen the objective acceleration" << std::endl;
-        o_accel<ContainerType>(fun, u, mMax, itmax, atol, rtol, damping);
-    }else if (solver == 4){
-        std::cout << "You have chosen the Broyden solver" << std::endl;
-        broyden<ContainerType>(fun, u, mMax, itmax, atol, rtol, damping);
-    } else {
-        std::cout << "Solver not specified. Defaulting to Anderson Acceleration" << std::endl;
-        andacc<ContainerType>(fun, u, mMax, itmax, atol, rtol, beta, AAstart,damping);
-    }
-    ////Update u_
-    std::rotate(u_.rbegin(), u_.rbegin() + 1, u_.rend()); //Rotate 1 to the right.
-    dg::blas1::copy(u,u_[0]);
-    std::cout<<"Exited nonlin solver" << std::endl;
-    ////Update sum_x_prev
-    
+    if( m_k > 1 ) //everything higher than Euler
+        dg::blas1::axpby( alpha[0], m_u[0], alpha[1],  m_u[1], u);
+    else
+        dg::blas1::copy( m_u[0], u);
+    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend()); //Rotate 1 to the right
+    m_solver.solve( -m_dt*m_beta, rhs, t, u, m_f);
+    dg::blas1::copy( u, m_u[0]);
 }
-}
-*/
-
-
 
 } //namespace dg

@@ -82,6 +82,7 @@ struct Full
         m_exp( g, nu), m_imp( g, nu), m_temp( dg::evaluate( dg::one, g))
 
     { }
+    const container& weights(){return m_imp.weights();}
     void operator()( double t, const container& y, container& yp) {
         m_exp( t, y, yp);
         m_imp( t, y, m_temp);
@@ -124,7 +125,7 @@ int main()
     double time = 0.;
     dg::DVec error( sol);
     exblas::udouble res;
-    std::cout << "### Test explicit multistep methods with "<<NT<<"steps\n";
+    std::cout << "### Test explicit multistep methods with "<<NT<<" steps\n";
     for( unsigned s=1; s<6; s++)
     {
         time = 0., y0 = init;
@@ -136,6 +137,19 @@ int main()
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
         std::cout << "Relative error AB "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+    }
+    std::cout << "### Test implicit multistep methods with "<<NT<<" steps\n";
+    for( unsigned s=1; s<6; s++)
+    {
+        time = 0., y0 = init;
+        dg::BDF< dg::DVec, dg::FixedPointSolver<dg::DVec> > bdf( s, y0, 100, 1e-10);
+        bdf.init( full, time, y0, dt);
+        //main time loop
+        for( unsigned k=0; k<NT; k++)
+            bdf.step( full, time, y0);
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+        std::cout << "Relative error BDF "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
     }
     Explicit<dg::DVec> ex( grid, nu);
     Implicit<dg::DMatrix, dg::DVec> im( grid, nu);
