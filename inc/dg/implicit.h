@@ -1,5 +1,6 @@
 #pragma once
 #include "cg.h"
+#include "andersonacc.h"
 
 namespace dg{
 ///@cond
@@ -186,5 +187,60 @@ struct FixedPointSolver
     ContainerType m_current;
     value_type m_eps;
     unsigned m_max_iter;
+};
+
+/*!@brief Fixed Point iterator with Anderson Acceleration for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
+ *
+ * for given t, alpha and rho.
+ * @copydoc hide_ContainerType
+ * @sa AndersonAcceleration Karniadakis ARKStep DIRKStep
+ * @ingroup invert
+ */
+template<class ContainerType>
+struct AndersonSolver
+{
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>;//!< value type of vectors
+    ///No memory allocation
+    AndersonSolver(){}
+    /*!
+    * @param copyable vector of the size that is later used in \c solve (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c solve method can only be called with vectors of the same size)
+    * @param max_iter maimum iteration number in cg
+    * @param eps accuracy parameter for cg
+    */
+    AndersonSolver( const ContainerType& copyable, unsigned mMax, value_type eps):
+        m_acc(copyable, mMax), m_rhs( copyable), m_eps(eps)
+        {}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_rhs;}
+
+    template< class Implicit> //going to be a reference type
+    void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
+    {
+        detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
+#ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif//MPI
+        Timer ti;
+        ti.tic();
+        unsigned number = m_acc( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
+        ti.toc();
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif//MPI
+        std::cout << "# of pcg iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+#else
+        m_pcg( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
+#endif //DG_BENCHMARK
+    }
+    private:
+    AndersonAcceleration< ContainerType> m_acc;
+    ContainerType m_rhs;
+    value_type m_eps;
 };
 }//namespace dg

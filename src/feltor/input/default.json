@@ -30,7 +30,6 @@
     "sigma_z"   : 0.5,
     "k_psi"     : 0,
     "nprofileamp" : 4,
-    "bgprofamp"   : 1,
     "bc" :
     {
         "density" : ["NEU", "NEU"],

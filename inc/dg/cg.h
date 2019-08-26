@@ -95,7 +95,7 @@ class CG
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
-     * @param S Weights used to compute the norm for the error condition
+     * @param S (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      *
