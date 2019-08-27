@@ -48,7 +48,7 @@
  * These algorithms make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
- *     @defgroup invert Matrix inversion
+ *     @defgroup invert Linear and nonlinear solvers
  *     @defgroup root Root finding
  * @}
  * @defgroup geo Level 3: Topology and Geometry

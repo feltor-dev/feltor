@@ -25,23 +25,27 @@ int main()
     dg::HVec x = dg::evaluate( initial, grid);
     unsigned max_iter = n*n*Nx*Ny;
     const dg::HVec& copyable_vector = x;
+    double damping;
+    unsigned restart;
+    std::cout << "Type damping (1e-6) and restart (10) \n";
+    std::cin >> damping >> restart;
 
 //! [doxygen]
-    // create volume and inverse volume on previously defined grid
+    // create volume on previously defined grid
     const dg::HVec w2d = dg::create::weights( grid);
 
-    // Create unnormalized Laplacian
+    // Create normalized Laplacian
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid, dg::normed);
 
-    // allocate memory in conjugate gradient
-    dg::AndersonAcceleration<dg::HVec > acc( copyable_vector, 10);
+    // allocate memory
+    dg::AndersonAcceleration<dg::HVec > acc( copyable_vector, 3);
 
     // Evaluate right hand side and solution on the grid
     dg::HVec b = dg::evaluate ( laplace_fct, grid);
     const dg::HVec solution = dg::evaluate ( fct, grid);
 
     const double eps = 1e-6;
-    std::cout << "Number of iterations "<< acc.solve( A, x, b, w2d, eps, eps, 1, 0, max_iter, 1e-6, 10, true)<<std::endl;
+    std::cout << "Number of iterations "<< acc.solve( A, x, b, w2d, eps, eps, max_iter, damping, restart, true)<<std::endl;
 //! [doxygen]
     std::cout << "For a precision of "<< eps<<std::endl;
     //compute error

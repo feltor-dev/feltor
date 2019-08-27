@@ -139,10 +139,11 @@ int main()
         std::cout << "Relative error AB "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
     }
     std::cout << "### Test implicit multistep methods with "<<NT<<" steps\n";
-    for( unsigned s=1; s<6; s++)
+    for( unsigned s=1; s<7; s++)
     {
         time = 0., y0 = init;
-        dg::BDF< dg::DVec, dg::FixedPointSolver<dg::DVec> > bdf( s, y0, 100, 1e-10);
+        dg::BDF< dg::DVec, dg::AndersonSolver<dg::DVec> > bdf( s, y0, 0, 1e-10, 100, 1, 1);
+        //dg::BDF< dg::DVec, dg::FixedPointSolver<dg::DVec> > bdf( s, y0, 10, 1e-10);
         bdf.init( full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)

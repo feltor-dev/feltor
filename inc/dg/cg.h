@@ -288,7 +288,6 @@ class ChebyshevIteration
      * @brief Allocate memory for the pcg method
      *
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable) {
         m_x1 = m_r = copyable;

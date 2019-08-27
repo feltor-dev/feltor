@@ -41,7 +41,7 @@ struct Simpsons
     {
         set_order(order);
     }
-    ///@copydoc SimpsonsRule(unsigned)
+    ///@copydoc Simpsons(unsigned)
     void set_order( unsigned order){
         m_order=order;
         m_t.resize( order-1);

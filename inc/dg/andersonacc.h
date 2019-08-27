@@ -39,13 +39,13 @@ void QRdelete1(std::vector<ContainerType>& Q,Mat& R, unsigned m)
 
 
 
-/*!@brief Anderson Acceleration of Fixed Point Iteration for \f[ f(x) = 0\f]
+/*!@brief Anderson Acceleration of Fixed Point/Richardson Iteration for the nonlinear equation \f[ f(x) = b\f]
  *
- * This class implements the Anderson acceleration of the fixed point iteration algorithm for the problem
- * \f[
- *  f(x) = 0
- *  \f]
+ * This class implements the Anderson acceleration of the fixed point iteration algorithm
  *  described by https://users.wpi.edu/~walker/Papers/Walker-Ni,SINUM,V49,1715-1735.pdf
+ As recommended by  https://arxiv.org/pdf/1803.06673.pdf we periodically restart the acceleration to
+ improve convergence behaviour.
+ *  @ingroup invert
  * @snippet andersonacc_t.cu doxygen
  * @copydoc hide_ContainerType
  */
@@ -54,7 +54,9 @@ struct AndersonAcceleration
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
+    ///@brief Allocate nothing, Call \c construct method before usage
     AndersonAcceleration(){}
+    ///@copydoc construct()
     AndersonAcceleration(const ContainerType& copyable, unsigned mMax ):
         m_gval( copyable), m_g_old( m_gval), m_fval( m_gval), m_f_old(m_gval),
         m_df( m_gval), m_DG( mMax, copyable), m_Q( m_DG),
@@ -62,16 +64,37 @@ struct AndersonAcceleration
         m_R( mMax, m_gamma), m_mMax( mMax)
     {}
 
-//mMax worth trying something between 3 and 10
-//AAstart 0
-//damping Fixed Point damping
-//restart: restart the iteration
+    /*! @brief Allocate memory for the object
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param mMax The maximum number of vectors to include in the optimization procedure. \c mMax+1 is the number
+     * of solutions involved in computing the new solution.
+     *  Something between 3 and 10 are good values but higher values mean more storage space that needs to be reserved.
+     *  If \c mMax==0 then the algorithm is equivalent to Fixed Point (or Richardson if the damping parameter is used in the \c solve() method) iteration i.e. no optimization and only 1 solution needed to compute a new solution.
+     */
+    void construct( const ContainerType& copyable, unsigned mMax)
+    {
+        *this = AndersonAcceleration(copyable, mMax);
+    }
+    const ContainerType& copyable() const{ return m_gval;}
+
     /*!@brief Solve the system \f$ f(x) = b \f$ in the given norm
      *
+     * @param f The function \c y=f(x) in the form \c f(x,y). The first argument is the input and the second the output.
+     * @param x Contains an initial guess on input and the solution on output.
+     * @param b The right hand side vector.
+     * @param weights The weights define the norm for the stopping condition of the solver
+     * @param rtol Relative error condition with respect to \c b
+     * @param atol Absolute error condition
+     * @param max_iter Maxmimum number of iterations
+     * @param damping Paramter to prevent too large jumps around the actual solution. Hard to determine in general but values between 0.1 and 1e-3 are good values to begin with. This is the parameter that appears in Richardson iteration.
+     * @param restart Number >= 1 that indicates after how many iterations to restart the acceleration. Periodic restarts are important for this method.  Per default it should be the same value as \c mMax but \c mMax+1 or higher could also be valuable to consider.
+     * @param verbose If true writes intermediate errors to \c std::cout . Avoid in MPI code.
+     * @return Number of iterations used to achieve desired precision
      */
     template<class BinarySubroutine>
     unsigned solve( BinarySubroutine& f, ContainerType& x, const ContainerType& b, const ContainerType& weights,
-        value_type rtol, value_type atol, value_type beta, unsigned AAstart, unsigned max_iter,
+        value_type rtol, value_type atol, unsigned max_iter,
         value_type damping, unsigned restart, bool verbose);
 
     private:
@@ -88,8 +111,8 @@ template<class ContainerType>
 template<class BinarySubroutine>
 unsigned AndersonAcceleration<ContainerType>::solve(
     BinarySubroutine& func, ContainerType& x, const ContainerType& b, const ContainerType& weights,
-    value_type rtol, value_type atol, value_type beta, unsigned AAstart, unsigned max_iter,
-    value_type damping, unsigned restart, bool verbose )
+    value_type rtol, value_type atol, unsigned max_iter,
+    value_type damping, unsigned restart,  bool verbose )
 {
     if (m_mMax == 0){
         if(verbose)std::cout<< "No acceleration will occur" << std::endl;
@@ -100,13 +123,13 @@ unsigned AndersonAcceleration<ContainerType>::solve(
     value_type tol = atol+rtol*nrmb;
     if(verbose)std::cout << "tol = " << tol << std::endl;
 
-    for(unsigned iter=0;iter < max_iter-1; iter++)
+    for(unsigned iter=0;iter < max_iter; iter++)
     {
 
-        // Restart if a certain number of iterations are reached. Does not need to be mMax... Just seems to work nicely right now.
-        if (iter % restart == 0) {
-            if(verbose)std::cout << "Iter = " << iter << std::endl;
+        // Restart from mAA=1 (note that it's incremented further down) if a certain number of iterations are reached.
+        if (iter % (restart) == 0) {
             mAA = 0;
+            if(verbose)std::cout << "Iter = " << iter << std::endl;
         }
 
         func( x, m_fval);
@@ -130,7 +153,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
         } else {
             // Apply Anderson acceleration.
 
-            if(iter > AAstart){                                         // Update the m_df vector and the m_DG array.t,
+            if(iter > 0){                                         // Update the m_df vector and the m_DG array.t,
 
                 dg::blas1::axpby(1.,m_fval,-1.,m_f_old, m_df);                 //m_df = m_fval-m_f_old;
 
@@ -151,7 +174,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
 
             dg::blas1::copy(m_gval,m_g_old);                                //m_g_old = m_gval;
 
-            if(mAA==0.){
+            if(mAA==0){ //only the very first iteration
 
                 dg::blas1::copy(m_gval,x);                                // If mAA == 0, update x <- g(x) to obtain the next approximate solution.
 
@@ -200,21 +223,6 @@ unsigned AndersonAcceleration<ContainerType>::solve(
                     dg::blas1::axpby(-m_gamma[i],m_DG[i],1.,x);
                 }
 
-                //In the paper there is a damping terms included.
-                if ((fabs(beta) > 0) && (beta <= 1)){
-                    for(unsigned i = 0; i < mAA; i++) {
-                        m_Ry[i] = 0;
-                        for(unsigned j = i; j < mAA; j++) {
-                            m_Ry[i] += m_R[i][j]*m_gamma[j];                  //Check correctness
-                        }
-                    }
-                    dg::blas1::axpby(-(1.-beta),m_fval,1,x);              //x = x -(1-beta)*m_fval
-                    for(unsigned i = 0; i < mAA; i++) {
-                        dg::blas1::axpby((1.0-beta)*m_Ry[i],m_Q[i],1.,x);   // x = x - (1-beta)*(-1*Q*R*gamma) = x + (1-beta)*Q*R*gamma = x + (1-beta)*Q*Ry
-                    }
-                }
-                else
-                    throw Error ( Message(_ping_)<< "Insane value for beta: "<<beta<<" should be 0<beta<=1. 1 means no damping!");
             }//Should all mAA
         }
 

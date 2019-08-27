@@ -103,13 +103,13 @@ struct AdamsBashforth
     * @brief Advance u0 one timestep
     *
     * @copydoc hide_rhs
-    * @param f right hand side function or functor
+    * @param rhs right hand side function or functor
     * @param t (write-only) contains timestep corresponding to \c u on output
     * @param u (write-only) contains next step of the integration on output
     * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
     */
     template< class RHS>
-    void step( RHS& f, value_type& t, ContainerType& u);
+    void step( RHS& rhs, value_type& t, ContainerType& u);
   private:
     value_type m_tu, m_dt;
     std::vector<ContainerType> m_f;
@@ -372,7 +372,7 @@ struct BDF
 
     ///@copydoc AdamsBashforth::step()
     template<class RHS>
-    void step(RHS& rhs, value_type& t0, container_type& u0);
+    void step(RHS& rhs, value_type& t, container_type& u);
     private:
     void init_coeffs(unsigned order){
         switch (order){
@@ -381,7 +381,7 @@ struct BDF
             case 3: m_bdf = { 18./11., -9./11., 2./11.}; m_beta = 6./11.; break;
             case 4: m_bdf = {48./25., -36./25., 16./25., -3./25.}; m_beta = 12./25.; break;
             case 5: m_bdf = { 300./137., -300./137., 200./137., -75./137., 12./137.}; m_beta = 60/137.; break;
-            case 6: m_bdf = { 360./147., -450./147., 400./147., -225./147., 172./147., -10./147.}; m_beta = 60/147.; break;
+            case 6: m_bdf = { 360./147., -450./147., 400./147., -225./147., 72./147., -10./147.}; m_beta = 60/147.; break;
             default: throw dg::Error(dg::Message()<<"Order not implemented in BDF!");
         }
     }

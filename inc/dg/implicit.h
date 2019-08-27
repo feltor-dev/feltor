@@ -180,7 +180,7 @@ struct FixedPointSolver
 #ifdef MPI_VERSION
         if(rank==0)
 #endif//MPI
-        std::cout << "# of iterations time solver: "<<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
+        std::cout << "# of iterations Fixed Point time solver: "<<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
 #endif //DG_BENCHMARK
     }
     private:
@@ -207,15 +207,21 @@ struct AndersonSolver
     * @param copyable vector of the size that is later used in \c solve (
      it does not matter what values \c copyable contains, but its size is important;
      the \c solve method can only be called with vectors of the same size)
-    * @param max_iter maimum iteration number in cg
-    * @param eps accuracy parameter for cg
-    */
-    AndersonSolver( const ContainerType& copyable, unsigned mMax, value_type eps):
-        m_acc(copyable, mMax), m_rhs( copyable), m_eps(eps)
+     * @param mMax \c mMax+1 is the maximum number of vectors to include in the optimization procedure.
+     *  Something between 3 and 10 are good values but higher values mean more storage space that needs to be reserved.
+     *  If \c mMax==0 then the algorithm is equivalent to Fixed Point (or Richardson if the damping parameter is used in the \c solver method) iteration
+    * @param eps accuracy parameter for (rtol=atol=eps)
+    * @param max_iter maximum iteration number
+     * @param damping Paramter to prevent too large jumps around the actual solution. Hard to determine in general but values between 0.1 and 1e-3 are good values to begin with. This is the parameter that appears in Richardson iteration.
+     * @param restart Number >= 1 that indicates after how many iterations to restart the acceleration. Periodic restarts are important for this method.  Per default it should be the same value as \c mMax but \c mMax+1 or higher could also be valuable to consider.
+     */
+    AndersonSolver( const ContainerType& copyable, unsigned mMax, value_type eps, unsigned max_iter,
+        value_type damping, unsigned restart):
+        m_acc(copyable, mMax), m_eps(eps), m_damp(damping), m_max(max_iter), m_restart(restart)
         {}
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_rhs;}
+    const ContainerType& copyable()const{ return m_acc.copyable();}
 
     template< class Implicit> //going to be a reference type
     void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
@@ -228,19 +234,19 @@ struct AndersonSolver
 #endif//MPI
         Timer ti;
         ti.tic();
-        unsigned number = m_acc( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
+        unsigned number = m_acc.solve( implicit, y, rhs, im.weights(), m_eps, m_eps, m_max, m_damp, m_restart, false);
         ti.toc();
 #ifdef MPI_VERSION
         if(rank==0)
 #endif//MPI
-        std::cout << "# of pcg iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+        std::cout << "# of Anderson iterations time solver: "<<number<<"/"<<m_max<<" took "<<ti.diff()<<"s\n";
 #else
-        m_pcg( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
+        m_acc.solve( implicit, y, rhs, im.weights(), m_eps, m_eps, m_max, m_damp, m_restart, false);
 #endif //DG_BENCHMARK
     }
     private:
     AndersonAcceleration< ContainerType> m_acc;
-    ContainerType m_rhs;
-    value_type m_eps;
+    value_type m_eps, m_damp;
+    unsigned m_max, m_restart;
 };
 }//namespace dg
