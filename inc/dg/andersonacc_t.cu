@@ -27,7 +27,7 @@ int main()
     const dg::HVec& copyable_vector = x;
     double damping;
     unsigned restart;
-    std::cout << "Type damping (1e-6) and restart (10) \n";
+    std::cout << "Type damping (1e-3) and restart (10) \n";
     std::cin >> damping >> restart;
 
 //! [doxygen]

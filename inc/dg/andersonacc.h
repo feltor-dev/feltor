@@ -92,8 +92,8 @@ struct AndersonAcceleration
      * @param verbose If true writes intermediate errors to \c std::cout . Avoid in MPI code.
      * @return Number of iterations used to achieve desired precision
      */
-    template<class BinarySubroutine>
-    unsigned solve( BinarySubroutine& f, ContainerType& x, const ContainerType& b, const ContainerType& weights,
+    template<class BinarySubroutine, class ContainerType2>
+    unsigned solve( BinarySubroutine& f, ContainerType& x, const ContainerType& b, const ContainerType2& weights,
         value_type rtol, value_type atol, unsigned max_iter,
         value_type damping, unsigned restart, bool verbose);
 
@@ -108,9 +108,9 @@ struct AndersonAcceleration
 ///@cond
 
 template<class ContainerType>
-template<class BinarySubroutine>
+template<class BinarySubroutine, class ContainerType2>
 unsigned AndersonAcceleration<ContainerType>::solve(
-    BinarySubroutine& func, ContainerType& x, const ContainerType& b, const ContainerType& weights,
+    BinarySubroutine& func, ContainerType& x, const ContainerType& b, const ContainerType2& weights,
     value_type rtol, value_type atol, unsigned max_iter,
     value_type damping, unsigned restart,  bool verbose )
 {
@@ -182,7 +182,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
 
                 if (mAA == 1) {                                         // If mAA == 1, form the initial QR decomposition.
 
-                    m_R[0][0] = sqrt(dg::blas2::dot(m_df,weights, m_df));
+                    m_R[0][0] = sqrt(dg::blas1::dot(m_df, m_df));
                     dg::blas1::axpby(1./m_R[0][0],m_df,0.,m_Q[0]);
 
                 } else {                                                // If mAA > 1, update the QR decomposition.
@@ -196,11 +196,11 @@ unsigned AndersonAcceleration<ContainerType>::solve(
                     }
                     // Now update the QR decomposition to incorporate the new column.
                     for (unsigned j = 1; j < mAA; j++) {
-                        m_R[j-1][mAA-1] = dg::blas2::dot(m_Q[j-1],weights,m_df);      //Q(:,j)’*m_df; //Changed mAA -> mAA-1
+                        m_R[j-1][mAA-1] = dg::blas1::dot(m_Q[j-1],m_df);      //Q(:,j)’*m_df; //Changed mAA -> mAA-1
 
                         dg::blas1::axpby(-m_R[j-1][mAA-1],m_Q[j-1],1.,m_df);  //m_df = m_df - R(j,mAA)*Q(:,j);
                     }
-                    m_R[mAA-1][mAA-1] = sqrt(dg::blas2::dot(m_df,weights,m_df));
+                    m_R[mAA-1][mAA-1] = sqrt(dg::blas1::dot(m_df,m_df));
                     dg::blas1::axpby(1./m_R[mAA-1][mAA-1],m_df,0.,m_Q[mAA-1]);
                 }
 
@@ -210,7 +210,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
 
                 //Solve least squares problem.
                 for(int i = (int)mAA-1; i>=0; i--){
-                    m_gamma[i] = dg::blas2::dot(m_Q[i],weights,m_fval);
+                    m_gamma[i] = dg::blas1::dot(m_Q[i],m_fval);
                     for(int j = i + 1; j < (int)mAA; j++){
                         m_gamma[i] -= m_R[i][j]*m_gamma[j];
                     }

@@ -8,6 +8,7 @@
   */
 namespace dg{
 
+//MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
 
 /*! @class hide_explicit_implicit
  * @tparam Explicit The explicit part of the right hand side
@@ -311,7 +312,7 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, valu
 * @brief Struct for Backward differentiation formula implicit multistep time-integration
 * \f[
 * \begin{align}
-    v^{n+1} = \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1})\right]
+    v^{n+1} = \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1})
     \end{align}
     \f]
 
@@ -365,6 +366,10 @@ struct BDF
         m_u.assign( order, m_solver.copyable());
         m_f = m_solver.copyable();
     }
+    ///Write access to the internal solver for the implicit part
+    SolverType& solver() { return m_solver;}
+    ///Read access to the internal solver for the implicit part
+    const SolverType& solver() const { return m_solver;}
 
     ///@copydoc AdamsBashforth::init()
     template<class RHS>

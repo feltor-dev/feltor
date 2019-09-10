@@ -436,7 +436,7 @@ compile the tex file(s) of the documentation.
 
 The
 http://feltor-dev.github.io/doc/dg/html/modules.html[documentation]
-of the dG library was generated with
+of the dg library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
 version including informative pdf writeups on implemented numerical
 methods directly from source code. This depends on the `doxygen`,
@@ -455,8 +455,8 @@ For details on how FELTOR's internal Makefiles are configured please see the lin
 
 == 3. Authors, Acknowledgements, Contributions
 
-FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please see the list of https://feltor-dev.github.io/about[contributors]
-and funding.
+FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please see the https://feltor-dev.github.io/about/[Acknowledgements] section on our homepage
+for a list of contributors and funding.
 Also check out our https://feltor-dev.github.io[homepage]
 for general information, wiki pages,
 troubleshooting and guides on how to contribute.
