@@ -3,12 +3,13 @@
 #pragma message( "The inclusion of file/nc_utilities.h is deprecated. Please use dg/file/nc_utilities.h")
 #endif //_INCLUDED_BY_DG_
 
-#include <exception>
 #include <netcdf.h>
 #include "thrust/host_vector.h"
 
 #include "dg/topology/grid.h"
 #include "dg/topology/evaluation.h"
+
+#include "easy_output.h"
 
 /*!@file
  *
@@ -23,63 +24,6 @@
 namespace file
 {
 
-/**
- * @brief Class thrown by the NC_ErrorClonePtr
- */
-struct NC_Error : public std::exception
-{
-
-    /**
-     * @brief Construct from error code
-     *
-     * @param error netcdf error code
-     */
-    NC_Error( int error): error_( error) {}
-    /**
-     * @brief What string
-     *
-     * @return string netcdf error message generated from error code
-     */
-    char const* what() const throw(){
-        return nc_strerror(error_);}
-  private:
-    int error_;
-};
-
-/**
- * @brief Empty utitlity class that handles return values of netcdf
- * functions and throws NC_Error if something goes wrong
- */
-struct NC_Error_Handle
-{
-    /**
-     * @brief Construct from error code
-     *
-     * throws an NC_Error if err is not a success
-     * @param err netcdf error code
-     *
-     * @return Newly instantiated object
-     */
-    NC_Error_Handle operator=( int err)
-    {
-        NC_Error_Handle h;
-        return h(err);
-    }
-    /**
-     * @brief Construct from error code
-     *
-     * throws an NC_Error if err is not a success
-     * @param err netcdf error code
-     *
-     * @return Newly instantiated object
-     */
-    NC_Error_Handle operator()( int err)
-    {
-        if( err)
-            throw NC_Error( err);
-        return *this;
-    }
-};
 /**
  * @brief Define an unlimited time dimension and variable following
   <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>

@@ -1031,9 +1031,10 @@ discontinuous Galerkin on structured grid
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
     coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
+Advection terms & direct DG & DG approximation with centered flux of derivatives \\
+Elliptic terms & local DG & The local DG approximation with centered flux \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
 Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
-Curvature terms & direct DG & regular DG approximation of derivatives \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
 \qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\

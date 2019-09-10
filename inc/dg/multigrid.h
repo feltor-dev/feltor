@@ -264,7 +264,7 @@ struct MultigridCG2d
         //
         // gamma:  typically 1 (V-cycle) or 2 (W-cycle)
         // nu1, nu2: typically in {0,1,2,3}
-        double lmin = 0, lmax = 1; //determine lmin and lmax
+        double lmax = 1; //determine lmin and lmax
 
         // 1. Pre-Smooth nu1 times
         m_cheby[p].solve( op[p], x[p], b[p], 0.1*lmax, 1.1*lmax, nu1);

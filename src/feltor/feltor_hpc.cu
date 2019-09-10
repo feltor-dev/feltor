@@ -36,7 +36,6 @@ using Geometry = dg::CylindricalGrid3d;
 
 #include "init.h"
 #include "feltordiag.h"
-#include "serial_netcdf.h"
 
 #ifdef FELTOR_MPI
 //ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
@@ -170,8 +169,6 @@ int main( int argc, char* argv[])
     HVec resultH = dg::evaluate( dg::zero, grid);
     DVec resultD = dg::evaluate( dg::zero, grid);
 
-    feltor::ManageOutput output(g3d_out);
-
     std::array<DVec, 3> gradPsip;
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
@@ -243,7 +240,7 @@ int main( int argc, char* argv[])
         MPI_OUT std::cout << "Computing "<<record.name<<"\n";
         record.function( resultH, var, grid, gp, mag);
         dg::blas2::symv( projectH, resultH, transferH);
-        output.output_static3d( ncid, vecID, transferH);
+        file::write_static3d( ncid, vecID, transferH, g3d_out);
         MPI_OUT err = nc_redef(ncid);
     }
 
@@ -299,7 +296,7 @@ int main( int argc, char* argv[])
         record.function( resultD, var);
         dg::blas2::symv( projectD, resultD, transferD);
         dg::assign( transferD, transferH);
-        output.output_dynamic3d( ncid, id4d.at(record.name), start, transferH);
+        file::write_dynamic3d( ncid, id4d.at(record.name), start, transferH, g3d_out);
     }
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -317,7 +314,11 @@ int main( int argc, char* argv[])
         tti.toc();
         MPI_OUT std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
         tti.tic();
-        output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+#ifdef FELTOR_MPI
+        //only the globally first slice should write
+        if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
+#endif //FELTOR_MPI
+            file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         tti.tic();
@@ -327,7 +328,11 @@ int main( int argc, char* argv[])
         feltor::slice_vector3d( transferD, transferD2d, local_size2d);
         dg::assign( transferD2d, transferH2d);
         if( record.integral) time_integrals[name].init( time, transferH2d);
-        output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+#ifdef FELTOR_MPI
+        //only the globally first slice should write
+        if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
+#endif //FELTOR_MPI
+            file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
     }
@@ -433,7 +438,7 @@ int main( int argc, char* argv[])
             record.function( resultD, var);
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
-            output.output_dynamic3d( ncid, id4d.at(record.name), start, transferH);
+            file::write_dynamic3d( ncid, id4d.at(record.name), start, transferH, g3d_out);
         }
         for( auto& record : feltor::diagnostics2d_list)
         {
@@ -442,12 +447,20 @@ int main( int argc, char* argv[])
                 std::string name = record.name+"_ta2d";
                 transferH2d = time_integrals.at(name).get_integral();
                 time_integrals.at(name).flush();
-                output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+#ifdef FELTOR_MPI
+                //only the globally first slice should write
+                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
+#endif //FELTOR_MPI
+                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
 
                 name = record.name+"_2d";
                 transferH2d = time_integrals.at(name).get_integral( );
                 time_integrals.at(name).flush( );
-                output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+#ifdef FELTOR_MPI
+                //only the globally first slice should write
+                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
+#endif //FELTOR_MPI
+                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
             }
             else //manage the time integrators
             {
@@ -457,13 +470,21 @@ int main( int argc, char* argv[])
                 std::string name = record.name+"_ta2d";
                 dg::assign( transferD, transferH);
                 toroidal_average( transferH, transferH2d, false);
-                output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+#ifdef FELTOR_MPI
+                //only the globally first slice should write
+                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
+#endif //FELTOR_MPI
+                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
 
                 // 2d data of plane varphi = 0
                 name = record.name+"_2d";
                 feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                 dg::assign( transferD2d, transferH2d);
-                output.output_dynamic2d_slice( ncid, id3d.at(name), start, transferH2d);
+#ifdef FELTOR_MPI
+                //only the globally first slice should write
+                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
+#endif //FELTOR_MPI
+                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
             }
         }
         MPI_OUT err = nc_close(ncid);
