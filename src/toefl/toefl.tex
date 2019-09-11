@@ -132,9 +132,9 @@ time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order impl
 \end{longtable}
 
 \section{Compilation and useage}
-There are three programs toeflR.cu, toefl\_hpc.cu and toefl\_mpi.cu . Compilation with 
+There are two programs toeflR.cu and toefl\_hpc.cu . Compilation with
 \begin{verbatim}
-make device = <omp or gpu>
+make <toeflR toefl_hpc toefl_mpi> device = <omp gpu>
 \end{verbatim}
 Run with
 \begin{verbatim}
@@ -146,9 +146,10 @@ echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/toefl/toefl_mpi\
 All programs write performance informations to std::cout.
 The first is for shared memory systems (OpenMP/GPU) and opens a terminal window with life simulation results.
  The
-second is for shared memory systems and uses serial netcdf.
-The third is for distributed
-memory systems (MPI+OpenMP/GPU) using parallel netcdf and expects the distribution of processes in the
+second can be compiled for both shared and distributed memory systems and uses serial netcdf in both cases
+to write results to a file.
+For distributed
+memory systems (MPI+OpenMP/GPU) the program expects the distribution of processes in the
 x and y directions as command line input parameters.
 
 \subsection{Input file structure}

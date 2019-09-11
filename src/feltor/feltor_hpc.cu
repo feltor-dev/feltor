@@ -240,7 +240,7 @@ int main( int argc, char* argv[])
         MPI_OUT std::cout << "Computing "<<record.name<<"\n";
         record.function( resultH, var, grid, gp, mag);
         dg::blas2::symv( projectH, resultH, transferH);
-        file::write_static3d( ncid, vecID, transferH, g3d_out);
+        file::put_var_double( ncid, vecID, g3d_out, transferH);
         MPI_OUT err = nc_redef(ncid);
     }
 
@@ -296,7 +296,7 @@ int main( int argc, char* argv[])
         record.function( resultD, var);
         dg::blas2::symv( projectD, resultD, transferD);
         dg::assign( transferD, transferH);
-        file::write_dynamic3d( ncid, id4d.at(record.name), start, transferH, g3d_out);
+        file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
     }
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -318,7 +318,7 @@ int main( int argc, char* argv[])
         //only the globally first slice should write
         if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
 #endif //FELTOR_MPI
-            file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
+            file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         tti.tic();
@@ -332,7 +332,7 @@ int main( int argc, char* argv[])
         //only the globally first slice should write
         if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
 #endif //FELTOR_MPI
-            file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
+            file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
     }
@@ -438,7 +438,7 @@ int main( int argc, char* argv[])
             record.function( resultD, var);
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
-            file::write_dynamic3d( ncid, id4d.at(record.name), start, transferH, g3d_out);
+            file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
         }
         for( auto& record : feltor::diagnostics2d_list)
         {
@@ -451,7 +451,7 @@ int main( int argc, char* argv[])
                 //only the globally first slice should write
                 if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
 #endif //FELTOR_MPI
-                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
+                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
 
                 name = record.name+"_2d";
                 transferH2d = time_integrals.at(name).get_integral( );
@@ -460,7 +460,7 @@ int main( int argc, char* argv[])
                 //only the globally first slice should write
                 if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
 #endif //FELTOR_MPI
-                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
+                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
             }
             else //manage the time integrators
             {
@@ -474,7 +474,7 @@ int main( int argc, char* argv[])
                 //only the globally first slice should write
                 if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
 #endif //FELTOR_MPI
-                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
+                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
 
                 // 2d data of plane varphi = 0
                 name = record.name+"_2d";
@@ -484,7 +484,7 @@ int main( int argc, char* argv[])
                 //only the globally first slice should write
                 if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
 #endif //FELTOR_MPI
-                    file::write_dynamic2d( ncid, id3d.at(name), start, transferH2d, *g2d_out_ptr);
+                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
             }
         }
         MPI_OUT err = nc_close(ncid);

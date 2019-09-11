@@ -71,56 +71,62 @@ struct NC_Error_Handle
 /**
 * @brief Convenience wrapper around \c nc_put_vara_double()
 *
+* The purpose of this function is mainly to simplify output in an MPI environment and to provide
+* the same interface also in a shared memory system for uniform programming.
 * This version is for a time-independent variable,
 * i.e. writes a single variable in one go and is actually equivalent
-* to \c nc_put_var_double. The dimensionality is indicated by the name.
+* to \c nc_put_var_double. The dimensionality is given by the grid.
 * @tparam host_vector Type with \c data() member that returns pointer to first element in CPU (host) adress space, meaning it cannot be a GPU vector
 * @param ncid Forwarded to \c nc_put_vara_double
 * @param varid  Forwarded to \c nc_put_vara_double
-* @param toWrite data is forwarded to \c nc_put_vara_double, may be destroyed on output in the mpi version.
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara_double
+* @param data data is forwarded to \c nc_put_vara_double, may be destroyed on output in the mpi version.
 * @param parallel This parameter is ignored in the serial version.
 * In the MPI version this parameter indicates whether each process
 * writes to the file independently in parallel (\c true)
-* or each process funnels its data through the master rank (\c false).
+* or each process funnels its data through the master rank (\c false),
+* which involves communication but may be faster than the former method.
 * @attention In the MPI version, if \c parallel==true a **parallel netcdf** must be
 * linked while if \c parallel==false we need **serial netcdf**.
 * Note that serious performance penalties have been observed on some platforms for parallel netcdf.
 */
 template<class host_vector>
-void write_static2d(int ncid, int varid, host_vector& toWrite,
-    dg::aTopology2d& grid, bool parallel = false)
+void put_var_double(int ncid, int varid, dg::aTopology2d& grid,
+    host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[2] = {0,0}, count[2];
     count[0] = grid.n()*grid.Ny();
     count[1] = grid.n()*grid.Nx();
-    err = nc_put_vara_double( ncid, varid, start, count, toWrite.data());
+    err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
 /**
 * @brief Convenience wrapper around \c nc_put_vara_double()
 *
+* The purpose of this function is mainly to simplify output in an MPI environment and to provide
+* the same interface also in a shared memory system for uniform programming.
 * This version is for a time-dependent variable,
 * i.e. writes a single time-slice into the file.
-* The dimensionality is indicated by the name.
+* The dimensionality is given by the grid.
 * @tparam host_vector Type with \c data() member that returns pointer to first element in CPU (host) adress space, meaning it cannot be a GPU vector
 * @param ncid Forwarded to \c nc_put_vara_double
 * @param varid  Forwarded to \c nc_put_vara_double
 * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara_double)
-* @param toWrite data is forwarded to \c nc_put_vara_double, may be destroyed on output in the mpi version.
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara_double
+* @param data data is forwarded to \c nc_put_vara_double, may be destroyed on output in the mpi version.
 * @param parallel This parameter is ignored in the serial version.
 * In the MPI version this parameter indicates whether each process
 * writes to the file independently in parallel (\c true)
-* or each process funnels its data through the master rank (\c false).
+* or each process funnels its data through the master rank (\c false),
+* which involves communication but may be faster than the former method.
 * @attention In the MPI version, if \c parallel==true a **parallel netcdf** must be
 * linked while if \c parallel==false we need **serial netcdf**.
 * Note that serious performance penalties have been observed on some platforms for parallel netcdf.
 */
 template<class host_vector>
-void write_dynamic2d(int ncid, int varid, unsigned slice, host_vector& toWrite,
-    dg::aTopology2d& grid, bool parallel = false)
+void put_vara_double(int ncid, int varid, unsigned slice,
+    dg::aTopology2d& grid, host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[3] = {slice,0,0}, count[3];
@@ -128,12 +134,13 @@ void write_dynamic2d(int ncid, int varid, unsigned slice, host_vector& toWrite,
     count[1] = grid.n()*grid.Ny();
     count[2] = grid.n()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count,
-        toWrite.data());
+        data.data());
 }
 
-///@copydoc write_static2d()
+///@copydoc put_var_double()
 template<class host_vector>
-void write_static3d(int ncid, int varid, host_vector& toWrite, dg::aTopology3d& grid, bool parallel = false)
+void put_var_double(int ncid, int varid, dg::aTopology3d& grid,
+    host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0,0}, count[3];
@@ -141,13 +148,13 @@ void write_static3d(int ncid, int varid, host_vector& toWrite, dg::aTopology3d& 
     count[1] = grid.n()*grid.Ny();
     count[2] = grid.n()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count,
-        toWrite.data());
+        data.data());
 }
 
-///@copydoc write_dynamic2d()
+///@copydoc put_vara_double()
 template<class host_vector>
-void write_dynamic3d(int ncid, int varid, unsigned slice, host_vector& toWrite,
-    dg::aTopology3d& grid, bool parallel = false)
+void put_vara_double(int ncid, int varid, unsigned slice,
+    dg::aTopology3d& grid, host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[3] = {slice, 0,0,0}, count[4];
@@ -156,15 +163,14 @@ void write_dynamic3d(int ncid, int varid, unsigned slice, host_vector& toWrite,
     count[2] = grid.n()*grid.Ny();
     count[3] = grid.n()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count,
-        toWrite.data());
+        data.data());
 }
 
 #ifdef MPI_VERSION
-///@copydoc write_static2d()
+///@copydoc put_var_double()
 template<class host_vector>
-void write_static2d(int ncid, int varid,
-    dg::MPI_Vector<host_vector>& toWrite,
-    dg::aMPITopology3d& grid, bool parallel = false)
+void put_var_double(int ncid, int varid, dg::aMPITopology2d& grid,
+    dg::MPI_Vector<host_vector>& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0}, count[2];
@@ -186,16 +192,16 @@ void write_static2d(int ncid, int varid,
             for( int rrank=0; rrank<size; rrank++)
             {
                 if(rrank!=0)
-                    MPI_Recv( toWrite.data().data(), local_size, MPI_DOUBLE,
+                    MPI_Recv( data.data().data(), local_size, MPI_DOUBLE,
                           rrank, rrank, comm, &status);
                 start[0] = coords[2*rrank+1]*count[0],
                 start[1] = coords[2*rrank+0]*count[1],
                 err = nc_put_vara_double( ncid, varid, start, count,
-                    toWrite.data().data());
+                    data.data().data());
             }
         }
         else
-            MPI_Send( toWrite.data().data(), local_size, MPI_DOUBLE,
+            MPI_Send( data.data().data(), local_size, MPI_DOUBLE,
                       0, rank, comm);
         MPI_Barrier( comm);
     }
@@ -206,15 +212,15 @@ void write_static2d(int ncid, int varid,
         start[0] = coords[1]*count[0],
         start[1] = coords[0]*count[1],
         err = nc_put_vara_double( ncid, varid, start, count,
-            toWrite.data().data());
+            data.data().data());
     }
 }
 
-///@copydoc write_dynamic2d()
+///@copydoc put_vara_double()
 template<class host_vector>
-void write_dynamic2d(int ncid, int varid, unsigned slice,
-    dg::MPI_Vector<host_vector>& toWrite,
-    dg::aMPITopology2d& grid, bool parallel = false)
+void put_vara_double(int ncid, int varid, unsigned slice,
+    dg::aMPITopology2d& grid, dg::MPI_Vector<host_vector>& data,
+    bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[3] = {slice, 0,0}, count[3];
@@ -232,7 +238,7 @@ void write_dynamic2d(int ncid, int varid, unsigned slice,
         start[1] = coords[1]*count[1],
         start[2] = coords[0]*count[2],
         err = nc_put_vara_double( ncid, varid, start, count,
-            toWrite.data().data());
+            data.data().data());
     }
     else
     {
@@ -246,26 +252,26 @@ void write_dynamic2d(int ncid, int varid, unsigned slice,
             for( int rrank=0; rrank<size; rrank++)
             {
                 if(rrank!=0)
-                    MPI_Recv( toWrite.data().data(), local_size, MPI_DOUBLE,
+                    MPI_Recv( data.data().data(), local_size, MPI_DOUBLE,
                           rrank, rrank, comm, &status);
                 start[1] = coords[2*rrank+1]*count[1],
                 start[2] = coords[2*rrank+0]*count[2],
                 err = nc_put_vara_double( ncid, varid, start, count,
-                    toWrite.data().data());
+                    data.data().data());
             }
         }
         else
-            MPI_Send( toWrite.data().data(), local_size, MPI_DOUBLE,
+            MPI_Send( data.data().data(), local_size, MPI_DOUBLE,
                       0, rank, comm);
         MPI_Barrier( comm);
     }
 }
 
-///@copydoc write_static2d()
+///@copydoc put_var_double()
 template<class host_vector>
-void write_static3d(int ncid, int varid,
-    dg::MPI_Vector<host_vector>& toWrite,
-    dg::aMPITopology3d& grid, bool parallel = false)
+void put_var_double(int ncid, int varid,
+    dg::aMPITopology3d& grid, dg::MPI_Vector<host_vector>& data,
+    bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0,0}, count[3];
@@ -288,17 +294,17 @@ void write_static3d(int ncid, int varid,
             for( int rrank=0; rrank<size; rrank++)
             {
                 if(rrank!=0)
-                    MPI_Recv( toWrite.data().data(), local_size, MPI_DOUBLE,
+                    MPI_Recv( data.data().data(), local_size, MPI_DOUBLE,
                           rrank, rrank, comm, &status);
                 start[0] = coords[3*rrank+2]*count[0],
                 start[1] = coords[3*rrank+1]*count[1],
                 start[2] = coords[3*rrank+0]*count[2];
                 err = nc_put_vara_double( ncid, varid, start, count,
-                    toWrite.data().data());
+                    data.data().data());
             }
         }
         else
-            MPI_Send( toWrite.data().data(), local_size, MPI_DOUBLE,
+            MPI_Send( data.data().data(), local_size, MPI_DOUBLE,
                       0, rank, comm);
         MPI_Barrier( comm);
     }
@@ -310,15 +316,15 @@ void write_static3d(int ncid, int varid,
         start[1] = coords[1]*count[1],
         start[2] = coords[0]*count[2];
         err = nc_put_vara_double( ncid, varid, start, count,
-            toWrite.data().data());
+            data.data().data());
     }
 }
 
-///@copydoc write_dynamic2d()
+///@copydoc put_vara_double()
 template<class host_vector>
-void write_dynamic3d(int ncid, int varid, unsigned slice,
-    dg::MPI_Vector<host_vector>& toWrite,
-    dg::aMPITopology3d& grid, bool parallel = false)
+void put_vara_double(int ncid, int varid, unsigned slice,
+    dg::aMPITopology3d& grid, dg::MPI_Vector<host_vector>& data,
+    bool parallel = false)
 {
     file::NC_Error_Handle err;
     size_t start[4] = {slice, 0,0,0}, count[4];
@@ -338,7 +344,7 @@ void write_dynamic3d(int ncid, int varid, unsigned slice,
         start[2] = coords[1]*count[2],
         start[3] = coords[0]*count[3];
         err = nc_put_vara_double( ncid, varid, start, count,
-            toWrite.data().data());
+            data.data().data());
     }
     else
     {
@@ -352,17 +358,17 @@ void write_dynamic3d(int ncid, int varid, unsigned slice,
             for( int rrank=0; rrank<size; rrank++)
             {
                 if(rrank!=0)
-                    MPI_Recv( toWrite.data().data(), local_size, MPI_DOUBLE,
+                    MPI_Recv( data.data().data(), local_size, MPI_DOUBLE,
                           rrank, rrank, comm, &status);
                 start[1] = coords[3*rrank+2]*count[1],
                 start[2] = coords[3*rrank+1]*count[2],
                 start[3] = coords[3*rrank+0]*count[3];
                 err = nc_put_vara_double( ncid, varid, start, count,
-                    toWrite.data().data());
+                    data.data().data());
             }
         }
         else
-            MPI_Send( toWrite.data().data(), local_size, MPI_DOUBLE,
+            MPI_Send( data.data().data(), local_size, MPI_DOUBLE,
                       0, rank, comm);
         MPI_Barrier( comm);
     }
