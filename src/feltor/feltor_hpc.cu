@@ -185,12 +185,17 @@ int main( int argc, char* argv[])
     /// //////////////////The initial field///////////////////////////////////////////
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
-    feltor::Initialize init( p, gp, mag);
     if( argc == 4)
-        y0 = init.init_from_parameters(feltor, grid);
+        y0 = feltor::initial_conditions.at[p.initne]( feltor, grid, p,gp,mag );
     if( argc == 5)
-        y0 = init.init_from_file(argv[4], grid, time);
-    feltor.set_source( init.profile(grid), p.omega_source, init.source_damping(grid));
+        y0 = feltor::init_from_file(argv[4], grid, time);
+
+    bool fixed_profile;
+    DVec profile;
+    DVec source_profile = feltor::source_profile.at[p.source_type](
+        fixed_profile, profile, feltor, grid, p, gp, mag);
+
+    feltor.set_source( fixed_profile, profile, p.omega_source, source_profile);
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;

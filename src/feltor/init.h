@@ -18,6 +18,27 @@ struct TorpexSource
     double m_R0, m_Z0, m_a, m_b, m_c;
 };
 
+struct Radius
+{
+    Radius ( double R0, double Z0): m_R0(R0), m_Z0(Z0) {}
+    DG_DEVICE
+    double operator()( double R, double Z) const{
+        return sqrt( (R-m_R0)*(R-m_R0) - (Z-m_Z0)*(Z-m_Z0));
+    }
+    private:
+    double m_R0, m_Z0;
+};
+HVec circular_damping( const Geometry& grid
+    const feltor::Parameters& p,
+    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+{
+    HVec circular = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
+        Radius( mag.R0(), 0.),
+        gp.a*p.rho_damping, gp.a*p.alpha, -1), grid);
+    return circular;
+}
+
+
 HVec xpoint_damping(const Geometry& grid
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
@@ -29,7 +50,7 @@ HVec xpoint_damping(const Geometry& grid
         double ZX = -1.1*gp.elongation*gp.a;
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         xpoint_damping = dg::pullback(
-            dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
+            dg::geo::ZCutter(ZX), grid);
     }
     return xpoint_damping;
 }
@@ -61,6 +82,18 @@ HVec profile(const Geometry& grid,
         p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
     dg::blas1::pointwiseDot( profile_damping(grid,p,gp,mag), profile, profile);
     return profile;
+}
+HVec source_damping(const Geometry& grid
+    const feltor::Parameters& p,
+    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+{
+    HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
+        //first change coordinate from psi to (psi_0 - psip)/psi_0
+        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
+        //then shift
+        p.rho_source, p.alpha, -1), grid);
+    dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), source_damping, source_damping);
+    return source_damping;
 }
 
 
@@ -195,21 +228,43 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
             return y0;
         }
+    },
+    { "turbulence_on_gaussian",
+        []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
+            Geometry& grid, const feltor::Parameters& p,
+            const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        {
+            dg::Gaussian profile( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma,
+                p.sigma, p.nprofamp);
+            std::array<std::array<DVec,2>,2> y0;
+            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(
+                dg::pullback( profile, grid) );
+
+            HVec ntilde = dg::evaluate(dg::zero,grid);
+            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
+            dg::BathRZ init0(16,16,grid.x0(),grid.y0(), 30.,2.,p.amp);
+            if( p.symmetric)
+                ntilde = dg::pullback( init0, grid);
+            else
+            {
+                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
+                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
+                //evaluate should always be used with mx,my > 1
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
+            }
+            dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0] );
+            dg::blas1::pointwiseDot( circular_damping(grid,p,gp,mag),
+                y0[0][0], y0[0][0] );
+            init_ni( y0, f,p,gp,mag);
+
+            dg::blas1::copy( 0., y0[1][0]); //set we = 0
+            dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
+            return y0;
+        }
     }
 };
 
-HVec source_damping(const Geometry& grid
-    const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
-{
-    HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift
-        p.rho_source, p.alpha, -1), grid);
-    dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), source_damping, source_damping);
-    return source_damping;
-}
 std::map<std::string, std::function< DVec(
     bool& fixed_profile, DVec& ne_profile,
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
@@ -247,7 +302,8 @@ std::map<std::string, std::function< DVec(
         const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
         {
             fixed_profile = false;
-            DVec source_profile = dg::construct<DVec> ( dg::pullback( TorpexSource(0,0, 1,1,1 ), grid));
+            DVec source_profile = dg::construct<DVec> ( dg::pullback(
+                TorpexSource(0.98, -0.02, 0.0335, 0.05, 565 ), grid) );
             return source_profile;
         }
     },

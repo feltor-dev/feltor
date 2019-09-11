@@ -294,8 +294,9 @@ struct Explicit
     }
 
     //source strength, profile - 1
-    void set_source( Container profile, double omega_source, Container source)
+    void set_source( bool fixed_profile, Container profile, double omega_source, Container source)
     {
+        m_fixed_profile = fixed_profile;
         m_profne = profile;
         m_omega_source = omega_source;
         m_source = source;
@@ -355,6 +356,7 @@ struct Explicit
 
     const feltor::Parameters m_p;
     double m_omega_source = 0.;
+    bool m_fixed_profile = true;
 
 };
 
@@ -835,7 +837,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //Add source terms
     if( m_omega_source != 0)
     {
-        if( m_p.source_type == "profile")
+        if( m_fixed_profile )
             dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
                 m_profne, m_source, m_omega_source);
         else
