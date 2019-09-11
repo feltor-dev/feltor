@@ -157,7 +157,7 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     dg::aTopology3d& grid, host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
-    size_t start[3] = {slice, 0,0,0}, count[4];
+    size_t start[4] = {slice, 0,0,0}, count[4];
     count[0] = 1;
     count[1] = grid.Nz();
     count[2] = grid.n()*grid.Ny();

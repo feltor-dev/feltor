@@ -12,8 +12,10 @@
 
 namespace feltor{
 
-// This file constitutes the diagnostics module of feltor
-// You can register you own diagnostics in one of the diagnostics lists further down
+// This file constitutes the diagnostics module for feltor
+// The way it works is that it allocates global lists of Records that describe what goes into the file
+// You can register you own diagnostics in one of three diagnostics lists (static 3d, dynamic 3d and
+// dynamic 2d) further down
 // which will then be applied during a simulation
 
 namespace routines{
@@ -138,7 +140,8 @@ void jacobian(
 }
 }//namespace routines
 
-//Here, we neeed the typedefs
+//From here on, we use the typedefs to ease the notation
+/
 struct Variables{
     feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
     feltor::Parameters p;
@@ -149,7 +152,7 @@ struct Variables{
 struct Record{
     std::string name;
     std::string long_name;
-    bool integral;
+    bool integral; //indicates whether the function should be time-integrated
     std::function<void( DVec&, Variables&)> function;
 };
 
@@ -159,6 +162,9 @@ struct Record_static{
     std::function<void( HVec&, Variables&, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag)> function;
 };
 
+///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //Here is a list of static (time-independent) 3d variables that go into the output
 std::vector<Record_static> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
@@ -716,7 +722,10 @@ std::vector<Record> diagnostics2d_list = {
 
 };
 
-// These two lists signify the quantities for accuracy computation
+///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// These two lists signify the quantities involved in accuracy computation
 std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
 std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt"};
 

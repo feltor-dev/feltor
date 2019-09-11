@@ -298,6 +298,11 @@ int main( int argc, char* argv[])
         dg::assign( transferD, transferH);
         file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
     }
+    bool write2d = true;
+#ifdef FELTOR_MPI
+    //only the globally first slice should write
+    if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
+#endif //FELTOR_MPI
     for( auto& record : feltor::diagnostics2d_list)
     {
         dg::Timer tti;
@@ -314,11 +319,7 @@ int main( int argc, char* argv[])
         tti.toc();
         MPI_OUT std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
         tti.tic();
-#ifdef FELTOR_MPI
-        //only the globally first slice should write
-        if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
-#endif //FELTOR_MPI
-            file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+        if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         tti.tic();
@@ -328,11 +329,7 @@ int main( int argc, char* argv[])
         feltor::slice_vector3d( transferD, transferD2d, local_size2d);
         dg::assign( transferD2d, transferH2d);
         if( record.integral) time_integrals[name].init( time, transferH2d);
-#ifdef FELTOR_MPI
-        //only the globally first slice should write
-        if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
-#endif //FELTOR_MPI
-            file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+        if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
     }
@@ -447,22 +444,14 @@ int main( int argc, char* argv[])
                 std::string name = record.name+"_ta2d";
                 transferH2d = time_integrals.at(name).get_integral();
                 time_integrals.at(name).flush();
-#ifdef FELTOR_MPI
-                //only the globally first slice should write
-                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
-#endif //FELTOR_MPI
-                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
 
                 name = record.name+"_2d";
                 transferH2d = time_integrals.at(name).get_integral( );
                 time_integrals.at(name).flush( );
-#ifdef FELTOR_MPI
-                //only the globally first slice should write
-                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
-#endif //FELTOR_MPI
-                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
             }
-            else //manage the time integrators
+            else // compute from scratch
             {
                 record.function( resultD, var);
                 dg::blas2::symv( projectD, resultD, transferD);
@@ -470,21 +459,13 @@ int main( int argc, char* argv[])
                 std::string name = record.name+"_ta2d";
                 dg::assign( transferD, transferH);
                 toroidal_average( transferH, transferH2d, false);
-#ifdef FELTOR_MPI
-                //only the globally first slice should write
-                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
-#endif //FELTOR_MPI
-                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
 
                 // 2d data of plane varphi = 0
                 name = record.name+"_2d";
                 feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                 dg::assign( transferD2d, transferH2d);
-#ifdef FELTOR_MPI
-                //only the globally first slice should write
-                if( g3d_out.local().z0() - g3d_out.global().z0() < 1e-14)
-#endif //FELTOR_MPI
-                    file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
             }
         }
         MPI_OUT err = nc_close(ncid);

@@ -6,6 +6,7 @@
 #include "json/json.h"
 
 namespace feltor{
+/// If you need more parameters, just go ahead and extend the list
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;

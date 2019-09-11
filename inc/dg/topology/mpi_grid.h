@@ -30,7 +30,7 @@ namespace dg
  * Represents the global grid coordinates and the process topology.
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
  * @note a single cell is never divided across processes.
- * @note although it is abstract objects, are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @attention
  * The access functions \c n() \c Nx() ,... all return the global parameters. If you want to have the local ones call the \c local() function.
  * @ingroup basictopology
