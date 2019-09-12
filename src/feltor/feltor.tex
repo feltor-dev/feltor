@@ -670,10 +670,10 @@ We define the simulation box as
 $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
 \begin{align} \label{eq:box}
-    R_{\min}&=R_0-\varepsilon^{R-}a\quad
-    &&R_{\max}=R_0+\varepsilon^{R+}a\nonumber\\
-    Z_{\min}&=-\varepsilon^{Z-}ae\quad
-    &&Z_{\max}=\varepsilon^{Z+}ae
+    R_{\min}&=R_0-\varepsilon_{R-}a\quad
+    &&R_{\max}=R_0+\varepsilon_{R+}a\nonumber\\
+    Z_{\min}&=-\varepsilon_{Z-}ae\quad
+    &&Z_{\max}=\varepsilon_{Z+}ae
 \end{align}
 where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.
@@ -760,29 +760,41 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
     \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
 \tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
 \end{align}
+\subsubsection{Turbulence on Gaussian profile}
+Instead of the flux-aligned profile we can also choose a toroidally symmetric Gaussian profile
+\begin{align} \label{eq:profile_blob}
+  n_{prof}(R,Z) = n_0 + \triangle n_{peak} \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+\end{align}
+on top of which we can add the turbulent bath $\tilde n_{\text{bath}}$ and finally dampen it by
+\begin{align}\label{eq:turbulence_on_gaussian}
+n_e(R,Z,\varphi,0) = (n_{prof}(R,Z) + \tilde n_{\text{bath}})\Theta_\alpha( 1- \sqrt{(R-R_0)^2 + Z^2}/a)
+\end{align}
 
 \subsection{Sinks and sources} \label{sec:sources}
-The idea for the source terms $S_N$ is to fix the profile $n_{\text{prof}}$ in the
+We can choose the source terms $S_N$ to either force a profile
+$n_{\text{prof}}$ or provide a constant influx of particles in the
 core of our domain, where our model does not apply.
 We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
-  S_{n_e}(R,Z,\varphi, t) &= \omega_s
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
+  S_{n_e}(R,Z,\varphi, t) &= \omega_s \begin{cases}
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X) \quad \text{ forced}\\
+    S_{prof}(R,Z)\quad \text{ influx}
+    \end{cases} \\
     \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}}, \quad
     \psi_p(R,Z):= (1-\rho(R,Z))\psi_{p,\min},\\ \text{In general }\psi_{p,\min} &= \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
 \end{align}
 with $0 < \rho_{s}<1$
 where $\omega_s$ is the source strength parameter and $R_O$, $Z_O$ are the coordinates of the O-point.
-This will result in exponential adaption of the core
+The forced source will result in exponential adaption of the core
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 
-As an alternative we can also choose a constant influx
+We can choose the constant influx
 \begin{align} \label{eq:electron_source_influx}
-  S_{n_e}(R,Z,\varphi, t) &= \omega_s\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)
+  S_{prof}(R,Z) &= \Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)
 \end{align}
 or a Torpex inspired source profile
 \begin{align} \label{eq:electron_source_torpex}
-  S_{n_e}(R,Z,\varphi, t) &= \omega_s
+  S_{prof}(R,Z) &= 
   \begin{cases}
     \exp\left( - \frac{(R-R_0)^2}{a^2 }- \frac{(Z-Z_0)^2}{b^2}\right) \text{ if} R > R_0 \\
     \frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} -2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \\
@@ -1075,22 +1087,24 @@ n      & integer & 3 & - &Number of Gaussian nodes in R and Z \\
 Nx     & integer &52& - &Number of grid points in R \\
 Ny     & integer &52& - &Number of grid points in Z \\
 Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt since parallel velocity dominates timestep) \\
-dt     & integer &1e-2& - &initial time stepsize in units of $c_s/\rho_s$ \\
+dt     & integer &1e-2& - & time stepsize in units of $c_s/\rho_s$ \\
 compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
     (has to divde Nx evenly), and n*Ny/c[1] points in y,
     (has to divde Ny evenly)\\
-inner\_loop & integer & 2  & 1 & Number of time steps between diagnostics updates \\
-itstp       & integer & 2  & - & Number of updates for one output \\
-maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is maxout$\cdot$itstp$\cdot$inner\_loop) \\
-eps\_time   & float & 1e-7  & - & Accuracy of solver for implicit part in time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$) \\
-rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
-eps\_pol    & float & 1e-6  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ ) \\
-jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
-eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
+inner\_loop & integer & 2  & 1 & Number of time steps between updates to the time integrated quantities. Note that integrating selected
+quantities in time during the simulation is how we maintain the time-resolution in the file output (cf. \ref{sec:output_file}).\\
+itstp       & integer & 2  & - &{ \tt inner\_loop*itstp} is the number of timesteps between file outputs (2d and 3d quantities);
+Note that 1d and 0d quantities can only be computed in diagnostics since we can't compute flux-integrals in parallel in MPI. \\
+maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is {\tt maxout$\cdot$itstp$\cdot$inner\_loop}) \\
+eps\_time   & float & 1e-7  & - & Tolerance for solver for implicit part in time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$) \\
+rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep) \\
+eps\_pol    & float & 1e-6  & - &  Tolerance for residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ ) \\
+jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms\\
+eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$  \\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
 has to evenly divide both $N_x$ and $N_y$\\
-refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in DS in R- and Z-direction\\
-rk4eps     & float & 1e-5 & 1e-5 & Accuracy of fieldline integrator in DS\\
+refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in FCI approach in R- and Z-direction\\
+rk4eps     & float & 1e-5 & 1e-5 & Accuracy of fieldline integrator in FCI\\
 mu         & float & -0.000272121& - & $\mu_e =-m_e/m_i$.
     One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
@@ -1105,29 +1119,33 @@ bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has t
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$ and $A_\parallel$\\
 \qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$\\
-    boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon^{R-}, \varepsilon^{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
-    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon^{Z-}, \varepsilon^{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
+    boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
+    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
 initne    & string & "turbulence"     & "blob"  & initial condition for the
 perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial_zonal_flow}),
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
-    "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})\\
+    "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})
+    "turbulence\_on\_gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
+    See the file {\tt init.h} to add your own custom condition.
+    \\
 initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
 electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
 \\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
-sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
-posX       & float &0.3    & - & blob R-position in units of $a$\\
-posY       & float &0.0    & - & blob Z-position in units of $a$ \\
+sigma      & float &2      & - & Gaussian variance in units of $\rho_s$ \\
+posX       & float &0.3    & - & Gaussian R-position in units of $a$\\
+posY       & float &0.0    & - & Gaussian Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & toroidal variance in units of $R_0$ of the fieldline-following initialization \\
-k\_psi     & float &0    & - & zonal mode wave number  \\
-nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
+k\_psi     & float &0    & - & zonal mode wave number (only for "zonal" initial condition)  \\
+nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}\\
 alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}\\
 alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes) \\
 source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
 source\_type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
-"influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx}, "torpex": Torpex inspired
-source profile Eq.~\eqref{eq:electron_source_torpex}\\
+"influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx},
+"torpex": Torpex inspired source profile Eq.~\eqref{eq:electron_source_torpex},
+    See the file {\tt init.h} to add your own custom source. \\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
 rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psip}  \\
@@ -1147,8 +1165,8 @@ File format: json
     B      & float & 1 &  1 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
     c      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev} \\
     R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
-    elongation    & float & 1 & - & Elongation $e$ \\
-    triangularity & float & 0 & - & Triangularity $\delta$ \\
+    elongation    & float & 1 & - & Elongation $e$, used in determining the box size Eq.~\eqref{eq:box} and the initial guess for the location of the X-point $Z_X = -1.1 ea$ \\
+    triangularity & float & 0 & - & Triangularity $\delta$, used in the initial guess for the location of the X-point $R_X = R_0-1.1\delta a$ \\
     inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ \\
 \bottomrule
 \end{longtable}
@@ -1180,9 +1198,8 @@ xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \
 yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
-Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
+Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ used in the forcing source \\
 Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
-Damping          & Dataset & 3 (z,y,x) & Damping profile for initial profile \\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
@@ -1197,10 +1214,10 @@ X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\langle X
     \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
 Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs) selected plane
 $\int_{t_0}^{t_1}\d t Y(\varphi=0) $
-where $t_1 - t_0 = $dt*inner\_loop*itstp\\
+where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
 Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs) toroidal average (Eq.~\eqref{eq:phi_average})
 $\int_{t_0}^{t_1}\d t \langle Y \rangle_\varphi$
-where $t_1 - t_0 = $dt*inner\_loop*itstp\\
+where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
 \bottomrule
 \end{longtable}
 where the time integrals are computed with the help of Simpson's rule

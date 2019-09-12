@@ -35,6 +35,7 @@ using Geometry = dg::CylindricalGrid3d;
 #endif //FELTOR_MPI
 
 #include "init.h"
+#include "init_from_file.h"
 #include "feltordiag.h"
 
 #ifdef FELTOR_MPI
@@ -186,16 +187,18 @@ int main( int argc, char* argv[])
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
     if( argc == 4)
-        y0 = feltor::initial_conditions.at[p.initne]( feltor, grid, p,gp,mag );
+        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
     if( argc == 5)
-        y0 = feltor::init_from_file(argv[4], grid, time);
+        y0 = feltor::init_from_file(argv[4], grid, p,time);
 
     bool fixed_profile;
-    DVec profile;
-    DVec source_profile = feltor::source_profile.at[p.source_type](
-        fixed_profile, profile, feltor, grid, p, gp, mag);
+    {
+    HVec profile;
+    HVec source_profile = feltor::source_profiles.at(p.source_type)(
+        fixed_profile, profile, grid, p, gp, mag);
 
-    feltor.set_source( fixed_profile, profile, p.omega_source, source_profile);
+    feltor.set_source( fixed_profile, dg::construct<DVec>(profile), p.omega_source, dg::construct<DVec>(source_profile));
+    }
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;

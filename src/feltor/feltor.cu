@@ -81,9 +81,15 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
-    feltor::Initialize init( p, gp, mag);
-    y0 = init.init_from_parameters(feltor, grid);
-    feltor.set_source( init.profile(grid), p.omega_source, init.source_damping(grid));
+    y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+    bool fixed_profile;
+
+    HVec profile;
+    HVec source_profile = feltor::source_profiles.at(p.source_type)(
+        fixed_profile, profile, grid, p, gp, mag);
+
+    feltor.set_source( fixed_profile, dg::construct<DVec>(profile), p.omega_source, dg::construct<DVec>(source_profile));
+
 
     ////////////////////////create timer and timestepper
     //
@@ -142,7 +148,7 @@ int main( int argc, char* argv[])
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
             {
                 dg::assign( *pair.second, hvisual);
-                dg::blas1::axpby( 1., hvisual, -1., init.profile(grid), hvisual);
+                dg::blas1::axpby( 1., hvisual, -1., profile, hvisual);
             }
             else
                 dg::assign( *pair.second, hvisual);

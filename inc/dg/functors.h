@@ -92,7 +92,7 @@ struct Gaussian
      * @brief Return the value of the gaussian
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
+       f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
        \f]
      * @param x x - coordinate
      * @param y y - coordinate

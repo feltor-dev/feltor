@@ -141,7 +141,7 @@ void jacobian(
 }//namespace routines
 
 //From here on, we use the typedefs to ease the notation
-/
+
 struct Variables{
     feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
     feltor::Parameters p;
@@ -192,21 +192,18 @@ std::vector<Record_static> diagnostics3d_static_list = {
     },
     { "Nprof", "Density profile (that the source may force)",
         []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            result = profile(grid, p, gp, mag);
+            result = dg::evaluate( dg::zero, grid);
+            bool fixed_profile;
+            HVec source = feltor::source_profiles.at(v.p.source_type)(
+                fixed_profile, result, grid, v.p, gp, mag);
         }
     },
     { "Source", "Source region",
         []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            result = source_damping(grid, p, gp, mag);
             bool fixed_profile;
-            DVec profile;
-            result = feltor::source_profile.at[p.source_type](
-                fixed_profile, profile, v.f, grid, v.p, gp, mag);
-        }
-    },
-    { "Damping", "Damping region for initial profile",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            result = profile_damping(grid, v.p, gp, mag);
+            HVec profile;
+            result = feltor::source_profiles.at(v.p.source_type)(
+                fixed_profile, profile, grid, v.p, gp, mag);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
