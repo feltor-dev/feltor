@@ -149,7 +149,8 @@ int main( int argc, char* argv[])
 #endif
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
+    if( p.alpha_mag > 0.)
+        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
     MPI_OUT std::cout << "Constructing Explicit...\n";

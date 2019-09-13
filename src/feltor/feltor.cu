@@ -57,7 +57,8 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
+    if( p.alpha_mag > 0.)
+        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
@@ -84,7 +85,7 @@ int main( int argc, char* argv[])
     y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
     bool fixed_profile;
 
-    HVec profile;
+    HVec profile = dg::evaluate( dg::zero, grid);
     HVec source_profile = feltor::source_profiles.at(p.source_type)(
         fixed_profile, profile, grid, p, gp, mag);
 

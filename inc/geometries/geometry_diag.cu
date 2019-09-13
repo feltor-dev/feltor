@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
     if( !(argc == 4 || argc == 3))
     {
         std::cerr << "ERROR: Wrong number of arguments!\n";
-        std::cerr << " Usage: "<< argv[0]<<" [input.js] [geom.js] [output.nc]\n";
+        std::cerr << " Usage: "<< argv[0]<<" [input.json] [geom.json] [output.nc]\n";
         std::cerr << " ( Minimum input json file is { \"n\" : 3, \"Nx\": 100, \"Ny\":100 })\n";
         std::cerr << "Or \n Usage: "<< argv[0]<<" [file.nc] [output.nc]\n";
         std::cerr << " ( Program searches for string variables 'inputfile' and 'geomfile' in file.nc and tries a json parser)\n";
@@ -146,7 +146,8 @@ int main( int argc, char* argv[])
 
     //Test coefficients
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    //mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
+    if(p.alpha_mag > 0 )
+        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     if( gp.hasXpoint())

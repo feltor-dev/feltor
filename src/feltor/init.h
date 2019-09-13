@@ -29,7 +29,7 @@ struct Radius
     Radius ( double R0, double Z0): m_R0(R0), m_Z0(Z0) {}
     DG_DEVICE
     double operator()( double R, double Z) const{
-        return sqrt( (R-m_R0)*(R-m_R0) - (Z-m_Z0)*(Z-m_Z0));
+        return sqrt( (R-m_R0)*(R-m_R0) + (Z-m_Z0)*(Z-m_Z0));
     }
     private:
     double m_R0, m_Z0;
@@ -277,7 +277,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
 
 std::map<std::string, std::function< HVec(
     bool& fixed_profile, //indicate whether a profile should be forced (yes or no)
-    HVec& ne_profile, //construct profile if yes, do nothing if no
+    HVec& ne_profile, //construct profile if yes, do nothing or construct (determines what is written in output fiele) if no
     Geometry& grid, const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
 > > source_profiles =
@@ -299,6 +299,7 @@ std::map<std::string, std::function< HVec(
         const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
         {
             fixed_profile = false;
+            ne_profile = dg::construct<HVec>( detail::profile(grid, p,gp,mag));
             HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,gp,mag));
             return source_profile;
         }
@@ -308,6 +309,9 @@ std::map<std::string, std::function< HVec(
         Geometry& grid, const feltor::Parameters& p,
         const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
         {
+            dg::Gaussian prof( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma,
+                p.sigma, p.nprofamp);
+            ne_profile = dg::pullback( prof, grid);
             fixed_profile = false;
             double rhosinm = 0.98 / gp.R_0;
             double rhosinm2 = rhosinm*rhosinm;

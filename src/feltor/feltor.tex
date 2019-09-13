@@ -376,29 +376,29 @@ of introducing a strong shear layer limiting the scrape-off layer width.
 We define an approximation to the step function with width $\alpha$
 \begin{align}
 \Theta_\alpha(\psi) := \begin{cases}
-    1 & \text{ for } \psi < - \alpha  \\
-    \frac{1}{32 \alpha^7}  \left(16 \alpha^3+29 \alpha^2 \psi+20 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^4
+    0 & \text{ for } \psi < - \alpha  \\
+    \frac{1}{32 \alpha^7}  \left(16 \alpha^3-29 \alpha^2 \psi+20 \alpha \psi^2-5 \psi^3\right) (\alpha+\psi)^4
     &\text{ for } -\alpha<\psi<+\alpha \\
-    0 & \text{ for } \psi > \alpha 
+    1 & \text{ for } \psi > \alpha 
 \end{cases}
-    \approx H(-\psi)
+    \approx H(\psi)
 \label{eq:approx_heaviside}
 \end{align}
 if $H(\psi)$ is the Heaviside step function.
 An integral of this function is
 \begin{align}
 \theta_\alpha(\psi) := \begin{cases}
-\psi &\text{ for } \psi < -\alpha \\
-    - \frac{1}{256 \alpha^7} \left(35 \alpha^3+47 \alpha^2 \psi+25 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^5
+    0 &\text{ for } \psi < -\alpha \\
+    \frac{1}{256 \alpha^7} \left(35 \alpha^3-47 \alpha^2 \psi+25 \alpha \psi^2-5 \psi^3\right) (\alpha+\psi)^5
      &\text{ for } -\alpha<\psi<+\alpha \\
-    0 &\text{ for } \psi > \alpha
+\psi &\text{ for } \psi > \alpha
 \end{cases}
-    \approx \psi H(-\psi)
+    \approx \psi H(\psi)
 \end{align}
 
 We now use 
 \begin{align}
-\theta_\alpha(\psi-\psi_0)+\psi_0
+-\theta_\alpha(\psi_0 - \psi)+\psi_0 \approx (\psi- \psi_0)H(\psi_0-\psi) + \psi_0
 \label{eq:modified_psip}
 \end{align}
 instead of $\psi$ for the computation of the
@@ -715,7 +715,7 @@ Note that we should take care to intitialize a smooth profile with ideally well-
 Let us define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{\text{prof}}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{\alpha}(-\psi_p(R, Z)-\alpha) H(Z-Z_X)
 \end{align}
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
 X-point and avoids a profile in the private flux region. The factor $\alpha$ provides a smooth transition
@@ -751,14 +751,14 @@ last closed flux surface. Notice that the core region is rather stable
 and quickly damps away fluctuations.
 Again, we transform this to all poloidal planes along the magnetic field lines and multiply the bath with
 \begin{align} \label{eq:initial_turbulent}
-\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{\alpha}(-\psi_p(R, Z)-\alpha) H(Z-Z_X)
 \end{align}
 \subsubsection{Zonal flows}
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \begin{align} \label{eq:initial_zonal_flow}
     \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
-\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{\alpha}(\psi_p(R, Z)+\alpha) H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{\alpha}(-\psi_p(R, Z)-\alpha) H(Z-Z_X)
 \end{align}
 \subsubsection{Turbulence on Gaussian profile}
 Instead of the flux-aligned profile we can also choose a toroidally symmetric Gaussian profile
@@ -777,7 +777,7 @@ core of our domain, where our model does not apply.
 We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s \begin{cases}
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X) \quad \text{ forced}\\
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho(R,Z) - \rho_s) H(Z-Z_X) \quad \text{ forced}\\
     S_{prof}(R,Z)\quad \text{ influx}
     \end{cases} \\
     \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}}, \quad
@@ -790,7 +790,7 @@ density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_s
 
 We can choose the constant influx
 \begin{align} \label{eq:electron_source_influx}
-  S_{prof}(R,Z) &= \Theta_\alpha( \rho_{s} -\rho(R,Z)) H(Z-Z_X)
+  S_{prof}(R,Z) &= \Theta_\alpha( \rho(R,Z) - \rho_s) H(Z-Z_X)
 \end{align}
 or a Torpex inspired source profile
 \begin{align} \label{eq:electron_source_torpex}
@@ -1139,7 +1139,6 @@ posY       & float &0.0    & - & Gaussian Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & toroidal variance in units of $R_0$ of the fieldline-following initialization \\
 k\_psi     & float &0    & - & zonal mode wave number (only for "zonal" initial condition)  \\
 nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}\\
-alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}\\
 alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes) \\
 source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
 source\_type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
@@ -1148,7 +1147,8 @@ source\_type & string & "profile" & "profile" & The type of source to use: "prof
     See the file {\tt init.h} to add your own custom source. \\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
-rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psip}  \\
+alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the magnetic field and rho\_damping is ignored.\\
+rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0 = (1-\rho_d)\psi_{p,\min}$ in Eq.~\eqref{eq:modified_psip}. \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -1199,7 +1199,7 @@ yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
 Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ used in the forcing source \\
-Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
+Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho(R,Z) - \rho_s) H(Z-Z_X)$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
