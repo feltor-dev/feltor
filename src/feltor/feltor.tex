@@ -1046,7 +1046,8 @@ discontinuous Galerkin on structured grid
 Advection terms & direct DG & DG approximation with centered flux of derivatives \\
 Elliptic terms & local DG & The local DG approximation with centered flux \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
+Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\nabla_\parallel N$ and $\nabla_\parallel \phi$ in the velocity equation use a forward difference, while the term $\nabla_\parallel U$ in the
+density equation uses backward difference. This is to avoid a too wide stencil for the diverence of the current and increases stability for low resistivity. \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
 \qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
