@@ -768,6 +768,7 @@ struct Heaviside
      * @param xb boundary value
      * @param sign either +1 or -1, If -1, we mirror the Heaviside at
      *  the \c x=x_b axis, i.e. we swap the < sign in the definition to >
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     Heaviside( double xb, int sign = +1):
         m_xb(xb), m_s(sign){ }
@@ -819,6 +820,7 @@ struct TanhProfX {
      * @param sign sign of the Tanh, defines the damping direction
      * @param bgamp background amplitude \c B
      * @param profamp profile amplitude \c A
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     TanhProfX(double xb, double width, int sign =1,double bgamp = 0.,
         double profamp = 1.) :
@@ -859,6 +861,7 @@ struct PolynomialHeaviside {
      * @param xb boundary value
      * @param a transition width
      * @param sign either +1 (original Heaviside) or -1 (the function is mirrored at the \c x=xb axis: f(2xb-x))
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     PolynomialHeaviside(double xb, double a, int sign = +1) :
         x0(xb), a(a), m_s(sign){}

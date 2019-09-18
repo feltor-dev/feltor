@@ -165,7 +165,8 @@ int main( int argc, char* argv[])
     std::cout << "psip( 1, 0) "<<psip0<<"\n";
     //Find O-point
     double R_O = gp.R_0, Z_O = 0.;
-    dg::geo::findXpoint( mag.get_psip(), R_O, Z_O);
+    if( !gp.isToroidal() )
+        dg::geo::findXpoint( mag.get_psip(), R_O, Z_O);
     const double psipmin = mag.psip()(R_O, Z_O);
 
     std::cout << "O-point "<<R_O<<" "<<Z_O<<" with Psip = "<<psipmin<<std::endl;
@@ -274,8 +275,9 @@ int main( int argc, char* argv[])
         std::cout << "Generate X-point flux-aligned grid!\n";
         double RX = gp.R_0-1.1*gp.triangularity*gp.a;
         double ZX = -1.1*gp.elongation*gp.a;
+        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, R_X, Z_X, mag.R0(), 0, 0, true);
+        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, RX, ZX, mag.R0(), 0, 0, true);
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipmin;
         std::cout << "psi 1 is          "<<psipmax<<"\n";
@@ -339,72 +341,76 @@ int main( int argc, char* argv[])
     }
 
     ///////////////////Compute flux average////////////////////
-    std::cout << "Compute flux averages\n";
-    dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
-    if( gp.hasXpoint() )
-        dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
-    dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, mag, psipog2d, xpoint_weights);
-    dg::Grid1d grid1d(psipmin, psipmax, npsi ,Npsi,dg::NEU);
-    map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
-        "Flux surface average of psi with delta function");
-    if( gp.equilibrium == "solovev")
+    dg::Grid1d grid1d( 0,1,npsi,Npsi, dg::NEU);
+    if( !gp.isToroidal())
     {
-        dg::geo::SafetyFactor     qprof( mag);
-        map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
-            "q-profile (Safety factor) using direct integration");
+        std::cout << "Compute flux averages\n";
+        dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
+        if( gp.hasXpoint() )
+            dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
+        dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, mag, psipog2d, xpoint_weights);
+        grid1d = dg::Grid1d (psipmin, psipmax, npsi ,Npsi,dg::NEU);
+        map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
+            "Flux surface average of psi with delta function");
+        if( gp.equilibrium == "solovev")
+        {
+            dg::geo::SafetyFactor     qprof( mag);
+            map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
+                "q-profile (Safety factor) using direct integration");
+        }
+        else
+        {
+            dg::geo::SafetyFactorAverage     qprof( grid2d, mag);
+            map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
+                "q-profile (Safety factor) using average integration");
+        }
+        map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
+            "Flux label psi evaluated on grid1d");
+        dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
+        dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
+        map1d.emplace_back("rho", rho,
+            "Alternative flux label rho = -psi/psimin + 1");
+        fsa.set_container( (dg::DVec)curvNablaBGradPsip);
+        map1d.emplace_back("curvNablaB_fsa",   dg::evaluate( fsa,      grid1d),
+            "Flux surface average of true Nabla B curvature Dot Grad Psip with delta function");
+        fsa.set_container( (dg::DVec)curvKappaKGradPsip);
+        map1d.emplace_back("curvKappaK_fsa",   dg::evaluate( fsa,      grid1d),
+            "Flux surface average of true Kappa curvature Dot Grad Psip with delta function");
+        fsa.set_container( (dg::DVec)gradPsip);
+        map1d.emplace_back("gradPsip_fsa",   dg::evaluate( fsa,      grid1d),
+            "Flux surface average of |Grad Psip| with delta function");
+
+        //other flux labels
+        dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag);
+        fsi.set_right( xpoint_weights);
+
+        dg::HVec areaT_psip = dg::evaluate( fsi, grid1d);
+        dg::HVec w1d = dg::create::weights( grid1d);
+        double volumeCoarea = 2.*M_PI*dg::blas1::dot( areaT_psip, w1d);
+
+        //area
+        fsi.set_left( dg::evaluate( dg::geo::GradPsip(mag), grid2d));
+        dg::HVec psi_area = dg::evaluate( fsi, grid1d);
+        dg::blas1::scal(psi_area, 2.*M_PI);
+        map1d.emplace_back( "psi_area", psi_area,
+            "Flux area with delta function");
+
+        dg::geo::FluxVolumeIntegral<dg::HVec> fvi( (dg::CartesianGrid2d)grid2d, mag);
+        std::cout << "Delta Rho for Flux surface integrals = "<<-fsi.get_deltapsi()/psipmin<<"\n";
+
+        fvi.set_right( xpoint_weights);
+        dg::HVec psi_vol = dg::evaluate( fvi, grid1d);
+        dg::blas1::scal(psi_vol, 2.*M_PI);
+        map1d.emplace_back( "psi_vol", psi_vol,
+            "Flux volume with delta function");
+        double volumeFVI = 2.*M_PI*fvi(psipmax);
+        std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
+                  <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
+        if(gp.hasXpoint()){
+            std::cout << "VOLUME TEST WITH X Grid FORMULA: "<<volumeXGrid<<" "<<volumeFVI
+                      <<" rel error = "<<fabs(volumeXGrid-volumeFVI)/volumeFVI<<"\n";
+        };
     }
-    else
-    {
-        dg::geo::SafetyFactorAverage     qprof( grid2d, mag);
-        map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
-            "q-profile (Safety factor) using average integration");
-    }
-    map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
-        "Flux label psi evaluated on grid1d");
-    dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
-    dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
-    map1d.emplace_back("rho", rho,
-        "Alternative flux label rho = -psi/psimin + 1");
-    fsa.set_container( (dg::DVec)curvNablaBGradPsip);
-    map1d.emplace_back("curvNablaB_fsa",   dg::evaluate( fsa,      grid1d),
-        "Flux surface average of true Nabla B curvature Dot Grad Psip with delta function");
-    fsa.set_container( (dg::DVec)curvKappaKGradPsip);
-    map1d.emplace_back("curvKappaK_fsa",   dg::evaluate( fsa,      grid1d),
-        "Flux surface average of true Kappa curvature Dot Grad Psip with delta function");
-    fsa.set_container( (dg::DVec)gradPsip);
-    map1d.emplace_back("gradPsip_fsa",   dg::evaluate( fsa,      grid1d),
-        "Flux surface average of |Grad Psip| with delta function");
-
-    //other flux labels
-    dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag);
-    fsi.set_right( xpoint_weights);
-
-    dg::HVec areaT_psip = dg::evaluate( fsi, grid1d);
-    dg::HVec w1d = dg::create::weights( grid1d);
-    double volumeCoarea = 2.*M_PI*dg::blas1::dot( areaT_psip, w1d);
-
-    //area
-    fsi.set_left( dg::evaluate( dg::geo::GradPsip(mag), grid2d));
-    dg::HVec psi_area = dg::evaluate( fsi, grid1d);
-    dg::blas1::scal(psi_area, 2.*M_PI);
-    map1d.emplace_back( "psi_area", psi_area,
-        "Flux area with delta function");
-
-    dg::geo::FluxVolumeIntegral<dg::HVec> fvi( (dg::CartesianGrid2d)grid2d, mag);
-    std::cout << "Delta Rho for Flux surface integrals = "<<-fsi.get_deltapsi()/psipmin<<"\n";
-
-    fvi.set_right( xpoint_weights);
-    dg::HVec psi_vol = dg::evaluate( fvi, grid1d);
-    dg::blas1::scal(psi_vol, 2.*M_PI);
-    map1d.emplace_back( "psi_vol", psi_vol,
-        "Flux volume with delta function");
-    double volumeFVI = 2.*M_PI*fvi(psipmax);
-    std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
-              <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
-    if(gp.hasXpoint()){
-        std::cout << "VOLUME TEST WITH X Grid FORMULA: "<<volumeXGrid<<" "<<volumeFVI
-                  <<" rel error = "<<fabs(volumeXGrid-volumeFVI)/volumeFVI<<"\n";
-    };
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;

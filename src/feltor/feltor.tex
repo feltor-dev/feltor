@@ -174,19 +174,24 @@ from where we recover the Grad-Shafranov equation
 with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
 The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
 By integration over \(\psi_p\) we find
-\begin{align}\label{eq:solovevassumption}
- p(\psi_p) &= (A-1)\psi_p/R_0,  &
- I(\psi_p) &= \sqrt{-2 A \psi_p/R_0 + 1}, &
-    j_{\hat\varphi} &= \left[(A-1)R^2/R_0^2 - A \right]/R.
-\end{align}
-Now, we introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
-and solve Equations~\eqref{eq:GSEdimless} and~\eqref{eq:solovevassumption} to obtain
+$
+ p(\psi_p) = (A-1)\psi_p/R_0$,
+ $I(\psi_p) = \sqrt{-2 A \psi_p/R_0 + 1}$,
+ and
+    $j_{\hat\varphi} = \left[(A-1)R^2/R_0^2 - A \right]/R $.
+Note that if $\psi_p$, $I(\psi)$ and $p(\psi)$ are a solution to Eq.~\eqref{eq:GSEdimless}
+then so are $\mathcal P_\psi \psi_p$ , $\mathcal P_\psi I(\psi_p)$ and $\mathcal P_\psi^2 p(\psi_p)$.
+Also note that for $A=0$ the constant current $I$ is arbitrary $\mathcal P_I$.
+
+We introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
+and represent a solution to Equation~\eqref{eq:GSEdimless} as~\cite{Cerfon2010}
 \begin{align}\label{eq:solovev}
- \psi_p (R,Z) &= R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
-   - \frac{1}{8}\bar{R}^4\right)+ B\frac{1}{8}\bar{R}^4 
-   + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],
+ \psi_p (R,Z) &= \mathcal P_{\psi} R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
+   - \frac{1}{8}\bar{R}^4\right)+ \frac{1}{8}\bar{R}^4 
+   + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],\\
+   I(\psi_p) &= \mathcal P_I\sqrt{ - 2A\psi_p/(R_0\mathcal P_{\psi}) +1},
 \end{align}
-with
+with $\mathcal P_I = \pm \mathcal P_\psi$ for $A\neq 0$, $p(\psi_p) = \mathcal P_\psi (A-1)\psi_p/R_0$ and
 \rowcolors{2}{gray!25}{white}
 \begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \toprule
@@ -219,9 +224,11 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
 \bottomrule
 \end{longtable}
 The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field, while $R_0$ appears as an artificial scaling factor (note here that a change in $\rho_s$ changes $R_0$ but not the form or size of the dimensional equilibrium magnetic field).
-Note that $B$ is not part of the original work ($B=1$ per default) and has been added for additional flexibility in fitting the coefficients to an existing experimental equilibrium.
+The scaling factors $\mathcal P_\psi$ and $\mathcal P_I$ are mainly introduced to maximize the flexibility e.g. to adapt the solution to experimental equilibria or to reverse the sign of the magnetic field.
+Remember that $\mathcal  P_I \neq \mathcal P_\psi$ only yields a solution for $A=0$.
+
 Eq.~\eqref{eq:solovev} allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
-field reversed configurations and low and high beta tokamak equilbria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
+field reversed configurations and low and high beta tokamak equilibria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
 
 Note that
 \begin{align}
@@ -273,9 +280,9 @@ This simplifies the curvature operators to:
 \end{align}
 and
 \begin{align}
- \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z}.
+ \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z},
 \end{align}
-which, results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
+which results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
 
 Note that in an actual toroidal field we have
 \begin{align}
