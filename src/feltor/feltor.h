@@ -848,6 +848,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
         dg::blas1::axpby( 1., m_s[0][0], 1.0, yp[0][0]);
         dg::blas1::axpby( 1., m_s[0][1], 1.0, yp[0][1]);
+        //currently we ignore m_s[1]
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{

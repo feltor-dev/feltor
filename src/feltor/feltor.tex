@@ -185,12 +185,15 @@ Also note that for $A=0$ the constant current $I$ is arbitrary $\mathcal P_I$.
 
 We introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
 and represent a solution to Equation~\eqref{eq:GSEdimless} as~\cite{Cerfon2010}
-\begin{align}\label{eq:solovev}
+\begin{subequations}
+\label{eq:solovev}
+\begin{align}
  \psi_p (R,Z) &= \mathcal P_{\psi} R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
    - \frac{1}{8}\bar{R}^4\right)+ \frac{1}{8}\bar{R}^4 
    + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],\\
    I(\psi_p) &= \mathcal P_I\sqrt{ - 2A\psi_p/(R_0\mathcal P_{\psi}) +1},
 \end{align}
+\end{subequations}
 with $\mathcal P_I = \pm \mathcal P_\psi$ for $A\neq 0$, $p(\psi_p) = \mathcal P_\psi (A-1)\psi_p/R_0$ and
 \rowcolors{2}{gray!25}{white}
 \begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
@@ -616,7 +619,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
     + \mu NU\mathcal K_{\nabla\times\bhat}(\psi) \nonumber\\
     &= -\tau \left(\bhat + \tilde{\vec b}_\perp\right)\cdot \nabla N 
     -N \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) 
-    - \eta n_e^2(U_i-u_e) + \mu N(\Lambda_U + S_U)
+    - \eta n_e^2(U_i-u_e) + \mu N\Lambda_U
 \label{}
 \end{align}
 with
@@ -828,6 +831,7 @@ so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 %  S_{U}(R,Z,\varphi, t) := -\omega_d U \Theta( \rho(R,Z) - \rho_d)
 %\end{align}
 %with $\rho_d > 1$.
+Currently we do not implement any source terms for the velocity $U$.
 
 \subsection{Implemented form}
 The form that we implement avoids derivatives on the product of
@@ -855,7 +859,7 @@ two functions for which we have no boundary conditions
         -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
         + \nu_\perp\Delta_\perp U
-        + \nu_\parallel \Delta_\parallel U + S_U,
+        + \nu_\parallel \Delta_\parallel U,
         \label{eq:EgyrofluidU} \\
         W&:= \left( U + \frac{A_\parallel}{\mu}\right)
     \end{align}
@@ -942,7 +946,7 @@ with ( $z_e=-1$ and $z_i=+1$)
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
   \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
 \nonumber \\
-  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U^2 \right)S_{N}  + \mu NU S_U\right]
+  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U^2 \right)S_{N}\right]
 \nonumber \\
   R_{\mathcal E} =&  -\eta_\parallel  \left[ n_e(U_i-u_e)\right]^2.
 \end{align}
@@ -1091,9 +1095,9 @@ Input file format: json
 \begin{longtable}{llll>{\RaggedRight}p{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &Number of Gaussian nodes in R and Z \\
-Nx     & integer &52& - &Number of grid points in R \\
-Ny     & integer &52& - &Number of grid points in Z \\
+n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we always take 3) \\
+Nx     & integer &52& - &Number of grid points in R (increase if your simulations crash) \\
+Ny     & integer &52& - &Number of grid points in Z (increase if your simulations crash) \\
 Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt since parallel velocity dominates timestep) \\
 dt     & integer &1e-2& - & time stepsize in units of $c_s/\rho_s$ \\
 compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
@@ -1119,10 +1123,18 @@ tau        & float &1      & - & $\tau = T_i/T_e$  \\
 beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
 nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$ \\
 perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$\\
-nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
+nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$
+(dimensional analysis reveals there can be a factor $(R_0/\rho_s)^2$ between
+$\nu_\perp $n and $\nu_\parallel$ for $\nu_\parallel$ to become relevant for
+the dynamics)\\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true": no approximation - requires significantly more resolution in Nz, "toroidal": toroidal field approx - elliptic equation does not need communication in z)  \\
-symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
+curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta",
+"true": no approximation - requires significantly more resolution in Nz,
+"toroidal": toroidal field approx - elliptic equation does not need
+communication in z)  \\
+symmetric & bool & false & false & If true, initialize all quantities symmetric
+in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
+to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
 \qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$ and $A_\parallel$\\
@@ -1170,8 +1182,9 @@ File format: json
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
     A      & float & 0 &  0 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
-    B      & float & 1 &  1 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
     c      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev} \\
+    PP     & float & 1 &  1 & Prefactor $\mathcal P_\psi$ for $\psi_p$ in Eq.~\eqref{eq:solovev} \\
+    PI     & float & 1 &  1 & Prefactor $\mathcal P_I$ for $I$ in Eq.~\eqref{eq:solovev} \\
     R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
     elongation    & float & 1 & - & Elongation $e$, used in determining the box size Eq.~\eqref{eq:box} and the initial guess for the location of the X-point $Z_X = -1.1 ea$ \\
     triangularity & float & 0 & - & Triangularity $\delta$, used in the initial guess for the location of the X-point $R_X = R_0-1.1\delta a$ \\
@@ -1257,7 +1270,9 @@ and X $\in$
     ne2 & $n_e^2$ &
     phi2 & $\phi^2$ \\
     nephi & $n_e\phi$ &
-     & \\
+    sne & $S_{n_e}$ \\
+    see & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_e^2) S_{n_e} $ &
+    sei & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_i^2) S_{N_i} $ \\
     nelnne &$ z_e\tau_e n_e \ln n_e$ &
     nilnni &$ z_i\tau_i N_i \ln N_i$ \\
     aperp2 &$ (\nabla_\perp A_\parallel)^2/2/\beta$ &
@@ -1270,7 +1285,7 @@ and X $\in$
     odiai &$\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i$ \\
 \bottomrule
 \end{longtable}
-and the sources and currents Y $\in$
+and the time-averaged quantities Y $\in$
 \begin{longtable}{ll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\

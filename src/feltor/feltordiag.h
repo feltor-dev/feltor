@@ -105,6 +105,11 @@ struct RadialEnergyFlux{
         return m_z*(m_tau*(1+log(ne))+P+0.5*m_mu*ue*ue)*lapMperpN
                 + m_z*m_mu*ne*ue*lapMperpU;
     }
+    //energy source
+    DG_DEVICE double operator()( double ne, double ue, double P,
+        double source){
+        return m_z*(m_tau*(1+log(ne))+P+0.5*m_mu*ue*ue)*source;
+    }
     private:
     double m_tau, m_mu, m_z;
 };
@@ -447,6 +452,11 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( v.p.nu_parallel, v.f.dssN(0), 1., result);
         }
     },
+    {"sne", "Source term for electron density", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::copy( v.f.sources()[0][0], result);
+        }
+    },
     /// ------------------- Energy terms ------------------------//
     {"nelnne", "Entropy electrons", false,
         []( DVec& result, Variables& v ) {
@@ -504,6 +514,24 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( 1., v.f.velocity(1), -1., v.f.velocity(0), result);
             dg::blas1::pointwiseDot( result, v.f.density(0), result);
             dg::blas1::pointwiseDot( -v.p.eta, result, result, 0., result);
+        }
+    },
+    {"see", "Energy sink/source for electrons", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::evaluate( result, dg::equals(),
+                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                v.f.density(0), v.f.velocity(0), v.f.potential(0),
+                v.f.sources()[0][0]
+            );
+        }
+    },
+    {"sei", "Energy sink/source for ions", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::evaluate( result, dg::equals(),
+                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                v.f.density(1), v.f.velocity(1), v.f.potential(1),
+                v.f.sources()[0][1]
+            );
         }
     },
     /// ------------------ Energy flux terms ------------------------//
@@ -725,7 +753,7 @@ std::vector<Record> diagnostics2d_list = {
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // These two lists signify the quantities involved in accuracy computation
 std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt"};
+std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see", "sei"};
 
 template<class Container>
 void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)
