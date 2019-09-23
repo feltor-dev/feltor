@@ -141,8 +141,6 @@ struct BR: public aCylindricalFunctor<BR>
     {
         double Rn;
         Rn = R/mag_.R0();
-        //sign before A changed to +
-        //return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ qampl_*qampl_*Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
         return -1./R/invB_(R,Z) + invB_(R,Z)/Rn/Rn*(mag_.ipol()(R,Z)*mag_.ipolR()(R,Z) + mag_.psipR()(R,Z)*mag_.psipRR()(R,Z) + mag_.psipZ()(R,Z)*mag_.psipRZ()(R,Z));
     }
   private:
@@ -165,8 +163,6 @@ struct BZ: public aCylindricalFunctor<BZ>
     {
         double Rn;
         Rn = R/mag_.R0();
-        //sign before A changed to -
-        //return (-qampl_*qampl_*A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
         return (invB_(R,Z)/Rn/Rn)*(mag_.ipol()(R,Z)*mag_.ipolZ()(R,Z) + mag_.psipR()(R,Z)*mag_.psipRZ()(R,Z) + mag_.psipZ()(R,Z)*mag_.psipZZ()(R,Z));
     }
   private:
@@ -180,12 +176,18 @@ struct BZ: public aCylindricalFunctor<BZ>
 ///@copydoc hide_toroidal_approximation_note
 struct CurvatureNablaBR: public aCylindricalFunctor<CurvatureNablaBR>
 {
-    CurvatureNablaBR(const TokamakMagneticField& mag): invB_(mag), bZ_(mag) { }
+    CurvatureNablaBR(const TokamakMagneticField& mag, int sign): invB_(mag), bZ_(mag) {
+        if( sign >0)
+            m_sign = +1.;
+        else
+            m_sign = -1;
+    }
     double do_compute( double R, double Z) const
     {
-        return -invB_(R,Z)*invB_(R,Z)*bZ_(R,Z);
+        return -m_sign*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z);
     }
     private:
+    double m_sign;
     InvB invB_;
     BZ bZ_;
 };
@@ -196,12 +198,18 @@ struct CurvatureNablaBR: public aCylindricalFunctor<CurvatureNablaBR>
 ///@copydoc hide_toroidal_approximation_note
 struct CurvatureNablaBZ: public aCylindricalFunctor<CurvatureNablaBZ>
 {
-    CurvatureNablaBZ( const TokamakMagneticField& mag): invB_(mag), bR_(mag) { }
+    CurvatureNablaBZ( const TokamakMagneticField& mag, int sign): invB_(mag), bR_(mag) {
+        if( sign >0)
+            m_sign = +1.;
+        else
+            m_sign = -1;
+    }
     double do_compute( double R, double Z) const
     {
-        return invB_(R,Z)*invB_(R,Z)*bR_(R,Z);
+        return m_sign*invB_(R,Z)*invB_(R,Z)*bR_(R,Z);
     }
     private:
+    double m_sign;
     InvB invB_;
     BR bR_;
 };
@@ -213,7 +221,7 @@ struct CurvatureNablaBZ: public aCylindricalFunctor<CurvatureNablaBZ>
 struct CurvatureKappaR: public aCylindricalFunctor<CurvatureKappaR>
 {
     CurvatureKappaR( ){ }
-    CurvatureKappaR( const TokamakMagneticField& mag){ }
+    CurvatureKappaR( const TokamakMagneticField& mag, int sign = +1){ }
     double do_compute( double R, double Z) const
     {
         return  0.;
@@ -227,12 +235,18 @@ struct CurvatureKappaR: public aCylindricalFunctor<CurvatureKappaR>
 ///@copydoc hide_toroidal_approximation_note
 struct CurvatureKappaZ: public aCylindricalFunctor<CurvatureKappaZ>
 {
-    CurvatureKappaZ( const TokamakMagneticField& mag): invB_(mag) { }
+    CurvatureKappaZ( const TokamakMagneticField& mag, int sign): invB_(mag) {
+        if( sign >0)
+            m_sign = +1.;
+        else
+            m_sign = -1;
+    }
     double do_compute( double R, double Z) const
     {
-        return -invB_(R,Z)/R;
+        return -m_sign*invB_(R,Z)/R;
     }
     private:
+    double m_sign;
     InvB invB_;
 };
 
@@ -242,22 +256,29 @@ struct CurvatureKappaZ: public aCylindricalFunctor<CurvatureKappaZ>
 ///@copydoc hide_toroidal_approximation_note
 struct DivCurvatureKappa: public aCylindricalFunctor<DivCurvatureKappa>
 {
-    DivCurvatureKappa( const TokamakMagneticField& mag): invB_(mag), bZ_(mag){ }
+    DivCurvatureKappa( const TokamakMagneticField& mag, int sign): invB_(mag), bZ_(mag){
+        if( sign >0)
+            m_sign = +1.;
+        else
+            m_sign = -1;
+    }
     double do_compute( double R, double Z) const
     {
-        return bZ_(R,Z)*invB_(R,Z)*invB_(R,Z)/R;
+        return m_sign*bZ_(R,Z)*invB_(R,Z)*invB_(R,Z)/R;
     }
     private:
+    double m_sign;
     InvB invB_;
     BZ bZ_;
 };
+
 ///@brief Approximate \f$  \vec{\nabla}\cdot \mathcal{K}_{\nabla B}  \f$
 ///
 ///  \f$  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\nabla B}  = -\frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f$
 ///@copydoc hide_toroidal_approximation_note
 struct DivCurvatureNablaB: public aCylindricalFunctor<DivCurvatureNablaB>
 {
-    DivCurvatureNablaB( const TokamakMagneticField& mag): div_(mag){ }
+    DivCurvatureNablaB( const TokamakMagneticField& mag, int sign): div_(mag, sign){ }
     double do_compute( double R, double Z) const
     {
         return -div_(R,Z);
@@ -533,33 +554,38 @@ inline CylindricalVectorLvl0 createBHat( const TokamakMagneticField& mag){
 }
 
 /**
- * @brief Contravariant components of the unit vector field (0, 0, 1/R)
+ * @brief Contravariant components of the unit vector field (0, 0, +/- 1/R)
  * in cylindrical coordinates.
+ * @param sign indicate positive or negative unit vector
  * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$
  * @note This is equivalent to inserting a toroidal magnetic field into the \c dg::geo::createBHat function.
  */
-inline CylindricalVectorLvl0 createEPhi( ){
-    return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return 1./x;});
+inline CylindricalVectorLvl0 createEPhi( int sign ){
+    if( sign > 0)
+        return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return 1./x;});
+    return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return -1./x;});
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
  *
  * @param mag the tokamak magnetic field
- * @return the tuple CurvatureNablaBR, CurvatureNablaBZ, dg::geo::Constant(0) constructed from mag
+ * @param sign indicate positive or negative unit vector in approximation
+ * @return the tuple \c CurvatureNablaBR, \c CurvatureNablaBZ, \c dg::geo::Constant(0) constructed from \c mag
  * @note The contravariant components in cylindrical coordinates
  */
-inline CylindricalVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag){
-    return CylindricalVectorLvl0( CurvatureNablaBR(mag), CurvatureNablaBZ(mag), Constant(0));
+inline CylindricalVectorLvl0 createCurvatureNablaB( const TokamakMagneticField& mag, int sign){
+    return CylindricalVectorLvl0( CurvatureNablaBR(mag, sign), CurvatureNablaBZ(mag, sign), Constant(0));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureKappaR, CurvatureKappaZ, Constant(0))
  *
  * @param mag the tokamak magnetic field
- * @return the tuple CurvatureKappaR, CurvatureKappaZ, dg::geo::Constant(0) constructed from mag
+ * @param sign indicate positive or negative unit vector in approximation
+ * @return the tuple \c CurvatureKappaR, \c CurvatureKappaZ, \c dg::geo::Constant(0) constructed from \c mag
  * @note The contravariant components in cylindrical coordinates
  */
-inline CylindricalVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag){
-    return CylindricalVectorLvl0( CurvatureKappaR(mag), CurvatureKappaZ(mag), Constant(0));
+inline CylindricalVectorLvl0 createCurvatureKappa( const TokamakMagneticField& mag, int sign){
+    return CylindricalVectorLvl0( CurvatureKappaR(mag, sign), CurvatureKappaZ(mag, sign), Constant(0));
 }
 /**
  * @brief True curvature vector field (TrueCurvatureKappaR, TrueCurvatureKappaZ, TrueCurvatureKappaP)

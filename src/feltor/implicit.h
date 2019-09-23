@@ -46,9 +46,11 @@ struct ImplicitDensity
         m_p = p;
         m_lapM_perpN.construct( g, p.bcxN, p.bcyN,dg::PER, dg::normed, dg::centered);
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
-        auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
+        auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
         if( p.curvmode == "true")
             bhat = dg::geo::createBHat(mag);
+        else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+            bhat = dg::geo::createEPhi(-1);
         dg::SparseTensor<Container> hh
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
@@ -114,9 +116,11 @@ struct ImplicitVelocity
         m_apar = m_temp;
         m_fields[0][0] = m_fields[0][1] = m_temp;
         m_fields[1][0] = m_fields[1][1] = m_temp;
-        auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
+        auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
         if( p.curvmode == "true")
             bhat = dg::geo::createBHat(mag);
+        else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+            bhat = dg::geo::createEPhi(-1);
         dg::SparseTensor<Container> hh
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h

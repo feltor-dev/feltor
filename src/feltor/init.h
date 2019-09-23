@@ -163,7 +163,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             return y0;
         }
     },
-    { "straight_blob",
+    { "straight blob",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
             const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
@@ -239,7 +239,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             return y0;
         }
     },
-    { "turbulence_on_gaussian",
+    { "turbulence on gaussian",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
             const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )

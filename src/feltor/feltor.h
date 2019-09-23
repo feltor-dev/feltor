@@ -375,14 +375,26 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     }
     else if( p.curvmode == "low beta")
     {
-        curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag);
+        curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, +1);
         dg::assign( dg::evaluate(dg::zero, g), m_divCurvKappa);
     }
     else if( p.curvmode == "toroidal")
     {
-        curvNabla = dg::geo::createCurvatureNablaB(mag);
-        curvKappa = dg::geo::createCurvatureKappa(mag);
-        dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag), g),
+        curvNabla = dg::geo::createCurvatureNablaB(mag, +1);
+        curvKappa = dg::geo::createCurvatureKappa(mag, +1);
+        dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, +1), g),
+            m_divCurvKappa);
+    }
+    else if( p.curvmode == "low beta negative")
+    {
+        curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, -1);
+        dg::assign( dg::evaluate(dg::zero, g), m_divCurvKappa);
+    }
+    else if( p.curvmode == "toroidal negative")
+    {
+        curvNabla = dg::geo::createCurvatureNablaB(mag, -1);
+        curvKappa = dg::geo::createCurvatureKappa(mag, -1);
+        dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, -1), g),
             m_divCurvKappa);
     }
     dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
@@ -416,9 +428,11 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
             dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
 
     // in Poisson we take EPhi except for the true curvmode
-    bhat = dg::geo::createEPhi();
+    bhat = dg::geo::createEPhi(+1);
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
+    else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+        bhat = dg::geo::createEPhi(-1);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
     dg::SparseTensor<Container> metric = g.metric();
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
@@ -447,9 +461,11 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
     /////////////////////////init elliptic and helmholtz operators/////////
-    auto bhat = dg::geo::createEPhi(); //bhat = ephi except when "true"
+    auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat( mag);
+    else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+        bhat = dg::geo::createEPhi(-1);
     m_multi_chi = m_multigrid.project( m_temp0);
     m_multi_pol.resize(p.stages);
     m_multi_invgammaP.resize(p.stages);

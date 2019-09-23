@@ -1128,10 +1128,15 @@ nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$
 $\nu_\perp $n and $\nu_\parallel$ for $\nu_\parallel$ to become relevant for
 the dynamics)\\
 resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta",
+curvmode  & string & "low beta"  & "toroidal" &
+curvature mode (
+"low beta",
 "true": no approximation - requires significantly more resolution in Nz,
 "toroidal": toroidal field approx - elliptic equation does not need
-communication in z)  \\
+communication in z,
+"low beta negative": reversed sign of low beta,
+"toroidal negative": reversed sign of toroidal
+) \\
 symmetric & bool & false & false & If true, initialize all quantities symmetric
 in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
 to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
@@ -1146,7 +1151,7 @@ perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})
-    "turbulence\_on\_gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
+    "turbulence on gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
     See the file {\tt init.h} to add your own custom condition.
     \\
 initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
