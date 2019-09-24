@@ -840,6 +840,11 @@ std::vector<Record> restart3d_list = {
         []( DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.velocity(1), result);
         }
+    },
+    {"restart_induction", "parallel magnetic induction", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.induction(), result);
+        }
     }
 };
 // These two lists signify the quantities involved in accuracy computation

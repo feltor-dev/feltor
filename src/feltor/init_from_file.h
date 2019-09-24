@@ -36,7 +36,7 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
 
     // Now read in last timestep
     Geometry grid_IN( grid.x0(), grid.x1(), grid.y0(), grid.y1(), grid.z0(), grid.z1(),
-        pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.symmetric ? 1 : pIN.Nz_out, pIN.bcxN, pIN.bcyN, dg::PER
+        pIN.n, pIN.Nx, pIN.Ny, pIN.symmetric ? 1 : pIN.Nz, pIN.bcxN, pIN.bcyN, dg::PER
         #ifdef FELTOR_MPI
         , grid.communicator()
         #endif //FELTOR_MPI
@@ -47,29 +47,30 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     int dimsIN[3],  coordsIN[3];
     int periods[3] = {false, false, true}; //non-, non-, periodic
     MPI_Cart_get( grid.communicator(), 3, dimsIN, periods, coordsIN);
-    size_t countIN[4] = {1, grid_IN.local().Nz(),
-        grid_IN.n()*(grid_IN.local().Ny()),
-        grid_IN.n()*(grid_IN.local().Nx())};
-    size_t startIN[4] = {0, coordsIN[2]*countIN[1],
-                            coordsIN[1]*countIN[2],
-                            coordsIN[0]*countIN[3]};
+    size_t countIN[3] = {grid_IN.local().Nz(),
+            grid_IN.n()*(grid_IN.local().Ny()),
+            grid_IN.n()*(grid_IN.local().Nx())};
+    size_t startIN[3] = {coordsIN[2]*countIN[1],
+                         coordsIN[1]*countIN[2],
+                         coordsIN[0]*countIN[3]};
     #else //FELTOR_MPI
-    size_t startIN[4] = {0, 0, 0, 0};
-    size_t countIN[4] = {1, grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
+    size_t startIN[3] = {0, 0, 0};
+    size_t countIN[3] = {grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
         grid_IN.n()*grid_IN.Nx()};
     #endif //FELTOR_MPI
     std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid));
     HVec transferINH( dg::evaluate(dg::zero, grid_IN));
 
-    std::string namesIN[5] = {"electrons", "ions", "Ue", "Ui", "induction"};
+    std::string namesIN[5] = {"restart_electrons", "restart_ions", "restart_Ue", "restart_Ui", "restart_induction"};
 
     int timeIDIN;
+    size_t size_time, count_time = 1;
     /////////////////////Get time length and initial data///////////////////////////
     errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
-    errIN = nc_inq_dimlen(ncidIN, timeIDIN, &startIN[0]);
-    startIN[0] -= 1;
+    errIN = nc_inq_dimlen(ncidIN, timeIDIN, &size_time);
     errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);
-    errIN = nc_get_vara_double( ncidIN, timeIDIN, startIN, countIN, &time);
+    size_time -= 1;
+    errIN = nc_get_vara_double( ncidIN, timeIDIN, &size_time, &count_time, &time);
     MPI_OUT std::cout << " Current time = "<< time <<  std::endl;
     for( unsigned i=0; i<5; i++)
     {
@@ -85,7 +86,7 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
         dg::blas2::gemv( interpolateIN, transferINH, transferINHvec[i]);
     }
     errIN = nc_close(ncidIN);
-    /// ///////////////Now Construct initial fields
+    /// ///////////////Now Construct initial fields ////////////////////////
     //
     //Convert to N-1 and W
     dg::blas1::plus( transferINHvec[0], -1.);
