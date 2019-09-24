@@ -274,6 +274,75 @@ std::vector<Record> diagnostics3d_list = {
     }
 };
 
+//Here is a list of static (time-independent) 2d variables that go into the output
+//( we make 3d variables here that but only the first 2d slice is output)
+std::vector<Record_static> diagnostics2d_static_list = {
+    { "Psip2d", "Flux-function psi",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = dg::pullback( mag.psip(), grid);
+        }
+    },
+    { "Ipol", "Poloidal current",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = dg::pullback( mag.ipol(), grid);
+        }
+    },
+    { "Bmodule", "Magnetic field strength",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = dg::pullback( dg::geo::Bmodule(mag), grid);
+        }
+    },
+    { "Divb", "The divergence of the magnetic unit vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.divb();
+        }
+    },
+    { "InvB", "Inverse of Bmodule",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.binv();
+        }
+    },
+    { "CurvatureKappaR", "R-component of the Kappa B curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.curvKappa()[0];
+        }
+    },
+    { "CurvatureKappaZ", "Z-component of the Kappa B curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.curvKappa()[1];
+        }
+    },
+    { "CurvatureKappaP", "Contravariant Phi-component of the Kappa B curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.curvKappa()[2];
+        }
+    },
+    { "DivCurvatureKappa", "Divergence of the Kappa B curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.divCurvKappa();
+        }
+    },
+    { "CurvatureR", "R-component of the curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.curv()[0];
+        }
+    },
+    { "CurvatureZ", "Z-component of the full curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.curv()[1];
+        }
+    },
+    { "CurvatureP", "Contravariant Phi-component of the full curvature vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.curv()[2];
+        }
+    },
+    { "bphi", "Contravariant Phi-component of the magnetic unit vector",
+        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+            result = v.f.bphi();
+        }
+    }
+};
 // and here are all the 2d outputs we want to produce
 std::vector<Record> diagnostics2d_list = {
     {"electrons", "Electron density", false,
@@ -751,6 +820,28 @@ std::vector<Record> diagnostics2d_list = {
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+std::vector<Record> restart3d_list = {
+    {"restart_electrons", "electron density", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.density(0), result);
+        }
+    },
+    {"restart_ions", "ion density", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.density(1), result);
+        }
+    },
+    {"restart_Ue", "parallel electron velocity", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.velocity(0), result);
+        }
+    },
+    {"restart_Ui", "parallel ion velocity", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.velocity(1), result);
+        }
+    }
+};
 // These two lists signify the quantities involved in accuracy computation
 std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
 std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see", "sei"};

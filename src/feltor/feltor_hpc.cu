@@ -179,7 +179,7 @@ int main( int argc, char* argv[])
         feltor, p, gradPsip, gradPsip
     };
     // the vector ids
-    std::map<std::string, int> id3d, id4d;
+    std::map<std::string, int> id3d, id4d, restart_ids;
 
     double dEdt = 0, accuracy = 0;
     double E0 = 0.;
@@ -229,13 +229,15 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     // Define dimensions (t,z,y,x)
-    int dim_ids[4], tvarID;
-#ifdef FELTOR_MPI
-    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out.global());
-#else //FELTOR_MPI
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out);
-#endif //FELTOR_MPI
+    int dim_ids[4], restart_dim_ids[3], tvarID;
+    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out, {"time", "z", "y", "x"});
+    MPI_OUT err = file::define_dimensions( ncid, restart_dim_ids, grid, {"zr", "yr", "xr"});
     int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
+    bool write2d = true;
+#ifdef FELTOR_MPI
+    //only the globally first slice should write
+    if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
+#endif //FELTOR_MPI
 
     //create & output static 3d variables into file
     for ( auto& record : feltor::diagnostics3d_static_list)
@@ -252,6 +254,21 @@ int main( int argc, char* argv[])
         file::put_var_double( ncid, vecID, g3d_out, transferH);
         MPI_OUT err = nc_redef(ncid);
     }
+    //create & output static 2d variables into file
+    for ( auto& record : feltor::diagnostics2d_static_list)
+    {
+        int vecID;
+        MPI_OUT err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 2,
+            &dim_ids[2], &vecID);
+        MPI_OUT err = nc_put_att_text( ncid, vecID,
+            "long_name", record.long_name.size(), record.long_name.data());
+        MPI_OUT err = nc_enddef( ncid);
+        MPI_OUT std::cout << "Computing2d "<<record.name<<"\n";
+        record.function( resultH, var, grid, gp, mag);
+        dg::blas2::symv( projectH, resultH, transferH);
+        if(write2d)file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
+        MPI_OUT err = nc_redef(ncid);
+    }
 
     //Create field IDs
     for( auto& record : feltor::diagnostics3d_list)
@@ -262,6 +279,16 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
             &id4d.at(name));
         MPI_OUT err = nc_put_att_text( ncid, id4d.at(name), "long_name", long_name.size(),
+            long_name.data());
+    }
+    for( auto& record : feltor::restart3d_list)
+    {
+        std::string name = record.name;
+        std::string long_name = record.long_name;
+        restart_ids[name] = 0;//creates a new entry for all processes
+        MPI_OUT err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, restart_dim_ids,
+            &restart_ids.at(name));
+        MPI_OUT err = nc_put_att_text( ncid, restart_ids.at(name), "long_name", long_name.size(),
             long_name.data());
     }
     for( auto& record : feltor::diagnostics2d_list)
@@ -307,11 +334,12 @@ int main( int argc, char* argv[])
         dg::assign( transferD, transferH);
         file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
     }
-    bool write2d = true;
-#ifdef FELTOR_MPI
-    //only the globally first slice should write
-    if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
-#endif //FELTOR_MPI
+    for( auto& record : feltor::restart3d_list)
+    {
+        record.function( resultD, var);
+        dg::assign( transferD, transferH);
+        file::put_var_double( ncid, restart_ids.at(record.name), grid, transferH);
+    }
     for( auto& record : feltor::diagnostics2d_list)
     {
         dg::Timer tti;
@@ -445,6 +473,12 @@ int main( int argc, char* argv[])
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
             file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
+        }
+        for( auto& record : feltor::restart3d_list)
+        {
+            record.function( resultD, var);
+            dg::assign( transferD, transferH);
+            file::put_var_double( ncid, restart_ids.at(record.name), grid, transferH);
         }
         for( auto& record : feltor::diagnostics2d_list)
         {

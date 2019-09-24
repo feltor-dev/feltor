@@ -121,11 +121,7 @@ int main( int argc, char* argv[])
     std::string input = js.toStyledString();
     MPI_OUT err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
-#ifdef TOEFL_MPI
-    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
-#else //TOEFL_MPI
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-#endif //TOEFL_MPI
+    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     //field IDs
     std::string names[4] = {"electrons", "ions", "potential", "vorticity"};
     int dataIDs[4];

@@ -245,6 +245,9 @@ struct Explicit
     const std::array<Container, 3> & curvKappa () const {
         return m_curvKappa;
     }
+    const Container& divCurvKappa() const {
+        return m_divCurvKappa;
+    }
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }

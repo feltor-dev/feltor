@@ -8,6 +8,9 @@
 
 #include "dg/topology/grid.h"
 #include "dg/topology/evaluation.h"
+#ifdef MPI_VERSION
+#include "dg/topology/mpi_grid.h"
+#endif //MPI_VERSION
 
 #include "easy_output.h"
 
@@ -233,5 +236,28 @@ static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const 
 }
 
 
+#ifdef MPI_VERSION
+
+/// Convenience function that just calls the corresponding serial version with the global grid
+static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aMPITopology2d& g, std::array<std::string,2> name_dims = {"y", "x"})
+{
+    return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
+}
+/// Convenience function that just calls the corresponding serial version with the global grid
+static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aMPITopology2d& g, std::array<std::string,3> name_dims = {"time", "y", "x"})
+{
+    return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
+}
+/// Convenience function that just calls the corresponding serial version with the global grid
+static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aMPITopology3d& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
+{
+    return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
+}
+/// Convenience function that just calls the corresponding serial version with the global grid
+static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aMPITopology3d& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
+{
+    return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
+}
+#endif //MPI_VERSION
 
 } //namespace file
