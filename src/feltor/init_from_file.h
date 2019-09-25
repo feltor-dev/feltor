@@ -50,9 +50,9 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     size_t countIN[3] = {grid_IN.local().Nz(),
             grid_IN.n()*(grid_IN.local().Ny()),
             grid_IN.n()*(grid_IN.local().Nx())};
-    size_t startIN[3] = {coordsIN[2]*countIN[1],
-                         coordsIN[1]*countIN[2],
-                         coordsIN[0]*countIN[3]};
+    size_t startIN[3] = {coordsIN[2]*countIN[0],
+                         coordsIN[1]*countIN[1],
+                         coordsIN[0]*countIN[2]};
     #else //FELTOR_MPI
     size_t startIN[3] = {0, 0, 0};
     size_t countIN[3] = {grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),

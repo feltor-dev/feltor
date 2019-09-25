@@ -1326,7 +1326,9 @@ The program \texttt{feltor\_hpc.cu} has the possibility to initialize time and t
 the results of a previous simulation. This behaviour is enabled by giving an additional file \texttt{initial.nc}
 to the command line. In this case the \texttt{initne} and \texttt{initphi} parameters of the input
 file are ignored. Instead, the fields \texttt{electrons, ions, Ue, Ui, induction} at the latest timestep
-are read from the given file, interpolated to the current grid and used to initialize the simulation.
+are read from the given file to initialize the simulation.
+Note that to enable a loss-less continuation of the simulation we output special restart fields into the output file that in contrast to the other fields
+are not compressed.
 Apart from that the behaviour of the program is unchanged i.e. the magnetic field, profiles, resolutions, etc.
 are all taken from the regular input files. This means that the user must take care that these are consistent
 with the paramters in the existing \texttt{initial.nc} file. Also note that we try to discourage

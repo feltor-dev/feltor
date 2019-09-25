@@ -337,8 +337,8 @@ int main( int argc, char* argv[])
     for( auto& record : feltor::restart3d_list)
     {
         record.function( resultD, var);
-        dg::assign( transferD, transferH);
-        file::put_var_double( ncid, restart_ids.at(record.name), grid, transferH);
+        dg::assign( resultD, resultH);
+        file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
     }
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -477,8 +477,8 @@ int main( int argc, char* argv[])
         for( auto& record : feltor::restart3d_list)
         {
             record.function( resultD, var);
-            dg::assign( transferD, transferH);
-            file::put_var_double( ncid, restart_ids.at(record.name), grid, transferH);
+            dg::assign( resultD, resultH);
+            file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
         for( auto& record : feltor::diagnostics2d_list)
         {
