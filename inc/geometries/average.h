@@ -100,7 +100,7 @@ struct FluxSurfaceIntegral
     /**
      * @brief Set the right function to integrate
      *
-     * @param f the container containing the discretized function
+     * @param g the container containing the discretized function
      */
     void set_right( const container& g){
         dg::blas1::copy( g, m_g);
@@ -160,7 +160,7 @@ struct FluxVolumeIntegral
     /**
      * @brief Set the right function to integrate
      *
-     * @param f the container containing the discretized function
+     * @param g the container containing the discretized function
      */
     void set_right( const container& g){
         dg::blas1::copy( g, m_g);

@@ -1095,12 +1095,12 @@ Input file format: json
 \begin{longtable}{llll>{\RaggedRight}p{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we always take 3) \\
+n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we practically always take 3) \\
 Nx     & integer &52& - &Number of grid points in R (increase if your simulations crash) \\
 Ny     & integer &52& - &Number of grid points in Z (increase if your simulations crash) \\
 Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt since parallel velocity dominates timestep) \\
 dt     & integer &1e-2& - & time stepsize in units of $c_s/\rho_s$ \\
-compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
+compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y (pojecting the polynomials onto a coarser grid): output contains n*Nx/c[0] points in x,
     (has to divde Nx evenly), and n*Ny/c[1] points in y,
     (has to divde Ny evenly)\\
 inner\_loop & integer & 2  & 1 & Number of time steps between updates to the time integrated quantities. Note that integrating selected
@@ -1141,9 +1141,11 @@ symmetric & bool & false & false & If true, initialize all quantities symmetric
 in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
 to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
-\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
-\qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$ and $A_\parallel$\\
-\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$\\
+\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$, DIR means
+no outflow by convection while NEU means no outflow by diffusion\\
+\qquad velocity  & char[2] & [NEU,NEU] & - & boundary conditions in x and y for $u_e$ and $U_i$ and $A_\parallel$, DIR is in general not very stable, NEU works better\\
+\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$, DIR means that
+the $v_{E,\perp}=0$ on the boundary (i.e. no outflow by \ExB drift), NEU can mean lowering the timestep \\
     boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
     boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
 initne    & string & "turbulence"     & "blob"  & initial condition for the

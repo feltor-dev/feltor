@@ -17,7 +17,7 @@ int main()
     //![doxygen]
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::Average< dg::DVec > pol(g, dg::coo2d::y);
+    dg::Average< dg::DVec > pol(g, dg::coo2d::y, "simple");
 
     const dg::DVec vector = dg::evaluate( function ,g);
     dg::DVec average_y;
@@ -33,9 +33,9 @@ int main()
     res.d = sqrt( dg::blas2::dot( average_y, w1d, average_y));
     std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
     std::cout << "Averaging x ... \n";
-    dg::Average< dg::DVec> tor( g, dg::coo2d::x);
+    dg::Average< dg::DVec> tor( g, dg::coo2d::x, "simple" );
     average_y = vector;
-    tor( vector, average_y);
+    tor( vector, average_y, true);
     solution = dg::evaluate( tor_average, g);
     dg::blas1::axpby( 1., solution, -1., average_y);
     const dg::DVec w2d = dg::create::weights( g);

@@ -29,17 +29,23 @@ int main(int argc, char* argv[])
     dg::Timer t;
 
 
-    dg::Average<dg::MHVec > pol(g, dg::coo2d::y);
-    dg::MHVec vector = dg::evaluate( function ,g), average_y( vector);
-    const dg::MHVec solution = dg::evaluate( pol_average, g);
+    dg::Average<dg::MDVec > pol(g, dg::coo2d::y, "simple");
+    dg::Average<dg::MDVec > pol_ex(g, dg::coo2d::y, "exact");
+    dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);
+    const dg::MDVec solution = dg::evaluate( pol_average, g);
     t.tic();
     for( unsigned i=0; i<100; i++)
         pol( vector, average_y);
     t.toc();
-    if(rank==0)std::cout << "Assembly of average vector took:      "<<t.diff()/100.<<"s\n";
+    if(rank==0)std::cout << "Assembly of average (simple) vector took:      "<<t.diff()/100.<<"s\n";
+    t.tic();
+    for( unsigned i=0; i<100; i++)
+        pol_ex( vector, average_y);
+    t.toc();
+    if(rank==0)std::cout << "Assembly of average (exact)  vector took:      "<<t.diff()/100.<<"s\n";
 
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
-    dg::MHVec w2d = dg::create::weights(g);
+    dg::MDVec w2d = dg::create::weights(g);
     double norm = dg::blas2::dot(vector, w2d, vector);
     if(rank==0)std::cout << "Distance to solution is: "<<        sqrt(norm)<<std::endl;
 
