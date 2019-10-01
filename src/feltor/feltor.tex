@@ -1095,39 +1095,81 @@ Input file format: json
 \begin{longtable}{llll>{\RaggedRight}p{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we practically always take 3) \\
-Nx     & integer &52& - &Number of grid points in R (increase if your simulations crash) \\
-Ny     & integer &52& - &Number of grid points in Z (increase if your simulations crash) \\
-Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt since parallel velocity dominates timestep) \\
+n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we practically always take 3)
+\\
+Nx     & integer &52& - &Number of grid points in R (increase if your simulations crash)
+\\
+Ny     & integer &52& - &Number of grid points in Z (increase if your simulations crash)
+\\
+Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt
+since parallel velocity dominates timestep)
+\\
 dt     & integer &1e-2& - & time stepsize in units of $c_s/\rho_s$ \\
-compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y (pojecting the polynomials onto a coarser grid): output contains n*Nx/c[0] points in x,
-    (has to divde Nx evenly), and n*Ny/c[1] points in y,
-    (has to divde Ny evenly)\\
-inner\_loop & integer & 2  & 1 & Number of time steps between updates to the time integrated quantities. Note that integrating selected
-quantities in time during the simulation is how we maintain the time-resolution in the file output (cf. \ref{sec:output_file}).\\
-itstp       & integer & 2  & - &{ \tt inner\_loop*itstp} is the number of timesteps between file outputs (2d and 3d quantities);
-Note that 1d and 0d quantities can only be computed in diagnostics since we can't compute flux-integrals in parallel in MPI. \\
-maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is {\tt maxout$\cdot$itstp$\cdot$inner\_loop}) \\
-eps\_time   & float & 1e-7  & - & Tolerance for solver for implicit part in time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$) \\
-rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep) \\
-eps\_pol    & float & 1e-6  & - &  Tolerance for residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ ) \\
-jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms\\
-eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$  \\
+compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing
+points in x and y (pojecting the polynomials onto a coarser grid): output
+contains n*Nx/c[0] points in x, (has to divde Nx evenly), and n*Ny/c[1] points
+in y, (has to divde Ny evenly). 2 or 3 are reasonable values.
+\\
+inner\_loop & integer & 2  & 1 & Number of time steps between updates to the
+time integrated quantities. (Although the diagnostics is quite fast sometimes
+you need to amortize the time spent on it). Note that integrating selected
+quantities in time during the simulation is how we maintain the time-resolution
+in the file output (cf. \ref{sec:output_file}). Choose as low as you can get
+away with (between 1 and 10).
+\\
+itstp       & integer & 2  & - &{ \tt inner\_loop*itstp} is the number of
+timesteps between file outputs (2d and 3d quantities); Note that 1d and 0d
+quantities can only be computed post-simulation since we can't compute
+flux-integrals in parallel in MPI.
+\\
+maxout      & integer & 10 & - & Total Number of fields outputs excluding first
+(The total number of time steps is {\tt maxout$\cdot$itstp$\cdot$inner\_loop})
+If you want to let the simulation run for a certain time instead just choose
+this parameter very large and let the simulation hit the time-limit.
+\\
+eps\_time   & float & 1e-7  & - & Tolerance for solver for implicit part in
+time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$)
+\\
+rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep)
+\\
+eps\_pol    & float & 1e-6  & - &  Tolerance for residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ )
+\\
+jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms. (Don't touch unless you know what you're doing.
+\\
+eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$
+\\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
-has to evenly divide both $N_x$ and $N_y$\\
-refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in FCI approach in R- and Z-direction\\
-rk4eps     & float & 1e-5 & 1e-5 & Accuracy of fieldline integrator in FCI\\
+has to evenly divide both $N_x$ and $N_y$
+\\
+refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in FCI approach in R- and Z-direction.
+We use [1,1], higher values take more time.
+\\
+rk4eps     & float & 1e-6 & 1e-6 & Accuracy of fieldline integrator in FCI. The default is reasonable.
+\\
 mu         & float & -0.000272121& - & $\mu_e =-m_e/m_i$.
-    One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
-tau        & float &1      & - & $\tau = T_i/T_e$  \\
-beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
-nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$ \\
-perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$\\
+    One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$
+\\
+tau        & float &1      & - & $\tau = T_i/T_e$
+\\
+beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot
+10^{-3}$ (Compass), If $0$, then the model is electrostatic
+\\
+nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$, increase
+this or the resolution if you see vertical or horizontal oscillations (likely
+from the advection terms) in your simulation box, decrease if it dampens all
+instabilities
+\\
+perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto
+\nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto
+-\nu_\perp\Delta_\perp^2$
+\\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$
 (dimensional analysis reveals there can be a factor $(R_0/\rho_s)^2$ between
 $\nu_\perp $n and $\nu_\parallel$ for $\nu_\parallel$ to become relevant for
-the dynamics)\\
-resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
+the dynamics)
+\\
+resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}
+\\
 curvmode  & string & "low beta"  & "toroidal" &
 curvature mode (
 "low beta",
@@ -1136,18 +1178,26 @@ curvature mode (
 communication in z,
 "low beta negative": reversed sign of low beta,
 "toroidal negative": reversed sign of toroidal
-) \\
+)
+\\
 symmetric & bool & false & false & If true, initialize all quantities symmetric
 in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
-to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
+to construct the parallel derivatives and then overwritten to $N_z\equiv 1$.
+\\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
-\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$, DIR means
-no outflow by convection while NEU means no outflow by diffusion\\
-\qquad velocity  & char[2] & [NEU,NEU] & - & boundary conditions in x and y for $u_e$ and $U_i$ and $A_\parallel$, DIR is in general not very stable, NEU works better\\
-\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$, DIR means that
-the $v_{E,\perp}=0$ on the boundary (i.e. no outflow by \ExB drift), NEU can mean lowering the timestep \\
+\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y
+for $n_e$ and $N_i$, DIR (density 1 on boundary) means both convective and
+    diffusive outflow while NEU (gradient 0) means no outflow by diffusion
+\\
+\qquad velocity  & char[2] & [NEU,NEU] & - & boundary conditions in x and y for
+$u_e$ and $U_i$ and $A_\parallel$, DIR is in general not very stable, NEU works
+better\\
+\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for
+$\phi$ and $\psi$, DIR means that the $v_{E,\perp}=0$ on the boundary (i.e. no
+outflow by \ExB drift), NEU can can have a detrimental effect on timestep \\
     boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
-    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
+    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box}
+\\
 initne    & string & "turbulence"     & "blob"  & initial condition for the
 perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial_zonal_flow}),
     "blob" = blob simulations (several rounds fieldaligned),
@@ -1155,7 +1205,7 @@ perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial
     "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})
     "turbulence on gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
     See the file {\tt init.h} to add your own custom condition.
-    \\
+\\
 initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
 electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
 \\
@@ -1165,17 +1215,25 @@ posX       & float &0.3    & - & Gaussian R-position in units of $a$\\
 posY       & float &0.0    & - & Gaussian Z-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & toroidal variance in units of $R_0$ of the fieldline-following initialization \\
 k\_psi     & float &0    & - & zonal mode wave number (only for "zonal" initial condition)  \\
-nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}\\
-alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes) \\
-source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
+nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in
+Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}
+\\
+alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside
+Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be
+small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes)
+\\
+source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}
+\\
 source\_type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
 "influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx},
 "torpex": Torpex inspired source profile Eq.~\eqref{eq:electron_source_torpex},
-    See the file {\tt init.h} to add your own custom source. \\
+    See the file {\tt init.h} to add your own custom source.
+\\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
 alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the magnetic field and rho\_damping is ignored.\\
-rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0 = (1-\rho_d)\psi_{p,\min}$ in Eq.~\eqref{eq:modified_psip}. \\
+rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0 = (1-\rho_d)\psi_{p,\min}$ in Eq.~\eqref{eq:modified_psip}.
+\\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
@@ -1323,9 +1381,12 @@ and the time-averaged quantities Y $\in$
     socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
 \bottomrule
 \end{longtable}
+Even though this might look like a lot of things to compute the actual time spent on diagnostics is negligible if {\tt inner\_loop} parameter is greater than 1.
 \subsection{Restart file} \label{sec:restart_file}
 The program \texttt{feltor\_hpc.cu} has the possibility to initialize time and the fields with
-the results of a previous simulation. This behaviour is enabled by giving an additional file \texttt{initial.nc}
+the results of a previous simulation. In particular, this feature is motivated by chain jobs on a cluster
+(see e.g. the --dependency option in SLURM).
+This behaviour is enabled by giving an additional file \texttt{initial.nc}
 to the command line. In this case the \texttt{initne} and \texttt{initphi} parameters of the input
 file are ignored. Instead, the fields \texttt{electrons, ions, Ue, Ui, induction} at the latest timestep
 are read from the given file to initialize the simulation.

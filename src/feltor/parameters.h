@@ -72,7 +72,7 @@ struct Parameters
         stages      = js.get( "stages", 3).asUInt();
         mx          = js["refineDS"].get( 0u, 10).asUInt();
         my          = js["refineDS"].get( 1u, 10).asUInt();
-        rk4eps      = js.get( "rk4eps", 1e-5).asDouble();
+        rk4eps      = js.get( "rk4eps", 1e-6).asDouble();
 
         mu[0]       = js["mu"].asDouble();
         mu[1]       = +1.;
