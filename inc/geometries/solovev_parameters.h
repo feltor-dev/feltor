@@ -127,6 +127,7 @@ struct Parameters
             os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
 
         os  <<" R0            = "<<R_0<<"\n"
+            <<" a             = "<<a<<"\n"
             <<" epsilon_a     = "<<a/R_0<<"\n"
             <<" elongation    = "<<elongation<<"\n"
             <<" triangularity = "<<triangularity<<"\n"

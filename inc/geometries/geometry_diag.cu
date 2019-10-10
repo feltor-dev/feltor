@@ -35,10 +35,10 @@ struct Parameters
         Ny = js.get("Ny",100).asUInt();
         Nz = js.get("Nz", 1).asUInt();
         Npsi = js.get("Npsi", 16).asUInt();
-        boxscaleRm = js.get("boxscaleRm", 1.1).asDouble();
-        boxscaleRp = js.get("boxscaleRp", 1.1).asDouble();
-        boxscaleZm = js.get("boxscaleZm", 1.2).asDouble();
-        boxscaleZp = js.get("boxscaleZp", 1.1).asDouble();
+        boxscaleRm = js["boxscaleR"].get(0u, 1.1).asDouble();
+        boxscaleRp = js["boxscaleR"].get(1u, 1.1).asDouble();
+        boxscaleZm = js["boxscaleZ"].get(0u, 1.2).asDouble();
+        boxscaleZp = js["boxscaleZ"].get(1u, 1.1).asDouble();
         amp = js.get("amplitude", 1.).asDouble();
         k_psi = js.get("k_psi", 1.).asDouble();
         bgprofamp = js.get("bgprofamp", 1.).asDouble();
@@ -154,6 +154,8 @@ int main( int argc, char* argv[])
     {
         dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
         std::cout <<  "X-point found at "<<R_X << " "<<Z_X<<" with Psip "<<mag.psip()(R_X, Z_X)<<"\n";
+        std::cout <<  "     R - Factor "<<(gp.R_0-R_X)/gp.triangularity/gp.a << "   Z - factor "<<-(Z_X/gp.elongation/gp.a)<<std::endl;
+
     }
     const double R_H = gp.R_0-gp.triangularity*gp.a;
     const double Z_H = gp.elongation*gp.a;
@@ -349,7 +351,7 @@ int main( int argc, char* argv[])
         if( gp.hasXpoint() )
             dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
         dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, mag, psipog2d, xpoint_weights);
-        grid1d = dg::Grid1d (psipmin, psipmax, npsi ,Npsi,dg::NEU);
+        grid1d = dg::Grid1d (psipmin<psipmax ? psipmin : psipmax, psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::NEU);
         map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
             "Flux surface average of psi with delta function");
         if( gp.equilibrium == "solovev")
