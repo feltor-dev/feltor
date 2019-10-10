@@ -153,7 +153,7 @@ int main( int argc, char* argv[])
     if( gp.hasXpoint())
     {
         dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
-        std::cout <<  "X-point found at "<<R_X << " "<<Z_X<<"\n";
+        std::cout <<  "X-point found at "<<R_X << " "<<Z_X<<" with Psip "<<mag.psip()(R_X, Z_X)<<"\n";
     }
     const double R_H = gp.R_0-gp.triangularity*gp.a;
     const double Z_H = gp.elongation*gp.a;
@@ -439,7 +439,7 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    err = file::define_dimension( ncid, "psi", &dim1d_ids[0], grid1d);
+    err = file::define_dimension( ncid, &dim1d_ids[0], grid1d, "psi");
     std::string psi_long_name = "Flux surface label";
     err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
         psi_long_name.size(), psi_long_name.data());

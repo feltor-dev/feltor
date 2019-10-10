@@ -29,13 +29,13 @@ struct Interpolate
     Interpolate( const thrust::host_vector<real_type>& fZeta,
                  const thrust::host_vector<real_type>& fEta,
                  const dg::aTopology2d& g2d ):
-        iter0_( dg::create::forward_transform( fZeta, g2d) ),
-        iter1_( dg::create::forward_transform(  fEta, g2d) ),
+        iter0_( dg::forward_transform( fZeta, g2d) ),
+        iter1_( dg::forward_transform(  fEta, g2d) ),
         g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
     void operator()(real_type t, const thrust::host_vector<real_type>& zeta, thrust::host_vector<real_type>& fZeta)
     {
-        fZeta[0] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter0_, g_);
-        fZeta[1] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter1_, g_);
+        fZeta[0] = interpolate( dg::lspace, iter0_, fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), g_);
+        fZeta[1] = interpolate( dg::lspace, iter1_, fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), g_);
         //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
         //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
     }
@@ -43,8 +43,8 @@ struct Interpolate
     {
         for( unsigned i=0; i<zeta[0].size(); i++)
         {
-            fZeta[0][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter0_, g_);
-            fZeta[1][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter1_, g_);
+            fZeta[0][i] = interpolate( dg::lspace, iter0_, fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), g_);
+            fZeta[1][i] = interpolate( dg::lspace, iter1_, fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), g_);
         }
     }
     private:
@@ -59,13 +59,13 @@ template<class real_type>
 real_type construct_c0( const thrust::host_vector<real_type>& etaVinv, const dg::aRealTopology2d<real_type>& g2d)
 {
     //this is a normal integration:
-    thrust::host_vector<real_type> etaVinvL( dg::create::forward_transform(  etaVinv, g2d) );
+    thrust::host_vector<real_type> etaVinvL( dg::forward_transform(  etaVinv, g2d) );
     dg::Grid1d g1d( 0., 2.*M_PI, g2d.n(), g2d.Ny());
     dg::HVec eta = dg::evaluate(dg::cooX1d, g1d);
     dg::HVec w1d = dg::create::weights( g1d);
     dg::HVec int_etaVinv(eta);
     for( unsigned i=0; i<eta.size(); i++)
-        int_etaVinv[i] = interpolate( 0., eta[i], etaVinvL, g2d);
+        int_etaVinv[i] = interpolate( dg::lspace, etaVinvL, 0., eta[i], g2d);
     real_type c0 = 2.*M_PI/dg::blas1::dot( w1d, int_etaVinv );
     return c0;
 

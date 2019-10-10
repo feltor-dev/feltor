@@ -143,7 +143,7 @@ int main( int argc, char* argv[])
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
-    err = file::define_dimension(  ncid, "i", dim1d, g1d);
+    err = file::define_dimension(  ncid, dim1d, g1d, "i");
     int coordsID[2], defID, volID, divBID, gxxID, gyyID, gxyID;
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &gxyID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);

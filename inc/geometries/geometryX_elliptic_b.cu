@@ -141,8 +141,8 @@ int main(int argc, char**argv)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0., 0., (dg::HVec)gxx, g2d);
-    double hyX = dg::interpolate( 0., 0., (dg::HVec)gyy, g2d);
+    double hxX = dg::interpolate( dg::xspace, (dg::HVec)gxx, 0., 0., g2d);
+    double hyX = dg::interpolate( dg::xspace, (dg::HVec)gyy, 0., 0., g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";

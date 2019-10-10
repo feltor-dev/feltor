@@ -66,8 +66,8 @@ void compute_cellsize( const Geometry& g2d)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0., 0., gxx, g2d);
-    double hyX = dg::interpolate( 0., 0., gyy, g2d);
+    double hxX = dg::interpolate( dg::xspace, gxx, 0., 0., g2d);
+    double hyX = dg::interpolate( dg::xspace, gyy, 0., 0., g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";

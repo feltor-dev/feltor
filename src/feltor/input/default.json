@@ -32,7 +32,7 @@
     "nprofileamp" : 4,
     "bc" :
     {
-        "density" : ["NEU", "NEU"],
+        "density" : ["DIR", "DIR"],
         "velocity": ["NEU", "NEU"],
         "potential":["DIR", "DIR"]
     },

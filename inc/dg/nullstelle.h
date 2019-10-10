@@ -9,6 +9,7 @@
 #include <exception>
 #include <math.h>
 #include "backend/exceptions.h"
+
 namespace dg{
 
 /*! @brief Exception class, that stores boundaries for 1D root finding
@@ -47,12 +48,13 @@ class NoRoot1d: public std::exception
  * \param op Function or Functor
  * \param x_min left boundary, contains new left boundary on execution
  * \param x_max right boundary, contains new right boundary on execution
- * \param eps accuracy of the root finding
+ * \param eps accuracy of the root finding. Algorithm successful if
+ *  \f$ |x_{\max} - x_{\min}| < \varepsilon |x_{\max}| + \varepsilon \f$
  * \return number of used steps to reach the desired accuracy
  * \throw NoRoot1d if no root lies between the given boundaries
  * \throw std::runtime_error if after 60 steps the accuracy wasn't reached
  *
- * \code nullstelle_1D(funk, x_min, x_max, eps); \endcode
+ * \code bisection1d(f, x_min, x_max, eps); \endcode
  * \note If the root is found exactly the x_min = x_max
  */
 template <typename UnaryOp>
@@ -73,12 +75,11 @@ int bisection1d (UnaryOp& op, double& x_min, double& x_max, const double eps)
         if(wert_mitte==0) 			    {x_min=x_max=mitte; return j+3;}
         else if(wert_mitte*wert_max>0) 	x_max = mitte;
         else 				            x_min = mitte;
-        if((x_max-x_min)<eps)           return j+3;
+        if( fabs(x_max-x_min)<eps*fabs(x_max) + eps)         return j+3;
     }
     throw std::runtime_error("Too many steps in root finding!");
 }
 
-//@}
 }//namespace dg
 #endif //_NULLSTELLE_
 
