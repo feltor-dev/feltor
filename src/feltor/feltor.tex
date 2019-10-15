@@ -254,26 +254,27 @@ for the Solov'ev equilibrium.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsubsection{Toroidal field line approximation}\label{sec:torfieldlineapprox}
-The toroidal field line approximation applies \(\bhat\approx \ehat_\varphi\) to all perpendicular operators
+\subsubsection{Toroidal (and negative toroidal) field line approximation}\label{sec:torfieldlineapprox}
+The toroidal/negative toroidal field line approximation applies \(\bhat\approx \pm \ehat_\varphi\) to all perpendicular operators
 (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
 but retains the full expression for the magnetic field unit vector \(\bhat\)
 for parallel operators (\(\nabla_\parallel\) and \(\Delta_\parallel\)).
+(Note that we allow the negative sign $-\ehat_\varphi$ to enable a sign reversal of the magnetic field, see Section~\ref{sec:field_reversal}).
 In cylindrical coordinates that is
 \begin{align}
-[f,g]_\perp \equiv [f,g]_{RZ} &= \frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
+[f,g]_\perp \equiv [f,g]_{RZ} &= \pm\frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
 \nabla_\perp f &= \partial_R f \ehat_R + \partial_Z f \ehat_Z \\
 \Delta_\perp f &= \frac{1}{R}\partial_R \left( R \partial_R f\right) + \partial_Z(\partial_Z f)
 \label{}
 \end{align}
 The curl of $\bhat$ reduces to
 %\begin{align}
- $\nabla\times\bhat \approx -  \frac{1}{R} \ehat_Z$.
+ $\nabla\times\bhat \approx -  \frac{\pm 1}{R} \ehat_Z$.
 %end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}}_{{\nabla\times\bhat}}  &\approx  -  \frac{1}{B R} \ehat_Z , &
-\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+\vec{\mathcal{K}}_{{\nabla\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 %\ehat_\varphi \times \vec{\nabla} B, &
 \vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{{\nabla\times\bhat}} ,
 %\\
@@ -283,19 +284,19 @@ This simplifies the curvature operators to:
 \end{align}
 and
 \begin{align}
- \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z},
+ \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
 \end{align}
 which results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
 
 Note that in an actual toroidal field we have
 \begin{align}
-  \vec B(R) := \frac{R_0}{R} \ehat_\varphi
+  \vec B(R) := \pm \frac{R_0}{R} \ehat_\varphi
   \label{}
 \end{align}
 We then have $\bhat = \ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
-  \vec{ \mathcal K_{\nabla\times\bhat}} = \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z =
+  \vec{ \mathcal K_{\nabla\times\bhat}} = \vec{ \mathcal K_{\nabla B}} = -\frac{\pm 1}{R_0} \ehat_Z =
 \vec{ \mathcal K}/2\\
   \nabla\cdot\vec{\mathcal K_{{\nabla\times\bhat}}}=
     \nabla_\parallel \ln B = 0
@@ -650,6 +651,18 @@ potential $A_\parallel$.
 We have the continuity equation for the electron density \(n_e\) and the ion gyro-centre
 density \(N_i\) and the momentum conservation equation for
 the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\)~\cite{WiesenbergerPhD, HeldPhD}.
+\subsection{ Sign reversals of the magnetic field}\label{sec:field_reversal}
+If we change the direction of the magnetic field vector $\bhat$, we immediately see that all perpendicular
+drifts and $U\bhat$ change directions. On the other side, the diffusive and resistive terms remain unchanged.
+Without resistivity and diffusion a change in direction of the magnetic field thus corresponds to
+a time reversal $t\rightarrow t'=-t$.
+
+Also note that changing the sign of the magnetic field only in the parallel derivatives $\nabla_\parallel \rightarrow -\nabla_\parallel$ does not
+have any effect. This can be seen by simply renormalizing $U'=-U$. This reverts the equations back to the original equations.
+In the code this situation can happen when you change the sign of $\bhat$ using $\mathcal P_\psi$  and $\mathcal P_I$
+and use the toroidal field approximation at the same time.
+To actually change the sign of the magnetic field you need to use the "negative toroidal field approximation".
+
 
 \subsection{Diffusive terms}\label{sec:dissres}
 The dissipative terms can be decomposed into perpendicular and parallel components
@@ -901,7 +914,7 @@ The terms of the particle conservation thus read
 \\
   S_{n_e} =&  S_{n_e}
 \end{align}
-Notice that we used
+Notice that
 \begin{align}
 n_e \vec K = n_e\nabla\times\frac{\bhat}{B} = \nabla\times n_e\frac{\bhat}{B} + \frac{\bhat\times\nabla n_e}{B}
 \label{}
@@ -1086,6 +1099,8 @@ the output file \texttt{output.nc}.
  The output file is described in Section~\ref{sec:output_file}.
  The optional file \texttt{initial.nc} can be used to initialize a simulation from an existing file.
  This behavior is described in Section~\ref{sec:restart_file}.
+ Both programs write unstructured human readable performance information of the running simulation
+ to \texttt{std::cout}.
 
 
 \subsection{Input file structure} \label{sec:input_file}
