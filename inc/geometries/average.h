@@ -199,13 +199,13 @@ struct FluxSurfaceAverage
      /**
      * @brief Construct from a field and a grid
      * @param g2d 2d grid
-     * @param c contains psip, psipR and psipZ
-     * @param f container for global safety factor
+     * @param mag contains psip, psipR and psipZ
+     * @param f the function to take the average over (until \c set_container() is called)
      * @param weights Weight function \c H (can be used to cut away parts of the domain e.g. below the X-point and/or contain a volume form without dg weights)
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
      */
-    FluxSurfaceAverage( const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f, container weights, double width_factor = 1.) :
-    m_avg( g2d,c, width_factor), m_area( g2d, c, width_factor)
+    FluxSurfaceAverage( const dg::Grid2d& g2d, const TokamakMagneticField& mag, const container& f, container weights, double width_factor = 1.) :
+    m_avg( g2d,mag, width_factor), m_area( g2d, mag, width_factor)
     {
         m_avg.set_left( f);
         //    container gradpsi  = dg::evaluate( dg::geo::GradPsip( c), g2d);

@@ -80,8 +80,9 @@ int main( int argc, char* argv[])
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1);
     t.toc();
+    std::cout << "Construction successful!\n";
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    //////////////////////////////setup netcdf//////////////////
+    //////////////////////////////setup and write netcdf//////////////////
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "flux.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -93,46 +94,85 @@ int main( int argc, char* argv[])
     dg::HVec X=dg::pullback(dg::cooX2d, g2d), Y=dg::pullback(dg::cooY2d, g2d); //P = dg::pullback( dg::coo3, g);
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
-    //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    std::string names[] = {"psi", "d", "R", "vol", "divB"};
-    unsigned size=5;
-    int varID[size];
-    for( unsigned i=0; i<size; i++)
-        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 2, dim2d, &varID[i]);
-    ///////////////////////now fill variables///////////////////
+    std::map< std::string, std::function< void( dg::HVec&, dg::geo::CurvilinearGrid2d&, dg::geo::solovev::Parameters&, dg::geo::TokamakMagneticField&)> > output = {
+        { "Psip", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.psip(), g2d);
+        }},
+        { "PsipR", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.psipR(), g2d);
+        }},
+        { "PsipZ", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.psipZ(), g2d);
+        }},
+        { "g_xx", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=g2d.metric().value(0,0);
+        }},
+        { "g_xy", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=g2d.metric().value(0,1);
+        }},
+        { "g_yy", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=g2d.metric().value(1,1);
+        }},
+        { "g_xy_g_xx", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::blas1::pointwiseDivide( g2d.metric().value(0,1),
+                g2d.metric().value(0,0), result);
+        }},
+        { "g_yy_g_xx", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::blas1::pointwiseDivide( g2d.metric().value(1,1),
+                g2d.metric().value(0,0), result);
+        }},
+        { "vol", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=dg::tensor::volume(g2d.metric());
+        }},
+        { "Bzeta", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::HVec Bzeta, Beta;
+            dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
+            result=Bzeta;
+        }},
+        { "Beta", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::HVec Bzeta, Beta;
+            dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
+            result=Beta;
+        }},
+        { "Bphi", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( dg::geo::BFieldP(mag), g2d);
+        }},
+        { "q-profile", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::HVec Bzeta, Beta;
+            dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
+            result = dg::pullback( dg::geo::BFieldP(mag), g2d);
+            dg::blas1::pointwiseDivide( result, Beta, result); //Bphi / Beta
 
-    thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
-    //g.display();
-    err = nc_put_var_double( ncid, varID[0], periodify(psi_p, g2d_periodic).data());
-    dg::HVec temp0( g2d.size()), temp1(temp0);
-    dg::HVec w3d = dg::create::weights( g2d);
-
-    //compute and write deformation into netcdf
-    dg::SparseTensor<dg::HVec> metric = g2d.metric();
-    dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::HVec vol_ = dg::tensor::volume(metric);
-    dg::blas1::pointwiseDivide( g_xy, g_xx, temp0);
-    const dg::HVec ones = dg::evaluate( dg::one, g2d);
-    X=g_yy;
-    err = nc_put_var_double( ncid, varID[1], periodify(X, g2d_periodic).data());
-    //compute and write conformalratio into netcdf
-    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
-    X=g_xx;
-    err = nc_put_var_double( ncid, varID[2], periodify(X, g2d_periodic).data());
-
-    std::cout << "Construction successful!\n";
-
-    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
-    dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
-    dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    dg::blas1::transform( temp0, temp0, dg::SQRT<double>()); //temp0=1/sqrt(g) = sqrt(g^xx g^yy - g^xy^2)
-    dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0=sqrt(g)
-    X=temp0;
-    err = nc_put_var_double( ncid, varID[3], periodify(X, g2d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., vol_, temp0); //temp0 = sqrt(g)-vol
-    double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_, w3d, vol_));
-    std::cout << "Rel Consistency  of volume is "<<error<<"\n";
+        }},
+        { "Ipol", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.ipol(), g2d);
+        }}
+    };
+    dg::HVec temp( g2d.size());
+    for( auto pair : output)
+    {
+        int varID;
+        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 2, dim2d, &varID);
+        pair.second( temp, g2d, gp, c);
+        err = nc_put_var_double( ncid, varID, periodify(temp, g2d_periodic).data());
+    }
+    err = nc_close( ncid);
+    ///////////////////////some further testing//////////////////////
 
     const dg::HVec vol3d = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
@@ -160,6 +200,5 @@ int main( int argc, char* argv[])
     std::cout << "relative difference in volume2d is "<<fabs(volumeRZ - volume2d)/volume2d<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
-    err = nc_close( ncid);
     return 0;
 }
