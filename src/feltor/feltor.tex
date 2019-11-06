@@ -595,19 +595,11 @@ The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with
 $\hat A_\parallel = \rho_s B_0$.
 We introduce the dimensionless parameters
 \begin{align}
-  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and } 
+  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and }
   \beta:=\frac{\mu_0 n_0 T_e}{B_0^2}
   \label{}
 \end{align}
-where $a\in\{e,i\}$ is the species label and $z$ is the charge number. We define with 
-$\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}$
-\begin{align}
-  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1},
-    \label{eq:resistivity}
-\end{align}
-with $\ln \lambda \approx 10$.
- The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_i - u_e\right)\)
- determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
+where $a\in\{e,i\}$ is the species label and $z$ is the charge number.
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
@@ -644,7 +636,7 @@ Given $\phi$ we define the generalised electric potential
 \begin{align}
     \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{\mu_i }{2}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
 \end{align}
-In total 
+In total
 we have an isothermal 3d gyro-fluid model with up to 2nd order FLR effects
 on in the electric potential $\phi$ and 0th order FLR effects in the parallel magnetic
 potential $A_\parallel$.
@@ -665,6 +657,16 @@ To actually change the sign of the magnetic field you need to use the "negative 
 
 
 \subsection{Diffusive terms}\label{sec:dissres}
+We define with
+$\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}$ and $\nu_{ei} = \sqrt{2} z^2 e^4 \ln \Lambda/ (12\pi^{3/2} \sqrt{m_e} \epsilon_0^2) n_e /T_e^{3/2}$
+\begin{align}
+  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1},
+    \label{eq:resistivity}
+\end{align}
+with $\ln \lambda \approx 10$.
+ The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_i - u_e\right)\)
+ determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
+
 The dissipative terms can be decomposed into perpendicular and parallel components
 \begin{align}
  \Lambda_{n_e} &= \Lambda_{n_e,\perp}+\Lambda_{n_e,\parallel}, &
@@ -677,7 +679,7 @@ For numerical stabilisation we choose:
 \Lambda_{n_e,\parallel} &= \nu_\parallel \Delta_\parallel n_e &
 \Lambda_{N_i,\parallel} &= \nu_\parallel \Delta_\parallel N_i \\
 \Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
-\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i 
+\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i
 \end{align}
 Similarly, for the perpendicular dissipation we apply viscous or hyperviscous terms.
 \begin{align}\label{eq:perpdiffNT}
@@ -687,6 +689,12 @@ Similarly, for the perpendicular dissipation we apply viscous or hyperviscous te
  \Lambda_{U_i,\perp} &=  \nu_\perp \Delta_\perp U_i \text{ or } -\nu_\perp \Delta_\perp^2 U_i
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
+The drift-fluid corresponding diffusion gives an order-of-magnitude estimate for $\nu_\perp$.
+We have with $\nu_{ii0} = z^4e^4\ln \Lambda/ (12\pi^{3/2} \sqrt{m_i} \epsilon_0^2) n_{i0} /T_{i0}^{3/2}$ and choose $D_i = \rho_i^2 \nu_{ii}$ and $T_{i0} = T_{e0}$
+\begin{align}
+\nu_\perp = \left( 1+\frac{R_0}{a}q_{95}^2\right)\frac{ m_i \nu_{ii0}}{e B_0}
+\end{align}
+where the prefactor stems from neoclassical corrections and contains the major radius $R_0$ and minor radius $a$.
 
 \subsection{Boundary and initial conditions}
 We define the simulation box as
@@ -944,7 +952,7 @@ The terms of the energy theorem are
 +  S_{\mathcal E}
 +  R_{\mathcal E}
 \end{align}
-with ( $z_e=-1$ and $z_i=+1$)
+with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \nabla\phi}/{B}$
 \begin{align} \label{eq:energy_conservation}
   \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
   +\frac{1}{2\beta}\left(\vec \nabla_\perp A_\parallel\right)^2
