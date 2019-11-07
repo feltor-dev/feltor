@@ -690,11 +690,18 @@ Similarly, for the perpendicular dissipation we apply viscous or hyperviscous te
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 The drift-fluid corresponding diffusion gives an order-of-magnitude estimate for $\nu_\perp$.
-We have with $\nu_{ii0} = z^4e^4\ln \Lambda/ (12\pi^{3/2} \sqrt{m_i} \epsilon_0^2) n_{i0} /T_{i0}^{3/2}$ and choose $D_i = \rho_i^2 \nu_{ii}$ and $T_{i0} = T_{e0}$
+We have with $\nu_{ii0} = z^4e^4\ln \Lambda/ (12\pi^{3/2} \sqrt{m_i} \epsilon_0^2) n_{i0} /T_{i0}^{3/2}$ and choose $D_i = \rho_i^2 \nu_{ii}$ and $T_{i0} = T_{e0}$.
+By dividing by $\rho_s^2 \Omega_{ci}$ we arrive at $\nu_\perp = m_i \nu_{ii0}/eB_0$.
+Together with neoclassical corrections we then have
 \begin{align}
-\nu_\perp = \left( 1+\frac{R_0}{a}q_{95}^2\right)\frac{ m_i \nu_{ii0}}{e B_0}
+\nu_\perp =
+5\cdot 10^{-3} \left(1+\frac{R}{a}q_{95}\right) \ln \lambda
+\left(\frac{n_0}{10^{19}\text{m}^3}\right)
+\left(\frac{T_e}{\text{eV}}\right)^{-3/2}
+\left(\frac{B_0}{\text{T}}\right)^{-1}
+\left(\frac{m_i}{m_H}\right)^{1/2},
 \end{align}
-where the prefactor stems from neoclassical corrections and contains the major radius $R_0$ and minor radius $a$.
+where we use the major radius $R_0$ and minor radius $a$ and the safety factor $q_{95}$~\cite{Madsen2016}.
 
 \subsection{Boundary and initial conditions}
 We define the simulation box as

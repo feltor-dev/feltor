@@ -127,6 +127,9 @@ struct Fpsi
 /**
  * @brief A symmetry flux generator
  *
+ * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$
+ * The symmetry refers to the symmetry in the toroidal angle while flux coordinates allow the representation
+ * of the magnetic field in Clebsch form
  * @ingroup generators_geo
  * @snippet flux_t.cu doxygen
  */
