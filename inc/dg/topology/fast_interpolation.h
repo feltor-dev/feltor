@@ -106,7 +106,7 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
     unsigned n=t.n();
     dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
     dg::RealGrid1d<real_type> g_new( -1., 1., n, multiply);
-    dg::IHMatrix interpolX = dg::create::interpolation( g_new, g_old);
+    cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX = dg::create::interpolation( g_new, g_old);
     EllSparseBlockMat<real_type> iX( multiply*t.N(), t.N(), 1, multiply, t.n());
     for( unsigned  k=0; k<multiply; k++)
     for( unsigned  i=0; i<n; i++)
@@ -127,18 +127,22 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 {
     unsigned n=t.n();
     if( t.N()%divide != 0) throw Error( Message(_ping_)<< "Nx and divide don't match: Nx: " << t.N()<< " divide "<< (unsigned)divide);
-    dg::RealGrid1d<real_type> g_oldX( -1., 1., n, divide);
-    dg::RealGrid1d<real_type> g_new(  -1., 1., n, 1);
-    dg::IHMatrix projectX;
-    if(no == normed)
-        projectX = dg::create::projection( g_new, g_oldX);
-    else
-        projectX = dg::create::interpolationT( g_new, g_oldX);
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, divide);
+    dg::RealGrid1d<real_type> g_new( -1., 1., n, 1);
+    dg::HVec w1d = dg::create::weights( g_old);
+    dg::HVec v1d = dg::create::inv_weights( g_new);
+    cusp::coo_matrix<int, real_type, cusp::host_memory> projectX;
+    //Here, we cannot use create::projection because that would remove explicit zeros!!
+    projectX = dg::create::interpolationT( g_new, g_old);
     EllSparseBlockMat<real_type> pX( t.N()/divide, t.N(), divide, divide, t.n());
+    for( unsigned k=0; k<divide; k++)
     for( unsigned i=0; i<n; i++)
     for( unsigned j=0; j<n; j++)
-        for( unsigned k=0; k<divide; k++)
-            pX.data[(k*n+i)*n+j] = projectX.values[i*divide*n +k*n+j];
+    {
+        pX.data[(k*n+i)*n+j] = projectX.values[(i*divide +k)*n+j];
+        if( no == normed)
+            pX.data[(k*n+i)*n+j] *= v1d[i]*w1d[j];
+    }
     for( unsigned i=0; i<t.N()/divide; i++)
         for( unsigned d=0; d<divide; d++)
         {

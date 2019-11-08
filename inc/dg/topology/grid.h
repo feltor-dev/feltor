@@ -249,7 +249,7 @@ struct RealGrid1d
 
 /**
  * @brief An abstract base class for two-dimensional grids
- * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
  */
 template<class real_type>
@@ -473,7 +473,7 @@ struct aRealTopology2d
 
 /**
  * @brief An abstract base class for three-dimensional grids
- * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
  */
 template<class real_type>

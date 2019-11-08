@@ -80,9 +80,9 @@ int main( int argc, char* argv[])
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d_periodic);
     int coordsID[2], onesID, defID, confID, volID,divBID;
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
-    //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim3d, &coordsID[1]);
+    //err = nc_def_var( ncid, "zc", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
     err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &confID);

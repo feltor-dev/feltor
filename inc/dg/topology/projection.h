@@ -134,6 +134,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
         Vc.values[i] = v_c[i];
     }
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
+    //!!! cusp::multiply removes explicit zeros in the output
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
     A.sort_by_row_and_column();

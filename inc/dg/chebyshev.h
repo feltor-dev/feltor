@@ -83,10 +83,10 @@ class Chebyshev
             rhok = 1./(2.*theta/delta - rhokm1);
             dg::blas2::symv( A, x, m_ax);
             dg::blas1::evaluate( m_xm1, dg::equals(), PairSum(),
-                             1.+rhok*rhokm1,   x,
-                            -rhok*rhokm1,       m_xm1,
-                             2.*rhok/delta,       b,
-                            -2.*rhok/delta,        m_ax
+                             1.+rhok*rhokm1, x,
+                            -rhok*rhokm1,    m_xm1,
+                             2.*rhok/delta,  b,
+                            -2.*rhok/delta,  m_ax
                             );
             x.swap(m_xm1);
             rhokm1 = rhok;

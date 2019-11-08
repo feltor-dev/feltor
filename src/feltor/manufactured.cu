@@ -7,11 +7,13 @@
 
 #include "parameters.h"
 #define DG_MANUFACTURED
-#define FELTORPARALLEL 1
+//Change here to selectively test parallel and perp parts
+#define FELTORPARALLEL 0
 #define FELTORPERP 1
-//#include "/mnt/hgfs/shared/manufactured.h"
+
 #include "manufactured.h"
-#include "feltor.cuh"
+#include "feltor.h"
+#include "implicit.h"
 
 int main( int argc, char* argv[])
 {
@@ -47,19 +49,19 @@ int main( int argc, char* argv[])
     std::cout << "Initialize implicit" << std::endl;
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 
-    feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                 p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                      p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                      p.beta,p.nu_perp,p.nu_parallel};
-    feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.c,
+    feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                 p.beta,p.nu_perp,p.nu_parallel};
 
     dg::DVec R = dg::pullback( dg::cooX3d, grid);
@@ -75,26 +77,33 @@ int main( int argc, char* argv[])
     dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,P,0);
     dg::blas1::plus(y0[0][0],-1); //ne-1
     dg::blas1::plus(y0[0][1],-1); //Ni-1
-    dg::blas1::axpby(p.beta/p.mu[0], apar, 1., y0[1][0]); //we=ue+b/mA
-    dg::blas1::axpby(p.beta/p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+b/mA
+    dg::blas1::axpby(1./p.mu[0], apar, 1., y0[1][0]); //we=ue+1/mA
+    dg::blas1::axpby(1./p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+1/mA
 
     //Adaptive solver
-    dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
-        "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
+    //dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
+    //    "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
+    //Multistep solver
+    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
+        feltor::FeltorSpecialSolver<
+            dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+        > karniadakis( grid, p, mag);
     double time = 0, dt_new = p.dt, TMAX = 1e-3;
+    karniadakis.init( feltor, im, time, y0, p.dt);
     while( time < TMAX)
     {
         if( time + dt_new > TMAX)
             dt_new = TMAX - time;
 
         try{
-            do
-            {
-                adaptive.step( feltor, im, time, y0, time, y0, dt_new,
-                    dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                if( adaptive.failed())
-                    std::cout << "FAILED STEP! REPEAT!\n";
-            }while ( adaptive.failed());
+            karniadakis.step( feltor, im, time, y0);
+            //do
+            //{
+            //    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
+            //        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
+            //    if( adaptive.failed())
+            //        std::cout << "FAILED STEP! REPEAT!\n";
+            //}while ( adaptive.failed());
         }
         catch( dg::Fail& fail) {
             std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -131,8 +140,8 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., num_phi[1], -1.,sol_phi[1]);
     dg::blas1::axpby( 1., num_apar, -1.,sol_apar);
     std::cout<<std::scientific;
-    std::cout <<"Error: \n"
-              <<"    Time: "<<time<<"\n"
+    std::cout <<"           rel. Error\tNorm: \n"
+              //<<"    Time: "<<time<<"\n"
               <<"    ne:   "<<sqrt(dg::blas2::dot( w3d, sol[0][0]))/normne<<"\t"<<normne<<"\n"
               <<"    ni:   "<<sqrt(dg::blas2::dot( w3d, sol[0][1]))/normni<<"\t"<<normni<<"\n"
               <<"    ue:   "<<sqrt(dg::blas2::dot( w3d, sol[1][0]))/normue<<"\t"<<normue<<"\n"

@@ -48,7 +48,7 @@
  * These algorithms make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
- *     @defgroup invert Matrix inversion
+ *     @defgroup invert Linear and nonlinear solvers
  *     @defgroup root Root finding
  * @}
  * @defgroup geo Level 3: Topology and Geometry
@@ -269,82 +269,6 @@
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
  *
- * @subsection dispatch_examples Examples
- *
- * Let us assume that we have two vectors \f$ v\f$ and \f$ w\f$. In a shared
- memory code these will be declared as
- @code
- dg::DVec v, w;
- // initialize v and w with some meaningful values
- @endcode
- In an MPI implementation we would simply write \c dg::MDVec instead of \c dg::DVec.
- Let us now assume that we want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
- with the \c dg::blas1::subroutine. The first step is to write a Functor that
- implements this expression
- @code
- struct Expression{
-    DG_DEVICE
-    void operator() ( double& v, double w){
-       v = v*v + w;
-    }
- };
- @endcode
- Note that we used the Marco \ref DG_DEVICE to enable this code on GPUs.
- The next step is just to apply our struct to the vectors we have.
- @code
- dg::blas1::subroutine( Expression(), v, w);
- @endcode
-
- Now, we want to use an additional parameter in our expresion. Let's assume we have
- @code
- double parameter = 3.;
- @endcode
- and we want to compute \f$ v_i \leftarrow p v_i^2 + w_i\f$. We now have two
- possibilities. We can add a private variable in \c Expression and use it in the
- implementation of the paranthesis operator
- @code
- struct Expression{
-    Expression( double param):m_param(param){}
-    DG_DEVICE
-    void operator() ( double& v, double w)const{
-        v = m_param*v*v + w;
-    }
-    private:
-    double m_param;
- };
- dg::blas1::subroutine( Expression(parameter), v, w);
- @endcode
- The other possibility is to extend the paranthesis operator in \c Expression and call \c dg::blas1::subroutine with a scalar
- @code
- struct Expression{
-    DG_DEVICE
-    void operator() ( double& v, double w, double param){
-        v = param*v*v + w;
-    }
- };
- dg::blas1::subroutine( Expression(), v, w, parameter);
- @endcode
- The result (and runtime) is the same in both cases. However, the second is more versatile,
- when we use recursion. Consider that \f$ v,\ w\f$ and \f$ p\f$ are now arrays, declared as
- @code
- std::array<dg::DVec, 3> array_v, array_w;
- std::array<double,3> array_parameter;
- // initialize array_v, array_w and array_parameter meaningfully
- @endcode
- We now want to compute the expression \f$ v_{ij} \leftarrow p_i v_{ij}^2 + w_{ij}\f$,
- where \c i runs from 0 to 2 and \c j runs over all elements in the shared vectors
- <tt> array_v[i] </tt> and <tt> array_w[i] </tt>.
- In this case we just call
- @code
- dg::blas1::subroutine( Expression(), array_v, array_w, array_parameter);
- @endcode
- and use the fact that <tt> std::array </tt> has the \c dg::RecursiveVectorTag.
-
- In order to compute the sum \f$ \sum_{i=0}^2 p_i\f$ we can use
- @code
- double sum = dg::blas1::dot( 1, array_parameter);
- @endcode
-
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
 @subsection mpi_vector MPI Vectors and the blas functions

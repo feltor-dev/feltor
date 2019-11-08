@@ -97,9 +97,9 @@ int main( int argc, char* argv[])
     double psi_0 = -20;
     std::cin >> psi_0;
     std::cout << "Typed "<<psi_0<<"\n";
-    //std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
+    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) 1/4, 1/22 \n";
     double fx_0=1./4., fy_0=1./22.;
-    //std::cin >> fx_0>> fy_0;
+    std::cin >> fx_0>> fy_0;
     std::cout << "Typed "<<fx_0<<" "<<fy_0<<"\n";
 
     std::cout << "Type add_x and add_y \n";
@@ -111,7 +111,10 @@ int main( int argc, char* argv[])
     t.tic();
     //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
+    double R_O = gp.R_0, Z_O = 0.;
+    dg::geo::findXpoint( c.get_psip(), R_O, Z_O);
+    const double psipmin = c.psip()(R_O, Z_O);
+    std::cout << "Psi min "<<psipmin<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
@@ -140,7 +143,7 @@ int main( int argc, char* argv[])
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
-    err = file::define_dimension(  ncid, "i", dim1d, g1d);
+    err = file::define_dimension(  ncid, dim1d, g1d, "i");
     int coordsID[2], defID, volID, divBID, gxxID, gyyID, gxyID;
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &gxyID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
@@ -148,8 +151,8 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
     err = nc_def_var( ncid, "num_solution", NC_DOUBLE, 3, dim3d, &gxxID);
     err = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 3, dim3d, &gyyID);
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 3, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 3, dim3d, &coordsID[1]);
 
     thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
     g2d.display();
@@ -189,7 +192,7 @@ int main( int argc, char* argv[])
     err = nc_close( ncid);
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e2, 5e2, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
     dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);

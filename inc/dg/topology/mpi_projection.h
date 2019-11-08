@@ -59,7 +59,7 @@ static void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& globa
 /**
  * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
  *
- * @tparam ConversionPolicy has to have the members:
+ * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
  *  - \c bool\c global2localIdx(unsigned,unsigned&,unsigned&) \c const;
  * where the first parameter is the global index and the
  * other two are the output pair (localIdx, rank).
@@ -76,8 +76,6 @@ static void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& globa
 template<class ConversionPolicy, class real_type>
 dg::tMIHMatrix<real_type> convert( const dg::tIHMatrix<real_type>& global, const ConversionPolicy& policy)
 {
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::iHVec unique_global_idx;
     cusp::array1d<int, cusp::host_memory> buffer_idx;
     dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);

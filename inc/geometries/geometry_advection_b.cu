@@ -87,7 +87,7 @@ struct VariationDirPer
 
 struct CurvatureDirPer
 {
-    CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c), curvZ(c){}
+    CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c,+1), curvZ(c,+1){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -204,7 +204,7 @@ int main(int argc, char** argv)
     std::cout << "TESTING CURVATURE 3D\n";
     dg::DVec curvX, curvY;
     dg::HVec tempX, tempY;
-    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(c), dg::geo::CurvatureNablaBZ(c), tempX, tempY, grid);
+    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(c,+1), dg::geo::CurvatureNablaBZ(c,+1), tempX, tempY, grid);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
     dg::DMatrix dx, dy;

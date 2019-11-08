@@ -47,8 +47,8 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
     std::vector<real_type> px(n);
     if( xn == -1)
     {
-        for( unsigned i=0; i<n; i++)
-            px[i] = (real_type)pow( -1, i);
+        for( unsigned u=0; u<n; u++)
+            px[u] = (u%2 == 0) ? +1. : -1.;
     }
     else if( xn == 1)
     {
@@ -98,6 +98,13 @@ void assert_contains( real_type X, real_type x0, real_type x1, char const * poin
 ///@endcond
 ///@addtogroup interpolation
 ///@{
+/*!@class hide_bcx_doc
+ * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
+ * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
+ (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
+ * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+*/
+
 /**
  * @brief Create interpolation matrix
  *
@@ -108,10 +115,7 @@ void assert_contains( real_type X, real_type x0, real_type x1, char const * poin
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
- * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
- (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
- * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ * @copydoc hide_bcx_doc
  *
  * @return interpolation matrix
  */
@@ -131,7 +135,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         detail::mirror( negative, X, g.x0(), g.x1(), bcx);
 
         //determine which cell (x) lies in
-        real_type xnn = (x[i]-g.x0())/g.h();
+        real_type xnn = (X-g.x0())/g.h();
         unsigned n = (unsigned)floor(xnn);
         //determine normalized coordinates
         real_type xn = 2.*xnn - (real_type)(2*n+1);
@@ -168,10 +172,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
- * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
- (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
- * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ * @copydoc hide_bcx_doc
  * @param bcy analogous to \c bcx, applies to y direction
  *
  * @return interpolation matrix
@@ -319,10 +320,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
  * @param z Z-coordinates of interpolation points (\c z.size() must equal \c x.size())
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
- * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
- (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
- * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ * @copydoc hide_bcx_doc
  * @param bcy analogous to \c bcx, applies to y direction
  * @param bcz analogous to \c bcx, applies to z direction
  *
@@ -521,6 +519,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
 ///@}
 
 
+}//namespace create
+
 /**
  * @brief Transform a vector from XSPACE to LSPACE
  *
@@ -545,35 +545,101 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
     return out;
 }
 
-}//namespace create
 
 /**
- * @brief Interpolate a single point
+ * @brief Interpolate a vector on a single point on a 1d Grid
  *
+ * @param v The vector to interpolate in dg::xspace
  * @param x X-coordinate of interpolation point
- * @param y Y-coordinate of interpolation point
- * @param v The vector to interpolate in LSPACE, s.a. dg::forward_transform( )
  * @param g The Grid on which to operate
+ * @copydoc hide_bcx_doc
  *
  * @ingroup interpolation
  * @return interpolated point
  * @note \c g.contains(x,y) must return true
  */
 template<class real_type>
-real_type interpolate( real_type x, real_type y,  const thrust::host_vector<real_type>& v, const aRealTopology2d<real_type>& g )
+real_type interpolate(
+    const thrust::host_vector<real_type>& v,
+    real_type x,
+    const RealGrid1d<real_type>& g,
+    dg::bc bcx = dg::NEU)
 {
     assert( v.size() == g.size());
+    g.shift_topologic( x,x, bcx);
+    //mirror at boundary
+    bool negative = false;
+    create::detail::mirror( negative, x, g.x0(), g.x1(), bcx);
 
-    if (!(x >= g.x0() && x <= g.x1())) {
-        std::cerr << g.x0()<<"< xi = " << x <<" < "<<g.x1()<<std::endl;
+    //determine which cell (x) lies in
+
+    real_type xnn = (x-g.x0())/g.h();
+    unsigned n = (unsigned)floor(xnn);
+    //determine normalized coordinates
+
+    real_type xn =  2.*xnn - (real_type)(2*n+1);
+    //interval correction
+    if (n==g.N()) {
+        n-=1;
+        xn = 1.;
     }
-
-    assert(x >= g.x0() && x <= g.x1());
-
-    if (!(y >= g.y0() && y <= g.y1())) {
-        std::cerr << g.y0()<<"< yi = " << y <<" < "<<g.y1()<<std::endl;
+    //evaluate 1d Legendre polynomials at (xn)...
+    std::vector<real_type> px = create::detail::coefficients( xn, g.n());
+    dg::Operator<real_type> forward( g.dlt().forward());
+    std::vector<real_type> pxF(g.n(),0);
+    for( unsigned l=0; l<g.n(); l++)
+        for( unsigned k=0; k<g.n(); k++)
+            pxF[l]+= px[k]*forward(k,l);
+    for( unsigned k=0; k<g.n(); k++)
+        px[k] = pxF[k];
+    //these are the matrix coefficients with which to multiply
+    unsigned col_begin = (n)*g.n();
+    //multiply x
+    real_type value = 0;
+    for( unsigned j=0; j<g.n(); j++)
+    {
+        if(negative)
+            value -= v[col_begin + j]*px[j];
+        else
+            value += v[col_begin + j]*px[j];
     }
-    assert( y >= g.y0() && y <= g.y1());
+    return value;
+}
+
+/**
+ * @brief Interpolate a vector on a single point on a 2d Grid
+ *
+ * @param sp Indicate whether the elements of the vector
+ * v are in xspace or lspace
+ *  (choose dg::xspace if you don't know what is going on here,
+ *      It is faster to interpolate in dg::lspace so consider
+ *      transforming v using dg::forward_transform( )
+ *      if you do it very many times)
+ * @param v The vector to interpolate in dg::xspace, or dg::lspace s.a. dg::forward_transform( )
+ * @param x X-coordinate of interpolation point
+ * @param y Y-coordinate of interpolation point
+ * @param g The Grid on which to operate
+ * @copydoc hide_bcx_doc
+ * @param bcy analogous to \c bcx, applies to y direction
+ *
+ * @ingroup interpolation
+ * @return interpolated point
+ * @note \c g.contains(x,y) must return true
+ */
+template<class real_type>
+real_type interpolate(
+    dg::space sp,
+    const thrust::host_vector<real_type>& v,
+    real_type x, real_type y,
+    const aRealTopology2d<real_type>& g,
+    dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU )
+{
+    assert( v.size() == g.size());
+    g.shift_topologic( x,y,x,y, bcx, bcy);
+    //mirror at boundary
+    bool negative = false;
+    create::detail::mirror( negative, x, g.x0(), g.x1(), bcx);
+    create::detail::mirror( negative, y, g.y0(), g.y1(), bcy);
 
     //determine which cell (x,y) lies in
 
@@ -596,23 +662,32 @@ real_type interpolate( real_type x, real_type y,  const thrust::host_vector<real
     }
     //evaluate 2d Legendre polynomials at (xn, yn)...
     std::vector<real_type> px = create::detail::coefficients( xn, g.n()),
-                        py = create::detail::coefficients( yn, g.n());
-    //dg::Operator<real_type> forward( g.dlt().forward());
-    //std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
-    //for( unsigned l=0; l<g.n(); l++)
-    //    for( unsigned k=0; k<g.n(); k++)
-    //    {
-    //        pxF[l]+= px[k]*forward(k,l);
-    //        pyF[l]+= py[k]*forward(k,l);
-    //    }
+                           py = create::detail::coefficients( yn, g.n());
+    if( sp == dg::xspace)
+    {
+        dg::Operator<real_type> forward( g.dlt().forward());
+        std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
+        for( unsigned l=0; l<g.n(); l++)
+            for( unsigned k=0; k<g.n(); k++)
+            {
+                pxF[l]+= px[k]*forward(k,l);
+                pyF[l]+= py[k]*forward(k,l);
+            }
+        for( unsigned k=0; k<g.n(); k++)
+            px[k] = pxF[k], py[k] = pyF[k];
+    }
     //these are the matrix coefficients with which to multiply
     unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
     //multiply x
     real_type value = 0;
     for( unsigned i=0; i<g.n(); i++)
         for( unsigned j=0; j<g.n(); j++)
-            value += v[col_begin + i*g.Nx()*g.n() + j]*px[j]*py[i];
-            //value += v[col_begin + i*g.Nx()*g.n() + j]*pxF[j]*pyF[i];
+        {
+            if(negative)
+                value -= v[col_begin + i*g.Nx()*g.n() + j]*px[j]*py[i];
+            else
+                value += v[col_begin + i*g.Nx()*g.n() + j]*px[j]*py[i];
+        }
     return value;
 }
 

@@ -25,6 +25,7 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as
 //good as it can, i.e. until machine precision is reached
+//Note that f(psi) = 1/q(psi) (The safety factor)
 struct Fpsi
 {
 
@@ -68,10 +69,11 @@ struct Fpsi
             eps_old = eps, end_old = end; N*=2;
             dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+            //Attention: if this succeeds on the first attempt end_old won't be updated
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
         if(m_verbose)std::cout <<end_old[2] << " "<<end[2] <<"\n";
-        double f_psi = 2.*M_PI/end_old[2];
+        double f_psi = 2.*M_PI/end[2]; //this actually is 1/q the safety factor
         return f_psi;
     }
 
@@ -125,6 +127,9 @@ struct Fpsi
 /**
  * @brief A symmetry flux generator
  *
+ * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$
+ * The symmetry refers to the symmetry in the toroidal angle while flux coordinates allow the representation
+ * of the magnetic field in Clebsch form
  * @ingroup generators_geo
  * @snippet flux_t.cu doxygen
  */

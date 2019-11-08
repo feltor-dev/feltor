@@ -6,13 +6,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
-\title{The feltor project}
-\author{ M.~Held and M.~Wiesenberger}
+\title{
+The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
+\author{ M.~Wiesenberger and M.~Held}
 \maketitle
 
 \begin{abstract}
-The full-F electromagnetic model in toroidal geoemtry (\textsc{Feltor}).
-This is a program for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
+The purpose of this document is to describe the programs
+\texttt{feltor\_hpc.cu, feltor.cu, feltor\_diag.cu} and to an extend
+\texttt{geometry\_diag.cu}. The goal is to provide
+information such that a user can avoid to look
+into the actual codes on the one side and connect
+the presented formulas to relevant journal publications on the other.
+
+The program \texttt{feltor/inc/geometries/geometry\_diag.cu}
+analyses the magnetic field geometry.
+\texttt{feltor\_hpc.cu} and \texttt{feltor.cu} are programs for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
+\texttt{feltor/diag/feltor\_diag.cu} is a program to analyse the output
+file(s) of \texttt{feltor\_hpc.cu}.
+
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -24,7 +36,7 @@ Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B
 we can define various differential operations.
 %Let us further assume that $\bhat$ is perturbed by the parallel
 %vector potential $A_\parallel$ via
-%$\tilde{ \vec b } := ({\nabla \times A_\parallel \bhat)}/{B}$
+%$\tilde{ \vec b }_\perp := ({\nabla \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
 %\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
@@ -48,20 +60,21 @@ we can define various differential operations.
     $ \Delta_\perp f:= \vec \nabla\cdot (\vec \nabla_\perp f)
     = \nabla\cdot( h\cdot\nabla f)$  \\
     Curl-b Curvature &
-    $\mathcal K_\kappa$ &
-    $\mathcal K_\kappa(f) := \vec{ \mathcal K_\kappa }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\
+    $\mathcal K_{\nabla\times\bhat}$ &
+    $\mathcal K_{\nabla\times\bhat}(f) := \vec{ \mathcal K_{\nabla\times\bhat} }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\[4pt]
     Grad-B Curvature &
     $\mathcal K_{\nabla B} $ &
-    $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\
+    $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\[4pt]
     Curvature &
     $\mathcal K$ &
-    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f = \vec{\nabla} \cdot \left(\frac{ \bhat \times \vec{\nabla} f}{B} \right) = \mathcal K_\kappa(f) + \mathcal K_{\nabla B}(f)$,\\
+    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f =
+     \vec{\nabla}\cdot\left(\frac{\bhat\times\vec{\nabla} f}{B}\right)$,\\[4pt]
     Parallel derivative&
     $\nabla_\parallel $&
     $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
     %Perturbed parallel Derivative&
     %$\bar\nabla_\parallel$ &
-    %$\bar\nabla_\parallel f := (\bhat + \tilde{\vec b })\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_\kappa(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
+    %$\bar\nabla_\parallel f := (\bhat + \tilde{\vec b }_\perp)\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
     Parallel Laplacian&
     $\Delta_\parallel $&
     $\Delta_\parallel f:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f )$\\
@@ -73,10 +86,13 @@ Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
 Note that we have
 \begin{align}
-    \vec \nabla \cdot \vec{\mathcal K_\kappa}
-    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_\kappa}\cdot\nabla\ln B, \\
+    \vec \nabla \cdot \vec{\mathcal K_{\nabla\times\bhat}}
+    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_{\nabla\times\bhat}}\cdot\nabla\ln B, \\
     \vec\nabla\cdot\vec{ \mathcal K} &= 0, \\
-    \vec{ \mathcal K_\kappa} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
+    \vec{\mathcal K} &=
+     \nabla\times\frac{\bhat}{B}\cdot\nabla f
+    = \mathcal K_{\nabla\times\bhat}(f) + \mathcal K_{\nabla B}(f),\\
+    \vec{ \mathcal K_{\nabla\times\bhat}} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
     \nabla_\parallel \ln B &= -\vec\nabla\cdot\bhat.
     \label{eq:curl_curvature}
 \end{align}
@@ -91,7 +107,7 @@ Note that in any arbitrary coordinate system we have
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Coordinate system}\label{sec:cylmetric}
-We employ cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle (clockwise if viewed from above) to
+We employ cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle ({\bf clockwise} if viewed from above) to
 obtain a right handed system. The parametric representation in Cartesian \((x,y,z)\) coordinates is therefore simply:
 \begin{align}
  x &= R \hspace{1 mm} \sin{(\varphi)}, &
@@ -100,13 +116,13 @@ obtain a right handed system. The parametric representation in Cartesian \((x,y,
 \end{align}
 Note here that the angle $\varphi = 0$ corresponds to the Cartesian $y$-axis.
 The unit
-basis vectors and metric tensor are:
+basis vectors and (covariant) metric tensor are:
 \begin{align}
  \ehat_R      &= (\sin{(\varphi)} ,   \cos{(\varphi)},0)^T, &
  \ehat_Z      &= ( 0 ,0 ,1 )^T, &
  \ehat_{\varphi} &= ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
 \\
- g &= \begin{pmatrix}
+    (g_{ij}) &= \begin{pmatrix}
   1 & 0 & 0 \\
   0 & 1 & 0 \\
   0 & 0 & R^2
@@ -119,13 +135,19 @@ With the help of the metric elements we get a well behaved volume element \(\sqr
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
-In cylindrical coordinates the general axisymmetric magnetic field normalized with $R_0$ can be written as
+In cylindrical coordinates the general axisymmetric  magnetic field can be written as (dimensionless)
 \begin{align}
  \vec{B} &= \frac{R_0}{R}\left[I(\psi) \ehat_{\varphi} + \frac{\partial
  \psi_p}{\partial Z} \ehat_R -  \frac{\partial \psi_p}{\partial R} \ehat_Z\right] ,
 \end{align}
-which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system.
-Note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
+which can obviously not be manipulated to be in Clebsch form.
+Hence we are dealing with a non-flux aligned coordinate system.
+We scaled $R$, $Z$ and $R_0$ with $\rho_s$, the magnetic field with $B_0$, the flux with $\psi_{p0} = B_0\rho_s \hat R_0$
+and $I_0 = B_0 \hat R_0$ (with $\hat R_0$ being the dimensional major radius).
+Note that this normalization is in line with the one later chosen for the gyrofluid
+equations but is unnatural for the MHD type equilibrium equations through the introduction
+of $\rho_s$.
+Also note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
 %The unit vectors are denoted by \(\ehat_{R}\), \(\ehat_{Z}\), \(\ehat_{\varphi}\).
@@ -133,9 +155,9 @@ Note that with $\psi_p = I(\psi_p) \equiv 1$ we recover a purely toroidal field.
 With a subsequent identification of $x:=R-R_0$ and the transition to
 Cartesian coordinates while straightening the field lines for large $R_0$
 we recover the familiar slab geometry.
-We have
-the equilibrium equations in toroidally symmetric, ideal MHD (
-$\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ )
+
+We have the equilibrium equations in toroidally symmetric, ideal MHD (
+$\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ normalized with $p_0 = B_0^2/\mu_0$, and $j_0 = B_0/\rho_s/\mu_0$ )
 \begin{align}
     \vec\nabla\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
  j_\parallel &= \vec j\cdot \bhat = \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
@@ -150,24 +172,29 @@ from where we recover the Grad-Shafranov equation
     -\Delta^*_\perp  \psi_p &= \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p } \equiv \frac{R}{R_0} j_{\hat\varphi}
 \end{align}
 with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
-Note that $R$ and $Z$ are normalized
-with $\rho_s$, $\psi_p$ with $\psi_{p0}$, $p$ with
-$p_0 := \psi_{p0}^2/\mu_0\rho_s^4$, $I$ with $I_0:=\psi_{p0}/\rho_s$,
-and $j_\varphi$ with $\j_{\varphi 0} = \psi_{p0}/\rho_s^3\mu_0$.
 The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
 By integration over \(\psi_p\) we find
-\begin{align}\label{eq:solovevassumption}
- p(\psi_p) &= (A-1)\psi_p/R_0,  &
- I(\psi_p) &= \sqrt{-2 A \psi_p/R_0 + 1}, &
-    j_{\hat\varphi} &= \left[(A-1)R^2/R_0^2 - A \right]/R.
+$
+ p(\psi_p) = (A-1)\psi_p/R_0$,
+ $I(\psi_p) = \sqrt{-2 A \psi_p/R_0 + 1}$,
+ and
+    $j_{\hat\varphi} = \left[(A-1)R^2/R_0^2 - A \right]/R $.
+Note that if $\psi_p$, $I(\psi)$ and $p(\psi)$ are a solution to Eq.~\eqref{eq:GSEdimless}
+then so are $\mathcal P_\psi \psi_p$ , $\mathcal P_\psi I(\psi_p)$ and $\mathcal P_\psi^2 p(\psi_p)$.
+Also note that for $A=0$ the constant current $I$ is arbitrary $\mathcal P_I$.
+
+We introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
+and represent a solution to Equation~\eqref{eq:GSEdimless} as~\cite{Cerfon2010}
+\begin{subequations}
+\label{eq:solovev}
+\begin{align}
+ \psi_p (R,Z) &= \mathcal P_{\psi} R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
+   - \frac{1}{8}\bar{R}^4\right)+ \frac{1}{8}\bar{R}^4 
+   + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],\\
+   I(\psi_p) &= \mathcal P_I\sqrt{ - 2A\psi_p/(R_0\mathcal P_{\psi}) +1},
 \end{align}
-Now, we introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
-and solve Equations~\eqref{eq:GSEdimless} and~\eqref{eq:solovevassumption} to obtain
-\begin{align}\label{eq:solovev}
- \psi_p (R,Z) &= R_0 \left[ \frac{1}{8}\bar{R}^4 + A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}} 
-   - \frac{1}{8}\bar{R}^4\right) + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],
-\end{align}
-with
+\end{subequations}
+with $\mathcal P_I = \pm \mathcal P_\psi$ for $A\neq 0$, $p(\psi_p) = \mathcal P_\psi (A-1)\psi_p/R_0$ and
 \rowcolors{2}{gray!25}{white}
 \begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \toprule
@@ -199,8 +226,12 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
    & \\
 \bottomrule
 \end{longtable}
-The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field. It allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
-field reversed configurations and low and high beta tokamak equilbria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
+The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field, while $R_0$ appears as an artificial scaling factor (note here that a change in $\rho_s$ changes $R_0$ but not the form or size of the dimensional equilibrium magnetic field).
+The scaling factors $\mathcal P_\psi$ and $\mathcal P_I$ are mainly introduced to maximize the flexibility e.g. to adapt the solution to experimental equilibria or to reverse the sign of the magnetic field.
+Remember that $\mathcal  P_I \neq \mathcal P_\psi$ only yields a solution for $A=0$.
+
+Eq.~\eqref{eq:solovev} allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
+field reversed configurations and low and high beta tokamak equilibria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
 
 Note that
 \begin{align}
@@ -223,50 +254,51 @@ for the Solov'ev equilibrium.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsubsection{Toroidal field line approximation}\label{sec:torfieldlineapprox}
-The toroidal field line approximation applies \(\bhat\approx \ehat_\varphi\) to all perpendicular operators
+\subsubsection{Toroidal (and negative toroidal) field line approximation}\label{sec:torfieldlineapprox}
+The toroidal/negative toroidal field line approximation applies \(\bhat\approx \pm \ehat_\varphi\) to all perpendicular operators
 (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
 but retains the full expression for the magnetic field unit vector \(\bhat\)
 for parallel operators (\(\nabla_\parallel\) and \(\Delta_\parallel\)).
+(Note that we allow the negative sign $-\ehat_\varphi$ to enable a sign reversal of the magnetic field, see Section~\ref{sec:field_reversal}).
 In cylindrical coordinates that is
 \begin{align}
-[f,g]_\perp \equiv [f,g]_{RZ} &= \frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
+[f,g]_\perp \equiv [f,g]_{RZ} &= \pm\frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
 \nabla_\perp f &= \partial_R f \ehat_R + \partial_Z f \ehat_Z \\
 \Delta_\perp f &= \frac{1}{R}\partial_R \left( R \partial_R f\right) + \partial_Z(\partial_Z f)
 \label{}
 \end{align}
 The curl of $\bhat$ reduces to
 %\begin{align}
- $\nabla\times\bhat \approx -  \frac{1}{R} \ehat_Z$.
+ $\nabla\times\bhat \approx -  \frac{\pm 1}{R} \ehat_Z$.
 %end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \ehat_Z , &
-\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+\vec{\mathcal{K}}_{{\nabla\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 %\ehat_\varphi \times \vec{\nabla} B, &
-\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{\kappa} ,
+\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{{\nabla\times\bhat}} ,
 %\\
-%\mathcal{K}_{\kappa}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
+%\mathcal{K}_{{\nabla\times\bhat}}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
 %\mathcal{K}_{\vec{\nabla}  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},&
 %\mathcal{K} (f) &\approx\frac{1}{B} \left[\ln B, f \right]_{RZ}-  \frac{1}{B R} \frac{\partial f}{\partial Z} ,
 \end{align}
 and
 \begin{align}
- \vec{\nabla} \cdot \vec{\mathcal{K}}_{\kappa} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z}.
+ \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
 \end{align}
-which, results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
+which results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
 
 Note that in an actual toroidal field we have
 \begin{align}
-  \vec B(R) := \frac{R_0}{R} \ehat_\varphi
+  \vec B(R) := \pm \frac{R_0}{R} \ehat_\varphi
   \label{}
 \end{align}
 We then have $\bhat = \ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
-  \vec{ \mathcal K_\kappa} = \vec{ \mathcal K_{\nabla B}} = -\frac{1}{R_0} \ehat_Z =
+  \vec{ \mathcal K_{\nabla\times\bhat}} = \vec{ \mathcal K_{\nabla B}} = -\frac{\pm 1}{R_0} \ehat_Z =
 \vec{ \mathcal K}/2\\
-  \nabla\cdot\vec{\mathcal K_{\kappa}}=
+  \nabla\cdot\vec{\mathcal K_{{\nabla\times\bhat}}}=
     \nabla_\parallel \ln B = 0
     \label{}
 \end{align}
@@ -275,38 +307,45 @@ simplify to
 In this approximation we apply the toroidal field line approximation
 as in Section
 \ref{sec:torfieldlineapprox}
-but approximate the curvature operator $\mathcal K_\kappa \approx \bhat\times\kappa$
+but approximate the curvature operator $\mathcal K_{\nabla\times\bhat} \approx \bhat\times\vec \kappa$
   with
   $\vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
 \(\beta = \frac{P}{B^2/(2 \mu_0) } \)
 we can rewrite the curvature to
 \begin{align}
- \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
+    \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
 \end{align}
 In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \begin{align}
- \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
+    \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\mathcal{K}_{\kappa}(f)   &\approx  \mathcal{K}_{\vec{\nabla}  B}(f),  &
+\vec{\mathcal{K}_{{\nabla\times\bhat}}}(f) \approx
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 \mathcal{K} (f) &\approx 2\mathcal{K}_{\vec{\nabla}  B} (f) , &
- \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
+    \vec{{\nabla\times\bhat}} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
 \end{align}
 The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
 In general, the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
 \subsubsection{True perpendicular terms}
+
 Without any approximations we have
 \begin{align}
 b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
 b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad 
 b^\varphi = \frac{I}{R}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \\
-\vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ}
+\vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ} \\
+\left({\nabla\times\bhat}\right) \cdot\bhat =
+    (I'(\nabla\psi_p)^2 - I \Delta_\perp^* \psi_p)\frac{ R_0^2}{R^2B^2} \propto 1/R_0
 \label{}
 \end{align}
-We then need to take the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
-We can explicitly write
+where for the last
+estimate we inserted the Grad-Shafranov equation and the Solov'ev assumptions.
+We can then insert $\bhat$ into the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
+
+For the curvature terms we can explicitly write
 \begin{align}
 K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
 K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
@@ -318,147 +357,316 @@ K_{\nabla B}^\varphi &= \frac{R_0}{B^3R^2}\left(
 \end{align}
 and
 \begin{align}
-K_\kappa^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
-K_\kappa^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
-K_\kappa^\varphi &= \frac{R_0}{R^2B^2}\left(
+K_{\nabla\times\bhat}^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
+K_{\nabla\times\bhat}^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
+K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 + \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
 + \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
 -R\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
 - \frac{\partial^2 \psi}{\partial Z^2}
 \right) \\
-\vec\nabla\cdot\vec{\mathcal K_\kappa} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}=
-    -\vec{\mathcal K_\kappa}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
+\vec\nabla\cdot\vec{\mathcal K_{\nabla\times\bhat}} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}=
+    -\vec{\mathcal K_{\nabla\times\bhat}}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
 %contravariant phi component
 \label{}
-\end{align}
-\subsection{Flux surface average and Safety factor}
-We define the toroidal average of a function $f(R,Z,\varphi)$ as
-\begin{align} \label{eq:phi_average}
-\langle f\rangle_\varphi := \frac{1}{2\pi}\oint f\d \varphi
-\end{align}
-The flux surface average
-of a function $f(R,Z,\varphi)$ is given by the formula
-\begin{align}\label{eq:fsa}
-\langle f \rangle_{\psi_{p0}} :=
-\frac{ \oint_{\psi_p = \psi_{p0} } f(R,Z,\varphi)\dA}{\oint_{\psi_p = \psi_{p0} } \dA} =
-\frac{\int_\Omega f(R,Z,\varphi) \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p| \dV}
-{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p0})|\vec\nabla\psi_p|\dV}
-\end{align}
-with $\dV := \d R\d Z\d \varphi$ (we define the average in computational space and omit one $R$).
-A numerically tractable approximation to the $\delta$-function reads
-\begin{align}\label{eq:delta}
-\delta(\psi_p-\psi_{p0}) = \frac{1}{2\pi \epsilon^2}
-\exp\left( - \frac{\left(\psi_p-\psi_{p0}\right)^2}{2\epsilon^2}\right)
-\end{align}
-where $\epsilon$ is a small, free parameter. In the dG framework the integrals
-in Eq.~\eqref{eq:fsa} can be computed via Gauss-Legendre quadrature.
-
-If we write $B_p:=R_0|\nabla\psi_p|/R$, we can define the safety factor (in two dimensions) as
-\begin{align}
-q:=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
-= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) \d R\d Z
 \end{align}
 
 \subsection{ Modified $\psi_p$}
 Our computational domain is a box and in particular not aligned with the
 magnetic flux surfaces. This means that particularly in the corners of
-the domain the field lines enter and leave the box very quickly.
-It turns out that this behaviour is numerically disadvantageous in the
+the domain the field lines inside the domain are very short (in the
+sense that the distance between the entry point and leave point is short).
+It turns out that this behaviour is numerically disadvantageous (may
+blow up the simulation in the worst case) in the
 computation of parallel derivatives. In order to remedy this situation
 we propose to modify the flux surfaces $\psi_p$ to a constant value
 if $\psi_p$ exceeds a certain critical value. In this way the poloidal
-field component vanishes in the corners of the domain.
+field component vanishes in the corners of the domain at the cost
+of introducing a strong shear layer limiting the scrape-off layer width.
 
 We define an approximation to the step function with width $\alpha$
 \begin{align}
-\Theta(\psi) := \begin{cases}
-    1 & \text{ for } \psi < - \alpha  \\
-    \frac{1}{32 \alpha^7}  \left(16 \alpha^3+29 \alpha^2 \psi+20 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^4
+\Theta_\alpha(\psi) := \begin{cases}
+    0 & \text{ for } \psi < - \alpha  \\
+    \frac{1}{32 \alpha^7}  \left(16 \alpha^3-29 \alpha^2 \psi+20 \alpha \psi^2-5 \psi^3\right) (\alpha+\psi)^4
     &\text{ for } -\alpha<\psi<+\alpha \\
-    0 & \text{ for } \psi > \alpha 
+    1 & \text{ for } \psi > \alpha 
 \end{cases}
-    \approx H(-\psi)
+    \approx H(\psi)
 \label{eq:approx_heaviside}
 \end{align}
 if $H(\psi)$ is the Heaviside step function.
 An integral of this function is
 \begin{align}
-\theta(\psi) := \begin{cases}
-\psi &\text{ for } \psi < -\alpha \\
-    - \frac{1}{256 \alpha^7} \left(35 \alpha^3+47 \alpha^2 \psi+25 \alpha \psi^2+5 \psi^3\right) (\alpha-\psi)^5
+\theta_\alpha(\psi) := \begin{cases}
+    0 &\text{ for } \psi < -\alpha \\
+    \frac{1}{256 \alpha^7} \left(35 \alpha^3-47 \alpha^2 \psi+25 \alpha \psi^2-5 \psi^3\right) (\alpha+\psi)^5
      &\text{ for } -\alpha<\psi<+\alpha \\
-    0 &\text{ for } \psi > \alpha
+\psi &\text{ for } \psi > \alpha
 \end{cases}
-    \approx \psi H(-\psi)
-\label{eq:modified_psi}
+    \approx \psi H(\psi)
 \end{align}
 
-We now use $\theta(\psi-\psi_0)+\psi_0$ instead of $\psi$ for the computation of the
+We now use 
+\begin{align}
+-\theta_\alpha(\psi_0 - \psi)+\psi_0 \approx (\psi- \psi_0)H(\psi_0-\psi) + \psi_0
+\label{eq:modified_psip}
+\end{align}
+instead of $\psi$ for the computation of the
 magnetic field, which introduces a shear layer around $\psi_0$ where the
 fieldlines are straightened to match $\ehat_\varphi$.
-Note that $\Theta(0) = 0.5$ and $\theta(0) = 35\alpha/256$.
+Note that $\Theta_\alpha(0) = 0.5$ and $\theta_\alpha(0) = 35\alpha/256$.
+\section{Flux surface averaging and safety factor}
+\subsection{Preliminary}
+Recall that the {\bf Dirac delta-function} has the property (in any dimension):
+\begin{align} \label{eq:dirac_delta}
+\int_V f(\vec x) \delta(h(\vec x) - h') \dV = \int_{h=h'} \frac{f(\vec x)}{|\nabla h|} \dA
+\end{align}
+which means that the delta-function can be used to express area integrals of the
+submanifold given as a contour of the function $h(\vec x)$.
+A numerically tractable approximation to the delta-function reads
+\begin{align}\label{eq:delta}
+\delta(h(\vec x)-h') = \frac{1}{2\pi \epsilon^2}
+\exp\left( - \frac{\left(h(\vec x)-h'\right)^2}{2\epsilon^2}\right)
+\end{align}
+where $\epsilon$ is a small, free parameter.
+In the DG framework the left-hand side
+of Eq.~\eqref{eq:dirac_delta} can thus readily be computed
+via Gauss-Legendre quadrature, which we propse as a first method to compute area
+integrals even if our coordinate system is not aligned to the area.
+Note: in order for this to work the Delta function needs to be numerically
+resolved and cannot be made arbitrarily small.
+This introduces a smoothing effect
+over neighboring contour lines which is given by the grid distance.
+
+Furthermore, recall the {\bf co-area formula}
+\begin{align} \label{eq:coarea}
+\int_{\Omega_0} f(\vec x) \dV =
+\int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
+\end{align}
+where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
+The co-area formula can be viewed as a change of variables in the
+volume integral.
+
+We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
+\begin{align} \label{eq:phi_average}
+\langle f\rangle_\varphi(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
+\end{align}
+
+In arbitrary coordinates the area integral is defined by the pull back
+of the flux 2-form and the metric
+\begin{align}
+\label{}
+\dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\nabla \psi_p}{|\nabla \psi_p|}
+\end{align}
+to a parameterization of the flux-surface.
+In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have
+\begin{align}
+\dA &= \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi = f_0|\nabla\psi_p|\sqrt{g}\d\eta\d\varphi,
+\\
+\vec\dA &:= \hat\psi_p \dA = f_0 (\nabla\psi_p) \sqrt{g}\d\eta\d\varphi,\quad
+\label{}
+\end{align}
+where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2 = f_0^2(\nabla\psi_p)^2$.
+Notice that numerically we can integrate in flux-aligned coordinates by generating a corresponding
+grid and pulling back (interpolating) the relevant fields to this grid. This is the second method
+to numerically compute area integrals.
+
+\subsection{Flux surface average}
+
+There is two possible ways to introduce a flux-surface average.
+The first one is the straightforward average on the actual area of the
+flux-surface.
+The {\bf area average}
+of a function $f(R,Z,\varphi)$ is given by the formula
+\begin{align}\label{eq:fsa_area}
+\langle f \rangle^{area}_{\psi_{p}} :=&
+\frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
+=& \frac{\oint \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g g^{\zeta\zeta}}\d\eta}
+         { \oint \sqrt{g g^{\zeta\zeta}}\d\eta}
+\end{align}
+%with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
+and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
+in our domain $\Omega$.
+
+The second one (the {\bf volume average} after \cite{haeseleer}) defines an average on a
+small volume - a shell centered around the flux-surface - defined by two neighboring flux-surfaces.
+With the help of the volume
+flux label (notice that both the volume $v$ as well as the poloidal flux $\psi_p$ have physical 
+meaning while the coordinate $\zeta(\psi_p)$ is an arbitrary choice) we define
+\begin{align} \label{eq:fsa_vol}
+v(\psi_p) :=& \int_{\psi_{p,\min}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\zeta\d\eta\d\varphi,
+\\
+\frac{\d v}{\d\psi_p} =& \int\dA |\nabla\psi_p|^{-1} = 2\pi f_0\oint_{\zeta(\psi_p)} \sqrt{g}\d\eta \\
+\langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
+ = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
+ =& \left(\frac{\d v}{\d\psi_p }\right)^{-1} 2\pi f_0 \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
+ = \frac{1}{\oint \sqrt{g}\d\eta } \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
+\end{align}
+where we used the co-area formula Eq.~\eqref{eq:coarea} for the second
+identity. We immediately see that this definition differs from the first
+Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$ and that it is particularly easy to compute
+in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
+
+Both averages fulfill the basic identities
+\begin{align}
+\label{eq:fsa_identities}
+\langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
+\langle f(\psi_p) \rangle &= f(\psi_p)
+\end{align}
+
+
+The volume average is better suited for density-like quantities
+than the area average as we can see with the following identity.
+Assume we have a quantity $X$ with $\partial_t X + \nabla \cdot \vec j_X = \Lambda_X$. Then we can use the volume average to write
+\begin{align}
+\frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
+  \partial v} \langle \vec j_X\cdot \nabla v\rangle^{vol}  = \langle \Lambda_X\rangle^{vol}
+\label{eq:fsa_balance}
+\end{align}
+where again $v=v(\psi_p)$ is the volume flux label.
+The {\bf total flux} of a given flux density $\vec j_X$ though the
+flux surface $\psi_p = \psi_{p0}$ is given by
+\begin{align}
+\left\langle\vec j_X\cdot\nabla v\right\rangle^{vol} &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
+ \frac{\d v}{\d\psi_p} \langle \vec j_X\cdot\nabla\psi_p \rangle^{vol}\\
+ &=
+   2\pi f_0 \oint_0^{2\pi} \langle \vec j_X\cdot\nabla\psi_p\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
+%2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
+\label{eq:total_flux}
+\end{align}
+Once we have the flux-surface averaged equation we can easily get the volume integrated version (again with the help of the co-area formula)
+\begin{align}
+\frac{\partial}{\partial t} \int_0^{v(\psi_p)}\langle X \rangle^{vol} \d v 
++ \langle \vec j_X\cdot \nabla v\rangle^{vol}(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle^{vol}\d v
+\label{eq:integral_balance}
+\end{align}
+
+\subsection{The safety factor}
+Assume that we pick a random field line and follow it (integrate it) for exactly one
+poloidal turn. The {\bf safety factor} is defined as the ratio between
+the resulting toroidal angle ($\Delta\varphi$) to the poloidal angle ($2\pi$)
+\begin{align}
+q := \frac{\Delta\varphi}{2\pi}
+\label{}
+\end{align}
+Since our magnetic field is symmetric in $\varphi$ and we used one
+full poloidal turn this definition is independent of which
+fieldline we pick on a given flux surface.
+
+%Let us define the poloidal length $s$ as the fieldline following
+%parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
+%and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
+%We can then express the safety factor as the line integral
+%\begin{align}
+%q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+%= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
+%\end{align}
+%where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
+%last equality and thus arrive at a numerical tractable expression
+%to evaluate the safety factor.
+Let us define the geometric poloidal angle $\Theta$ as the fieldline following
+parameter i.e. $\vec B\cdot\nabla\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
+We can then directly integrate the safety factor as
+\begin{align}\label{eq:safety_factor}
+\frac{\d R}{\d\Theta} = \frac{B^R}{B^\Theta}\quad 
+\frac{\d Z}{\d\Theta} = \frac{B^Z}{B^\Theta}\quad 
+\frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
+q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
+\end{align}
+We integrate this equation with the help of one of our grid
+construction algorithms, i.e. we use a high-order Runge-Kutta method
+and refine the stepsize until machine-precision is reached.
+
+Notice that the safety factor diverges on the last closed flux
+surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
+remain finite due to the $\nabla\psi$ factor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
-\subsection{Dimensional Equations}
-% \(n_e\) is the electron density, \(N_i\) is the ion gyro-centre density, \(\phi\) is the electric potential,
-% \\
-% This model is an isothermal 3D gyro-fluid model, which exploits the toroidal field line approximation in the curvature operator terms (cf.~\ref{sec:torfieldlineapprox}).
-% It incorporates a Solov'ev equilibrium (cf.~\ref{sec:solovev}) for the magnetic field, which allows a
-% realistically shaped axisymmetric magnetic field. The coordinate system of choice is a non-aligned  cylindrical coordinate system (cf.~\ref{sec:cylmetric} and~\ref{sec:nonparallelalignedmetric}), which allows
-% the correct numerical treatment of singular points (e.g. X- and O- Points). These points occur naturally in realistic magnetic field configurations.
-% Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL.
-% However, our isothermal model misses important core physics ingredients, such as the ion temperature gradient (ITG) and trapped electron mode (TEM)~\cite{Wesson07}. Thus the validity the global model is limited to certain
-% parameter regimes.\\
-The continuity equation for the electron density \(n_e\) and the ion gyro-centre
-density \(N_i\) and the momentum conservation equation for
-the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
-(omitting species labels)~\cite{WiesenbergerPhD, HeldPhD}
+\subsection{Conservative form}
+We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyro-frequency $\Omega_0 = eB_0/m_i$.
+The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
+The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with
+$\hat A_\parallel = \rho_s B_0$.
+We introduce the dimensionless parameters
+\begin{align}
+  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and }
+  \beta:=\frac{\mu_0 n_0 T_e}{B_0^2}
+  \label{}
+\end{align}
+where $a\in\{e,i\}$ is the species label and $z$ is the charge number.
+Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})\right)\right) = \Lambda_N + S_N \\
-mN \frac{\partial}{\partial t} U &+ mN \left(
-    \vec v_E + \vec v_C + \vec v_{\nabla B} + U(\bhat + \tilde{\vec b})
+    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
+\mu N \frac{\partial}{\partial t} U &+ \mu N \left(
+    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)
     \right)\cdot \vec\nabla U  \nonumber \\
-    &+ 2m\vec \nabla \cdot ( NU \vec v_\kappa)
-    -mNU\vec \nabla\cdot \vec v_\kappa
-    + mNU\mathcal K_\kappa(\phi) \nonumber\\
-    &= -T (\bhat + \tilde{\vec b})\cdot \nabla N -qN \left( (\bhat+\tilde{\vec b})\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) + mN R_{\eta_\parallel} + mN(\Lambda_U + S_U)
+    &+ 2\mu \vec \nabla \cdot ( NU \vec v_{\nabla\times\bhat})
+    -\mu NU\vec \nabla\cdot \vec v_{\nabla\times\bhat}
+    + \mu NU\mathcal K_{\nabla\times\bhat}(\psi) \nonumber\\
+    &= -\tau \left(\bhat + \tilde{\vec b}_\perp\right)\cdot \nabla N 
+    -N \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) 
+    - \eta n_e^2(U_i-u_e) + \mu N\Lambda_U
 \label{}
 \end{align}
 with
 \begin{align}
-\tilde{\vec b} = \frac{\nabla\times A_\parallel \bhat}{B}, \quad
 \vec v_E := \frac{\bhat\times\nabla\psi}{B},\quad
-\vec v_C := \frac{T+mU^2}{q}\vec{\mathcal K_\kappa},\quad
-\vec v_\kappa := \frac{T}{q}\vec{\mathcal K_\kappa},\quad
-\vec v_{\nabla B} := \frac{T}{q}\vec{\mathcal K_{\nabla B}}.
+\vec v_{K} := \tau \left(\vec{\mathcal K_{\nabla B}} + \vec{\mathcal K_{\nabla\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
+\vec v_C := \mu U^2\vec{\mathcal K_{\nabla\times\bhat}},\quad
+\vec v_{\nabla\times\bhat} := \tau\vec{\mathcal K_{\nabla\times\bhat}},\quad
+\tilde{\vec b}_\perp = \frac{\nabla\times A_\parallel \bhat}{B}.
 \label{}
 \end{align}
 
 The electric potential \(\phi\) and parallel magnetic vector potential \(A_\parallel\) are
 computed by the polarisation and induction equations (with $q_e=-e$ and $q_i=+e$)
 \begin{align}
- -\vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{m_i T_i}{2e^2 B_0^2} \Delta_\perp , \\
-  -\frac{1}{\mu_0} \Delta_\perp A_\parallel &= e\left(N_i U_i-n_e u_e \right)
+ -\vec{\nabla} \cdot\left(\frac{\mu_iN_i}{B^2} \vec{\nabla}_\perp \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{1}{2}\mu_i\tau_i\Delta_\perp , \\
+  -\frac{1}{\beta} \Delta_\perp A_\parallel &= \left(N_i U_i-n_e u_e \right)
   \label{eq:polarisation_dimensional}
 \end{align}
 Given $\phi$ we define the generalised electric potential
 \begin{align}
-    \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{m_i }{2 e}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
+    \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{\mu_i }{2}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
 \end{align}
+In total
+we have an isothermal 3d gyro-fluid model with up to 2nd order FLR effects
+on in the electric potential $\phi$ and 0th order FLR effects in the parallel magnetic
+potential $A_\parallel$.
+We have the continuity equation for the electron density \(n_e\) and the ion gyro-centre
+density \(N_i\) and the momentum conservation equation for
+the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\)~\cite{WiesenbergerPhD, HeldPhD}.
+\subsection{ Sign reversals of the magnetic field}\label{sec:field_reversal}
+If we change the direction of the magnetic field vector $\bhat$, we immediately see that all perpendicular
+drifts and $U\bhat$ change directions. On the other side, the diffusive and resistive terms remain unchanged.
+Without resistivity and diffusion a change in direction of the magnetic field thus corresponds to
+a time reversal $t\rightarrow t'=-t$.
 
-\subsection{Parallel Resistivity and diffusion}\label{sec:dissres}
-The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
-The parallel Spitzer resistivity
+Also note that changing the sign of the magnetic field only in the parallel derivatives $\nabla_\parallel \rightarrow -\nabla_\parallel$ does not
+have any effect. This can be seen by simply renormalizing $U'=-U$. This reverts the equations back to the original equations.
+In the code this situation can happen when you change the sign of $\bhat$ using $\mathcal P_\psi$  and $\mathcal P_I$
+and use the toroidal field approximation at the same time.
+To actually change the sign of the magnetic field you need to use the "negative toroidal field approximation".
+
+
+\subsection{Diffusive terms}\label{sec:dissres}
+We define with
+$\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}$ and $\nu_{ei} = \sqrt{2} z^2 e^4 \ln \Lambda/ (12\pi^{3/2} \sqrt{m_e} \epsilon_0^2) n_e /T_e^{3/2}$
 \begin{align}
-\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}
+  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1},
+    \label{eq:resistivity}
 \end{align}
-and the approximate Spitzer current \(J_{\parallel,s}:= e n_e \left(U_i - u_e\right)\) determine the parallel resistive terms to:
-\begin{align}
-  R_{e,\eta_\parallel} &=  en_e\eta_\parallel J_{\parallel,s}/(m_en_e)  &
-  R_{i,\eta_\parallel} &=- en_e\eta_\parallel J_{\parallel,s}/(m_iN_i)
-\end{align}
+with $\ln \lambda \approx 10$.
+ The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_i - u_e\right)\)
+ determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
+
 The dissipative terms can be decomposed into perpendicular and parallel components
 \begin{align}
  \Lambda_{n_e} &= \Lambda_{n_e,\perp}+\Lambda_{n_e,\parallel}, &
@@ -471,7 +679,7 @@ For numerical stabilisation we choose:
 \Lambda_{n_e,\parallel} &= \nu_\parallel \Delta_\parallel n_e &
 \Lambda_{N_i,\parallel} &= \nu_\parallel \Delta_\parallel N_i \\
 \Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
-\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i 
+\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i
 \end{align}
 Similarly, for the perpendicular dissipation we apply viscous or hyperviscous terms.
 \begin{align}\label{eq:perpdiffNT}
@@ -481,16 +689,29 @@ Similarly, for the perpendicular dissipation we apply viscous or hyperviscous te
  \Lambda_{U_i,\perp} &=  \nu_\perp \Delta_\perp U_i \text{ or } -\nu_\perp \Delta_\perp^2 U_i
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
+The drift-fluid corresponding diffusion gives an order-of-magnitude estimate for $\nu_\perp$.
+We have with $\nu_{ii0} = z^4e^4\ln \Lambda/ (12\pi^{3/2} \sqrt{m_i} \epsilon_0^2) n_{i0} /T_{i0}^{3/2}$ and choose $D_i = \rho_i^2 \nu_{ii}$ and $T_{i0} = T_{e0}$.
+By dividing by $\rho_s^2 \Omega_{ci}$ we arrive at $\nu_\perp = m_i \nu_{ii0}/eB_0$.
+Together with neoclassical corrections we then have
+\begin{align}
+\nu_\perp =
+5\cdot 10^{-3} \left(1+\frac{R}{a}q_{95}\right) \ln \lambda
+\left(\frac{n_0}{10^{19}\text{m}^3}\right)
+\left(\frac{T_e}{\text{eV}}\right)^{-3/2}
+\left(\frac{B_0}{\text{T}}\right)^{-1}
+\left(\frac{m_i}{m_H}\right)^{1/2},
+\end{align}
+where we use the major radius $R_0$ and minor radius $a$ and the safety factor $q_{95}$~\cite{Madsen2016}.
 
-\subsection{Boundary and Initial conditions}
+\subsection{Boundary and initial conditions}
 We define the simulation box as
 $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
 \begin{align} \label{eq:box}
-    R_{\min}&=R_0-\varepsilon^{R-}a\quad
-    &&R_{\max}=R_0+\varepsilon^{R+}a\nonumber\\
-    Z_{\min}&=-\varepsilon^{Z-}ae\quad
-    &&Z_{\max}=\varepsilon^{Z+}ae
+    R_{\min}&=R_0-\varepsilon_{R-}a\quad
+    &&R_{\max}=R_0+\varepsilon_{R+}a\nonumber\\
+    Z_{\min}&=-\varepsilon_{Z-}ae\quad
+    &&Z_{\max}=\varepsilon_{Z+}ae
 \end{align}
 where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.
@@ -519,7 +740,7 @@ and initialize the electron density with
     n_e(R,Z,\varphi, 0)= n_{prof}(R,Z) + \tilde n(R,Z,\varphi)
 \end{align}
 consisting of a toroidally symmetric background profile $n_{\text{prof}}(R,Z)$ and a perturbation
-$\tilde n(R,Z,\varphi)$.
+$\tilde n(R,Z,\varphi)$, which breaks the toroidal symmetry.
 Note that we should take care to intitialize a smooth profile with ideally well-defined $\Delta^2_\perp n_e$.
 %Let us define another approximation to the Heaviside function
 %\begin{align}
@@ -532,18 +753,20 @@ Note that we should take care to intitialize a smooth profile with ideally well-
 Let us define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{\text{prof}}(R,Z)=
-      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) \Theta(\psi_p(R, Z)+\alpha)}{\psi_p(R_0,0)} H(Z-Z_X)
+      n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_p(R_0,0)}\Theta_{\alpha}(-\psi_p(R, Z)-\alpha) H(Z-Z_X)
 \end{align}
-%NOTE: this profile is slightly below n_0 outside the LCFS! (not sure whether this does anything for nabla_parallel)
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
-X-point and avoids a profile in the private flux region.
+X-point and avoids a profile in the private flux region. The factor $\alpha$ provides a smooth transition
+zone that avoids numerical oscillations.
+
 
 We have two possibilities to initialize the ion density
 \begin{align} \label{eq:initphi}
-  N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = n_e
+  N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = \Gamma_{1,i}n_e\approx \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e
 \end{align}
 In the first case the potential $\phi= 0$ while in the second case
-the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i \propto \Delta \phi$.
+the $E\times B$ and ion diamagnetic vorticity coincide $\Delta_\perp N_i \propto \Delta_\perp \phi$ in the long-wavelength limit.
+Note that $\alpha$ must not be too small to avoid $N_i < 0$.
 We can choose between several initial conditions for $\tilde n$:
 
 \subsubsection{Blob and Straight blob}
@@ -561,35 +784,67 @@ We either follow fieldlines around the torus several times (``blob'') or only on
 (``straight blob'').
 \subsubsection{Turbulent bath}
 We can initialize the R-Z plane with a turbulent bath with a certain amplitude $A$.
+This especially has the goal to destabilize the edge region right inside the
+last closed flux surface. Notice that the core region is rather stable
+and quickly damps away fluctuations.
 Again, we transform this to all poloidal planes along the magnetic field lines and multiply the bath with
 \begin{align} \label{eq:initial_turbulent}
-\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta(-\psi_p)H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)\Theta_{\alpha}(-\psi_p(R, Z)-\alpha) H(Z-Z_X)
 \end{align}
 \subsubsection{Zonal flows}
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and
 wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \begin{align} \label{eq:initial_zonal_flow}
     \tilde n_{\text{zonal}}(R,Z) &= A \sin (2\pi k_\psi \psi_p(R,Z)) \nonumber\\
-\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta(-\psi_p)H(Z-Z_X)
+\tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)\Theta_{\alpha}(-\psi_p(R, Z)-\alpha) H(Z-Z_X)
+\end{align}
+\subsubsection{Turbulence on Gaussian profile}
+Instead of the flux-aligned profile we can also choose a toroidally symmetric Gaussian profile
+\begin{align} \label{eq:profile_blob}
+  n_{prof}(R,Z) = n_0 + \triangle n_{peak} \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+\end{align}
+on top of which we can add the turbulent bath $\tilde n_{\text{bath}}$ and finally dampen it by
+\begin{align}\label{eq:turbulence_on_gaussian}
+n_e(R,Z,\varphi,0) = (n_{prof}(R,Z) + \tilde n_{\text{bath}})\Theta_\alpha( 1- \sqrt{(R-R_0)^2 + Z^2}/a)
 \end{align}
 
 \subsection{Sinks and sources} \label{sec:sources}
-The idea for the source terms $S_N$ is to fix the profile $n_{prof}$ in the
+We can choose the source terms $S_N$ to either force a profile
+$n_{\text{prof}}$ or provide a constant influx of particles in the
 core of our domain, where our model does not apply.
 We thus define a particle sink/source for electrons as
 \begin{align} \label{eq:electron_source}
-  S_{n_e}(R,Z,\varphi, t) &= \omega_s
-    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta( \rho_{s} -\rho(R,Z)) H(Z-Z_X)\\
-    \rho(R,Z) &:= \frac{\psi_p(R_0,0)- \psi_p(R,Z) }{\psi_p(R_0,0)},\\
-    \psi_p(R,Z)&:= (1-\rho(R,Z))\psi_p(R_0,0)
+  S_{n_e}(R,Z,\varphi, t) &= \omega_s \begin{cases}
+    (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))\Theta_\alpha( \rho(R,Z) - \rho_s) H(Z-Z_X) \quad \text{ forced}\\
+    S_{prof}(R,Z)\quad \text{ influx}
+    \end{cases} \\
+    \rho(R,Z) &:= \frac{\psi_{p,\min}- \psi_p(R,Z) }{\psi_{p,\min}}, \quad
+    \psi_p(R,Z):= (1-\rho(R,Z))\psi_{p,\min},\\ \text{In general }\psi_{p,\min} &= \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
 \end{align}
 with $0 < \rho_{s}<1$
-where $\omega_s$ is the source strength parameter.
-This will result in exponential adaption of the core and wall
+where $\omega_s$ is the source strength parameter and $R_O$, $Z_O$ are the coordinates of the O-point.
+The forced source will result in exponential adaption of the core
 density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
+
+We can choose the constant influx
+\begin{align} \label{eq:electron_source_influx}
+  S_{prof}(R,Z) &= \Theta_\alpha( \rho(R,Z) - \rho_s) H(Z-Z_X)
+\end{align}
+or a Torpex inspired source profile
+\begin{align} \label{eq:electron_source_torpex}
+  S_{prof}(R,Z) &= 
+  \begin{cases}
+    \exp\left( - \frac{(R-R_0)^2}{a^2 }- \frac{(Z-Z_0)^2}{b^2}\right) \text{ if} R > R_0 \\
+    \frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} -2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \\
+  +\frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} +2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \text{ else}
+              \end{cases}
+\end{align}
+with $a=0.0335$m, $b=0.05$m, $c=565m^{-2}$, $R_0=0.98$m and $Z_0=-0.02$m.
+
+
 For ions we use
 \begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{m_i T_i}{2q^2 B_0^2} \nabla_\perp^2\right) S_{n_e}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e}
   \label{eq:ion_source}
 \end{align}
 Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
@@ -604,101 +859,43 @@ so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 %  S_{U}(R,Z,\varphi, t) := -\omega_d U \Theta( \rho(R,Z) - \rho_d)
 %\end{align}
 %with $\rho_d > 1$.
+Currently we do not implement any source terms for the velocity $U$.
 
-\subsection{Conservation laws} \label{sec:conservation}
-\subsubsection{Mass conservation}
-Integrating the density equation we directly get
-\begin{align} \label{eq:mass_conservation}
-  \frac{\partial}{\partial t} \int \dV n_e =  \int dV (\Lambda_{n_e}+S_{n_e})
-\end{align}
-\subsubsection{Charge/vorticity conservation}
-Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
-and assuming $\Gamma_{1,i}S_{N_i} = S_{n_e}$ we find
-\begin{align} \label{eq:charge_conservation}
-  \frac{\partial}{\partial t} \int \dV \vec{\nabla} \cdot\left(\frac{m_iN_i}{e B^2} \vec{\nabla}_\perp \phi\right) =  - \int \dV (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i})
-\end{align}
-Note that if the integrand on the left hand side is interpreted as the \ExB vorticity
-density
-$\zeta := \vec \nabla\cdot( m_iN_i\vec \nabla_\perp\phi/e B^2)$
-and if we further assume that $\Gamma_{1,i} \Lambda_{N_i} \equiv \Lambda_{\Gamma_{1,i}N_i}$,
-we get the vorticity conservation
-\begin{align} \label{eq:vorticity_conservation}
-  \frac{\partial}{\partial t} \int \dV \zeta =  - \int \dV\Lambda_{\zeta}
-\end{align}
-
-\subsubsection{Energy theorem}
-The terms of the energy theorem $\partial_t \mathcal E + \mathcal S =
-\Lambda$ are derived to (if either $\psi$ or $\nabla\psi$ vanishes at the
-boundary)
-\begin{align} \label{eq:energy_conservation}
-  \mathcal{E} = \int  \dV & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+
-    \frac{(\vec \nabla_\perp A_\parallel)^2}{2\mu_0} 
-    +\frac{1}{2} m_i N_i \left(\frac{\vec\nabla_\perp\phi}{B}\right)^2 \right.\nonumber\\
-    &\left.+\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
-  \mathcal S = \sum_s \int \vec{\dA} \cdot &\left[ \left(
-  U(\bhat+\tilde{\vec b}) + \vec v_E + \vec v_C + \vec v_{\nabla B} \right)
-  \left(T N\ln N + \frac{1}{2}m NU^2 + q\psi N \right) \right. \nonumber\\
-  & \left . + \vec v_\kappa m NU^2  + (\bhat + \tilde{\vec b}) UNT\right], \\
-  \Lambda =  \int \dV & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
-  \nonumber\\ &
-+\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
-\nonumber \\ &
-+ m_e u_e n_e (\Lambda_{u_e}+S_{u_e})+m_iU_i N_i (\Lambda_{U_i}+S_{U_i})- \eta_\parallel J_{\parallel,s}^2\bigg\}.
-\end{align}
-The energy consists of the Helmholtz free energy density for electrons and ions, the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
-In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Dimensionless form}
-We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyrofrequency $\Omega_0 = eB_0/m_i$.
-The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
-The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with 
-$\hat A_\parallel = \beta \rho_s B_0$ (this particular choice for $\hat
-A_\parallel$ allows to easily recover the electrostatic limit $\beta = 0$).
-We introduce the dimensionless parameters
-\begin{align}
-  \tau_a = \frac{T_a}{z_aT_e}~,\quad \mu_a = \frac{m_a}{z_am_i}\text{ and } 
-  \beta:=\frac{\mu_0 n_0 T_e}{B_0^2}
-  \label{}
-\end{align}
-where $a\in\{e,i\}$ is the species label and $z$ is the charge number. Finally, we define
-\begin{align}
-  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
-    \label{eq:resistivity}
-\end{align}
-Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
+\subsection{Implemented form}
+The form that we implement avoids derivatives on the product of
+two functions for which we have no boundary conditions
 \begin{subequations}
     \begin{align}
     \frac{\partial}{\partial t} N =&
         - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
         - \bar \nabla_\parallel \left( NU\right)
-        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}\right)
+        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}_\perp\right)
         - \tau \mathcal K(N) \nonumber \\&
         - N \mathcal K(\psi)
-        -\mu \mathcal K_\kappa(NU^2)
-        -\mu NU^2\nabla\cdot \vec{ \mathcal K_\kappa}
+        -\mu \mathcal K_{\nabla\times\bhat}(NU^2)
+        -\mu NU^2\nabla\cdot \vec{ \mathcal K_{\nabla\times\bhat}}
         + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
     \frac{\partial}{\partial t} W =&
         - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
         - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
         - \frac{1}{2}\bar \nabla_\parallel U^2
         -\frac{\tau}{\mu} \bar \nabla_\parallel \ln N
-        - U\mathcal K_\kappa(\psi)
+        - U\mathcal K_{\nabla\times\bhat}(\psi)
         - \tau \mathcal K(U)
-        -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
-        - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
-        -2\tau U\mathcal K_\kappa(\ln N)
+        -\tau U\nabla\cdot\vec{ \mathcal K_{\nabla\times\bhat}}\nonumber\\&
+        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\nabla\times\bhat} (U)
+        -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
-        + \nu_\perp\Delta_\perp W
-        - \nu_\perp\frac{\beta}{\mu}\Delta_\perp A_\parallel
-        + \nu_\parallel \Delta_\parallel U + S_U,
+        + \nu_\perp\Delta_\perp U
+        + \nu_\parallel \Delta_\parallel U,
         \label{eq:EgyrofluidU} \\
-        W&:= \left( U + \frac{\beta}{\mu}A_\parallel\right)
+        W&:= \left( U + \frac{A_\parallel}{\mu}\right)
     \end{align}
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
-$\bar\nabla_\parallel f = \nabla_\parallel f + \beta A_\parallel \mathcal K_\kappa(f) + \frac{\beta}{B}[ f, A_\parallel]_\perp$
-and $\vec \nabla \cdot \tilde{ \vec b} = \beta A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K_\kappa}} - \beta \mathcal K_{\nabla B}(A_\parallel) $
+$\bar\nabla_\parallel f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
+and $\vec \nabla \cdot \tilde{ \vec b}_\perp = A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \mathcal K_{\nabla B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -706,42 +903,163 @@ and
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
     \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\nabla_\perp\phi)^2}{B^2} \\
     \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
-    A_\parallel &= N_iW_i-n_e w_e
+    A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
   \end{align}
 \end{subequations}
-Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite. Also note the peculiar notation of the perpendicular viscosity on $U$.
-We indicate that $\Delta_\perp W$ is treated implicitly while the correction $\Delta_\perp A_\parallel$ is treated explicitly.
-The energy theorem reads $\partial_t \mathcal E + \mathcal S = \Lambda$ (with $z_e=-1$ and $z_i=+1$)
-\begin{align}
-  \mathcal{E}= \int  \dV & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
-  +\frac{\beta}{2}\left(\vec \nabla_\perp A_\parallel\right)^2
-   +  \frac{1}{2} \mu_i N_i u_E^2  \right .\nonumber\\
-   &\left. +\frac{1}{2} z_e\mu_e  n_e u_e^2
-  +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
-  %\mathcal S = \sum_s \int \vec{\dA} & \cdot\left[ \left( U\bhat + \vec v_\perp )
-  %(z\tau N\ln N + \frac{1}{2}z\mu NU^2 + \psi N \right) + \vec v_C' z\mu NU^2 + \bhat UNT \right], \\
-  \Lambda =  \int \dV & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right]
-    \left(\nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e + S_{n_e}\right)
-  \nonumber\\ &
-+z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right]
-    \left(\nu_\perp\Delta_\perp N_i + \nu_\parallel\Delta_\parallel N_i +S_{N_i}\right)
-\nonumber \\ &
-    +z_e\mu_e u_e n_e \left(\nu_\perp\Delta_\perp u_e + \nu_\parallel \Delta_\parallel u_e + S_{u_e}\right)\nonumber \\ &
-    +z_i\mu_i U_i N_i \left(\nu_\perp\Delta_\perp U_i + \nu_\parallel \Delta_\parallel U_i + S_{U_i}\right)% \nonumber \\ &
-    - \eta \left(n_e(U_i-u_e)\right)^2\bigg\}.
+Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} positive definite.
+\subsection{Conservation laws} \label{sec:conservation}
+\subsubsection{Mass conservation}
+The density equation directly yields the particle conservation
+\begin{align} \label{eq:mass_theorem}
+  \frac{\partial}{\partial t} n_e
+  + \nabla\cdot\vec{ j_{n_e}}
+  =  \Lambda_{n_e}+S_{n_e}
 \end{align}
+The terms of the particle conservation thus read
+\begin{align} \label{eq:mass_conservation}
+  n_e= & n_e,\\
+  \vec j_{n_e} =& n_e\left(
+  \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
+  =& n_e \left(\frac{\bhat\times \nabla\phi}{B} 
+  + \tau_e \frac{\bhat\times\nabla n_e}{n_eB} 
+  + \mu_e u_e^2\vec K_{\nabla\times\bhat} 
+  + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
+  \Lambda_{n_e} =&
+  \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
+\\
+  S_{n_e} =&  S_{n_e}
+\end{align}
+Notice that
+\begin{align}
+n_e \vec K = n_e\nabla\times\frac{\bhat}{B} = \nabla\times n_e\frac{\bhat}{B} + \frac{\bhat\times\nabla n_e}{B}
+\label{}
+\end{align}
+such that we can define the diamagnetic flux in the particle flux since
+the rotation vanishes under the divergence.
+
+Let us here also derive the particle flux \eqref{eq:mass_conservation} through a flux surface
+\begin{align} \label{eq:particle_flux}
+ \vec j_{N}\cdot \vec \nabla v %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
+ %\nabla\psi_p \nonumber\\
+ =&
+  \frac{\d v}{\d \psi_p} N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
+ &+ NU\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
+\end{align}
+
+
+\subsubsection{Energy theorem}
+The terms of the energy theorem are
+\begin{align} \label{eq:energy_theorem}
+\partial_t \mathcal E +
+\nabla \cdot \vec j_{\mathcal E}
+= \Lambda_{\mathcal E}
++  S_{\mathcal E}
++  R_{\mathcal E}
+\end{align}
+with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \nabla\phi}/{B}$
+\begin{align} \label{eq:energy_conservation}
+  \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
+  +\frac{1}{2\beta}\left(\vec \nabla_\perp A_\parallel\right)^2
+   +  \frac{1}{2} z_i \mu_i N_i u_E^2  \nonumber\\
+   & +\frac{1}{2} z_e\mu_e  n_e u_e^2
+  +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
+  \vec j_{\mathcal E} =& \sum_s z\left[
+  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right)N\left(
+  \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \right]
+  \nonumber\\
+  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
+  \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
+  \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
+\nonumber \\
+  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U^2 \right)S_{N}\right]
+\nonumber \\
+  R_{\mathcal E} =&  -\eta_\parallel  \left[ n_e(U_i-u_e)\right]^2.
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric and magnetic potentials and we sum over all species.
+The energy density $\mathcal E$ consists of the Helmholtz free energy density for electrons and ions,
+the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
+In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
 Replace $\Delta_\perp$ with $-\Delta_\perp^2$ when hyperviscous diffusion is chosen
 for the diffusion terms in the above equations.
+
+We have the energy flux through a flux surface
+\begin{align}
+ \vec j_{\mathcal E}\cdot \vec \nabla v =&%\frac{\d v}{\d \psi_p} \vec j_{\mathcal E}\cdot \vec \nabla \psi_p  =
+\frac{\d v}{\d \psi_p}\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
++ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
+&+ z \tau NU
+ \left( A_\parallel \mathcal
+ K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+\label{eq:energy_flux}
+\end{align}
+
+\subsection{ Force balance equation}
+In order to discuss poloidal flows let us first define orthogonal vectors $\{\vec{ \hat\zeta}, \vec{\hat\eta},\bhat\}$
+\begin{align}
+\vec{\hat\zeta} := \nabla\psi_p,\quad
+\vec{\hat \eta} := \frac{\bhat \times\hat \zeta}{B}
+\end{align}
+where $\vec{\hat\eta}$
+points in the counter-clockwise poloidal direction with our choice of the magnetic field direction.
+Notice that $\vec{\hat \eta}$ in general has a (small) toroidal component in addition to the dominant poloidal component.
+
+%We then have $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
+%with $\partial_{\hat\zeta}:= \hat\zeta\cdot\nabla$ and $\partial_{\hat\eta}:=\hat\eta\cdot\nabla$.
+Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ and $\vec u_d = \tau_i \bhat\times\nabla \ln N_i$
+we can derive
+\begin{align}
+u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2}
+&&u_d^{\hat\eta} := \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \\
+u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi
+&&u_d^{\hat\zeta}:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i
+\end{align}
+With this we write the force balance equation (in the LWL)
+\begin{align}
+&\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
+\frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) \right\rangle
+\nonumber\\
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
++ \tau_i \partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel \right\rangle
+\nonumber\\
+&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
+\end{align}
+where the right hand side represents the Lorentz force $\vec j\times\vec B$.
+Notice that 
+\begin{align}
+\left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p\right\rangle
+= \left\langle \frac{ \bhat\times \nabla (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cdot\nabla\psi_p\right\rangle
+= -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
+\end{align}
+We can interpret the force balance as the flux surface average of a
+continuity equation
+\begin{align}
+&\partial_t \Omega + \nabla\cdot \vec j_\Omega = S_\Omega \\
+\Omega &:= \mu_i N_i \left(\frac{\nabla\psi_p\cdot\nabla\phi}{B^2} + \tau_i \nabla\psi_p \cdot\nabla \ln N_i\right) \\
+\vec j_{\Omega} &:= -\Omega \vec u_E 
+    - \frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel \frac{\bhat\times\nabla A_\parallel}{B} \\
+    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
+\end{align}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 \subsection{Manufactured Solution}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
 n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
-N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \Gamma N_i  \\
+N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \gamma_{ N_i}  \\
 u_e(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
 U_i(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_e(R,Z,\varphi,t) \\
 \phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
-\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \Gamma \phi \\
-A_\parallel( R,Z,\varphi,t) &:= \sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
+\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \gamma_{\phi} \\
+A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
 \end{align*}
 We choose circular flux surfaces of the form
 \begin{align*}
@@ -752,7 +1070,7 @@ with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times
 We then symbolically compute (with the help of Mathematica) source terms that we insert to the right hand side of
 the corresponding equation in code (\texttt{manufactured.h}) and simulate from $t=0...10^{-3}$.
 By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
-the convergence of the dG discretized terms from our parallel derivative
+the convergence of the DG discretized terms from our parallel derivative
 we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
 
 Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
@@ -760,108 +1078,211 @@ Unfortunately, we were unable to find a closed solution for the energy integrals
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
-\begin{longtable}{p{3cm}l>{\RaggedRight}p{7cm}}
+\begin{longtable}{p{3cm}l>{\RaggedRight}p{8cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
     coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
+Advection terms & direct DG & DG approximation with centered flux of derivatives \\
+Elliptic terms & local DG & The local DG approximation with centered flux \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017} \\
-Curvature terms & direct dG & regular dG approximation of derivatives \\
-time & Strang Splitting & $2$nd order\\
-\qquad explicit & Bogacki-Shampine embedded & $3$rd order explicit\\
-\qquad implicit & Trapezoidal & perp. Diffusion and Resistive term. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
+Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\nabla_\parallel N$ and $\nabla_\parallel \phi$ in the velocity equation use a forward difference, while the term $\nabla_\parallel U$ in the
+density equation uses backward difference. This is to avoid a too wide stencil for the diverence of the current and increases stability for low resistivity. \\
+time & Multistep "Karniadakis" & \\
+\qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
+\qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
 \bottomrule
 \end{longtable}
-\section{Input/Output}
-The programs \texttt{feltor\_hpc.cu} and \texttt{feltor.cu} expect two input
-files. One is for the physical and numerical parameters of the model equations
-and the other one describes the Solov'ev equilibrium. Results are written into
-an output file in the first program and plotted on screen with glfw in the
-second.
 
-\subsection{Input file structure}
+\section{Usage}
+
+Compilation:\\
+\texttt{make feltor device=\{gpu,omp\}} Compile \texttt{feltor.cu} (only shared memory)\\
+\texttt{make feltor\_hpc device=\{gpu,omp\}} Compile \texttt{feltor\_hpc.cu} for shared memory system. Needs {\it serial netcdf} \\
+\texttt{make feltor\_mpi device=\{gpu,omp,skl,knl\}} Compile \texttt{feltor\_hpc.cu} for distributed memory systems. Also needs {\it serial netcdf}\\
+Usage:\\
+\texttt{./feltor\_hpc input.json geometry.json output.nc [initial.nc]} \\
+\texttt{./feltor\_mpi input.json geometry.json output.nc [initial.nc]} \\
+\texttt{./feltor input.json geometry.json } \\
+
+The programs \texttt{feltor\_hpc.cu} and \texttt{feltor.cu} expect two input
+files \texttt{input.json} and \texttt{geometry.json}, described in Sections~\ref{sec:input_file} and \ref{sec:geometry_file}.
+The first is for the physical and numerical parameters of the model equations
+while the latter describes the Solov'ev equilibrium.
+ The program \texttt{feltor.cu} plots the results directly to the screen using \texttt{glfw3}.
+The program \texttt{feltor\_hpc.cu} writes results into
+the output file \texttt{output.nc}.
+ The output file is described in Section~\ref{sec:output_file}.
+ The optional file \texttt{initial.nc} can be used to initialize a simulation from an existing file.
+ This behavior is described in Section~\ref{sec:restart_file}.
+ Both programs write unstructured human readable performance information of the running simulation
+ to \texttt{std::cout}.
+
+
+\subsection{Input file structure} \label{sec:input_file}
 Input file format: json
 
 %%This is a booktabs table
 \begin{longtable}{llll>{\RaggedRight}p{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &Number of Gaussian nodes in R and Z \\
-Nx     & integer &52& - &Number of grid points in R \\
-Ny     & integer &52& - &Number of grid points in Z \\
-Nz     & integer &16& - &Number of grid points in $\varphi$ \\
-dt     & integer &1e-2& - &initial time stepsize in units of $c_s/\rho_s$ \\
-compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing points in x and y: output contains n*Nx/c[0] points in x,
-    (has to divde Nx evenly), and n*Ny/c[1] points in y,
-    (has to divde Ny evenly)\\
-inner\_loop & integer & 2  & 1 & Number of time steps between each energy output \\
-itstp       & integer & 2  & - & Number of energy outputs for each fields outputs \\
-maxout      & integer & 10 & - & Total Number of fields outputs excluding first (The total number of time steps is maxout$\cdot$itstp$\cdot$inner\_loop) \\
-eps\_time   & float & 1e-9  & - & Accuracy of solver for implicit part in time-stepper \\
-rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper \\
-eps\_pol    & float & 1e-5  & - &  Accuracy of residual of the inversion of polarisation and induction Eq. \\
-jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
-eps\_gamma  & float & 1e-6  & - & Accuracy of $\Gamma_1$  \\
+n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we practically always take 3)
+\\
+Nx     & integer &52& - &Number of grid points in R (increase if your simulations crash)
+\\
+Ny     & integer &52& - &Number of grid points in Z (increase if your simulations crash)
+\\
+Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt
+since parallel velocity dominates timestep)
+\\
+dt     & integer &1e-2& - & time stepsize in units of $c_s/\rho_s$ \\
+compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing
+points in x and y (pojecting the polynomials onto a coarser grid): output
+contains n*Nx/c[0] points in x, (has to divde Nx evenly), and n*Ny/c[1] points
+in y, (has to divde Ny evenly). 2 or 3 are reasonable values.
+\\
+inner\_loop & integer & 2  & 1 & Number of time steps between updates to the
+time integrated quantities. (Although the diagnostics is quite fast sometimes
+you need to amortize the time spent on it). Note that integrating selected
+quantities in time during the simulation is how we maintain the time-resolution
+in the file output (cf. \ref{sec:output_file}). Choose as low as you can get
+away with (between 1 and 10).
+\\
+itstp       & integer & 2  & - &{ \tt inner\_loop*itstp} is the number of
+timesteps between file outputs (2d and 3d quantities); Note that 1d and 0d
+quantities can only be computed post-simulation since we can't compute
+flux-integrals in parallel in MPI.
+\\
+maxout      & integer & 10 & - & Total Number of fields outputs excluding first
+(The total number of time steps is {\tt maxout$\cdot$itstp$\cdot$inner\_loop})
+If you want to let the simulation run for a certain time instead just choose
+this parameter very large and let the simulation hit the time-limit.
+\\
+eps\_time   & float & 1e-7  & - & Tolerance for solver for implicit part in
+time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$)
+\\
+rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep)
+\\
+eps\_pol    & float & 1e-6  & - &  Tolerance for residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ )
+\\
+jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms. (Don't touch unless you know what you're doing.
+\\
+eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$
+\\
 stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
-has to evenly divide both $N_x$ and $N_y$\\
-refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in DS in R- and Z-direction\\
-rk4eps     & float & 1e-5 & 1e-5 & Accuracy of fieldline integrator in DS\\
+has to evenly divide both $N_x$ and $N_y$
+\\
+refineDS     & integer[2] & [10,10] & [10,10] & refinement factor in FCI approach in R- and Z-direction.
+We use [1,1], higher values take more time.
+\\
+rk4eps     & float & 1e-6 & 1e-6 & Accuracy of fieldline integrator in FCI. The default is reasonable.
+\\
 mu         & float & -0.000272121& - & $\mu_e =-m_e/m_i$.
-    One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
-tau        & float &1      & - & $\tau = T_i/T_e$  \\
-beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass), If $0$, then the model is electrostatic \\
-nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$ \\
-perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto -\nu_\perp\Delta_\perp^2$\\
-nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
-resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}\\
-curvmode  & string & "low beta"  & "toroidal"& curvature mode ("low beta", "true" no approximation, "toroidal": toroidal field approx) \\
-symmetric & bool & false & false & If true, initialize all quantities symmetric in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used to construct the parallel derivatives and then overwritten to $N_z\equiv 1$. \\
+    One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$
+\\
+tau        & float &1      & - & $\tau = T_i/T_e$
+\\
+beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot
+10^{-3}$ (Compass), If $0$, then the model is electrostatic
+\\
+nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$, increase
+this or the resolution if you see vertical or horizontal oscillations (likely
+from the advection terms) in your simulation box, decrease if it dampens all
+instabilities
+\\
+perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto
+\nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto
+-\nu_\perp\Delta_\perp^2$
+\\
+nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$
+(dimensional analysis reveals there can be a factor $(R_0/\rho_s)^2$ between
+$\nu_\perp $n and $\nu_\parallel$ for $\nu_\parallel$ to become relevant for
+the dynamics)
+\\
+resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}
+\\
+curvmode  & string & "low beta"  & "toroidal" &
+curvature mode (
+"low beta",
+"true": no approximation - requires significantly more resolution in Nz,
+"toroidal": toroidal field approx - elliptic equation does not need
+communication in z,
+"low beta negative": reversed sign of low beta,
+"toroidal negative": reversed sign of toroidal
+)
+\\
+symmetric & bool & false & false & If true, initialize all quantities symmetric
+in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
+to construct the parallel derivatives and then overwritten to $N_z\equiv 1$.
+\\
 bc & dict & & & Dictionary of boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
-\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y for $n_e$ and $N_i$\\
-\qquad velocity  & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $u_e$ and $U_i$\\
-\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for $\phi$ and $\psi$\\
-    boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon^{R-}, \varepsilon^{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
-    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon^{Z-}, \varepsilon^{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box} \\
+\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y
+for $n_e$ and $N_i$, DIR (density 1 on boundary) means both convective and
+    diffusive outflow while NEU (gradient 0) means no outflow by diffusion
+\\
+\qquad velocity  & char[2] & [NEU,NEU] & - & boundary conditions in x and y for
+$u_e$ and $U_i$ and $A_\parallel$, DIR is in general not very stable, NEU works
+better\\
+\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for
+$\phi$ and $\psi$, DIR means that the $v_{E,\perp}=0$ on the boundary (i.e. no
+outflow by \ExB drift), NEU can can have a detrimental effect on timestep \\
+    boxscaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
+    boxscaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box}
+\\
 initne    & string & "turbulence"     & "blob"  & initial condition for the
 perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial_zonal_flow}),
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
-    "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})\\
-initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
-electric potential, "balance": $n_e=N_i$, ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
+    "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})
+    "turbulence on gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
+    See the file {\tt init.h} to add your own custom condition.
+\\
+initphi   & string & "zero"  & "balance" & (ignored if $\tau_i = 0$, then $\phi=0$) initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
+electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity
 \\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
-sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
-posX       & float &0.3    & - & blob R-position in units of $a$\\
-posY       & float &0.0    & - & blob Z-position in units of $a$ \\
-sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
-k\_psi     & float &0    & - & zonal mode wave number  \\
-nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
-alpha       & float & 0.02 & - & Width $\alpha$ of Heaviside profile in Eq.~\eqref{eq:heaviside_profile} and \eqref{eq:modified_psi} \\
-source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source} \\
-rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source}  \\
+sigma      & float &2      & - & Gaussian variance in units of $\rho_s$ \\
+posX       & float &0.3    & - & Gaussian R-position in units of $a$\\
+posY       & float &0.0    & - & Gaussian Z-position in units of $a$ \\
+sigma\_z    & float &0.25   & - & toroidal variance in units of $R_0$ of the fieldline-following initialization \\
+k\_psi     & float &0    & - & zonal mode wave number (only for "zonal" initial condition)  \\
+nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in
+Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}
+\\
+alpha       & float & 0.2 & - & Width $\alpha$ of the Heaviside
+Eq.~\eqref{eq:approx_heaviside} in the density and source profiles (should be
+small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes)
+\\
+source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}
+\\
+source\_type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
+"influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx},
+"torpex": Torpex inspired source profile Eq.~\eqref{eq:electron_source_torpex},
+    See the file {\tt init.h} to add your own custom source.
+\\
+rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 %damping     & float & 0    & 0   & Friction coefficient $\omega_d$ in Eq.~\eqref{eq:velocity_source} \\
-rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0$ in Eq.~\eqref{eq:modified_psi}  \\
-%restart    & bool & false & false & If true, all input and geometry parameters except maxout,
-%    itstp and inner\_loop are ignored. Instead, the parameters and all fields are initialized from output.nc
-%    The actual output is then appended to output.nc This effectively continues an existing simulation.
+alpha\_mag   & float & 0.05 & - & Width $\alpha$ of the Heaviside in the modified $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the magnetic field and rho\_damping is ignored.\\
+rho\_damping& float & 0.2  & 1.2 & Modification region boundary $\psi_0 = (1-\rho_d)\psi_{p,\min}$ in Eq.~\eqref{eq:modified_psip}.
+\\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
 the value is not found,
 the program exits with an error message.
-\subsection{Geometry file structure}
+\subsection{Geometry file structure} \label{sec:geometry_file}
 File format: json
 
 %%This is a booktabs table
 \begin{longtable}{llll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-    A      & float & 1 &  - & Solovev parameter in Eq.~\eqref{eq:solovev} \\
-    C      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev}  \\
-    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} \\
-    elongation    & float & 1 & - & Elongation $e$ \\
-    triangularity & float & 0 & - & Triangularity $\delta$ \\
+    A      & float & 0 &  0 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
+    c      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev} \\
+    PP     & float & 1 &  1 & Prefactor $\mathcal P_\psi$ for $\psi_p$ in Eq.~\eqref{eq:solovev} \\
+    PI     & float & 1 &  1 & Prefactor $\mathcal P_I$ for $I$ in Eq.~\eqref{eq:solovev} \\
+    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
+    elongation    & float & 1 & - & Elongation $e$, used in determining the box size Eq.~\eqref{eq:box} and the initial guess for the location of the X-point $Z_X = -1.1 ea$ \\
+    triangularity & float & 0 & - & Triangularity $\delta$, used in the initial guess for the location of the X-point $R_X = R_0-1.1\delta a$ \\
     inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ \\
 \bottomrule
 \end{longtable}
@@ -869,96 +1290,188 @@ The default value is taken if the value name is not found in the input file. If 
 the value is not found,
 the program exits with an error message.
 
-\subsection{Output}
-Output file format: netcdf-4/hdf5
+\subsection{Output} \label{sec:output_file}
+Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
+We follow CF Conventions CF-1.7
+\url{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}
+and write according attributes into the file.
+The command \texttt{ncdump -h output.nc} gives a full list of what a file contains.
+Here, we list the content without attributes
+since the internal netcdf information does not display equations.
 %
 %Name | Type | Dimensionality | Description
 %---|---|---|---|
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
-geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
-x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
-y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-z                & Dataset & 1 & $\varphi$-coordinate (computational space, size: $N_z$) \\
-x\_XYZ           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
-y\_XYZ           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
-z\_XYZ           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, no comments) \\
+geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
+x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
+xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
+yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
+zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
-Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ \\
-Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta(\rho_{s} - \rho(R,Z)) H(Z-Z_X)$\\
-%Damping          & Dataset & 3 (z,y,x) & Damping profile $\Theta(\rho(R,Z) - \rho_{d} )$\\
+Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ used in the forcing source \\
+Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho(R,Z) - \rho_s) H(Z-Z_X)$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
-time             & Dataset & 1 & time at which fields are written (size: maxout$+1$ \\
 electrons        & Dataset & 4 (time, z, y, x) & electron density $n_e$ \\
 ions             & Dataset & 4 (time, z, y, x) & ion density $N_i$ \\
 Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
 Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
-energy\_time     & Dataset & 1 & timesteps at which 1d variables are written (size: itstp$\cdot$maxout$+1$ \\
-mass      & Dataset & 1 (energy\_time) & total mass integral Eq.~\eqref{eq:mass_conservation} \\
-diff      & Dataset & 1 (energy\_time) & total mass integral diffusion Eq.~\eqref{eq:mass_conservation} \\
-energy    & Dataset & 1 (energy\_time) & total energy integral Eq.~\eqref{eq:energy_conservation} \\
-ediff     & Dataset & 1 (energy\_time) & total energy integral diffusion Eq.~\eqref{eq:energy_conservation} \\
-Se        & Dataset & 1 (energy\_time) & total electron entropy integral Eq.~\eqref{eq:energy_conservation} \\
-Si        & Dataset & 1 (energy\_time) & total ion entropy integral Eq.~\eqref{eq:energy_conservation} \\
-Upare        & Dataset & 1 (energy\_time) & total electron parallel energy integral Eq.~\eqref{eq:energy_conservation} \\
-Upari        & Dataset & 1 (energy\_time) & total ion parallel energy integral Eq.~\eqref{eq:energy_conservation} \\
-Uperp     & Dataset & 1 (energy\_time) & total perpendicular energy integral Eq.~\eqref{eq:energy_conservation} \\
-Apar     & Dataset & 1 (energy\_time) & total magnetic energy integral Eq.~\eqref{eq:energy_conservation} \\
-dEdt      & Dataset & 1 (energy\_time) & change of energy per time  \\
-accuracy  & Dataset & 1 (energy\_time) & accuracy of energy theorem in time  \\
-aligned   & Dataset & 1 (energy\_time) & Alignment parameter $\int\dV \ln n_e\Delta_\parallel n_e$\\
+X\_2d            & Dataset & 3 (time,y,x) & Selected plane $X(\varphi=0)$ \\
+X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\langle X
+    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
+Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs) selected plane
+$\int_{t_0}^{t_1}\d t Y(\varphi=0) $
+where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
+Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs) toroidal average (Eq.~\eqref{eq:phi_average})
+$\int_{t_0}^{t_1}\d t \langle Y \rangle_\varphi$
+where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
 \bottomrule
 \end{longtable}
+where the time integrals are computed with the help of Simpson's rule
+and X $\in$
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation}\\
+\midrule
+    electrons &$n_e$ &
+    ions &$N_i$ \\
+    Ue &$u_e$ &
+    Ui &$U_i$ \\
+    potential &$\phi$ &
+    psi &$\psi$ \\
+    induction &$A_\parallel$ &
+    vorticity &$-\Delta_\perp\phi$ \\
+    dssue & $\nabla_\parallel^2 u_e$&
+    dppue & $\partial_\varphi^2 u_e$\\
+    dpue2 & $(\partial_\varphi u_e)^2$&
+    apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
+    neue &$n_e u_e$ &
+    niui &$N_i U_i$ \\
+    neuebphi &$n_eu_eb_\varphi$ &
+    niuibphi &$N_iU_ib_\varphi$ \\
+    lperpinv &$L_\perp^{-1} := |\vec\nabla_\perp n_e|/n_e$ &
+    perpaligned &$(\vec\nabla_\perp n_e)^2/n_e$ \\
+    lparallelinv &$L_\parallel^{-1} := |\nabla_\parallel n_e|/n_e$ &
+    aligned &$ (\nabla_\parallel n_e)^2/n_e$ \\
+    ne2 & $n_e^2$ &
+    phi2 & $\phi^2$ \\
+    nephi & $n_e\phi$ &
+    sne & $S_{n_e}$ \\
+    see & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_e^2) S_{n_e} $ &
+    sei & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_i^2) S_{N_i} $ \\
+    nelnne &$ z_e\tau_e n_e \ln n_e$ &
+    nilnni &$ z_i\tau_i N_i \ln N_i$ \\
+    aperp2 &$ (\nabla_\perp A_\parallel)^2/2/\beta$ &
+    ue2   &$z_i\mu_i N_i u_E^2 /2$ \\
+    neue2 &$ z_e\mu_e n_e u_e^2/2$ &
+    niui2 &$ z_i\mu_i N_i U_i^2/2$ \\
+    oexbe &$\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2$ &
+    oexbi &$\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2$ \\
+    odiae &$\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e$ &
+    odiai &$\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i$ \\
+\bottomrule
+\end{longtable}
+and the time-averaged quantities Y $\in$
+\begin{longtable}{ll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
+\midrule
+    jsne &$ n_e (\vec v_E + \vec v_K + \vec v_C )\cdot\nabla \psi_p$ \\
+    jsneA &$ n_e u_e \vec{\tilde b}_\perp  \cdot\nabla \psi_p$ \\
+    lneperp &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ \\
+    lneparallel &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
+    resistivity &-$\eta_\parallel n_e^2 (U_i-u_e)^2$ \\
+    jsee &$z_e(\tau_e \ln n_e + \mu_e u_e^2/2 + \phi)n_e(\vec v_E + \vec v_C + \vec v_K)\cdot\nabla \psi_p
+        + z_e \tau_e n_e u_e^2 \vec K_{\nabla\times\bhat}\cdot\nabla \psi_p$ \\
+    jsei &$z_i(\tau_i \ln N_i + \mu_i U_i^2/2 + \psi_i)N_i(\vec v_E^i + \vec v_C + \vec v_K)\cdot\nabla \psi_p
+        + z_i \tau_i N_i U_i^2 \vec K_{\nabla\times\bhat}\cdot\nabla \psi_p$ \\
+    jseea &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec {\tilde b}_\perp\cdot\nabla \psi_p
+        + z_e \tau_e n_e u_e \vec{\tilde b}_\perp \cdot \nabla \psi_p $ \\
+    jseia &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec {\tilde b}_\perp\cdot\nabla \psi_p
+        + z_i \tau_i N_i U_i \vec{\tilde b}_\perp \cdot \nabla \psi_p $ \\
+    leeperp &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\perp \Delta_\perp n_e + z_e\mu_e n_e u_e \nu_\perp \Delta_\perp u_e$ \\
+    leiperp &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_i \nu_\perp \Delta_\perp U_i$ \\
+    leeparallel &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_e \nu_\parallel \Delta_\parallel u_e$ \\
+    leiparallel &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_i \nu_\parallel \Delta_\parallel U_i$ \\
+    jsoexbi &$-(\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i)  \vec u_E\cdot\nabla \psi_p$ \\
+    jsoexbe &$-(\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e) \vec u_E\cdot\nabla \psi_p$ \\
+    jsoapar &$ \nabla\psi_p\cdot\nabla A_\parallel \bhat\times\nabla A_\parallel\cdot\nabla \psi_p/B/\beta$ \\
+    socurve &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
+    socurvi &$z_i\tau_i N_i \mathcal K(\psi_p)$ \\
+    socurvkappae &$z_e\mu_e n_eu_e^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
+    socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
+\bottomrule
+\end{longtable}
+Even though this might look like a lot of things to compute the actual time spent on diagnostics is negligible if {\tt inner\_loop} parameter is greater than 1.
+\subsection{Restart file} \label{sec:restart_file}
+The program \texttt{feltor\_hpc.cu} has the possibility to initialize time and the fields with
+the results of a previous simulation. In particular, this feature is motivated by chain jobs on a cluster
+(see e.g. the --dependency option in SLURM).
+This behaviour is enabled by giving an additional file \texttt{initial.nc}
+to the command line. In this case the \texttt{initne} and \texttt{initphi} parameters of the input
+file are ignored. Instead, the fields \texttt{electrons, ions, Ue, Ui, induction} at the latest timestep
+are read from the given file to initialize the simulation.
+Note that to enable a loss-less continuation of the simulation we output special restart fields into the output file that in contrast to the other fields
+are not compressed.
+Apart from that the behaviour of the program is unchanged i.e. the magnetic field, profiles, resolutions, etc.
+are all taken from the regular input files. This means that the user must take care that these are consistent
+with the paramters in the existing \texttt{initial.nc} file. Also note that we try to discourage
+appending new results to an exisiting file directly,
+because if for some reason the cluster crashes and the file is corrupted
+the whole simulation is lost. It is safer to just merge files afterwards with for example\\
+\texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
+\subsection{Program and files}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
-This program reads in the output file above and writes into another output file.
+This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
+Compilation\\
+\texttt{make feltordiag} \\
+Usage \\
+\texttt{./feltordiag input.nc output.nc} \\
 
-\begin{align}
- \vec j_e\cdot \vec \nabla\psi_p =& n_e\left( \vec v_E + \vec v_C + \vec v_{\nabla
- B} + u_e \left(\bhat + \tilde{\vec b}\right)\right) \cdot \vec
- \nabla\psi_p \nonumber\\
- =& \beta n_eu_e\left( A_\parallel \mathcal
- K_\kappa(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \nonumber\\
-  &+ n_e\frac{1}{B}[\phi, \psi_p]_\perp + \left(\tau_e + \mu_e u_e^2\right)
-   n_e\mathcal K_\kappa(\psi_p) + \tau_e n_e \mathcal K_{\nabla B}(\psi_p) \nonumber\\
-   f_e :=& \frac{\vec j_e\cdot\vec \nabla \psi_p}{|\vec \nabla\psi_p|} \quad
-   L_\perp^{-1} := \frac{|\vec\nabla_\perp n_e|}{n_e}\quad
-   L_\parallel^{-1} := \frac{|\nabla_\parallel n_e|}{n_e}
-\end{align}
-
-Output file format: netcdf-4/hdf5
+Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
 
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &     text attribute & 1 & verbose input file as a string (valid JSON) \\
-geomfile   &     text attribute & 1 & verbose geometry input file as a string (valid JSON) \\
-x                & Dataset & 1 & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
-y                & Dataset & 1 & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-psip1d           & Dataset & 1 & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
-X\_avg           & Dataset & 3 (time,y,x) & Toroidal average $\langle X
-    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
-X\_fsa\_mp       & Dataset & 3 (time,y,x) & Fluctuation level on midplane ($\varphi\equiv \pi$) $\delta X := X(R,Z,\pi) - \langle X\rangle_{\psi_{p}}$ \\
-X\_fsa           & Dataset & 2 (time, psip1d) & Flux surface average $\langle X\rangle_\psi$ Eq.~\eqref{eq:fsa} \\
-aligned          & Dataset & 1 (time) & $\int \dV (\nabla_\parallel n_e)^2 /n_e$ \\
-perp\_aligned    & Dataset & 1 (time) & $\int \dV (\vec\nabla_\perp n_e)^2 /n_e$ \\
-correlationNPhi  & Dataset & 1 (time) & $\left( \int\dV e^\phi n_e \right)/ ||e^\phi||||n_e||$\\
-total\_flux      & Dataset & 1 (time) & $\int \dV f_e$\\
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, no comments) \\
+geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
+x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, compressed size: $N_z$)\\
+psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
+xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
+yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
+zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
+psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
+rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
+psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\nabla\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
+psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
+dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
+Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \langle Z\rangle_{\psi_{p}}$ \\
+Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle Z\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
+Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle Z\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
+Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \langle Z\rangle_{\psi_p}$ \\
+Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the fsa evaluated $\langle j_v\rangle_{\psi_p}(0)$ \\
+Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average, unless Z is a current, then it is the square derivative of the flux surface average \\
 \bottomrule
 \end{longtable}
-X $\in$ \{ electrons, ions, Ue, Ui, potential,
-induction, vorticity, fluxe, Lperpinv, Lparallelinv\} corresponding to \{
-    $n_e$, $N_i$, $u_e$, $U_i$, $\phi$, $A_\parallel$, $-\Delta_\perp \phi$,
-    $f_e$, $L_\perp^{-1}$, $L_\parallel^{-1}$\}
-
-
+where Z $\in$ \{X, Y\_tt\}
+Note that feltoridag converts all $jsX$ quantities into $jvX$
+by multiplying $\d v/\d \psi_p$
+in the sense that $\vec j\cdot \nabla v  = \vec j \cdot \nabla \psi_p \d v/\d\psi_p$.
 
 
 

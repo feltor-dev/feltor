@@ -5,7 +5,6 @@
 {
 	"A" : 0,
 	"R_0" : 91.884233908188605,
-	"alpha" : 0.02,
 	"c" :
 	[
 		0.58136855188608583,
@@ -24,11 +23,5 @@
 	"elongation" : 1.7,
 	"equilibrium" : "solovev",
 	"inverseaspectratio" : 0.16666666666666669,
-	"psip_max" : 0,
-	"psip_max_cut" : 10000000000,
-	"psip_max_lim" : 10000000000,
-	"psip_min" : -1.1,
-	"qampl" : 1,
-	"rk4eps" : 0.01,
 	"triangularity" : 0.33000000000000002
 }

@@ -893,12 +893,14 @@ EXCLUDE_SYMBOLS        = hide_*
 # that contain example code fragments that are included (see the \include
 # command).
 
-EXAMPLE_PATH           = cg2d_t.cu \
+EXAMPLE_PATH           = andersonacc_t.cu \
+                         cg2d_t.cu \
                          arakawa_t.cu \
                          poisson_t.cu \
                          elliptic_b.cu \
                          elliptic2d_b.cu \
                          runge_kutta_t.cu \
+                         simpsons_t.cu \
                          adaptive_t.cu \
                          multistep_t.cu \
                          helmholtzg2_b.cu \

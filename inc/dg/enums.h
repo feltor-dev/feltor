@@ -75,7 +75,7 @@ static inline bc str2bc( std::string s)
         return NEU_DIR;
     if( s=="DIR_NEU"||s=="dir_neu" )
         return DIR_NEU;
-    throw std::runtime_error( "No matching boundary condition!");
+    throw std::runtime_error( "Boundary condition '"+s+"' not recognized!");
 }
 
 ///@brief Switch between normalisations
@@ -89,6 +89,12 @@ enum direction{
     forward, //!< forward derivative
     backward, //!< backward derivative
     centered //!< centered derivative
+};
+
+///@brief Space of DG coefficients
+enum space{
+    lspace, //!< DG Polynomial space
+    xspace //!< Configuration space
 };
 
 ///@brief 2d coordinates

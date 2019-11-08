@@ -60,16 +60,6 @@ inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, PointerOrVal
     subroutine_kernel<Subroutine, PointerOrValue, PointerOrValues...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
 }
 
-template<class T, class PointerOrValue, class BinaryOp>
- __global__ T reduction_kernel( int size, T init, PointerOrValue x, BinaryOp op)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_is/grid_size is
-    for( int i = thread_id; i<size; i += grid_size)
-
-}
-
 template<class T, class Pointer, class BinaryOp>
 inline T doReduce_dispatch( CudaTag, int size, Pointer x, T init, BinaryOp op)
 {

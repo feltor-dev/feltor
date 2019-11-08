@@ -27,6 +27,7 @@
 #include "refined_elliptic.h"
 #include "arakawa.h"
 #include "poisson.h"
+#include "simpsons.h"
 #include "topology/average.h"
 #ifdef MPI_VERSION
 #include "topology/average_mpi.h"

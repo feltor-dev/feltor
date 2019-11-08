@@ -233,6 +233,7 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
 }
 
 
+//MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
 
 
 /*!
@@ -329,6 +330,10 @@ struct ARKStep
         m_kE.assign(m_rkE.num_stages(), m_rhs);
         m_kI.assign(m_rkI.num_stages(), m_rhs);
     }
+    ///Write access to the internal solver for the implicit part
+    SolverType& solver() { return m_solver;}
+    ///Read access to the internal solver for the implicit part
+    const SolverType& solver() const { return m_solver;}
 
     /**
     * @brief Advance one step
@@ -755,6 +760,7 @@ You can provide your own coefficients or use one of our predefined methods:
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
+* @copydoc hide_SolverType
 */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct ImplicitRungeKutta

@@ -116,11 +116,11 @@ int main( int argc, char* argv[])
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
-    err = file::define_dimension(  ncid, "i", dim1d, g1d);
+    err = file::define_dimension(  ncid, dim1d, g1d, "i");
     int coordsID[2], onesID, defID, volID, divBID;
     int coord1D[5];
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 3, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 3, dim3d, &coordsID[1]);
     err = nc_def_var( ncid, "x_left", NC_DOUBLE, 1, dim1d, &coord1D[0]);
     err = nc_def_var( ncid, "y_left", NC_DOUBLE, 1, dim1d, &coord1D[1]);
     err = nc_def_var( ncid, "x_right", NC_DOUBLE, 1, dim1d, &coord1D[2]);

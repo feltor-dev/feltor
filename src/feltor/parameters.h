@@ -6,6 +6,7 @@
 #include "json/json.h"
 
 namespace feltor{
+/// If you need more parameters, just go ahead and extend the list
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
@@ -27,7 +28,7 @@ struct Parameters
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
-    double alpha, beta;
+    double alpha_mag, alpha, beta;
     double rho_source, rho_damping;
 
     double nu_perp, nu_parallel;
@@ -46,6 +47,7 @@ struct Parameters
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
+    std::string source_type;
     bool symmetric;
     Parameters() = default;
     Parameters( const Json::Value& js) {
@@ -70,7 +72,7 @@ struct Parameters
         stages      = js.get( "stages", 3).asUInt();
         mx          = js["refineDS"].get( 0u, 10).asUInt();
         my          = js["refineDS"].get( 1u, 10).asUInt();
-        rk4eps      = js.get( "rk4eps", 1e-5).asDouble();
+        rk4eps      = js.get( "rk4eps", 1e-6).asDouble();
 
         mu[0]       = js["mu"].asDouble();
         mu[1]       = +1.;
@@ -91,8 +93,10 @@ struct Parameters
 
         nprofamp  = js["nprofileamp"].asDouble();
         omega_source  = js.get("source", 0.).asDouble();
+        source_type  = js.get("source_type", "profile").asString();
         omega_damping = js.get("damping", 0.).asDouble();
-        alpha        = js.get("alpha", 0.02).asDouble();
+        alpha_mag    = js.get("alpha_mag", 0.05).asDouble();
+        alpha        = js.get("alpha", 0.2).asDouble();
         rho_source   = js.get("rho_source", 0.2).asDouble();
         rho_damping  = js.get("rho_damping", 1.2).asDouble();
 
@@ -141,6 +145,7 @@ struct Parameters
             <<"     rho_source:                   "<<rho_source<<"\n"
             <<"     omega_damping:                "<<omega_damping<<"\n"
             <<"     rho_damping:                  "<<rho_damping<<"\n"
+            <<"     alpha_mag:                    "<<alpha_mag<<"\n"
             <<"     alpha:                        "<<alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"

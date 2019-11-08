@@ -6,9 +6,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <vector>
-#include <thrust/random/linear_congruential_engine.h>
-#include <thrust/random/uniform_real_distribution.h>
-#include <thrust/random/normal_distribution.h>
+#include <random>
 #include "blas1.h"
 #include "topology/grid.h"
 #include "topology/evaluation.h"
@@ -71,7 +69,7 @@ DG_DEVICE
 };
 
 /**
- * @brief Functor returning a gaussian
+ * @brief Functor returning a 2d Gaussian
  * \f[
    f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
    \f]
@@ -79,22 +77,21 @@ DG_DEVICE
 struct Gaussian
 {
     /**
-     * @brief Functor returning a gaussian
+     * @brief Functor returning a Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
      * @param sigma_x x - variance
      * @param sigma_y y - variance
      * @param amp Amplitude
-     * @param kz wavenumber in z direction
      */
-    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp, double kz = 1.)
-        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp), kz_(kz){}
+    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
+        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
     /**
-     * @brief Return the value of the gaussian
+     * @brief Return the value of the Gaussian
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
+       f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
@@ -109,9 +106,9 @@ struct Gaussian
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian modulated by a cosine
+     * @brief Return the value of the Gaussian
      * \f[
-       f(x,y,z) = A\cos(kz)e^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
+       f(x,y,z) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
@@ -122,12 +119,10 @@ struct Gaussian
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-        return  amplitude*cos(kz_*z)*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  this->operator()(x,y);
     }
   private:
-    double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
+    double  x00, y00, sigma_x, sigma_y, amplitude;
 
 };
 
@@ -208,7 +203,7 @@ struct Cauchy
 };
 
 /**
-* @brief The 3d gaussian
+* @brief The 3d Gaussian
 * \f[
 f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)}
 \f]
@@ -216,7 +211,7 @@ f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y
 struct Gaussian3d
 {
     /**
-     * @brief Functor returning a gaussian
+     * @brief Functor returning a Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
@@ -229,7 +224,7 @@ struct Gaussian3d
     Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
         : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
     /**
-     * @brief Return a 2d gaussian
+     * @brief Return a 2d Gaussian
      *
      * \f[
        f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
@@ -247,7 +242,7 @@ struct Gaussian3d
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian
+     * @brief Return the value of the Gaussian
      *
      * \f[
        f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}+\frac{(z-z_0)^2}{2\sigma_z^2})}
@@ -261,16 +256,10 @@ struct Gaussian3d
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-//         if (z== z00)
-//         {
-            return  amplitude*
-                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                           (z-z00)*(z-z00)/2./sigma_z/sigma_z +
-                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
-//         }
-//         else {
-//         return 0.;
-//         }
+        return  amplitude*
+                exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                       (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                       (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
   private:
     double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
@@ -712,6 +701,7 @@ struct Iris
 {
     Iris( double psi_min, double psi_max ):
         m_psimin(psi_min), m_psimax(psi_max) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > m_psimax) return 0.;
@@ -732,6 +722,7 @@ struct Pupil
 {
     Pupil( double psimax):
         psimax_(psimax) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > psimax_) return 0.;
@@ -751,6 +742,7 @@ struct PsiPupil
 {
     PsiPupil(double psimax):
         psimax_(psimax){ }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > psimax_) return psimax_;
@@ -765,6 +757,7 @@ struct PsiPupil
         0  \text{ if } x < x_b \\
         1  \text{ else}
      \end{cases}\f]
+  @note the 1 is inclusive i.e if x==x_b the functor always returns 1
  */
 struct Heaviside
 {
@@ -773,12 +766,14 @@ struct Heaviside
      * @brief Construct with xb and sign
      *
      * @param xb boundary value
-     * @param sign either +1 or -1, If -1, \c x<x_b is replaced with \c x>x_b
-     * thus approximating H(xb-x) if H(x-xb) is the regular Heaviside function
+     * @param sign either +1 or -1, If -1, we mirror the Heaviside at
+     *  the \c x=x_b axis, i.e. we swap the < sign in the definition to >
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     Heaviside( double xb, int sign = +1):
-        m_xb(xb){ }
+        m_xb(xb), m_s(sign){ }
 
+    DG_DEVICE
     double operator()(double x)const
     {
         if( (x < m_xb && m_s == 1) || (x > m_xb && m_s == -1)) return 0.;
@@ -802,6 +797,7 @@ struct GaussianDamping
 {
     GaussianDamping( double psimax, double alpha):
         m_psimax(psimax), m_alpha(alpha) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > m_psimax + 4.*m_alpha) return 0.;
@@ -824,6 +820,7 @@ struct TanhProfX {
      * @param sign sign of the Tanh, defines the damping direction
      * @param bgamp background amplitude \c B
      * @param profamp profile amplitude \c A
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     TanhProfX(double xb, double width, int sign =1,double bgamp = 0.,
         double profamp = 1.) :
@@ -848,33 +845,34 @@ struct TanhProfX {
 /**
  * @brief An approximation to Heaviside using polynomials
      \f[ \begin{cases}
-     0 \text{ if } x < x_0-a \\
-        ((16 a^3 - 29 a^2 (x - x_0) + 20 a (x - x_0)^2 - 5 (x - x_0)^3) (a + x - 
-   x_0)^4)/(32 a^7) \text{ if } |x-x_0| < a \\
-        1  \text{ if } x > x_0 + a
+     0 \text{ if } x < x_b-a \\
+        ((16 a^3 - 29 a^2 (x - x_b) + 20 a (x - x_b)^2 - 5 (x - x_b)^3) (a + x -
+   x_b)^4)/(32 a^7) \text{ if } |x-x_b| < a \\
+        1  \text{ if } x > x_b + a
      \end{cases}\f]
 
-     This function is 3 times continuously differentiable, takes the value 0.5 at x0 and
-     has a transition width a on both sides of x0.
+     This function is 3 times continuously differentiable, takes the value 0.5 at xb and
+     has a transition width a on both sides of xb.
  */
 struct PolynomialHeaviside {
     /**
-     * @brief Construct with x0, width and sign
+     * @brief Construct with xb, width and sign
      *
-     * @param x0 boundary value
+     * @param xb boundary value
      * @param a transition width
-     * @param sign either +1 (original) or -1 (the function is mirrored at the \c x=x0 axis: f(2x0-x))
+     * @param sign either +1 (original Heaviside) or -1 (the function is mirrored at the \c x=xb axis: f(2xb-x))
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
-    PolynomialHeaviside(double x0, double a, int sign = +1) :
-        x0(x0), a(a), m_s(sign){}
+    PolynomialHeaviside(double xb, double a, int sign = +1) :
+        x0(xb), a(a), m_s(sign){}
     DG_DEVICE
     double operator() (double x)const
     {
-        if( m_s == -1) x = 2*x0-x; //mirror 
+        if( m_s == -1) x = 2*x0-x; //mirror
         if ( x < x0-a) return 0;
         if ( x > x0+a) return 1;
         return ((16.*a*a*a - 29.*a*a*(x - x0)
-               + 20.*a*(x - x0)*(x - x0) 
+               + 20.*a*(x - x0)*(x - x0)
                - 5.*(x - x0)*(x-x0)*(x-x0))
                *(a + x - x0)*(a + x - x0)
                *(a + x - x0)*(a + x - x0))/(32.*a*a*a * a*a*a*a);
@@ -887,30 +885,30 @@ struct PolynomialHeaviside {
 /**
  * @brief The integral of PolynomialHeaviside approximates xH(x)
      \f[ \begin{cases}
-     x_0 \text{ if } x < x_0-a \\
-     x_0 + ((35 a^3 - 47 a^2 (x - x0) + 25 a (x - x0)^2 - 5 (x - x0)^3) (a + x - x0)^5)/(256 a^7)
-        \text{ if } |x-x_0| < a \\
-        x  \text{ if } x > x_0 + a
+     x_b \text{ if } x < x_b-a \\
+     x_b + ((35 a^3 - 47 a^2 (x - x_b) + 25 a (x - x_b)^2 - 5 (x - x_b)^3) (a + x - x_b)^5)/(256 a^7)
+        \text{ if } |x-x_b| < a \\
+        x  \text{ if } x > x_b + a
      \end{cases}\f]
 
      This function is 4 times continuously differentiable,
-     has a transition width \c a on both sides of \c x0, where it transitions from the
-     constant \c x0 to the linear function \c x.
+     has a transition width \c a on both sides of \c xb, where it transitions from the
+     constant \c xb to the linear function \c x.
  */
 struct IPolynomialHeaviside {
     /**
-     * @brief Construct with x0, width and sign
+     * @brief Construct with xb, width and sign
      *
-     * @param x0 boundary value
+     * @param xb boundary value
      * @param a transition width
-     * @param sign either +1 (original) or -1 (the function is point mirrored at \c x=x0: 2*x0-f(2x0-x))
+     * @param sign either +1 (original) or -1 (the function is point mirrored at \c x=xb: 2*xb-f(2xb-x))
      */
-    IPolynomialHeaviside(double x0, double a, int sign = +1) :
-        x0(x0), a(a), m_s(sign){}
+    IPolynomialHeaviside(double xb, double a, int sign = +1) :
+        x0(xb), a(a), m_s(sign){}
     DG_DEVICE
     double operator() (double x)const
     {
-        if( m_s == -1) x = 2*x0-x; //mirror 
+        if( m_s == -1) x = 2*x0-x; //mirror
         double result;
         if ( x < x0-a) result =  x0;
         else if ( x > x0+a) result =  x;
@@ -931,27 +929,27 @@ struct IPolynomialHeaviside {
 /**
  * @brief The derivative of PolynomialHeaviside approximates delta(x)
      \f[ \begin{cases}
-     0 \text{ if } x < x_0-a || x > x_0+a \\
-     (35 (a + x - x0)^3 (a - x + x0)^3)/(32 a^7)
-        \text{ if } |x-x_0| < a 
+     0 \text{ if } x < x_b-a || x > x_b+a \\
+     (35 (a + x - x_b)^3 (a - x + x_b)^3)/(32 a^7)
+        \text{ if } |x-x_b| < a
      \end{cases}\f]
 
-     This function is 2 times continuously differentiable, is symmetric around \c x0
+     This function is 2 times continuously differentiable, is symmetric around \c xb
      and has a width \c a on both sides of \c x0.
      The integral over this function yields 1.
  */
 struct DPolynomialHeaviside {
     /**
-     * @brief Construct with x0, width and sign
+     * @brief Construct with xb, width and sign
      *
-     * @param x0 boundary value
+     * @param xb boundary value
      * @param a transition width
      * @param sign either +1 (original) or -1 (the function is mirrored at \c x=x0)
      * (since this function is symmetric this parameter is ignored, it's there to be
      * consistent with PolynomialHeaviside)
      */
-    DPolynomialHeaviside(double x0, double a, int sign = +1) :
-        x0(x0), a(a){}
+    DPolynomialHeaviside(double xb, double a, int sign = +1) :
+        x0(xb), a(a){}
     DG_DEVICE
     double operator() (double x)const
     {
@@ -1522,7 +1520,7 @@ struct Vortex
 };
 
 /**
-* @brief Makes a random bath in the RZ plane
+* @brief A random bath in the RZ plane
 *
 \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
 \f]
@@ -1568,9 +1566,9 @@ struct BathRZ{
         double N_kRh = N_kR_/2.;
         double N_kZh = N_kZ_/2.;
 
-        thrust::random::minstd_rand generator;
-        thrust::random::normal_distribution<double> ndistribution;
-        thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
+        std::minstd_rand generator;
+        std::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
+        std::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
         for (unsigned j=1;j<=N_kZ_;j++)
         {
             double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);

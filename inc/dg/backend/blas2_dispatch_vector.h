@@ -33,9 +33,9 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
         std::vector<int64_t> temp = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m[i], do_get_vector_element(y,i,get_tensor_category<Vector2>()));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
-        for( int k=exblas::IMIN; k<exblas::IMAX; k++)
+        for( int k=exblas::IMIN; k<=exblas::IMAX; k++)
             acc[k] += temp[k];
-        if( i%128 == 0)
+        if( (i+1)%128 == 0)
         {
             imin = exblas::IMIN, imax = exblas::IMAX;
             exblas::cpu::Normalize( &(acc[0]), imin, imax);
