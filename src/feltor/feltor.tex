@@ -1236,8 +1236,8 @@ perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial
     "turbulence on gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
     See the file {\tt init.h} to add your own custom condition.
 \\
-initphi   & string & "zero"  & "balance" & initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
-electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity (For $\tau_i =0 $ both are the same)
+initphi   & string & "zero"  & "balance" & (ignored if $\tau_i = 0$, then $\phi=0$) initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
+electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity
 \\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
 sigma      & float &2      & - & Gaussian variance in units of $\rho_s$ \\

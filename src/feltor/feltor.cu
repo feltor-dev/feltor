@@ -82,12 +82,23 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
-    y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+    try{
+        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+    }catch ( std::out_of_range& error){
+        std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
+        return -1;
+    }
     bool fixed_profile;
 
     HVec profile = dg::evaluate( dg::zero, grid);
-    HVec source_profile = feltor::source_profiles.at(p.source_type)(
+    HVec source_profile;
+    try{
+        source_profile = feltor::source_profiles.at(p.source_type)(
         fixed_profile, profile, grid, p, gp, mag);
+    }catch ( std::out_of_range& error){
+        std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
+        return -1;
+    }
 
     feltor.set_source( fixed_profile, dg::construct<DVec>(profile), p.omega_source, dg::construct<DVec>(source_profile));
 

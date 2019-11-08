@@ -75,7 +75,7 @@ static inline bc str2bc( std::string s)
         return NEU_DIR;
     if( s=="DIR_NEU"||s=="dir_neu" )
         return DIR_NEU;
-    throw std::runtime_error( "No matching boundary condition!");
+    throw std::runtime_error( "Boundary condition '"+s+"' not recognized!");
 }
 
 ///@brief Switch between normalisations

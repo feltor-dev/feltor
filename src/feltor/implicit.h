@@ -112,6 +112,8 @@ struct ImplicitVelocity
         m_p=p;
         m_lapM_perpU.construct( g, p.bcxU,p.bcyU,dg::PER,
             dg::normed, dg::centered);
+        if( !(p.perp_diff == "viscous" || p.perp_diff == "hyperviscous") )
+            throw dg::Error(dg::Message(_ping_)<<"Warning! perp_diff value '"<<p.perp_diff<<"' not recognized!! I do not know how to proceed! Exit now!");
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
         m_apar = m_temp;
         m_fields[0][0] = m_fields[0][1] = m_temp;

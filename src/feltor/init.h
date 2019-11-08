@@ -113,7 +113,7 @@ void init_ni(
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif
-    MPI_OUT std::cout << "initialize ni" << std::endl;
+    MPI_OUT std::cout << "initialize ni with "<<p.initphi << std::endl;
     feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
     double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
     MPI_OUT std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;

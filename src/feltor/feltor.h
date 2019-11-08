@@ -400,6 +400,8 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
         dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, -1), g),
             m_divCurvKappa);
     }
+    else
+        throw dg::Error(dg::Message(_ping_)<<"Warning! curvmode value '"<<p.curvmode<<"' not recognized!! I don't know what to do! I exit!\n");
     dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
         m_curv[0], m_curv[1], m_curv[2], g);
     dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
@@ -581,7 +583,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
                 MPI_Comm_rank( MPI_COMM_WORLD, &rank);
                 if(rank==0)
             #endif
-            std::cerr <<"WARNING: Unknown initial condition for phi!\n";
+            throw dg::Error(dg::Message(_ping_)<<"Warning! initphi value '"<<initphi<<"' not recognized. I have tau = "<<m_p.tau[1]<<" ! I don't know what to do! I exit!\n");
         }
     }
 }
