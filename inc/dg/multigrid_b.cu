@@ -2,6 +2,7 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
+#include "dg/file/nc_utilities.h"
 #include "backend/timer.h"
 
 #include "blas.h"
@@ -119,8 +120,99 @@ int main()
     err = sqrt( err/norm);
     std::cout << " Error of Multigrid iterations "<<err<<"\n";
     //should converge to ~2e-7
+    //////////////////////////////setup and write netcdf//////////////////
+    int ncid;
+    file::NC_Error_Handle err;
+    err = nc_create( "multigrid.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    std::vector<int> dim2d(2*stages);
+    for( unsigned u=0; u<stages; u++)
+    {
+        dg::Message xs()<<"x"<<u, ys() <<"y"<<u;
+        err = file::define_dimensions(  ncid, *dim2d[2*u], multigrid.grid(u), {xs.str(),ys.str()} );
+    }
+
+    for( auto pair : output)
+    {
+        for( unsigned u=0; u<stages; u++)
+        {
+            dg::HVec temp( grid.size());
+            int varID;
+            err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 2, *dim2d[2*u], &varID);
+            pair.second( temp, g2d, gp, c);
+            err = nc_put_var_double( ncid, varID, grid, temp);
+        }
+    }
+    err = nc_close( ncid);
 
 
     return 0;
 }
 
+    std::map< std::string, std::function< void( dg::HVec&, dg::geo::CurvilinearGrid2d&, dg::geo::solovev::Parameters&, dg::geo::TokamakMagneticField&)> > output = {
+        { "Psip", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.psip(), g2d);
+        }},
+        { "PsipR", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.psipR(), g2d);
+        }},
+        { "PsipZ", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.psipZ(), g2d);
+        }},
+        { "g_xx", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=g2d.metric().value(0,0);
+        }},
+        { "g_xy", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=g2d.metric().value(0,1);
+        }},
+        { "g_yy", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=g2d.metric().value(1,1);
+        }},
+        { "g_xy_g_xx", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::blas1::pointwiseDivide( g2d.metric().value(0,1),
+                g2d.metric().value(0,0), result);
+        }},
+        { "g_yy_g_xx", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::blas1::pointwiseDivide( g2d.metric().value(1,1),
+                g2d.metric().value(0,0), result);
+        }},
+        { "vol", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result=dg::tensor::volume(g2d.metric());
+        }},
+        { "Bzeta", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::HVec Bzeta, Beta;
+            dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
+            result=Bzeta;
+        }},
+        { "Beta", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::HVec Bzeta, Beta;
+            dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
+            result=Beta;
+        }},
+        { "Bphi", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( dg::geo::BFieldP(mag), g2d);
+        }},
+        { "q-profile", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            dg::HVec Bzeta, Beta;
+            dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
+            result = dg::pullback( dg::geo::BFieldP(mag), g2d);
+            dg::blas1::pointwiseDivide( result, Beta, result); //Bphi / Beta
+
+        }},
+        { "Ipol", []( dg::HVec& result, dg::geo::CurvilinearGrid2d& g2d,
+            dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag){
+            result = dg::pullback( mag.ipol(), g2d);
+        }}
+    };
