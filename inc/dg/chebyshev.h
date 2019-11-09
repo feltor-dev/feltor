@@ -38,7 +38,7 @@ class Chebyshev
     Chebyshev(){}
     ///@copydoc construct()
     Chebyshev( const ContainerType& copyable):
-        m_ax(copyable), m_xm1(m_ax){}
+        m_ax(copyable), m_xm1(m_ax), m_b( m_ax){}
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_ax;}
@@ -50,7 +50,7 @@ class Chebyshev
      * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable) {
-        m_xm1 = m_ax = copyable;
+        m_xm1 = m_ax = m_b = copyable;
     }
     /**
      * @brief Solve the system A*x = b using Chebyshev iteration
@@ -66,6 +66,35 @@ class Chebyshev
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      */
+    template< class MatrixType, class ContainerType0, class ContainerType1>
+    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
+        double min_ev, double max_ev, unsigned num_iter, const ContainerType1& weights)
+    {
+        if( num_iter == 0)
+            return;
+        assert ( min_ev < max_ev);
+        double theta = (min_ev+max_ev)/2., delta = (max_ev-min_ev)/2.;
+        double rhokm1 = delta/theta, rhok=0;
+        dg::blas1::copy( x, m_xm1); //x0
+        dg::blas2::symv( A, x, m_ax);
+        dg::blas1::pointwiseDot( weights, m_ax, m_ax);
+        dg::blas2::symv( weights, b, m_b);
+        dg::blas1::axpbypgz( 1./theta, m_b, -1./theta, m_ax, 1., x); //x1
+        for ( unsigned k=1; k<num_iter; k++)
+        {
+            rhok = 1./(2.*theta/delta - rhokm1);
+            dg::blas2::symv( A, x, m_ax);
+            dg::blas1::pointwiseDot( weights, m_ax, m_ax);
+            dg::blas1::evaluate( m_xm1, dg::equals(), PairSum(),
+                             1.+rhok*rhokm1, x,
+                            -rhok*rhokm1,    m_xm1,
+                             2.*rhok/delta,  m_b,
+                            -2.*rhok/delta,  m_ax
+                            );
+            x.swap(m_xm1);
+            rhokm1 = rhok;
+        }
+    }
     template< class MatrixType, class ContainerType0, class ContainerType1>
     void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
         double min_ev, double max_ev, unsigned num_iter)
@@ -93,7 +122,7 @@ class Chebyshev
         }
     }
   private:
-    ContainerType m_ax, m_xm1;
+    ContainerType m_ax, m_xm1, m_b;
 };
 
 } //namespace dg

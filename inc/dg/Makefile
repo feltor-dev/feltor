@@ -17,7 +17,7 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@  -g
 
 %_b: %_b.cu
-	$(CC) $(OPT) $(CFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) -g
+	$(CC) $(OPT) $(CFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) $(LIBS) -g
 
 %_mpit: %_mpit.cu
 	$(MPICC) $(OPT) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
