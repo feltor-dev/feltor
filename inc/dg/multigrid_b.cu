@@ -26,6 +26,17 @@ double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-
 double sol(double x, double y)  { return sin( x)*sin(y);}
 double der(double x, double y)  { return cos( x)*sin(y);}
 
+//TODO list
+//1. Show that the thing reliably converges (the first trick seems to be that
+// the Chebyshev smoother smoothes on VAx=Vb instead of Ax=b even though this
+// should be the same? Maybe has something to do with how the weights cancel
+// the second trick was to increase the jumps but take care to have enough
+// smoothing steps)
+//2. Can we use this with fixed number of smooting and 1 FMG cycle in simulations?
+// (it seems that the number of smoothing steps influences execution time very
+// little which means that the CG on the coarse grid dominates time; but why
+// does the number of stages influence the error in both nested iterations and
+// the multigrid? )
 
 int main()
 {
@@ -33,18 +44,20 @@ int main()
     double eps;
     double jfactor;
 
-	n = 4;
-	Nx = 32, Ny = 64;
-	eps = 1e-8;
-	jfactor = 1;
+    n = 3;
+    Nx = 32, Ny = 64;
+    eps = 1e-10;
+    std::cout << "Type n(3) Nx(32) Ny(64)!\n";
+    std::cin >> n >> Nx >> Ny;
+    jfactor = 1;
 
-	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
+    /*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
     std::cin >> eps >> jfactor;*/
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
-	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec v2d = dg::create::inv_weights( grid);
     dg::DVec one = dg::evaluate( dg::one, grid);
@@ -97,14 +110,15 @@ int main()
     std::vector<double> multi_ev(stages);
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::normed, dg::centered, 10*jfactor);
+        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, 10*jfactor);
         multi_eve[u].construct( multi_chi[u]);
         multi_pol[u].set_chi( multi_chi[u]);
         counter = multi_eve[u]( multi_pol[u], multi_x[u], multi_b[u],
             multi_ev[u], eps_ev);
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, 10*jfactor);
-        multi_pol[u].set_chi( multi_chi[u]);
+        w2d = dg::create::weights( multigrid.grid(u));
+        multi_ev[u]/=hxhy;
         std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
+        hxhy*=4;
     }
     //////////////////////////////setup and write netcdf//////////////////
     err = nc_create( "multigrid.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -115,12 +129,13 @@ int main()
     err = nc_def_var( ncid, "b_num", NC_DOUBLE, 3, dim3d, &bID);
     err = nc_def_var( ncid, "r_num", NC_DOUBLE, 3, dim3d, &rID);
     ////////////////////////////////////////////////////
-    std::cout << "Type nu1 (3), nu2 (3) gamma (1) max_iter (3)\n";
+    std::cout << "Type nu1 (20), nu2 (20) gamma (1) max_iter (1)\n";
     unsigned nu1, nu2, gamma;
     int max_iter = 3;
     std::cin >> nu1 >> nu2 >> gamma >> max_iter;
     x = dg::evaluate( initial, grid);
     const dg::DVec solution = dg::evaluate( sol, grid);
+    t.tic();
     for( int i=0; i<max_iter; i++)
     {
         multigrid.solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
@@ -134,14 +149,19 @@ int main()
         std::cout << " At iteration "<<i<<"\n";
         std::cout << " Error of Multigrid iterations "<<err<<"\n";
     }
+    t.toc();
+    std::cout << "Took "<<t.diff()<<"s\n";
     x = dg::evaluate( initial, grid);
+    t.tic();
     multigrid.direct_solve(multi_pol, x, b, eps);
+    t.toc();
     const double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
     err = sqrt( err/norm);
     std::cout << " Error of nested iterations "<<err<<"\n";
+    std::cout << "Took "<<t.diff()<<"s\n";
 
     int varID;
     err = nc_def_var( ncid, "x_ana", NC_DOUBLE, 2, &dim3d[1], &varID);
