@@ -15,6 +15,7 @@
 #include "topology/mpi_projection.h"
 #endif
 
+#include "dg/file/nc_utilities.h"
 size_t start=0;
 int ncid =0;
 int xID=0, bID=0, rID=0, tvarID=0;
@@ -180,7 +181,8 @@ struct MultigridCG2d
 #ifdef DG_BENCHMARK
             t.tic();
 #endif //DG_BENCHMARK
-            number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
+            number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(),
+                op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();
@@ -189,7 +191,7 @@ struct MultigridCG2d
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
             if(rank==0)
 #endif //MPI
-            std::cout << "stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
+            std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
 
         }
@@ -208,7 +210,7 @@ struct MultigridCG2d
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
 #endif //MPI
-        std::cout << "stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
+        std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
 
         return number;
@@ -279,59 +281,76 @@ struct MultigridCG2d
         full_multigrid( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
         dg::blas1::axpby( 1., m_x[0], 1., x);
 
-        //MULTIGRID CYCLES
-        //dg::blas1::copy( x, m_x[0]);
-        //multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
-        //dg::blas1::copy( m_x[0], x);
+        value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
+        blas2::symv( op[0],x,m_cgr);
+        blas1::axpby( 1., m_b[0], -1., m_cgr);
+        //if x happens to be the solution
+        value_type error = sqrt( blas2::dot(op[0].inv_weights(),m_cgr) );
+        std::cout<< "# Relative Residual error is  "<<error<<"\n";
+        while ( error >  eps*(nrmb + 1))
+        {
+            //MULTIGRID CYCLES
 
+            dg::blas1::copy( x, m_x[0]);
+            multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+            dg::blas1::copy( m_x[0], x);
+
+            blas2::symv( op[0],x,m_cgr);
+            blas1::axpby( 1., m_b[0], -1., m_cgr);
+            error = sqrt( blas2::dot(op[0].inv_weights(), m_cgr));
+            std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
+        }
+    }
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+    void pcg_solve( std::vector<SymmetricOp>& op,
+    ContainerType0& x, const ContainerType1& b, std::vector<double> ev, unsigned nu_pre, unsigned
+    nu_post, unsigned gamma, double eps)
+    {
+
+        dg::blas2::symv(op[0].weights(), b, m_b[0]);
         //PCG WITH MULTIGRID CYCLE AS PRECONDITIONER
-        //unsigned max_iter_ = m_grids[0]->size();
-        //value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
-        //if( nrmb == 0)
-        //{
-        //    blas1::copy( m_b[0], x);
-        //    return;
-        //}
-        //blas2::symv( op[0],x,m_cgr);
-        //blas1::axpby( 1., m_b[0], -1., m_cgr);
-        ////if x happens to be the solution
-        //if( sqrt( blas2::dot(op[0].inv_weights(),m_cgr) )
-        //        < eps*(nrmb + 1))
-        //    return;
-        ////blas2::symv( P, r, p );//<-- compute p_0
-        ////dg::blas2::symv( op[0].precond(), m_cgr, m_p);
-        ////dg::blas1::copy( 0, m_p);
-        ////m_cheby[0].solve( op[0], m_p, m_cgr, 0.1*ev[0], 1.1*ev[0], nu_post+nu_pre);
+        unsigned max_iter_ = m_grids[0]->size();
+        value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
+        if( nrmb == 0)
+        {
+            blas1::copy( m_b[0], x);
+            return;
+        }
+        blas2::symv( op[0],x,m_cgr);
+        blas1::axpby( 1., m_b[0], -1., m_cgr);
+        //if x happens to be the solution
+        if( sqrt( blas2::dot(op[0].inv_weights(),m_cgr) )
+                < eps*(nrmb + 1))
+            return;
 
-        //dg::blas1::copy( 0, m_x[0]);
-        //dg::blas1::copy( m_cgr, m_b[0]);
-        //full_multigrid( op,m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
-        //dg::blas1::copy( m_x[0], m_p);
+        dg::blas1::copy( 0, m_x[0]);
+        dg::blas1::copy( m_cgr, m_b[0]);
+        //multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+        full_multigrid( op,m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
+        dg::blas1::copy( m_x[0], m_p);
 
-        ////and store the scalar product
-        //value_type nrmzr_old = blas1::dot( m_p,m_cgr);
-        //value_type alpha, nrmzr_new;
-        //for( unsigned i=2; i<max_iter_; i++)
-        //{
-        //    blas2::symv( op[0], m_p, m_x[0]);
-        //    alpha =  nrmzr_old/blas1::dot( m_p, m_x[0]);
-        //    blas1::axpby( alpha, m_p, 1., x);
-        //    blas1::axpby( -alpha, m_x[0], 1., m_cgr);
-        //    value_type error = sqrt( blas2::dot(op[0].inv_weights(), m_cgr))/(nrmb+1);
-        //    std::cout << "\t\t\tError at "<<i<<" is "<<error<<"\n";
-        //    if( error < eps)
-        //        return;
-        //    dg::blas2::symv( op[0].precond(), m_cgr, m_x[0]);
-        //    dg::blas1::copy( 0, m_x[0]);
-        //    m_cheby[0].solve( op[0], m_x[0], m_cgr, 0.1*ev[0], 1.1*ev[0], nu_post+nu_pre);
-        ////dg::blas1::copy( 0, m_x[0]);
-        ////dg::blas1::copy( m_cgr, m_b[0]);
-        ////multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+        //and store the scalar product
+        value_type nrmzr_old = blas1::dot( m_p,m_cgr);
+        value_type alpha, nrmzr_new;
+        for( unsigned i=2; i<max_iter_; i++)
+        {
+            blas2::symv( op[0], m_p, m_x[0]);
+            alpha =  nrmzr_old/blas1::dot( m_p, m_x[0]);
+            blas1::axpby( alpha, m_p, 1., x);
+            blas1::axpby( -alpha, m_x[0], 1., m_cgr);
+            value_type error = sqrt( blas2::dot(op[0].inv_weights(), m_cgr))/(nrmb+1);
+            std::cout << "\t\t\tError at "<<i<<" is "<<error<<"\n";
+            if( error < eps)
+                return;
+        dg::blas1::copy( 0, m_x[0]);
+        dg::blas1::copy( m_cgr, m_b[0]);
+        //multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+        full_multigrid( op,m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
 
-        //    nrmzr_new = blas1::dot( m_x[0], m_cgr);
-        //    blas1::axpby(1., m_x[0], nrmzr_new/nrmzr_old, m_p );
-        //    nrmzr_old=nrmzr_new;
-        //}
+            nrmzr_new = blas1::dot( m_x[0], m_cgr);
+            blas1::axpby(1., m_x[0], nrmzr_new/nrmzr_old, m_p );
+            nrmzr_old=nrmzr_new;
+        }
 
     }
 
@@ -358,15 +377,19 @@ struct MultigridCG2d
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         //double norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
+#ifdef DG_BENCHMARK
+        Timer t;
+#endif //DG_BENCHMARK
 
-        std::vector<Container> out( x);
-        file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
+        //std::vector<Container> out( x);
+        //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
 
-        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1, op[p].inv_weights());
+        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1);
+        //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1, op[p].inv_weights());
         // 2. Residuum
         dg::blas2::symv( op[p], x[p], m_r[p]);
         dg::blas1::axpby( 1., b[p], -1., m_r[p]);
-        file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
+        //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
         //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum after  "<<norm_res<<"\n";
         // 3. Coarsen
@@ -375,13 +398,12 @@ struct MultigridCG2d
         dg::blas1::scal( x[p+1], 0.);
         if( p+1 == m_stages-1)
         {
-            file_output( x, b, m_r, out, p+1, m_inter, *m_grids[0] );
+            //file_output( x, b, m_r, out, p+1, m_inter, *m_grids[0] );
 #ifdef DG_BENCHMARK
-            Timer t;
             t.tic();
 #endif //DG_BENCHMARK
             int number = m_cg[p+1]( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
-                op[p+1].inv_weights(), eps);
+                op[p+1].inv_weights(), eps/2.);
 #ifdef DG_BENCHMARK
             t.toc();
 #ifdef MPI_VERSION
@@ -389,10 +411,9 @@ struct MultigridCG2d
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
             if(rank==0)
 #endif //MPI
-            std::cout << "stage: " << p+1 << ", iter: " << number << ", took "<<t.diff()<<"s\n";
+            std::cout << "# Multigrid stage: " << p+1 << ", iter: " << number << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
-            file_output( x, b, m_r, out, p+1, m_inter, *m_grids[0] );
-            //m_cheby[p+1].solve( op[p+1], x[p+1], b[p+1], 0.1*ev[p+1], 1.1*ev[p+1], nu1+nu2);
+            //file_output( x, b, m_r, out, p+1, m_inter, *m_grids[0] );
             //dg::blas2::symv( op[p+1], x[p+1], m_r[p+1]);
             //dg::blas1::axpby( 1., b[p+1], -1., m_r[p+1]);
             //double norm_res = sqrt(dg::blas1::dot( m_r[p+1], m_r[p+1]));
@@ -412,13 +433,13 @@ struct MultigridCG2d
         //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
         // 6. Post-Smooth nu2 times
-        file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
-        //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2);
-        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
-        file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
+        //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
+        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2);
+        //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
+        //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
-        //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //double norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum after "<<norm_res<<"\n";
     }
 
@@ -433,14 +454,27 @@ struct MultigridCG2d
             dg::blas2::gemv( m_interT[u], x[u], x[u+1]);
             dg::blas2::gemv( m_interT[u], b[u], b[u+1]);
         }
-        std::vector<Container> out( x);
+        //std::vector<Container> out( x);
         //begins on coarsest level and cycles through to highest
         unsigned s = m_stages-1;
-        file_output( x, b, m_r, out, s, m_inter, *m_grids[0] );
-        m_cg[s]( op[s], x[s], b[s], op[s].precond(),
-            op[s].inv_weights(), eps);
+        //file_output( x, b, m_r, out, s, m_inter, *m_grids[0] );
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
+        int number = m_cg[s]( op[s], x[s], b[s], op[s].precond(),
+            op[s].inv_weights(), eps/2.);
+#ifdef DG_BENCHMARK
+        t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        std::cout << "# Multigrid stage: " << s << ", iter: " << number << ", took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
 
-        file_output( x, b, m_r, out, s, m_inter, *m_grids[0] );
+        //file_output( x, b, m_r, out, s, m_inter, *m_grids[0] );
 		for( int p=m_stages-2; p>=0; p--)
         {
             dg::blas2::gemv( m_inter[p], x[p+1],  x[p]);
