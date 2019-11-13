@@ -1257,6 +1257,7 @@ source      & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq
 source\_type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
 "influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx},
 "torpex": Torpex inspired source profile Eq.~\eqref{eq:electron_source_torpex},
+"gaussian": Gaussian shaped source profile - uses \texttt{posX}, \texttt{posY} and \texttt{sigma},
     See the file {\tt init.h} to add your own custom source.
 \\
 rho\_source & float & 0.2  & 0.2 & Source region boundary $0<\rho_{s}<1$ in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
