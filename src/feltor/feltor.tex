@@ -832,7 +832,7 @@ We can choose the constant influx
 \end{align}
 or a Torpex inspired source profile
 \begin{align} \label{eq:electron_source_torpex}
-  S_{prof}(R,Z) &= 
+  S_{prof}(R,Z) &=
   \begin{cases}
     \exp\left( - \frac{(R-R_0)^2}{a^2 }- \frac{(Z-Z_0)^2}{b^2}\right) \text{ if} R > R_0 \\
     \frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} -2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \\
@@ -844,10 +844,14 @@ with $a=0.0335$m, $b=0.05$m, $c=565m^{-2}$, $R_0=0.98$m and $Z_0=-0.02$m.
 
 For ions we use
 \begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e} \\
+    \delta S_{n_e} = \nabla\cdot\left( \frac{\mu_i S_{N_i}}{B^2}\nabla_\perp \phi\right)
   \label{eq:ion_source}
 \end{align}
-Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
+and finally add $\delta S_{n_e}$ to $S_{n_e}$ as the potential FLR correction.
+Note that the correction $\delta S_{n_e}$ is a total divergence which means
+it does not change the volume integrated "total" particle number created by the source.
+Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid potential generation
 by the particle source (cf.~Section~\ref{sec:conservation}). $S_{n_e}$ needs to be smooth
 so that $\nabla_\perp^2 S_{n_e}$ is well defined.
 
@@ -998,7 +1002,7 @@ We have the energy flux through a flux surface
 \label{eq:energy_flux}
 \end{align}
 
-\subsection{ Force balance equation}
+\subsection{ Vorticity and momentum balance equation}
 In order to discuss poloidal flows let us first define orthogonal vectors $\{\vec{ \hat\zeta}, \vec{\hat\eta},\bhat\}$
 \begin{align}
 \vec{\hat\zeta} := \nabla\psi_p,\quad
@@ -1013,35 +1017,60 @@ Notice that $\vec{\hat \eta}$ in general has a (small) toroidal component in add
 Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ and $\vec u_d = \tau_i \bhat\times\nabla \ln N_i$
 we can derive
 \begin{align}
-u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2}
-&&u_d^{\hat\eta} := \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \\
-u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi
-&&u_d^{\hat\zeta}:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i
+u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2} \sim u_{E,\varphi}
+&&u_d^{\hat\eta} := \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \sim u_{D,\varphi} \\
+u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi \sim u_E^v \sim -\partial_\varphi\phi
+&&u_d^{\hat\zeta}:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i \sim u_D^v
 \end{align}
-With this we write the force balance equation (in the LWL)
-\begin{align}
+where we write $\partial_{\hat\zeta} := \nabla\psi_p\cdot\nabla$ and $\partial_{\hat\eta} := \vec{\hat\eta}\cdot\nabla$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Vorticity equation}
+With this we write the vorticity equation (in the LWL)
+\begin{align} \label{eq:vorticity_average}
 &\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
 \frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) \right\rangle
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
-+ \tau_i \partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel \right\rangle
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
++ \tau_i \partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i \right\rangle
 \nonumber\\
 &= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
 \end{align}
-where the right hand side represents the Lorentz force $\vec j\times\vec B$.
-Notice that 
+where we neglect the second order derivative $\partial_{\hat\eta}\partial_{\hat\zeta}A_\parallel$ in the magnetization density term and
+where the right hand side represents the negative toroidal component of the Lorentz force $-(\vec j\times\vec B)_\varphi$.
+Notice that
 \begin{align}
 \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p\right\rangle
 = \left\langle \frac{ \bhat\times \nabla (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cdot\nabla\psi_p\right\rangle
 = -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
 \end{align}
-We can interpret the force balance as the flux surface average of a
-continuity equation
+We can interpret Eq.~\eqref{eq:vorticity_average} as the flux surface average of
+the vorticity equation
 \begin{align}
-&\partial_t \Omega + \nabla\cdot \vec j_\Omega = S_\Omega \\
+&\partial_t \GA{\Omega} + \GA{\nabla\cdot \vec j_\Omega} = \GA{S_\Omega} \\
 \Omega &:= \mu_i N_i \left(\frac{\nabla\psi_p\cdot\nabla\phi}{B^2} + \tau_i \nabla\psi_p \cdot\nabla \ln N_i\right) \\
-\vec j_{\Omega} &:= -\Omega \vec u_E 
-    - \frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel \frac{\bhat\times\nabla A_\parallel}{B} \\
+\vec j_{\Omega} &:= \Omega \vec u_E
+    - \left(\frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel +\frac{1}{2} \nabla\psi_p\cdot\nabla \tau_i N_iU_i\right)\frac{\bhat\times\nabla A_\parallel}{B} \\
+    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
+\end{align}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Toroidal ExB momentum equation}
+Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB velocity
+\begin{align} \label{eq:exb_average}
+&\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
+\frac{\partial_{\hat\zeta}\phi\,}{B^2}\right) \right\rangle
+\nonumber\\
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(\partial_{\hat\eta} \phi + \tau_i \partial_{\hat\eta} \ln N_i \right)
+ + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\zeta} A_\parallel \partial_{\hat\eta} \tau_i N_i U_i\right \rangle
+\nonumber\\
+&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
+\end{align}
+We can interpret Eq.~\eqref{eq:exb_average} as the flux surface average of
+the \ExB vorticity equation
+\begin{align}
+&\partial_t \GA{\Omega_E} + \GA{\nabla\cdot \vec j_{\Omega_E}} = \GA{S_\Omega} \\
+\Omega_E &:= \mu_i N_i \frac{\nabla\psi_p\cdot\nabla\phi}{B^2} \\
+\vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
+    - \frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel \left(\frac{\bhat\times\nabla A_\parallel}{B} +\frac{1}{2} \bhat \times \nabla \tau_i N_iU_i\right) \\
     S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
 \end{align}
 
