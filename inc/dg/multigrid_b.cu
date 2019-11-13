@@ -27,21 +27,20 @@ double sol(double x, double y)  { return sin( x)*sin(y);}
 double der(double x, double y)  { return cos( x)*sin(y);}
 
 //TODO list
-//1. Show that the thing reliably converges (the first trick seems to be that
-// the Chebyshev smoother smoothes on VAx=Vb instead of Ax=b even though this
-// should be the same? Maybe has something to do with how the weights cancel
-// the second trick was to increase the jumps but take care to have enough
-// smoothing steps)
+//1. Show that the thing reliably converges ( I think we should focus on showing that a single
+//FMG sweep reliably produces an acceptable solution even if the discretiation error has not yet been reached)
 //2. Can we use this with fixed number of smooting and 1 FMG cycle in simulations?
 // (it seems that the number of smoothing steps influences execution time very
-// little which means that the CG on the coarse grid dominates time; but why
-// does the number of stages influence the error in both nested iterations and
-// the multigrid? )
+// little which means that the CG on the coarse grid dominates time;)
+//3. The eps on the lowest grid can be larger than on the fine grids because the discretization error on the coarse grid is h^3 times higher
+//4. With forward discretization there seems to be a sweet spot on how many smoothing steps to choose
+//5. The relevant errors for us are the gradient in phi errors
+//6. The range that the Chebyshev solver smoothes influences the error in the end
 
 int main()
 {
     unsigned n = 3, Nx = 32, Ny = 64;
-    double eps = 1e-8;
+    double eps = 1e-6;
     double jfactor = 1;
 
     std::cout << "Type n(3) Nx(32) Ny(64)!\n";
@@ -57,7 +56,6 @@ int main()
     dg::DVec b =    dg::evaluate( rhs, grid);
     const dg::DVec chi =  dg::evaluate( pol, grid);
     const dg::DVec solution = dg::evaluate( sol, grid);
-
 
     unsigned stages = 3;
     std::cout<< "Type number of stages (3) and jfactor (10) !\n";

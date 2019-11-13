@@ -270,34 +270,39 @@ struct MultigridCG2d
     ContainerType0& x, const ContainerType1& b, std::vector<double> ev, unsigned nu_pre, unsigned
     nu_post, unsigned gamma, double eps)
     {
-        dg::blas2::symv(op[0].weights(), b, m_b[0]);
-
         //FULL MULTIGRID
         //solve for residuum ( if not we always get the same solution)
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
+        value_type nrmb = sqrt( blas1::dot( m_b[0], b));
+
         dg::blas2::symv( op[0], x, m_r[0]);
         dg::blas1::axpby( -1., m_r[0], 1., m_b[0]);
         dg::blas1::copy( 0., m_x[0]);
         full_multigrid( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
         dg::blas1::axpby( 1., m_x[0], 1., x);
 
-        value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
-        blas2::symv( op[0],x,m_cgr);
-        blas1::axpby( 1., m_b[0], -1., m_cgr);
-        //if x happens to be the solution
-        value_type error = sqrt( blas2::dot(op[0].inv_weights(),m_cgr) );
-        std::cout<< "# Relative Residual error is  "<<error<<"\n";
+        dg::blas2::symv(op[0].weights(), b, m_b[0]);
+        blas2::symv( op[0],x,m_r[0]);
+        dg::blas1::axpby( -1., m_r[0], 1., m_b[0]);
+        dg::blas1::copy( 0., m_x[0]);
+        value_type error = sqrt( blas2::dot(op[0].inv_weights(),m_b[0]) );
+        std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
+
         while ( error >  eps*(nrmb + 1))
         {
             //MULTIGRID CYCLES
+            //dg::blas1::copy( x, m_x[0]);
+            //multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
+            //dg::blas1::copy( m_x[0], x);
+            //FMG cycles
+            full_multigrid( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 1, eps);
+            dg::blas1::axpby( 1., m_x[0], 1., x);
 
-            dg::blas1::copy( x, m_x[0]);
-            multigrid_cycle( op, m_x, m_b, ev, nu_pre, nu_post, gamma, 0, eps);
-            dg::blas1::copy( m_x[0], x);
-
-            blas2::symv( op[0],x,m_cgr);
-            blas1::axpby( 1., m_b[0], -1., m_cgr);
-            error = sqrt( blas2::dot(op[0].inv_weights(), m_cgr));
+            dg::blas2::symv(op[0].weights(), b, m_b[0]);
+            blas2::symv( op[0],x,m_r[0]);
+            dg::blas1::axpby( -1., m_r[0], 1., m_b[0]);
+            dg::blas1::copy( 0., m_x[0]);
+            error = sqrt( blas2::dot(op[0].inv_weights(),m_b[0]) );
             std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
         }
     }
@@ -384,7 +389,7 @@ struct MultigridCG2d
         //std::vector<Container> out( x);
         //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
 
-        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1);
+        m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu1);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1, op[p].inv_weights());
         // 2. Residuum
         dg::blas2::symv( op[p], x[p], m_r[p]);
@@ -434,7 +439,7 @@ struct MultigridCG2d
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
         // 6. Post-Smooth nu2 times
         //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
-        m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2);
+        m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu2);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
         //file_output( x, b, m_r, out, p, m_inter, *m_grids[0] );
         //dg::blas2::symv( op[p], x[p], m_r[p]);

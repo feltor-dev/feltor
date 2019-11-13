@@ -60,41 +60,12 @@ class Chebyshev
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param min_ev the minimum Eigenvalue
-     * @param max_ev the minimum Eigenvalue
+     * @param max_ev the maximum Eigenvalue
      * @param num_iter the number of iterations k (equals the number of times A is applied)
      *
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      */
-    template< class MatrixType, class ContainerType0, class ContainerType1>
-    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
-        double min_ev, double max_ev, unsigned num_iter, const ContainerType1& weights)
-    {
-        if( num_iter == 0)
-            return;
-        assert ( min_ev < max_ev);
-        double theta = (min_ev+max_ev)/2., delta = (max_ev-min_ev)/2.;
-        double rhokm1 = delta/theta, rhok=0;
-        dg::blas1::copy( x, m_xm1); //x0
-        dg::blas2::symv( A, x, m_ax);
-        dg::blas1::pointwiseDot( weights, m_ax, m_ax);
-        dg::blas2::symv( weights, b, m_b);
-        dg::blas1::axpbypgz( 1./theta, m_b, -1./theta, m_ax, 1., x); //x1
-        for ( unsigned k=1; k<num_iter; k++)
-        {
-            rhok = 1./(2.*theta/delta - rhokm1);
-            dg::blas2::symv( A, x, m_ax);
-            dg::blas1::pointwiseDot( weights, m_ax, m_ax);
-            dg::blas1::evaluate( m_xm1, dg::equals(), PairSum(),
-                             1.+rhok*rhokm1, x,
-                            -rhok*rhokm1,    m_xm1,
-                             2.*rhok/delta,  m_b,
-                            -2.*rhok/delta,  m_ax
-                            );
-            x.swap(m_xm1);
-            rhokm1 = rhok;
-        }
-    }
     template< class MatrixType, class ContainerType0, class ContainerType1>
     void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
         double min_ev, double max_ev, unsigned num_iter)
