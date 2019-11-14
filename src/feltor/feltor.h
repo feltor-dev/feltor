@@ -161,6 +161,7 @@ struct ComputeSource{
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
+    using vector = std::array<std::array<Container,2>,2>;
     Explicit( const Geometry& g, feltor::Parameters p,
         dg::geo::TokamakMagneticField mag);
 
@@ -870,7 +871,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
         // potential part of FLR correction
         dg::blas1::subroutine( routines::ComputeChi(),
-            m_temp0, y[1], m_binv, m_p.mu[1]);
+            m_temp0, y[0][1], m_binv, m_p.mu[1]);
         m_lapperpP.set_chi( m_temp0);
         dg::blas2::gemv( m_lapperpP, m_phi[0], m_temp0);//negative!!
         dg::blas1::axpby( -1., m_temp0, 1., m_s[0][0]);
