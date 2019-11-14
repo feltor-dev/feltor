@@ -1030,8 +1030,8 @@ With this we write the vorticity equation (in the LWL)
 &\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
 \frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) \right\rangle
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\mu_i N_i\partial_{\hat\eta} \phi \left(\frac{\partial_{\hat\zeta}\phi }{B^2}
-+ \tau_i \partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i \right\rangle
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\partial_{\hat\eta} \phi \left(\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}
++ \mu_i \tau_i N_i\partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\eta}A_\parallel\partial_{\hat\zeta} A_\parallel  + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i \right\rangle
 \nonumber\\
 &= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
 \end{align}
@@ -1059,7 +1059,7 @@ Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continui
 &\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
 \frac{\partial_{\hat\zeta}\phi\,}{B^2}\right) \right\rangle
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(\partial_{\hat\eta} \phi + \tau_i \partial_{\hat\eta} \ln N_i \right)
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(-\partial_{\hat\eta} \phi - \tau_i \partial_{\hat\eta} \ln N_i \right)
  + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\zeta} A_\parallel \partial_{\hat\eta} \tau_i N_i U_i\right \rangle
 \nonumber\\
 &= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
@@ -1432,8 +1432,12 @@ and the time-averaged quantities Y $\in$
     leiperp &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_i \nu_\perp \Delta_\perp U_i$ \\
     leeparallel &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_e \nu_\parallel \Delta_\parallel u_e$ \\
     leiparallel &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_i \nu_\parallel \Delta_\parallel U_i$ \\
-    jsoexbi &$-(\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i)  \vec u_E\cdot\nabla \psi_p$ \\
-    jsoexbe &$-(\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2+\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e) \vec u_E\cdot\nabla \psi_p$ \\
+    jsoexbi &$(\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
+    jsoexbe &$(\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
+    jsodiaiUE &$(\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
+    jsodiaeUE &$(\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
+    jsoexbiUD &$(\mu_i\tau_i \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla N_i)\cdot\nabla \psi_p/B$ \\
+    jsoexbeUD &$(\mu_i\tau_i \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla n_e)\cdot\nabla \psi_p/B$ \\
     jsoapar &$ \nabla\psi_p\cdot\nabla A_\parallel \bhat\times\nabla A_\parallel\cdot\nabla \psi_p/B/\beta$ \\
     socurve &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
     socurvi &$z_i\tau_i N_i \mathcal K(\psi_p)$ \\

@@ -741,16 +741,13 @@ std::vector<Record> diagnostics2d_list = {
     /// --------------------- Vorticity flux terms ---------------------------//
     {"jsoexbi_tt", "ExB vorticity flux term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
-            // - ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.gradPsip, v.f.gradP(0), result);
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
 
-            // Omega
+            // Omega_E
             routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.density(1), 0., v.tmp[0]);
-
-            routines::dot( v.f.gradN(1), v.gradPsip, v.tmp[1]);
-            dg::blas1::axpby( v.p.mu[1]*v.p.tau[1], v.tmp[1], 1., v.tmp[0] );
 
             // Multiply everything
             dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
@@ -758,16 +755,67 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"jsoexbe_tt", "ExB vorticity flux term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
-            // - ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.gradPsip, v.f.gradP(0), result);
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
 
-            // Omega
+            // Omega_E
             routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.density(0), 0., v.tmp[0]);
 
-            routines::dot( v.f.gradN(0), v.gradPsip, v.tmp[1]);
-            dg::blas1::axpby( v.p.mu[1]*v.p.tau[1], v.tmp[1], 1., v.tmp[0] );
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
+    {"jsodiaiUE_tt", "Diamagnetic vorticity flux by ExB veloctiy term with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // Omega_D,phi
+            routines::dot( v.f.gradN(1), v.gradPsip, v.tmp[0]);
+            dg::blas1::scal( v.tmp[0], v.p.mu[1]*v.p.tau[1]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
+    {"jsodiaeUE_tt", "Diamagnetic vorticity flux by ExB velocity term with electron density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // Omega_D,phi
+            routines::dot( v.f.gradN(0), v.gradPsip, v.tmp[0]);
+            dg::blas1::scal( v.tmp[0], v.p.mu[1]*v.p.tau[1]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
+    {"jsoexbiUD_tt", "ExB vorticity flux term by diamagnetic velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // bxGradN/B Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradN(1), v.gradPsip, result);
+            dg::blas1::scal( result, v.p.tau[1]);
+
+            // m Omega_E,phi
+            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
+    {"jsoexbeUD_tt", "ExB vorticity flux term by diamagnetic velocity with electron density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // bxGradN/B Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradN(0), v.gradPsip, result);
+            dg::blas1::scal( result, v.p.tau[1]);
+
+            // m Omega_E,phi
+            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
 
             // Multiply everything
             dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
@@ -817,9 +865,9 @@ std::vector<Record> diagnostics2d_list = {
 
 };
 
-///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 std::vector<Record> restart3d_list = {
     {"restart_electrons", "electron density", false,
         []( DVec& result, Variables& v ) {
