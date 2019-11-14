@@ -88,8 +88,8 @@ int main( int argc, char* argv[])
         std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
         return -1;
     }
-    bool fixed_profile;
 
+    bool fixed_profile;
     HVec profile = dg::evaluate( dg::zero, grid);
     HVec source_profile;
     try{
@@ -144,7 +144,6 @@ int main( int argc, char* argv[])
     std::cout << std::scientific << std::setprecision( 2);
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     title << std::setprecision(2) << std::scientific;
-    //unsigned failed_counter = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         title << std::fixed;
@@ -153,7 +152,6 @@ int main( int argc, char* argv[])
         {
             if(pair.first == "Ome / ")
             {
-                //dg::blas2::gemv( laplacianM, *pair.second, dvisual);
                 dg::assign( feltor.lapMperpP(0), hvisual);
                 dg::assign( *pair.second, hvisual);
             }
