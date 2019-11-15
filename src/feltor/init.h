@@ -100,7 +100,7 @@ HVec source_damping(const Geometry& grid,
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
         //then shift
-        p.rho_source, p.alpha, ((psip0>0)-(psip0<0)), grid);
+        p.rho_source, p.alpha, ((psip0>0)-(psip0<0)) ), grid);
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), source_damping, source_damping);
     return source_damping;
 }
