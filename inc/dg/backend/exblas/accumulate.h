@@ -130,7 +130,7 @@ static inline void Accumulate( int64_t* accumulator, double x) {
     double xscaled = cpu::myldexp(x, -DIGITS * exp_word);
 
     int i;
-    for (i = iup; xscaled != 0; --i) {
+    for (i = iup; xscaled != 0 && i>=0; --i) {
         double xrounded = cpu::myrint(xscaled);
         int64_t xint = cpu::myllrint(xscaled);
         AccumulateWord(accumulator, i, xint);
