@@ -95,11 +95,12 @@ HVec source_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
+    double psip0 = mag.psip()( mag.R0(), 0);
     HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
         //then shift
-        p.rho_source, p.alpha, -1), grid);
+        p.rho_source, p.alpha, ((psip0>0)-(psip0<0)), grid);
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), source_damping, source_damping);
     return source_damping;
 }

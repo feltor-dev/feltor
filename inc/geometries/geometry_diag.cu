@@ -28,7 +28,7 @@ struct Parameters
     double boxscaleZm, boxscaleZp;
     double amp, k_psi, bgprofamp, nprofileamp;
     double sigma, posX, posY;
-    double rho_damping, alpha_mag;
+    double rho_damping, alpha, alpha_mag, rho_source;
     Parameters( const Json::Value& js){
         n = js.get("n",3).asUInt();
         Nx = js.get("Nx",100).asUInt();
@@ -48,6 +48,8 @@ struct Parameters
         posY = js.get("posY", 0.5).asDouble();
         rho_damping = js.get("rho_damping", 1.2).asDouble();
         alpha_mag = js.get("alpha_mag", 0.05).asDouble();
+        alpha = js.get("alpha", 0.05).asDouble();
+        rho_source = js.get("rho_source", 0.2).asDouble();
     }
     void display( std::ostream& os = std::cout ) const
     {
@@ -251,12 +253,15 @@ int main( int argc, char* argv[])
         //////////////////////////////////
         {"Iris", "A flux aligned Heaviside", dg::geo::Iris(mag.psip(), gp.psipmin, gp.psipmax)},
         {"Pupil", "A flux aligned Heaviside", dg::geo::Pupil(mag.psip(), gp.psipmaxcut)},
-        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::geo::GaussianDamping(mag.psip(), gp.psipmaxcut, gp.alpha)},
+        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::geo::GaussianDamping(mag.psip(), gp.psipmaxcut, p.alpha)},
         {"ZonalFlow",  "Flux aligned zonal flows", dg::geo::ZonalFlow(mag.psip(), p.amp, 0., 2.*M_PI*p.k_psi )},
         {"PsiLimiter", "A flux aligned Heaviside", dg::geo::PsiLimiter(mag.psip(), gp.psipmaxlim)},
+        {"SourceProfile", "A source profile", dg::geo::Compose<dg::PolynomialHeaviside>(
+            dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
+            p.rho_source, p.alpha, ((psip0>0)-(psip0<0)) ) },
         {"Nprofile", "A flux aligned profile", dg::geo::Nprofile(mag.psip(), p.nprofileamp/mag.psip()(mag.R0(),0.), p.bgprofamp )},
         {"Delta", "A flux aligned delta function", dg::geo::DeltaFunction( mag, gp.alpha*gp.alpha, psip0*0.2)},
-        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::geo::TanhDamping(mag.psip(), -3*gp.alpha, gp.alpha, -1)},
+        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::geo::TanhDamping(mag.psip(), -3*p.alpha, p.alpha, -1)},
         ////
         {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
         {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
