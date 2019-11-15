@@ -104,7 +104,7 @@ static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) {
     double xscaled = ldexp(x, -DIGITS * exp_word);
 
     int i;
-    for (i = iup; xscaled != 0; --i) {
+    for (i = iup; xscaled != 0 && i>=0; --i) {
         double xrounded = rint(xscaled);
         int64_t xint = (int64_t) xrounded;
         AccumulateWord(accumulator, i, xint, stride);
