@@ -95,6 +95,7 @@ __device__
 static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
     if (x == 0)
         return;
+    assert( !std::isnan(x) && "Detected NaN in dot product!!");
 
     int e;
     frexp(x, &e); //extract the exponent of x (lies in -1024;1023 ?)

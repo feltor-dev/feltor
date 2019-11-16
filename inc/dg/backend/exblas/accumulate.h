@@ -121,6 +121,7 @@ static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 static inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
+    assert( !std::isnan(x) && "Detected NaN in dot product!!");
 
 
     int e = cpu::exponent(x);

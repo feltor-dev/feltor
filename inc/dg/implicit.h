@@ -93,8 +93,8 @@ struct DefaultSolver
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_rhs;}
 
-    template< class Implicit> //going to be a reference type
-    void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
+    template< class Implicit>
+    void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
         detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
         blas2::symv( im.weights(), rhs, m_rhs);
@@ -154,7 +154,7 @@ struct FixedPointSolver
     const ContainerType& copyable()const{ return m_current;}
 
     template< class Implicit>
-    void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
+    void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
@@ -223,9 +223,10 @@ struct AndersonSolver
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_acc.copyable();}
 
-    template< class Implicit> //going to be a reference type
-    void solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs)
+    template< class Implicit>
+    void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
+        //dg::WhichType<Implicit> {};
         detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION

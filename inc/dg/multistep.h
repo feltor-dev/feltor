@@ -418,6 +418,7 @@ template< class ContainerType, class SolverType>
 template<class RHS>
 void BDF<ContainerType, SolverType>::step(RHS& rhs, value_type& t, container_type& u)
 {
+    //dg::WhichType<RHS> {};
     dg::blas1::axpby( m_bdf[0], m_u[0], 0., m_f);
     for (unsigned i = 1; i < m_k; i++){
         dg::blas1::axpby( m_bdf[i], m_u[i], 1., m_f);
