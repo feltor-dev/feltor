@@ -394,8 +394,8 @@ int main( int argc, char* argv[])
     //karniadakis.init( feltor, im, time, y0, p.dt);
     unsigned mMax = 3, restart = 3, max_iter = 100;
     double damping = 1e-3;
-    dg::BDF< std::array<std::array<dg::DVec,2>,2 >,
-        dg::AndersonSolver< std::array<std::array<dg::DVec,2>,2> >
+    dg::BDF< std::array<std::array<DVec,2>,2 >,
+        dg::AndersonSolver< std::array<std::array<DVec,2>,2> >
         > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
     bdf.init( feltor, time, y0, p.dt);
     dg::Timer t;
