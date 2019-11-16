@@ -92,6 +92,8 @@ struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
     {
         double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
         double psip2 = psipR*psipR+psipZ*psipZ;
+        if( psip2 == 0)
+            psip2 = 1e-16;
         return (ipol*ipol + psip2)/R/R/psip2;
     }
     private:

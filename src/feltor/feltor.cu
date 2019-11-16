@@ -61,12 +61,12 @@ int main( int argc, char* argv[])
         mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
-    std::cout << "Constructing RHS...\n";
-    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
-    //std::cout << "Constructing Explicit...\n";
-    //feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
-    //std::cout << "Constructing Implicit...\n";
-    //feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
+    //std::cout << "Constructing RHS...\n";
+    //feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
+    std::cout << "Constructing Explicit...\n";
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
+    std::cout << "Constructing Implicit...\n";
+    feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     std::cout << "Done!\n";
 
     DVec result = dg::evaluate( dg::zero, grid);
@@ -109,21 +109,21 @@ int main( int argc, char* argv[])
     //
     dg::Timer t;
     unsigned step = 0;
-    //dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
-    //    feltor::FeltorSpecialSolver<
-    //        Geometry, IDMatrix, DMatrix, DVec>
-    //    > karniadakis( grid, p, mag);
-    unsigned mMax = 3, restart = 3, max_iter = 100;
-    double damping = 1e-3;
-    dg::BDF< std::array<std::array<dg::DVec,2>,2 >,
-        dg::AndersonSolver< std::array<std::array<dg::DVec,2>,2> >
-        > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
+    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
+        feltor::FeltorSpecialSolver<
+            Geometry, IDMatrix, DMatrix, DVec>
+        > karniadakis( grid, p, mag);
+    //unsigned mMax = 3, restart = 3, max_iter = 100;
+    //double damping = 1e-3;
+    //dg::BDF< std::array<std::array<dg::DVec,2>,2 >,
+    //    dg::AndersonSolver< std::array<std::array<dg::DVec,2>,2> >
+    //    > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
     //dg::AdamsBashforth< std::array<std::array<dg::DVec,2>,2 >
     //    > bdf( 3, y0);
 
     std::cout << "Initialize Timestepper" << std::endl;
-    //karniadakis.init( feltor, im, time, y0, p.dt);
-    bdf.init( feltor, time, y0, p.dt);
+    karniadakis.init( feltor, im, time, y0, p.dt);
+    //bdf.init( feltor, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
 
     std::map<std::string, const dg::DVec* > v4d;
@@ -210,8 +210,8 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    //karniadakis.step( feltor, im, time, y0);
-                    bdf.step( feltor, time, y0);
+                    karniadakis.step( feltor, im, time, y0);
+                    //bdf.step( feltor, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

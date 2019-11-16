@@ -153,12 +153,12 @@ int main( int argc, char* argv[])
         mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
-    MPI_OUT std::cout << "Constructing RHS...\n";
-    feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
-    //MPI_OUT std::cout << "Constructing Explicit...\n";
-    //feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
-    //MPI_OUT std::cout << "Constructing Implicit...\n";
-    //feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
+    //MPI_OUT std::cout << "Constructing RHS...\n";
+    //feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
+    MPI_OUT std::cout << "Constructing Explicit...\n";
+    feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
+    MPI_OUT std::cout << "Constructing Implicit...\n";
+    feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
     // helper variables for output computations
@@ -387,17 +387,17 @@ int main( int argc, char* argv[])
     MPI_OUT err = nc_close(ncid);
     MPI_OUT std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
-    //dg::Karniadakis< std::array<std::array<DVec,2>,2 >,
-    //    feltor::FeltorSpecialSolver<
-    //        Geometry, IDMatrix, DMatrix, DVec>
-    //    > karniadakis( grid, p, mag);
-    //karniadakis.init( feltor, im, time, y0, p.dt);
-    unsigned mMax = 3, restart = 3, max_iter = 100;
-    double damping = 1e-3;
-    dg::BDF< std::array<std::array<DVec,2>,2 >,
-        dg::AndersonSolver< std::array<std::array<DVec,2>,2> >
-        > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
-    bdf.init( feltor, time, y0, p.dt);
+    dg::Karniadakis< std::array<std::array<DVec,2>,2 >,
+        feltor::FeltorSpecialSolver<
+            Geometry, IDMatrix, DMatrix, DVec>
+        > karniadakis( grid, p, mag);
+    karniadakis.init( feltor, im, time, y0, p.dt);
+    //unsigned mMax = 3, restart = 3, max_iter = 100;
+    //double damping = 1e-3;
+    //dg::BDF< std::array<std::array<DVec,2>,2 >,
+    //    dg::AndersonSolver< std::array<std::array<DVec,2>,2> >
+    //    > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
+    //bdf.init( feltor, time, y0, p.dt);
     dg::Timer t;
     t.tic();
     unsigned step = 0;
@@ -412,8 +412,8 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    //karniadakis.step( feltor, im, time, y0);
-                    bdf.step( feltor, time, y0);
+                    karniadakis.step( feltor, im, time, y0);
+                    //bdf.step( feltor, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
