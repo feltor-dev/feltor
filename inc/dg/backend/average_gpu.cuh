@@ -74,13 +74,16 @@ void average( CudaTag, unsigned nx, unsigned ny, const value_type* in0, const va
     static thrust::host_vector<value_type> h_round;
     d_accumulator.resize( ny*exblas::BIN_COUNT);
     int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
+    int status;
     for( unsigned i=0; i<ny; i++)
-        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT]);
+        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT], &status);
     h_accumulator = d_accumulator;
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
-        h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
+        h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT], &status);
     cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
+    if(status != 0)
+        throw dg::Error(dg::Message(_ping_)<<"GPU Average failed since one of the inputs contains NaN or Inf");
 }
 
 #ifdef MPI_VERSION

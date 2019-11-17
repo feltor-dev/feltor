@@ -6,6 +6,7 @@
 #include <thrust/device_vector.h>
 
 #include "dg/blas.h"
+#include "dg/functors.h"
 
 #include "evaluation.h"
 #include "weights.h"
@@ -112,6 +113,10 @@ int main()
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
     std::cout << " Error norm of  1d integral function "<<norm<<"\n";
+    // TEST if dot throws on NaN
+    dg::blas1::transform( x,x, dg::LN<double>());
+    dg::blas1::dot( x,x);
+
     std::cout << "\nFINISHED! Continue with topology/derivatives_t.cu !\n\n";
     return 0;
 }

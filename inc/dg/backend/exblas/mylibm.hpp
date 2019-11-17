@@ -86,6 +86,7 @@ static inline int biased_exponent(double x)
     return e;
 }
 
+//MW: if x is a NaN this thing still returns a number??
 static inline double myldexp(double x, int e)
 {
     // Scale x by e
