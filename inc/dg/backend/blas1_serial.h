@@ -14,7 +14,7 @@ namespace detail
 template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status;
+    int status = 0;
     exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0],&status) ;
     if(status != 0)
         throw dg::Error(dg::Message(_ping_)<<"CPU Dot failed since one of the inputs contains NaN or Inf");
@@ -23,7 +23,7 @@ inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrV
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
 inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status;
+    int status = 0;
     exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0], &status) ;
     if(status != 0)
         throw dg::Error(dg::Message(_ping_)<<"CPU Dot failed since one of the inputs contains NaN or Inf");

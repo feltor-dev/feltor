@@ -17,7 +17,7 @@ const int MIN_SIZE=100;//don't parallelize if work is too small
 template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status;
+    int status = 0;
     if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0], &status);
     else
@@ -29,7 +29,7 @@ inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValu
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
 inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status;
+    int status = 0;
     if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0], &status);
     else

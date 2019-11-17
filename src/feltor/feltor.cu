@@ -174,8 +174,8 @@ int main( int argc, char* argv[])
             else
                 dg::assign( *pair.second, hvisual);
             dg::blas2::gemv( equi, hvisual, visual);
-            colors.scalemax() = (double)thrust::reduce(
-                visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            colors.scalemax() = dg::blas1::reduce(
+                visual, 0., dg::AbsMax<double>() );
             colors.scalemin() = -colors.scalemax();
             title <<pair.first << colors.scalemax()<<"   ";
             if ( p.symmetric )
@@ -227,18 +227,20 @@ int main( int argc, char* argv[])
             {
                 if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
+                    std::cout << record.name<<" : ";
                     record.function( result, var);
                     double norm = dg::blas1::dot( result, feltor.vol3d());
                     energy += norm;
-                    std::cout << record.name<<" : "<<norm<<std::endl;
+                    std::cout << norm<<std::endl;
 
                 }
                 if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
                 {
+                    std::cout << record.name<<" : ";
                     record.function( result, var);
                     double norm = dg::blas1::dot( result, feltor.vol3d());
                     ediff += norm;
-                    std::cout << record.name<<" : "<<norm<<std::endl;
+                    std::cout << norm<<std::endl;
                 }
 
             }
@@ -250,6 +252,9 @@ int main( int argc, char* argv[])
             std::cout <<"\td E/dt = " << dEdt
               <<" Lambda = " << ediff
               <<" -> Accuracy: " << accuracy << "\n";
+            double max_ue = dg::blas1::reduce(
+                feltor.velocity(0), 0., dg::AbsMax<double>() );
+            MPI_OUT std::cout << "\tMaximum ue "<<max_ue<<"\n";
             //----------------Test if induction equation holds
             if( p.beta != 0)
             {

@@ -15,7 +15,7 @@ template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
     int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
-    int status;
+    int status = 0;
     exblas::exdot_gpu( size, x_ptr,y_ptr, d_ptr, &status );
     if( status != 0)
         throw dg::Error(dg::Message(_ping_)<<"GPU Dot product failed since one of the inputs contains NaN or Inf");
@@ -27,7 +27,7 @@ template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
 inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
     static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
     int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
-    int status;
+    int status = 0;
     exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr, d_ptr, &status);
     if( status != 0)
         throw dg::Error(dg::Message(_ping_)<<"GPU Dot product failed since one of the inputs contains NaN or Inf");

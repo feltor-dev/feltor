@@ -463,6 +463,9 @@ int main( int argc, char* argv[])
             MPI_OUT std::cout <<"\td E/dt = " << dEdt
                       <<" Lambda = " << ediff
                       <<" -> Accuracy: " << accuracy << "\n";
+            double max_ue = dg::blas1::reduce(
+                feltor.velocity(0), 0., dg::AbsMax<double>() );
+            MPI_OUT std::cout << "\tMaximum ue "<<max_ue<<"\n";
             //----------------Test if induction equation holds
             if( p.beta != 0)
             {

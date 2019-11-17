@@ -23,7 +23,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     const get_value_type<Vector2>* y_ptr = &y;
     //since we only accumulate up to three values (multiplication and rest) reduce the size of the FPE
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status;
+    int status = 0;
     exblas::exdot_cpu<const get_value_type<Vector1>*, const get_value_type<Matrix>*, const get_value_type<Vector2>*, 3>( 1, x_ptr,m_ptr,y_ptr, &h_superacc[0], &status) ;
     if(status != 0)
         throw dg::Error(dg::Message(_ping_)<<"Scalar Dot failed since one of the inputs contains NaN or Inf");
