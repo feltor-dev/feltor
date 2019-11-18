@@ -155,7 +155,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 3);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
@@ -183,7 +183,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
@@ -210,8 +210,8 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             {
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                    dg::geo::NoLimiter(), p.rk4eps, 1, 1);
+                //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::pointwiseDot( detail::profile_damping(grid,p,gp,mag), ntilde, ntilde);
@@ -262,8 +262,8 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             {
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                    dg::geo::NoLimiter(), p.rk4eps, 1, 1);
+                //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0] );
