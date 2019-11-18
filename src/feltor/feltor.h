@@ -156,13 +156,32 @@ struct ComputeSource{
         result = temp;
     }
 };
+//Resistivity (consistent density dependency,
+//parallel momentum conserving, quadratic current energy conservation dependency)
+struct AddResistivity{
+    AddResistivity( double eta, std::array<double,2> mu): m_eta(eta){
+        m_mu[0] = mu[0], m_mu[1] = mu[1];
+    }
+    DG_DEVICE
+    void operator()( double ne, double ni, double ue,
+        double ui, double& dtUe, double& dtUi) const{
+        double current = (ne)*(ui-ue);
+        dtUe += -m_eta/m_mu[0] * current;
+        dtUi += -m_eta/m_mu[1] * (ne)/(ni) * current;
+    }
+    private:
+    double m_eta;
+    double m_mu[2];
+};
 }//namespace routines
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
+    using vector = std::array<std::array<Container,2>,2>;
+    using container = Container;
     Explicit( const Geometry& g, feltor::Parameters p,
-        dg::geo::TokamakMagneticField mag);
+        dg::geo::TokamakMagneticField mag, bool full_system );
 
     //Given N_i-1 initialize n_e-1 such that phi=0
     void initializene( const Container& ni, Container& ne);
@@ -252,6 +271,7 @@ struct Explicit
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }
     const Container& vol3d() const { return m_vol3d;}
+    const Container& weights() const { return m_lapperpN.weights();}
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
         return m_b;
@@ -360,6 +380,7 @@ struct Explicit
     const feltor::Parameters m_p;
     double m_omega_source = 0.;
     bool m_fixed_profile = true;
+    bool m_full_system = false;
 
 };
 
@@ -367,6 +388,8 @@ template<class Grid, class IMatrix, class Matrix, class Container>
 void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
+    if( !(p.perp_diff == "viscous" || p.perp_diff == "hyperviscous") )
+        throw dg::Error(dg::Message(_ping_)<<"Warning! perp_diff value '"<<p.perp_diff<<"' not recognized!! I do not know how to proceed! Exit now!");
     //due to the various approximations bhat and mag not always correspond
     dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
     if( p.curvmode == "true" )
@@ -504,7 +527,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
-    feltor::Parameters p, dg::geo::TokamakMagneticField mag):
+    feltor::Parameters p, dg::geo::TokamakMagneticField mag, bool full_system):
 #ifdef DG_MANUFACTURED
     m_R( dg::pullback( dg::cooX3d, g)),
     m_Z( dg::pullback( dg::cooY3d, g)),
@@ -520,7 +543,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
-    m_p(p)
+    m_p(p), m_full_system(full_system)
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
@@ -863,13 +886,52 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 m_profne, m_source, m_omega_source);
         else
             dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
-        //compute FLR correction
+        //compute FLR corrections
         dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
+        // potential part of FLR correction
+        dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][1], m_binv, m_binv, 0., m_temp0);
+        m_lapperpP.multiply_sigma( -1., m_temp0, m_phi[0], 1., m_s[0][0]);
 
         dg::blas1::axpby( 1., m_s[0][0], 1.0, yp[0][0]);
         dg::blas1::axpby( 1., m_s[0][1], 1.0, yp[0][1]);
         //currently we ignore m_s[1]
+    }
+    if( m_full_system)
+    {
+#if FELTORPERP == 1
+        /* y[0] := n_e - 1
+           y[1] := N_i - 1
+        */
+        for( unsigned i=0; i<2; i++)
+        {
+            if( m_p.perp_diff == "hyperviscous")
+            {
+                dg::blas2::symv( m_lapperpN, y[0][i], m_temp0);
+                dg::blas2::symv( -m_p.nu_perp, m_lapperpN, m_temp0, 1., yp[0][i]);
+            }
+            else // m_p.perp_diff == "viscous"
+                dg::blas2::symv( -m_p.nu_perp, m_lapperpN, y[0][i],  1., yp[0][i]);
+        }
+        /* fields[1][0] := u_e
+           fields[1][1] := U_i
+        */
+        for( unsigned i=0; i<2; i++)
+        {
+            if( m_p.perp_diff == "hyperviscous")
+            {
+                dg::blas2::symv( m_lapperpU, m_fields[1][i], m_temp0);
+                dg::blas2::symv( -m_p.nu_perp, m_lapperpU, m_temp0, 1., yp[1][i]);
+            }
+            else // m_p.perp_diff == "viscous"
+                dg::blas2::symv( -m_p.nu_perp, m_lapperpU,
+                    m_fields[1][i],  1., yp[1][i]);
+        }
+#endif
+        //------------------Add Resistivity--------------------------//
+        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+            m_fields[0][0], m_fields[0][1],
+            m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
     }
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{

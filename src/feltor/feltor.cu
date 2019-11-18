@@ -61,8 +61,10 @@ int main( int argc, char* argv[])
         mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
 
     //create RHS
+    //std::cout << "Constructing RHS...\n";
+    //feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
     std::cout << "Constructing Implicit...\n";
     feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
     std::cout << "Done!\n";
@@ -88,8 +90,8 @@ int main( int argc, char* argv[])
         std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
         return -1;
     }
-    bool fixed_profile;
 
+    bool fixed_profile;
     HVec profile = dg::evaluate( dg::zero, grid);
     HVec source_profile;
     try{
@@ -111,13 +113,22 @@ int main( int argc, char* argv[])
         feltor::FeltorSpecialSolver<
             Geometry, IDMatrix, DMatrix, DVec>
         > karniadakis( grid, p, mag);
+    //unsigned mMax = 3, restart = 3, max_iter = 100;
+    //double damping = 1e-3;
+    //dg::BDF< std::array<std::array<dg::DVec,2>,2 >,
+    //    dg::AndersonSolver< std::array<std::array<dg::DVec,2>,2> >
+    //    > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
+    //dg::AdamsBashforth< std::array<std::array<dg::DVec,2>,2 >
+    //    > bdf( 3, y0);
+
     std::cout << "Initialize Timestepper" << std::endl;
     karniadakis.init( feltor, im, time, y0, p.dt);
+    //bdf.init( feltor, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
 
     std::map<std::string, const dg::DVec* > v4d;
-    v4d["ne-1 / "] = &y0[0][0],               v4d["ni-1 / "] = &y0[0][1];
-    v4d["Ue / "]   = &feltor.fields()[1][0],  v4d["Ui / "]   = &feltor.fields()[1][1];
+    v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
+    v4d["Ue / "]   = &feltor.velocity(0), v4d["Ui / "]   = &feltor.velocity(1);
     v4d["Ome / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.induction();
     double dEdt = 0, accuracy = 0;
     double E0 = 0.;
@@ -144,7 +155,6 @@ int main( int argc, char* argv[])
     std::cout << std::scientific << std::setprecision( 2);
     dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     title << std::setprecision(2) << std::scientific;
-    //unsigned failed_counter = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         title << std::fixed;
@@ -153,7 +163,6 @@ int main( int argc, char* argv[])
         {
             if(pair.first == "Ome / ")
             {
-                //dg::blas2::gemv( laplacianM, *pair.second, dvisual);
                 dg::assign( feltor.lapMperpP(0), hvisual);
                 dg::assign( *pair.second, hvisual);
             }
@@ -165,8 +174,8 @@ int main( int argc, char* argv[])
             else
                 dg::assign( *pair.second, hvisual);
             dg::blas2::gemv( equi, hvisual, visual);
-            colors.scalemax() = (double)thrust::reduce(
-                visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            colors.scalemax() = dg::blas1::reduce(
+                visual, 0., dg::AbsMax<double>() );
             colors.scalemin() = -colors.scalemax();
             title <<pair.first << colors.scalemax()<<"   ";
             if ( p.symmetric )
@@ -202,6 +211,7 @@ int main( int argc, char* argv[])
             {
                 try{
                     karniadakis.step( feltor, im, time, y0);
+                    //bdf.step( feltor, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -217,18 +227,20 @@ int main( int argc, char* argv[])
             {
                 if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
+                    std::cout << record.name<<" : ";
                     record.function( result, var);
                     double norm = dg::blas1::dot( result, feltor.vol3d());
                     energy += norm;
-                    std::cout << record.name<<" : "<<norm<<std::endl;
+                    std::cout << norm<<std::endl;
 
                 }
                 if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
                 {
+                    std::cout << record.name<<" : ";
                     record.function( result, var);
                     double norm = dg::blas1::dot( result, feltor.vol3d());
                     ediff += norm;
-                    std::cout << record.name<<" : "<<norm<<std::endl;
+                    std::cout << norm<<std::endl;
                 }
 
             }
@@ -240,6 +252,9 @@ int main( int argc, char* argv[])
             std::cout <<"\td E/dt = " << dEdt
               <<" Lambda = " << ediff
               <<" -> Accuracy: " << accuracy << "\n";
+            double max_ue = dg::blas1::reduce(
+                feltor.velocity(0), 0., dg::AbsMax<double>() );
+            MPI_OUT std::cout << "\tMaximum ue "<<max_ue<<"\n";
             //----------------Test if induction equation holds
             if( p.beta != 0)
             {

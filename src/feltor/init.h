@@ -75,17 +75,19 @@ HVec profile_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
+    double psip0 = mag.psip()( mag.R0(), 0);
     HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
-        mag.psip(), -p.alpha, p.alpha, -1), grid);
+        mag.psip(), -p.alpha, p.alpha, ((psip0>0)-(psip0<0))), grid); //sign operator!!
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), profile_damping, profile_damping);
     return profile_damping;
 }
 HVec profile(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag ){
+    double psip0 = mag.psip()( mag.R0(), 0);
     //First the profile and the source (on the host since we want to output those)
     HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(),
-        p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
+        p.nprofamp/psip0, 0.), grid);
     dg::blas1::pointwiseDot( profile_damping(grid,p,gp,mag), profile, profile);
     return profile;
 }
@@ -93,11 +95,12 @@ HVec source_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
+    double psip0 = mag.psip()( mag.R0(), 0);
     HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
         //first change coordinate from psi to (psi_0 - psip)/psi_0
         dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
         //then shift
-        p.rho_source, p.alpha, -1), grid);
+        p.rho_source, p.alpha, ((psip0>0)-(psip0<0)) ), grid);
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), source_damping, source_damping);
     return source_damping;
 }
@@ -152,7 +155,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 3);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
@@ -180,7 +183,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
                     dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
@@ -207,8 +210,8 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             {
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                    dg::geo::NoLimiter(), p.rk4eps, 1, 1);
+                //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::pointwiseDot( detail::profile_damping(grid,p,gp,mag), ntilde, ntilde);
@@ -259,8 +262,8 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             {
                 dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
                     fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 5, 5);
-                //evaluate should always be used with mx,my > 1
+                    dg::geo::NoLimiter(), p.rk4eps, 1, 1);
+                //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0] );
@@ -277,7 +280,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
 
 std::map<std::string, std::function< HVec(
     bool& fixed_profile, //indicate whether a profile should be forced (yes or no)
-    HVec& ne_profile, //construct profile if yes, do nothing or construct (determines what is written in output fiele) if no
+    HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file in any case
     Geometry& grid, const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
 > > source_profiles =
@@ -318,6 +321,17 @@ std::map<std::string, std::function< HVec(
             HVec source_profile = dg::construct<HVec> ( dg::pullback(
                 detail::TorpexSource(0.98/rhosinm, -0.02/rhosinm, 0.0335/rhosinm, 0.05/rhosinm, 565*rhosinm2 ), grid) );
             return source_profile;
+        }
+    },
+    {"gaussian",
+        []( bool& fixed_profile, HVec& ne_profile,
+        Geometry& grid, const feltor::Parameters& p,
+        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        {
+            fixed_profile = false;
+            dg::Gaussian prof( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma,
+                p.sigma, 1.);
+            return dg::pullback( prof, grid);
         }
     },
 };

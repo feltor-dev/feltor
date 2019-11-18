@@ -23,8 +23,8 @@ namespace dg
  *
  * @ingroup matrixoperators
  *
- * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
- * where \f$ \nabla_\perp \f$ is the two-dimensional gradient and \f$\chi\f$ is a
+ * The term discretized is \f[ -\nabla \cdot ( \chi \nabla ) \f]
+ * where \f$ \nabla \f$ is the two-dimensional nabla and \f$\chi\f$ is a
  * (possibly spatially dependent) tensor.
  * In general coordinates that means
  * \f[ -\frac{1}{\sqrt{g}}\left(
@@ -250,6 +250,46 @@ class Elliptic
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
     }
 
+    /**
+     * @brief Compute elliptic term with a possibly zero prefactor and add to output
+     *
+     * i.e this function computes \f[ y = -\alpha\nabla \cdot ( \sigma\chi \nabla x )  + \beta y\f]
+     * This is in principle possible also with the \c set_chi() and \c symv() functions
+     * however sometimes you have a \c sigma with explicit zeros or negative values.
+     * Then you need to use this function because \c set_chi() won't allow a \c sigma with zeros
+     * @note This function does not change the internal \c chi tensor
+     * @param alpha a scalar
+     * @param sigma The prefactor for the \c chi tensor
+     * @param x left-hand-side
+     * @param beta a scalar
+     * @param y result
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void multiply_sigma( value_type alpha, const ContainerType2& sigma, const ContainerType0& x, value_type beta, ContainerType1& y)
+    {
+        //compute gradient
+        dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
+        dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
+
+        //multiply with tensor (note the alias)
+        dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+        //sigma is possibly zero so we don't multiply it to m_chi
+        dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx); ///////
+        dg::blas1::pointwiseDot( m_tempy, sigma, m_tempy); ///////
+
+        //now take divergence
+        dg::blas2::symv( m_lefty, m_tempy, m_temp);
+        dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
+
+        //add jump terms
+        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( m_no == normed)
+            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
+        if( m_no == not_normed)//multiply weights without volume
+            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+    }
     private:
     bc inverse( bc bound)
     {
@@ -477,6 +517,44 @@ class Elliptic3d
         else
         {
             dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas2::symv( -1.,m_lefty, m_tempy, 0., m_temp);
+        }
+        dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
+
+        //add jump terms
+        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( m_no == normed)
+            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
+        if( m_no == not_normed)//multiply weights without volume
+            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+    }
+    ///@copydoc Elliptic::multiply_sigma(value_type,const ContainerType2&,const ContainerType0&,value_type,ContainerType1&)
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void multiply_sigma( value_type alpha, const ContainerType2& sigma, const ContainerType0& x, value_type beta, ContainerType1& y)
+    {
+        //compute gradient
+        dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
+        dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
+        if( m_multiplyZ )
+        {
+            dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
+
+            //multiply with tensor (note the alias)
+            dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
+            //sigma is possibly zero so we don't multiply it to m_chi
+            dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx); ///////
+            dg::blas1::pointwiseDot( m_tempy, sigma, m_tempy); ///////
+            dg::blas1::pointwiseDot( m_tempz, sigma, m_tempz); ///////
+            //now take divergence
+            dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
+            dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+        }
+        else
+        {
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx); ///////
+            dg::blas1::pointwiseDot( m_tempy, sigma, m_tempy); ///////
             dg::blas2::symv( -1.,m_lefty, m_tempy, 0., m_temp);
         }
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);

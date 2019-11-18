@@ -92,6 +92,7 @@ template < bool...> struct bool_pack;
 template<bool... v>
 using all_true = std::is_same<bool_pack<true,v...>, bool_pack<v..., true>>;
 
+template< typename ...> struct WhichType; //!< This is a utility class to get type information at compile time for debugging purposes Use like @code dg::WhichType<T>{};@endcode
 
 
 }//namespace dg

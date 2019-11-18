@@ -80,6 +80,8 @@ struct AndersonAcceleration
 
     /*!@brief Solve the system \f$ f(x) = b \f$ in the given norm
      *
+     * Iterates until \f$ ||f(x)-b|| < a_{\mathrm{tol}} + r_{\mathrm{tol}} ||b||\f$
+     *
      * @param f The function \c y=f(x) in the form \c f(x,y). The first argument is the input and the second the output.
      * @param x Contains an initial guess on input and the solution on output.
      * @param b The right hand side vector.

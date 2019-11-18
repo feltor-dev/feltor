@@ -71,7 +71,7 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * @param y Right input (may alias \c x)
  * @return Generalized scalar product. If \c x and \c y are vectors of containers and \c m is not, then we sum the results of \c dg::blas2::dot( x[i], m, y[i])
  * @note This routine is always executed synchronously due to the
-    implicit memcpy of the result.
+    implicit memcpy of the result. With mpi the result is broadcasted to all processes. Also note that the behaviour is undefined when one of the containers contains \c nan
  * @tparam MatrixType \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */

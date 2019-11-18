@@ -3,32 +3,13 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "dg/geometries/geometries.h"
+#include "feltor.h"
 
 //This contains the implicit part of the feltor equations
 //We even write a custom solver object for it
 
 namespace feltor
 {
-namespace routines
-{
-//Resistivity (consistent density dependency,
-//parallel momentum conserving, quadratic current energy conservation dependency)
-struct AddResistivity{
-    AddResistivity( double eta, std::array<double,2> mu): m_eta(eta){
-        m_mu[0] = mu[0], m_mu[1] = mu[1];
-    }
-    DG_DEVICE
-    void operator()( double ne, double ni, double ue,
-        double ui, double& dtUe, double& dtUi) const{
-        double current = (ne)*(ui-ue);
-        dtUe += -m_eta/m_mu[0] * current;
-        dtUi += -m_eta/m_mu[1] * (ne)/(ni) * current;
-    }
-    private:
-    double m_eta;
-    double m_mu[2];
-};
-}//namespace routines
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 struct ImplicitDensity

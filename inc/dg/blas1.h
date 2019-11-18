@@ -64,7 +64,7 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * @param y Right Container may alias x
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the
-        implicit memcpy of the result. With mpi the result is broadcasted to all processes
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes. Also note that the behaviour is undefined when one of the containers contains \c nan
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class ContainerType2>

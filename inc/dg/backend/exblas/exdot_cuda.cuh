@@ -49,7 +49,8 @@ __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
     PointerOrValue1 d_a,
     PointerOrValue2 d_b,
-    const uint NbElements
+    const uint NbElements,
+    volatile bool* error
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
     int64_t *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
@@ -64,6 +65,9 @@ __global__ void ExDOT(
         double r = 0.0;
         double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
         //double x = d_a[pos]*d_b[pos];//ATTENTION: if we write it like this, cpu compiler might generate an fma from this while nvcc does not...
+
+        //Check if the input is sane
+        if( !isfinite(x) ) *error = true;
 
         #pragma unroll
         for(uint i = 0; i != NBFPE; ++i) {
@@ -135,7 +139,8 @@ __global__ void ExDOT(
     PointerOrValue1 d_a,
     PointerOrValue2 d_b,
     PointerOrValue3 d_c,
-    const uint NbElements
+    const uint NbElements,
+    volatile bool *error
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
     int64_t *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
@@ -154,7 +159,10 @@ __global__ void ExDOT(
         double x1 = __fma_rn( get_element(d_a,pos), get_element(d_b,pos), 0);
         double x2 = __fma_rn( x1                  , get_element(d_c,pos), 0);
 
-        if( x2 != 0.0) {//accumulate x2
+        //Check if the input is sane
+        if( !isfinite(x2) ) *error = true;
+
+        if( x2 != 0.0 ) {//accumulate x2
             #pragma unroll
             for(uint i = 0; i != NBFPE; ++i) {
                 double s;
@@ -321,14 +329,18 @@ void ExDOTComplete(
 */
 template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* d_superacc, int* status)
 {
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
+    thrust::device_vector<bool> d_errorV(1, false);
+    bool *d_error = thrust::raw_pointer_cast( d_errorV.data());
+    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size, d_error);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    *status = 0;
+    if( d_errorV[0] ) *status = 1;
 }
 
 /*!@brief gpu version of exact triple dot product
@@ -346,15 +358,19 @@ void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, in
  */
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* d_superacc, int* status)
 {
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue3>::value, "PointerOrValue3 needs to be T or T* with T one of (const) float or (const) double");
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
+    thrust::device_vector<bool> d_errorV(1, false);
+    bool *d_error = thrust::raw_pointer_cast( d_errorV.data());
+    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size,d_error);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    *status = 0;
+    if( d_errorV[0] ) *status = 1;
 }
 
 }//namespace exblas

@@ -19,7 +19,7 @@ namespace dg{
 //// TO DO: check for better stopping criteria using condition number estimates?
 
 /**
-* @brief Functor class for the preconditioned conjugate gradient method to solve
+* @brief Preconditioned conjugate gradient method to solve
 * \f[ Ax=b\f]
 *
 * @ingroup invert
