@@ -283,8 +283,11 @@ class Elliptic
         dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( 0 != m_jfactor )
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
@@ -560,8 +563,11 @@ class Elliptic3d
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( 0 != m_jfactor )
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume

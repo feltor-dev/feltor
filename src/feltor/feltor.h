@@ -483,6 +483,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
         m_lapperpU.set_compute_in_2d(true);
         m_lapperpP.set_compute_in_2d(true);
     }
+    m_lapperpP.set_jfactor(0); //we don't want jump terms in source
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
