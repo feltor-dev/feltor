@@ -26,10 +26,10 @@ namespace geo{
 ///@ingroup fieldaligned
 enum whichMatrix
 {
-    einsPlus = 0,   /// plus interpolation in next plane
-    einsPlusT = 1,  /// transposed plus interpolation in previous plane
-    einsMinus = 2,  /// minus interpolation in previous plane
-    einsMinusT = 3, /// transposed minus interpolation in next plane
+    einsPlus = 0,   //!< plus interpolation in next plane
+    einsPlusT = 1,  //!< transposed plus interpolation in previous plane
+    einsMinus = 2,  //!< minus interpolation in previous plane
+    einsMinusT = 3, //!< transposed minus interpolation in next plane
 };
 
 ///@brief Full Limiter means there is a limiter everywhere
@@ -327,7 +327,9 @@ struct Fieldaligned
     container evaluate( const BinaryOp& binary, const UnaryOp& unary, unsigned p0, unsigned rounds) const;
 
     /**
-    * @brief Applies the interpolation
+    * @brief Apply the interpolation to three-dimensional vectors
+    *
+    * computes \f$  y = 1^\pm \otimes \mathcal T x\f$
     * @param which specify what interpolation should be applied
     * @param in input
     * @param out output may not equal input
@@ -351,6 +353,20 @@ struct Fieldaligned
     }
     ///Grid used for construction
     const ProductGeometry& grid()const{return *m_g;}
+
+    /**
+    * @brief Interpolate along fieldlines from a coarse to a fine grid in phi
+    *
+    * In this function we assume that the Fieldaligned object lives on the fine
+    * grid and we now want to interpolate values from a vector living on a coarse grid along the fieldlines onto the fine grid.
+    * Here, coarse and fine are with respect to the phi direction. The perpendicular directions need to have the same resolution in both input and output, i.e. there
+    * is no interpolation in those directions.
+    * @param cphi The compression factor in phi (must integer divide \c Nz in input grid)
+    * @param in the coarse input vector
+    *
+    * @return the input interpolated onto the grid given in the constructor
+    */
+    container interpolate_from_coarse_grid( unsigned cphi, const container& in);
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -534,6 +550,24 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
     return vec3d;
 }
 
+template<class G, class I, class container>
+container interpolate_from_coarse_grid( unsigned cphi, const container& in)
+{
+    //I think we need grid as input to split input vector and we need to interpret
+    //the grid nodes as node centered not cell-centered!
+    //idea: apply I+/I- cphi - 1 times in each direction and then apply interpolation formula
+    assert( m_g->Nz() % cphi == 0);
+    unsigned Nz_coarse = m_g.Nz() % cphi;
+
+    container out = dg::evaluate( dg::zero, *m_g);
+    dg::split( out, m_temp, *m_g);
+    //1. copy input vector to appropriate place in output
+    for ( int i=0; i<(int)Nz_coarse; i++)
+    {
+    }
+
+
+}
 
 template<class G, class I, class container>
 void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe)
