@@ -361,12 +361,13 @@ struct Fieldaligned
     * grid and we now want to interpolate values from a vector living on a coarse grid along the fieldlines onto the fine grid.
     * Here, coarse and fine are with respect to the phi direction. The perpendicular directions need to have the same resolution in both input and output, i.e. there
     * is no interpolation in those directions.
-    * @param cphi The compression factor in phi (must integer divide \c Nz in input grid)
-    * @param in the coarse input vector
+    * @param grid_coarse The coarse grid (\c coarse_grid.Nz() must integer divide \c Nz from input grid) The x and y dimensions must be equal
+    * @param coarse the coarse input vector
     *
     * @return the input interpolated onto the grid given in the constructor
+    * @note the interpolation weights are taken in the phi distance not the s-distancewhich makes the interpolation linear in phi
     */
-    container interpolate_from_coarse_grid( unsigned cphi, const container& in);
+    container interpolate_from_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse);
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -551,22 +552,43 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
 }
 
 template<class G, class I, class container>
-container interpolate_from_coarse_grid( unsigned cphi, const container& in)
+container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& grid, const container& in)
 {
     //I think we need grid as input to split input vector and we need to interpret
     //the grid nodes as node centered not cell-centered!
     //idea: apply I+/I- cphi - 1 times in each direction and then apply interpolation formula
-    assert( m_g->Nz() % cphi == 0);
-    unsigned Nz_coarse = m_g.Nz() % cphi;
+    assert( m_g->Nz() % grid.Nz() == 0);
+    unsigned Nz_coarse = grid.Nz(), Nz = m_g->Nz();
+    unsigned cphi = Nz / Nz_coarse;
 
     container out = dg::evaluate( dg::zero, *m_g);
-    dg::split( out, m_temp, *m_g);
-    //1. copy input vector to appropriate place in output
+    container helper = dg::evaluate( dg::zero, *m_g);
+    dg::split( out, m_f, *m_g);
+    dg::split( helper, m_temp, *m_g);
+    std::vector<dg::View< container>> in_split = dg::split( in, grid);
     for ( int i=0; i<(int)Nz_coarse; i++)
     {
+        //1. copy input vector to appropriate place in output
+        dg::blas1::copy( in_split[i], m_f[i*cphi]);
+        dg::blas1::copy( in_split[i], m_temp[i*cphi]);
+        //2. Now apply plus and minus T to fill in the rest
+        for( int j=1; j<(int)cphi; j++)
+        {
+            //!!! The value of f at the plus plane is I^- of the current plane
+            dg::blas2::symv( m_minus, m_f[i*cphi+j-1], m_f[i*cphi+j]);
+            //!!! The value of f at the minus plane is I^+ of the current plane
+            dg::blas2::symv( m_plus, m_temp[(i*cphi+cphi+1-j)%Nz], m_temp[i*cphi+cphi-j]);
+        }
     }
-
-
+    //3. Now add up with appropriate weights
+    for( int i=0; i<(int)Nz_coarse; i++)
+        for( int j=1; j<(int)cphi; j++)
+        {
+            double alpha = (double)(cphi-j)/(double)cphi;
+            double beta = (double)j/(double)cphi;
+            dg::blas1::axpby( alpha, m_f[i*cphi+j], beta, m_temp[i*cphi+j], m_f[i*cphi+j]);
+        }
+    return out;
 }
 
 template<class G, class I, class container>
