@@ -63,6 +63,8 @@ struct Parameters
             <<" boxscaleRp    = "<<boxscaleRp<<"\n"
             <<" boxscaleZm    = "<<boxscaleZm<<"\n"
             <<" boxscaleZp    = "<<boxscaleZp<<"\n"
+            <<" alpha         = "<<alpha<<"\n"
+            <<" alpha_mag     = "<<alpha_mag<<"\n"
             <<" amp           = "<<amp<<"\n"
             <<" k_psi         = "<<k_psi<<"\n"
             <<" bgprofamp     = "<<bgprofamp<<"\n"

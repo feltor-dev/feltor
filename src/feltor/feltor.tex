@@ -1313,7 +1313,7 @@ File format: json
     R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ in Eq.~\eqref{eq:solovev} (This is the only geometry quantity to change if $\rho_s$ changes)\\
     elongation    & float & 1 & - & Elongation $e$, used in determining the box size Eq.~\eqref{eq:box} and the initial guess for the location of the X-point $Z_X = -1.1 ea$ \\
     triangularity & float & 0 & - & Triangularity $\delta$, used in the initial guess for the location of the X-point $R_X = R_0-1.1\delta a$ \\
-    inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ \\
+    inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ (used to compute $a$ from $R_0$) \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and

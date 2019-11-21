@@ -456,6 +456,8 @@ class Elliptic3d
      * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
      * set each part seperately. This functions sets the tensor part.
      *
+     * @note The class will take care of the volume element in the divergence so do not multiply it to \c tau yourself
+     *
      * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
      * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
      */
