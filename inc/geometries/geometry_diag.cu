@@ -378,20 +378,28 @@ int main( int argc, char* argv[])
         grid1d = dg::Grid1d (psipmin<psipmax ? psipmin : psipmax, psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::NEU);
         map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
             "Flux surface average of psi with delta function");
+        dg::HVec qprofile;
         if( gp.equilibrium == "solovev")
         {
-            dg::geo::SafetyFactor     qprof( mag);
-            map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
+            dg::geo::SafetyFactor qprof( mag);
+            qprofile = dg::evaluate( qprof, grid1d);
+            map1d.emplace_back("q-profile", qprofile,
                 "q-profile (Safety factor) using direct integration");
         }
-        else
-        {
-            dg::geo::SafetyFactorAverage     qprof( grid2d, mag);
-            map1d.emplace_back("q-profile", dg::evaluate( qprof,    grid1d),
-                "q-profile (Safety factor) using average integration");
-        }
+        dg::geo::SafetyFactorAverage qprof( grid2d, mag);
+        qprofile = dg::evaluate( qprof, grid1d);
+        map1d.emplace_back("q-profile_fsa", qprofile,
+            "q-profile (Safety factor) using average integration");
+        dg::HVec psit = dg::integrate( qprofile, grid1d);
+        map1d.emplace_back("psit1d", psit,
+            "Toroidal flux label psi_t evaluated on grid1d");
+        double psit_tot = dg::interpolate(psit, 0., grid1d);
+        dg::blas1::scal ( psit, 1/psit_tot);
+        dg::blas1::transform( psit, psit, dg::SQRT<double>());
+        map1d.emplace_back("rho_t", psit,
+            "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
         map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
-            "Flux label psi evaluated on grid1d");
+            "Poloidal flux label psi_p evaluated on grid1d");
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
         dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
         map1d.emplace_back("rho", rho,

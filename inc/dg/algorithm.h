@@ -18,6 +18,8 @@
 #include "blas.h"
 #include "helmholtz.h"
 #include "cg.h"
+#include "bicgstabl.h"
+#include "lgmres.h"
 #include "functors.h"
 #include "multistep.h"
 #include "elliptic.h"
