@@ -36,7 +36,7 @@ Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B
 we can define various differential operations.
 %Let us further assume that $\bhat$ is perturbed by the parallel
 %vector potential $A_\parallel$ via
-%$\tilde{ \vec b }_\perp := ({\nabla \times A_\parallel \bhat)}/{B}$
+%$\tilde{ \vec b }_\perp := ({\vn \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
 %\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
@@ -45,39 +45,39 @@ we can define various differential operations.
 \midrule
     Perpendicular Poisson bracket&
     $\left[.,.\right]_\perp$ &
-    $\left[f,g\right]_\perp := \bhat \cdot \left(\vec{\nabla} f \times \vec\nabla g\right) =
+    $\left[f,g\right]_\perp := \bhat \cdot \left(\vn f \times \vn g\right) =
     b_i \varepsilon^{ijk}\partial_j f\partial_k g/\sqrt{g}$  \\
     Projection Tensor&
     $h $ & $h^{ij} := g^{ij} - b^ib^j $\\
     %Alignment Tensor&
     %$t $ & $ t^{ij} := b^ib^j$\\
     Perpendicular Gradient&
-    $\vec \nabla_\perp $&
-    $ \vec \nabla_\perp f := \bhat\times(\vec \nabla f\times \bhat ) \equiv
-    h \cdot \nabla f$ \\
+    $\np $&
+    $ \np f := \bhat\times(\vn f\times \bhat ) \equiv
+    h \cn f$ \\
     Perpendicular Laplacian&
     $\Delta_\perp $&
-    $ \Delta_\perp f:= \vec \nabla\cdot (\vec \nabla_\perp f)
-    = \nabla\cdot( h\cdot\nabla f)$  \\
+    $ \Delta_\perp f:= \vec \nc (\np f)
+    = \nc( h\cn f)$  \\
     Curl-b Curvature &
-    $\mathcal K_{\nabla\times\bhat}$ &
-    $\mathcal K_{\nabla\times\bhat}(f) := \vec{ \mathcal K_{\nabla\times\bhat} }\cdot \vec \nabla f = \frac{1}{B}(\nabla \times \bhat)\cdot \vec \nabla f$ \\[4pt]
+    $\mathcal K_{\vn\times\bhat}$ &
+    $\mathcal K_{\vn\times\bhat}(f) := \vec{ \mathcal K_{\vn\times\bhat} }\cn f = \frac{1}{B}(\vn \times \bhat)\cn f$ \\[4pt]
     Grad-B Curvature &
-    $\mathcal K_{\nabla B} $ &
-    $\mathcal K_{\nabla B}(f) := \vec{\mathcal K_{\nabla B}} \cdot \vec \nabla f = \frac{1}{B}(\bhat \times \vec \nabla \ln B)\cdot \vec \nabla f$ \\[4pt]
+    $\mathcal K_{\vn B} $ &
+    $\mathcal K_{\vn B}(f) := \vec{\mathcal K_{\vn B}} \cn f = \frac{1}{B}(\bhat \times \vn \ln B)\cn f$ \\[4pt]
     Curvature &
     $\mathcal K$ &
-    $\mathcal{K}(f):=\vec{\mathcal K} \cdot \vec \nabla f =
-     \vec{\nabla}\cdot\left(\frac{\bhat\times\vec{\nabla} f}{B}\right)$,\\[4pt]
+    $\mathcal{K}(f):=\vec{\mathcal K} \cn f =
+     \nc\left(\frac{\bhat\times\vn f}{B}\right)$,\\[4pt]
     Parallel derivative&
-    $\nabla_\parallel $&
-    $ \nabla_\parallel f := \bhat\cdot\vec{\nabla} f$ \\
+    $\npar $&
+    $ \npar f := \bhat\cn f$ \\
     %Perturbed parallel Derivative&
-    %$\bar\nabla_\parallel$ &
-    %$\bar\nabla_\parallel f := (\bhat + \tilde{\vec b }_\perp)\cdot \nabla f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
+    %$\bar\npar$ &
+    %$\bar\npar f := (\bhat + \tilde{\vec b }_\perp)\cn f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
     Parallel Laplacian&
     $\Delta_\parallel $&
-    $\Delta_\parallel f:= \vec{\nabla} \cdot ( \bhat\bhat\cdot\vec{\nabla} f )$\\
+    $\Delta_\parallel f:= \nc ( \bhat\bhat\cn f )$\\
 \bottomrule
 \end{longtable}
 with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$, and
@@ -86,21 +86,21 @@ Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
 Note that we have
 \begin{align}
-    \vec \nabla \cdot \vec{\mathcal K_{\nabla\times\bhat}}
-    &= -\vec\nabla \cdot \vec{\mathcal K_{\nabla B}} = -\vec{ \mathcal K_{\nabla\times\bhat}}\cdot\nabla\ln B, \\
-    \vec\nabla\cdot\vec{ \mathcal K} &= 0, \\
+    \nc \vec{\mathcal K_{\vn\times\bhat}}
+    &= -\nc \vec{\mathcal K_{\vn B}} = -\vec{ \mathcal K_{\vn\times\bhat}}\cn\ln B, \\
+    \vec\nc\vec{ \mathcal K} &= 0, \\
     \vec{\mathcal K} &=
-     \nabla\times\frac{\bhat}{B}\cdot\nabla f
-    = \mathcal K_{\nabla\times\bhat}(f) + \mathcal K_{\nabla B}(f),\\
-    \vec{ \mathcal K_{\nabla\times\bhat}} - \vec{ \mathcal K_{\nabla B}} &= \frac{1}{B^2} (\vec \nabla \times \vec B), \\
-    \nabla_\parallel \ln B &= -\vec\nabla\cdot\bhat.
+     \vn\times\frac{\bhat}{B}\cn f
+    = \mathcal K_{\vn\times\bhat}(f) + \mathcal K_{\vn B}(f),\\
+    \vec{ \mathcal K_{\vn\times\bhat}} - \vec{ \mathcal K_{\vn B}} &= \frac{1}{B^2} (\vn \times \vec B), \\
+    \npar \ln B &= -\vec\nc\bhat.
     \label{eq:curl_curvature}
 \end{align}
-The last equality holds if $\vec\nabla\cdot \vec B = 0$.
+The last equality holds if $\vec\nc \vec B = 0$.
 Note that in any arbitrary coordinate system we have
 \begin{align}
-(\vec \nabla f)^i = g^{ij}\partial_j f ~, \quad
-\vec \nabla \cdot \vec v = \frac{1}{\sqrt{g}}\partial_i \left(\sqrt{g} v^i\right) ~, \quad
+(\vn f)^i = g^{ij}\partial_j f ~, \quad
+\nc \vec v = \frac{1}{\sqrt{g}}\partial_i \left(\sqrt{g} v^i\right) ~, \quad
 (\vec v \times \vec w)^i = \frac{1}{\sqrt{g}}\varepsilon^{ijk} v_jw_k ~.
 %\label{}
 \end{align}
@@ -127,9 +127,9 @@ basis vectors and (covariant) metric tensor are:
   0 & 1 & 0 \\
   0 & 0 & R^2
    \end{pmatrix}
-% \vec{\nabla} R &= (\sin{(\varphi)} ,   \cos{(\varphi)},0 )^T , &
-%  \vec{\nabla}Z &= ( 0 ,0 ,1 )^T,  &
-%  \vec{\nabla}{\varphi} &= \frac{1}{R} ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T .
+% \vn R &= (\sin{(\varphi)} ,   \cos{(\varphi)},0 )^T , &
+%  \vnZ &= ( 0 ,0 ,1 )^T,  &
+%  \vn{\varphi} &= \frac{1}{R} ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T .
 \end{align}
 With the help of the metric elements we get a well behaved volume element \(\sqrt{g} = R\). However, we have a coordinate singularity at \(R=0\).
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
@@ -157,15 +157,15 @@ Cartesian coordinates while straightening the field lines for large $R_0$
 we recover the familiar slab geometry.
 
 We have the equilibrium equations in toroidally symmetric, ideal MHD (
-$\vec\nabla p = \vec j\times \vec B$ and $\vec \nabla\times\vec B = \vec j$ normalized with $p_0 = B_0^2/\mu_0$, and $j_0 = B_0/\rho_s/\mu_0$ )
+$\vn p = \vec j\times \vec B$ and $\vn\times\vec B = \vec j$ normalized with $p_0 = B_0^2/\mu_0$, and $j_0 = B_0/\rho_s/\mu_0$ )
 \begin{align}
-    \vec\nabla\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
+    \vn\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
  j_\parallel &= \vec j\cdot \bhat = \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
  \frac{\d I}{\d\psi_p} B \quad \text{  Pfirsch-Schl\"uter \& Bootstrap current } \\
  \vec j_\perp &= \bhat\times\left(\vec j\times\bhat\right)=
- \frac{\bhat \times \nabla p}{B} \quad\quad\quad \text{ diamagnetic current} \\
+ \frac{\bhat \times \vn p}{B} \quad\quad\quad \text{ diamagnetic current} \\
  \vec j\times\vec B &= \frac{R_0^2}{R^2}\left[ -\Delta^* \psi_p - I
-     \frac{\d I}{\d \psi_p} \right]\vec\nabla\psi_p \equiv \frac{\d p}{\d\psi_p}\vec\nabla\psi_p =\vec \nabla p
+     \frac{\d I}{\d \psi_p} \right]\vn\psi_p \equiv \frac{\d p}{\d\psi_p}\vn\psi_p =\vn p
 \end{align}
 from where we recover the Grad-Shafranov equation
 \begin{align}\label{eq:GSEdimless}
@@ -242,12 +242,12 @@ Note that
 (contra- and covariant components of $\vec B$).
 By construction we have $\partial_\varphi B = 0$ with
 \begin{align}
-  B = \frac{R_0}{R}\sqrt{ {I^2 + |\nabla \psi_p|^2}}.
+  B = \frac{R_0}{R}\sqrt{ {I^2 + |\vn \psi_p|^2}}.
     \label{}
 \end{align}
 Furthermore, we have
 \begin{align}
-  \nabla_\parallel f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \nabla_\parallel \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nabla\cdot\bhat.
+  \npar f(R,Z) = \frac{R_0}{RB}[f,\psi_p]_{RZ}\Rightarrow \npar \ln B = \frac{R_0}{RB^2}\left[B, \psi_p\right]_{RZ} = -\vec\nc\bhat.
 \end{align}
 We allow various simplifications to the curvature operator
 for the Solov'ev equilibrium.
@@ -258,35 +258,35 @@ for the Solov'ev equilibrium.
 The toroidal/negative toroidal field line approximation applies \(\bhat\approx \pm \ehat_\varphi\) to all perpendicular operators
 (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
 but retains the full expression for the magnetic field unit vector \(\bhat\)
-for parallel operators (\(\nabla_\parallel\) and \(\Delta_\parallel\)).
+for parallel operators (\(\npar\) and \(\Delta_\parallel\)).
 (Note that we allow the negative sign $-\ehat_\varphi$ to enable a sign reversal of the magnetic field, see Section~\ref{sec:field_reversal}).
 In cylindrical coordinates that is
 \begin{align}
 [f,g]_\perp \equiv [f,g]_{RZ} &= \pm\frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
-\nabla_\perp f &= \partial_R f \ehat_R + \partial_Z f \ehat_Z \\
+\np f &= \partial_R f \ehat_R + \partial_Z f \ehat_Z \\
 \Delta_\perp f &= \frac{1}{R}\partial_R \left( R \partial_R f\right) + \partial_Z(\partial_Z f)
 \label{}
 \end{align}
 The curl of $\bhat$ reduces to
 %\begin{align}
- $\nabla\times\bhat \approx -  \frac{\pm 1}{R} \ehat_Z$.
+ $\vn\times\bhat \approx -  \frac{\pm 1}{R} \ehat_Z$.
 %end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}}_{{\nabla\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
-\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
-%\ehat_\varphi \times \vec{\nabla} B, &
-\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{{\nabla\times\bhat}} ,
+\vec{\mathcal{K}}_{{\vn\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
+\vec{ \mathcal{K} }_{\vn  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+%\ehat_\varphi \times \vn B, &
+\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vn  B}  +\vec{ \mathcal{K} }_{{\vn\times\bhat}} ,
 %\\
-%\mathcal{K}_{{\nabla\times\bhat}}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
-%\mathcal{K}_{\vec{\nabla}  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},&
+%\mathcal{K}_{{\vn\times\bhat}}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
+%\mathcal{K}_{\vn  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},&
 %\mathcal{K} (f) &\approx\frac{1}{B} \left[\ln B, f \right]_{RZ}-  \frac{1}{B R} \frac{\partial f}{\partial Z} ,
 \end{align}
 and
 \begin{align}
- \vec{\nabla} \cdot \vec{\mathcal{K}}_{{\nabla\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
+ \nc \vec{\mathcal{K}}_{{\vn\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
 \end{align}
-which results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\).
+which results in a vanishing divergence of the curvature operators \( \nc \vec{ \mathcal{K} } = 0\).
 
 Note that in an actual toroidal field we have
 \begin{align}
@@ -296,10 +296,10 @@ Note that in an actual toroidal field we have
 We then have $\bhat = \ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
-  \vec{ \mathcal K_{\nabla\times\bhat}} = \vec{ \mathcal K_{\nabla B}} = -\frac{\pm 1}{R_0} \ehat_Z =
+  \vec{ \mathcal K_{\vn\times\bhat}} = \vec{ \mathcal K_{\vn B}} = -\frac{\pm 1}{R_0} \ehat_Z =
 \vec{ \mathcal K}/2\\
-  \nabla\cdot\vec{\mathcal K_{{\nabla\times\bhat}}}=
-    \nabla_\parallel \ln B = 0
+  \nc\vec{\mathcal K_{{\vn\times\bhat}}}=
+    \npar \ln B = 0
     \label{}
 \end{align}
 
@@ -307,49 +307,49 @@ simplify to
 In this approximation we apply the toroidal field line approximation
 as in Section
 \ref{sec:torfieldlineapprox}
-but approximate the curvature operator $\mathcal K_{\nabla\times\bhat} \approx \bhat\times\vec \kappa$
+but approximate the curvature operator $\mathcal K_{\vn\times\bhat} \approx \bhat\times\vec \kappa$
   with
-  $\vec \kappa := \bhat \cdot \vec \nabla\bhat = -\bhat \times(\vec \nabla\times \bhat)$.
+  $\vec \kappa := \bhat \cn\bhat = -\bhat \times( \vn\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
 \(\beta = \frac{P}{B^2/(2 \mu_0) } \)
 we can rewrite the curvature to
 \begin{align}
-    \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
+    \vec{\kappa} &\approx \frac{\beta}{2} \vn \ln(P) +\np \ln{B} .
 \end{align}
 In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \begin{align}
-    \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
+    \vec{\kappa} & \approx \np \ln{B} .
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}_{{\nabla\times\bhat}}}(f) \approx
-\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
-\mathcal{K} (f) &\approx 2\mathcal{K}_{\vec{\nabla}  B} (f) , &
-    \vec{{\nabla\times\bhat}} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
+\vec{\mathcal{K}_{{\vn\times\bhat}}}(f) \approx
+\vec{ \mathcal{K} }_{\vn  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+\mathcal{K} (f) &\approx 2\mathcal{K}_{\vn  B} (f) , &
+    \vn\times\bhat \cdot \vec{\mathcal{K}}_{\vn  B} &= 0.
 \end{align}
-The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\).
-In general, the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
+The divergence over the curvature vanishes \( \nc \vec{ \mathcal{K} } = 0\) only if \( \nc \vec{ \mathcal{K}}_{\vn  B}   = 0\).
+In general, the divergence \( \nc \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
 \subsubsection{True perpendicular terms}
 
 Without any approximations we have
 \begin{align}
-b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad
-b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \quad 
-b^\varphi = \frac{I}{R}\left(I^2+|\nabla\psi|^2\right)^{-1/2} \\
-\vec\nabla\cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ} \\
-\left({\nabla\times\bhat}\right) \cdot\bhat =
-    (I'(\nabla\psi_p)^2 - I \Delta_\perp^* \psi_p)\frac{ R_0^2}{R^2B^2} \propto 1/R_0
+b^R = {\frac{\partial \psi}{\partial Z}}\left(I^2+|\vn\psi|^2\right)^{-1/2} \quad
+b^Z = -{\frac{\partial \psi}{\partial R}}\left(I^2+|\vn\psi|^2\right)^{-1/2} \quad 
+b^\varphi = \frac{I}{R}\left(I^2+|\vn\psi|^2\right)^{-1/2} \\
+\vec\nc\bhat = -\npar \ln B = -\frac{R_0}{R B^2}[B,\psi_p]_{RZ} \\
+\left({\vn\times\bhat}\right) \cdot\bhat =
+    (I'(\vn\psi_p)^2 - I \Delta_\perp^* \psi_p)\frac{ R_0^2}{R^2B^2} \propto 1/R_0
 \label{}
 \end{align}
 where for the last
 estimate we inserted the Grad-Shafranov equation and the Solov'ev assumptions.
-We can then insert $\bhat$ into the exact definitions for $[.,.]_\perp$, $\nabla_\perp$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
+We can then insert $\bhat$ into the exact definitions for $[.,.]_\perp$, $\np$ and $\Delta_\perp$ from Section~\ref{sec:magnetic}.
 
 For the curvature terms we can explicitly write
 \begin{align}
-K_{\nabla B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
-K_{\nabla B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
-K_{\nabla B}^\varphi &= \frac{R_0}{B^3R^2}\left(
+K_{\vn B}^R &= -\frac{R_0 I}{B^3R}\frac{\partial B}{\partial Z} \equiv -\frac{1}{B^2}\frac{\partial B}{\partial Z}b^\varphi \\
+K_{\vn B}^Z &= \frac{R_0 I}{B^3R}\frac{\partial B}{\partial R}\equiv \frac{1}{B^2}\frac{\partial B}{\partial R}b^\varphi \\
+K_{\vn B}^\varphi &= \frac{R_0}{B^3R^2}\left(
       \frac{\partial \psi}{\partial Z} \frac{\partial B}{\partial Z}
     + \frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}\right)
 %\equiv \frac{1}{B^2R}\left(\bhat^R \frac{\partial B}{\partial Z} - \bhat^Z \frac{\partial B}{\partial R}\right)\quad %contravariant phi component
@@ -357,16 +357,16 @@ K_{\nabla B}^\varphi &= \frac{R_0}{B^3R^2}\left(
 \end{align}
 and
 \begin{align}
-K_{\nabla\times\bhat}^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
-K_{\nabla\times\bhat}^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
-K_{\nabla\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
+K_{\vn\times\bhat}^R &= \frac{R_0 }{RB^3}\left( B\frac{\partial I}{\partial Z} -I\frac{\partial B}{\partial Z}\right) \\
+K_{\vn\times\bhat}^Z &= \frac{R_0 }{RB^3} \left( I\frac{\partial B}{\partial R} - B\frac{\partial I}{\partial R} \right)\\
+K_{\vn\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 + \frac{1}{B}\frac{\partial\psi}{\partial Z} \frac{\partial B}{\partial Z}
 + \frac{1}{B}\frac{\partial \psi}{\partial R}\frac{\partial B}{\partial R}
 -R\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
 - \frac{\partial^2 \psi}{\partial Z^2}
 \right) \\
-\vec\nabla\cdot\vec{\mathcal K_{\nabla\times\bhat}} &= -\vec\nabla\cdot\vec{\mathcal K_{\nabla B}}=
-    -\vec{\mathcal K_{\nabla\times\bhat}}\cdot \vec \nabla\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
+\vec\nc\vec{\mathcal K_{\vn\times\bhat}} &= -\vec\nc\vec{\mathcal K_{\vn B}}=
+    -\vec{\mathcal K_{\vn\times\bhat}}\cn\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
 %contravariant phi component
 \label{}
 \end{align}
@@ -420,7 +420,7 @@ Note that $\Theta_\alpha(0) = 0.5$ and $\theta_\alpha(0) = 35\alpha/256$.
 \subsection{Preliminary}
 Recall that the {\bf Dirac delta-function} has the property (in any dimension):
 \begin{align} \label{eq:dirac_delta}
-\int_V f(\vec x) \delta(h(\vec x) - h') \dV = \int_{h=h'} \frac{f(\vec x)}{|\nabla h|} \dA
+\int_V f(\vec x) \delta(h(\vec x) - h') \dV = \int_{h=h'} \frac{f(\vec x)}{|\vn h|} \dA
 \end{align}
 which means that the delta-function can be used to express area integrals of the
 submanifold given as a contour of the function $h(\vec x)$.
@@ -442,7 +442,7 @@ over neighboring contour lines which is given by the grid distance.
 Furthermore, recall the {\bf co-area formula}
 \begin{align} \label{eq:coarea}
 \int_{\Omega_0} f(\vec x) \dV =
-\int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\nabla h|}  \dA  \right) \d h'
+\int_0^{h_0} \left( \int_{h=h'} \frac{f(\vec x)}{|\vn h|}  \dA  \right) \d h'
 \end{align}
 where $\Omega_0$ is the volume enclosed by the contour $h=h_0$.
 The co-area formula can be viewed as a change of variables in the
@@ -457,17 +457,17 @@ In arbitrary coordinates the area integral is defined by the pull back
 of the flux 2-form and the metric
 \begin{align}
 \label{}
-\dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\nabla \psi_p}{|\nabla \psi_p|}
+\dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\vn \psi_p}{|\vn \psi_p|}
 \end{align}
 to a parameterization of the flux-surface.
 In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have
 \begin{align}
-\dA &= \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi = f_0|\nabla\psi_p|\sqrt{g}\d\eta\d\varphi,
+\dA &= \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi = f_0|\vn\psi_p|\sqrt{g}\d\eta\d\varphi,
 \\
-\vec\dA &:= \hat\psi_p \dA = f_0 (\nabla\psi_p) \sqrt{g}\d\eta\d\varphi,\quad
+\vec\dA &:= \hat\psi_p \dA = f_0 (\vn\psi_p) \sqrt{g}\d\eta\d\varphi,\quad
 \label{}
 \end{align}
-where we used that $g^{\zeta\zeta} = (\nabla\zeta)^2 = f_0^2(\nabla\psi_p)^2$.
+where we used that $g^{\zeta\zeta} = (\vn\zeta)^2 = f_0^2(\vn\psi_p)^2$.
 Notice that numerically we can integrate in flux-aligned coordinates by generating a corresponding
 grid and pulling back (interpolating) the relevant fields to this grid. This is the second method
 to numerically compute area integrals.
@@ -482,8 +482,8 @@ of a function $f(R,Z,\varphi)$ is given by the formula
 \begin{align}\label{eq:fsa_area}
 \langle f \rangle^{area}_{\psi_{p}} :=&
 \frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
-=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vec\nabla\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega |\vec\nabla\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
+=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vn\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+{\int_\Omega |\vn\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
 =& \frac{\oint \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g g^{\zeta\zeta}}\d\eta}
          { \oint \sqrt{g g^{\zeta\zeta}}\d\eta}
 \end{align}
@@ -499,9 +499,9 @@ meaning while the coordinate $\zeta(\psi_p)$ is an arbitrary choice) we define
 \begin{align} \label{eq:fsa_vol}
 v(\psi_p) :=& \int_{\psi_{p,\min}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\zeta\d\eta\d\varphi,
 \\
-\frac{\d v}{\d\psi_p} =& \int\dA |\nabla\psi_p|^{-1} = 2\pi f_0\oint_{\zeta(\psi_p)} \sqrt{g}\d\eta \\
+\frac{\d v}{\d\psi_p} =& \int\dA |\vn\psi_p|^{-1} = 2\pi f_0\oint_{\zeta(\psi_p)} \sqrt{g}\d\eta \\
 \langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
- = \frac{1}{\int \dA |\nabla\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\nabla\psi_p|} \dA \nonumber\\
+ = \frac{1}{\int \dA |\vn\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\vn\psi_p|} \dA \nonumber\\
 =& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
 {\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
  =& \left(\frac{\d v}{\d\psi_p }\right)^{-1} 2\pi f_0 \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
@@ -509,7 +509,7 @@ v(\psi_p) :=& \int_{\psi_{p,\min}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\ze
 \end{align}
 where we used the co-area formula Eq.~\eqref{eq:coarea} for the second
 identity. We immediately see that this definition differs from the first
-Eq.~\eqref{eq:fsa_area} by the weight factor $|\nabla\psi_p|$ and that it is particularly easy to compute
+Eq.~\eqref{eq:fsa_area} by the weight factor $|\vn\psi_p|$ and that it is particularly easy to compute
 in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
 
 Both averages fulfill the basic identities
@@ -522,27 +522,27 @@ Both averages fulfill the basic identities
 
 The volume average is better suited for density-like quantities
 than the area average as we can see with the following identity.
-Assume we have a quantity $X$ with $\partial_t X + \nabla \cdot \vec j_X = \Lambda_X$. Then we can use the volume average to write
+Assume we have a quantity $X$ with $\partial_t X + \nc \vec j_X = \Lambda_X$. Then we can use the volume average to write
 \begin{align}
 \frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
-  \partial v} \langle \vec j_X\cdot \nabla v\rangle^{vol}  = \langle \Lambda_X\rangle^{vol}
+  \partial v} \langle \vec j_X\cn v\rangle^{vol}  = \langle \Lambda_X\rangle^{vol}
 \label{eq:fsa_balance}
 \end{align}
 where again $v=v(\psi_p)$ is the volume flux label.
 The {\bf total flux} of a given flux density $\vec j_X$ though the
 flux surface $\psi_p = \psi_{p0}$ is given by
 \begin{align}
-\left\langle\vec j_X\cdot\nabla v\right\rangle^{vol} &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
- \frac{\d v}{\d\psi_p} \langle \vec j_X\cdot\nabla\psi_p \rangle^{vol}\\
+\left\langle\vec j_X\cn v\right\rangle^{vol} &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
+ \frac{\d v}{\d\psi_p} \langle \vec j_X\cn\psi_p \rangle^{vol}\\
  &=
-   2\pi f_0 \oint_0^{2\pi} \langle \vec j_X\cdot\nabla\psi_p\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
-%2\pi\int_\Omega \vec \langle \vec j\cdot \vec\nabla\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
+   2\pi f_0 \oint_0^{2\pi} \langle \vec j_X\cn\psi_p\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
+%2\pi\int_\Omega \vec \langle \vec j\cn\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
 \label{eq:total_flux}
 \end{align}
 Once we have the flux-surface averaged equation we can easily get the volume integrated version (again with the help of the co-area formula)
 \begin{align}
 \frac{\partial}{\partial t} \int_0^{v(\psi_p)}\langle X \rangle^{vol} \d v 
-+ \langle \vec j_X\cdot \nabla v\rangle^{vol}(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle^{vol}\d v
++ \langle \vec j_X\cn v\rangle^{vol}(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle^{vol}\d v
 \label{eq:integral_balance}
 \end{align}
 
@@ -559,18 +559,18 @@ full poloidal turn this definition is independent of which
 fieldline we pick on a given flux surface.
 
 %Let us define the poloidal length $s$ as the fieldline following
-%parameter i.e. $\vec B\cdot \nabla s \equiv B_p = R_0|\nabla \psi_p|/R$
+%parameter i.e. $\vec B\cn s \equiv B_p = R_0|\vn \psi_p|/R$
 %and $\d\varphi/\d s = B^\varphi(R(s), Z(s)) / B_p(R(s),Z(s))$.
 %We can then express the safety factor as the line integral
 %\begin{align}
-%q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vec\nabla\psi_p|} \d s
+%q=\frac{1}{2\pi}\oint \frac{B^\varphi}{B_p} \d s = \frac{1}{2\pi}\oint_{\psi_p=\psi_{p0}}\frac{I(\psi_p)}{R|\vn\psi_p|} \d s
 %= \frac{1}{2\pi}\int \frac{I(\psi_p)}{R}\delta(\psi_p-\psi_{p0}) H(Z-Z_X) \d R\d Z
 %\end{align}
 %where we made use of Eq.~\eqref{eq:dirac_delta} in two dimensions in the
 %last equality and thus arrive at a numerical tractable expression
 %to evaluate the safety factor.
 Let us define the geometric poloidal angle $\Theta$ as the fieldline following
-parameter i.e. $\vec B\cdot\nabla\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
+parameter i.e. $\vec B\cn\Theta = R_0(\psi_R (R-R_0) + \psi_Z Z)/r^2R$.
 We can then directly integrate the safety factor as
 \begin{align}\label{eq:safety_factor}
 \frac{\d R}{\d\Theta} = \frac{B^R}{B^\Theta}\quad 
@@ -584,7 +584,7 @@ and refine the stepsize until machine-precision is reached.
 
 Notice that the safety factor diverges on the last closed flux
 surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
-remain finite due to the $\nabla\psi$ factor.
+remain finite due to the $\vn\psi$ factor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -602,39 +602,39 @@ We introduce the dimensionless parameters
 where $a\in\{e,i\}$ is the species label and $z$ is the charge number.
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{align}
-\frac{\partial}{\partial t} N &+ \vec\nabla\cdot\left( N \left(
+\frac{\partial}{\partial t} N &+ \vec\nc\left( N \left(
     \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
 \mu N \frac{\partial}{\partial t} U &+ \mu N \left(
     \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)
-    \right)\cdot \vec\nabla U  \nonumber \\
-    &+ 2\mu \vec \nabla \cdot ( NU \vec v_{\nabla\times\bhat})
-    -\mu NU\vec \nabla\cdot \vec v_{\nabla\times\bhat}
-    + \mu NU\mathcal K_{\nabla\times\bhat}(\psi) \nonumber\\
-    &= -\tau \left(\bhat + \tilde{\vec b}_\perp\right)\cdot \nabla N 
-    -N \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cdot \nabla \psi + \frac{\partial A_\parallel}{\partial t}\right) 
+    \right)\cn U  \nonumber \\
+    &+ 2\mu \nc ( NU \vec v_{\vn\times\bhat})
+    -\mu NU\nc \vec v_{\vn\times\bhat}
+    + \mu NU\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
+    &= -\tau \left(\bhat + \tilde{\vec b}_\perp\right)\cn N 
+    -N \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right) 
     - \eta n_e^2(U_i-u_e) + \mu N\Lambda_U
 \label{}
 \end{align}
 with
 \begin{align}
-\vec v_E := \frac{\bhat\times\nabla\psi}{B},\quad
-\vec v_{K} := \tau \left(\vec{\mathcal K_{\nabla B}} + \vec{\mathcal K_{\nabla\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
-\vec v_C := \mu U^2\vec{\mathcal K_{\nabla\times\bhat}},\quad
-\vec v_{\nabla\times\bhat} := \tau\vec{\mathcal K_{\nabla\times\bhat}},\quad
-\tilde{\vec b}_\perp = \frac{\nabla\times A_\parallel \bhat}{B}.
+\vec v_E := \frac{\bhat\times\vn\psi}{B},\quad
+\vec v_{K} := \tau \left(\vec{\mathcal K_{\vn B}} + \vec{\mathcal K_{\vn\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
+\vec v_C := \mu U^2\vec{\mathcal K_{\vn\times\bhat}},\quad
+\vec v_{\vn\times\bhat} := \tau\vec{\mathcal K_{\vn\times\bhat}},\quad
+\tilde{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B}.
 \label{}
 \end{align}
 
 The electric potential \(\phi\) and parallel magnetic vector potential \(A_\parallel\) are
 computed by the polarisation and induction equations (with $q_e=-e$ and $q_i=+e$)
 \begin{align}
- -\vec{\nabla} \cdot\left(\frac{\mu_iN_i}{B^2} \vec{\nabla}_\perp \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{1}{2}\mu_i\tau_i\Delta_\perp , \\
+ -\nc\left(\frac{\mu_iN_i}{B^2} \np \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{1}{2}\mu_i\tau_i\Delta_\perp , \\
   -\frac{1}{\beta} \Delta_\perp A_\parallel &= \left(N_i U_i-n_e u_e \right)
   \label{eq:polarisation_dimensional}
 \end{align}
 Given $\phi$ we define the generalised electric potential
 \begin{align}
-    \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{\mu_i }{2}\left(\frac{\vec \nabla_\perp\phi}{B}\right)^2
+    \psi_e := \phi,\quad \psi_i&:= \Gamma_{1,i} \phi - \frac{\mu_i }{2}\left(\frac{\np\phi}{B}\right)^2
 \end{align}
 In total
 we have an isothermal 3d gyro-fluid model with up to 2nd order FLR effects
@@ -649,7 +649,7 @@ drifts and $U\bhat$ change directions. On the other side, the diffusive and resi
 Without resistivity and diffusion a change in direction of the magnetic field thus corresponds to
 a time reversal $t\rightarrow t'=-t$.
 
-Also note that changing the sign of the magnetic field only in the parallel derivatives $\nabla_\parallel \rightarrow -\nabla_\parallel$ does not
+Also note that changing the sign of the magnetic field only in the parallel derivatives $\npar \rightarrow -\npar$ does not
 have any effect. This can be seen by simply renormalizing $U'=-U$. This reverts the equations back to the original equations.
 In the code this situation can happen when you change the sign of $\bhat$ using $\mathcal P_\psi$  and $\mathcal P_I$
 and use the toroidal field approximation at the same time.
@@ -725,7 +725,7 @@ in the same way as $U$.
 Typically,
 \begin{align}
 n_e = n_0, \quad u_e = \phi = 0
-\text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla u_e = 0
+\text{ or } \hat n \cn n_e = \hat n \cn u_e = 0
 \end{align}
 where $\hat n$ is the normal vector to the boundary.
 
@@ -845,7 +845,7 @@ with $a=0.0335$m, $b=0.05$m, $c=565m^{-2}$, $R_0=0.98$m and $Z_0=-0.02$m.
 For ions we use
 \begin{align}
     S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e} \\
-    \delta S_{n_e} = \nabla\cdot\left( \frac{\mu_i S_{N_i}}{B^2}\nabla_\perp \phi\right)
+    \delta S_{n_e} = \nc\left( \frac{\mu_i S_{N_i}}{B^2}\np \phi\right)
   \label{eq:ion_source}
 \end{align}
 and finally add $\delta S_{n_e}$ to $S_{n_e}$ as the potential FLR correction.
@@ -853,7 +853,7 @@ Note that the correction $\delta S_{n_e}$ is a total divergence which means
 it does not change the volume integrated "total" particle number created by the source.
 Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid potential generation
 by the particle source (cf.~Section~\ref{sec:conservation}). $S_{n_e}$ needs to be smooth
-so that $\nabla_\perp^2 S_{n_e}$ is well defined.
+so that $\np^2 S_{n_e}$ is well defined.
 
 %The idea for the terms $S_U$ is mainly to provide more numerical stability
 %in the corner regions of the domain, where the parallel derivative may lead
@@ -872,23 +872,23 @@ two functions for which we have no boundary conditions
     \begin{align}
     \frac{\partial}{\partial t} N =&
         - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
-        - \bar \nabla_\parallel \left( NU\right)
-        - NU\left(\vec \nabla\cdot\bhat+\vec \nabla\cdot\tilde{\vec b}_\perp\right)
+        - \bar \npar \left( NU\right)
+        - NU\left(\vec \nc\bhat+\vec \nc\tilde{\vec b}_\perp\right)
         - \tau \mathcal K(N) \nonumber \\&
         - N \mathcal K(\psi)
-        -\mu \mathcal K_{\nabla\times\bhat}(NU^2)
-        -\mu NU^2\nabla\cdot \vec{ \mathcal K_{\nabla\times\bhat}}
+        -\mu \mathcal K_{\vn\times\bhat}(NU^2)
+        -\mu NU^2\nc \vec{ \mathcal K_{\vn\times\bhat}}
         + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
     \frac{\partial}{\partial t} W =&
         - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
-        - \frac{1}{\mu} \bar \nabla_\parallel \psi% \nonumber\\
-        - \frac{1}{2}\bar \nabla_\parallel U^2
-        -\frac{\tau}{\mu} \bar \nabla_\parallel \ln N
-        - U\mathcal K_{\nabla\times\bhat}(\psi)
+        - \frac{1}{\mu} \bar \npar \psi% \nonumber\\
+        - \frac{1}{2}\bar \npar U^2
+        -\frac{\tau}{\mu} \bar \npar \ln N
+        - U\mathcal K_{\vn\times\bhat}(\psi)
         - \tau \mathcal K(U)
-        -\tau U\nabla\cdot\vec{ \mathcal K_{\nabla\times\bhat}}\nonumber\\&
-        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\nabla\times\bhat} (U)
-        -2\tau U\mathcal K_{\nabla\times\bhat}(\ln N)
+        -\tau U\nc\vec{ \mathcal K_{\vn\times\bhat}}\nonumber\\&
+        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\vn\times\bhat} (U)
+        -2\tau U\mathcal K_{\vn\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
         + \nu_\perp\Delta_\perp U
         + \nu_\parallel \Delta_\parallel U,
@@ -898,14 +898,14 @@ two functions for which we have no boundary conditions
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
-$\bar\nabla_\parallel f = \nabla_\parallel f + A_\parallel \mathcal K_{\nabla\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
-and $\vec \nabla \cdot \tilde{ \vec b}_\perp = A_\parallel \vec \nabla\cdot\vec{ \mathcal{ K}_{\nabla\times\bhat}} - \mathcal K_{\nabla B}(A_\parallel) $
+$\bar\npar f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
+and $\nc \tilde{ \vec b}_\perp = A_\parallel \vec \nc\vec{ \mathcal{ K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
-    -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
+    -\nc\left( \frac{N_i}{B^2}\np \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
-    \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\nabla_\perp\phi)^2}{B^2} \\
+    \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\np\phi)^2}{B^2} \\
     \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
     A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
   \end{align}
@@ -916,7 +916,7 @@ Note that the negative signs make the operators in Eq.~\eqref{eq:elliptic} posit
 The density equation directly yields the particle conservation
 \begin{align} \label{eq:mass_theorem}
   \frac{\partial}{\partial t} n_e
-  + \nabla\cdot\vec{ j_{n_e}}
+  + \nc\vec{ j_{n_e}}
   =  \Lambda_{n_e}+S_{n_e}
 \end{align}
 The terms of the particle conservation thus read
@@ -924,9 +924,9 @@ The terms of the particle conservation thus read
   n_e= & n_e,\\
   \vec j_{n_e} =& n_e\left(
   \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
-  =& n_e \left(\frac{\bhat\times \nabla\phi}{B} 
-  + \tau_e \frac{\bhat\times\nabla n_e}{n_eB} 
-  + \mu_e u_e^2\vec K_{\nabla\times\bhat} 
+  =& n_e \left(\frac{\bhat\times \vn\phi}{B} 
+  + \tau_e \frac{\bhat\times\vn n_e}{n_eB} 
+  + \mu_e u_e^2\vec K_{\vn\times\bhat} 
   + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
   \Lambda_{n_e} =&
   \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
@@ -935,7 +935,7 @@ The terms of the particle conservation thus read
 \end{align}
 Notice that
 \begin{align}
-n_e \vec K = n_e\nabla\times\frac{\bhat}{B} = \nabla\times n_e\frac{\bhat}{B} + \frac{\bhat\times\nabla n_e}{B}
+n_e \vec K = n_e\vn\times\frac{\bhat}{B} = \vn\times n_e\frac{\bhat}{B} + \frac{\bhat\times\vn n_e}{B}
 \label{}
 \end{align}
 such that we can define the diamagnetic flux in the particle flux since
@@ -943,14 +943,13 @@ the rotation vanishes under the divergence.
 
 Let us here also derive the particle flux \eqref{eq:mass_conservation} through a flux surface
 \begin{align} \label{eq:particle_flux}
- \vec j_{N}\cdot \vec \nabla v %=& N\left( \vec v_E + \vec v_C + \vec v_{\nabla
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cdot \vec
- %\nabla\psi_p \nonumber\\
+ \vec j_{N}\cn v %=& N\left( \vec v_E + \vec v_C + \vec v_{\vn
+ %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cn \psi_p \nonumber\\
  =&
   \frac{\d v}{\d \psi_p} N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
-   \mathcal K_{\nabla\times\bhat}(\psi_p) + \tau  \mathcal K_{\nabla B}(\psi_p) \right] \nonumber\\
+   \mathcal K_{\vn\times\bhat}(\psi_p) + \tau  \mathcal K_{\vn B}(\psi_p) \right] \nonumber\\
  &+ NU\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
+ K_{\vn\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right] \\
 \end{align}
 
 
@@ -958,15 +957,15 @@ Let us here also derive the particle flux \eqref{eq:mass_conservation} through a
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
 \partial_t \mathcal E +
-\nabla \cdot \vec j_{\mathcal E}
+\nc \vec j_{\mathcal E}
 = \Lambda_{\mathcal E}
 +  S_{\mathcal E}
 +  R_{\mathcal E}
 \end{align}
-with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \nabla\phi}/{B}$
+with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \vn\phi}/{B}$
 \begin{align} \label{eq:energy_conservation}
   \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
-  +\frac{1}{2\beta}\left(\vec \nabla_\perp A_\parallel\right)^2
+  +\frac{1}{2\beta}\left(\np A_\parallel\right)^2
    +  \frac{1}{2} z_i \mu_i N_i u_E^2  \nonumber\\
    & +\frac{1}{2} z_e\mu_e  n_e u_e^2
   +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
@@ -974,7 +973,7 @@ with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \nabla\phi}/{B}$
   \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right)N\left(
   \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \right]
   \nonumber\\
-  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\nabla\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
+  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\vn\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
   \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
 \nonumber \\
@@ -993,28 +992,28 @@ for the diffusion terms in the above equations.
 
 We have the energy flux through a flux surface
 \begin{align}
- \vec j_{\mathcal E}\cdot \vec \nabla v =&%\frac{\d v}{\d \psi_p} \vec j_{\mathcal E}\cdot \vec \nabla \psi_p  =
-\frac{\d v}{\d \psi_p}\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cdot\vec\nabla\psi_p
-+ z \mu\tau NU^2 \mathcal K_{\nabla\times\bhat}(\psi_p) \nonumber\\
+ \vec j_{\mathcal E}\cn v =&%\frac{\d v}{\d \psi_p} \vec j_{\mathcal E}\cn \psi_p  =
+\frac{\d v}{\d \psi_p}\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cn\psi_p
++ z \mu\tau NU^2 \mathcal K_{\vn\times\bhat}(\psi_p) \nonumber\\
 &+ z \tau NU
  \left( A_\parallel \mathcal
- K_{\nabla\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
+ K_{\vn\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
 \label{eq:energy_flux}
 \end{align}
 
 \subsection{ Vorticity and momentum balance equation}
 In order to discuss poloidal flows let us first define orthogonal vectors $\{\vec{ \hat\zeta}, \vec{\hat\eta},\bhat\}$
 \begin{align}
-\vec{\hat\zeta} := \nabla\psi_p,\quad
+\vec{\hat\zeta} := \vn\psi_p,\quad
 \vec{\hat \eta} := \frac{\bhat \times\hat \zeta}{B}
 \end{align}
 where $\vec{\hat\eta}$
 points in the counter-clockwise poloidal direction with our choice of the magnetic field direction.
 Notice that $\vec{\hat \eta}$ in general has a (small) toroidal component in addition to the dominant poloidal component.
 
-%We then have $\nabla\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
-%with $\partial_{\hat\zeta}:= \hat\zeta\cdot\nabla$ and $\partial_{\hat\eta}:=\hat\eta\cdot\nabla$.
-Furthermore, from $\vec u_E = \bhat\times \vec\nabla\phi/B$ and $\vec u_d = \tau_i \bhat\times\nabla \ln N_i$
+%We then have $\vn\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
+%with $\partial_{\hat\zeta}:= \hat\zeta\cn$ and $\partial_{\hat\eta}:=\hat\eta\cn$.
+Furthermore, from $\vec u_E = \bhat\times \vn\phi/B$ and $\vec u_d = \tau_i \bhat\times\vn \ln N_i$
 we can derive
 \begin{align}
 u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2} \sim u_{E,\varphi}
@@ -1022,7 +1021,7 @@ u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \ph
 u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi \sim u_E^v \sim -\partial_\varphi\phi
 &&u_d^{\hat\zeta}:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i \sim u_D^v
 \end{align}
-where we write $\partial_{\hat\zeta} := \nabla\psi_p\cdot\nabla$ and $\partial_{\hat\eta} := \vec{\hat\eta}\cdot\nabla$.
+where we write $\partial_{\hat\zeta} := \vn\psi_p\cn$ and $\partial_{\hat\eta} := \vec{\hat\eta}\cn$.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Vorticity equation}
 With this we write the vorticity equation (in the LWL)
@@ -1033,24 +1032,24 @@ With this we write the vorticity equation (in the LWL)
 &+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\partial_{\hat\eta} \phi \left(\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}
 + \mu_i \tau_i N_i\partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\eta}A_\parallel\partial_{\hat\zeta} A_\parallel  + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i \right\rangle
 \nonumber\\
-&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
+&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p \right\rangle
 \end{align}
 where we neglect the second order derivative $\partial_{\hat\eta}\partial_{\hat\zeta}A_\parallel$ in the magnetization density term and
 where the right hand side represents the negative toroidal component of the Lorentz force $-(\vec j\times\vec B)_\varphi$.
 Notice that
 \begin{align}
-\left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p\right\rangle
-= \left\langle \frac{ \bhat\times \nabla (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cdot\nabla\psi_p\right\rangle
+\left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p\right\rangle
+= \left\langle \frac{ \bhat\times \vn (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cn\psi_p\right\rangle
 = -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
 \end{align}
 We can interpret Eq.~\eqref{eq:vorticity_average} as the flux surface average of
 the vorticity equation
 \begin{align}
-&\partial_t \GA{\Omega} + \GA{\nabla\cdot \vec j_\Omega} = \GA{S_\Omega} \\
-\Omega &:= \mu_i N_i \left(\frac{\nabla\psi_p\cdot\nabla\phi}{B^2} + \tau_i \nabla\psi_p \cdot\nabla \ln N_i\right) \\
+&\partial_t \GA{\Omega} + \GA{\nc \vec j_\Omega} = \GA{S_\Omega} \\
+\Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\psi_p \cn \ln N_i\right) \\
 \vec j_{\Omega} &:= \Omega \vec u_E
-    - \left(\frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel +\frac{1}{2} \nabla\psi_p\cdot\nabla \tau_i N_iU_i\right)\frac{\bhat\times\nabla A_\parallel}{B} \\
-    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
+    - \left(\frac{1}{\beta} \vn\psi_p\cn A_\parallel +\frac{1}{2} \vn\psi_p\cn \tau_i N_iU_i\right)\frac{\bhat\times\vn A_\parallel}{B} \\
+    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
 \end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Toroidal ExB momentum equation}
@@ -1062,19 +1061,35 @@ Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continui
 &+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(-\partial_{\hat\eta} \phi - \tau_i \partial_{\hat\eta} \ln N_i \right)
  + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\zeta} A_\parallel \partial_{\hat\eta} \tau_i N_i U_i\right \rangle
 \nonumber\\
-&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cdot\nabla\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\nabla\times\bhat}\cdot\nabla\psi_p \right\rangle
+&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p \right\rangle
 \end{align}
 We can interpret Eq.~\eqref{eq:exb_average} as the flux surface average of
 the \ExB vorticity equation
 \begin{align}
-&\partial_t \GA{\Omega_E} + \GA{\nabla\cdot \vec j_{\Omega_E}} = \GA{S_\Omega} \\
-\Omega_E &:= \mu_i N_i \frac{\nabla\psi_p\cdot\nabla\phi}{B^2} \\
+&\partial_t \GA{\Omega_E} + \GA{\nc \vec j_{\Omega_E}} = \GA{S_\Omega} \\
+\Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
-    - \frac{1}{\beta} \nabla\psi_p\cdot\nabla A_\parallel \left(\frac{\bhat\times\nabla A_\parallel}{B} +\frac{1}{2} \bhat \times \nabla \tau_i N_iU_i\right) \\
-    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\nabla\times\bhat}(\psi_p)
+    - \frac{1}{\beta} \vn\psi_p\cn A_\parallel \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
+    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
 \end{align}
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Parallel momentum balance}
+The flux surface average over the parallel momentum equation under species summation and the LWL yields
+\begin{align}
+  \frac{\partial}{\partial t}\GA{m_iN_iU_{i} }
+    % \nonumber\\
+    + \frac{\partial}{\partial v} \GA{m_iN_iU_i u_E^{\;v} + \sum_s (N_sT_s + mN_sU_s^2) \widetilde{ b_{\perp}^{\;v} } }
+   % \nonumber\\
+   = \sum_s\GA{-N_sT_s\npar \ln B}
+   \label{eq:parallel_momentum}
+\end{align}
+while the toroidal parallel angular momentum contribution reads
+\begin{align}\label{eq:parallel_momentum_direction}
+    \frac{\partial}{\partial t}  \GA{m_iNU_i b_\varphi}
+    + \frac{\partial}{\partial v} \GA{m_iN_iU_i b_\varphi u_E^{\;v} + \sum_s (N_sT_s + m_sN_sU_s^2) b_\varphi\widetilde{ b_{\perp}^{\;v} }}
+   = -\GA{S_\Omega}
+\end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1114,7 +1129,7 @@ discontinuous Galerkin on structured grid
 Advection terms & direct DG & DG approximation with centered flux of derivatives \\
 Elliptic terms & local DG & The local DG approximation with centered flux \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\nabla_\parallel N$ and $\nabla_\parallel \phi$ in the velocity equation use a forward difference, while the term $\nabla_\parallel U$ in the
+Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\npar N$ and $\npar \phi$ in the velocity equation use a forward difference, while the term $\npar U$ in the
 density equation uses backward difference. This is to avoid a too wide stencil for the diverence of the current and increases stability for low resistivity. \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
@@ -1380,7 +1395,7 @@ and X $\in$
     psi &$\psi$ \\
     induction &$A_\parallel$ &
     vorticity &$-\Delta_\perp\phi$ \\
-    dssue & $\nabla_\parallel^2 u_e$&
+    dssue & $\npar^2 u_e$&
     dppue & $\partial_\varphi^2 u_e$\\
     dpue2 & $(\partial_\varphi u_e)^2$&
     apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
@@ -1388,10 +1403,10 @@ and X $\in$
     niui &$N_i U_i$ \\
     neuebphi &$n_eu_eb_\varphi$ &
     niuibphi &$N_iU_ib_\varphi$ \\
-    lperpinv &$L_\perp^{-1} := |\vec\nabla_\perp n_e|/n_e$ &
-    perpaligned &$(\vec\nabla_\perp n_e)^2/n_e$ \\
-    lparallelinv &$L_\parallel^{-1} := |\nabla_\parallel n_e|/n_e$ &
-    aligned &$ (\nabla_\parallel n_e)^2/n_e$ \\
+    lperpinv &$L_\perp^{-1} := |\vec\np n_e|/n_e$ &
+    perpaligned &$(\vec\np n_e)^2/n_e$ \\
+    lparallelinv &$L_\parallel^{-1} := |\npar n_e|/n_e$ &
+    aligned &$ (\npar n_e)^2/n_e$ \\
     ne2 & $n_e^2$ &
     phi2 & $\phi^2$ \\
     nephi & $n_e\phi$ &
@@ -1400,14 +1415,14 @@ and X $\in$
     sei & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_i^2) S_{N_i} $ \\
     nelnne &$ z_e\tau_e n_e \ln n_e$ &
     nilnni &$ z_i\tau_i N_i \ln N_i$ \\
-    aperp2 &$ (\nabla_\perp A_\parallel)^2/2/\beta$ &
+    aperp2 &$ (\np A_\parallel)^2/2/\beta$ &
     ue2   &$z_i\mu_i N_i u_E^2 /2$ \\
     neue2 &$ z_e\mu_e n_e u_e^2/2$ &
     niui2 &$ z_i\mu_i N_i U_i^2/2$ \\
-    oexbe &$\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2$ &
-    oexbi &$\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2$ \\
-    odiae &$\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e$ &
-    odiai &$\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i$ \\
+    oexbe &$\mu_i n_e \vn\psi_p\cn\phi/B^2$ &
+    oexbi &$\mu_i N_i \vn\psi_p\cn\phi/B^2$ \\
+    odiae &$\mu_i \tau_i\vn\psi_p\cn n_e$ &
+    odiai &$\mu_i \tau_i\vn\psi_p\cn N_i$ \\
 \bottomrule
 \end{longtable}
 and the time-averaged quantities Y $\in$
@@ -1415,34 +1430,34 @@ and the time-averaged quantities Y $\in$
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
 \midrule
-    jsne &$ n_e (\vec v_E + \vec v_K + \vec v_C )\cdot\nabla \psi_p$ \\
-    jsneA &$ n_e u_e \vec{\tilde b}_\perp  \cdot\nabla \psi_p$ \\
+    jsne &$ n_e (\vec v_E + \vec v_K + \vec v_C )\cn \psi_p$ \\
+    jsneA &$ n_e u_e \vec{\tilde b}_\perp  \cn \psi_p$ \\
     lneperp &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ \\
     lneparallel &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
     resistivity &-$\eta_\parallel n_e^2 (U_i-u_e)^2$ \\
-    jsee &$z_e(\tau_e \ln n_e + \mu_e u_e^2/2 + \phi)n_e(\vec v_E + \vec v_C + \vec v_K)\cdot\nabla \psi_p
-        + z_e \tau_e n_e u_e^2 \vec K_{\nabla\times\bhat}\cdot\nabla \psi_p$ \\
-    jsei &$z_i(\tau_i \ln N_i + \mu_i U_i^2/2 + \psi_i)N_i(\vec v_E^i + \vec v_C + \vec v_K)\cdot\nabla \psi_p
-        + z_i \tau_i N_i U_i^2 \vec K_{\nabla\times\bhat}\cdot\nabla \psi_p$ \\
-    jseea &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec {\tilde b}_\perp\cdot\nabla \psi_p
-        + z_e \tau_e n_e u_e \vec{\tilde b}_\perp \cdot \nabla \psi_p $ \\
-    jseia &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec {\tilde b}_\perp\cdot\nabla \psi_p
-        + z_i \tau_i N_i U_i \vec{\tilde b}_\perp \cdot \nabla \psi_p $ \\
+    jsee &$z_e(\tau_e \ln n_e + \mu_e u_e^2/2 + \phi)n_e(\vec v_E + \vec v_C + \vec v_K)\cn \psi_p
+        + z_e \tau_e n_e u_e^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
+    jsei &$z_i(\tau_i \ln N_i + \mu_i U_i^2/2 + \psi_i)N_i(\vec v_E^i + \vec v_C + \vec v_K)\cn \psi_p
+        + z_i \tau_i N_i U_i^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
+    jseea &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec {\tilde b}_\perp\cn \psi_p
+        + z_e \tau_e n_e u_e \vec{\tilde b}_\perp \cn \psi_p $ \\
+    jseia &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec {\tilde b}_\perp\cn \psi_p
+        + z_i \tau_i N_i U_i \vec{\tilde b}_\perp \cn \psi_p $ \\
     leeperp &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\perp \Delta_\perp n_e + z_e\mu_e n_e u_e \nu_\perp \Delta_\perp u_e$ \\
     leiperp &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_i \nu_\perp \Delta_\perp U_i$ \\
     leeparallel &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_e \nu_\parallel \Delta_\parallel u_e$ \\
     leiparallel &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_i \nu_\parallel \Delta_\parallel U_i$ \\
-    jsoexbi &$(\mu_i N_i \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
-    jsoexbe &$(\mu_i n_e \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
-    jsodiaiUE &$(\mu_i \tau_i\nabla\psi_p\cdot\nabla N_i) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
-    jsodiaeUE &$(\mu_i \tau_i\nabla\psi_p\cdot\nabla n_e) (\bhat\times\nabla\phi)\cdot\nabla \psi_p/B$ \\
-    jsoexbiUD &$(\mu_i\tau_i \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla N_i)\cdot\nabla \psi_p/B$ \\
-    jsoexbeUD &$(\mu_i\tau_i \nabla\psi_p\cdot\nabla\phi/B^2) (\bhat\times\nabla n_e)\cdot\nabla \psi_p/B$ \\
-    jsoapar &$ \nabla\psi_p\cdot\nabla A_\parallel \bhat\times\nabla A_\parallel\cdot\nabla \psi_p/B/\beta$ \\
+    jsoexbi &$(\mu_i N_i \vn\psi_p\cn\phi/B^2) (\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsoexbe &$(\mu_i n_e \vn\psi_p\cn\phi/B^2) (\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsodiaiUE &$(\mu_i \tau_i\vn\psi_p\cn N_i) (\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsodiaeUE &$(\mu_i \tau_i\vn\psi_p\cn n_e) (\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsoexbiUD &$(\mu_i\tau_i \vn\psi_p\cn\phi/B^2) (\bhat\times\vn N_i)\cn \psi_p/B$ \\
+    jsoexbeUD &$(\mu_i\tau_i \vn\psi_p\cn\phi/B^2) (\bhat\times\vn n_e)\cn \psi_p/B$ \\
+    jsoapar &$ \vn\psi_p\cn A_\parallel \bhat\times\vn A_\parallel\cn \psi_p/B/\beta$ \\
     socurve &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
     socurvi &$z_i\tau_i N_i \mathcal K(\psi_p)$ \\
-    socurvkappae &$z_e\mu_e n_eu_e^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
-    socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\nabla\times\bhat}(\psi_p)$ \\
+    socurvkappae &$z_e\mu_e n_eu_e^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
+    socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
 \bottomrule
 \end{longtable}
 Even though this might look like a lot of things to compute the actual time spent on diagnostics is negligible if {\tt inner\_loop} parameter is greater than 1.
@@ -1491,7 +1506,7 @@ zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
-psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\nabla\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
+psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
 psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \langle Z\rangle_{\psi_{p}}$ \\
@@ -1505,7 +1520,7 @@ Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface av
 where Z $\in$ \{X, Y\_tt\}
 Note that feltoridag converts all $jsX$ quantities into $jvX$
 by multiplying $\d v/\d \psi_p$
-in the sense that $\vec j\cdot \nabla v  = \vec j \cdot \nabla \psi_p \d v/\d\psi_p$.
+in the sense that $\vec j\cn v  = \vec j \cn \psi_p \d v/\d\psi_p$.
 
 
 
