@@ -57,8 +57,15 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
-    {dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";}
+    {
+        dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+        //Find O-point
+        double R_O = gp.R_0, Z_O = 0.;
+        if( !gp.isToroidal() )
+            dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
+        const double psipmin = mag.psip()(R_O, Z_O);
+        std::cout << "O-point "<<R_O<<" "<<Z_O<<" with Psip = "<<psipmin<<std::endl;
+    }
     std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;

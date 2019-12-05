@@ -30,9 +30,14 @@ struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
+    Fpsi( const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
         psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip),m_verbose(verbose)
     {
+        //Find O-point
+        double R_O = x0, Z_O = y0;
+        dg::geo::findOpoint( psip, R_O, Z_O);
+        //define angle with respect to O-point
+        fieldRZYT_ = dg::geo::flux::FieldRZYT(psip, ipol, R_O, Z_O);
         X_init = x0, Y_init = y0;
         while( fabs( psip.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psip.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.;
@@ -69,6 +74,7 @@ struct Fpsi
             eps_old = eps, end_old = end; N*=2;
             dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+            if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
             //Attention: if this succeeds on the first attempt end_old won't be updated
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";

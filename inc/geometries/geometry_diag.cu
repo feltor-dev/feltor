@@ -187,7 +187,7 @@ int main( int argc, char* argv[])
     //Find O-point
     double R_O = gp.R_0, Z_O = 0.;
     if( !gp.isToroidal() )
-        dg::geo::findXpoint( mag.get_psip(), R_O, Z_O);
+        dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
     const double psipmin = mag.psip()(R_O, Z_O);
 
     std::cout << "O-point "<<R_O<<" "<<Z_O<<" with Psip = "<<psipmin<<std::endl;
@@ -385,19 +385,27 @@ int main( int argc, char* argv[])
             qprofile = dg::evaluate( qprof, grid1d);
             map1d.emplace_back("q-profile", qprofile,
                 "q-profile (Safety factor) using direct integration");
+            dg::HVec psit = dg::integrate( qprofile, grid1d);
+            map1d.emplace_back("psit1d", psit,
+                "Toroidal flux label psi_t integrated  on grid1d using direct q");
+            //we need to avoid integrating >=0
+            dg::Grid1d g1d_fine(psipmin<0. ? psipmin : psipmax, psipmin<0. ? 0. : psipmin, npsi ,Npsi,dg::NEU);
+            qprofile = dg::evaluate( qprof, g1d_fine);
+            dg::HVec w1d = dg::create::weights( g1d_fine);
+            double psit_tot = dg::blas1::dot( w1d, qprofile);
+            std::cout << "psit tot "<<psit_tot<<"\n";
+            dg::blas1::scal ( psit, 1./psit_tot);
+            dg::blas1::transform( psit, psit, dg::SQRT<double>());
+            map1d.emplace_back("rho_t", psit,
+                "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
         }
         dg::geo::SafetyFactorAverage qprof( grid2d, mag);
         qprofile = dg::evaluate( qprof, grid1d);
         map1d.emplace_back("q-profile_fsa", qprofile,
             "q-profile (Safety factor) using average integration");
         dg::HVec psit = dg::integrate( qprofile, grid1d);
-        map1d.emplace_back("psit1d", psit,
-            "Toroidal flux label psi_t evaluated on grid1d");
-        double psit_tot = dg::interpolate(psit, 0., grid1d);
-        dg::blas1::scal ( psit, 1/psit_tot);
-        dg::blas1::transform( psit, psit, dg::SQRT<double>());
-        map1d.emplace_back("rho_t", psit,
-            "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
+        map1d.emplace_back("psit1d_fsa", psit,
+            "Toroidal flux label psi_t integrated on grid1d using average q");
         map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
             "Poloidal flux label psi_p evaluated on grid1d");
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);

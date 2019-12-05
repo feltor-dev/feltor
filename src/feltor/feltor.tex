@@ -1509,9 +1509,8 @@ psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) 
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but unavailable outside separatrix) \\
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
-q-profile\_fsa   & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} computed with average integration (less accurate but defined outside separatrix) \\
-psit1d           & Dataset & 1 (psi) & Toroidal flux \\
-rho\_t           & Dataset & 1 (psi) & Toroidal flux label $\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$\\
+psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^\psi_p \d\psi_p q(\psi_p)$ \\
+rho\_t           & Dataset & 1 (psi) & Toroidal flux label $\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$ (is similar to $\rho$ in the edge but $\rho_t$ is nicer in the core domain, because equidistant $\rho_t$ make more equidistant flux-surfaces)\\
 Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \langle Z\rangle_{\psi_{p}}$ \\
 Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle Z\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
 Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle Z\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\

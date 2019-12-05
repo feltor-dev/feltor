@@ -18,6 +18,7 @@ namespace flux{
  */
 struct FieldRZYT
 {
+    //x0 and y0 sould be O-point to define angle with respect to O-point
     FieldRZYT( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
@@ -133,6 +134,7 @@ namespace ribeiro{
 
 struct FieldRZYT
 {
+    //x0 and y0 sould be O-point to define angle with respect to O-point
     FieldRZYT( const CylindricalFunctorsLvl1& psip, double R0, double Z0, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
@@ -247,6 +249,7 @@ namespace equalarc{
 
 struct FieldRZYT
 {
+    //x0 and y0 sould be O-point to define angle with respect to O-point
     FieldRZYT( const CylindricalFunctorsLvl1& psip, double R0, double Z0, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
@@ -469,6 +472,23 @@ struct MinimalCurve
     bool norm_;
     CylindricalFunctorsLvl1 psip_;
 };
+
+///@copydoc findXpoint()
+static inline void findOpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
+{
+    dg::geo::HessianRZtau hessianRZtau(  psi);
+    std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
+    X[0] = R_X, X[1] = Z_X;
+    double eps = 1e10, eps_old= 2e10;
+    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10)
+    {
+        X_OLD = X; eps= eps_old;
+        hessianRZtau.newton_iteration( X, XN);
+        XN.swap(X);
+        eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
+    }
+    R_X = X[0], Z_X = X[1];
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 

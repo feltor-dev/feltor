@@ -167,25 +167,24 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
     map1d.emplace_back("rho", rho,
         "Alternative flux label rho = -psi/psimin + 1");
-    dg::geo::SafetyFactor qprofile( mag);
-    map1d.emplace_back("q-profile", dg::evaluate( qprofile,   g1d_out),
+    dg::geo::SafetyFactor qprof( mag);
+    dg::HVec qprofile = dg::evaluate( qprof, g1d_out);
+    map1d.emplace_back("q-profile", qprofile,
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
-        "Flux label psi (same as coordinate)");
-
-    dg::geo::SafetyFactorAverage qprof( g2d_out, mag);
-    dg::HVec qprofv = dg::evaluate( qprof, g1d_out);
-    map1d.emplace_back("q-profile_fsa", qprofv,
-        "q-profile (Safety factor) using average integration");
-    dg::HVec psit = dg::integrate( qprofv, g1d_out);
+        "Poloidal flux label psi (same as coordinate)");
+    dg::HVec psit = dg::integrate( qprofile, g1d_out);
     map1d.emplace_back("psit1d", psit,
-        "Toroidal flux label psi_t evaluated on grid1d");
-    double psit_tot = dg::interpolate(psit, 0., g1d_out);
+        "Toroidal flux label psi_t integrated using q-profile");
+    //we need to avoid integrating >=0 for total psi_t
+    dg::Grid1d g1d_fine(psipmin, 0., 3, Npsi, dg::DIR_NEU);
+    qprofile = dg::evaluate( qprof, g1d_fine);
+    dg::HVec w1d = dg::create::weights( g1d_fine);
+    double psit_tot = dg::blas1::dot( w1d, qprofile);
     dg::blas1::scal ( psit, 1./psit_tot);
     dg::blas1::transform( psit, psit, dg::SQRT<double>());
     map1d.emplace_back("rho_t", psit,
-        "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
-
+        "Toroidal flux label rho_t = sqrt( psit/psit_tot)");
 
     // interpolate from 2d grid to X-point points
     dg::IHMatrix grid2gridX2d  = dg::create::interpolation(
