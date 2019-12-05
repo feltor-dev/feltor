@@ -834,6 +834,42 @@ std::vector<Record> diagnostics2d_list = {
             }
         }
     },
+    /// --------------------- Parallel momentum flux terms ---------------------------//
+    {"jsparexbi_tt", "Parallel momentum radial flux by ExB velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // parallel momentum mu_iN_iU_i
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
+    {"jsparbhiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // parallel momentum mu_iN_iU_i
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0],v.f.bphi(), 0., result);
+        }
+    },
+    /// --------------------- Mirror force term ---------------------------//
+    {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
+        []( DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.divb(), v.f.density(0), 0., result);
+        }
+    },
+    {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.divb(), v.f.density(1), 0., result);
+        }
+    },
     /// --------------------- Vorticity source terms ---------------------------//
     {"socurve_tt", "Vorticity source term electron curvature (Time average)", true,
         []( DVec& result, Variables& v) {

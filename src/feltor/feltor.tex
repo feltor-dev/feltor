@@ -1077,17 +1077,17 @@ the \ExB vorticity equation
 \subsubsection{Parallel momentum balance}
 The flux surface average over the parallel momentum equation under species summation and the LWL yields
 \begin{align}
-  \frac{\partial}{\partial t}\GA{m_iN_iU_{i} }
+  \frac{\partial}{\partial t}\GA{\mu_iN_iU_{i} }
     % \nonumber\\
-    + \frac{\partial}{\partial v} \GA{m_iN_iU_i u_E^{\;v} + \sum_s (N_sT_s + mN_sU_s^2) \widetilde{ b_{\perp}^{\;v} } }
+    + \frac{\partial}{\partial v} \GA{-\mu_iN_iU_i \partial_{\hat\eta}\phi + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) \widetilde{ b_{\perp}^{\;v} } }
    % \nonumber\\
-   = \sum_s\GA{-N_sT_s\npar \ln B}
+   = \sum_s\GA{-z_s\tau_s N_s\npar \ln B}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads
 \begin{align}\label{eq:parallel_momentum_direction}
-    \frac{\partial}{\partial t}  \GA{m_iNU_i b_\varphi}
-    + \frac{\partial}{\partial v} \GA{m_iN_iU_i b_\varphi u_E^{\;v} + \sum_s (N_sT_s + m_sN_sU_s^2) b_\varphi\widetilde{ b_{\perp}^{\;v} }}
+    \frac{\partial}{\partial t}  \GA{\mu_iNU_i b_\varphi}
+    + \frac{\partial}{\partial v} \GA{-\mu_iN_iU_i b_\varphi \partial_{\hat\eta}\phi + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi\widetilde{ b_{\perp}^{\;v} }}
    = -\GA{S_\Omega}
 \end{align}
 
