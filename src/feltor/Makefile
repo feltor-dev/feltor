@@ -13,7 +13,7 @@ all: feltor_hpc manufactured
 manufactured: manufactured.cu manufactured.h feltor.h implicit.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
 
-feltordiag: feltordiag.cu
+feltordiag: feltordiag.cu feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
 feltor: feltor.cu feltor.h implicit.h init.h parameters.h init_from_file.h

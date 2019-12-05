@@ -847,7 +847,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
         }
     },
-    {"jsparbhiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with ion density (Time average)", true,
+    {"jsparbphiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with ion density (Time average)", true,
         []( DVec& result, Variables& v){
             // ExB Dot GradPsi
             routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);

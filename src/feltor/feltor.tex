@@ -1079,7 +1079,7 @@ The flux surface average over the parallel momentum equation under species summa
 \begin{align}
   \frac{\partial}{\partial t}\GA{\mu_iN_iU_{i} }
     % \nonumber\\
-    + \frac{\partial}{\partial v} \GA{-\mu_iN_iU_i \partial_{\hat\eta}\phi + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) \widetilde{ b_{\perp}^{\;v} } }
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \GA{-\mu_iN_iU_i \partial_{\hat\eta}\phi + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) \widetilde{ b_{\perp}^{\;v} } }
    % \nonumber\\
    = \sum_s\GA{-z_s\tau_s N_s\npar \ln B}
    \label{eq:parallel_momentum}
@@ -1087,7 +1087,7 @@ The flux surface average over the parallel momentum equation under species summa
 while the toroidal parallel angular momentum contribution reads
 \begin{align}\label{eq:parallel_momentum_direction}
     \frac{\partial}{\partial t}  \GA{\mu_iNU_i b_\varphi}
-    + \frac{\partial}{\partial v} \GA{-\mu_iN_iU_i b_\varphi \partial_{\hat\eta}\phi + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi\widetilde{ b_{\perp}^{\;v} }}
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \GA{-\mu_iN_iU_i b_\varphi \partial_{\hat\eta}\phi + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi\widetilde{ b_{\perp}^{\;v} }}
    = -\GA{S_\Omega}
 \end{align}
 
@@ -1336,8 +1336,8 @@ the value is not found,
 the program exits with an error message.
 
 \subsection{Output} \label{sec:output_file}
-Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
-We follow CF Conventions CF-1.7
+Output file format: netcdf-4/hdf5; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
+We follow \textbf{CF Conventions CF-1.7}
 \url{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}
 and write according attributes into the file.
 The command \texttt{ncdump -h output.nc} gives a full list of what a file contains.
@@ -1458,6 +1458,10 @@ and the time-averaged quantities Y $\in$
     socurvi &$z_i\tau_i N_i \mathcal K(\psi_p)$ \\
     socurvkappae &$z_e\mu_e n_eu_e^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
     socurvkappai &$z_i\mu_i N_iU_i^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
+    jsparexbi       & $N_iU_i(\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsparbphiexbi   & $N_iU_i(\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    sparmirrore & $-z_e\tau_en_e\npar \ln B$ \\
+    sparmirrori & $-z_i\tau_iN_i\npar \ln B$ \\
 \bottomrule
 \end{longtable}
 Even though this might look like a lot of things to compute the actual time spent on diagnostics is negligible if {\tt inner\_loop} parameter is greater than 1.
@@ -1488,7 +1492,7 @@ Compilation\\
 Usage \\
 \texttt{./feltordiag input.nc output.nc} \\
 
-Output file format: netcdf-4/hdf5; A coordinate variable (Coord. Var.) is a Dataset with the same name as a dimension.
+Output file format: netcdf-4/hdf5, Conventions: CF-1.7; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
 
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
@@ -1497,24 +1501,23 @@ inputfile  &     text attribute & - & verbose input file as a string (valid JSON
 geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, compressed size: $N_z$)\\
-psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( size: $3\cdot 50$) \\
+psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $3\cdot 64$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
-yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
-zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
-q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} \\
-psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
-rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
-psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
-psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
+psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
+psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
+rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
+q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but unavailable outside separatrix) \\
+psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
+q-profile\_fsa   & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} computed with average integration (less accurate but defined outside separatrix) \\
+psit1d           & Dataset & 1 (psi) & Toroidal flux \\
+rho\_t           & Dataset & 1 (psi) & Toroidal flux label $\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$\\
 Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \langle Z\rangle_{\psi_{p}}$ \\
 Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle Z\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
 Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle Z\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
 Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \langle Z\rangle_{\psi_p}$ \\
 Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the fsa evaluated $\langle j_v\rangle_{\psi_p}(0)$ \\
-Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average, unless Z is a current, then it is the square derivative of the flux surface average \\
+Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \GA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v j^v)^2}$\\
 \bottomrule
 \end{longtable}
 where Z $\in$ \{X, Y\_tt\}
