@@ -281,7 +281,7 @@ int main( int argc, char* argv[])
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     double volumeXGrid;
     /// -------  Elements for fsa of curvature operators ----------------
-    // This is a numerical test because the fsa of the curvature operators exactly vanishes (at least for I = cte)
+    // This is a numerical test because the fsa of the curvature operators exactly vanishes (at least for I = cte and almost for everything else)!!
     dg::geo::CylindricalVectorLvl0 bhat_ = dg::geo::createBHat( mag);
     dg::geo::CylindricalVectorLvl0 curvB_ = dg::geo::createTrueCurvatureNablaB( mag);
     dg::geo::CylindricalVectorLvl0 curvK_ = dg::geo::createTrueCurvatureKappa( mag);
@@ -307,7 +307,7 @@ int main( int argc, char* argv[])
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipmin;
         std::cout << "psi 1 is          "<<psipmax<<"\n";
-        dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., npsi, Npsi, 360, dg::DIR, dg::NEU);
+        dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
         std::cout << "DONE! Generate X-point flux-aligned grid!\n";
         dg::Average<dg::HVec > avg_eta( gX2d.grid(), dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d.map();
@@ -324,6 +324,8 @@ int main( int argc, char* argv[])
         dg::blas1::scal( dvdzeta, 4.*M_PI*M_PI);
         dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
         dg::HVec X_psi_vol = dg::integrate( dvdzeta, gX1d);
+        map1d.emplace_back( "X_dvdzeta", dvdzeta,
+            "dvdzeta on X-point grid");
         map1d.emplace_back( "X_psi_vol", X_psi_vol,
             "Flux volume on X-point grid");
         dg::blas1::pointwiseDivide( X_psip1d, dvdzeta, X_psip1d);
@@ -364,6 +366,22 @@ int main( int argc, char* argv[])
             "Flux surface average of true Kappa curvature Dot Grad Psip");
         map1d.emplace_back( "X_gradPsip_fsa", X_gradPsip_fsa,
             "Flux surface average of |Grad Psip|");
+        // h02 factor
+        dg::HVec h02 = dg::pullback( Hoo(mag), gX2d), X_h02_fsa;
+        dg::blas1::pointwiseDot( volX2d, h02, h02);
+        avg_eta( h02, X_h02_fsa, false);
+        dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
+        dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
+        map1d.emplace_back( "X_hoo_fsa", X_h02_fsa,
+            "Flux surface average of novel h02 factor");
+        //divb
+        h02 = dg::pullback( dg::geo::Divb(mag), gX2d);
+        dg::blas1::pointwiseDot( volX2d, h02, h02);
+        avg_eta( h02, X_h02_fsa, false);
+        dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
+        dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
+        map1d.emplace_back( "X_divb_fsa", X_h02_fsa,
+            "Flux surface average of divb");
     }
 
     ///////////////////Compute flux average////////////////////
@@ -439,8 +457,9 @@ int main( int argc, char* argv[])
         // h02 factor
         dg::HVec h02 = dg::evaluate( Hoo(mag), grid2d);
         fsa.set_container( h02);
-        map1d.emplace_back( "hoo", dg::evaluate( fsa, grid1d),
-            "Flux surface average of novel h02 factor");
+        map1d.emplace_back( "hoo_fsa", dg::evaluate( fsa, grid1d),
+           "Flux surface average of novel h02 factor with delta function");
+
 
 
         dg::geo::FluxVolumeIntegral<dg::HVec> fvi( (dg::CartesianGrid2d)grid2d, mag);
@@ -568,7 +587,8 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);
-    std::cout << "TEST ACCURACY OF CURVATURES (values must be close to 0!)\n";
+    std::cout << "FILE CLOSED AND READY TO USE NOW!\n";
+    std::cout << "Test accuracy of curvatures (values must be close to 0!)\n";
     std::array<dg::HVec, 3> bhat, curvB, curvK;
     dg::pushForward( bhat_.x(), bhat_.y(), bhat_.z(),
             bhat[0], bhat[1], bhat[2], grid3d);
