@@ -563,19 +563,19 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& g
 
     container out = dg::evaluate( dg::zero, *m_g);
     container helper = dg::evaluate( dg::zero, *m_g);
-    dg::split( out, m_f, *m_g);
+    dg::split( in, m_f, *m_g);
     dg::split( helper, m_temp, *m_g);
-    std::vector<dg::View< container>> in_split = dg::split( in, grid);
+    std::vector<dg::View< container>> out_split = dg::split( out, grid);
     for ( int i=0; i<(int)Nz_coarse; i++)
     {
         //1. copy input vector to appropriate place in output
-        dg::blas1::copy( in_split[i], m_f[i*cphi]);
-        dg::blas1::copy( in_split[i], m_temp[i*cphi]);
+        dg::blas1::copy( m_f[i], out_split[i*cphi]);
+        dg::blas1::copy( m_f[i], m_temp[i*cphi]);
         //2. Now apply plus and minus T to fill in the rest
         for( int j=1; j<(int)cphi; j++)
         {
             //!!! The value of f at the plus plane is I^- of the current plane
-            dg::blas2::symv( m_minus, m_f[i*cphi+j-1], m_f[i*cphi+j]);
+            dg::blas2::symv( m_minus, out_split[i*cphi+j-1], out_split[i*cphi+j]);
             //!!! The value of f at the minus plane is I^+ of the current plane
             dg::blas2::symv( m_plus, m_temp[(i*cphi+cphi+1-j)%Nz], m_temp[i*cphi+cphi-j]);
         }
@@ -586,7 +586,7 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& g
         {
             double alpha = (double)(cphi-j)/(double)cphi;
             double beta = (double)j/(double)cphi;
-            dg::blas1::axpby( alpha, m_f[i*cphi+j], beta, m_temp[i*cphi+j], m_f[i*cphi+j]);
+            dg::blas1::axpby( alpha, out_split[i*cphi+j], beta, m_temp[i*cphi+j], out_split[i*cphi+j]);
         }
     return out;
 }
