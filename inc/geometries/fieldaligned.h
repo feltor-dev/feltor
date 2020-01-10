@@ -563,15 +563,19 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& g
 
     container out = dg::evaluate( dg::zero, *m_g);
     container helper = dg::evaluate( dg::zero, *m_g);
-    dg::split( in, m_f, *m_g);
     dg::split( helper, m_temp, *m_g);
-    std::vector<dg::View< container>> out_split = dg::split( out, grid);
+    std::vector<dg::View< container>> out_split = dg::split( out, *m_g);
+    std::vector<dg::View< const container>> in_split = dg::split( in, grid);
     for ( int i=0; i<(int)Nz_coarse; i++)
     {
         //1. copy input vector to appropriate place in output
-        dg::blas1::copy( m_f[i], out_split[i*cphi]);
-        dg::blas1::copy( m_f[i], m_temp[i*cphi]);
-        //2. Now apply plus and minus T to fill in the rest
+        dg::blas1::copy( in_split[i], out_split[i*cphi]);
+        dg::blas1::copy( in_split[i], m_temp[i*cphi]);
+    }
+    //Step 1 needs to finish so that m_temp contains values everywhere
+    //2. Now apply plus and minus T to fill in the rest
+    for ( int i=0; i<(int)Nz_coarse; i++)
+    {
         for( int j=1; j<(int)cphi; j++)
         {
             //!!! The value of f at the plus plane is I^- of the current plane

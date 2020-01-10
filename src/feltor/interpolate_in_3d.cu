@@ -19,8 +19,19 @@ using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #include "feltordiag.h"
 
-//convert all 3d variables of the last timestep to float and interpolate to a 3 times finer grid in phi
-//we need a time variable when available
+thrust::host_vector<float> append( const thrust::host_vector<float>& in, const dg::aRealTopology3d<double>& g)
+{
+    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
+    thrust::host_vector<float> out(g.size()+size2d);
+    for( unsigned i=0; i<g.size(); i++)
+        out[i] = in[i];
+    for( unsigned i=0; i<size2d; i++)
+        out[g.size()+i] = in[i];
+    return out;
+}
+//convert all 3d variables of every n-th timestep to float
+//and interpolate to a 3 times finer grid in phi
+//also periodify in 3d
 int main( int argc, char* argv[])
 {
     if( argc != 3)
@@ -32,24 +43,24 @@ int main( int argc, char* argv[])
 
     //------------------------open input nc file--------------------------------//
     file::NC_Error_Handle err;
-    int ncid;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    size_t length;
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
+    int ncid_in;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid_in);
+    size_t length=0;
+    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
+    std::string inputfile( length, 'x');
+    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
     std::string geom( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
-    err = nc_close(ncid);
+    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geom[0]);
+    err = nc_close(ncid_in);
 
-    //std::cout << "input "<<input<<std::endl;
+    //std::cout << "inputfile "<<input<<std::endl;
     //std::cout << "geome "<<geom <<std::endl;
     Json::Value js,gs;
     Json::CharReaderBuilder parser;
     parser["collectComments"] = false;
     std::string errs;
-    std::stringstream ss( input);
+    std::stringstream ss( inputfile);
     parseFromStream( parser, ss, &js, &errs); //read input without comments
     ss.str( geom);
     parseFromStream( parser, ss, &gs, &errs); //read input without comments
@@ -77,7 +88,7 @@ int main( int argc, char* argv[])
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = input;
+    att["inputfile"] = inputfile;
     att["geomfile"] = geom;
     for( auto pair : att)
         err = nc_put_att_text( ncid_out, NC_GLOBAL,
@@ -94,6 +105,8 @@ int main( int argc, char* argv[])
         p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<double> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, 3*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+    dg::RealCylindricalGrid3d<float> g3d_out_periodic( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
+        p.n_out, p.Nx_out, p.Ny_out, 3*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
 
     // Construct weights and temporaries
     dg::HVec transferH_in = dg::evaluate(dg::zero,g3d_in);
@@ -102,51 +115,65 @@ int main( int argc, char* argv[])
 
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out, {"time", "z", "y", "x"});
+    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic, {"time", "z", "y", "x"});
     std::map<std::string, int> id4d;
 
     /////////////////////////////////////////////////////////////////////////
-    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    auto bhat = dg::geo::createBHat( mag);
     if( p.alpha_mag > 0.)
         mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
+    auto bhat = dg::geo::createBHat( mag);
     dg::geo::Fieldaligned<Geometry, IHMatrix, HVec> fieldaligned(
-        bhat, g3d_out, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+        bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, p.mx, p.my);
+    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+
 
     for( auto& record : feltor::diagnostics3d_static_list)
     {
-        std::string name = record.name;
-        std::string long_name = record.long_name;
+        if( record.name != "xc" && record.name != "yc" && record.name != "zc" )
+        {
+            int vID;
+            err = nc_def_var( ncid_out, record.name.data(), NC_FLOAT, 3, &dim_ids[1],
+                &vID);
+            err = nc_put_att_text( ncid_out, vID, "long_name", record.long_name.size(),
+                record.long_name.data());
+
+            int dataID = 0;
+            err = nc_inq_varid(ncid_in, record.name.data(), &dataID);
+            err = nc_get_var_double( ncid_in, dataID, transferH_in.data());
+            transferH_out = fieldaligned.interpolate_from_coarse_grid(
+                g3d_in, transferH_in);
+            dg::assign( transferH_out, transferH_out_float);
+
+            err = nc_enddef( ncid_out);
+            err = nc_put_var_float( ncid_out, vID, append(transferH_out_float, g3d_out).data());
+            err = nc_redef(ncid_out);
+        }
+    }
+    for( auto record : feltor::generate_cyl2cart( g3d_out) )
+    {
         int vID;
-        err = nc_def_var( ncid_out, name.data(), NC_FLOAT, 3, dim_ids,
+        err = nc_def_var( ncid_out, std::get<0>(record).data(), NC_FLOAT, 3, &dim_ids[1],
             &vID);
-        err = nc_put_att_text( ncid_out, vID, "long_name", long_name.size(),
-            long_name.data());
-
-        int dataID = 0;
-        err = nc_inq_varid(ncid, record.name.data(), &dataID);
-        err = nc_get_var_double( ncid, dataID, transferH_in.data());
-        transferH_out = fieldaligned.interpolate_from_coarse_grid(
-            g3d_in, transferH_in);
-        dg::assign( transferH_out, transferH_out_float);
-
-        err = nc_enddef( ncid);
-        err = nc_put_var_float( ncid_out, vID, transferH_out_float.data());
+        err = nc_put_att_text( ncid_out, vID, "long_name", std::get<1>(record).size(),
+            std::get<1>(record).data());
+        dg::assign( std::get<2>(record), transferH_out_float);
+        err = nc_enddef( ncid_out);
+        err = nc_put_var_float( ncid_out, vID, append(transferH_out_float, g3d_out).data());
         err = nc_redef(ncid_out);
+
     }
     for( auto& record : feltor::diagnostics3d_list)
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
-        err = nc_def_var( ncid_out, name.data(), NC_FLOAT, 3, dim_ids,
+        err = nc_def_var( ncid_out, name.data(), NC_FLOAT, 4, dim_ids,
             &id4d[name]);
         err = nc_put_att_text( ncid_out, id4d[name], "long_name", long_name.size(),
             long_name.data());
     }
-    err = nc_enddef( ncid);
+    err = nc_enddef( ncid_out);
 
 
 
@@ -154,18 +181,20 @@ int main( int argc, char* argv[])
     double time=0.;
 
     size_t steps;
-    err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
-    err = nc_inq_dimlen( ncid, timeID, &steps);
+    err = nc_inq_unlimdim( ncid_in, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
+    err = nc_inq_dimlen( ncid_in, timeID, &steps);
     size_t count3d_in[4]  = {1, g3d_in.Nz(), g3d_in.n()*g3d_in.Ny(), g3d_in.n()*g3d_in.Nx()};
-    size_t count3d_out[4] = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
+    size_t count3d_out[4] = {1, g3d_out_periodic.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3d[4] = {0, 0, 0, 0};
-    /////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////
     for( unsigned i=0; i<steps; i+=10)//timestepping
     {
+        std::cout << "Timestep = "<<i<< "/"<<steps;
         start3d[0] = i;
         // read and write time
-        err = nc_get_vara_double( ncid, timeID, start3d, count3d_in, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << std::endl;
+        err = nc_get_vara_double( ncid_in, timeID, start3d, count3d_in, &time);
+        std::cout << "  time = " << time << std::endl;
+        start3d[0] = i/10;
         err = nc_put_vara_double( ncid_out, tvarID, start3d, count3d_out, &time);
         for( auto& record : feltor::diagnostics3d_list)
         {
@@ -173,7 +202,7 @@ int main( int argc, char* argv[])
             int dataID =0;
             bool available = true;
             try{
-                err = nc_inq_varid(ncid, record.name.data(), &dataID);
+                err = nc_inq_varid(ncid_in, record.name.data(), &dataID);
             } catch ( file::NC_Error error)
             {
                 if(  i == 0)
@@ -186,7 +215,7 @@ int main( int argc, char* argv[])
             }
             if( available)
             {
-                err = nc_get_vara_double( ncid, dataID,
+                err = nc_get_vara_double( ncid_in, dataID,
                     start3d, count3d_in, transferH_in.data());
                 //2. Compute fsa and output fsa
                 transferH_out = fieldaligned.interpolate_from_coarse_grid(
@@ -198,13 +227,14 @@ int main( int argc, char* argv[])
                 dg::blas1::scal( transferH_out_float, (float)0);
             }
             err = nc_put_vara_float( ncid_out, id4d.at(record.name), start3d,
-                count3d_out, transferH_out_float.data());
+                count3d_out, append(transferH_out_float, g3d_out).data());
         }
 
-
     } //end timestepping
-    err = nc_close(ncid);
+    std::cout << "Hello!\n";
+    err = nc_close(ncid_in);
     err = nc_close(ncid_out);
+    std::cout << "Hello!\n";
 
     return 0;
 }

@@ -37,6 +37,17 @@ template<>
 inline nc_type getNCDataType<int>(){ return NC_INT;}
 template<>
 inline nc_type getNCDataType<unsigned>(){ return NC_UINT;}
+
+template<class T>
+inline int put_var_T( int ncid, int varID, T* data);
+template<>
+inline int put_var_T<float>( int ncid, int varID, float* data){
+    return nc_put_var_float( ncid, varID, data);
+}
+template<>
+inline int put_var_T<double>( int ncid, int varID, double* data){
+    return nc_put_var_double( ncid, varID, data);
+}
 ///@endcond
 
 template<class T>
@@ -113,7 +124,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
     int varID;
     if( (retval = nc_def_var( ncid, name_dim.data(), getNCDataType<T>(), 1, dimID, &varID))){return retval;}
     if( (retval = nc_enddef(ncid)) ) {return retval;} //not necessary for NetCDF4 files
-    if( (retval = nc_put_var_double( ncid, varID, points.data())) ){ return retval;}
+    if( (retval = put_var_T<T>( ncid, varID, points.data())) ){ return retval;}
     if( (retval = nc_redef(ncid))) {return retval;} //not necessary for NetCDF4 files
     retval = nc_put_att_text( ncid, *dimID, "axis", axis.size(), axis.data());
     retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());

@@ -240,6 +240,20 @@ std::vector<Record_static> diagnostics3d_static_list = {
     },
 };
 
+std::array<std::tuple<std::string, std::string, HVec>, 3> generate_cyl2cart( Geometry& grid)
+{
+    HVec xc = dg::evaluate( dg::cooX3d, grid);
+    HVec yc = dg::evaluate( dg::cooY3d, grid);
+    HVec zc = dg::evaluate( dg::cooZ3d, grid);
+    dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+    std::array<std::tuple<std::string, std::string, HVec>, 3> list = {{
+        { "xc", "x-coordinate in Cartesian coordinate system", xc },
+        { "yc", "y-coordinate in Cartesian coordinate system", yc },
+        { "zc", "z-coordinate in Cartesian coordinate system", zc }
+    }};
+    return list;
+}
+
 // Here are all 3d outputs we want to have
 std::vector<Record> diagnostics3d_list = {
     {"electrons", "electron density", false,
