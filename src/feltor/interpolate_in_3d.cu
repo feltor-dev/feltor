@@ -113,8 +113,8 @@ int main( int argc, char* argv[])
     dg::HVec transferH_out = dg::evaluate(dg::zero,g3d_out);
     dg::fHVec transferH_out_float = dg::construct<dg::fHVec>( transferH_out);
 
-    // define 2d and 1d and 0d dimensions and variables
-    int dim_ids[3], tvarID;
+    // define 4d dimension
+    int dim_ids[4], tvarID;
     err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic, {"time", "z", "y", "x"});
     std::map<std::string, int> id4d;
 
@@ -231,10 +231,8 @@ int main( int argc, char* argv[])
         }
 
     } //end timestepping
-    std::cout << "Hello!\n";
     err = nc_close(ncid_in);
     err = nc_close(ncid_out);
-    std::cout << "Hello!\n";
 
     return 0;
 }
