@@ -105,17 +105,22 @@ int main( int argc, char* argv[])
         p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<double> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, 3*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+    dg::RealCylindricalGrid3d<double> g3d_out_equidistant( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
+        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, 3*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<float> g3d_out_periodic( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
         p.n_out, p.Nx_out, p.Ny_out, 3*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
+    dg::RealCylindricalGrid3d<float> g3d_out_periodic_equidistant( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
+        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, 3*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
 
     // Construct weights and temporaries
     dg::HVec transferH_in = dg::evaluate(dg::zero,g3d_in);
     dg::HVec transferH_out = dg::evaluate(dg::zero,g3d_out);
-    dg::fHVec transferH_out_float = dg::construct<dg::fHVec>( transferH_out);
+    dg::HVec transferH = dg::evaluate(dg::zero,g3d_out_equidistant);
+    dg::fHVec transferH_out_float = dg::construct<dg::fHVec>( transferH);
 
     // define 4d dimension
     int dim_ids[4], tvarID;
-    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic, {"time", "z", "y", "x"});
+    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
     std::map<std::string, int> id4d;
 
     /////////////////////////////////////////////////////////////////////////
@@ -127,6 +132,7 @@ int main( int argc, char* argv[])
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, p.mx, p.my);
     err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+    dg::IHMatrix interpolate_in_2d = dg::create::interpolation( g3d_out_equidistant, g3d_out);
 
 
     for( auto& record : feltor::diagnostics3d_static_list)
@@ -144,14 +150,15 @@ int main( int argc, char* argv[])
             err = nc_get_var_double( ncid_in, dataID, transferH_in.data());
             transferH_out = fieldaligned.interpolate_from_coarse_grid(
                 g3d_in, transferH_in);
-            dg::assign( transferH_out, transferH_out_float);
+            dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
+            dg::assign( transferH, transferH_out_float);
 
             err = nc_enddef( ncid_out);
-            err = nc_put_var_float( ncid_out, vID, append(transferH_out_float, g3d_out).data());
+            err = nc_put_var_float( ncid_out, vID, append(transferH_out_float, g3d_out_equidistant).data());
             err = nc_redef(ncid_out);
         }
     }
-    for( auto record : feltor::generate_cyl2cart( g3d_out) )
+    for( auto record : feltor::generate_cyl2cart( g3d_out_equidistant) )
     {
         int vID;
         err = nc_def_var( ncid_out, std::get<0>(record).data(), NC_FLOAT, 3, &dim_ids[1],
@@ -160,7 +167,7 @@ int main( int argc, char* argv[])
             std::get<1>(record).data());
         dg::assign( std::get<2>(record), transferH_out_float);
         err = nc_enddef( ncid_out);
-        err = nc_put_var_float( ncid_out, vID, append(transferH_out_float, g3d_out).data());
+        err = nc_put_var_float( ncid_out, vID, append(transferH_out_float, g3d_out_equidistant).data());
         err = nc_redef(ncid_out);
 
     }
@@ -184,7 +191,7 @@ int main( int argc, char* argv[])
     err = nc_inq_unlimdim( ncid_in, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
     err = nc_inq_dimlen( ncid_in, timeID, &steps);
     size_t count3d_in[4]  = {1, g3d_in.Nz(), g3d_in.n()*g3d_in.Ny(), g3d_in.n()*g3d_in.Nx()};
-    size_t count3d_out[4] = {1, g3d_out_periodic.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
+    size_t count3d_out[4] = {1, g3d_out_periodic_equidistant.Nz(), g3d_out_equidistant.n()*g3d_out_equidistant.Ny(), g3d_out_equidistant.n()*g3d_out_equidistant.Nx()};
     size_t start3d[4] = {0, 0, 0, 0};
     ///////////////////////////////////////////////////////////////////////
     for( unsigned i=0; i<steps; i+=10)//timestepping
@@ -220,14 +227,15 @@ int main( int argc, char* argv[])
                 //2. Compute fsa and output fsa
                 transferH_out = fieldaligned.interpolate_from_coarse_grid(
                     g3d_in, transferH_in);
-                dg::assign( transferH_out, transferH_out_float);
+                dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
+                dg::assign( transferH, transferH_out_float);
             }
             else
             {
                 dg::blas1::scal( transferH_out_float, (float)0);
             }
             err = nc_put_vara_float( ncid_out, id4d.at(record.name), start3d,
-                count3d_out, append(transferH_out_float, g3d_out).data());
+                count3d_out, append(transferH_out_float, g3d_out_equidistant).data());
         }
 
     } //end timestepping
