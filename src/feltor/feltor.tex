@@ -474,24 +474,8 @@ to numerically compute area integrals.
 
 \subsection{Flux surface average}
 
-There is two possible ways to introduce a flux-surface average.
-The first one is the straightforward average on the actual area of the
-flux-surface.
-The {\bf area average}
-of a function $f(R,Z,\varphi)$ is given by the formula
-\begin{align}\label{eq:fsa_area}
-\langle f \rangle^{area}_{\psi_{p}} :=&
-\frac{ \oint_{\psi_p  } f(R,Z,\varphi)\dA}{\oint_{\psi_p } \dA} \nonumber \\
-=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) |\vn\psi_p| \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
-{\int_\Omega |\vn\psi_p|\delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z} \nonumber\\
-=& \frac{\oint \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g g^{\zeta\zeta}}\d\eta}
-         { \oint \sqrt{g g^{\zeta\zeta}}\d\eta}
-\end{align}
-%with $\dV := R\d R\d Z\d \varphi$ %(we define the average in computational space and omit one $R$)
-and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
-in our domain $\Omega$.
 
-The second one (the {\bf volume average} after \cite{haeseleer}) defines an average on a
+The flux surface average (as a {\bf volume average} after \cite{haeseleer}) is defined as an average over a
 small volume - a shell centered around the flux-surface - defined by two neighboring flux-surfaces.
 With the help of the volume
 flux label (notice that both the volume $v$ as well as the poloidal flux $\psi_p$ have physical 
@@ -500,40 +484,42 @@ meaning while the coordinate $\zeta(\psi_p)$ is an arbitrary choice) we define
 v(\psi_p) :=& \int_{\psi_{p,\min}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\zeta\d\eta\d\varphi,
 \\
 \frac{\d v}{\d\psi_p} =& \int\dA |\vn\psi_p|^{-1} = 2\pi f_0\oint_{\zeta(\psi_p)} \sqrt{g}\d\eta \\
-\langle f \rangle^{vol}_\psi :=& \frac{\partial}{\partial v} \int \dV f
+\langle f \rangle_\psi :=& \frac{\partial}{\partial v} \int \dV f
  = \frac{1}{\int \dA |\vn\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\vn\psi_p|} \dA \nonumber\\
 =& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
 {\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
  =& \left(\frac{\d v}{\d\psi_p }\right)^{-1} 2\pi f_0 \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
  = \frac{1}{\oint \sqrt{g}\d\eta } \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
 \end{align}
-where we used the co-area formula Eq.~\eqref{eq:coarea} for the second
-identity. We immediately see that this definition differs from the first
-Eq.~\eqref{eq:fsa_area} by the weight factor $|\vn\psi_p|$ and that it is particularly easy to compute
-in a flux-aligned coordinate system. Notice however that the volume element does appear (unlike e.g. Tokam3X papers)
+where we used the co-area formula Eq.~\eqref{eq:coarea} for the second identity
+and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
+in our domain $\Omega$.
+ We immediately see that this definition is particularly easy to compute
+in a flux-aligned coordinate system. Notice however that the volume element
+does appear (unlike e.g. Tokam3X papers)
 
-Both averages fulfill the basic identities
+The flux-surface average fulfills the basic identities
 \begin{align}
 \label{eq:fsa_identities}
 \langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
 \langle f(\psi_p) \rangle &= f(\psi_p)
 \end{align}
 
-
-The volume average is better suited for density-like quantities
-than the area average as we can see with the following identity.
-Assume we have a quantity $X$ with $\partial_t X + \nc \vec j_X = \Lambda_X$. Then we can use the volume average to write
+The volume average is well-suited for density-like quantities
+as we can see with the following identity.
+Assume we have a quantity $X$ with $\partial_t X + \nc \vec j_X = \Lambda_X$.
+Then we can use the volume average to write
 \begin{align}
-\frac{\partial}{\partial t} \langle X \rangle^{vol} + \frac{\partial}{
-  \partial v} \langle \vec j_X\cn v\rangle^{vol}  = \langle \Lambda_X\rangle^{vol}
+\frac{\partial}{\partial t} \langle X \rangle + \frac{\partial}{
+  \partial v} \langle \vec j_X\cn v\rangle  = \langle \Lambda_X\rangle
 \label{eq:fsa_balance}
 \end{align}
 where again $v=v(\psi_p)$ is the volume flux label.
 The {\bf total flux} of a given flux density $\vec j_X$ though the
 flux surface $\psi_p = \psi_{p0}$ is given by
 \begin{align}
-\left\langle\vec j_X\cn v\right\rangle^{vol} &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
- \frac{\d v}{\d\psi_p} \langle \vec j_X\cn\psi_p \rangle^{vol}\\
+\left\langle\vec j_X\cn v\right\rangle &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
+ \frac{\d v}{\d\psi_p} \langle \vec j_X\cn\psi_p \rangle\\
  &=
    2\pi f_0 \oint_0^{2\pi} \langle \vec j_X\cn\psi_p\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
 %2\pi\int_\Omega \vec \langle \vec j\cn\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
@@ -541,8 +527,8 @@ flux surface $\psi_p = \psi_{p0}$ is given by
 \end{align}
 Once we have the flux-surface averaged equation we can easily get the volume integrated version (again with the help of the co-area formula)
 \begin{align}
-\frac{\partial}{\partial t} \int_0^{v(\psi_p)}\langle X \rangle^{vol} \d v 
-+ \langle \vec j_X\cn v\rangle^{vol}(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle^{vol}\d v
+\frac{\partial}{\partial t} \int_0^{v(\psi_p)}\langle X \rangle \d v 
++ \langle \vec j_X\cn v\rangle(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle\d v
 \label{eq:integral_balance}
 \end{align}
 

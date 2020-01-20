@@ -29,9 +29,9 @@ thrust::host_vector<float> append( const thrust::host_vector<float>& in, const d
         out[g.size()+i] = in[i];
     return out;
 }
-//convert all 3d variables of every n-th timestep to float
-//and interpolate to a 3 times finer grid in phi
-//also periodify in 3d
+//convert all 3d variables of every N-th timestep to float
+//and interpolate to a FACTOR times finer grid in phi
+//also periodify in 3d and equidistant in RZ
 int main( int argc, char* argv[])
 {
     if( argc != 3)
@@ -100,17 +100,18 @@ int main( int argc, char* argv[])
     const double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     const double Rmax=gp.R_0+p.boxscaleRp*gp.a;
     const double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    const unsigned FACTOR = 6;
 
     dg::RealCylindricalGrid3d<double> g3d_in( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<double> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, 3*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<double> g3d_out_equidistant( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
-        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, 3*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, FACTOR*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<float> g3d_out_periodic( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
-        p.n_out, p.Nx_out, p.Ny_out, 3*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
+        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<float> g3d_out_periodic_equidistant( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
-        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, 3*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
+        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, FACTOR*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
 
     // Construct weights and temporaries
     dg::HVec transferH_in = dg::evaluate(dg::zero,g3d_in);
@@ -130,7 +131,7 @@ int main( int argc, char* argv[])
     auto bhat = dg::geo::createBHat( mag);
     dg::geo::Fieldaligned<Geometry, IHMatrix, HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
-        p.rk4eps, p.mx, p.my);
+        p.rk4eps, 5, 5);
     err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation( g3d_out_equidistant, g3d_out);
 
