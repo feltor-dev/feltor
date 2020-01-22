@@ -1472,11 +1472,11 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 \section{Diagnostics}\label{sec:diagnostics}
 \subsection{Program and files}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
-This program reads a previously generated simulation file \texttt{input.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
+This program reads one or more previously generated simulation file(s) \texttt{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
 Compilation\\
 \texttt{make feltordiag} \\
 Usage \\
-\texttt{./feltordiag input.nc output.nc} \\
+\texttt{./feltordiag input0.nc ... inputN.nc output.nc} \\
 
 Output file format: netcdf-4/hdf5, Conventions: CF-1.7; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
 

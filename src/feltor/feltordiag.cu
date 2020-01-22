@@ -20,12 +20,14 @@ using Geometry = dg::CylindricalGrid3d;
 
 int main( int argc, char* argv[])
 {
-    if( argc != 3)
+    if( argc < 3)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.nc]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [input0.nc ... inputN.nc] [output.nc]\n";
         return -1;
     }
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+    for( int i=1; i<argc-1; i++)
+        std::cout << argv[i]<< " ";
+    std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
     file::NC_Error_Handle err;
@@ -60,7 +62,7 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
-    err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
+    err = nc_create(argv[argc-1],NC_NETCDF4|NC_CLOBBER, &ncid_out);
 
     /// Set global attributes
     std::map<std::string, std::string> att;
@@ -213,7 +215,6 @@ int main( int argc, char* argv[])
     std::map<std::string, int> id0d, id1d, id2d;
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
-    size_t start1d[2] = {0, 0};
     size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
     size_t start2d[3] = {0, 0, 0};
 
@@ -284,154 +285,163 @@ int main( int argc, char* argv[])
             long_name.data());
     }
     /////////////////////////////////////////////////////////////////////////
-    int timeID;
-    double time=0.;
-
-    size_t steps;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-    err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
-    err = nc_inq_dimlen( ncid, timeID, &steps);
-    //steps = 3;
-    for( unsigned i=0; i<steps; i++)//timestepping
+    size_t counter = 0;
+    for( int j=1; j<argc-1; j++)
     {
-        start2d[0] = i;
-        start1d[0] = i;
-        // read and write time
-        err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << std::endl;
-        err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
-        for( auto& record : feltor::diagnostics2d_list)
+        int timeID;
+
+        size_t steps;
+        std::cout << "Opening file "<<argv[j]<<"\n";
+        err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
+        err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
+        err = nc_inq_dimlen( ncid, timeID, &steps);
+        //steps = 3;
+        for( unsigned i=0; i<steps; i++)//timestepping
         {
-            std::string record_name = record.name;
-            if( record_name[0] == 'j')
-                record_name[1] = 'v';
-            //1. Read toroidal average
-            int dataID =0;
-            bool available = true;
-            try{
-                err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
-            } catch ( file::NC_Error error)
+            if( j > 1 && i == 0)
+                continue; // else we duplicate the first timestep
+            start2d[0] = i;
+            size_t start2d_out[3] = {counter, 0,0};
+            size_t start1d_out[2] = {counter, 0};
+            // read and write time
+            double time=0.;
+            err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
+            std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
+            counter++;
+            err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
+            for( auto& record : feltor::diagnostics2d_list)
             {
-                if(  i == 0)
-                {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name+"_ta2d\n";
-                    std::cerr << "Writing zeros ... \n";
-                }
-                available = false;
-            }
-            if( available)
-            {
-                err = nc_get_vara_double( ncid, dataID,
-                    start2d, count2d, transferH2d.data());
-                //2. Compute fsa and output fsa
-                dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
-                dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-                poloidal_average( transferH2dX, t1d, false); //average over eta
-                dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
-                dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
+                std::string record_name = record.name;
                 if( record_name[0] == 'j')
-                    dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
-                //3. Interpolate fsa on 2d plane : <f>
-                dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
-            }
-            else
-            {
-                dg::blas1::scal( fsa1d, 0.);
-                dg::blas1::scal( transferH2d, 0.);
-            }
-            err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_fsa"),
-                start1d, count1d, fsa1d.data());
-            err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fsa2d"),
-                start2d, count2d, transferH2d.data() );
-            //4. Read 2d variable and compute fluctuations
-            available = true;
-            try{
-                err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
-            } catch ( file::NC_Error error)
-            {
-                if(  i == 0)
+                    record_name[1] = 'v';
+                //1. Read toroidal average
+                int dataID =0;
+                bool available = true;
+                try{
+                    err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
+                } catch ( file::NC_Error error)
                 {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name+"_2d\n";
-                    std::cerr << "Writing zeros ... \n";
+                    if(  i == 0)
+                    {
+                        std::cerr << error.what() <<std::endl;
+                        std::cerr << "Offending variable is "<<record.name+"_ta2d\n";
+                        std::cerr << "Writing zeros ... \n";
+                    }
+                    available = false;
                 }
-                available = false;
-            }
-            if( available)
-            {
-                err = nc_get_vara_double( ncid, dataID, start2d, count2d,
-                    t2d_mp.data());
-                if( record_name[0] == 'j')
-                    dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
-                dg::blas1::axpby( 1.0, t2d_mp, -1.0, transferH2d);
-                err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
-                    start2d, count2d, transferH2d.data() );
-
-                //5. flux surface integral/derivative
-                double result =0.;
-                if( record_name[0] == 'j') //j indicates a flux
+                if( available)
                 {
-                    dg::blas2::symv( dpsi, fsa1d, t1d);
-                    dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
-
-                    result = dg::interpolate( fsa1d, 0., g1d_out);
+                    err = nc_get_vara_double( ncid, dataID,
+                        start2d, count2d, transferH2d.data());
+                    //2. Compute fsa and output fsa
+                    dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
+                    dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
+                    dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
+                    if( record_name[0] == 'j')
+                        dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
+                    //3. Interpolate fsa on 2d plane : <f>
+                    dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
                 }
                 else
                 {
-                    dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
-                    transfer1d = dg::integrate( t1d, g1d_out);
-
-                    result = dg::interpolate( transfer1d, 0., g1d_out);
+                    dg::blas1::scal( fsa1d, 0.);
+                    dg::blas1::scal( transferH2d, 0.);
                 }
-                err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
-                    start1d, count1d, transfer1d.data());
-                //flux surface integral/derivative on last closed flux surface
-                err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
-                    start2d, count2d, &result );
-                //6. Compute norm of time-integral terms to get relative importance
-                if( record_name[0] == 'j') //j indicates a flux
+                err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_fsa"),
+                    start1d_out, count1d, fsa1d.data());
+                err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fsa2d"),
+                    start2d_out, count2d, transferH2d.data() );
+                //4. Read 2d variable and compute fluctuations
+                available = true;
+                try{
+                    err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
+                } catch ( file::NC_Error error)
                 {
-                    dg::blas2::symv( dpsi, fsa1d, t1d);
-                    dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
-                    dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
-                    dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
-                    transfer1d = dg::integrate( t1d, g1d_out);
-                    result = dg::interpolate( transfer1d, 0., g1d_out);
-                    result = sqrt(result);
+                    if(  i == 0)
+                    {
+                        std::cerr << error.what() <<std::endl;
+                        std::cerr << "Offending variable is "<<record.name+"_2d\n";
+                        std::cerr << "Writing zeros ... \n";
+                    }
+                    available = false;
+                }
+                if( available)
+                {
+                    err = nc_get_vara_double( ncid, dataID, start2d, count2d,
+                        t2d_mp.data());
+                    if( record_name[0] == 'j')
+                        dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
+                    dg::blas1::axpby( 1.0, t2d_mp, -1.0, transferH2d);
+                    err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
+                        start2d_out, count2d, transferH2d.data() );
+
+                    //5. flux surface integral/derivative
+                    double result =0.;
+                    if( record_name[0] == 'j') //j indicates a flux
+                    {
+                        dg::blas2::symv( dpsi, fsa1d, t1d);
+                        dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
+
+                        result = dg::interpolate( fsa1d, 0., g1d_out);
+                    }
+                    else
+                    {
+                        dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
+                        transfer1d = dg::integrate( t1d, g1d_out);
+
+                        result = dg::interpolate( transfer1d, 0., g1d_out);
+                    }
+                    err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
+                        start1d_out, count1d, transfer1d.data());
+                    //flux surface integral/derivative on last closed flux surface
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
+                        start2d_out, count2d, &result );
+                    //6. Compute norm of time-integral terms to get relative importance
+                    if( record_name[0] == 'j') //j indicates a flux
+                    {
+                        dg::blas2::symv( dpsi, fsa1d, t1d);
+                        dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
+                        dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
+                        dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
+                        transfer1d = dg::integrate( t1d, g1d_out);
+                        result = dg::interpolate( transfer1d, 0., g1d_out);
+                        result = sqrt(result);
+                    }
+                    else
+                    {
+                        dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
+                        dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
+                        transfer1d = dg::integrate( t1d, g1d_out);
+
+                        result = dg::interpolate( transfer1d, 0., g1d_out);
+                        result = sqrt(result);
+                    }
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
+                        start2d_out, count2d, &result );
                 }
                 else
                 {
-                    dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
-                    dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
-                    transfer1d = dg::integrate( t1d, g1d_out);
-
-                    result = dg::interpolate( transfer1d, 0., g1d_out);
-                    result = sqrt(result);
+                    dg::blas1::scal( transferH2d, 0.);
+                    dg::blas1::scal( transfer1d, 0.);
+                    double result = 0.;
+                    err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
+                        start2d_out, count2d, transferH2d.data() );
+                    err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
+                        start1d_out, count1d, transfer1d.data());
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
+                        start2d_out, count2d, &result );
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
+                        start2d_out, count2d, &result );
                 }
-                err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
-                    start2d, count2d, &result );
-            }
-            else
-            {
-                dg::blas1::scal( transferH2d, 0.);
-                dg::blas1::scal( transfer1d, 0.);
-                double result = 0.;
-                err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
-                    start2d, count2d, transferH2d.data() );
-                err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
-                    start1d, count1d, transfer1d.data());
-                err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
-                    start2d, count2d, &result );
-                err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
-                    start2d, count2d, &result );
+
             }
 
-        }
 
-
-    } //end timestepping
-    err = nc_close(ncid);
+        } //end timestepping
+        err = nc_close(ncid);
+    }
     err = nc_close(ncid_out);
 
     return 0;
