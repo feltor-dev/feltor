@@ -36,7 +36,7 @@ Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B
 we can define various differential operations.
 %Let us further assume that $\bhat$ is perturbed by the parallel
 %vector potential $A_\parallel$ via
-%$\tilde{ \vec b }_\perp := ({\vn \times A_\parallel \bhat)}/{B}$
+%${ \vec b }_\perp := ({\vn \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
 %\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
@@ -74,7 +74,7 @@ we can define various differential operations.
     $ \npar f := \bhat\cn f$ \\
     %Perturbed parallel Derivative&
     %$\bar\npar$ &
-    %$\bar\npar f := (\bhat + \tilde{\vec b }_\perp)\cn f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
+    %$\bar\npar f := (\bhat + {\vec b }_\perp)\cn f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
     Parallel Laplacian&
     $\Delta_\parallel $&
     $\Delta_\parallel f:= \nc ( \bhat\bhat\cn f )$\\
@@ -450,7 +450,7 @@ volume integral.
 
 We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
 \begin{align} \label{eq:phi_average}
-\langle f\rangle_\varphi(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
+\PA{ f}(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
 \end{align}
 
 In arbitrary coordinates the area integral is defined by the pull back
@@ -484,12 +484,12 @@ meaning while the coordinate $\zeta(\psi_p)$ is an arbitrary choice) we define
 v(\psi_p) :=& \int_{\psi_{p,\min}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\zeta\d\eta\d\varphi,
 \\
 \frac{\d v}{\d\psi_p} =& \int\dA |\vn\psi_p|^{-1} = 2\pi f_0\oint_{\zeta(\psi_p)} \sqrt{g}\d\eta \\
-\langle f \rangle_\psi :=& \frac{\partial}{\partial v} \int \dV f
+\RA{ f }_\psi :=& \frac{\partial}{\partial v} \int \dV f
  = \frac{1}{\int \dA |\vn\psi_p|^{-1} } \int_{\psi_p} \frac{f(\vec x)}{|\vn\psi_p|} \dA \nonumber\\
-=& \frac{\int_\Omega \langle f\rangle_\varphi(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
+=& \frac{\int_\Omega \PA{ f}(R,Z) \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}
 {\int_\Omega \delta(\psi_p(R,Z)-\psi_{p})H(Z-Z_X)\ R \d R \d Z}\nonumber\\
- =& \left(\frac{\d v}{\d\psi_p }\right)^{-1} 2\pi f_0 \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
- = \frac{1}{\oint \sqrt{g}\d\eta } \oint_0^{2\pi} \langle f\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
+ =& \left(\frac{\d v}{\d\psi_p }\right)^{-1} 2\pi f_0 \oint_0^{2\pi} \PA{ f}(\zeta,\eta) \sqrt{g}\d\eta
+ = \frac{1}{\oint \sqrt{g}\d\eta } \oint_0^{2\pi} \PA{ f}(\zeta,\eta) \sqrt{g}\d\eta
 \end{align}
 where we used the co-area formula Eq.~\eqref{eq:coarea} for the second identity
 and we use the Heaviside function $H(Z-Z_X)$ to cut away contributions from below the X-point
@@ -501,8 +501,8 @@ does appear (unlike e.g. Tokam3X papers)
 The flux-surface average fulfills the basic identities
 \begin{align}
 \label{eq:fsa_identities}
-\langle \mu f + \lambda g\rangle &= \mu\langle f\rangle + \lambda \langle g\rangle \\
-\langle f(\psi_p) \rangle &= f(\psi_p)
+\RA{ \mu f + \lambda g} &= \mu\RA{ f} + \lambda \RA{ g} \\
+\RA{ f(\psi_p)} &= f(\psi_p)
 \end{align}
 
 The volume average is well-suited for density-like quantities
@@ -510,25 +510,25 @@ as we can see with the following identity.
 Assume we have a quantity $X$ with $\partial_t X + \nc \vec j_X = \Lambda_X$.
 Then we can use the volume average to write
 \begin{align}
-\frac{\partial}{\partial t} \langle X \rangle + \frac{\partial}{
-  \partial v} \langle \vec j_X\cn v\rangle  = \langle \Lambda_X\rangle
+\frac{\partial}{\partial t} \RA{X } + \frac{\partial}{
+  \partial v} \RA{ \vec j_X\cn v}  = \RA{ \Lambda_X}
 \label{eq:fsa_balance}
 \end{align}
 where again $v=v(\psi_p)$ is the volume flux label.
 The {\bf total flux} of a given flux density $\vec j_X$ though the
 flux surface $\psi_p = \psi_{p0}$ is given by
 \begin{align}
-\left\langle\vec j_X\cn v\right\rangle &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
- \frac{\d v}{\d\psi_p} \langle \vec j_X\cn\psi_p \rangle\\
+\RA{\vec j_X\cn v} &:= J_X=\oint_{\psi_p=\psi_{p0}} \vec j_X\cdot \vec{\dA} =
+ \frac{\d v}{\d\psi_p} \RA{ \vec j_X\cn\psi_p }\\
  &=
-   2\pi f_0 \oint_0^{2\pi} \langle \vec j_X\cn\psi_p\rangle_\varphi(\zeta,\eta) \sqrt{g}\d\eta
-%2\pi\int_\Omega \vec \langle \vec j\cn\psi_p\rangle_\varphi \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
+   2\pi f_0 \oint_0^{2\pi} \PA{ \vec j_X\cn\psi_p}(\zeta,\eta) \sqrt{g}\d\eta
+%2\pi\int_\Omega \vec \PA{ \vec j\cn\psi_p} \delta(\psi_p(R,Z)-\psi_{p0}) H(Z-Z_X)\ R \d R \d Z
 \label{eq:total_flux}
 \end{align}
 Once we have the flux-surface averaged equation we can easily get the volume integrated version (again with the help of the co-area formula)
 \begin{align}
-\frac{\partial}{\partial t} \int_0^{v(\psi_p)}\langle X \rangle \d v 
-+ \langle \vec j_X\cn v\rangle(v(\psi_p))  = \int_0^{v(\psi_p)}\langle \Lambda_X\rangle\d v
+\frac{\partial}{\partial t} \int_0^{v(\psi_p)}\RA{X} \d v 
++ \RA{ \vec j_X\cn v}(v(\psi_p))  = \int_0^{v(\psi_p)}\RA{ \Lambda_X}\d v
 \label{eq:integral_balance}
 \end{align}
 
@@ -569,8 +569,8 @@ construction algorithms, i.e. we use a high-order Runge-Kutta method
 and refine the stepsize until machine-precision is reached.
 
 Notice that the safety factor diverges on the last closed flux
-surface whereas the Eq.~\eqref{eq:total_flux} and \eqref{eq:fsa_area}
-remain finite due to the $\vn\psi$ factor.
+surface whereas Eq.~\eqref{eq:total_flux}
+remains finite due to the $\vn\psi$ factor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -589,15 +589,15 @@ where $a\in\{e,i\}$ is the species label and $z$ is the charge number.
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nc\left( N \left(
-    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
+    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + {\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
 \mu N \frac{\partial}{\partial t} U &+ \mu N \left(
-    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + \tilde{\vec b}_\perp\right)
+    \vec v_E + \vec v_K + \vec v_{C} + U\left(\bhat + {\vec b}_\perp\right)
     \right)\cn U  \nonumber \\
     &+ 2\mu \nc ( NU \vec v_{\vn\times\bhat})
     -\mu NU\nc \vec v_{\vn\times\bhat}
     + \mu NU\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
-    &= -\tau \left(\bhat + \tilde{\vec b}_\perp\right)\cn N 
-    -N \left( \left(\bhat+\tilde{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right) 
+    &= -\tau \left(\bhat + {\vec b}_\perp\right)\cn N 
+    -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right) 
     - \eta n_e^2(U_i-u_e) + \mu N\Lambda_U
 \label{}
 \end{align}
@@ -607,7 +607,7 @@ with
 \vec v_{K} := \tau \left(\vec{\mathcal K_{\vn B}} + \vec{\mathcal K_{\vn\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
 \vec v_C := \mu U^2\vec{\mathcal K_{\vn\times\bhat}},\quad
 \vec v_{\vn\times\bhat} := \tau\vec{\mathcal K_{\vn\times\bhat}},\quad
-\tilde{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B}.
+{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B}.
 \label{}
 \end{align}
 
@@ -828,18 +828,19 @@ or a Torpex inspired source profile
 with $a=0.0335$m, $b=0.05$m, $c=565m^{-2}$, $R_0=0.98$m and $Z_0=-0.02$m.
 
 
-For ions we use
+In order to not generate potential with the source term the
+ion source needs to fulfill $S_{n_e} = \Gamma_{1,i}S_{N_i} + \nc\left( \frac{\mu_i S_{N_i}}{B^2}\np \phi\right)$ which in the long wavelength limit can be inverted to
 \begin{align}
-    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e} \\
-    \delta S_{n_e} = \nc\left( \frac{\mu_i S_{N_i}}{B^2}\np \phi\right)
+    S_{N_i} = \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S_{n_e} -\nc\left( \frac{\mu_i S_{n_e}}{B^2}\np \phi\right)
   \label{eq:ion_source}
 \end{align}
-and finally add $\delta S_{n_e}$ to $S_{n_e}$ as the potential FLR correction.
-Note that the correction $\delta S_{n_e}$ is a total divergence which means
-it does not change the volume integrated "total" particle number created by the source.
-Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid potential generation
-by the particle source (cf.~Section~\ref{sec:conservation}). $S_{n_e}$ needs to be smooth
+Note that the additional terms besides $S_{n_e}$ are total divergences which means
+they do not change the volume integrated "total" particle number created by the source.
+Note that $S_{n_e}$ needs to be smooth
 so that $\np^2 S_{n_e}$ is well defined.
+Also note that with our definition of $\Lambda_{n_e}$ and $\Lambda_{N_i}$ and
+the polarisation equation we have $\Lambda_{n_e} = \Gamma_{1,i}\Lambda_{N_i} + \nc\left( \frac{\mu_i \Lambda_{N_i}}{B^2}\np \phi\right)$ in the long wavelength limit (swap the operators).
+This means that diffusion does not generate potential either.
 
 %The idea for the terms $S_U$ is mainly to provide more numerical stability
 %in the corner regions of the domain, where the parallel derivative may lead
@@ -859,7 +860,7 @@ two functions for which we have no boundary conditions
     \frac{\partial}{\partial t} N =&
         - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
         - \bar \npar \left( NU\right)
-        - NU\left(\vec \nc\bhat+\vec \nc\tilde{\vec b}_\perp\right)
+        - NU\left(\vec \nc\bhat+\vec \nc{\vec b}_\perp\right)
         - \tau \mathcal K(N) \nonumber \\&
         - N \mathcal K(\psi)
         -\mu \mathcal K_{\vn\times\bhat}(NU^2)
@@ -885,7 +886,7 @@ two functions for which we have no boundary conditions
 \end{subequations}
 together with
 $\bar\npar f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
-and $\nc \tilde{ \vec b}_\perp = A_\parallel \vec \nc\vec{ \mathcal{ K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
+and $\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ \mathcal{ K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -909,11 +910,11 @@ The terms of the particle conservation thus read
 \begin{align} \label{eq:mass_conservation}
   n_e= & n_e,\\
   \vec j_{n_e} =& n_e\left(
-  \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \nonumber\\
+  \vec v_E + \vec v_C + \vec v_{K} +u_e\left(\bhat+{\vec b}_\perp\right)  \right) \nonumber\\
   =& n_e \left(\frac{\bhat\times \vn\phi}{B} 
   + \tau_e \frac{\bhat\times\vn n_e}{n_eB} 
   + \mu_e u_e^2\vec K_{\vn\times\bhat} 
-  + u_e(\bhat + \tilde{\vec b}_\perp) \right), \\
+  + u_e(\bhat + {\vec b}_\perp) \right), \\
   \Lambda_{n_e} =&
   \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
 \\
@@ -930,7 +931,7 @@ the rotation vanishes under the divergence.
 Let us here also derive the particle flux \eqref{eq:mass_conservation} through a flux surface
 \begin{align} \label{eq:particle_flux}
  \vec j_{N}\cn v %=& N\left( \vec v_E + \vec v_C + \vec v_{\vn
- %B} + U \left(\bhat + \tilde{\vec b}_\perp\right)\right) \cn \psi_p \nonumber\\
+ %B} + U \left(\bhat + {\vec b}_\perp\right)\right) \cn \psi_p \nonumber\\
  =&
   \frac{\d v}{\d \psi_p} N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
    \mathcal K_{\vn\times\bhat}(\psi_p) + \tau  \mathcal K_{\vn B}(\psi_p) \right] \nonumber\\
@@ -957,9 +958,9 @@ with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \vn\phi}/{B}$
   +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
   \vec j_{\mathcal E} =& \sum_s z\left[
   \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right)N\left(
-  \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+\tilde{\vec b}_\perp\right)  \right) \right]
+  \vec v_E + \vec v_C + \vec v_{K} +U\left(\bhat+{\vec b}_\perp\right)  \right) \right]
   \nonumber\\
-  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\vn\times\bhat} + \tau NU \left(\bhat + \tilde{\vec b}_\perp\right)\right], \\
+  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\vn\times\bhat} + \tau NU \left(\bhat + {\vec b}_\perp\right)\right], \\
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
   \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
 \nonumber \\
@@ -1012,26 +1013,26 @@ where we write $\partial_{\hat\zeta} := \vn\psi_p\cn$ and $\partial_{\hat\eta} :
 \subsubsection{Vorticity equation}
 With this we write the vorticity equation (in the LWL)
 \begin{align} \label{eq:vorticity_average}
-&\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
-\frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) \right\rangle
+&\frac{\partial}{\partial t} \RA{ \mu_i N_i \left(
+\frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) }
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle -\partial_{\hat\eta} \phi \left(\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}
-+ \mu_i \tau_i N_i\partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\eta}A_\parallel\partial_{\hat\zeta} A_\parallel  + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i \right\rangle
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ -\partial_{\hat\eta} \phi \left(\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}
++ \mu_i \tau_i N_i\partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\eta}A_\parallel\partial_{\hat\zeta} A_\parallel  + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i }
 \nonumber\\
-&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p \right\rangle
+&= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p }
 \end{align}
 where we neglect the second order derivative $\partial_{\hat\eta}\partial_{\hat\zeta}A_\parallel$ in the magnetization density term and
 where the right hand side represents the negative toroidal component of the Lorentz force $-(\vec j\times\vec B)_\varphi$.
 Notice that
 \begin{align}
-\left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p\right\rangle
-= \left\langle \frac{ \bhat\times \vn (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cn\psi_p\right\rangle
-= -\left\langle\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)\right\rangle
+\RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p}
+= \RA{ \frac{ \bhat\times \vn (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cn\psi_p}
+= -\RA{\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)}
 \end{align}
 We can interpret Eq.~\eqref{eq:vorticity_average} as the flux surface average of
 the vorticity equation
 \begin{align}
-&\partial_t \GA{\Omega} + \GA{\nc \vec j_\Omega} = \GA{S_\Omega} \\
+&\partial_t \RA{\Omega} + \RA{\nc \vec j_\Omega} = \RA{S_\Omega} \\
 \Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\psi_p \cn \ln N_i\right) \\
 \vec j_{\Omega} &:= \Omega \vec u_E
     - \left(\frac{1}{\beta} \vn\psi_p\cn A_\parallel +\frac{1}{2} \vn\psi_p\cn \tau_i N_iU_i\right)\frac{\bhat\times\vn A_\parallel}{B} \\
@@ -1041,40 +1042,41 @@ the vorticity equation
 \subsubsection{Toroidal ExB momentum equation}
 Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB velocity
 \begin{align} \label{eq:exb_average}
-&\frac{\partial}{\partial t} \left\langle \mu_i N_i \left(
-\frac{\partial_{\hat\zeta}\phi\,}{B^2}\right) \right\rangle
+&\frac{\partial}{\partial t} \RA{ \mu_i N_i
+\frac{\partial_{\hat\zeta}\phi\,}{B^2}}
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \left\langle \mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(-\partial_{\hat\eta} \phi - \tau_i \partial_{\hat\eta} \ln N_i \right)
- + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\zeta} A_\parallel \partial_{\hat\eta} \tau_i N_i U_i\right \rangle
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ \mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(-\partial_{\hat\eta} \phi - \tau_i \partial_{\hat\eta} \ln N_i \right)
+ + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\zeta} A_\parallel \partial_{\hat\eta} \tau_i N_i U_i}
 \nonumber\\
-&= \left\langle (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p \right\rangle
+&= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p } + \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\partial_{\hat\zeta}\phi\,}{B^2}}
 \end{align}
 We can interpret Eq.~\eqref{eq:exb_average} as the flux surface average of
 the \ExB vorticity equation
 \begin{align}
-&\partial_t \GA{\Omega_E} + \GA{\nc \vec j_{\Omega_E}} = \GA{S_\Omega} \\
+&\partial_t \RA{\Omega_E} + \RA{\nc \vec j_{\Omega_E}} = \RA{S_\Omega} \\
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
     - \frac{1}{\beta} \vn\psi_p\cn A_\parallel \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
-    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
+    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
+    \Lambda_\Omega &:= \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\vn\psi_p\cn\phi}{B^2}}
 \end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Parallel momentum balance}
 The flux surface average over the parallel momentum equation under species summation and the LWL yields
 \begin{align}
-  \frac{\partial}{\partial t}\GA{\mu_iN_iU_{i} }
+  \frac{\partial}{\partial t}\RA{\mu_iN_iU_{i} }
     % \nonumber\\
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \GA{-\mu_iN_iU_i \partial_{\hat\eta}\phi + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) \widetilde{ b_{\perp}^{\;v} } }
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{-\mu_iN_iU_i \partial_{\hat\eta}\phi + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) b_{\perp}^{\;v}  }
    % \nonumber\\
-   = \sum_s\GA{-z_s\tau_s N_s\npar \ln B}
+   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads
 \begin{align}\label{eq:parallel_momentum_direction}
-    \frac{\partial}{\partial t}  \GA{\mu_iNU_i b_\varphi}
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \GA{-\mu_iN_iU_i b_\varphi \partial_{\hat\eta}\phi + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi\widetilde{ b_{\perp}^{\;v} }}
-   = -\GA{S_\Omega}
+    \frac{\partial}{\partial t}  \RA{\mu_iNU_i b_\varphi}
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{-\mu_iN_iU_i b_\varphi \partial_{\hat\eta}\phi + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
+   = -\RA{S_\Omega}
 \end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1357,13 +1359,13 @@ Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
 X\_2d            & Dataset & 3 (time,y,x) & Selected plane $X(\varphi=0)$ \\
-X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\langle X
-    \rangle_\varphi$ Eq.~\eqref{eq:phi_average} \\
+X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\PA{ X }$
+Eq.~\eqref{eq:phi_average} \\
 Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs) selected plane
 $\int_{t_0}^{t_1}\d t Y(\varphi=0) $
 where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
 Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs) toroidal average (Eq.~\eqref{eq:phi_average})
-$\int_{t_0}^{t_1}\d t \langle Y \rangle_\varphi$
+$\int_{t_0}^{t_1}\d t \PA{ Y }$
 where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
 \bottomrule
 \end{longtable}
@@ -1417,7 +1419,7 @@ and the time-averaged quantities Y $\in$
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
 \midrule
     jsne &$ n_e (\vec v_E + \vec v_K + \vec v_C )\cn \psi_p$ \\
-    jsneA &$ n_e u_e \vec{\tilde b}_\perp  \cn \psi_p$ \\
+    jsneA &$ n_e u_e \vec{ b}_\perp  \cn \psi_p$ \\
     lneperp &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ \\
     lneparallel &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
     resistivity &-$\eta_\parallel n_e^2 (U_i-u_e)^2$ \\
@@ -1425,10 +1427,10 @@ and the time-averaged quantities Y $\in$
         + z_e \tau_e n_e u_e^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
     jsei &$z_i(\tau_i \ln N_i + \mu_i U_i^2/2 + \psi_i)N_i(\vec v_E^i + \vec v_C + \vec v_K)\cn \psi_p
         + z_i \tau_i N_i U_i^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
-    jseea &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec {\tilde b}_\perp\cn \psi_p
-        + z_e \tau_e n_e u_e \vec{\tilde b}_\perp \cn \psi_p $ \\
-    jseia &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec {\tilde b}_\perp\cn \psi_p
-        + z_i \tau_i N_i U_i \vec{\tilde b}_\perp \cn \psi_p $ \\
+    jseea &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec { b}_\perp\cn \psi_p
+        + z_e \tau_e n_e u_e \vec{ b}_\perp \cn \psi_p $ \\
+    jseia &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec { b}_\perp\cn \psi_p
+        + z_i \tau_i N_i U_i \vec{ b}_\perp \cn \psi_p $ \\
     leeperp &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\perp \Delta_\perp n_e + z_e\mu_e n_e u_e \nu_\perp \Delta_\perp u_e$ \\
     leiperp &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_i \nu_\perp \Delta_\perp U_i$ \\
     leeparallel &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_e \nu_\parallel \Delta_\parallel u_e$ \\
@@ -1497,12 +1499,12 @@ q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:s
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^\psi_p \d\psi_p q(\psi_p)$ \\
 rho\_t           & Dataset & 1 (psi) & Toroidal flux label $\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$ (is similar to $\rho$ in the edge but $\rho_t$ is nicer in the core domain, because equidistant $\rho_t$ make more equidistant flux-surfaces)\\
-Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \langle Z\rangle_{\psi_{p}}$ \\
-Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\langle Z\rangle_{\psi_p}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
-Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\langle Z\rangle_{\psi_p}$ Eq.~\eqref{eq:fsa_vol} \\
-Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \langle Z\rangle_{\psi_p}$ \\
-Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\langle Z\rangle_{\psi_p}$ unless Z is a current, then it is the fsa evaluated $\langle j_v\rangle_{\psi_p}(0)$ \\
-Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \GA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v j^v)^2}$\\
+Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \RA{ Z}(R,Z)$ \\
+Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\RA{ Z}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
+Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\RA{ Z}$ Eq.~\eqref{eq:fsa_vol} \\
+Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\RA{ Z}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \RA{ Z}$ \\
+Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\RA{ Z}$ unless Z is a current, then it is the fsa evaluated $\RA{ j_v}(0)$ \\
+Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \RA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v \RA{j^v})^2}$\\
 \bottomrule
 \end{longtable}
 where Z $\in$ \{X, Y\_tt\}

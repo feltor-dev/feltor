@@ -152,8 +152,7 @@ struct ComputeSource{
     DG_DEVICE
     void operator()( double& result, double tilde_n, double profne,
         double source, double omega_source) const{
-        double temp = omega_source*source*(profne - tilde_n);
-        result = temp;
+        result = omega_source*source*(profne - tilde_n);
     }
 };
 //Resistivity (consistent density dependency,
@@ -887,12 +886,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 m_profne, m_source, m_omega_source);
         else
             dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
-        //compute FLR corrections
+        //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
         dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
-        // potential part of FLR correction
-        dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][1], m_binv, m_binv, 0., m_temp0);
-        m_lapperpP.multiply_sigma( -1., m_temp0, m_phi[0], 1., m_s[0][0]);
+        // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
+        dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
+        m_lapperpP.multiply_sigma( 1., m_temp0, m_phi[0], 1., m_s[0][1]);
 
         dg::blas1::axpby( 1., m_s[0][0], 1.0, yp[0][0]);
         dg::blas1::axpby( 1., m_s[0][1], 1.0, yp[0][1]);
