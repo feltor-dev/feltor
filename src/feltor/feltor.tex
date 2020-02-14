@@ -989,76 +989,65 @@ We have the energy flux through a flux surface
 \end{align}
 
 \subsection{ Vorticity and momentum balance equation}
-In order to discuss poloidal flows let us first define orthogonal vectors $\{\vec{ \hat\zeta}, \vec{\hat\eta},\bhat\}$
+From $\vec u_E = \bhat\times \vn\phi/B$ and $\vec u_D = \tau_i \bhat\times\vn \ln N_i$
+we can derive using $\vn\psi_p = e_\varphi \times\vec B$
 \begin{align}
-\vec{\hat\zeta} := \vn\psi_p,\quad
-\vec{\hat \eta} := \frac{\bhat \times\hat \zeta}{B}
+u_{E,\varphi} &= \frac{\vn\phi\cn\psi_p}{B^2}
+&&u_{D,\varphi} = \frac{\tau_i \vn \ln N_i\cn\psi_p}{B} \\
+u_E^{v}&= \frac{\bhat\times \vn\phi}{B}\cn v
+&&u_D^{v}= \tau_i \bhat\times \vn \ln N_i\cn v
 \end{align}
-where $\vec{\hat\eta}$
-points in the counter-clockwise poloidal direction with our choice of the magnetic field direction.
-Notice that $\vec{\hat \eta}$ in general has a (small) toroidal component in addition to the dominant poloidal component.
-
-%We then have $\vn\phi = \hat \zeta\partial_{\hat\zeta}\phi + \hat\eta\partial_{\hat\eta} \phi$
-%with $\partial_{\hat\zeta}:= \hat\zeta\cn$ and $\partial_{\hat\eta}:=\hat\eta\cn$.
-Furthermore, from $\vec u_E = \bhat\times \vn\phi/B$ and $\vec u_d = \tau_i \bhat\times\vn \ln N_i$
-we can derive
-\begin{align}
-u_E^{\hat\eta} &:= \vec u_E\cdot \vec{\hat\eta} = \frac{\partial_{\hat\zeta} \phi}{B^2} \sim u_{E,\varphi}
-&&u_d^{\hat\eta} := \vec u_d\cdot \vec{\hat\eta} =  \frac{\tau_i \partial_{\hat\zeta} \ln N_i}{B} \sim u_{D,\varphi} \\
-u_E^{\hat\zeta}&:= \vec u_E\cdot \vec{\hat\zeta}  = -\partial_{\hat\eta} \phi \sim u_E^v \sim -\partial_\varphi\phi
-&&u_d^{\hat\zeta}:= \vec u_d\cdot \vec{\hat\zeta} = -B \tau_i \partial_{\hat\eta} \ln N_i \sim u_D^v
-\end{align}
-where we write $\partial_{\hat\zeta} := \vn\psi_p\cn$ and $\partial_{\hat\eta} := \vec{\hat\eta}\cn$.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Vorticity equation}
 With this we write the vorticity equation (in the LWL)
 \begin{align} \label{eq:vorticity_average}
 &\frac{\partial}{\partial t} \RA{ \mu_i N_i \left(
-\frac{\partial_{\hat\zeta}\phi\,}{B^2} + \tau_i \partial_{\hat\zeta} \ln N_i\right) }
+\frac{\vn\psi_p\cn\phi\,}{B^2} + \tau_i \vn\psi_p\cn \ln N_i\right) }
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ -\partial_{\hat\eta} \phi \left(\mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}
-+ \mu_i \tau_i N_i\partial_{\hat\zeta} \ln N_i \right) + \frac{1}{\beta} \partial_{\hat\eta}A_\parallel\partial_{\hat\zeta} A_\parallel  + \frac{1}{2}\partial_{\hat\eta} A_\parallel \partial_{\hat\zeta} \tau_i N_i U_i }
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ \mu_i N_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p \left(\frac{\vn\psi_p\cn\phi }{B^2}
++ \tau_i \vn\psi_p\cn \ln N_i \right) } \nonumber\\
+&- \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p\left(\frac{1}{\beta} \vn A_\parallel\cn\psi_p  + \frac{1}{2}\vn \tau_i N_i U_i\cn\psi_p\right) }
 \nonumber\\
 &= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p }
 \end{align}
-where we neglect the second order derivative $\partial_{\hat\eta}\partial_{\hat\zeta}A_\parallel$ in the magnetization density term and
+where we neglect the second order derivative $\frac{\bhat\times\vn\psi_p}{B}\cn\vn\psi_p\cn A_\parallel$ in the magnetization density term and
 where the right hand side represents the negative toroidal component of the Lorentz force $-(\vec j\times\vec B)_\varphi$.
-Notice that
+Notice that the Lorentz force is related to the diamagnetic velocity
 \begin{align}
 \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p}
 = \RA{ \frac{ \bhat\times \vn (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cn\psi_p}
-= -\RA{\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)}
+%= -\RA{\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)}
 \end{align}
 We can interpret Eq.~\eqref{eq:vorticity_average} as the flux surface average of
 the vorticity equation
 \begin{align}
-&\partial_t \RA{\Omega} + \RA{\nc \vec j_\Omega} = \RA{S_\Omega} \\
+&\partial_t \RA{\Omega} + \RA{\nc \vec j_\Omega} = -\RA{F_{L,\varphi}} \\
 \Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\psi_p \cn \ln N_i\right) \\
 \vec j_{\Omega} &:= \Omega \vec u_E
     - \left(\frac{1}{\beta} \vn\psi_p\cn A_\parallel +\frac{1}{2} \vn\psi_p\cn \tau_i N_iU_i\right)\frac{\bhat\times\vn A_\parallel}{B} \\
-    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
+    F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
 \end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Toroidal ExB momentum equation}
 Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB velocity
 \begin{align} \label{eq:exb_average}
 &\frac{\partial}{\partial t} \RA{ \mu_i N_i
-\frac{\partial_{\hat\zeta}\phi\,}{B^2}}
+\frac{\vn\psi_p\cn\phi\,}{B^2}}
 \nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ \mu_i N_i\frac{\partial_{\hat\zeta}\phi }{B^2}\left(-\partial_{\hat\eta} \phi - \tau_i \partial_{\hat\eta} \ln N_i \right)
- + \frac{1}{\beta} \partial_{\hat\zeta} A_\parallel \partial_{\hat\eta}A_\parallel + \frac{1}{2}\partial_{\hat\zeta} A_\parallel \partial_{\hat\eta} \tau_i N_i U_i}
+&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ \mu_i N_i\frac{\vn\psi_p\cn\phi }{B^2}\left(\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \tau_i \frac{\bhat\times\vn N_i}{N_i}\cn\psi_p \right)}
 \nonumber\\
-&= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p } + \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\partial_{\hat\zeta}\phi\,}{B^2}}
+ &- \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\vn\psi_p\cn A_\parallel\left(\frac{1}{\beta}  \frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p + \frac{1}{2} {\bhat\times\vn \tau_i N_i U_i}\cn\psi_p\right)}
+\nonumber\\
+&= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p } + \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\vn\psi_p\cn\phi\,}{B^2}}
 \end{align}
 We can interpret Eq.~\eqref{eq:exb_average} as the flux surface average of
-the \ExB vorticity equation
+the toroidal \ExB angular momentum density equation
 \begin{align}
-&\partial_t \RA{\Omega_E} + \RA{\nc \vec j_{\Omega_E}} = \RA{S_\Omega} \\
+&\partial_t \RA{\Omega_E} + \RA{\nc \vec j_{\Omega_E}} = -\RA{F_{L,\varphi}} + \RA{\Lambda_{\Omega_E}} \\
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
     - \frac{1}{\beta} \vn\psi_p\cn A_\parallel \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
-    S_\Omega &:=  (z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
-    \Lambda_\Omega &:= \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\vn\psi_p\cn\phi}{B^2}}
+    \Lambda_{\Omega_E} &:= \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\vn\psi_p\cn\phi}{B^2}}
 \end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1067,16 +1056,17 @@ The flux surface average over the parallel momentum equation under species summa
 \begin{align}
   \frac{\partial}{\partial t}\RA{\mu_iN_iU_{i} }
     % \nonumber\\
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{-\mu_iN_iU_i \partial_{\hat\eta}\phi + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) b_{\perp}^{\;v}  }
-   % \nonumber\\
-   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B}
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) b_{\perp}^{\;v}  }
+    \nonumber\\
+   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ \left(S_{N_i} + \Lambda_{N_i}\right) U_i}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads
 \begin{align}\label{eq:parallel_momentum_direction}
     \frac{\partial}{\partial t}  \RA{\mu_iNU_i b_\varphi}
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{-\mu_iN_iU_i b_\varphi \partial_{\hat\eta}\phi + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
-   = -\RA{S_\Omega}
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
+    \nonumber\\
+   = \RA{F_{L,\varphi}} + \mu_i \RA{ \left(S_{N_i} + \Lambda_{N_i}\right) U_i b_\varphi}
 \end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

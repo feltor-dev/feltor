@@ -471,6 +471,8 @@ int main( int argc, char* argv[])
         map1d.emplace_back( "psi_vol", psi_vol,
             "Flux volume with delta function");
         double volumeFVI = 2.*M_PI*fvi(psipmax);
+        double volumeSep = 2.*M_PI*fvi(0.);
+        std::cout << "VOLUME ENCLOSED BY SEPARATRIX: "<<volumeSep<<"\n";
         std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
                   <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
         if(gp.hasXpoint()){
