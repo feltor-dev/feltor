@@ -989,66 +989,28 @@ We have the energy flux through a flux surface
 \end{align}
 
 \subsection{ Vorticity and momentum balance equation}
-From $\vec u_E = \bhat\times \vn\phi/B$ and $\vec u_D = \tau_i \bhat\times\vn \ln N_i$
-we can derive using $\vn\psi_p = e_\varphi \times\vec B$
-\begin{align}
-u_{E,\varphi} &= \frac{\vn\phi\cn\psi_p}{B^2}
-&&u_{D,\varphi} = \frac{\tau_i \vn \ln N_i\cn\psi_p}{B} \\
-u_E^{v}&= \frac{\bhat\times \vn\phi}{B}\cn v
-&&u_D^{v}= \tau_i \bhat\times \vn \ln N_i\cn v
-\end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Vorticity equation}
-With this we write the vorticity equation (in the LWL)
-\begin{align} \label{eq:vorticity_average}
-&\frac{\partial}{\partial t} \RA{ \mu_i N_i \left(
-\frac{\vn\psi_p\cn\phi\,}{B^2} + \tau_i \vn\psi_p\cn \ln N_i\right) }
-\nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ \mu_i N_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p \left(\frac{\vn\psi_p\cn\phi }{B^2}
-+ \tau_i \vn\psi_p\cn \ln N_i \right) } \nonumber\\
-&- \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p\left(\frac{1}{\beta} \vn A_\parallel\cn\psi_p  + \frac{1}{2}\vn \tau_i N_i U_i\cn\psi_p\right) }
-\nonumber\\
-&= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p }
-\end{align}
-where we neglect the second order derivative $\frac{\bhat\times\vn\psi_p}{B}\cn\vn\psi_p\cn A_\parallel$ in the magnetization density term and
-where the right hand side represents the negative toroidal component of the Lorentz force $-(\vec j\times\vec B)_\varphi$.
-Notice that the Lorentz force is related to the diamagnetic velocity
+We write the vorticity equation (in the LWL)
 \begin{align}
-\RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p}
-= \RA{ \frac{ \bhat\times \vn (z_e\tau_e n_e + z_i\tau_i N_i)}{B}\cn\psi_p}
-%= -\RA{\partial_{\hat\eta} (z_e\tau_e n_e + z_i\tau_i N_i)}
-\end{align}
-We can interpret Eq.~\eqref{eq:vorticity_average} as the flux surface average of
-the vorticity equation
-\begin{align}
-&\partial_t \RA{\Omega} + \RA{\nc \vec j_\Omega} = -\RA{F_{L,\varphi}} \\
-\Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\psi_p \cn \ln N_i\right) \\
+&\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} \label{eq:vorticity_average} \\
+\Omega &:= \mu_i N_i \left(\frac{\vn\phi\cn\psi_p}{B^2} + \tau_i \vn\ln N_i\cn\psi_p\right) \\
 \vec j_{\Omega} &:= \Omega \vec u_E
-    - \left(\frac{1}{\beta} \vn\psi_p\cn A_\parallel +\frac{1}{2} \vn\psi_p\cn \tau_i N_iU_i\right)\frac{\bhat\times\vn A_\parallel}{B} \\
+    - \left(\frac{1}{\beta} \vn A_\parallel\cn\psi_p +\frac{1}{2} \vn\tau_i N_iU_i\cn\psi_p\right)\frac{\bhat\times\vn A_\parallel}{B} \\
     F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
 \end{align}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Toroidal ExB momentum equation}
 Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB velocity
-\begin{align} \label{eq:exb_average}
-&\frac{\partial}{\partial t} \RA{ \mu_i N_i
-\frac{\vn\psi_p\cn\phi\,}{B^2}}
-\nonumber\\
-&+ \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{ \mu_i N_i\frac{\vn\psi_p\cn\phi }{B^2}\left(\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \tau_i \frac{\bhat\times\vn N_i}{N_i}\cn\psi_p \right)}
-\nonumber\\
- &- \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\vn\psi_p\cn A_\parallel\left(\frac{1}{\beta}  \frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p + \frac{1}{2} {\bhat\times\vn \tau_i N_i U_i}\cn\psi_p\right)}
-\nonumber\\
-&= \RA{ (z_e \tau_e n_e + z_i\tau_i N_i)\vec K\cn\psi_p + (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\vec K_{\vn\times\bhat}\cn\psi_p } + \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\vn\psi_p\cn\phi\,}{B^2}}
-\end{align}
-We can interpret Eq.~\eqref{eq:exb_average} as the flux surface average of
-the toroidal \ExB angular momentum density equation
 \begin{align}
-&\partial_t \RA{\Omega_E} + \RA{\nc \vec j_{\Omega_E}} = -\RA{F_{L,\varphi}} + \RA{\Lambda_{\Omega_E}} \\
-\Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \\
+&\partial_t \RA{\Omega_E} + \frac{\partial}{\partial v} \frac{\d v}{\d \psi_p}\RA{ \vec j_{\Omega_E}\cn\psi_p} = -\RA{F_{L,\varphi}}+ \RA{\mathcal S_{\Omega_E}} + \RA{\Lambda_{\Omega_E}} \label{eq:exb_average} \\
+\Omega_E &:= \mu_i N_i \frac{\vn\phi\cn\psi_p}{B^2} \equiv u_{E,\varphi} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
-    - \frac{1}{\beta} \vn\psi_p\cn A_\parallel \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
-    \Lambda_{\Omega_E} &:= \RA{\mu_i (S_{n_e} + \Lambda_{n_e})\frac{\vn\psi_p\cn\phi}{B^2}}
+    - \frac{1}{\beta} \vn A_\parallel\cn\psi_p \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
+    \mathcal S_{\Omega_E} &:= \mu_i S_{n_e} \frac{\vn\phi\cn\psi_p}{B^2} \quad
+    \Lambda_{\Omega_E} := \mu_i \Lambda_{n_e}\frac{\vn\phi\cn\psi_p}{B^2}
 \end{align}
+where here we also monitor the source and diffusion terms.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Parallel momentum balance}
@@ -1058,15 +1020,15 @@ The flux surface average over the parallel momentum equation under species summa
     % \nonumber\\
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) b_{\perp}^{\;v}  }
     \nonumber\\
-   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ \left(S_{N_i} + \Lambda_{N_i}\right) U_i}
+   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_i}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads
 \begin{align}\label{eq:parallel_momentum_direction}
-    \frac{\partial}{\partial t}  \RA{\mu_iNU_i b_\varphi}
+    \frac{\partial}{\partial t}  \RA{\mu_iN_iU_i b_\varphi}
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
     \nonumber\\
-   = \RA{F_{L,\varphi}} + \mu_i \RA{ \left(S_{N_i} + \Lambda_{N_i}\right) U_i b_\varphi}
+   = \RA{F_{L,\varphi}} + \mu_i \RA{ S_{N_i} U_i b_\varphi}
 \end{align}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1359,8 +1321,8 @@ $\int_{t_0}^{t_1}\d t \PA{ Y }$
 where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
 \bottomrule
 \end{longtable}
-where the time integrals are computed with the help of Simpson's rule
-and X $\in$
+where
+X $\in$
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation}\\
@@ -1403,7 +1365,7 @@ and X $\in$
     odiai &$\mu_i \tau_i\vn\psi_p\cn N_i$ \\
 \bottomrule
 \end{longtable}
-and the time-averaged quantities Y $\in$
+and the time-averaged (the time integrals are computed with the help of Simpson's rule) quantities Y $\in$
 \begin{longtable}{ll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
@@ -1442,7 +1404,8 @@ and the time-averaged quantities Y $\in$
     sparmirrori & $-z_i\tau_iN_i\npar \ln B$ \\
 \bottomrule
 \end{longtable}
-Even though this might look like a lot of things to compute the actual time spent on diagnostics is negligible if {\tt inner\_loop} parameter is greater than 1.
+Even though this might look like a lot of things to compute the actual time spent on diagnostics is negligible if {\tt inner\_loop} parameter is greater than 1. Also
+remember that these are all two-dimensional fields, which take up much less disk-space than three-dimensional fields.
 \subsection{Restart file} \label{sec:restart_file}
 The program \texttt{feltor\_hpc.cu} has the possibility to initialize time and the fields with
 the results of a previous simulation. In particular, this feature is motivated by chain jobs on a cluster
