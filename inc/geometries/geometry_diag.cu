@@ -86,21 +86,6 @@ struct IPhi
     private:
     double R_0, A;
 };
-//The newly derived h02 factor
-struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
-{
-    Hoo( dg::geo::TokamakMagneticField mag): mag_(mag){}
-    double do_compute( double R, double Z) const
-    {
-        double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
-        double psip2 = psipR*psipR+psipZ*psipZ;
-        if( psip2 == 0)
-            psip2 = 1e-16;
-        return (ipol*ipol + psip2)/R/R/psip2;
-    }
-    private:
-    dg::geo::TokamakMagneticField mag_;
-};
 
 int main( int argc, char* argv[])
 {
@@ -270,7 +255,7 @@ int main( int argc, char* argv[])
         {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
         {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
             M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
-        { "Hoo", "The novel h02 factor", Hoo( mag) }
+        { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
 
     };
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
@@ -367,7 +352,7 @@ int main( int argc, char* argv[])
         map1d.emplace_back( "X_gradPsip_fsa", X_gradPsip_fsa,
             "Flux surface average of |Grad Psip|");
         // h02 factor
-        dg::HVec h02 = dg::pullback( Hoo(mag), gX2d), X_h02_fsa;
+        dg::HVec h02 = dg::pullback( dg::geo::Hoo(mag), gX2d), X_h02_fsa;
         dg::blas1::pointwiseDot( volX2d, h02, h02);
         avg_eta( h02, X_h02_fsa, false);
         dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
@@ -455,7 +440,7 @@ int main( int argc, char* argv[])
         map1d.emplace_back( "psi_area", psi_area,
             "Flux area with delta function");
         // h02 factor
-        dg::HVec h02 = dg::evaluate( Hoo(mag), grid2d);
+        dg::HVec h02 = dg::evaluate( dg::geo::Hoo(mag), grid2d);
         fsa.set_container( h02);
         map1d.emplace_back( "hoo_fsa", dg::evaluate( fsa, grid1d),
            "Flux surface average of novel h02 factor with delta function");

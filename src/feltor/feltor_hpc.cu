@@ -178,7 +178,7 @@ int main( int argc, char* argv[])
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  resultD; //zero
     feltor::Variables var = {
-        feltor, p, gradPsip, gradPsip
+        feltor, p, gp, mag, gradPsip, gradPsip
     };
     // the vector ids
     std::map<std::string, int> id3d, id4d, restart_ids;
@@ -263,7 +263,7 @@ int main( int argc, char* argv[])
             "long_name", record.long_name.size(), record.long_name.data());
         MPI_OUT err = nc_enddef( ncid);
         MPI_OUT std::cout << "Computing "<<record.name<<"\n";
-        record.function( resultH, var, grid, gp, mag);
+        record.function( resultH, var, grid);
         dg::blas2::symv( projectH, resultH, transferH);
         file::put_var_double( ncid, vecID, g3d_out, transferH);
         MPI_OUT err = nc_redef(ncid);
@@ -278,7 +278,7 @@ int main( int argc, char* argv[])
             "long_name", record.long_name.size(), record.long_name.data());
         MPI_OUT err = nc_enddef( ncid);
         MPI_OUT std::cout << "Computing2d "<<record.name<<"\n";
-        record.function( resultH, var, grid, gp, mag);
+        record.function( resultH, var, grid);
         dg::blas2::symv( projectH, resultH, transferH);
         if(write2d)file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
         MPI_OUT err = nc_redef(ncid);

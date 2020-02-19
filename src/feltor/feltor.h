@@ -199,6 +199,9 @@ struct Explicit
     }
 
     /// ///////////////////DIAGNOSTIC MEMBERS //////////////////////
+    const Geometry& grid() const {
+        return m_multigrid.grid(0);
+    }
     //potential[0]: electron potential, potential[1]: ion potential
     const Container& uE2() const {
         return m_UE2;
@@ -226,6 +229,11 @@ struct Explicit
     }
     const std::array<Container, 3> & gradA () const {
         return m_dA;
+    }
+    void compute_gradS( int i, std::array<Container,3>& gradS) const{
+        dg::blas2::symv( m_dx_N, m_s[0][i], gradS[0]);
+        dg::blas2::symv( m_dy_N, m_s[1][i], gradS[1]);
+        if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[2][i], gradS[2]);
     }
     const Container & dsN (int i) const {
         return m_dsN[i];

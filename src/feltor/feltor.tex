@@ -1091,7 +1091,7 @@ In the output file we have
     socurvkappai\_tt &$z_i\mu_i N_iU_i^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ & \\
     sosne\_tt & $\mu_i S_{n_e} \vn\psi_p\cn\phi/B^2$ &
     sospi\_tt & $\mu_i \tau_i \vn\psi_p \cn S_{n_e}$\\
-    loe\_tt & $ \mu_i \Lambda_{n_e} \vn\psi_p\cn\phi/B^2$ & \\
+    loexbe\_tt & $ \mu_i \Lambda_{n_e} \vn\psi_p\cn\phi/B^2$ & \\
 \bottomrule
 \end{longtable}
 
@@ -1436,7 +1436,7 @@ yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
 zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
 Psip             & Dataset & 3 (z,y,x) & Flux function $\psi_p(R,Z)$ \\
 Nprof            & Dataset & 3 (z,y,x) & Density profile $n_\text{prof}$ used in the forcing source \\
-Source           & Dataset & 3 (z,y,x) & Source  profile $\Theta_\alpha(\rho(R,Z) - \rho_s) H(Z-Z_X)$\\
+Source           & Dataset & 3 (z,y,x) & Source profile $S_{prof}$\\
 BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
 BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
@@ -1458,7 +1458,7 @@ where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of 
 \bottomrule
 \end{longtable}
 where
-X and Y\_tt represent the quantities described in previous sections. Additionally we output the miscellaneous quantities
+X and Y\_tt represent the quantities described in the tables in previous sections and the miscellaneous quantities
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation}\\

@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  result; //zero
     feltor::Variables var = {
-        feltor, p, gradPsip, gradPsip
+        feltor, p,gp,mag, gradPsip, gradPsip
     };
 
 

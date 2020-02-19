@@ -678,6 +678,21 @@ struct GradPsip: public aCylindricalFunctor<GradPsip>
     TokamakMagneticField m_mag;
 
 };
+///@brief Inertia factor \f$ \mathcal I_0 \f$
+struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
+{
+    Hoo( dg::geo::TokamakMagneticField mag): mag_(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        if( psip2 == 0)
+            psip2 = 1e-16;
+        return (ipol*ipol + psip2)/R/R/psip2;
+    }
+    private:
+    dg::geo::TokamakMagneticField mag_;
+};
 ///@}
 
 } //namespace geo
