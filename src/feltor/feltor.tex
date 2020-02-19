@@ -26,6 +26,7 @@ analyses the magnetic field geometry.
 file(s) of \texttt{feltor\_hpc.cu}.
 
 \end{abstract}
+\tableofcontents
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The magnetic field}\label{sec:magnetic}
@@ -189,7 +190,7 @@ and represent a solution to Equation~\eqref{eq:GSEdimless} as~\cite{Cerfon2010}
 \label{eq:solovev}
 \begin{align}
  \psi_p (R,Z) &= \mathcal P_{\psi} R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
-   - \frac{1}{8}\bar{R}^4\right)+ \frac{1}{8}\bar{R}^4 
+   - \frac{1}{8}\bar{R}^4\right)+ \frac{1}{8}\bar{R}^4
    + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],\\
    I(\psi_p) &= \mathcal P_I\sqrt{ - 2A\psi_p/(R_0\mathcal P_{\psi}) +1},
 \end{align}
@@ -944,7 +945,7 @@ such that we can define the diamagnetic flux in the particle flux since
 the rotation vanishes under the divergence.
 
 Let us here also derive the particle flux \eqref{eq:particle_flux} through a flux surface
-\begin{align} \label{eq:particle_flux}
+\begin{align} \label{eq:radial_particle_flux}
  \vec j_{N}\cn v %=& N\left( \vec u_E + \vec u_C + \vec u_{\vn
  %B} + U \left(\bhat + {\vec b}_\perp\right)\right) \cn \psi_p \nonumber\\
  =&
@@ -1047,16 +1048,15 @@ The relevant terms in the output file are
 \bottomrule
 \end{longtable}
 
-\subsection{ Vorticity and momentum balance equation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Vorticity and toroidal ExB angular momentum equation} \label{sec:vorticity_eq}
 We write the vorticity equation (in the LWL)
 \begin{align}
-&\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} \label{eq:vorticity_average} \\
-\Omega &:= \mu_i N_i \left(\frac{\vn\phi\cn\psi_p}{B^2} + \tau_i \vn\ln N_i\cn\psi_p\right) \equiv \mu_i N_i(u_{E,\varphi} + u_{D,\varphi}) \\
+    &\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} + \RA{\mathcal S_\Omega} \label{eq:vorticity_average} \\
+\Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\ln N_i\cn\psi_p\right) \equiv \mu_i N_i(u_{E,\varphi} + u_{D,\varphi}) \\
 \vec j_{\Omega} &:= \Omega \vec u_E
-    - \left(\frac{1}{\beta} \vn A_\parallel\cn\psi_p +\frac{1}{2} \vn\tau_i N_iU_i\cn\psi_p\right)\frac{\bhat\times\vn A_\parallel}{B} \\
-    F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p)
+    - \left(\frac{1}{\beta} \vn\psi_p \cn A_\parallel +\frac{1}{2}\tau_i \vn\psi_p\cn  (N_iU_i)\right)\frac{\bhat\times\vn A_\parallel}{B} \\
+    F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
+    \mathcal S_\Omega &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn \phi}{B^2} + \mu_i\tau_i\vn\psi_p\cn S_{n_e} \label{eq:em_source}
 \end{align}
 Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB velocity
 \begin{align}
@@ -1064,14 +1064,11 @@ Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continui
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \equiv \mu_i N_i u_{E,\varphi} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
     - \frac{1}{\beta} \vn A_\parallel\cn\psi_p \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
-    \mathcal S_{\Omega_E} &:= \mu_i S_{n_e} \frac{\vn\phi\cn\psi_p}{B^2} \quad
-    \Lambda_{\Omega_E} := \mu_i \Lambda_{n_e}\frac{\vn\phi\cn\psi_p}{B^2}
+    \mathcal S_{\Omega_E} &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn\phi}{B^2} \quad
+    \Lambda_{\Omega_E} := \mu_i \Lambda_{n_e}\frac{\vn\psi_p\cn\phi}{B^2}
 \end{align}
 where here we also monitor the source and diffusion terms.
 In the output file we have
-\begingroup
-%\setlength{\tabcolsep}{10pt} % Default value: 6pt
-\renewcommand{\arraystretch}{1.5} % Default value: 1
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}&
@@ -1092,10 +1089,11 @@ In the output file we have
     socurvi\_tt &$z_i\tau_i N_i \mathcal K(\psi_p)$ &
     socurvkappae\_tt &$z_e\mu_e n_eu_e^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
     socurvkappai\_tt &$z_i\mu_i N_iU_i^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ & \\
-    sosne\_tt & $\mu_i S_{n_e} \vn\psi_p\cn\phi/B^2$ & \\
+    sosne\_tt & $\mu_i S_{n_e} \vn\psi_p\cn\phi/B^2$ &
+    sospi\_tt & $\mu_i \tau_i \vn\psi_p \cn S_{n_e}$\\
+    loe\_tt & $ \mu_i \Lambda_{n_e} \vn\psi_p\cn\phi/B^2$ & \\
 \bottomrule
 \end{longtable}
-\endgroup
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Parallel momentum balance}
@@ -1132,11 +1130,45 @@ The relevant terms in the output file are (the Lorentz force term is described i
     sparmirrori\_tt & $-z_i\tau_iN_i\npar \ln B$ \\
     jsparexbi\_tt       & $\mu_i N_iU_i(\bhat\times\vn\phi)\cn \psi_p/B$ &
     jsparbphiexbi\_tt   & $\mu_i N_iU_i(\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    sparsni\_tt & $\mu_i S_{N_i} U_i$ &
+    sparsnibphi\_tt & $\mu_i S_{N_i} U_ib_\varphi $ \\
 \bottomrule
 \end{longtable}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+\subsubsection{Zonal flow energy}
+\begin{align}
+    E_\mathrm{zonal} = \frac{1}{2}\RA{\rho_M}\FA{ \iota^{-2}\mathcal I^{\vartheta\vartheta} + 2\iota^{-1}\mathcal I^{\vartheta\varphi} + \mathcal I^{\varphi\varphi}} \FA{u_{E,\varphi}}^2
+    \equiv \frac{1}{2} \RA{\rho_M} \FA{u_{E,\varphi}}^2  \FA{\mathcal I_0}
+    \label{eq:zonal_energy}
+\end{align}
+For symmetry flux coordinates we have $g_{\vartheta\vartheta} = R^2 (\vn\psi_p)^2/I^2\iota^2$, $g_{\varphi\vartheta} =0$ and $g_{\varphi\varphi}=R^2$ and thus $\mathcal I_0 = R^{-2}( 1 + I^2/|\vn\psi_p|^2)= B^2 / |\vn\psi_p|^2$.
+\begin{align}\label{eq:perp_kinetic}
+      \frac{\partial}{\partial t}E_{\mathrm{zonal}} +\frac{\partial}{\partial v } \left(E_{\mathrm{zonal}}\FA{u^v} \right)
+  =&-\FA{\mathcal I_0}\FA{u_{E,\varphi}}\left(\frac{\partial }{\partial v}  \Theta_{\varphi}^{\; v} + \RA{(\vec j_f\times\vec B)_\varphi}\right)
+  \nonumber\\
+    &-\frac{1}{2}\FA{u_{E,\varphi}}^2\frac{\partial}{\partial v}\left(\RA{\rho_M}\FA{\FF{\mathcal I_0}\FF{u^v}}\right)
+     + \mathcal S_{\mathrm{zonal}}
+\end{align}
+where we neglected the term $\RA{n\vec u\cn \mathcal I_0}$ in the continuity equation as small in our ordering
+ and we have
+ \begin{align}
+ \mathcal S_{\mathrm{zonal}} :=& \FA{\mathcal I_0} \FA{u_{E,\varphi}} \mathcal S_{u_{E,\varphi}} + \frac{1}{2}\FA{u_{E,\varphi}}^2  \RA{mS_n\mathcal I_0}
+%  \nonumber\\
+ \label{eq:zonal_source}
+ \end{align}
+ and in the output file
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} &
+\textbf{Name} &  \textbf{Equation}\\
+\midrule
+    nei0 &$n_e \mathcal I_0$ &
+    snei0 & $S_{n_e } \mathcal I_0$ \\
+\bottomrule
+\end{longtable}
 
 \subsection{Manufactured Solution}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
@@ -1466,7 +1498,6 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 \texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
-\subsection{Program and files}
 We have the program \texttt{feltor/diag/feltordiag.cu}.
 This program reads one or more previously generated simulation file(s) \texttt{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
 Compilation\\
