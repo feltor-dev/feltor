@@ -143,59 +143,61 @@ In cylindrical coordinates the general axisymmetric  magnetic field can be writt
 \end{align}
 which can obviously not be manipulated to be in Clebsch form.
 Hence we are dealing with a non-flux aligned coordinate system.
-We scaled $R$, $Z$ and $R_0$ with $\rho_s$, the magnetic field with $B_0$, the flux with $\psi_{p0} = B_0\rho_s \hat R_0$
-and $I_0 = B_0 \hat R_0$ (with $\hat R_0$ being the dimensional major radius).
-Note that this normalization is in line with the one later chosen for the gyrofluid
-equations but is unnatural for the MHD type equilibrium equations through the introduction
-of $\rho_s$.
-Also note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
-%The unit vectors are denoted by \(\ehat_{R}\), \(\ehat_{Z}\), \(\ehat_{\varphi}\).
-Note that with $\psi_p = I(\psi_p) \equiv 1$ we recover a purely toroidal field.
-With a subsequent identification of $x:=R-R_0$ and the transition to
-Cartesian coordinates while straightening the field lines for large $R_0$
-we recover the familiar slab geometry.
+Note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
 
-We have the equilibrium equations in toroidally symmetric, ideal MHD (
-$\vn p = \vec j\times \vec B$ and $\vn\times\vec B = \vec j$ normalized with $p_0 = B_0^2/\mu_0$, and $j_0 = B_0/\rho_s/\mu_0$ )
+We scaled $R$, $Z$ and $R_0$ with $\rho_s = \sqrt{T_e m_i}/(eB_0)$, the
+magnetic field with $B_0$, the poloidal flux with $\psi_{p0} = B_0\rho_s \hat
+R_0$ and the poloidal equilibrium current streamfunction with $I_0 = B_0 \hat R_0$ (with $\hat R_0 =
+\rho_s R_0$ the dimensional major radius).
+We have the equilibrium equations in toroidally symmetric, ideal MHD
+$\vn p = \vec j\times \vec B$ and $\vn\times\vec B = \beta \vec j$ normalized with $p_0 = n_0 T_0$, and $j_0 = e n_0 c_S$, where we introduce $\beta = n_0 T_0 \mu_0 /B_0^2$.
+Note that this normalization is in line with the one later chosen for the gyrofluid
+equations but is unnatural for the MHD type equilibrium equations through the introduction
+of $\rho_s$ and $\beta$.
 \begin{align}
-    \vn\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \vec j\\
- j_\parallel &= \vec j\cdot \bhat = \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
+    \vn\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \beta \vec j\\
+ \beta j_\parallel &= \beta \vec j\cdot \bhat = \beta \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
  \frac{\d I}{\d\psi_p} B \quad \text{  Pfirsch-Schl\"uter \& Bootstrap current } \\
- \vec j_\perp &= \bhat\times\left(\vec j\times\bhat\right)=
- \frac{\bhat \times \vn p}{B} \quad\quad\quad \text{ diamagnetic current} \\
- \vec j\times\vec B &= \frac{R_0^2}{R^2}\left[ -\Delta^* \psi_p - I
-     \frac{\d I}{\d \psi_p} \right]\vn\psi_p \equiv \frac{\d p}{\d\psi_p}\vn\psi_p =\vn p
+ \beta \vec j_\perp &= \beta \bhat\times\left(\vec j\times\bhat\right)=
+ \beta \frac{\bhat \times \vn p}{B} \quad\quad\quad \text{ diamagnetic current} \\
+ \beta \vec j\times\vec B &= \frac{R_0^2}{R^2}\left[ -\Delta^* \psi_p - I
+     \frac{\d I}{\d \psi_p} \right]\vn\psi_p \equiv \beta \frac{\d p}{\d\psi_p}\vn\psi_p =\beta \vn p
 \end{align}
 from where we recover the Grad-Shafranov equation
 \begin{align}\label{eq:GSEdimless}
-    -\Delta^*_\perp  \psi_p &= \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p } \equiv \frac{R}{R_0} j_{\hat\varphi}
+    -\Delta^*_\perp  \psi_p &= \beta \frac{R^2}{R_0^2} \frac{d p}{d  \psi_p } + I \frac{d I}{d  \psi_p } \equiv \beta \frac{R}{R_0} j_{\hat\varphi}
 \end{align}
 with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
 The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
 By integration over \(\psi_p\) we find
 $
- p(\psi_p) = (A-1)\psi_p/R_0$,
+ p(\psi_p) = (A-1)\psi_p/R_0/\beta$,
  $I(\psi_p) = \sqrt{-2 A \psi_p/R_0 + 1}$,
  and
-    $j_{\hat\varphi} = \left[(A-1)R^2/R_0^2 - A \right]/R $.
+    $j_{\hat\varphi} = \left[(A-1)R^2/R_0^2 - A \right]/R/\beta $.
 Note that if $\psi_p$, $I(\psi)$ and $p(\psi)$ are a solution to Eq.~\eqref{eq:GSEdimless}
 then so are $\mathcal P_\psi \psi_p$ , $\mathcal P_\psi I(\psi_p)$ and $\mathcal P_\psi^2 p(\psi_p)$.
-Also note that for $A=0$ the constant current $I$ is arbitrary $\mathcal P_I$.
+Also note that for $A=0$ the constant current $I$ becomes arbitrary $\mathcal P_I$.
 
 We introduce \(\bar{R} \equiv \frac{R}{R_0}\) and \(\bar{Z} \equiv\frac{Z}{R_0}\)
-and represent a solution to Equation~\eqref{eq:GSEdimless} as~\cite{Cerfon2010}
+and thus represent a general solution to Equation~\eqref{eq:GSEdimless} as~\cite{Cerfon2010}
 \begin{subequations}
 \label{eq:solovev}
 \begin{align}
  \psi_p (R,Z) &= \mathcal P_{\psi} R_0 \left[ A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}}
    - \frac{1}{8}\bar{R}^4\right)+ \frac{1}{8}\bar{R}^4
    + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],\\
-   I(\psi_p) &= \mathcal P_I\sqrt{ - 2A\psi_p/(R_0\mathcal P_{\psi}) +1},
+   I(\psi_p) &= \mathcal P_I\sqrt{ - 2A\frac{\psi_p}{R_0\mathcal P_{\psi}} +1},
 \end{align}
 \end{subequations}
-with $\mathcal P_I = \pm \mathcal P_\psi$ for $A\neq 0$, $p(\psi_p) = \mathcal P_\psi (A-1)\psi_p/R_0$ and
+with $\mathcal P_\psi$ a free constant, $\mathcal P_I = \pm \mathcal P_\psi$ for $A\neq 0$ and $\mathcal P_I$ arbitrary for $A=0$ (purely toroidal equilibrium current).
+We have
+\begin{align}
+    p(\psi_p) = \mathcal P_\psi \frac{( A-1)\psi_p}{\beta R_0 } \qquad
+    j_{\hat\varphi} = \frac{\mathcal P_\psi}{\beta } \left[\frac{(A-1)R}{R_0^2} - \frac{A}{R}\right]
+\end{align}
 \rowcolors{2}{gray!25}{white}
 \begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \toprule
@@ -227,12 +229,19 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
    & \\
 \bottomrule
 \end{longtable}
-The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field, while $R_0$ appears as an artificial scaling factor (note here that a change in $\rho_s$ changes $R_0$ but not the form or size of the dimensional equilibrium magnetic field).
+The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form
+of the magnetic field.
+Eq.~\eqref{eq:solovev} can for example represent single and asymmetric double X-point configurations, force-free states,
+field reversed configurations and low and high beta tokamak equilibria.
+$R_0$ appears as an artificial scaling factor
+(note here that a change in $\rho_s$ changes $R_0$ but not the form or size of
+the dimensional equilibrium magnetic field).
 The scaling factors $\mathcal P_\psi$ and $\mathcal P_I$ are mainly introduced to maximize the flexibility e.g. to adapt the solution to experimental equilibria or to reverse the sign of the magnetic field.
-Remember that $\mathcal  P_I \neq \mathcal P_\psi$ only yields a solution for $A=0$.
 
-Eq.~\eqref{eq:solovev} allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
-field reversed configurations and low and high beta tokamak equilibria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
+Since Eq.~\eqref{eq:solovev} is given analytically we can numerically evaluate $\psi_p$ and $I$
+and all their derivatives
+at arbitrary points to machine precision, which is simple to implement and fast to execute.
+This translates to an exact representation of the magnetic field and related quantities like the curvature operators in code.
 
 Note that
 \begin{align}
@@ -565,13 +574,17 @@ We can then directly integrate the safety factor as
 \frac{\d \varphi}{\d\Theta} = \frac{B^\varphi}{B^\Theta}\\
 q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
 \end{align}
-We integrate this equation with the help of one of our grid
-construction algorithms, i.e. we use a high-order Runge-Kutta method
+We integrate this equation with the help of one of our ODE integrators, i.e. we use a high-order Runge-Kutta method
 and refine the stepsize until machine-precision is reached.
-
 Notice that the safety factor diverges on the last closed flux
 surface whereas Eq.~\eqref{eq:total_flux}
 remains finite due to the $\vn\psi$ factor.
+
+We find the toroidal flux $\psi_t$ by integrating the q-profile $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$. Since $q$ diverges, $\psi_t$, in contrast to $\psi_p$,
+is not defined outside the last closed flux-surface. We define the normalized toroidal flux label
+$\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$, which is useful because
+equidistant $\rho_t$ values tend to translate to equidistant flux-surfaces
+in configuration space.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
@@ -630,7 +643,8 @@ potential $A_\parallel$.
 We have the continuity equation for the electron density \(n_e\) and the ion gyro-centre
 density \(N_i\) and the momentum conservation equation for
 the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\)~\cite{WiesenbergerPhD, HeldPhD}.
-\subsection{ Sign reversals of the magnetic field}\label{sec:field_reversal}
+\subsection{ Scale invariance}
+\subsubsection{Sign reversals of the magnetic field}\label{sec:field_reversal}
 If we change the direction of the magnetic field vector $\bhat$, we immediately see that all perpendicular
 drifts and $U\bhat$ change directions. On the other side, the diffusive and resistive terms remain unchanged.
 Without resistivity and diffusion a change in direction of the magnetic field thus corresponds to
@@ -639,8 +653,14 @@ a time reversal $t\rightarrow t'=-t$.
 Also note that changing the sign of the magnetic field only in the parallel derivatives $\npar \rightarrow -\npar$ does not
 have any effect. This can be seen by simply renormalizing $U'=-U$. This reverts the equations back to the original equations.
 In the code this situation can happen when you change the sign of $\bhat$ using $\mathcal P_\psi$  and $\mathcal P_I$
-and use the toroidal field approximation at the same time.
-To actually change the sign of the magnetic field you need to use the "negative toroidal field approximation".
+and use the toroidal field approximation at the same time, because $\ehat_\varphi$
+does not change sign automatically.
+To actually change the sign of the magnetic field in code you need to use the "toroidal
+negative" value for the \textit{curvmode} input parameter, which reverts $\ehat_\varphi$ in the other direction.
+\subsubsection{Scaling of density}
+If $N, U, \phi, A_\parallel$ are a solution to the model equations
+then so are $N'=\alpha N$, $U'=U$, $\phi'=\phi$ and $A_\parallel'=A_\parallel$ with the changed parameters $S_N' = \alpha S_N$, $\eta' = \eta/\alpha$ and $ \beta' = \beta/\alpha$. If $N$
+has a Dirichlet boundary condition, then $N'$ satisfies a correspondingly scaled boundary condition.
 
 
 \subsection{Diffusive terms}\label{sec:dissres}
@@ -1522,7 +1542,7 @@ psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) 
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= (\psi_{p,\min} - \psi_p)/\psi_{p,\min}$ \\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but unavailable outside separatrix) \\
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
-psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^\psi_p \d\psi_p q(\psi_p)$ \\
+psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$ \\
 rho\_t           & Dataset & 1 (psi) & Toroidal flux label $\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$ (is similar to $\rho$ in the edge but $\rho_t$ is nicer in the core domain, because equidistant $\rho_t$ make more equidistant flux-surfaces)\\
 Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \RA{ Z}(R,Z)$ \\
 Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\RA{ Z}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
