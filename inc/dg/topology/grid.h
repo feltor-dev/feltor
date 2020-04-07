@@ -193,43 +193,52 @@ struct RealGrid1d
     }
 
     /**
-     * @brief Shifts a point coordinate if periodic
+     * @brief Shift any point coordinate to a corresponding grid coordinate
      *
-     * This function shifts a point coordinate to its value between x0() and x1() if bcx() returns dg::PER
-     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
-     * @param x1 end point (inout)
+     * This function shifts a point coordinate to its corresponding value
+     * between x0() and x1() according to the boundary condition: if periodic
+     * the shift is simply a modulus operation, if Dirichlet or Neumann the
+     * point is mirrored at the boundary, if Dirichlet an additional sign flag
+     * is raised and returned.
+     * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
+     * @param x point to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void shift_topologic( real_type x0, real_type& x1)const
+    void correspond_coordinates( bool& negative, real_type& x)const
     {
-        real_type deltaX;
-        if( x1 > x0_) deltaX = x1 -x0_;
-        else deltaX = x1_ - x1;
-        unsigned N = floor(deltaX/lx());
-        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx();
-        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx();
+        correspond_coordinates( negative, x, bcx_);
     }
     /**
-     * @brief Shifts a point coordinate if periodic
-     *
-     * This function shifts a point coordinate to its value between x0() and x1() if \c bcx==dg::PER
-     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
-     * @param x1 end point (inout)
-     * @param bcx overrule grid internal boundary condition
+     * @copydoc correspond_coordinates(bool&,real_type&)const
+     * @param bcx boundary condition to use for shift:
      */
-    void shift_topologic( real_type x0, real_type& x1, bc bcx)const
+    void correspond_coordinates( bool& negative, real_type &x, bc bcx)const
     {
-        real_type deltaX;
-        if( x1 > x0_) deltaX = x1 -x0_;
-        else deltaX = x1_ - x1;
-        unsigned N = floor(deltaX/lx());
-        if( x1  > x1_ && bcx == dg::PER) x1 -= N*lx();
-        if( x1  < x0_ && bcx == dg::PER) x1 += N*lx();
+        if( bcx == dg::PER)
+        {
+            real_type N = floor((x-x0_)/(x1_-x0_)); // ... -2| -1| 0| 1| 2| ...
+            x = x - N*(x1_-x0_); //shift
+        }
+        //mirror along boundary as often as necessary
+        while( (x<x0_) || (x>x1_) )
+        {
+            if( x < x0_){
+                x = 2.*x0_ - x;
+                //every mirror swaps the sign if Dirichlet
+                if( bcx == dg::DIR || bcx == dg::DIR_NEU)
+                    negative = !negative;//swap sign
+            }
+            if( x > x1_){
+                x = 2.*x1_ - x;
+                if( bcx == dg::DIR || bcx == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
+                    negative = !negative; //swap sign
+            }
+        }
     }
 
     /**
      * @brief Check if the grid contains a point
      *
-     * @note Doesn't check periodicity!!
+     * @note Does not consider periodicity!!
      * @param x point to check
      *
      * @return true if x0()<=x<=x1(), false else
@@ -399,29 +408,30 @@ struct aRealTopology2d
             <<"    "<<bc2str(bcy())<<"\n";
     }
     /**
-     * @brief Shifts point coordinates if periodic
+     * @brief Shift any point coordinate to a corresponding grid coordinate
      *
-     * This function shifts point coordinates to its values inside
-     the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX2d)
-     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX2d)
-     * @param x1 x-coordinate to shift (inout)
-     * @param y1 y-coordinate to shift (inout)
+     * This function shifts a point coordinate to its corresponding value
+     * inside the grid domain according to the boundary condition: if periodic
+     * the shift is simply a modulus operation, if Dirichlet or Neumann the
+     * point is mirrored at the boundary, if Dirichlet an additional sign flag
+     * is raised and returned.
+     * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
+     * @param x point (x) to shift (inout) the result is guaranteed to lie inside the grid
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void shift_topologic( real_type x0, real_type y0, real_type& x1, real_type& y1)const
+    void correspond_coordinates( bool& negative, real_type& x, real_type& y)const
     {
-        gx_.shift_topologic( x0,x1);
-        gy_.shift_topologic( y0,y1);
+        correspond_coordinates( negative, x, y, bcx(), bcy());
     }
     /**
-     * @copydoc shift_topologic(real_type,real_type,real_type&,real_type&)const
+     * @copydoc correspond_coordinates(bool&,real_type&,real_type&)const
      * @param bcx overrule grid internal boundary condition with this value
      * @param bcy overrule grid internal boundary condition with this value
      */
-    void shift_topologic( real_type x0, real_type y0, real_type& x1, real_type& y1, bc bcx, bc bcy)const
+    void correspond_coordinates( bool& negative, real_type& x, real_type& y, bc bcx, bc bcy)const
     {
-        gx_.shift_topologic( x0,x1,bcx);
-        gy_.shift_topologic( y0,y1,bcy);
+        gx_.correspond_coordinates( negative, x,bcx);
+        gy_.correspond_coordinates( negative, y,bcy);
     }
     /**
      * @brief Check if the grid contains a point
@@ -646,34 +656,33 @@ struct aRealTopology3d
     }
 
     /**
-     * @brief Shifts point coordinates if periodic
+     * @brief Shift any point coordinate to a corresponding grid coordinate
      *
-     * This function shifts point coordinates to its values inside
-     the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
-     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
-     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
-     * @param x1 x-coordinate to shift (inout)
-     * @param y1 y-coordinate to shift (inout)
-     * @param z1 z-coordinate to shift (inout)
+     * This function shifts a point coordinate to its corresponding value
+     * inside the grid domain according to the boundary condition: if periodic
+     * the shift is simply a modulus operation, if Dirichlet or Neumann the
+     * point is mirrored at the boundary, if Dirichlet an additional sign flag
+     * is raised and returned.
+     * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
+     * @param x point (x) to shift (inout) the result is guaranteed to lie inside the grid
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
+     * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void shift_topologic( real_type x0, real_type y0, real_type z0, real_type& x1, real_type& y1, real_type& z1)const
+    void correspond_coordinates( bool& negative, real_type& x, real_type& y, real_type& z)const
     {
-        gx_.shift_topologic( x0,x1);
-        gy_.shift_topologic( y0,y1);
-        gz_.shift_topologic( z0,z1);
+        correspond_coordinates( negative, x,y,z, bcx(), bcy(), bcz());
     }
     /**
-     * @copydoc shift_topologic(real_type,real_type,real_type,real_type&,real_type&,real_type&)const
+     * @copydoc correspond_coordinates(bool&,real_type&,real_type&,real_type&)const
      * @param bcx overrule grid internal boundary condition with this value
      * @param bcy overrule grid internal boundary condition with this value
      * @param bcz overrule grid internal boundary condition with this value
      */
-    void shift_topologic( real_type x0, real_type y0, real_type z0, real_type& x1, real_type& y1, real_type& z1, bc bcx, bc bcy, bc bcz)const
+    void correspond_coordinates( bool& negative, real_type& x, real_type& y, real_type& z, bc bcx, bc bcy, bc bcz)const
     {
-        gx_.shift_topologic( x0,x1,bcx);
-        gy_.shift_topologic( y0,y1,bcy);
-        gz_.shift_topologic( z0,z1,bcz);
+        gx_.correspond_coordinates( negative, x,bcx);
+        gy_.correspond_coordinates( negative, y,bcy);
+        gz_.correspond_coordinates( negative, z,bcz);
     }
 
     /**

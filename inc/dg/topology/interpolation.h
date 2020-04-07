@@ -68,32 +68,6 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
     return px;
 }
 
-template<class real_type>
-void mirror( bool& negative, real_type& x, real_type x0, real_type x1, bc boundary) {
-    while( (x<x0) || (x>x1) )
-    {
-        //mirror along boundary as often as necessary
-        //every mirror swaps the sign if Dirichlet
-        if( x < x0){
-            x = 2.*x0 - x;
-            if( boundary == dg::DIR || boundary == dg::DIR_NEU)
-                negative = !negative;//swap sign
-        }
-        if( x > x1){
-            x = 2.*x1 - x;
-            if( boundary == dg::DIR || boundary == dg::NEU_DIR)
-                negative = !negative; //swap sign
-        }
-    }
-}
-template<class real_type>
-void assert_contains( real_type X, real_type x0, real_type x1, char const * point){
-    if (!(X >= x0 && X <= x1)) {
-        std::cerr << x0<<"< "<<point<<" = " << X <<" < "<<x1<<std::endl;
-    }
-    assert(X >= x0 && X <= x1);
-}
-
 }//namespace detail
 ///@endcond
 ///@addtogroup interpolation
@@ -129,10 +103,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     for( unsigned i=0; i<x.size(); i++)
     {
         real_type X = x[i];
-        g.shift_topologic( X,X, bcx);
-        //mirror at boundary
         bool negative = false;
-        detail::mirror( negative, X, g.x0(), g.x1(), bcx);
+        g.correspond_coordinates( negative, X, bcx);
 
         //determine which cell (x) lies in
         real_type xnn = (X-g.x0())/g.h();
@@ -190,14 +162,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     for( int i=0; i<(int)x.size(); i++)
     {
         real_type X = x[i], Y = y[i];
-        g.shift_topologic( X,Y,X,Y, bcx, bcy);
-        //mirror at boundary
-        bool negative = false;
-        detail::mirror( negative, X, g.x0(), g.x1(), bcx);
-        detail::mirror( negative, Y, g.y0(), g.y1(), bcy);
-        //assert that point is inside the grid boundaries
-        //detail::assert_contains( X, g.x0(), g.x1(), "xi");
-        //detail::assert_contains( Y, g.y0(), g.y1(), "yi");
+        bool negative=false;
+        g.correspond_coordinates( negative,X,Y, bcx, bcy);
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
@@ -341,15 +307,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     for( int i=0; i<(int)x.size(); i++)
     {
         real_type X = x[i], Y = y[i], Z = z[i];
-        g.shift_topologic( X,Y,Z,X,Y,Z, bcx, bcy, bcz);
         bool negative = false;
-        detail::mirror( negative, X, g.x0(), g.x1(), bcx);
-        detail::mirror( negative, Y, g.y0(), g.y1(), bcy);
-        detail::mirror( negative, Z, g.z0(), g.z1(), bcz);
-        //assert that point is inside the grid boundaries
-        //detail::assert_contains( X, g.x0(), g.x1(), "xi");
-        //detail::assert_contains( Y, g.y0(), g.y1(), "yi");
-        //detail::assert_contains( Z, g.z0(), g.z1(), "zi");
+        g.correspond_coordinates( negative,X,Y,Z, bcx, bcy, bcz);
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
@@ -549,6 +508,12 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
 /**
  * @brief Interpolate a vector on a single point on a 1d Grid
  *
+ * @param sp Indicate whether the elements of the vector
+ * v are in xspace or lspace
+ *  (choose dg::xspace if you don't know what is going on here,
+ *      It is faster to interpolate in dg::lspace so consider
+ *      transforming v using dg::forward_transform( )
+ *      if you do it very many times)
  * @param v The vector to interpolate in dg::xspace
  * @param x X-coordinate of interpolation point
  * @param g The Grid on which to operate
@@ -556,20 +521,18 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
  *
  * @ingroup interpolation
  * @return interpolated point
- * @note \c g.contains(x,y) must return true
  */
 template<class real_type>
 real_type interpolate(
+    dg::space sp,
     const thrust::host_vector<real_type>& v,
     real_type x,
     const RealGrid1d<real_type>& g,
     dg::bc bcx = dg::NEU)
 {
     assert( v.size() == g.size());
-    g.shift_topologic( x,x, bcx);
-    //mirror at boundary
     bool negative = false;
-    create::detail::mirror( negative, x, g.x0(), g.x1(), bcx);
+    g.correspond_coordinates( negative, x, bcx);
 
     //determine which cell (x) lies in
 
@@ -585,13 +548,16 @@ real_type interpolate(
     }
     //evaluate 1d Legendre polynomials at (xn)...
     std::vector<real_type> px = create::detail::coefficients( xn, g.n());
-    dg::Operator<real_type> forward( g.dlt().forward());
-    std::vector<real_type> pxF(g.n(),0);
-    for( unsigned l=0; l<g.n(); l++)
+    if( sp == dg::xspace)
+    {
+        dg::Operator<real_type> forward( g.dlt().forward());
+        std::vector<real_type> pxF(g.n(),0);
+        for( unsigned l=0; l<g.n(); l++)
+            for( unsigned k=0; k<g.n(); k++)
+                pxF[l]+= px[k]*forward(k,l);
         for( unsigned k=0; k<g.n(); k++)
-            pxF[l]+= px[k]*forward(k,l);
-    for( unsigned k=0; k<g.n(); k++)
-        px[k] = pxF[k];
+            px[k] = pxF[k];
+    }
     //these are the matrix coefficients with which to multiply
     unsigned col_begin = (n)*g.n();
     //multiply x
@@ -624,7 +590,6 @@ real_type interpolate(
  *
  * @ingroup interpolation
  * @return interpolated point
- * @note \c g.contains(x,y) must return true
  */
 template<class real_type>
 real_type interpolate(
@@ -635,11 +600,8 @@ real_type interpolate(
     dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU )
 {
     assert( v.size() == g.size());
-    g.shift_topologic( x,y,x,y, bcx, bcy);
-    //mirror at boundary
     bool negative = false;
-    create::detail::mirror( negative, x, g.x0(), g.x1(), bcx);
-    create::detail::mirror( negative, y, g.y0(), g.y1(), bcy);
+    g.correspond_coordinates( negative, x,y, bcx, bcy);
 
     //determine which cell (x,y) lies in
 

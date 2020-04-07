@@ -46,10 +46,9 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
+    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v):v_(v){ }
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
-        m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
         double vz = v_.z()(R, Z);
         yp[0] = v_.x()(R, Z)/vz;
         yp[1] = v_.y()(R, Z)/vz;
@@ -58,12 +57,12 @@ struct DSFieldCylindrical
 
     private:
     dg::geo::CylindricalVectorLvl0 v_;
-    dg::Grid2d m_b;
 };
 
 struct DSField
 {
     //z component of v may not vanish
+    //Fields outside g are extended according to bc in g
     DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
     {
         thrust::host_vector<double> v_zeta, v_eta;
@@ -77,16 +76,11 @@ struct DSField
         dsdphi_     = dg::forward_transform( v_phi, g );
     }
     //interpolate the vectors given in the constructor on the given point
-    //if point lies outside of grid boundaries zero is returned
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
-        double R = y[0], Z = y[1];
-        g_->shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
-        {
-            yp[0] = interpolate(dg::lspace, dzetadphi_, R, Z, *g_);
-            yp[1] = interpolate(dg::lspace, detadphi_,  R, Z, *g_);
-            yp[2] = interpolate(dg::lspace, dsdphi_,    R, Z, *g_);
-        }
+        yp[0] = interpolate(dg::lspace, dzetadphi_, y[0], y[1], *g_);
+        yp[1] = interpolate(dg::lspace, detadphi_,  y[0], y[1], *g_);
+        yp[2] = interpolate(dg::lspace, dsdphi_,    y[0], y[1], *g_);
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
@@ -117,7 +111,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field);
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
     unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {

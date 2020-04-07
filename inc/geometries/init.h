@@ -12,33 +12,6 @@ namespace dg
 namespace geo
 {
 
-/**
-* @brief Composition \f[ f\circ\psi = f(\psi(R,Z)) \f]
-*
-* @tparam UnaryFunctor A unary Functor with interface <tt>double (double x)</tt>
-* @ingroup profiles
-*/
-template<class UnaryFunctor>
-struct Compose : public aCylindricalFunctor<Compose<UnaryFunctor>>
-{
-    /**
-    * @brief Construct from 2d functor and forward any parameters to \c UnaryFunctor
-    *
-    * @param psi A binary functor
-    * @param ps Parameters that are forwarded to the constructor of \c UnaryFunctor
-    * @tparam FunctorParams Determined by Compiler
-    */
-    template<class ...FunctorParams>
-    Compose ( CylindricalFunctor psi, FunctorParams&& ... ps): m_psip(psi),
-        m_f(std::forward<FunctorParams>(ps)...){}
-    double do_compute( double R, double Z) const
-    {
-        return m_f(m_psip(R,Z));
-    }
-    private:
-    CylindricalFunctor m_psip;
-    UnaryFunctor m_f;
-};
 ///@addtogroup profiles
 ///@{
 
