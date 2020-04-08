@@ -49,6 +49,19 @@
  * @param bcy boundary condition in y
  * @param bcz boundary condition in z
  */
+/*!@class hide_shift_doc
+ * @brief Shift any point coordinate to a corresponding grid coordinate
+ *
+ * This function shifts a point coordinate to its corresponding value
+ * inside the grid according to the boundary condition: if periodic
+ * the shift is simply a modulus operation, if Dirichlet or Neumann the
+ * point is mirrored at the boundary, if Dirichlet an additional sign flag
+ * is raised and returned. This function forms the basis for periodifying a
+ * function discretized on the grid beyond the grid boundaries.
+ * @note If periodic the right boundary point is counted to lie outside the grid and is shifted to the left boundary point.
+ * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
+ * @param x point to shift (inout) the result is guaranteed to lie inside the grid
+ */
 
 namespace dg{
 
@@ -193,29 +206,21 @@ struct RealGrid1d
     }
 
     /**
-     * @brief Shift any point coordinate to a corresponding grid coordinate
-     *
-     * This function shifts a point coordinate to its corresponding value
-     * between x0() and x1() according to the boundary condition: if periodic
-     * the shift is simply a modulus operation, if Dirichlet or Neumann the
-     * point is mirrored at the boundary, if Dirichlet an additional sign flag
-     * is raised and returned.
-     * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
-     * @param x point to shift (inout) the result is guaranteed to lie inside the grid
+     * @copydoc hide_shift_doc
      */
-    void correspond_coordinates( bool& negative, real_type& x)const
+    void shift( bool& negative, real_type& x)const
     {
-        correspond_coordinates( negative, x, bcx_);
+        shift( negative, x, bcx_);
     }
     /**
-     * @copydoc correspond_coordinates(bool&,real_type&)const
-     * @param bcx boundary condition to use for shift:
+     * @copydoc hide_shift_doc
+     * @param bcx overrule grid internal boundary condition with this value
      */
-    void correspond_coordinates( bool& negative, real_type &x, bc bcx)const
+    void shift( bool& negative, real_type &x, bc bcx)const
     {
         if( bcx == dg::PER)
         {
-            real_type N = floor((x-x0_)/(x1_-x0_)); // ... -2| -1| 0| 1| 2| ...
+            real_type N = floor((x-x0_)/(x1_-x0_)); // ... -2[ -1[ 0[ 1[ 2[ ...
             x = x - N*(x1_-x0_); //shift
         }
         //mirror along boundary as often as necessary
@@ -245,6 +250,7 @@ struct RealGrid1d
      */
     bool contains( real_type x)const
     {
+        //should we catch the case x1_==x && dg::PER?
         if( (x>=x0_ && x <= x1_)) return true;
         return false;
     }
@@ -408,30 +414,23 @@ struct aRealTopology2d
             <<"    "<<bc2str(bcy())<<"\n";
     }
     /**
-     * @brief Shift any point coordinate to a corresponding grid coordinate
-     *
-     * This function shifts a point coordinate to its corresponding value
-     * inside the grid domain according to the boundary condition: if periodic
-     * the shift is simply a modulus operation, if Dirichlet or Neumann the
-     * point is mirrored at the boundary, if Dirichlet an additional sign flag
-     * is raised and returned.
-     * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
-     * @param x point (x) to shift (inout) the result is guaranteed to lie inside the grid
+     * @copydoc hide_shift_doc
      * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void correspond_coordinates( bool& negative, real_type& x, real_type& y)const
+    void shift( bool& negative, real_type& x, real_type& y)const
     {
-        correspond_coordinates( negative, x, y, bcx(), bcy());
+        shift( negative, x, y, bcx(), bcy());
     }
     /**
-     * @copydoc correspond_coordinates(bool&,real_type&,real_type&)const
+     * @copydoc hide_shift_doc
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
      * @param bcx overrule grid internal boundary condition with this value
      * @param bcy overrule grid internal boundary condition with this value
      */
-    void correspond_coordinates( bool& negative, real_type& x, real_type& y, bc bcx, bc bcy)const
+    void shift( bool& negative, real_type& x, real_type& y, bc bcx, bc bcy)const
     {
-        gx_.correspond_coordinates( negative, x,bcx);
-        gy_.correspond_coordinates( negative, y,bcy);
+        gx_.shift( negative, x,bcx);
+        gy_.shift( negative, y,bcy);
     }
     /**
      * @brief Check if the grid contains a point
@@ -656,33 +655,27 @@ struct aRealTopology3d
     }
 
     /**
-     * @brief Shift any point coordinate to a corresponding grid coordinate
-     *
-     * This function shifts a point coordinate to its corresponding value
-     * inside the grid domain according to the boundary condition: if periodic
-     * the shift is simply a modulus operation, if Dirichlet or Neumann the
-     * point is mirrored at the boundary, if Dirichlet an additional sign flag
-     * is raised and returned.
-     * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
-     * @param x point (x) to shift (inout) the result is guaranteed to lie inside the grid
+     * @copydoc hide_shift_doc
      * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
      * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void correspond_coordinates( bool& negative, real_type& x, real_type& y, real_type& z)const
+    void shift( bool& negative, real_type& x, real_type& y, real_type& z)const
     {
-        correspond_coordinates( negative, x,y,z, bcx(), bcy(), bcz());
+        shift( negative, x,y,z, bcx(), bcy(), bcz());
     }
     /**
-     * @copydoc correspond_coordinates(bool&,real_type&,real_type&,real_type&)const
+     * @copydoc hide_shift_doc
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
+     * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
      * @param bcx overrule grid internal boundary condition with this value
      * @param bcy overrule grid internal boundary condition with this value
      * @param bcz overrule grid internal boundary condition with this value
      */
-    void correspond_coordinates( bool& negative, real_type& x, real_type& y, real_type& z, bc bcx, bc bcy, bc bcz)const
+    void shift( bool& negative, real_type& x, real_type& y, real_type& z, bc bcx, bc bcy, bc bcz)const
     {
-        gx_.correspond_coordinates( negative, x,bcx);
-        gy_.correspond_coordinates( negative, y,bcy);
-        gz_.correspond_coordinates( negative, z,bcz);
+        gx_.shift( negative, x,bcx);
+        gy_.shift( negative, y,bcy);
+        gz_.shift( negative, z,bcz);
     }
 
     /**

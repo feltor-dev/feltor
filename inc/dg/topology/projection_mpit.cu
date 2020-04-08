@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
         x[i] +=shift;
         y[i] +=shift;
         bool negative = false;
-        g2d.global().correspond_coordinates( negative, x[i], y[i]);
+        g2d.global().shift( negative, x[i], y[i]);
     }
     dg::MIHMatrix converted_i = dg::create::interpolation( x,y,g2d);
     dg::IHMatrix  direct_i = dg::create::interpolation( x,y,g2d.global());
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
         x[i] +=shift;
         y[i] +=shift;
         bool negative = false;
-        g2d.global().correspond_coordinates( negative, x[i], y[i]);
+        g2d.global().shift( negative, x[i], y[i]);
     }
     direct_i = dg::transpose(dg::create::interpolation( x,y,g2d.global()));
     g_temp.resize( g2d.global().size());

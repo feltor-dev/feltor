@@ -104,7 +104,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     {
         real_type X = x[i];
         bool negative = false;
-        g.correspond_coordinates( negative, X, bcx);
+        g.shift( negative, X, bcx);
 
         //determine which cell (x) lies in
         real_type xnn = (X-g.x0())/g.h();
@@ -163,7 +163,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     {
         real_type X = x[i], Y = y[i];
         bool negative=false;
-        g.correspond_coordinates( negative,X,Y, bcx, bcy);
+        g.shift( negative,X,Y, bcx, bcy);
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
@@ -308,7 +308,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
     {
         real_type X = x[i], Y = y[i], Z = z[i];
         bool negative = false;
-        g.correspond_coordinates( negative,X,Y,Z, bcx, bcy, bcz);
+        g.shift( negative,X,Y,Z, bcx, bcy, bcz);
 
         //determine which cell (x,y) lies in
         real_type xnn = (X-g.x0())/g.hx();
@@ -532,7 +532,7 @@ real_type interpolate(
 {
     assert( v.size() == g.size());
     bool negative = false;
-    g.correspond_coordinates( negative, x, bcx);
+    g.shift( negative, x, bcx);
 
     //determine which cell (x) lies in
 
@@ -601,7 +601,7 @@ real_type interpolate(
 {
     assert( v.size() == g.size());
     bool negative = false;
-    g.correspond_coordinates( negative, x,y, bcx, bcy);
+    g.shift( negative, x,y, bcx, bcy);
 
     //determine which cell (x,y) lies in
 
