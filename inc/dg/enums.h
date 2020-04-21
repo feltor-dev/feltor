@@ -78,6 +78,21 @@ static inline bc str2bc( std::string s)
     throw std::runtime_error( "Boundary condition '"+s+"' not recognized!");
 }
 
+/**
+ * @brief invert boundary condition
+ *
+ * @param bound boundary condition to invert
+ * @return NEU for DIR, DIR for NEU, NEU_DIR for DIR_NEU, DIR_NEU for NEU_DIR and PER for PER
+ */
+bc inverse( bc bound)
+{
+    if( bound == DIR) return NEU;
+    if( bound == NEU) return DIR;
+    if( bound == DIR_NEU) return NEU_DIR;
+    if( bound == NEU_DIR) return DIR_NEU;
+    return PER;
+}
+
 ///@brief Switch between normalisations
 enum norm{
     normed,   //!< indicates that output is properly normalized
@@ -90,6 +105,20 @@ enum direction{
     backward, //!< backward derivative
     centered //!< centered derivative
 };
+
+
+/**
+ * @brief invert direction
+ *
+ * @param dir direction to invert
+ * @return backward for forward, forward for backward, centered for centered
+ */
+direction inverse( direction dir)
+{
+    if( dir == forward) return backward;
+    if( dir == backward) return forward;
+    return centered;
+}
 
 ///@brief Space of DG coefficients
 enum space{

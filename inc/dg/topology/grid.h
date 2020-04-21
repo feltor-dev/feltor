@@ -50,15 +50,15 @@
  * @param bcz boundary condition in z
  */
 /*!@class hide_shift_doc
- * @brief Shift any point coordinate to a corresponding grid coordinate
+ * @brief Shift any point coordinate to a corresponding grid coordinate according to the boundary condition
  *
- * This function shifts a point coordinate to its corresponding value
- * inside the grid according to the boundary condition: if periodic
- * the shift is simply a modulus operation, if Dirichlet or Neumann the
- * point is mirrored at the boundary, if Dirichlet an additional sign flag
- * is raised and returned. This function forms the basis for periodifying a
+ * If the given point is already inside the grid, the function does nothing, else along each dimension the following happens: check the boundary condition.
+ *If \c dg::PER, the point will be shifted topologically back onto the domain (modulo operation). Else the
+ * point will be mirrored at the closest boundary. If the boundary is a Dirichlet boundary (happens for \c dg::DIR, \c dg::DIR_NEU and \c dg::NEU_DIR; the latter two apply \c dg::DIR to the respective left or right boundary )
+ * an additional sign flag is swapped. This process is repeated until the result lies inside the grid. This function forms the basis for extending/periodifying a
  * function discretized on the grid beyond the grid boundaries.
- * @note If periodic the right boundary point is counted to lie outside the grid and is shifted to the left boundary point.
+ * @sa interpolate
+ * @note For periodic boundaries the right boundary point is considered outside the grid and is shifted to the left boundary point.
  * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
  * @param x point to shift (inout) the result is guaranteed to lie inside the grid
  */

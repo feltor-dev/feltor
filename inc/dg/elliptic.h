@@ -294,20 +294,6 @@ class Elliptic
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
     }
     private:
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_temp;
@@ -577,20 +563,6 @@ class Elliptic3d
     }
 
     private:
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_tempz, m_temp;
