@@ -95,8 +95,10 @@ struct Collective
     thrust::host_vector<int> m_recvFrom, m_accR;
     dg::Buffer<thrust::host_vector<get_value_type<Vector> >> m_values, m_store;
 #else
-    Index m_sendTo,   m_accS; //accumulated send
-    Index m_recvFrom, m_accR; //accumulated recv
+//surprisingly MPI_Alltoallv wants the integers to be on the host, only
+//the data is on the device (does this question the necessity of Index?)
+    thrust::host_vector<int> m_sendTo,   m_accS; //accumulated send
+    thrust::host_vector<int> m_recvFrom, m_accR; //accumulated recv
 #endif // _DG_CUDA_UNAWARE_MPI
     MPI_Comm m_comm;
 };

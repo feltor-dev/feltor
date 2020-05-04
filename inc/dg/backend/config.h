@@ -35,6 +35,10 @@
 #define SIMD simd
 #endif//__INTEL_COMPILER
 
+#elif defined(__ibmxl__)
+#define SIMD simd
+#pragma message( "Using IBM compiler!")
+
 #elif defined(__GNUG__)
 
 #ifndef GCC_VERSION
