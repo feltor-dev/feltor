@@ -63,10 +63,10 @@
 
 #include "mpi-ext.h"
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-#pragma message( "Using CUDA-aware MPI support!")
+#pragma message( "CUDA-aware MPI support detected! Yay!")
 //Has cuda aware MPI support. Everything fine
 #elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#warning "NO CUDA aware MPI installation! Falling back to regular MPI!"
+#warning "No CUDA aware MPI installation! Falling back to regular MPI!"
 #define _DG_CUDA_UNAWARE_MPI
 #else
 #pragma message( "Cannot determine CUDA-aware MPI support! Falling back to regular MPI!")
