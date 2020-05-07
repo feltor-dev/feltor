@@ -157,10 +157,10 @@ int main( int argc, char* argv[])
         double RO=mag.R0(), ZO=0.;
         dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         double psipO = mag.psip()( RO, ZO);
-        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        std::cout<< " damping "<< damping_psi0 << " "<<damping_alpha<<"\n";
-        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2., fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2., fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
     }
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;

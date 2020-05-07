@@ -64,10 +64,10 @@ int main( int argc, char* argv[])
         double RO=mag.R0(), ZO=0.;
         dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         double psipO = mag.psip()( RO, ZO);
-        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2.,
-                fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2.,
+                fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
     }
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
@@ -184,7 +184,7 @@ int main( int argc, char* argv[])
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
             {
                 dg::assign( *pair.second, hvisual);
-                dg::blas1::axpby( 1., hvisual, -1., profile, hvisual);
+                //dg::blas1::axpby( 1., hvisual, -1., profile, hvisual);
             }
             else
                 dg::assign( *pair.second, hvisual);

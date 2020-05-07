@@ -896,9 +896,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 m_profne, m_source, m_omega_source);
         else
             dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
+        // -w_d ~n
         dg::blas1::pointwiseDot( -m_omega_damping, m_damping, y[0][0], 1.,  m_s[0][0]);
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][0], 1.,  m_s[1][0]);
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][1], 1.,  m_s[1][1]);
+        // - w_d U
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][0], 0.,  m_s[1][0]);
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][1], 0.,  m_s[1][1]);
         //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
         dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
