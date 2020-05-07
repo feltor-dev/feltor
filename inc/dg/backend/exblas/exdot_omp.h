@@ -254,6 +254,7 @@ void ExDOTFPE(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c, in
  * @param x1_ptr first array
  * @param x2_ptr second array
  * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
 template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=8>
@@ -280,6 +281,7 @@ void exdot_omp(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, in
  * @param x2_ptr second array
  * @param x3_ptr third array
  * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=8>
