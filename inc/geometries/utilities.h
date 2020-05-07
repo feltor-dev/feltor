@@ -421,15 +421,6 @@ struct HessianRZtau
         }
 
     }
-    void newton_iteration( const std::array<double,2>& y, std::array<double,2>& yp)
-    {
-        double psipRZ = psip_.dfxy()(y[0], y[1]);
-        double psipRR = psip_.dfxx()(y[0], y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
-        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
-        double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
-        yp[0] = y[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
-        yp[1] = y[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
-    }
   private:
     bool norm_;
     int quad_;
@@ -473,22 +464,6 @@ struct MinimalCurve
     CylindricalFunctorsLvl1 psip_;
 };
 
-///@copydoc findXpoint()
-static inline void findOpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
-{
-    dg::geo::HessianRZtau hessianRZtau(  psi);
-    std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
-    X[0] = R_X, X[1] = Z_X;
-    double eps = 1e10, eps_old= 2e10;
-    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10)
-    {
-        X_OLD = X; eps= eps_old;
-        hessianRZtau.newton_iteration( X, XN);
-        XN.swap(X);
-        eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
-    }
-    R_X = X[0], Z_X = X[1];
-}
 ////////////////////////////////////////////////////////////////////////////////
 
 

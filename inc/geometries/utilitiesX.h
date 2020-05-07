@@ -8,16 +8,7 @@ namespace dg
 {
 namespace geo
 {
-/**
- * @brief This function finds the X-point (or O-point for that matter) via Newton iteration applied to the gradient of psi
- *
- * The inverse of the Hessian matrix is computed analytically
- * @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
- * @param R_X start value on input, X-point on output
- * @param Z_X start value on input, X-point on output
- * @ingroup misc_geo
- * @note also finds the O-point or any other point with vanishing gradient
- */
+///@copydoc findOpoint()
 static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     findOpoint( psi, R_X, Z_X);

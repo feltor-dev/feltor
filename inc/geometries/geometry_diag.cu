@@ -14,7 +14,6 @@
 
 #include "solovev.h"
 //#include "taylor.h"
-#include "init.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 #include "curvilinearX.h"
@@ -26,30 +25,31 @@ struct Parameters
     unsigned n, Nx, Ny, Nz, Npsi;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
-    double amp, k_psi, bgprofamp, nprofileamp;
+    double amp, k_psi, nprofileamp;
     double sigma, posX, posY;
-    double rho_damping, alpha, alpha_mag, rho_source;
+    double damping_boundary, source_alpha, damping_alpha, source_boundary;
+    double profile_alpha;
     Parameters( const Json::Value& js){
         n = js.get("n",3).asUInt();
         Nx = js.get("Nx",100).asUInt();
         Ny = js.get("Ny",100).asUInt();
         Nz = js.get("Nz", 1).asUInt();
-        Npsi = js.get("Npsi", 16).asUInt();
-        boxscaleRm = js["boxscaleR"].get(0u, 1.1).asDouble();
-        boxscaleRp = js["boxscaleR"].get(1u, 1.1).asDouble();
-        boxscaleZm = js["boxscaleZ"].get(0u, 1.2).asDouble();
-        boxscaleZp = js["boxscaleZ"].get(1u, 1.1).asDouble();
+        Npsi = js.get("Npsi", 32).asUInt();
+        boxscaleRm = js["box"]["scaleR"].get(0u, 1.1).asDouble();
+        boxscaleRp = js["box"]["scaleR"].get(1u, 1.1).asDouble();
+        boxscaleZm = js["box"]["scaleZ"].get(0u, 1.2).asDouble();
+        boxscaleZp = js["box"]["scaleZ"].get(1u, 1.1).asDouble();
         amp = js.get("amplitude", 1.).asDouble();
         k_psi = js.get("k_psi", 1.).asDouble();
-        bgprofamp = js.get("bgprofamp", 1.).asDouble();
-        nprofileamp = js.get("nprofileamp", 1.).asDouble();
+        nprofileamp = js["profile"].get("amp", 1.).asDouble();
+        profile_alpha = js["profile"].get("alpha", 0.1).asDouble();
         sigma = js.get("sigma", 10).asDouble();
         posX = js.get("posX", 0.5).asDouble();
         posY = js.get("posY", 0.5).asDouble();
-        rho_damping = js.get("rho_damping", 1.2).asDouble();
-        alpha_mag = js.get("alpha_mag", 0.05).asDouble();
-        alpha = js.get("alpha", 0.05).asDouble();
-        rho_source = js.get("rho_source", 0.2).asDouble();
+        damping_boundary = js["damping"].get("boundary", 1.2).asDouble();
+        damping_alpha = js["damping"].get("alpha", 0.1).asDouble();
+        source_alpha = js["source"].get("alpha", 0.5).asDouble();
+        source_boundary = js["source"].get("boundary", 0.5).asDouble();
     }
     void display( std::ostream& os = std::cout ) const
     {
@@ -63,11 +63,12 @@ struct Parameters
             <<" boxscaleRp    = "<<boxscaleRp<<"\n"
             <<" boxscaleZm    = "<<boxscaleZm<<"\n"
             <<" boxscaleZp    = "<<boxscaleZp<<"\n"
-            <<" alpha         = "<<alpha<<"\n"
-            <<" alpha_mag     = "<<alpha_mag<<"\n"
+            <<" source bound  = "<<source_boundary<<"\n"
+            <<" source alpha  = "<<source_alpha<<"\n"
+            <<" damping bound = "<<damping_boundary<<"\n"
+            <<" damping alpha = "<<damping_alpha<<"\n"
             <<" amp           = "<<amp<<"\n"
             <<" k_psi         = "<<k_psi<<"\n"
-            <<" bgprofamp     = "<<bgprofamp<<"\n"
             <<" nprofileamp   = "<<nprofileamp<<"\n"
             <<" sigma         = "<<sigma<<"\n"
             <<" posX          = "<<posX<<"\n"
@@ -76,9 +77,9 @@ struct Parameters
     }
 };
 
-struct IPhi
+struct JPhi
 {
-    IPhi( dg::geo::solovev::Parameters gp): R_0(gp.R_0), A(gp.A){}
+    JPhi( dg::geo::solovev::Parameters gp): R_0(gp.R_0), A(gp.A){}
     double operator()(double R, double Z, double phi)const
     {
         return ((A-1.)*R - A*R_0*R_0/R)/R_0/R_0/R_0;
@@ -149,9 +150,18 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
     //Test coefficients
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    if(p.alpha_mag > 0 )
-        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(), 0.), p.alpha_mag);
+    dg::geo::TokamakMagneticField mag_origin = dg::geo::createSolovevField(gp);
+    dg::geo::TokamakMagneticField mag = mag_origin;
+    if( p.damping_alpha > 0.)
+    {
+        double RO=mag.R0(), ZO=0.;
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        double psipO = mag.psip()( RO, ZO);
+        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        std::cout<< " damping "<< damping_psi0 << " "<<damping_alpha<<"\n";
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2., fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+    }
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     if( gp.hasXpoint())
@@ -161,103 +171,16 @@ int main( int argc, char* argv[])
         std::cout <<  "     R - Factor "<<(gp.R_0-R_X)/gp.triangularity/gp.a << "   Z - factor "<<-(Z_X/gp.elongation/gp.a)<<std::endl;
 
     }
-    const double R_H = gp.R_0-gp.triangularity*gp.a;
-    const double Z_H = gp.elongation*gp.a;
-    const double alpha_ = asin(gp.triangularity);
-    const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
-    const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
-    const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
-    const double psip0 = mag.psip()(gp.R_0, 0);
-    std::cout << "psip( 1, 0) "<<psip0<<"\n";
     //Find O-point
     double R_O = gp.R_0, Z_O = 0.;
     if( !gp.isToroidal() )
         dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
     const double psipmin = mag.psip()(R_O, Z_O);
-
-    std::cout << "O-point "<<R_O<<" "<<Z_O<<" with Psip = "<<psipmin<<std::endl;
-
-    std::cout << "TEST ACCURACY OF PSI (values must be close to 0!)\n";
-    if( gp.hasXpoint())
-        std::cout << "    Equilibrium with X-point!\n";
-    else
-        std::cout << "    NO X-point in flux function!\n";
-    std::cout << "psip( 1+e,0)           "<<mag.psip()(gp.R_0 + gp.a, 0.)<<"\n";
-    std::cout << "psip( 1-e,0)           "<<mag.psip()(gp.R_0 - gp.a, 0.)<<"\n";
-    std::cout << "psip( 1-de,ke)         "<<mag.psip()(R_H, Z_H)<<"\n";
-    if( !gp.hasXpoint())
-        std::cout << "psipR( 1-de,ke)        "<<mag.psipR()(R_H, Z_H)<<"\n";
-    else
-    {
-        std::cout << "psip( 1-1.1de,-1.1ke)  "<<mag.psip()(R_X, Z_X)<<"\n";
-        std::cout << "psipZ( 1+e,0)          "<<mag.psipZ()(gp.R_0 + gp.a, 0.)<<"\n";
-        std::cout << "psipZ( 1-e,0)          "<<mag.psipZ()(gp.R_0 - gp.a, 0.)<<"\n";
-        std::cout << "psipR( 1-de,ke)        "<<mag.psipR()(R_H,Z_H)<<"\n";
-        std::cout << "psipR( 1-1.1de,-1.1ke) "<<mag.psipR()(R_X,Z_X)<<"\n";
-        std::cout << "psipZ( 1-1.1de,-1.1ke) "<<mag.psipZ()(R_X,Z_X)<<"\n";
-    }
-    std::cout << "psipZZ( 1+e,0)         "<<mag.psipZZ()(gp.R_0+gp.a,0.)+N1*mag.psipR()(gp.R_0+gp.a,0)<<"\n";
-    std::cout << "psipZZ( 1-e,0)         "<<mag.psipZZ()(gp.R_0-gp.a,0.)+N2*mag.psipR()(gp.R_0-gp.a,0)<<"\n";
-    std::cout << "psipRR( 1-de,ke)       "<<mag.psipRR()(R_H,Z_H)+N3*mag.psipZ()(R_H,Z_H)<<"\n";
+    std::cout << "O-point found at "<<R_O<<" "<<Z_O<<" with Psip "<<psipmin<<std::endl;
+    const double psip0 = mag.psip()(gp.R_0, 0);
+    std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
 
 
-    dg::HVec hvisual;
-    //allocate mem for visual
-    dg::HVec visual;
-    std::vector< std::tuple<std::string, std::string, std::function<double(double,double)> > > map{
-        {"Psip", "Flux function", mag.psip()},
-        {"PsipR", "Flux function derivative in R", mag.psipR()},
-        {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
-        {"Ipol", "Poloidal current", mag.ipol()},
-        {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
-        {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
-        {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
-        {"GradLnB", "The parallel derivative of LnB", dg::geo::GradLnB(mag)},
-        {"Divb", "The divergence of the magnetic unit vector", dg::geo::Divb(mag)},
-        {"B_R", "Derivative of Bmodule in R", dg::geo::BR(mag)},
-        {"B_Z", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
-        {"CurvatureNablaBR",  "R-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBR(mag,+1)},
-        {"CurvatureNablaBZ",  "Z-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBZ(mag,+1)},
-        {"CurvatureKappaR",   "R-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaR(mag,+1)},
-        {"CurvatureKappaZ",   "Z-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaZ(mag,+1)},
-        {"DivCurvatureKappa", "Divergence of the (toroidal) Kappa B curvature vector", dg::geo::DivCurvatureKappa(mag,+1)},
-        {"DivCurvatureNablaB","Divergence of the (toroidal) Nabla B curvature vector", dg::geo::DivCurvatureNablaB(mag,+1)},
-        {"TrueCurvatureNablaBR", "R-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBR(mag)},
-        {"TrueCurvatureNablaBZ", "Z-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBZ(mag)},
-        {"TrueCurvatureNablaBP", "Contravariant Phi-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBP(mag)},
-        {"TrueCurvatureKappaR", "R-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaR(mag)},
-        {"TrueCurvatureKappaZ", "Z-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaZ(mag)},
-        {"TrueCurvatureKappaP", "Contravariant Phi-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaP(mag)},
-        {"TrueDivCurvatureKappa", "Divergence of the (true) Kappa B curvature vector", dg::geo::TrueDivCurvatureKappa(mag)},
-        {"TrueDivCurvatureNablaB","Divergence of the (true) Nabla B curvature vector",  dg::geo::TrueDivCurvatureNablaB(mag)},
-        {"BFieldR", "R-component of the magnetic field vector", dg::geo::BFieldR(mag)},
-        {"BFieldZ", "Z-component of the magnetic field vector", dg::geo::BFieldZ(mag)},
-        {"BFieldP", "Contravariant Phi-component of the magnetic field vector", dg::geo::BFieldP(mag)},
-        {"BHatR", "R-component of the magnetic field unit vector", dg::geo::BHatR(mag)},
-        {"BHatZ", "Z-component of the magnetic field unit vector", dg::geo::BHatZ(mag)},
-        {"BHatP", "Contravariant Phi-component of the magnetic field unit vector", dg::geo::BHatP(mag)},
-        {"GradBHatR", "Parallel derivative of BHatR", dg::geo::BHatR(mag)},
-        {"GradBHatZ", "Parallel derivative of BHatZ", dg::geo::BHatZ(mag)},
-        {"GradBHatP", "Parallel derivative of BHatP", dg::geo::BHatP(mag)},
-        //////////////////////////////////
-        {"Iris", "A flux aligned Heaviside", dg::geo::Iris(mag.psip(), gp.psipmin, gp.psipmax)},
-        {"Pupil", "A flux aligned Heaviside", dg::geo::Pupil(mag.psip(), gp.psipmaxcut)},
-        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::geo::GaussianDamping(mag.psip(), gp.psipmaxcut, p.alpha)},
-        {"ZonalFlow",  "Flux aligned zonal flows", dg::geo::ZonalFlow(mag.psip(), p.amp, 0., 2.*M_PI*p.k_psi )},
-        {"PsiLimiter", "A flux aligned Heaviside", dg::geo::PsiLimiter(mag.psip(), gp.psipmaxlim)},
-        {"SourceProfile", "A source profile", dg::geo::Compose<dg::PolynomialHeaviside>(
-            dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-            p.rho_source, p.alpha, ((psip0>0)-(psip0<0)) ) },
-        {"Nprofile", "A flux aligned profile", dg::geo::Nprofile(mag.psip(), p.nprofileamp/mag.psip()(mag.R0(),0.), p.bgprofamp )},
-        {"Delta", "A flux aligned delta function", dg::geo::DeltaFunction( mag, gp.alpha*gp.alpha, psip0*0.2)},
-        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::geo::TanhDamping(mag.psip(), -3*p.alpha, p.alpha, -1)},
-        ////
-        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
-        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
-            M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
-        { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
-
-    };
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
@@ -283,17 +206,17 @@ int main( int argc, char* argv[])
     dg::blas1::transform( gradPsip, gradPsip, dg::SQRT<double>());
     if( gp.hasXpoint())
     {
-        std::cout << "Generate X-point flux-aligned grid!\n";
+        std::cout << "Generate X-point flux-aligned grid ... \n";
         double RX = gp.R_0-1.1*gp.triangularity*gp.a;
         double ZX = -1.1*gp.elongation*gp.a;
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, RX, ZX, mag.R0(), 0, 0, true);
+        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, RX, ZX, mag.R0(), 0, 0, false);
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipmin;
-        std::cout << "psi 1 is          "<<psipmax<<"\n";
+        //std::cout << "psi 1 is          "<<psipmax<<"\n";
         dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
-        std::cout << "DONE! Generate X-point flux-aligned grid!\n";
+        std::cout << "DONE! \n";
         dg::Average<dg::HVec > avg_eta( gX2d.grid(), dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d.map();
         dg::SparseTensor<dg::HVec> metricX = gX2d.metric();
@@ -325,7 +248,7 @@ int main( int argc, char* argv[])
         dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
         map1d.emplace_back( "X_psi_area", X_psi_area,
             "Flux area on X-point grid");
-        volumeXGrid = dg::interpolate( X_psi_vol, gX1d.x1(), gX1d);
+        volumeXGrid = dg::interpolate( dg::xspace, X_psi_vol, gX1d.x1(), gX1d);
 
         //Compute FSA of curvature operators
         dg::HVec X_curvNablaBGradPsip( psip_X), X_curvKappaKGradPsip( psip_X), X_gradPsip(psip_X);
@@ -371,6 +294,7 @@ int main( int argc, char* argv[])
 
     ///////////////////Compute flux average////////////////////
     dg::Grid1d grid1d( 0,1,npsi,Npsi, dg::NEU);
+    double deltapsi = 0.1;
     if( !gp.isToroidal())
     {
         std::cout << "Compute flux averages\n";
@@ -392,11 +316,11 @@ int main( int argc, char* argv[])
             map1d.emplace_back("psit1d", psit,
                 "Toroidal flux label psi_t integrated  on grid1d using direct q");
             //we need to avoid integrating >=0
-            dg::Grid1d g1d_fine(psipmin<0. ? psipmin : psipmax, psipmin<0. ? 0. : psipmin, npsi ,Npsi,dg::NEU);
+            dg::Grid1d g1d_fine(psipmin<0. ? psipmin : 0., psipmin<0. ? 0. : psipmin, npsi ,Npsi,dg::NEU);
             qprofile = dg::evaluate( qprof, g1d_fine);
             dg::HVec w1d = dg::create::weights( g1d_fine);
             double psit_tot = dg::blas1::dot( w1d, qprofile);
-            std::cout << "psit tot "<<psit_tot<<"\n";
+            //std::cout << "psit tot "<<psit_tot<<"\n";
             dg::blas1::scal ( psit, 1./psit_tot);
             dg::blas1::transform( psit, psit, dg::SQRT<double>());
             map1d.emplace_back("rho_t", psit,
@@ -415,6 +339,9 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
         map1d.emplace_back("rho", rho,
             "Alternative flux label rho = -psi/psimin + 1");
+        dg::blas1::transform( rho, rho, dg::SQRT<double>());
+        map1d.emplace_back("rho_p", rho,
+            "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
         fsa.set_container( (dg::DVec)curvNablaBGradPsip);
         map1d.emplace_back("curvNablaB_fsa",   dg::evaluate( fsa,      grid1d),
             "Flux surface average of true Nabla B curvature Dot Grad Psip with delta function");
@@ -428,6 +355,7 @@ int main( int argc, char* argv[])
         //other flux labels
         dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag);
         fsi.set_right( xpoint_weights);
+        deltapsi = fsi.get_deltapsi();
 
         dg::HVec areaT_psip = dg::evaluate( fsi, grid1d);
         dg::HVec w1d = dg::create::weights( grid1d);
@@ -448,7 +376,7 @@ int main( int argc, char* argv[])
 
 
         dg::geo::FluxVolumeIntegral<dg::HVec> fvi( (dg::CartesianGrid2d)grid2d, mag);
-        std::cout << "Delta Rho for Flux surface integrals = "<<-fsi.get_deltapsi()/psipmin<<"\n";
+        //std::cout << "Delta Rho for Flux surface integrals = "<<-deltapsi/psipmin<<"\n";
 
         fvi.set_right( xpoint_weights);
         dg::HVec psi_vol = dg::evaluate( fvi, grid1d);
@@ -457,16 +385,17 @@ int main( int argc, char* argv[])
             "Flux volume with delta function");
         double volumeFVI = 2.*M_PI*fvi(psipmax);
         double volumeSep = 2.*M_PI*fvi(0.);
-        std::cout << "VOLUME ENCLOSED BY SEPARATRIX: "<<volumeSep<<"\n";
-        std::cout << "VOLUME TEST WITH COAREA FORMULA: "<<volumeCoarea<<" "<<volumeFVI
+        std::cout << "volume enclosed by separatrix: "<<volumeSep<<"\n";
+        std::cout << "volume test with coarea formula: "<<volumeCoarea<<" "<<volumeFVI
                   <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
         if(gp.hasXpoint()){
-            std::cout << "VOLUME TEST WITH X Grid FORMULA: "<<volumeXGrid<<" "<<volumeFVI
+            std::cout << "volume test with x grid formula: "<<volumeXGrid<<" "<<volumeFVI
                       <<" rel error = "<<fabs(volumeXGrid-volumeFVI)/volumeFVI<<"\n";
         };
     }
 
     /////////////////////////////set up netcdf/////////////////////////////////////
+    std::cout << "CREATING/OPENING FILE AND WRITING ... \n";
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( newfilename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -514,6 +443,75 @@ int main( int argc, char* argv[])
         err = nc_redef(ncid);
     }
     //write 2d vectors
+    std::vector< std::tuple<std::string, std::string, std::function<double(double,double)> > > map{
+        {"Psip", "Flux function", mag.psip()},
+        {"PsipR", "Flux function derivative in R", mag.psipR()},
+        {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
+        {"PsipRR", "Flux function derivative in RR", mag.psipRR()},
+        {"PsipRZ", "Flux function derivative in RZ", mag.psipRZ()},
+        {"PsipZZ", "Flux function derivative in ZZ", mag.psipZZ()},
+        {"Ipol", "Poloidal current", mag.ipol()},
+        {"IpolR", "Poloidal current derivative in R", mag.ipolR()},
+        {"IpolZ", "Poloidal current derivative in Z", mag.ipolZ()},
+        {"Rho_p", "Normalized Poloidal flux label", dg::geo::RhoP(mag)},
+        {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
+        {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
+        {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
+        {"GradLnB", "The parallel derivative of LnB", dg::geo::GradLnB(mag)},
+        {"Divb", "The divergence of the magnetic unit vector", dg::geo::Divb(mag)},
+        {"B_R", "Derivative of Bmodule in R", dg::geo::BR(mag)},
+        {"B_Z", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
+        {"CurvatureNablaBR",  "R-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBR(mag,+1)},
+        {"CurvatureNablaBZ",  "Z-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBZ(mag,+1)},
+        {"CurvatureKappaR",   "R-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaR(mag,+1)},
+        {"CurvatureKappaZ",   "Z-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaZ(mag,+1)},
+        {"DivCurvatureKappa", "Divergence of the (toroidal) Kappa B curvature vector", dg::geo::DivCurvatureKappa(mag,+1)},
+        {"DivCurvatureNablaB","Divergence of the (toroidal) Nabla B curvature vector", dg::geo::DivCurvatureNablaB(mag,+1)},
+        {"TrueCurvatureNablaBR", "R-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBR(mag)},
+        {"TrueCurvatureNablaBZ", "Z-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBZ(mag)},
+        {"TrueCurvatureNablaBP", "Contravariant Phi-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBP(mag)},
+        {"TrueCurvatureKappaR", "R-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaR(mag)},
+        {"TrueCurvatureKappaZ", "Z-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaZ(mag)},
+        {"TrueCurvatureKappaP", "Contravariant Phi-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaP(mag)},
+        {"TrueDivCurvatureKappa", "Divergence of the (true) Kappa B curvature vector", dg::geo::TrueDivCurvatureKappa(mag)},
+        {"TrueDivCurvatureNablaB","Divergence of the (true) Nabla B curvature vector",  dg::geo::TrueDivCurvatureNablaB(mag)},
+        {"BFieldR", "R-component of the magnetic field vector", dg::geo::BFieldR(mag)},
+        {"BFieldZ", "Z-component of the magnetic field vector", dg::geo::BFieldZ(mag)},
+        {"BFieldP", "Contravariant Phi-component of the magnetic field vector", dg::geo::BFieldP(mag)},
+        {"BHatR", "R-component of the magnetic field unit vector", dg::geo::BHatR(mag)},
+        {"BHatZ", "Z-component of the magnetic field unit vector", dg::geo::BHatZ(mag)},
+        {"BHatP", "Contravariant Phi-component of the magnetic field unit vector", dg::geo::BHatP(mag)},
+        {"GradBHatR", "Parallel derivative of BHatR", dg::geo::BHatR(mag)},
+        {"GradBHatZ", "Parallel derivative of BHatZ", dg::geo::BHatZ(mag)},
+        {"GradBHatP", "Parallel derivative of BHatP", dg::geo::BHatP(mag)},
+        {"GradPsip", "Module of gradient of Psip", dg::geo::GradPsip(mag)},
+        //////////////////////////////////
+        {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( gp.psipmin, gp.psipmax), mag.psip())},
+        {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(gp.psipmaxcut), mag.psip()) },
+        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::compose( dg::GaussianDamping( gp.psipmaxcut, p.source_alpha), mag.psip()) },
+        {"ZonalFlow",  "Flux aligned Sine function", dg::compose( dg::SinX ( p.amp, 0., 2.*M_PI*p.k_psi ), mag.psip())},
+        {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( gp.psipmaxlim), mag.psip() )},
+        {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
+                    p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
+                dg::geo::RhoP(mag))},
+        {"ProfileDamping", "Density profile damping", dg::compose(dg::PolynomialHeaviside(
+            1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)) },
+        {"MagneticTransition", "The region where the magnetic field is modified", dg::compose(dg::DPolynomialHeaviside(
+            p.damping_boundary+p.damping_alpha/2.,
+            p.damping_alpha/2., +1 ), dg::geo::RhoP(mag_origin))},
+        {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
+        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipmin*0.2, deltapsi, 1./(sqrt(2.*M_PI)*deltapsi)), mag.psip())},
+        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},
+        ////
+        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
+        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
+            M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
+        { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
+
+    };
+    //allocate mem for visual
+    dg::HVec hvisual;
+    dg::HVec visual;
     for(auto tp : map)
     {
         int vectorID;
@@ -575,7 +573,42 @@ int main( int argc, char* argv[])
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);
     std::cout << "FILE CLOSED AND READY TO USE NOW!\n";
-    std::cout << "Test accuracy of curvatures (values must be close to 0!)\n";
+
+    {
+        std::cout << "test accuracy of psi (values must be close to 0!)\n";
+        const double R_H = gp.R_0-gp.triangularity*gp.a;
+        const double Z_H = gp.elongation*gp.a;
+        const double alpha_ = asin(gp.triangularity);
+        const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
+        const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
+        const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
+
+        if( gp.hasXpoint())
+            std::cout << "    Equilibrium with X-point!\n";
+        else
+            std::cout << "    NO X-point in flux function!\n";
+        std::cout << "psip( 1+e,0)           "<<mag.psip()(gp.R_0 + gp.a, 0.)<<"\n";
+        std::cout << "psip( 1-e,0)           "<<mag.psip()(gp.R_0 - gp.a, 0.)<<"\n";
+        std::cout << "psip( 1-de,ke)         "<<mag.psip()(R_H, Z_H)<<"\n";
+        if( !gp.hasXpoint())
+            std::cout << "psipR( 1-de,ke)        "<<mag.psipR()(R_H, Z_H)<<"\n";
+        else
+        {
+            std::cout << "psip( 1-1.1de,-1.1ke)  "<<mag.psip()(R_X, Z_X)<<"\n";
+            std::cout << "psipZ( 1+e,0)          "<<mag.psipZ()(gp.R_0 + gp.a, 0.)<<"\n";
+            std::cout << "psipZ( 1-e,0)          "<<mag.psipZ()(gp.R_0 - gp.a, 0.)<<"\n";
+            std::cout << "psipR( 1-de,ke)        "<<mag.psipR()(R_H,Z_H)<<"\n";
+            std::cout << "psipR( 1-1.1de,-1.1ke) "<<mag.psipR()(R_X,Z_X)<<"\n";
+            std::cout << "psipZ( 1-1.1de,-1.1ke) "<<mag.psipZ()(R_X,Z_X)<<"\n";
+        }
+        std::cout << "psipZZ( 1+e,0)         "<<mag.psipZZ()(gp.R_0+gp.a,0.)+N1*mag.psipR()(gp.R_0+gp.a,0)<<"\n";
+        std::cout << "psipZZ( 1-e,0)         "<<mag.psipZZ()(gp.R_0-gp.a,0.)+N2*mag.psipR()(gp.R_0-gp.a,0)<<"\n";
+        std::cout << "psipRR( 1-de,ke)       "<<mag.psipRR()(R_H,Z_H)+N3*mag.psipZ()(R_H,Z_H)<<"\n";
+    }
+
+
+    std::cout << "Test accuracy of curvatures (values must be close to 0, but Test may be inaccurate for modified Psi_p)\n";
+    //Test NablaTimes B = B^2( curvK - curvB)
     std::array<dg::HVec, 3> bhat, curvB, curvK;
     dg::pushForward( bhat_.x(), bhat_.y(), bhat_.z(),
             bhat[0], bhat[1], bhat[2], grid3d);
@@ -592,10 +625,12 @@ int main( int argc, char* argv[])
     double error = sqrt(dg::blas1::dot( normb, normb));
     std::cout << "Error in norm b == 1 :  "<<error<<std::endl;
 
+    std::cout << "Push Forward curvatures ...\n";
     dg::pushForward( curvB_.x(), curvB_.y(), curvB_.z(),
             curvB[0], curvB[1], curvB[2], grid3d);
     dg::pushForward( curvK_.x(), curvK_.y(), curvK_.z(),
             curvK[0], curvK[1], curvK[2], grid3d);
+    std::cout << "Done!\n";
     dg::blas1::axpby( 1., curvK, -1., curvB);
     dg::HVec Bmodule = dg::pullback( dg::geo::Bmodule(mag), grid3d);
     dg::blas1::pointwiseDot( Bmodule, Bmodule, Bmodule);
@@ -606,7 +641,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( gp.R_0, IR, R, 0., IR);
     dg::HVec IZ =  dg::pullback( mag.ipolZ(), grid3d);
     dg::blas1::pointwiseDivide( gp.R_0, IZ, R, 0., IZ);
-    dg::HVec IP =  dg::pullback( IPhi( gp), grid3d);
+    dg::HVec IP =  dg::pullback( JPhi( gp), grid3d);
     dg::blas1::pointwiseDivide( gp.R_0, IP, R, 0., IP);
     dg::blas1::axpby( 1., IZ, -1., curvB[0]);
     dg::blas1::axpby( 1., IR, +1., curvB[1]);

@@ -14,7 +14,6 @@
 //#include "guenther.h"
 #include "curvilinearX.h"
 #include "ribeiroX.h"
-#include "init.h"
 #include "ds.h"
 
 double sine( double x) {return sin(x);}

@@ -63,6 +63,7 @@ struct DSField
 {
     //z component of v may not vanish
     //Fields outside g are extended according to bc in g
+    //this extension is not(!) the same as extending the flux function with these bc
     DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
     {
         thrust::host_vector<double> v_zeta, v_eta;
@@ -141,7 +142,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
         is a limiter and 0 if there isn't.
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply.
-    * @param vec The vector field to integrate
+    * @param vec The vector field to integrate. Note that you can control how the boundary conditions are represented by changing vec outside the grid domain using e.g. the \c periodify function.
     * @param grid The grid on which to integrate fieldlines.
     * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc) (see there for more details)
     * function and deterimens what happens when the endpoint of the fieldline integration leaves the domain boundaries of \c grid. Note that \c bcx and \c grid.bcx() have to be either both periodic or both not periodic.

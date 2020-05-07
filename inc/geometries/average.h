@@ -13,49 +13,6 @@ namespace dg
 {
 namespace geo
 {
-/**
- * @brief Delta function for poloidal flux \f$ B_Z\f$
-     \f[ \delta(\psi_p(R,Z)-\psi_0) = \frac{ 1}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
-     @ingroup profiles
- */
-struct DeltaFunction
-{
-    DeltaFunction(const TokamakMagneticField& c, double epsilon,double psivalue) :
-        c_(c), epsilon_(epsilon), psivalue_(psivalue){ }
-    /**
-    * @brief Set a new \f$ \varepsilon\f$
-    *
-    * @param eps new value
-    */
-    void setepsilon(double eps ){epsilon_ = eps;}
-    /**
-    * @brief Set a new \f$ \psi_0\f$
-    *
-    * @param psi_0 new value
-    */
-    void setpsi(double psi_0 ){psivalue_ = psi_0;}
-
-    /**
-     *@brief \f[ \frac{1}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
-     */
-    double operator()( double R, double Z) const
-    {
-        double psip = c_.psip()(R,Z);
-        return 1./sqrt(2.*M_PI*epsilon_)*
-               exp(-( (psip-psivalue_)* (psip-psivalue_))/2./epsilon_);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */
-    double operator()( double R, double Z, double phi) const
-    {
-        return (*this)(R,Z);
-    }
-    private:
-    TokamakMagneticField c_;
-    double epsilon_;
-    double psivalue_;
-};
 
 /**
  * @brief Flux surface integral of the form

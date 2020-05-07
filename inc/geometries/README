@@ -32,7 +32,6 @@
     #utilities
         testfunctors.h
         fluxfunctions.h
-    init.h
     magnetic_field.h
     adaption.h
 

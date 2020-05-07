@@ -8,6 +8,8 @@ namespace dg
 namespace geo
 {
 
+///@addtogroup fluxfunctions
+///@{
 /*! @brief Inject both 2d and 3d \c operator() to a 2d functor
  *
  * The purpose of this class is to extend any 2d Functor to a
@@ -17,7 +19,6 @@ namespace geo
  * to implement this class).
  * @note If you want to write a functor that is both 2d and 3d directly,
  * it is easier to derive from \c aCylindricalFunctor
- * @ingroup fluxfunctions
  * @sa this class is an alternative to \c aCylindricalFunctor and
  * \c aCylindricalFunctor can be converted to this class
  */
@@ -47,7 +48,6 @@ struct RealCylindricalFunctor
 };
 
 ///Most of the times we use \c double
-/// @ingroup fluxfunctions
 using CylindricalFunctor = RealCylindricalFunctor<double>;
 
 /**
@@ -58,7 +58,6 @@ using CylindricalFunctor = RealCylindricalFunctor<double>;
 * where the 3d functor trivially redirects to the 2d version.
 * This behaviour is injected into all classes that derive from this class
 * via the Curiously Recurring Template Pattern (CRTP).
-* @ingroup fluxfunctions
 * @sa \c aCylindricalFunctor
 * @sa An alternative is \c RealCylindricalFunctor
 * @tparam Derived Interface: <tt> double do_compute(double,double) const</tt>
@@ -112,7 +111,6 @@ struct aCylindricalFunctor
 /**
  * @brief The constant functor
  * \f[ f(x,y) = c\f]
-* @ingroup fluxfunctions
  */
 struct Constant: public aCylindricalFunctor<Constant>
 {
@@ -122,40 +120,58 @@ struct Constant: public aCylindricalFunctor<Constant>
     double c_;
 };
 /**
-* @brief Composition \f[ f\circ\psi = f(\psi(R,Z)) \f]
-*
-* @tparam UnaryFunctor A unary Functor with interface <tt>double (double x)</tt>
-* @ingroup profiles
-*/
-template<class UnaryFunctor>
-struct Compose : public aCylindricalFunctor<Compose<UnaryFunctor>>
+ * @brief <tt> (double Z_X)</tt>
+ \f[ f(R,Z)= \begin{cases}
+ 1 \text{ if } Z > Z_X \\
+ 0 \text{ else }
+ \end{cases}
+ \f]
+ */
+struct ZCutter : public aCylindricalFunctor<ZCutter>
 {
-    /**
-    * @brief Construct from 2d functor and forward any parameters to \c UnaryFunctor
-    *
-    * @param psi A binary functor
-    * @param ps Parameters that are forwarded to the constructor of \c UnaryFunctor
-    * @tparam FunctorParams Determined by Compiler
-    */
-    template<class ...FunctorParams>
-    Compose ( CylindricalFunctor psi, FunctorParams&& ... ps): m_psip(psi),
-        m_f(std::forward<FunctorParams>(ps)...){}
-    double do_compute( double R, double Z) const
-    {
-        return m_f(m_psip(R,Z));
+    ZCutter(double ZX): Z_X(ZX){}
+    double do_compute(double R, double Z) const {
+        if( Z > Z_X)
+            return 1;
+        return 0;
     }
     private:
-    CylindricalFunctor m_psip;
-    UnaryFunctor m_f;
+    double Z_X;
 };
 
+/**
+ * @brief This function uses the dg::Grid2d::shift member to extend another function beyond the grid boundaries
+ */
 struct Periodify : public aCylindricalFunctor<Periodify>
 {
-    Periodify( CylindricalFunctor functor): m_f(functor){}
+    /**
+     * @brief Construct from grid
+     *
+     * @param functor the functor to periodify
+     * @param g The grid provides the shift member
+     */
+    Periodify( CylindricalFunctor functor, dg::Grid2d g): m_g( g), m_f(functor) {}
+    /**
+     * @brief provide 2d grid boundaries by hand
+     *
+     * @param functor the functor to periodify
+     * @param R0 left boundary in R
+     * @param R1 right boundary in R
+     * @param Z0 lower boundary in Z
+     * @param Z1 upper boundary in Z
+     * @param bcx boundary condition in x (determines how function is periodified)
+     * @param bcy boundary condition in y (determines how function is periodified)
+     */
+    Periodify( CylindricalFunctor functor, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy): m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor) {}
     double do_compute( double R, double Z) const
     {
+        bool negative = false;
+        m_g.shift( negative, R, Z);
+        if( negative) return -m_f(R,Z);
+        return m_f( R, Z);
     }
     private:
+    dg::Grid2d m_g;
     CylindricalFunctor m_f;
 };
 
@@ -163,7 +179,6 @@ struct Periodify : public aCylindricalFunctor<Periodify>
 * @brief This struct bundles a function and its first derivatives
 *
 * @snippet hector_t.cu doxygen
-* @ingroup fluxfunctions
 */
 struct CylindricalFunctorsLvl1
 {
@@ -195,11 +210,12 @@ struct CylindricalFunctorsLvl1
     private:
     std::array<CylindricalFunctor,3> p_;
 };
+
+
 /**
 * @brief This struct bundles a function and its first and second derivatives
 *
 * @snippet hector_t.cu doxygen
-* @ingroup fluxfunctions
 */
 struct CylindricalFunctorsLvl2
 {
@@ -241,9 +257,38 @@ struct CylindricalFunctorsLvl2
     CylindricalFunctorsLvl1 f0,f1;
 };
 
+
+/**
+ * @brief This function finds critical points of psi (any point with vanishing gradient, including the X-point or O-point) via Newton iteration applied to the gradient of psi
+ *
+ * The inverse of the Hessian matrix is computed analytically
+ * @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+ * @param R_X start value on input, critical point on output
+ * @param Z_X start value on input, critical point on output
+ * @ingroup misc_geo
+ */
+static inline void findOpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
+{
+    std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
+    X[0] = R_X, X[1] = Z_X;
+    double eps = 1e10, eps_old= 2e10;
+    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10)
+    {
+        X_OLD = X; eps= eps_old;
+        double psipRZ = psi.dfxy()(X[0], X[1]);
+        double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+        double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        XN[0] = X[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
+        XN[1] = X[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
+        XN.swap(X);
+        eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
+    }
+    R_X = X[0], Z_X = X[1];
+}
+
 /// A symmetric 2d tensor field and its divergence
 ///@snippet hector_t.cu doxygen
-///@ingroup fluxfunctions
 struct CylindricalSymmTensorLvl1
 {
     /**
@@ -295,7 +340,6 @@ struct CylindricalSymmTensorLvl1
 
 /// A vector field with three components that depend only on the first two coordinates
 ///@snippet ds_t.cu doxygen
-///@ingroup fluxfunctions
 struct CylindricalVectorLvl0
 {
     CylindricalVectorLvl0(){}
@@ -331,7 +375,6 @@ struct CylindricalVectorLvl0
  * @param g The vector field is pushed unto this grid
  * @return The tensor \c chi living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
- * @ingroup fluxfunctions
  */
 template<class Geometry3d>
 dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
@@ -365,7 +408,6 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
  * @param g The vector field is pushed unto this grid
  * @return The tensor \c chi living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
- * @ingroup fluxfunctions
  */
 template<class Geometry3d>
 dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor(
