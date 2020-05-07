@@ -17,7 +17,6 @@
 #include "solovev.h"
 #include "hector.h"
 //#include "refined_conformal.h"
-#include "init.h"
 
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)

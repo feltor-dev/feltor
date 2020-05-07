@@ -28,11 +28,9 @@ struct Parameters
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
-    double alpha_mag, alpha, beta;
-    double rho_source, rho_damping;
 
     double nu_perp, nu_parallel;
-    double eta;
+    double eta, beta;
 
     double amp;
     double sigma;
@@ -40,7 +38,9 @@ struct Parameters
     double sigma_z;
     double k_psi;
 
-    double omega_source, omega_damping;
+    double source_rate, damping_rate;
+    double damping_alpha, source_alpha, profile_alpha;
+    double source_boundary, damping_boundary;
     double nprofamp;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
@@ -48,7 +48,7 @@ struct Parameters
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
     std::string source_type;
-    bool symmetric;
+    bool symmetric, periodify;
     Parameters() = default;
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
@@ -70,9 +70,10 @@ struct Parameters
 
         eps_gamma   = js["eps_gamma"].asDouble();
         stages      = js.get( "stages", 3).asUInt();
-        mx          = js["refineDS"].get( 0u, 10).asUInt();
-        my          = js["refineDS"].get( 1u, 10).asUInt();
-        rk4eps      = js.get( "rk4eps", 1e-6).asDouble();
+        mx          = js["FCI"]["refine"].get( 0u, 1).asUInt();
+        my          = js["FCI"]["refine"].get( 1u, 1).asUInt();
+        rk4eps      = js["FCI"].get( "rk4eps", 1e-6).asDouble();
+        periodify   = js["FCI"].get( "periodify", true).asBool();
 
         mu[0]       = js["mu"].asDouble();
         mu[1]       = +1.;
@@ -84,21 +85,25 @@ struct Parameters
         nu_parallel = js["nu_parallel"].asDouble();
         eta         = js["resistivity"].asDouble();
 
-        amp         = js["amplitude"].asDouble();
+        initne      = js.get( "initne", "blob").asString();
+        initphi     = js.get( "initphi", "zero").asString();
+        amp         = js["amp"].asDouble();
         sigma       = js["sigma"].asDouble();
         posX        = js["posX"].asDouble();
         posY        = js["posY"].asDouble();
         sigma_z     = js["sigma_z"].asDouble();
         k_psi       = js["k_psi"].asDouble();
 
-        nprofamp  = js["nprofileamp"].asDouble();
-        omega_source  = js.get("source", 0.).asDouble();
-        source_type  = js.get("source_type", "profile").asString();
-        omega_damping = js.get("damping", 0.).asDouble();
-        alpha_mag    = js.get("alpha_mag", 0.05).asDouble();
-        alpha        = js.get("alpha", 0.2).asDouble();
-        rho_source   = js.get("rho_source", 0.2).asDouble();
-        rho_damping  = js.get("rho_damping", 1.2).asDouble();
+        nprofamp   = js["profile"]["amp"].asDouble();
+        profile_alpha = js["profile"]["alpha"].asDouble();
+
+        source_rate     = js["source"].get("rate", 0.).asDouble();
+        source_type     = js["source"].get("type", "profile").asString();
+        source_boundary = js["source"].get("boundary", 0.2).asDouble();
+        source_alpha    = js["source"].get("alpha", 0.2).asDouble();
+        damping_rate = js["damping"].get("rate", 0.).asDouble();
+        damping_alpha= js["damping"].get("alpha", 0.05).asDouble();
+        damping_boundary = js["damping"].get("boundary", 1.2).asDouble();
 
         bcxN = dg::str2bc(js["bc"]["density"][0].asString());
         bcyN = dg::str2bc(js["bc"]["density"][1].asString());
@@ -107,13 +112,11 @@ struct Parameters
         bcxP = dg::str2bc(js["bc"]["potential"][0].asString());
         bcyP = dg::str2bc(js["bc"]["potential"][1].asString());
 
-        boxscaleRm  = js["boxscaleR"].get(0u,1.05).asDouble();
-        boxscaleRp  = js["boxscaleR"].get(1u,1.05).asDouble();
-        boxscaleZm  = js["boxscaleZ"].get(0u,1.05).asDouble();
-        boxscaleZp  = js["boxscaleZ"].get(1u,1.05).asDouble();
+        boxscaleRm  = js["box"]["scaleR"].get(0u,1.05).asDouble();
+        boxscaleRp  = js["box"]["scaleR"].get(1u,1.05).asDouble();
+        boxscaleZm  = js["box"]["scaleZ"].get(0u,1.05).asDouble();
+        boxscaleZp  = js["box"]["scaleZ"].get(1u,1.05).asDouble();
 
-        initne      = js.get( "initne", "blob").asString();
-        initphi     = js.get( "initphi", "zero").asString();
         curvmode    = js.get( "curvmode", "toroidal").asString();
         symmetric   = js.get( "symmetric", false).asBool();
     }
@@ -141,12 +144,13 @@ struct Parameters
             <<"    init n_e:     "<<initne<<"\n"
             <<"    init Phi:     "<<initphi<<"\n";
         os << "Profile parameters are: \n"
-            <<"     omega_source:                 "<<omega_source<<"\n"
-            <<"     rho_source:                   "<<rho_source<<"\n"
-            <<"     omega_damping:                "<<omega_damping<<"\n"
-            <<"     rho_damping:                  "<<rho_damping<<"\n"
-            <<"     alpha_mag:                    "<<alpha_mag<<"\n"
-            <<"     alpha:                        "<<alpha<<"\n"
+            <<"     source_rate:                  "<<source_rate<<"\n"
+            <<"     source_boundary:              "<<source_boundary<<"\n"
+            <<"     source_alpha:                 "<<source_alpha<<"\n"
+            <<"     source_type:                  "<<source_type<<"\n"
+            <<"     damping_rate:                 "<<damping_rate<<"\n"
+            <<"     damping_boundary:             "<<damping_boundary<<"\n"
+            <<"     damping_alpha:                "<<damping_alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
@@ -164,7 +168,8 @@ struct Parameters
             <<"     Accuracy Time  CG:    "<<eps_time<<"\n"
             <<"     Accuracy Time Stepper "<<rtol<<"\n"
             <<"     Accuracy Fieldline    "<<rk4eps<<"\n"
-            <<"     Refined DS            "<<mx<<" "<<my<<"\n";
+            <<"     Periodify FCI         "<<std::boolalpha<< periodify<<"\n"
+            <<"     Refined FCI           "<<mx<<" "<<my<<"\n";
         os << "Output parameters are: \n"
             <<"     n_out  =                 "<<n_out<<"\n"
             <<"     Nx_out =                 "<<Nx_out<<"\n"

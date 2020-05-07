@@ -98,8 +98,11 @@ void average_mpi( CudaTag, unsigned nx, unsigned ny, const value_type* in0, cons
     static thrust::host_vector<value_type> h_round;
     d_accumulator.resize( ny*exblas::BIN_COUNT);
     int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
+    int status = 0;
     for( unsigned i=0; i<ny; i++)
-        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT]);
+        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT], &status);
+    if(status != 0)
+        throw dg::Error(dg::Message(_ping_)<<"MPI GPU Average failed since one of the inputs contains NaN or Inf");
     h_accumulator2 = d_accumulator;
     h_accumulator.resize( h_accumulator2.size());
     exblas::reduce_mpi_cpu( ny, &h_accumulator2[0], &h_accumulator[0], comm, comm_mod, comm_mod_reduce);

@@ -13,7 +13,6 @@
 #include "solovev.h"
 #include "ribeiro.h"
 //#include "ds.h"
-#include "init.h"
 
 #include "dg/file/nc_utilities.h"
 
@@ -157,7 +156,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::geo::Iris iris(psip.f(), gp.psipmin, gp.psipmax);
+    auto iris = dg::compose( dg::Iris(gp.psipmin, gp.psipmax), psip.f()) ;
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
 //     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);

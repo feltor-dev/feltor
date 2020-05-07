@@ -26,10 +26,10 @@ namespace geo{
 ///@ingroup fieldaligned
 enum whichMatrix
 {
-    einsPlus = 0,   /// plus interpolation in next plane
-    einsPlusT = 1,  /// transposed plus interpolation in previous plane
-    einsMinus = 2,  /// minus interpolation in previous plane
-    einsMinusT = 3, /// transposed minus interpolation in next plane
+    einsPlus = 0,   //!< plus interpolation in next plane
+    einsPlusT = 1,  //!< transposed plus interpolation in previous plane
+    einsMinus = 2,  //!< minus interpolation in previous plane
+    einsMinusT = 3, //!< transposed minus interpolation in next plane
 };
 
 ///@brief Full Limiter means there is a limiter everywhere
@@ -46,10 +46,9 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
+    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v):v_(v){ }
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
-        m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
         double vz = v_.z()(R, Z);
         yp[0] = v_.x()(R, Z)/vz;
         yp[1] = v_.y()(R, Z)/vz;
@@ -58,12 +57,13 @@ struct DSFieldCylindrical
 
     private:
     dg::geo::CylindricalVectorLvl0 v_;
-    dg::Grid2d m_b;
 };
 
 struct DSField
 {
     //z component of v may not vanish
+    //Fields outside g are extended according to bc in g
+    //this extension is not(!) the same as extending the flux function with these bc
     DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
     {
         thrust::host_vector<double> v_zeta, v_eta;
@@ -77,16 +77,11 @@ struct DSField
         dsdphi_     = dg::forward_transform( v_phi, g );
     }
     //interpolate the vectors given in the constructor on the given point
-    //if point lies outside of grid boundaries zero is returned
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
-        double R = y[0], Z = y[1];
-        g_->shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
-        {
-            yp[0] = interpolate(dg::lspace, dzetadphi_, R, Z, *g_);
-            yp[1] = interpolate(dg::lspace, detadphi_,  R, Z, *g_);
-            yp[2] = interpolate(dg::lspace, dsdphi_,    R, Z, *g_);
-        }
+        yp[0] = interpolate(dg::lspace, dzetadphi_, y[0], y[1], *g_);
+        yp[1] = interpolate(dg::lspace, detadphi_,  y[0], y[1], *g_);
+        yp[2] = interpolate(dg::lspace, dsdphi_,    y[0], y[1], *g_);
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
@@ -117,7 +112,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field);
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
     unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
@@ -147,7 +142,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
         is a limiter and 0 if there isn't.
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply.
-    * @param vec The vector field to integrate
+    * @param vec The vector field to integrate. Note that you can control how the boundary conditions are represented by changing vec outside the grid domain using e.g. the \c periodify function.
     * @param grid The grid on which to integrate fieldlines.
     * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc) (see there for more details)
     * function and deterimens what happens when the endpoint of the fieldline integration leaves the domain boundaries of \c grid. Note that \c bcx and \c grid.bcx() have to be either both periodic or both not periodic.
@@ -327,7 +322,9 @@ struct Fieldaligned
     container evaluate( const BinaryOp& binary, const UnaryOp& unary, unsigned p0, unsigned rounds) const;
 
     /**
-    * @brief Applies the interpolation
+    * @brief Apply the interpolation to three-dimensional vectors
+    *
+    * computes \f$  y = 1^\pm \otimes \mathcal T x\f$
     * @param which specify what interpolation should be applied
     * @param in input
     * @param out output may not equal input
@@ -351,6 +348,21 @@ struct Fieldaligned
     }
     ///Grid used for construction
     const ProductGeometry& grid()const{return *m_g;}
+
+    /**
+    * @brief Interpolate along fieldlines from a coarse to a fine grid in phi
+    *
+    * In this function we assume that the Fieldaligned object lives on the fine
+    * grid and we now want to interpolate values from a vector living on a coarse grid along the fieldlines onto the fine grid.
+    * Here, coarse and fine are with respect to the phi direction. The perpendicular directions need to have the same resolution in both input and output, i.e. there
+    * is no interpolation in those directions.
+    * @param grid_coarse The coarse grid (\c coarse_grid.Nz() must integer divide \c Nz from input grid) The x and y dimensions must be equal
+    * @param coarse the coarse input vector
+    *
+    * @return the input interpolated onto the grid given in the constructor
+    * @note the interpolation weights are taken in the phi distance not the s-distancewhich makes the interpolation linear in phi
+    */
+    container interpolate_from_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse);
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -534,6 +546,49 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
     return vec3d;
 }
 
+template<class G, class I, class container>
+container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& grid, const container& in)
+{
+    //I think we need grid as input to split input vector and we need to interpret
+    //the grid nodes as node centered not cell-centered!
+    //idea: apply I+/I- cphi - 1 times in each direction and then apply interpolation formula
+    assert( m_g->Nz() % grid.Nz() == 0);
+    unsigned Nz_coarse = grid.Nz(), Nz = m_g->Nz();
+    unsigned cphi = Nz / Nz_coarse;
+
+    container out = dg::evaluate( dg::zero, *m_g);
+    container helper = dg::evaluate( dg::zero, *m_g);
+    dg::split( helper, m_temp, *m_g);
+    std::vector<dg::View< container>> out_split = dg::split( out, *m_g);
+    std::vector<dg::View< const container>> in_split = dg::split( in, grid);
+    for ( int i=0; i<(int)Nz_coarse; i++)
+    {
+        //1. copy input vector to appropriate place in output
+        dg::blas1::copy( in_split[i], out_split[i*cphi]);
+        dg::blas1::copy( in_split[i], m_temp[i*cphi]);
+    }
+    //Step 1 needs to finish so that m_temp contains values everywhere
+    //2. Now apply plus and minus T to fill in the rest
+    for ( int i=0; i<(int)Nz_coarse; i++)
+    {
+        for( int j=1; j<(int)cphi; j++)
+        {
+            //!!! The value of f at the plus plane is I^- of the current plane
+            dg::blas2::symv( m_minus, out_split[i*cphi+j-1], out_split[i*cphi+j]);
+            //!!! The value of f at the minus plane is I^+ of the current plane
+            dg::blas2::symv( m_plus, m_temp[(i*cphi+cphi+1-j)%Nz], m_temp[i*cphi+cphi-j]);
+        }
+    }
+    //3. Now add up with appropriate weights
+    for( int i=0; i<(int)Nz_coarse; i++)
+        for( int j=1; j<(int)cphi; j++)
+        {
+            double alpha = (double)(cphi-j)/(double)cphi;
+            double beta = (double)j/(double)cphi;
+            dg::blas1::axpby( alpha, out_split[i*cphi+j], beta, m_temp[i*cphi+j], out_split[i*cphi+j]);
+        }
+    return out;
+}
 
 template<class G, class I, class container>
 void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe)

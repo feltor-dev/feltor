@@ -199,11 +199,11 @@ int main()
 }
 ----
 
-To compile and run this code for a GPU use
+To compile and run this code for a GPU use (assuming the external libraries are linked in the `include` folder as described above)
 
 [source,sh]
 ----
-nvcc -x cu -std=c++11 -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+nvcc -x cu -std=c++11 -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -212,7 +212,7 @@ functions you can also use
 
 [source,sh]
 ----
-g++ -std=c++11 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+g++ -std=c++11 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 export OMP_NUM_THREADS=4
 ./test
 ----
@@ -255,7 +255,7 @@ Compile e.g. for a hybrid MPI {plus} OpenMP hardware platform with
 
 [source,sh]
 ----
-mpic++ -std=c++11 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test_mpi.cpp -o test_mpi
+mpic++ -std=c++11 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test_mpi.cpp -o test_mpi
 export OMP_NUM_THREADS=2
 mpirun -n 4 ./test_mpi
 ----

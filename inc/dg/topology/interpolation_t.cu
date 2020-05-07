@@ -94,7 +94,7 @@ int main()
         //create equidistant values
         x[i] = g1d.x0() + g1d.lx() + (i+0.5)*g1d.h()/(double)(g1d.n());
         //use DIR because the cooX1d is zero on the right boundary
-        double xi = dg::interpolate( xs, x[i], g1d, dg::DIR);
+        double xi = dg::interpolate( dg::xspace,xs, x[i], g1d, dg::DIR);
         if( x[i] - xi > 1e-14)
         {
             std::cerr << "X NOT EQUAL "<<i<<"\t"<<x[i]<<"  \t"<<xi<<"\n";

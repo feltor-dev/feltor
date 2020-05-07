@@ -559,8 +559,8 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
  * This subsequently modifies all derivatives of psi and the poloidal
  * current.
  * @param gp Solovev parameters
- * @param psi0 above this value psi is modified to a constant psi0
- * @param alpha determines how quickly the modification acts (smaller is quicker)
+ * @param psi0 boundary value where psi is modified to a constant psi0
+ * @param alpha radius of the transition region where the modification acts (smaller is quicker)
  * @param sign determines which side of Psi to dampen (negative or positive)
  * @return A magnetic field object
  * @ingroup geom

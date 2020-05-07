@@ -250,7 +250,7 @@ struct MultigridCG2d
     unsigned num_stages()const{return m_stages;}
 
     ///observe the grids at all stages
-    ///@param stage must fulfill \c 0<stage<stages()
+    ///@param stage must fulfill \c 0 <= stage < stages()
     const Geometry& grid( unsigned stage) const {
         return *(m_grids[stage]);
     }

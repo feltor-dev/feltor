@@ -283,28 +283,17 @@ class Elliptic
         dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( 0 != m_jfactor )
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
     }
     private:
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_temp;
@@ -453,6 +442,8 @@ class Elliptic3d
      * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
      * set each part seperately. This functions sets the tensor part.
      *
+     * @note The class will take care of the volume element in the divergence so do not multiply it to \c tau yourself
+     *
      * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
      * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
      */
@@ -560,8 +551,11 @@ class Elliptic3d
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if( 0 != m_jfactor )
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
@@ -569,20 +563,6 @@ class Elliptic3d
     }
 
     private:
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_tempz, m_temp;

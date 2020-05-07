@@ -7,6 +7,7 @@
 #endif
 #include <vector>
 #include <random>
+#include <functional>
 #include "blas1.h"
 #include "topology/grid.h"
 #include "topology/evaluation.h"
@@ -1805,6 +1806,60 @@ struct Histogram2D
     double binwidthx_,binwidthy_;
     container count_;
 };
+
+
+///@cond
+namespace detail
+{
+template<class F, class G>
+struct Compose
+{
+    Compose( F f, G g):m_f(f), m_g(g){}
+    template<class ...Xs>
+    auto operator() ( Xs&& ... xs){
+        return m_f(m_g(std::forward<Xs>(xs)...));
+    }
+    template<class ...Xs>
+    auto operator() ( Xs&& ... xs) const {
+        return m_f(m_g(std::forward<Xs>(xs)...));
+    }
+    private:
+    F m_f;
+    G m_g;
+};
+}//namespace detail
+///@endcond
+
+/**
+ * @brief Function composition \f$ f(g(x_0,x_1,...)) \f$
+ *
+ * @code{.cpp}
+ * dg::Grid2d grid2d( -1., 1., -1., 1., 3, 40, 40);
+ * //Mark everything above 2 with 1s and below with 0s
+ * dg::HVec fg = dg::evaluate( dg::compose( dg::Heaviside( 2.), dg::Gaussian( 0., 0., 2., 2., 4.)), grid2d);
+ * @endcode
+ * @tparam F Outer functor
+ * @tparam G Inner functor
+ * @param f outer functor
+ * @param g inner functor
+ * @note only works for host functions. If a version for device functions is ever needed
+ * it can be easily provided
+ *
+ * @return a function object that forwards all parameters to g and returns the
+ * return value of f, which is \f$ f(g(x_0,x_1,...)) \f$
+ */
+template <class F, class G>
+auto compose( F f, G g) {
+    return detail::Compose<F,G>( f, g);
+    //a C++-14 way of generating a generic lambda with a parameter pack. Taken from:
+    //https://stackoverflow.com/questions/19071268/function-composition-in-c-c11
+    //return [f,g](auto&&... xs){ return f(g(std::forward<decltype(xs)>(xs)...));};
+}
+///Composition of an arbitrary number of functions \f$ f_0(f_1(f_2( ... (x_0, x_1, ...)))\f$
+template <class F, typename... Fs>
+auto compose(F f, Fs... fs) {
+    return compose( f , compose(fs...));
+}
 ///@}
 } //namespace dg
 

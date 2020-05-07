@@ -150,6 +150,8 @@ void jacobian(
 struct Variables{
     feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
     feltor::Parameters p;
+    dg::geo::solovev::Parameters gp;
+    dg::geo::TokamakMagneticField mag;
     std::array<DVec, 3> gradPsip;
     std::array<DVec, 3> tmp;
 };
@@ -164,7 +166,7 @@ struct Record{
 struct Record_static{
     std::string name;
     std::string long_name;
-    std::function<void( HVec&, Variables&, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag)> function;
+    std::function<void( HVec&, Variables&, Geometry& grid)> function;
 };
 
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -173,46 +175,46 @@ struct Record_static{
 //Here is a list of static (time-independent) 3d variables that go into the output
 std::vector<Record_static> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            dg::geo::BFieldR fieldR(mag);
+        []( HVec& result, Variables& v, Geometry& grid){
+            dg::geo::BFieldR fieldR(v.mag);
             result = dg::pullback( fieldR, grid);
         }
     },
     { "BZ", "Z-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            dg::geo::BFieldZ fieldZ(mag);
+        []( HVec& result, Variables& v, Geometry& grid){
+            dg::geo::BFieldZ fieldZ(v.mag);
             result = dg::pullback( fieldZ, grid);
         }
     },
     { "BP", "Contravariant P-component of magnetic field in cylindrical coordinates",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            dg::geo::BFieldP fieldP(mag);
+        []( HVec& result, Variables& v, Geometry& grid){
+            dg::geo::BFieldP fieldP(v.mag);
             result = dg::pullback( fieldP, grid);
         }
     },
     { "Psip", "Flux-function psi",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-             result = dg::pullback( mag.psip(), grid);
+        []( HVec& result, Variables& v, Geometry& grid){
+             result = dg::pullback( v.mag.psip(), grid);
         }
     },
     { "Nprof", "Density profile (that the source may force)",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             result = dg::evaluate( dg::zero, grid);
             bool fixed_profile;
             HVec source = feltor::source_profiles.at(v.p.source_type)(
-                fixed_profile, result, grid, v.p, gp, mag);
+                fixed_profile, result, grid, v.p, v.gp, v.mag);
         }
     },
     { "Source", "Source region",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             bool fixed_profile;
             HVec profile;
             result = feltor::source_profiles.at(v.p.source_type)(
-                fixed_profile, profile, grid, v.p, gp, mag);
+                fixed_profile, profile, grid, v.p, v.gp, v.mag);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -221,7 +223,7 @@ std::vector<Record_static> diagnostics3d_static_list = {
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -230,7 +232,7 @@ std::vector<Record_static> diagnostics3d_static_list = {
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             HVec xc = dg::evaluate( dg::cooX3d, grid);
             HVec yc = dg::evaluate( dg::cooY3d, grid);
             HVec zc = dg::evaluate( dg::cooZ3d, grid);
@@ -239,6 +241,20 @@ std::vector<Record_static> diagnostics3d_static_list = {
         }
     },
 };
+
+std::array<std::tuple<std::string, std::string, HVec>, 3> generate_cyl2cart( Geometry& grid)
+{
+    HVec xc = dg::evaluate( dg::cooX3d, grid);
+    HVec yc = dg::evaluate( dg::cooY3d, grid);
+    HVec zc = dg::evaluate( dg::cooZ3d, grid);
+    dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+    std::array<std::tuple<std::string, std::string, HVec>, 3> list = {{
+        { "xc", "x-coordinate in Cartesian coordinate system", xc },
+        { "yc", "y-coordinate in Cartesian coordinate system", yc },
+        { "zc", "z-coordinate in Cartesian coordinate system", zc }
+    }};
+    return list;
+}
 
 // Here are all 3d outputs we want to have
 std::vector<Record> diagnostics3d_list = {
@@ -275,70 +291,70 @@ std::vector<Record> diagnostics3d_list = {
 };
 
 //Here is a list of static (time-independent) 2d variables that go into the output
-//( we make 3d variables here that but only the first 2d slice is output)
+//( we make 3d variables here but only the first 2d slice is output)
 std::vector<Record_static> diagnostics2d_static_list = {
     { "Psip2d", "Flux-function psi",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            result = dg::pullback( mag.psip(), grid);
+        []( HVec& result, Variables& v, Geometry& grid ){
+            result = dg::pullback( v.mag.psip(), grid);
         }
     },
     { "Ipol", "Poloidal current",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            result = dg::pullback( mag.ipol(), grid);
+        []( HVec& result, Variables& v, Geometry& grid ){
+            result = dg::pullback( v.mag.ipol(), grid);
         }
     },
     { "Bmodule", "Magnetic field strength",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
-            result = dg::pullback( dg::geo::Bmodule(mag), grid);
+        []( HVec& result, Variables& v, Geometry& grid ){
+            result = dg::pullback( dg::geo::Bmodule(v.mag), grid);
         }
     },
     { "Divb", "The divergence of the magnetic unit vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             result = v.f.divb();
         }
     },
     { "InvB", "Inverse of Bmodule",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             result = v.f.binv();
         }
     },
     { "CurvatureKappaR", "R-component of the Kappa B curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid ){
             result = v.f.curvKappa()[0];
         }
     },
     { "CurvatureKappaZ", "Z-component of the Kappa B curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.curvKappa()[1];
         }
     },
     { "CurvatureKappaP", "Contravariant Phi-component of the Kappa B curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.curvKappa()[2];
         }
     },
     { "DivCurvatureKappa", "Divergence of the Kappa B curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.divCurvKappa();
         }
     },
     { "CurvatureR", "R-component of the curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.curv()[0];
         }
     },
     { "CurvatureZ", "Z-component of the full curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.curv()[1];
         }
     },
     { "CurvatureP", "Contravariant Phi-component of the full curvature vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.curv()[2];
         }
     },
     { "bphi", "Contravariant Phi-component of the magnetic unit vector",
-        []( HVec& result, Variables& v, Geometry& grid, const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag ){
+        []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.bphi();
         }
     }
@@ -380,9 +396,15 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::copy(v.f.induction(), result);
         }
     },
+    /// -----------------Miscellaneous additions --------------------//
     {"vorticity", "Minus Lap_perp of electric potential", false,
         []( DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.lapMperpP(0), result);
+        }
+    },
+    {"apar_vorticity", "Minus Lap_perp of magnetic potential", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.lapMperpA(), result);
         }
     },
     {"dssue", "2nd parallel derivative of electron velocity", false,
@@ -398,35 +420,6 @@ std::vector<Record> diagnostics2d_list = {
     {"dpue2", "1st varphi derivative squared of electron velocity", false,
         []( DVec& result, Variables& v ) {
              dg::blas1::pointwiseDot(v.f.gradU(0)[2], v.f.gradU(0)[2], result);
-        }
-    },
-    {"apar_vorticity", "Minus Lap_perp of magnetic potential", false,
-        []( DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.lapMperpA(), result);
-        }
-    },
-    {"neue", "Product of electron density and velocity", false,
-        []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot(
-                v.f.density(0), v.f.velocity(0), result);
-        }
-    },
-    {"niui", "Product of ion gyrocentre density and velocity", false,
-        []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot(
-                v.f.density(1), v.f.velocity(1), result);
-        }
-    },
-    {"neuebphi", "Product of neue and covariant phi component of magnetic field unit vector", false,
-        []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( 1.,
-                v.f.density(0), v.f.velocity(0), v.f.bphi(), 0., result);
-        }
-    },
-    {"niuibphi", "Product of NiUi and covariant phi component of magnetic field unit vector", false,
-        []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( 1.,
-                v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., result);
         }
     },
     {"lperpinv", "Perpendicular density gradient length scale", false,
@@ -506,6 +499,13 @@ std::vector<Record> diagnostics2d_list = {
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             );
+        }
+    },
+    {"jsneE_tt", "Radial electron particle flux: ExB contribution (Time average)", true,
+        []( DVec& result, Variables& v ) {
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( result, v.f.density(0), result);
         }
     },
     {"lneperp_tt", "Perpendicular electron diffusion (Time average)", true,
@@ -834,7 +834,111 @@ std::vector<Record> diagnostics2d_list = {
             }
         }
     },
-    /// --------------------- Vorticity source terms ---------------------------//
+    {"sosne_tt", "ExB vorticity source term with electron source", true,
+        []( DVec& result, Variables& v){
+            routines::dot( v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.sources()[0][0], 0., result);
+        }
+    },
+    {"sospi_tt", "Diamagnetic vorticity source term with electron source", true,
+        []( DVec& result, Variables& v){
+            v.f.compute_gradS( 0, v.tmp);
+            routines::dot( v.tmp, v.gradPsip, result);
+            dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
+        }
+    },
+    {"loexbe_tt", "Vorticity dissipation term with electron Lambda", true,
+        []( DVec& result, Variables& v){
+            routines::dot( v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
+
+            v.f.compute_diffusive_lapMperpN( v.f.density(0), v.tmp[0], v.tmp[1]);
+            dg::blas1::scal( v.tmp[1], -v.p.nu_perp);
+            dg::blas1::pointwiseDot( v.p.nu_parallel, v.f.divb(), v.f.dsN(0),
+                                     0., v.tmp[2]);
+            dg::blas1::axpby( v.p.nu_parallel, v.f.dssN(0), 1., v.tmp[2]);
+            dg::blas1::axpby( 1., v.tmp[1], 1., v.tmp[2]); //Lambda_ne
+            dg::blas1::pointwiseDot( v.tmp[2], result, result);
+
+            dg::blas1::scal( result, v.p.mu[1]);
+        }
+    },
+    ///-----------------------Parallel momentum terms ------------------------//
+    {"neue", "Product of electron density and velocity", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(
+                v.f.density(0), v.f.velocity(0), result);
+        }
+    },
+    {"niui", "Product of ion gyrocentre density and velocity", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(
+                v.f.density(1), v.f.velocity(1), result);
+        }
+    },
+    {"neuebphi", "Product of neue and covariant phi component of magnetic field unit vector", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( 1.,
+                v.f.density(0), v.f.velocity(0), v.f.bphi(), 0., result);
+        }
+    },
+    {"niuibphi", "Product of NiUi and covariant phi component of magnetic field unit vector", false,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( 1.,
+                v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., result);
+        }
+    },
+    /// --------------------- Parallel momentum flux terms ---------------------//
+    {"jsparexbi_tt", "Parallel momentum radial flux by ExB velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // parallel momentum mu_iN_iU_i
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( result, v.tmp[0], result);
+        }
+    },
+    {"jsparbphiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // parallel momentum mu_iN_iU_i
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0],v.f.bphi(), 0., result);
+        }
+    },
+    /// --------------------- Parallel momentum source terms ---------------------//
+    {"sparsni_tt", "Parallel momentum source by density source", true,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( v.p.mu[1],
+                v.f.sources()[0][1], v.f.velocity(1), 0., result);
+        }
+    },
+    {"sparsnibphi_tt", "Parallel angular momentum source by density source", true,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( v.p.mu[1],
+                v.f.sources()[0][1], v.f.velocity(0), v.f.bphi(), 0., result);
+        }
+    },
+    /// --------------------- Mirror force term ---------------------------//
+    {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
+        []( DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.divb(), v.f.density(0), 0., result);
+        }
+    },
+    {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.divb(), v.f.density(1), 0., result);
+        }
+    },
+    /// --------------------- Lorentz force terms ---------------------------//
     {"socurve_tt", "Vorticity source term electron curvature (Time average)", true,
         []( DVec& result, Variables& v) {
             routines::dot( v.f.curv(), v.gradPsip, result);
@@ -859,6 +963,19 @@ std::vector<Record> diagnostics2d_list = {
             routines::dot( v.f.curvKappa(), v.gradPsip, result);
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.velocity(1), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], result, 0., result);
+        }
+    },
+    /// --------------------- Zonal flow energy terms------------------------//
+    {"nei0", "inertial factor", false,
+        []( DVec& result, Variables& v ) {
+            result = dg::pullback( dg::geo::Hoo( v.mag), v.f.grid());
+            dg::blas1::pointwiseDot( v.f.density(0), result, result);
+        }
+    },
+    {"snei0", "inertial factor source", false,
+        []( DVec& result, Variables& v ) {
+            result = dg::pullback( dg::geo::Hoo( v.mag), v.f.grid());
+            dg::blas1::pointwiseDot( v.f.sources()[0][0], result, result);
         }
     },
 

@@ -26,7 +26,40 @@
 */
 namespace file
 {
+///@cond
+template<class value_type>
+static inline nc_type getNCDataType(){ assert( false && "Type not supported!\n" ); return NC_DOUBLE; }
+template<>
+inline nc_type getNCDataType<double>(){ return NC_DOUBLE;}
+template<>
+inline nc_type getNCDataType<float>(){ return NC_FLOAT;}
+template<>
+inline nc_type getNCDataType<int>(){ return NC_INT;}
+template<>
+inline nc_type getNCDataType<unsigned>(){ return NC_UINT;}
 
+template<class T>
+inline int put_var_T( int ncid, int varID, T* data);
+template<>
+inline int put_var_T<float>( int ncid, int varID, float* data){
+    return nc_put_var_float( ncid, varID, data);
+}
+template<>
+inline int put_var_T<double>( int ncid, int varID, double* data){
+    return nc_put_var_double( ncid, varID, data);
+}
+///@endcond
+
+template<class T>
+inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID)
+{
+    int retval;
+    if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
+    if( (retval = nc_def_var( ncid, name, getNCDataType<T>(), 1, dimID, tvarID))){return retval;}
+    std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
+    return retval;
+}
 /**
  * @brief Define an unlimited time dimension and variable following
   <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
@@ -35,19 +68,15 @@ namespace file
  * @param ncid file ID
  * @param name Name of time variable (variable names are not standardized)
  * @param dimID time-dimension ID
- * @param tvarID time-variable ID
+ * @param tvarID time-variable ID (for a time variable of type \c NC_DOUBLE)
  *
  * @return netcdf error code if any
  */
 static inline int define_time( int ncid, const char* name, int* dimID, int* tvarID)
 {
-    int retval;
-    if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
-    if( (retval = nc_def_var( ncid, name, NC_DOUBLE, 1, dimID, tvarID))){return retval;}
-    std::string t = "time since start"; //needed for paraview to recognize timeaxis
-    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
-    return retval;
+    return define_real_time<double>( ncid, name, dimID, tvarID);
 }
+
 
 /**
  * @brief Define a limited time dimension and variable following
@@ -58,7 +87,7 @@ static inline int define_time( int ncid, const char* name, int* dimID, int* tvar
  * @param name Name of the time variable (usually "time")
  * @param size The number of timesteps
  * @param dimID time-dimension ID
- * @param tvarID time-variable ID
+ * @param tvarID time-variable ID (for a time variable of type \c NC_DOUBLE)
  *
  * @return netcdf error code if any
  */
@@ -81,19 +110,21 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
  * @param g The 1d DG grid from which data points are generated (input)
  * @param name_dim Name of dimension (input)
  * @param axis The axis attribute (input), ("X", "Y" or "Z")
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return netcdf error code if any
  */
-static inline int define_dimension( int ncid, int* dimID, const dg::Grid1d& g, std::string name_dim = "x", std::string axis = "X")
+template<class T>
+inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::string name_dim = "x", std::string axis = "X")
 {
     int retval;
     std::string long_name = name_dim+"-coordinate in Computational coordinate system";
-    thrust::host_vector<double> points = dg::create::abscissas( g);
+    thrust::host_vector<T> points = dg::create::abscissas( g);
     if( (retval = nc_def_dim( ncid, name_dim.data(), points.size(), dimID)) ) { return retval;}
     int varID;
-    if( (retval = nc_def_var( ncid, name_dim.data(), NC_DOUBLE, 1, dimID, &varID))){return retval;}
+    if( (retval = nc_def_var( ncid, name_dim.data(), getNCDataType<T>(), 1, dimID, &varID))){return retval;}
     if( (retval = nc_enddef(ncid)) ) {return retval;} //not necessary for NetCDF4 files
-    if( (retval = nc_put_var_double( ncid, varID, points.data())) ){ return retval;}
+    if( (retval = put_var_T<T>( ncid, varID, points.data())) ){ return retval;}
     if( (retval = nc_redef(ncid))) {return retval;} //not necessary for NetCDF4 files
     retval = nc_put_att_text( ncid, *dimID, "axis", axis.size(), axis.data());
     retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());
@@ -109,13 +140,15 @@ static inline int define_dimension( int ncid, int* dimID, const dg::Grid1d& g, s
  * @param tvarID time variable ID (unlimited)
  * @param g The 1d DG grid from which data points are generated
  * @param name_dims Names for the dimension variables
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return netcdf error code if any
  */
-static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g, std::array<std::string,2> name_dims = {"time","x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::RealGrid1d<T>& g, std::array<std::string,2> name_dims = {"time","x"})
 {
     int retval;
-    retval = define_time( ncid, name_dims[0].data(), &dimsIDs[0], tvarID);
+    retval = define_real_time<T>( ncid, name_dims[0].data(), &dimsIDs[0], tvarID);
     if(retval)
         return retval;
     return define_dimension( ncid, &dimsIDs[1], g, name_dims[1], "X");
@@ -128,14 +161,16 @@ static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const 
  * @param dimsIDs (write - only) 2D array of dimension IDs (Y,X)
  * @param g The 2d grid from which to derive the dimensions
  * @param name_dims Names for the dimension variables
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g, std::array<std::string,2> name_dims = {"y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<T>& g, std::array<std::string,2> name_dims = {"y", "x"})
 {
-    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::RealGrid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::RealGrid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
     retval = define_dimension( ncid, &dimsIDs[0], gy, name_dims[0], "Y");
     if(retval)
@@ -151,14 +186,16 @@ static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology
  * @param tvarID (write - only) The ID of the time variable ( unlimited)
  * @param g The 2d grid from which to derive the dimensions
  * @param name_dims Names for the dimension variables ( time, Y, X)
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology2d& g, std::array<std::string,3> name_dims = {"time", "y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealTopology2d<T>& g, std::array<std::string,3> name_dims = {"time", "y", "x"})
 {
     int retval;
-    retval = define_time( ncid, name_dims[0].data(), &dimsIDs[0], tvarID);
+    retval = define_real_time<T>( ncid, name_dims[0].data(), &dimsIDs[0], tvarID);
     if(retval)
         return retval;
     return define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2]});
@@ -174,11 +211,13 @@ static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const 
  * @param tvarID (write - only) The ID of the time variable (limited)
  * @param g The 2d grid from which to derive the dimensions
  * @param name_dims Names for the dimension variables (time, Y, X)
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-static inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::aTopology2d& g, std::array<std::string, 3> name_dims = {"time", "y", "x"})
+template<class T>
+inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::aRealTopology2d<T>& g, std::array<std::string, 3> name_dims = {"time", "y", "x"})
 {
     int retval;
     retval = define_limited_time( ncid, name_dims[0].data(), size, &dimsIDs[0], tvarID);
@@ -194,15 +233,17 @@ static inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvar
  * @param dimsIDs (write - only) 3D array of dimension IDs (Z,Y,X)
  * @param g The grid from which to derive the dimensions
  * @param name_dims Names for the dimension variables ( Z, Y, X)
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology3d& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<T>& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
 {
-    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
-    dg::Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
+    dg::RealGrid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::RealGrid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::RealGrid1d<T> gz( g.z0(), g.z1(), 1, g.Nz());
     int retval;
     retval = define_dimension( ncid, &dimsIDs[0], gz, name_dims[0], "Z");
     if(retval)
@@ -222,14 +263,16 @@ static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology
  * @param tvarID (write - only) The ID of the time variable ( unlimited)
  * @param g The grid from which to derive the dimensions
  * @param name_dims Names for the dimension variables ( time, Z, Y, X)
+ * @tparam T determines the datatype of the dimension variables
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology3d& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealTopology3d<T>& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
 {
     int retval;
-    retval = define_time( ncid, "time", &dimsIDs[0], tvarID);
+    retval = define_real_time<T>( ncid, "time", &dimsIDs[0], tvarID);
     if(retval)
         return retval;
     return define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2], name_dims[3]});
@@ -239,22 +282,26 @@ static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const 
 #ifdef MPI_VERSION
 
 /// Convenience function that just calls the corresponding serial version with the global grid
-static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aMPITopology2d& g, std::array<std::string,2> name_dims = {"y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealMPITopology2d<T>& g, std::array<std::string,2> name_dims = {"y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
 }
 /// Convenience function that just calls the corresponding serial version with the global grid
-static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aMPITopology2d& g, std::array<std::string,3> name_dims = {"time", "y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealMPITopology2d<T>& g, std::array<std::string,3> name_dims = {"time", "y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
 }
 /// Convenience function that just calls the corresponding serial version with the global grid
-static inline int define_dimensions( int ncid, int* dimsIDs, const dg::aMPITopology3d& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealMPITopology3d<T>& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
 }
 /// Convenience function that just calls the corresponding serial version with the global grid
-static inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aMPITopology3d& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
+template<class T>
+inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealMPITopology3d<T>& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
 }

@@ -15,7 +15,6 @@
 #include "flux.h"
 #include "fieldaligned.h"
 #include "ds.h"
-#include "init.h"
 
 #include "dg/file/nc_utilities.h"
 
@@ -57,8 +56,15 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
-    {dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";}
+    {
+        dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+        //Find O-point
+        double R_O = gp.R_0, Z_O = 0.;
+        if( !gp.isToroidal() )
+            dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
+        const double psipmin = mag.psip()(R_O, Z_O);
+        std::cout << "O-point "<<R_O<<" "<<Z_O<<" with Psip = "<<psipmin<<std::endl;
+    }
     std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
@@ -184,7 +190,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
+    auto iris = dg::compose( dg::Iris( gp.psipmin, gp.psipmax), c.psip());
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,3, 2e2, 2e2, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);

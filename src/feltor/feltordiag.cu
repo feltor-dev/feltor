@@ -20,12 +20,14 @@ using Geometry = dg::CylindricalGrid3d;
 
 int main( int argc, char* argv[])
 {
-    if( argc != 3)
+    if( argc < 3)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.nc]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [input0.nc ... inputN.nc] [output.nc]\n";
         return -1;
     }
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+    for( int i=1; i<argc-1; i++)
+        std::cout << argv[i]<< " ";
+    std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
     file::NC_Error_Handle err;
@@ -60,7 +62,7 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
-    err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
+    err = nc_create(argv[argc-1],NC_NETCDF4|NC_CLOBBER, &ncid_out);
 
     /// Set global attributes
     std::map<std::string, std::string> att;
@@ -94,8 +96,16 @@ int main( int argc, char* argv[])
         p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    const double psip0 = mag.psip()(gp.R_0, 0);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*psip0, p.alpha_mag);
+    double RO=mag.R0(), ZO=0.;
+    dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    const double psipO = mag.psip()( RO, ZO);
+    if( p.damping_alpha > 0.)
+    {
+        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2.,
+                fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+    }
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     // Construct weights and temporaries
 
@@ -104,32 +114,30 @@ int main( int argc, char* argv[])
 
 
     ///--------------- Construct X-point grid ---------------------//
-    //Find O-point
-    double R_O = gp.R_0, Z_O = 0.;
-    dg::geo::findXpoint( mag.get_psip(), R_O, Z_O);
-    const double psipmin = mag.psip()(R_O, Z_O);
 
 
-    std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
-    unsigned npsi = 3, Npsi = 32, Neta = 320;//set number of psivalues (NPsi % 8 == 0)
-    std::cin >> npsi >> Npsi >> Neta;
+    //std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
+    std::cout << "Using default X-point grid resolution (n(3), Npsi(64), Neta(640))\n";
+    unsigned npsi = 3, Npsi = 64, Neta = 640;//set number of psivalues (NPsi % 8 == 0)
+    //std::cin >> npsi >> Npsi >> Neta;
     std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
     std::cout << "Generate X-point flux-aligned grid!\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
     dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
-    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, R_X, Z_X, mag.R0(), 0, 0, true);
+    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, R_X, Z_X, mag.R0(), 0, 0, false);
     double fx_0 = 1./8.;
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::cout << "psi max is            "<<psipmax<<"\n";
-    psipmax = -fx_0/(1.-fx_0)*psipmin;
+    psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
     dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
+    std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
     std::cout << "DONE!\n";
     //Create 1d grid
-    dg::Grid1d g1d_out(psipmin, psipmax, 3, Npsi, dg::DIR_NEU); //inner value is always 0
-    const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipmin );
+    dg::Grid1d g1d_out(psipO, psipmax, 3, Npsi, dg::DIR_NEU); //inner value is always 0
+    const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
 
@@ -163,15 +171,30 @@ int main( int argc, char* argv[])
         "Flux area evaluated with X-point grid");
 
     dg::HVec rho = dg::evaluate( dg::cooX1d, g1d_out);
-    dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
+    dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
     map1d.emplace_back("rho", rho,
-        "Alternative flux label rho = -psi/psimin + 1");
-    dg::geo::SafetyFactor qprofile( mag);
-    map1d.emplace_back("q-profile", dg::evaluate( qprofile,   g1d_out),
+        "Alternative flux label rho = 1-psi/psimin");
+    dg::blas1::transform( rho, rho, dg::SQRT<double>());
+    map1d.emplace_back("rho_p", rho,
+        "Alternative flux label rho_p = sqrt(1-psi/psimin)");
+    dg::geo::SafetyFactor qprof( mag);
+    dg::HVec qprofile = dg::evaluate( qprof, g1d_out);
+    map1d.emplace_back("q-profile", qprofile,
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
-        "Flux label psi (same as coordinate)");
-
+        "Poloidal flux label psi (same as coordinate)");
+    dg::HVec psit = dg::integrate( qprofile, g1d_out);
+    map1d.emplace_back("psit1d", psit,
+        "Toroidal flux label psi_t integrated using q-profile");
+    //we need to avoid integrating >=0 for total psi_t
+    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, 3 ,Npsi,dg::DIR_NEU);
+    qprofile = dg::evaluate( qprof, g1d_fine);
+    dg::HVec w1d = dg::create::weights( g1d_fine);
+    double psit_tot = dg::blas1::dot( w1d, qprofile);
+    dg::blas1::scal ( psit, 1./psit_tot);
+    dg::blas1::transform( psit, psit, dg::SQRT<double>());
+    map1d.emplace_back("rho_t", psit,
+        "Toroidal flux label rho_t = sqrt( psit/psit_tot)");
 
     // interpolate from 2d grid to X-point points
     dg::IHMatrix grid2gridX2d  = dg::create::interpolation(
@@ -184,23 +207,41 @@ int main( int argc, char* argv[])
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
     dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU);
 
+    //define eta, psi
+    int dim_idsX[2] = {0,0};
+    err = file::define_dimensions( ncid_out, dim_idsX, gridX2d.grid(), {"eta", "psi"} );
+    std::string long_name = "Flux surface label";
+    err = nc_put_att_text( ncid_out, dim_idsX[0], "long_name",
+        long_name.size(), long_name.data());
+    long_name = "Flux angle";
+    err = nc_put_att_text( ncid_out, dim_idsX[1], "long_name",
+        long_name.size(), long_name.data());
+    int xccID, yccID;
+    err = nc_def_var( ncid_out, "xcc", NC_DOUBLE, 2, dim_idsX, &xccID);
+    err = nc_def_var( ncid_out, "ycc", NC_DOUBLE, 2, dim_idsX, &yccID);
+    long_name="Cartesian x-coordinate";
+    err = nc_put_att_text( ncid_out, xccID, "long_name",
+        long_name.size(), long_name.data());
+    long_name="Cartesian y-coordinate";
+    err = nc_put_att_text( ncid_out, yccID, "long_name",
+        long_name.size(), long_name.data());
+    err = nc_enddef( ncid);
+    err = nc_put_var_double( ncid_out, xccID, gridX2d.map()[0].data());
+    err = nc_put_var_double( ncid_out, yccID, gridX2d.map()[1].data());
+    err = nc_redef(ncid_out);
+
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
-    int dim_ids1d[2] = {dim_ids[0], 0}; //time , psi
-    err = file::define_dimension( ncid_out, "psi", &dim_ids1d[1], g1d_out);
     //Write long description
-    std::string long_name = "Time at which 2d fields are written";
+    long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
-    long_name = "Flux surface label";
-    err = nc_put_att_text( ncid_out, dim_ids1d[1], "long_name",
-        long_name.size(), long_name.data());
+    int dim_ids1d[2] = {dim_ids[0], dim_idsX[1]}; //time,  psi
 
     std::map<std::string, int> id0d, id1d, id2d;
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
-    size_t start1d[2] = {0, 0};
     size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
     size_t start2d[3] = {0, 0, 0};
 
@@ -271,106 +312,163 @@ int main( int argc, char* argv[])
             long_name.data());
     }
     /////////////////////////////////////////////////////////////////////////
-    int timeID;
-    double time=0.;
-
-    size_t steps;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-    err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
-    err = nc_inq_dimlen( ncid, timeID, &steps);
-    //steps = 3;
-    for( unsigned i=0; i<steps; i++)//timestepping
+    size_t counter = 0;
+    for( int j=1; j<argc-1; j++)
     {
-        start2d[0] = i;
-        start1d[0] = i;
-        // read and write time
-        err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << std::endl;
-        err = nc_put_vara_double( ncid_out, tvarID, start2d, count2d, &time);
-        for( auto& record : feltor::diagnostics2d_list)
+        int timeID;
+
+        size_t steps;
+        std::cout << "Opening file "<<argv[j]<<"\n";
+        err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
+        err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
+        err = nc_inq_dimlen( ncid, timeID, &steps);
+        //steps = 3;
+        for( unsigned i=0; i<steps; i++)//timestepping
         {
-            std::string record_name = record.name;
-            if( record_name[0] == 'j')
-                record_name[1] = 'v';
-            //1. Read toroidal average
-            int dataID =0;
-            err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
-            err = nc_get_vara_double( ncid, dataID,
-                start2d, count2d, transferH2d.data());
-            //2. Compute fsa and output fsa
-            dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
-            dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-            poloidal_average( transferH2dX, t1d, false); //average over eta
-            dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
-            dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
-            if( record_name[0] == 'j')
-                dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
-            err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_fsa"),
-                start1d, count1d, fsa1d.data());
-            //3. Interpolate fsa on 2d plane : <f>
-            dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
-            err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fsa2d"),
-                start2d, count2d, transferH2d.data() );
-
-            //4. Read 2d variable and compute fluctuations
-            err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
-            err = nc_get_vara_double( ncid, dataID, start2d, count2d,
-                t2d_mp.data());
-            if( record_name[0] == 'j')
-                dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
-            dg::blas1::axpby( 1.0, t2d_mp, -1.0, transferH2d);
-            err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
-                start2d, count2d, transferH2d.data() );
-
-            //5. flux surface integral/derivative
-            double result =0.;
-            if( record_name[0] == 'j') //j indicates a flux
+            if( j > 1 && i == 0)
+                continue; // else we duplicate the first timestep
+            start2d[0] = i;
+            size_t start2d_out[3] = {counter, 0,0};
+            size_t start1d_out[2] = {counter, 0};
+            // read and write time
+            double time=0.;
+            err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
+            std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
+            counter++;
+            err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
+            for( auto& record : feltor::diagnostics2d_list)
             {
-                dg::blas2::symv( dpsi, fsa1d, t1d);
-                dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
+                std::string record_name = record.name;
+                if( record_name[0] == 'j')
+                    record_name[1] = 'v';
+                //1. Read toroidal average
+                int dataID =0;
+                bool available = true;
+                try{
+                    err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
+                } catch ( file::NC_Error error)
+                {
+                    if(  i == 0)
+                    {
+                        std::cerr << error.what() <<std::endl;
+                        std::cerr << "Offending variable is "<<record.name+"_ta2d\n";
+                        std::cerr << "Writing zeros ... \n";
+                    }
+                    available = false;
+                }
+                if( available)
+                {
+                    err = nc_get_vara_double( ncid, dataID,
+                        start2d, count2d, transferH2d.data());
+                    //2. Compute fsa and output fsa
+                    dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
+                    dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
+                    dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
+                    if( record_name[0] == 'j')
+                        dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
+                    //3. Interpolate fsa on 2d plane : <f>
+                    dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
+                }
+                else
+                {
+                    dg::blas1::scal( fsa1d, 0.);
+                    dg::blas1::scal( transferH2d, 0.);
+                }
+                err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_fsa"),
+                    start1d_out, count1d, fsa1d.data());
+                err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fsa2d"),
+                    start2d_out, count2d, transferH2d.data() );
+                //4. Read 2d variable and compute fluctuations
+                available = true;
+                try{
+                    err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
+                } catch ( file::NC_Error error)
+                {
+                    if(  i == 0)
+                    {
+                        std::cerr << error.what() <<std::endl;
+                        std::cerr << "Offending variable is "<<record.name+"_2d\n";
+                        std::cerr << "Writing zeros ... \n";
+                    }
+                    available = false;
+                }
+                if( available)
+                {
+                    err = nc_get_vara_double( ncid, dataID, start2d, count2d,
+                        t2d_mp.data());
+                    if( record_name[0] == 'j')
+                        dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
+                    dg::blas1::axpby( 1.0, t2d_mp, -1.0, transferH2d);
+                    err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
+                        start2d_out, count2d, transferH2d.data() );
 
-                result = dg::interpolate( fsa1d, 0., g1d_out);
+                    //5. flux surface integral/derivative
+                    double result =0.;
+                    if( record_name[0] == 'j') //j indicates a flux
+                    {
+                        dg::blas2::symv( dpsi, fsa1d, t1d);
+                        dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
+
+                        result = dg::interpolate( dg::xspace, fsa1d, 0., g1d_out);
+                    }
+                    else
+                    {
+                        dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
+                        transfer1d = dg::integrate( t1d, g1d_out);
+
+                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
+                    }
+                    err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
+                        start1d_out, count1d, transfer1d.data());
+                    //flux surface integral/derivative on last closed flux surface
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
+                        start2d_out, count2d, &result );
+                    //6. Compute norm of time-integral terms to get relative importance
+                    if( record_name[0] == 'j') //j indicates a flux
+                    {
+                        dg::blas2::symv( dpsi, fsa1d, t1d);
+                        dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
+                        dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
+                        dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
+                        transfer1d = dg::integrate( t1d, g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
+                        result = sqrt(result);
+                    }
+                    else
+                    {
+                        dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
+                        dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
+                        transfer1d = dg::integrate( t1d, g1d_out);
+
+                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
+                        result = sqrt(result);
+                    }
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
+                        start2d_out, count2d, &result );
+                }
+                else
+                {
+                    dg::blas1::scal( transferH2d, 0.);
+                    dg::blas1::scal( transfer1d, 0.);
+                    double result = 0.;
+                    err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
+                        start2d_out, count2d, transferH2d.data() );
+                    err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
+                        start1d_out, count1d, transfer1d.data());
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
+                        start2d_out, count2d, &result );
+                    err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
+                        start2d_out, count2d, &result );
+                }
+
             }
-            else
-            {
-                dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
-                transfer1d = dg::integrate( t1d, g1d_out);
-
-                result = dg::interpolate( transfer1d, 0., g1d_out);
-            }
-            err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
-                start1d, count1d, transfer1d.data());
-            //flux surface integral/derivative on last closed flux surface
-            err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_lcfs"),
-                start2d, count2d, &result );
-            //6. Compute norm of time-integral terms to get relative importance
-            if( record_name[0] == 'j') //j indicates a flux
-            {
-                dg::blas2::symv( dpsi, fsa1d, t1d);
-                dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
-                dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
-                dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
-                transfer1d = dg::integrate( t1d, g1d_out);
-                result = dg::interpolate( transfer1d, 0., g1d_out);
-                result = sqrt(result);
-            }
-            else
-            {
-                dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
-                dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
-                transfer1d = dg::integrate( t1d, g1d_out);
-
-                result = dg::interpolate( transfer1d, 0., g1d_out);
-                result = sqrt(result);
-            }
-            err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
-                start2d, count2d, &result );
-
-        }
 
 
-    } //end timestepping
-    err = nc_close(ncid);
+        } //end timestepping
+        err = nc_close(ncid);
+    }
     err = nc_close(ncid_out);
 
     return 0;

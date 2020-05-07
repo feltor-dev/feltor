@@ -35,8 +35,10 @@ struct TokamakMagneticField
 {
     ///as long as the field stays empty the access functions are undefined
     TokamakMagneticField(){}
-    TokamakMagneticField( double R0, const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol): R0_(R0), psip_(psip), ipol_(ipol){}
-    void set( double R0, const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol)
+    TokamakMagneticField( double R0, const CylindricalFunctorsLvl2& psip, const
+            CylindricalFunctorsLvl1& ipol): R0_(R0), psip_(psip), ipol_(ipol){}
+    void set( double R0, const CylindricalFunctorsLvl2& psip, const
+            CylindricalFunctorsLvl1& ipol)
     {
         R0_=R0;
         psip_=psip;
@@ -72,6 +74,48 @@ struct TokamakMagneticField
     CylindricalFunctorsLvl1 ipol_;
 };
 
+///@cond
+CylindricalFunctorsLvl1 periodify( const CylindricalFunctorsLvl1& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
+{
+    return CylindricalFunctorsLvl1(
+            Periodify( in.f(),   R0, R1, Z0, Z1, bcx, bcy),
+            Periodify( in.dfx(), R0, R1, Z0, Z1, inverse(bcx), bcy),
+            Periodify( in.dfy(), R0, R1, Z0, Z1, bcx, inverse(bcy)));
+}
+CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
+{
+    return CylindricalFunctorsLvl2(
+            Periodify( in.f(),   R0, R1, Z0, Z1, bcx, bcy),
+            Periodify( in.dfx(), R0, R1, Z0, Z1, inverse(bcx), bcy),
+            Periodify( in.dfy(), R0, R1, Z0, Z1, bcx, inverse(bcy)),
+            Periodify( in.dfxx(), R0, R1, Z0, Z1, bcx, bcy),
+            Periodify( in.dfxy(), R0, R1, Z0, Z1, inverse(bcx), inverse(bcy)),
+            Periodify( in.dfyy(), R0, R1, Z0, Z1, bcx, bcy));
+}
+///@endcond
+/**
+ * @brief Use dg::geo::Periodify to periodify every function the magnetic field
+ *
+ * Note that derivatives are periodified with dg::inverse boundary conditions
+ * @param mag The magnetic field to periodify
+ * @param R0 left boundary in R
+ * @param R1 right boundary in R
+ * @param Z0 lower boundary in Z
+ * @param Z1 upper boundary in Z
+ * @param bcx boundary condition in x (determines how function is periodified)
+ * @param bcy boundary condition in y (determines how function is periodified)
+ * @note So far this was only tested for Neumann boundary conditions. It is uncertain if Dirichlet boundary conditions work
+ *
+ * @return new periodified magnetic field
+ */
+TokamakMagneticField periodify( const TokamakMagneticField& mag, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy)
+{
+    //what if Dirichlet BC in the current? Won't that generate a NaN?
+    return TokamakMagneticField( mag.R0(),
+            periodify( mag.get_psip(), R0, R1, Z0, Z1, bcx, bcy),
+            //what if Dirichlet BC in the current? Won't that generate a NaN?
+            periodify( mag.get_ipol(), R0, R1, Z0, Z1, bcx, bcy));
+}
 
 ///@brief \f$   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f$
 struct Bmodule : public aCylindricalFunctor<Bmodule>
@@ -677,6 +721,40 @@ struct GradPsip: public aCylindricalFunctor<GradPsip>
     private:
     TokamakMagneticField m_mag;
 
+};
+
+///@brief \f$ \sqrt{\psi_p/ \psi_{p,\min}} \f$
+struct RhoP: public aCylindricalFunctor<RhoP>
+{
+    RhoP( const TokamakMagneticField& mag): m_mag(mag){
+        double RO = m_mag.R0(), ZO = 0;
+        findOpoint( mag.get_psip(), RO, ZO);
+        m_psipmin = m_mag.psip()(RO, ZO);
+    }
+    double do_compute( double R, double Z) const
+    {
+        return sqrt( 1.-m_mag.psip()(R,Z)/m_psipmin ) ;
+    }
+    private:
+    double m_psipmin;
+    TokamakMagneticField m_mag;
+
+};
+
+///@brief Inertia factor \f$ \mathcal I_0 \f$
+struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
+{
+    Hoo( dg::geo::TokamakMagneticField mag): mag_(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        if( psip2 == 0)
+            psip2 = 1e-16;
+        return (ipol*ipol + psip2)/R/R/psip2;
+    }
+    private:
+    dg::geo::TokamakMagneticField mag_;
 };
 ///@}
 

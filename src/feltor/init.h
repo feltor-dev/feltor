@@ -3,8 +3,10 @@
 
 namespace feltor
 {
+
 namespace detail
 {
+
 
 struct TorpexSource
 {
@@ -24,11 +26,11 @@ struct TorpexSource
     double m_R0, m_Z0, m_a, m_b, m_c;
 };
 
-struct Radius
+struct Radius : public dg::geo::aCylindricalFunctor<Radius>
 {
     Radius ( double R0, double Z0): m_R0(R0), m_Z0(Z0) {}
     DG_DEVICE
-    double operator()( double R, double Z) const{
+    double do_compute( double R, double Z) const{
         return sqrt( (R-m_R0)*(R-m_R0) + (Z-m_Z0)*(Z-m_Z0));
     }
     private:
@@ -38,9 +40,9 @@ HVec circular_damping( const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
-    HVec circular = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        Radius( mag.R0(), 0.),
-        gp.a, gp.a*p.alpha, -1), grid);
+    HVec circular = dg::pullback( dg::compose(
+                dg::PolynomialHeaviside( gp.a, gp.a*p.profile_alpha/2., -1),
+                Radius( mag.R0(), 0.)), grid);
     return circular;
 }
 
@@ -60,34 +62,24 @@ HVec xpoint_damping(const Geometry& grid,
     }
     return xpoint_damping;
 }
-HVec damping_damping(const Geometry& grid,
-    const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
-{
-    HVec damping_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift
-        p.rho_damping, p.alpha, +1), grid);
-    return damping_damping;
-}
 HVec profile_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
-    double psip0 = mag.psip()( mag.R0(), 0);
-    HVec profile_damping = dg::pullback( dg::geo::Compose<dg::PolynomialHeaviside>(
-        mag.psip(), -p.alpha, p.alpha, ((psip0>0)-(psip0<0))), grid); //sign operator!!
+    HVec profile_damping = dg::pullback( dg::compose(dg::PolynomialHeaviside(
+        1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)), grid);
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), profile_damping, profile_damping);
     return profile_damping;
 }
 HVec profile(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag ){
-    double psip0 = mag.psip()( mag.R0(), 0);
+    double RO=mag.R0(), ZO=0.;
+    dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    double psipO = mag.psip()( RO, ZO);
     //First the profile and the source (on the host since we want to output those)
-    HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(),
-        p.nprofamp/psip0, 0.), grid);
+    HVec profile = dg::pullback( dg::compose(dg::LinearX(
+        p.nprofamp/psipO, 0.), mag.psip()), grid);
     dg::blas1::pointwiseDot( profile_damping(grid,p,gp,mag), profile, profile);
     return profile;
 }
@@ -95,13 +87,12 @@ HVec source_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
-    double psip0 = mag.psip()( mag.R0(), 0);
-    HVec source_damping = dg::pullback(dg::geo::Compose<dg::PolynomialHeaviside>(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift
-        p.rho_source, p.alpha, ((psip0>0)-(psip0<0)) ), grid);
-    dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag), source_damping, source_damping);
+    HVec source_damping = dg::pullback(
+        dg::compose(dg::PolynomialHeaviside(
+            p.source_boundary-p.source_alpha/2.,
+        p.source_alpha/2., -1 ), dg::geo::RhoP(mag)), grid);
+    dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag),
+           source_damping, source_damping);
     return source_damping;
 }
 
@@ -127,6 +118,17 @@ void init_ni(
     }
 };
 }//namespace detail
+
+//for wall shadow
+HVec wall_damping(const Geometry& grid,
+    const feltor::Parameters& p,
+    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+{
+    HVec wall_damping = dg::pullback(dg::compose( dg::PolynomialHeaviside(
+        p.damping_boundary+p.damping_alpha/2., p.damping_alpha/2., +1),
+                dg::geo::RhoP(mag)), grid);
+    return wall_damping;
+}
 
 /* The purpose of this file is to provide an interface for custom initial conditions and
  * source profiles.  Just add your own to the relevant map below.
@@ -231,8 +233,8 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,gp,mag));
             HVec ntilde = dg::evaluate(dg::zero,grid);
-            dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
-            ntilde = dg::pullback( init0, grid);
+            dg::SinX sinX( p.amp, 0., p.k_psi);
+            ntilde = dg::pullback( dg::compose( sinX, mag.psip()), grid);
             dg::blas1::pointwiseDot( detail::profile_damping(grid,p,gp,mag), ntilde, ntilde);
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
             detail::init_ni( y0, f,grid,p,gp,mag);

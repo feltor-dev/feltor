@@ -22,6 +22,7 @@
     "inverseaspectratio" : 0.41071428571428575, //a/R_0
     "elongation"         : 1.75,
     "triangularity"      : 0.47,
+    "equilibrium"  : "solovev",
     //----------------------Miscellaneous----------------------
     "alpha"         :  0.05, //damping thickness
     "rk4eps"        :  1e-6,
