@@ -324,12 +324,14 @@ struct Explicit
     }
 
     //source strength, profile - 1
-    void set_source( bool fixed_profile, Container profile, double omega_source, Container source)
+    void set_source( bool fixed_profile, Container profile, double omega_source, Container source, double omega_damping, Container damping )
     {
         m_fixed_profile = fixed_profile;
         m_profne = profile;
         m_omega_source = omega_source;
         m_source = source;
+        m_omega_damping = omega_damping;
+        m_damping = damping;
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
@@ -360,7 +362,7 @@ struct Explicit
     std::array<Container,3> m_curv, m_curvKappa, m_b;
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
-    Container m_source, m_profne;
+    Container m_source, m_profne, m_damping;
     Container m_vol3d;
 
     Container m_apar;
@@ -385,7 +387,7 @@ struct Explicit
     dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
-    double m_omega_source = 0.;
+    double m_omega_source = 0., m_omega_damping = 0.;
     bool m_fixed_profile = true;
     bool m_full_system = false;
 
@@ -842,17 +844,17 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     }
 }
 
-/* y[0][0] := n_e - 1
-   y[0][1] := N_i - 1
-   y[1][0] := w_e
-   y[1][1] := W_i
-*/
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     double t,
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
+    /* y[0][0] := n_e - 1
+       y[0][1] := N_i - 1
+       y[1][0] := w_e
+       y[1][1] := W_i
+    */
 
     // set m_phi[0]
     compute_phi( t, y[0]);
@@ -887,13 +889,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #endif
 
     //Add source terms
-    if( m_omega_source != 0)
+    if( m_omega_source != 0 || m_omega_damping != 0)
     {
         if( m_fixed_profile )
             dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
                 m_profne, m_source, m_omega_source);
         else
             dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, y[0][0], 1.,  m_s[0][0]);
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][0], 1.,  m_s[1][0]);
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][1], 1.,  m_s[1][1]);
         //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
         dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
@@ -901,10 +906,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
         m_lapperpP.multiply_sigma( 1., m_temp0, m_phi[0], 1., m_s[0][1]);
 
-        dg::blas1::axpby( 1., m_s[0][0], 1.0, yp[0][0]);
-        dg::blas1::axpby( 1., m_s[0][1], 1.0, yp[0][1]);
-        //currently we ignore m_s[1]
+        dg::blas1::axpby( 1., m_s, 1.0, yp);
     }
+
+
     if( m_full_system)
     {
 #if FELTORPERP == 1

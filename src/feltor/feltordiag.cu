@@ -96,8 +96,16 @@ int main( int argc, char* argv[])
         p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    const double psip0 = mag.psip()(gp.R_0, 0);
-    mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*psip0, p.alpha_mag);
+    double RO=mag.R0(), ZO=0.;
+    dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    const double psipO = mag.psip()( RO, ZO);
+    if( p.damping_alpha > 0.)
+    {
+        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2.,
+                fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+    }
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     // Construct weights and temporaries
 
@@ -106,10 +114,6 @@ int main( int argc, char* argv[])
 
 
     ///--------------- Construct X-point grid ---------------------//
-    //Find O-point
-    double R_O = gp.R_0, Z_O = 0.;
-    dg::geo::findXpoint( mag.get_psip(), R_O, Z_O);
-    const double psipmin = mag.psip()(R_O, Z_O);
 
 
     //std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
@@ -122,17 +126,18 @@ int main( int argc, char* argv[])
     double Z_X = -1.1*gp.elongation*gp.a;
     dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
     dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
-    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, R_X, Z_X, mag.R0(), 0, 0, true);
+    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, R_X, Z_X, mag.R0(), 0, 0, false);
     double fx_0 = 1./8.;
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::cout << "psi max is            "<<psipmax<<"\n";
-    psipmax = -fx_0/(1.-fx_0)*psipmin;
+    psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
     dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
+    std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
     std::cout << "DONE!\n";
     //Create 1d grid
-    dg::Grid1d g1d_out(psipmin, psipmax, 3, Npsi, dg::DIR_NEU); //inner value is always 0
-    const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipmin );
+    dg::Grid1d g1d_out(psipO, psipmax, 3, Npsi, dg::DIR_NEU); //inner value is always 0
+    const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
 
@@ -166,9 +171,12 @@ int main( int argc, char* argv[])
         "Flux area evaluated with X-point grid");
 
     dg::HVec rho = dg::evaluate( dg::cooX1d, g1d_out);
-    dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
+    dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
     map1d.emplace_back("rho", rho,
-        "Alternative flux label rho = -psi/psimin + 1");
+        "Alternative flux label rho = 1-psi/psimin");
+    dg::blas1::transform( rho, rho, dg::SQRT<double>());
+    map1d.emplace_back("rho_p", rho,
+        "Alternative flux label rho_p = sqrt(1-psi/psimin)");
     dg::geo::SafetyFactor qprof( mag);
     dg::HVec qprofile = dg::evaluate( qprof, g1d_out);
     map1d.emplace_back("q-profile", qprofile,
@@ -179,7 +187,7 @@ int main( int argc, char* argv[])
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
-    dg::Grid1d g1d_fine(psipmin, 0., 3, Npsi, dg::DIR_NEU);
+    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, 3 ,Npsi,dg::DIR_NEU);
     qprofile = dg::evaluate( qprof, g1d_fine);
     dg::HVec w1d = dg::create::weights( g1d_fine);
     double psit_tot = dg::blas1::dot( w1d, qprofile);
@@ -199,18 +207,37 @@ int main( int argc, char* argv[])
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
     dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU);
 
+    //define eta, psi
+    int dim_idsX[2] = {0,0};
+    err = file::define_dimensions( ncid_out, dim_idsX, gridX2d.grid(), {"eta", "psi"} );
+    std::string long_name = "Flux surface label";
+    err = nc_put_att_text( ncid_out, dim_idsX[0], "long_name",
+        long_name.size(), long_name.data());
+    long_name = "Flux angle";
+    err = nc_put_att_text( ncid_out, dim_idsX[1], "long_name",
+        long_name.size(), long_name.data());
+    int xccID, yccID;
+    err = nc_def_var( ncid_out, "xcc", NC_DOUBLE, 2, dim_idsX, &xccID);
+    err = nc_def_var( ncid_out, "ycc", NC_DOUBLE, 2, dim_idsX, &yccID);
+    long_name="Cartesian x-coordinate";
+    err = nc_put_att_text( ncid_out, xccID, "long_name",
+        long_name.size(), long_name.data());
+    long_name="Cartesian y-coordinate";
+    err = nc_put_att_text( ncid_out, yccID, "long_name",
+        long_name.size(), long_name.data());
+    err = nc_enddef( ncid);
+    err = nc_put_var_double( ncid_out, xccID, gridX2d.map()[0].data());
+    err = nc_put_var_double( ncid_out, yccID, gridX2d.map()[1].data());
+    err = nc_redef(ncid_out);
+
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
-    int dim_ids1d[2] = {dim_ids[0], 0}; //time , psi
-    err = file::define_dimension( ncid_out, &dim_ids1d[1], g1d_out, "psi" );
     //Write long description
-    std::string long_name = "Time at which 2d fields are written";
+    long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
-    long_name = "Flux surface label";
-    err = nc_put_att_text( ncid_out, dim_ids1d[1], "long_name",
-        long_name.size(), long_name.data());
+    int dim_ids1d[2] = {dim_ids[0], dim_idsX[1]}; //time,  psi
 
     std::map<std::string, int> id0d, id1d, id2d;
 
@@ -384,14 +411,14 @@ int main( int argc, char* argv[])
                         dg::blas2::symv( dpsi, fsa1d, t1d);
                         dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
 
-                        result = dg::interpolate( fsa1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, fsa1d, 0., g1d_out);
                     }
                     else
                     {
                         dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
                         transfer1d = dg::integrate( t1d, g1d_out);
 
-                        result = dg::interpolate( transfer1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
                     }
                     err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
                         start1d_out, count1d, transfer1d.data());
@@ -406,7 +433,7 @@ int main( int argc, char* argv[])
                         dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
                         transfer1d = dg::integrate( t1d, g1d_out);
-                        result = dg::interpolate( transfer1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
                         result = sqrt(result);
                     }
                     else
@@ -415,7 +442,7 @@ int main( int argc, char* argv[])
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
                         transfer1d = dg::integrate( t1d, g1d_out);
 
-                        result = dg::interpolate( transfer1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
                         result = sqrt(result);
                     }
                     err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),

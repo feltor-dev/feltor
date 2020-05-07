@@ -149,8 +149,20 @@ int main( int argc, char* argv[])
 #endif
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    if( p.alpha_mag > 0.)
-        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
+    //Wall damping has to be constructed before modification (!)
+    HVec damping_profile = feltor::wall_damping( grid, p, gp, mag);
+    if( p.damping_alpha > 0.)
+    {
+        double RO=mag.R0(), ZO=0.;
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        double psipO = mag.psip()( RO, ZO);
+        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2.,
+                fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+    }
+    if( p.periodify)
+        mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
     //create RHS
     //MPI_OUT std::cout << "Constructing RHS...\n";
@@ -212,7 +224,10 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    feltor.set_source( fixed_profile, dg::construct<DVec>(profile), p.omega_source, dg::construct<DVec>(source_profile));
+    feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
+        p.source_rate, dg::construct<DVec>(source_profile),
+        p.damping_rate, dg::construct<DVec>(damping_profile)
+    );
     }
 
     /// //////////////////////////set up netcdf/////////////////////////////////////

@@ -57,8 +57,20 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    if( p.alpha_mag > 0.)
-        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
+    //Wall damping has to be constructed before modification (!)
+    HVec damping_profile = feltor::wall_damping( grid, p, gp, mag);
+    if( p.damping_alpha > 0.)
+    {
+        double RO=mag.R0(), ZO=0.;
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        double psipO = mag.psip()( RO, ZO);
+        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2.,
+                fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
+    }
+    if( p.periodify)
+        mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
     //create RHS
     //std::cout << "Constructing RHS...\n";
@@ -96,13 +108,16 @@ int main( int argc, char* argv[])
     HVec source_profile;
     try{
         source_profile = feltor::source_profiles.at(p.source_type)(
-        fixed_profile, profile, grid, p, gp, mag);
+            fixed_profile, profile, grid, p, gp, mag);
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
         return -1;
     }
 
-    feltor.set_source( fixed_profile, dg::construct<DVec>(profile), p.omega_source, dg::construct<DVec>(source_profile));
+    feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
+        p.source_rate, dg::construct<DVec>(source_profile),
+        p.damping_rate, dg::construct<DVec>(damping_profile)
+    );
 
 
     ////////////////////////create timer and timestepper
