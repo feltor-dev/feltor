@@ -1,8 +1,3 @@
-/* EVE adds an estimator for the largest Eigenvalue
-   to not-yet-preconditioned CG.
-
-                           */
-
 #ifndef _DG_EVE_
 #define _DG_EVE_
 
@@ -10,38 +5,69 @@
 #include "blas.h"
 #include "functors.h"
 
+/*! @file
+ * EVE adds an estimator for the largest Eigenvalue
+ *  to not-yet-preconditioned CG.
+ *  @author Eduard Reiter and Matthias Wiesenberger
+ */
+
+
 namespace dg
 {
 
-//MW: please document
-/* EVE (EigenValueEstimator) estimate largest EV using CG */
-template< class Vector>
+/*! @brief (EigenValueEstimator) estimate largest Eigenvalue using conjugate gradient method
+* @copydoc hide_ContainerType
+ * @ingroup invert
+*/
+template< class ContainerType>
 class EVE
 {
-public:
-    using value_type  = get_value_type<Vector>;
+  public:
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
+    ///@brief Allocate nothing, Call \c construct method before usage
     EVE() {}
-    EVE( const Vector& copyable, unsigned max_iter):r( copyable), p( r), ap( r), max_iter( max_iter) {}
-    void set_max( unsigned new_max)
-    {   max_iter = new_max;
+    ///@copydoc construct()
+    EVE( const ContainerType& copyable, unsigned max_iter = 100):r( copyable), p( r), ap( r), m_max_iter( max_iter) {}
+    /**
+     * @brief Allocate memory for the pcg method
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param max_iter Maximum number of iterations to be used
+     */
+    void construct( const ContainerType& copyable, unsigned max_iter = 100) {
+        ap = p = r = copyable;
+        m_max_iter = max_iter;
     }
-    unsigned get_max() const
-    {   return max_iter;
+    /// Set maximum number of iterations
+    void set_max( unsigned new_max) {
+        m_max_iter = new_max;
     }
-    void construct( const Vector& copyable, unsigned max_iterations = 100)
-    {   ap = p = r = copyable;
-        max_iter = max_iterations;
-    }
-    template< class Matrix>
-    unsigned operator()( Matrix& A, Vector& x, const Vector& b, value_type& ev_max, value_type eps_ev=1e-16);
-private:
-    Vector r, p, ap;
-    unsigned max_iter;
+    /// Get maximum number of iterations
+    unsigned get_max() const {   return m_max_iter; }
+    /**
+     * @brief Unpreconditioned CG to estimate maximum Eigenvalue
+     *
+     * @param A A symmetric, positive definit matrix
+     * @param x Contains an initial value on input and the solution on output.
+     * @param b The right hand side vector. x and b may be the same vector.
+     * @param ev_max (output) maximum Eigenvalue on output
+     * @param eps_ev The desired accuracy of the largest Eigenvalue
+     *
+     * @return Number of iterations used to achieve desired precision or max_iterations
+     * @copydoc hide_matrix
+     */
+    template< class MatrixType>
+    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, value_type& ev_max, value_type eps_ev=1e-16);
+  private:
+    ContainerType r, p, ap;
+    unsigned m_max_iter;
 };
 
-template< class Vector>
-template< class Matrix>
-unsigned EVE< Vector>::operator()( Matrix& A, Vector& x, const Vector&
+///@cond
+template< class ContainerType>
+template< class MatrixType>
+unsigned EVE< ContainerType>::operator()( MatrixType& A, ContainerType& x, const ContainerType&
 b, value_type& ev_max, value_type eps_ev)
 {
     blas2::symv( A, x, r);
@@ -53,7 +79,7 @@ b, value_type& ev_max, value_type eps_ev)
     value_type evdash, gamma = 0., lambda, omega, beta = 0.;
     value_type ev_est = 0.;
     ev_max = 0.;
-    for( unsigned i=1; i<max_iter; i++)
+    for( unsigned i=1; i<m_max_iter; i++)
     {
         lambda = delta*alpha_inv;       // EVE!
         blas2::symv( A, p, ap);
@@ -77,8 +103,9 @@ b, value_type& ev_max, value_type eps_ev)
         nrm2r_old=nrm2r_new;
         ev_est = ev_max;
     }
-    return max_iter;
+    return m_max_iter;
 };
+///@endcond
 
 } //namespace dg
 #endif //_DG_EVE_

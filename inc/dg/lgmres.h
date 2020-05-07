@@ -291,7 +291,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
         dg::blas1::axpby(1.,b,-1.,residual);
         normres = sqrt(dg::blas2::dot(S,residual));
         dg::blas2::symv(P,residual,residual);
-        value_type rho = sqrt(dg::blas1::dot(residual,residual));
+        //value_type rho = sqrt(dg::blas1::dot(residual,residual));
         totalRestarts += 1;
     }
     return totalRestarts*krylovDimension;

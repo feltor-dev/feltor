@@ -21,7 +21,8 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
     unsigned n = grid.n(), Nx = grid.Nx(), Ny = grid.Ny();
     if( "cheby" == solver)
     {
-        dg::ChebyshevIteration<Container> cheby( x);
+        std::cout <<" CHEBYSHEV SOLVER:\n";
+        dg::Chebyshev<Container> cheby( x);
         double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         double hxhy = lx*ly/(n*n*Nx*Ny);
         lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
@@ -33,12 +34,14 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
     }
     if( "bicgstabl" == solver)
     {
+        std::cout <<" BICGSTABl SOLVER:\n";
         dg::BICGSTABl<Container> bicg( x, 100, 2);
         unsigned num_iter = bicg.solve( A, x, b, A.precond(), A.inv_weights(), 1e-6);
         std::cout << "After "<<num_iter<<" BICGSTABl iterations we have:\n";
     }
     if( "lgmres" == solver)
     {
+        std::cout <<" LGMRES SOLVER:\n";
         dg::LGMRES<Container> lgmres( x, 30, 4, 10000);
         unsigned num_iter = lgmres.solve( A, x, b, A.precond(), A.inv_weights(), 1e-6);
         std::cout << "After "<<num_iter<<" LGMRES iterations we have:\n";
@@ -60,6 +63,7 @@ int main()
     unsigned max_iter = n*n*Nx*Ny;
     const dg::HVec& copyable_vector = x;
 
+    std::cout <<" PCG SOLVER:\n";
 //! [doxygen]
     // create volume and inverse volume on previously defined grid
     const dg::HVec w2d = dg::create::weights( grid);
@@ -100,7 +104,7 @@ int main()
     res.d = sqrt(dg::blas2::dot(w2d , error));
     std::cout << "L2 Norm of Error is           " << res.d<<"\t"<<res.i << std::endl;
     res.d = sqrt(dg::blas2::dot( w2d, resi));
-    std::cout << "L2 Norm of Residuum is        " << res.d<<"\t"<<res.i << std::endl;
+    std::cout << "L2 Norm of Residuum is        " << res.d<<"\t"<<res.i << std::endl<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 
     std::vector<std::string> solvers{ "cheby", "bicgstabl", "lgmres"};

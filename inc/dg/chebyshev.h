@@ -5,11 +5,13 @@
 
 #include "blas.h"
 
+/*!@file
+ * Chebyshev solver
+ */
 
 namespace dg
 {
-//
-//implement the classical 3-term recursion with explicit residual
+
 /**
 * @brief Three-term recursion of the Chebyshev iteration for solving
 * \f[ Ax=b\f]
@@ -38,7 +40,7 @@ class Chebyshev
     Chebyshev(){}
     ///@copydoc construct()
     Chebyshev( const ContainerType& copyable):
-        m_ax(copyable), m_xm1(m_ax), m_b( m_ax){}
+        m_ax(copyable), m_xm1(m_ax){}
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_ax;}
@@ -47,10 +49,9 @@ class Chebyshev
      * @brief Allocate memory for the pcg method
      *
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable) {
-        m_xm1 = m_ax = m_b = copyable;
+        m_xm1 = m_ax = copyable;
     }
     /**
      * @brief Solve the system A*x = b using Chebyshev iteration
@@ -60,7 +61,7 @@ class Chebyshev
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param min_ev the minimum Eigenvalue
-     * @param max_ev the maximum Eigenvalue
+     * @param max_ev the maximum Eigenvalue (must be larger than \c min_ev)
      * @param num_iter the number of iterations k (equals the number of times A is applied)
      *
      * @copydoc hide_matrix
@@ -93,7 +94,7 @@ class Chebyshev
         }
     }
   private:
-    ContainerType m_ax, m_xm1, m_b;
+    ContainerType m_ax, m_xm1;
 };
 
 } //namespace dg

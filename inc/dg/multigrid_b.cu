@@ -88,23 +88,27 @@ int main()
         hxhy*=4;
     }
     std::cout << "\n\n";
-    //////////////////////////////setup and write netcdf//////////////////
-    err = nc_create( "multigrid.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim3d[3];
-    err = file::define_dimensions(  ncid, dim3d, &tvarID, grid, {"step", "y", "x"} );
-
-    err = nc_def_var( ncid, "x_num", NC_DOUBLE, 3, dim3d, &xID);
-    err = nc_def_var( ncid, "b_num", NC_DOUBLE, 3, dim3d, &bID);
-    err = nc_def_var( ncid, "r_num", NC_DOUBLE, 3, dim3d, &rID);
     ////////////////////////////////////////////////////
-    std::cout << "Type nu1 (20), nu2 (20) gamma (1) max_iter (1)\n";
+    std::cout << "Type nu1 (20), nu2 (20) gamma (1) \n";
     unsigned nu1, nu2, gamma;
-    int max_iter = 3;
-    std::cin >> nu1 >> nu2 >> gamma >> max_iter;
-    x = dg::evaluate( initial, grid);
+    std::cin >> nu1 >> nu2 >> gamma;
     dg::Timer t;
-    //for( int i=0; i<max_iter; i++)
+    std::cout << "MULTIGRID NESTED ITERATIONS SOLVE:\n";
+    x = dg::evaluate( initial, grid);
+    t.tic();
+    multigrid.direct_solve(multi_pol, x, b, eps);
+    t.toc();
+    const double norm = dg::blas2::dot( w2d, solution);
+    dg::DVec error( solution);
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    double err = dg::blas2::dot( w2d, error);
+    err = sqrt( err/norm);
+    std::cout << " Error of nested iterations "<<err<<"\n";
+    std::cout << "Took "<<t.diff()<<"s\n\n";
+    ////////////////////////////////////////////////////
     {
+        std::cout << "MULTIGRID PCG SOLVE:\n";
+        x = dg::evaluate( initial, grid);
         t.tic();
         multigrid.pcg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
         t.toc();
@@ -117,25 +121,21 @@ int main()
         //std::cout << " At iteration "<<i<<"\n";
         std::cout << " Error of Multigrid iterations "<<err<<"\n\n";
     }
-    ////////////////////////////////////////////////////
-
-    x = dg::evaluate( initial, grid);
-    t.tic();
-    multigrid.direct_solve(multi_pol, x, b, eps);
-    t.toc();
-    const double norm = dg::blas2::dot( w2d, solution);
-    dg::DVec error( solution);
-    dg::blas1::axpby( 1.,x,-1., solution, error);
-    double err = dg::blas2::dot( w2d, error);
-    err = sqrt( err/norm);
-    std::cout << " Error of nested iterations "<<err<<"\n";
-    std::cout << "Took "<<t.diff()<<"s\n\n";
-    /////////////////////////////////////////////////////
-    int varID;
-    err = nc_def_var( ncid, "x_ana", NC_DOUBLE, 2, &dim3d[1], &varID);
-    dg::HVec data = solution;
-    file::put_var_double( ncid, varID, grid, data);
-    err = nc_close( ncid);
+    {
+        std::cout << "MULTIGRID FMG SOLVE:\n";
+        x = dg::evaluate( initial, grid);
+        t.tic();
+        multigrid.fmg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+        t.toc();
+        std::cout << "Took "<<t.diff()<<"s\n";
+        const double norm = dg::blas2::dot( w2d, solution);
+        dg::DVec error( solution);
+        dg::blas1::axpby( 1.,x,-1., solution, error);
+        double err = dg::blas2::dot( w2d, error);
+        err = sqrt( err/norm);
+        //std::cout << " At iteration "<<i<<"\n";
+        std::cout << " Error of Multigrid iterations "<<err<<"\n\n";
+    }
 
 
     return 0;
