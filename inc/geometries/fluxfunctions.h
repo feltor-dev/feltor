@@ -287,6 +287,12 @@ static inline void findOpoint( const CylindricalFunctorsLvl2& psi, double& R_X, 
     R_X = X[0], Z_X = X[1];
 }
 
+///@copydoc findOpoint()
+static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
+{
+    findOpoint( psi, R_X, Z_X);
+}
+
 /// A symmetric 2d tensor field and its divergence
 ///@snippet hector_t.cu doxygen
 struct CylindricalSymmTensorLvl1

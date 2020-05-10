@@ -215,39 +215,26 @@ std::vector<Record_static> diagnostics3d_static_list = {
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( HVec& result, Variables& v, Geometry& grid ){
-            HVec xc = dg::evaluate( dg::cooX3d, grid);
-            HVec yc = dg::evaluate( dg::cooY3d, grid);
-            HVec zc = dg::evaluate( dg::cooZ3d, grid);
-            dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
-            result = xc;
+            return dg::evaluate( dg::cooRZP2X, grid);
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
         []( HVec& result, Variables& v, Geometry& grid ){
-            HVec xc = dg::evaluate( dg::cooX3d, grid);
-            HVec yc = dg::evaluate( dg::cooY3d, grid);
-            HVec zc = dg::evaluate( dg::cooZ3d, grid);
-            dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
-            result = yc;
+            return dg::evaluate( dg::cooRZP2Y, grid);
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
         []( HVec& result, Variables& v, Geometry& grid ){
-            HVec xc = dg::evaluate( dg::cooX3d, grid);
-            HVec yc = dg::evaluate( dg::cooY3d, grid);
-            HVec zc = dg::evaluate( dg::cooZ3d, grid);
-            dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
-            result = zc;
+            return dg::evaluate( dg::cooRZP2Z, grid);
         }
     },
 };
 
 std::array<std::tuple<std::string, std::string, HVec>, 3> generate_cyl2cart( Geometry& grid)
 {
-    HVec xc = dg::evaluate( dg::cooX3d, grid);
-    HVec yc = dg::evaluate( dg::cooY3d, grid);
-    HVec zc = dg::evaluate( dg::cooZ3d, grid);
-    dg::blas1::subroutine( feltor::routines::Cylindrical2Cartesian(), xc, yc, zc, xc, yc, zc);
+    HVec xc = dg::evaluate( dg::cooRZP2X, grid);
+    HVec yc = dg::evaluate( dg::cooRZP2Y, grid);
+    HVec zc = dg::evaluate( dg::cooRZP2Z, grid);
     std::array<std::tuple<std::string, std::string, HVec>, 3> list = {{
         { "xc", "x-coordinate in Cartesian coordinate system", xc },
         { "yc", "y-coordinate in Cartesian coordinate system", yc },

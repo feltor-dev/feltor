@@ -15,16 +15,6 @@ namespace feltor
 {
 
 namespace routines{
-struct Cylindrical2Cartesian{
-    void operator()( double R, double Z, double P, double& x, double& y, double& z)
-    {
-        //inplace possible
-        double xx = R*sin(P);
-        double yy = R*cos(P);
-        x = xx, y = yy, z = Z;
-    }
-};
-
 struct ComputePerpDrifts{
     ComputePerpDrifts( double mu, double tau):
         m_mu(mu), m_tau(tau){}

@@ -243,6 +243,7 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
 
 /**
  * @brief three-dimensional Grid with Cylindrical metric
+ * @note \c map() returns the identity, i.e. Cylindrical coordinates count as physical coordinates. Evaluate the \c dg::cooRZP2X() functions to transform to a Cartesian coordinate system.
  */
 template<class real_type>
 struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>

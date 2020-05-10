@@ -8,11 +8,6 @@ namespace dg
 {
 namespace geo
 {
-///@copydoc findOpoint()
-static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
-{
-    findOpoint( psi, R_X, Z_X);
-}
 
 ///@cond
 namespace detail{

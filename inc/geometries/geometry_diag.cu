@@ -20,6 +20,9 @@
 #include "separatrix_orthogonal.h"
 #include "average.h"
 
+
+// - write magnetic functions into file
+// - test performance and accuracy of Flux surface averages and integrals
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz, Npsi;
@@ -77,16 +80,6 @@ struct Parameters
     }
 };
 
-struct JPhi
-{
-    JPhi( dg::geo::solovev::Parameters gp): R_0(gp.R_0), A(gp.A){}
-    double operator()(double R, double Z, double phi)const
-    {
-        return ((A-1.)*R - A*R_0*R_0/R)/R_0/R_0/R_0;
-    }
-    private:
-    double R_0, A;
-};
 
 int main( int argc, char* argv[])
 {
@@ -161,15 +154,6 @@ int main( int argc, char* argv[])
         double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
         std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
         mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2., fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
-    }
-    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    double Z_X = -1.1*gp.elongation*gp.a;
-    if( gp.hasXpoint())
-    {
-        dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
-        std::cout <<  "X-point found at "<<R_X << " "<<Z_X<<" with Psip "<<mag.psip()(R_X, Z_X)<<"\n";
-        std::cout <<  "     R - Factor "<<(gp.R_0-R_X)/gp.triangularity/gp.a << "   Z - factor "<<-(Z_X/gp.elongation/gp.a)<<std::endl;
-
     }
     //Find O-point
     double R_O = gp.R_0, Z_O = 0.;
@@ -282,6 +266,20 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
         map1d.emplace_back( "X_hoo_fsa", X_h02_fsa,
             "Flux surface average of novel h02 factor");
+        // total source term
+        h02 = dg::pullback( dg::compose( dg::PolynomialHeaviside(
+                    p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
+                dg::geo::RhoP(mag)), gX2d);
+        dg::blas1::pointwiseDot( volX2d, h02, h02);
+        avg_eta( h02, X_h02_fsa, false);
+        dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
+        dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
+        map1d.emplace_back( "X_sne_fsa", X_h02_fsa,
+            "Flux surface average over source term");
+        dg::blas1::pointwiseDot( X_h02_fsa, dvdzeta, X_h02_fsa );
+        X_h02_fsa = dg::integrate( X_h02_fsa, gX1d);
+        map1d.emplace_back( "X_sne_ifs", X_h02_fsa,
+            "Flux surface integral over source term");
         //divb
         h02 = dg::pullback( dg::geo::Divb(mag), gX2d);
         dg::blas1::pointwiseDot( volX2d, h02, h02);
@@ -300,7 +298,13 @@ int main( int argc, char* argv[])
         std::cout << "Compute flux averages\n";
         dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
         if( gp.hasXpoint() )
-            dg::blas1::pointwiseDot( xpoint_weights , dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
+        {
+            double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+            double Z_X = -1.1*gp.elongation*gp.a;
+            dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
+            dg::blas1::pointwiseDot( xpoint_weights,
+                    dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
+        }
         dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, mag, psipog2d, xpoint_weights);
         grid1d = dg::Grid1d (psipmin<psipmax ? psipmin : psipmax, psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::NEU);
         map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
@@ -427,10 +431,13 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
         psi_long_name.size(), psi_long_name.data());
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
-    err = file::define_dimensions( ncid, &dim3d_ids[0], grid3d);
+    dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+
+    err = file::define_dimensions( ncid, &dim3d_ids[0], fgrid3d);
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
+    std::cout << "WRTING 1D FIELDS ... \n";
     for( auto tp : map1d)
     {
         int vid;
@@ -443,7 +450,7 @@ int main( int argc, char* argv[])
         err = nc_redef(ncid);
     }
     //write 2d vectors
-    std::vector< std::tuple<std::string, std::string, std::function<double(double,double)> > > map{
+    std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map2d{
         {"Psip", "Flux function", mag.psip()},
         {"PsipR", "Flux function derivative in R", mag.psipR()},
         {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
@@ -510,147 +517,64 @@ int main( int argc, char* argv[])
 
     };
     //allocate mem for visual
-    dg::HVec hvisual;
-    dg::HVec visual;
-    for(auto tp : map)
+    dg::HVec hvisual = dg::evaluate( dg::zero, grid2d);
+    dg::HVec hvisual3d = dg::evaluate( dg::zero, grid3d);
+    dg::fHVec fvisual, fvisual3d;
+    std::cout << "WRTING 2D/3D CYLINDRICAL FIELDS ... \n";
+    for(auto tp : map2d)
     {
-        int vectorID;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 2,
+        int vectorID, vectorID3d;
+        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 2,
             &dim2d_ids[0], &vectorID);
+        err = nc_def_var( ncid, (std::get<0>(tp)+"3d").data(), NC_FLOAT, 3,
+            &dim3d_ids[0], &vectorID3d);
         err = nc_put_att_text( ncid, vectorID, "long_name",
             std::get<1>(tp).size(), std::get<1>(tp).data());
+        err = nc_put_att_text( ncid, vectorID3d, "long_name",
+            std::get<1>(tp).size(), std::get<1>(tp).data());
+        std::string coordinates = "zc yc xc";
+        err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
         err = nc_enddef( ncid);
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
-        err = nc_put_var_double( ncid, vectorID, hvisual.data());
+        dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
+        dg::assign( hvisual, fvisual);
+        dg::assign( hvisual3d, fvisual3d);
+        err = nc_put_var_float( ncid, vectorID, fvisual.data());
+        err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
         err = nc_redef(ncid);
-
     }
+    std::cout << "WRTING 3D FIELDS ... \n";
     //compute & write 3d vectors
-    dg::HVec vecR = dg::evaluate( dg::geo::BFieldR(mag), grid3d);
-    dg::HVec vecZ = dg::evaluate( dg::geo::BFieldZ(mag), grid3d);
-    dg::HVec vecP = dg::evaluate( dg::geo::BFieldP(mag), grid3d);
-    std::string vec_long[3] = {"R-component of the magnetic field vector (3d version of BFieldR)",
-        "Z-component of the magnetic field vector (3d version of BFieldZ)",
-        "Contravariant Phi-component of the magnetic field vector (3d version of BFieldP)"};
-    int vecID[3];
-    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
-    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
-    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
-    for(int i=0; i<3; i++)
+    std::vector< std::tuple<std::string, std::string, std::function< double(double,double,double)> > > map3d{
+        {"BR", "R-component of the magnetic field vector (3d version of BFieldR)",
+            dg::geo::BFieldR(mag)},
+        {"BZ", "Z-component of the magnetic field vector (3d version of BFieldZ)",
+            dg::geo::BFieldZ(mag)},
+        {"BP", "Contravariant Phi-component of the magnetic field vector (3d version of BFieldP)",
+            dg::geo::BFieldP(mag)},
+        {"xc", "x-coordinate in Cartesian coordinate system", dg::cooRZP2X},
+        {"yc", "y-coordinate in Cartesian coordinate system", dg::cooRZP2Y},
+        {"zc", "z-coordinate in Cartesian coordinate system", dg::cooRZP2Z}
+    };
+    for( auto tp : map3d)
     {
-        err = nc_put_att_text( ncid, vecID[i], "long_name", vec_long[i].size(), vec_long[i].data());
-        std::string coordinates = "zc yc xc";
-        err = nc_put_att_text( ncid, vecID[i], "coordinates", coordinates.size(), coordinates.data());
+        int vectorID;
+        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 3,
+            &dim3d_ids[0], &vectorID);
+        err = nc_put_att_text( ncid, vectorID, "long_name",
+            std::get<1>(tp).size(), std::get<1>(tp).data());
+        if( std::get<1>(tp) != "xc" && std::get<1>(tp) != "yc" &&std::get<1>(tp) != "zc")
+        {
+            std::string coordinates = "zc yc xc";
+            err = nc_put_att_text( ncid, vectorID, "coordinates", coordinates.size(), coordinates.data());
+        }
+        err = nc_enddef( ncid);
+        hvisual3d = dg::evaluate( std::get<2>(tp), grid3d);
+        dg::assign( hvisual3d, fvisual3d);
+        err = nc_put_var_float( ncid, vectorID, fvisual3d.data());
+        err = nc_redef(ncid);
     }
-    err = nc_enddef( ncid);
-    err = nc_put_var_double( ncid, vecID[0], vecR.data());
-    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-    err = nc_put_var_double( ncid, vecID[2], vecP.data());
-    err = nc_redef(ncid);
-    vecR = dg::evaluate( dg::cooX3d, grid3d);
-    vecZ = dg::evaluate( dg::cooZ3d, grid3d);
-    vecP = dg::evaluate( dg::cooY3d, grid3d);
-    for( unsigned i=0; i<vecR.size(); i++)
-    {
-        double xc = vecR[i]*sin(vecZ[i]);
-        double yc = vecR[i]*cos(vecZ[i]);
-        vecR[i] = xc;
-        vecZ[i] = yc;
-    }
-    vec_long[0] = "x-coordinate in Cartesian coordinate system",
-    vec_long[1] = "y-coordinate in Cartesian coordinate system",
-    vec_long[2] = "z-coordinate in Cartesian coordinate system";
-    err = nc_def_var( ncid, "xc", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[0]);
-    err = nc_def_var( ncid, "yc", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[1]);
-    err = nc_def_var( ncid, "zc", NC_DOUBLE, 3, &dim3d_ids[0], &vecID[2]);
-    for(int i=0; i<3; i++)
-        err = nc_put_att_text( ncid, vecID[i], "long_name", vec_long[i].size(), vec_long[i].data());
-    err = nc_enddef( ncid);
-    err = nc_put_var_double( ncid, vecID[0], vecR.data());
-    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-    err = nc_put_var_double( ncid, vecID[2], vecP.data());
-    err = nc_redef(ncid);
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);
-    std::cout << "FILE CLOSED AND READY TO USE NOW!\n";
-
-    {
-        std::cout << "test accuracy of psi (values must be close to 0!)\n";
-        const double R_H = gp.R_0-gp.triangularity*gp.a;
-        const double Z_H = gp.elongation*gp.a;
-        const double alpha_ = asin(gp.triangularity);
-        const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
-        const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
-        const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
-
-        if( gp.hasXpoint())
-            std::cout << "    Equilibrium with X-point!\n";
-        else
-            std::cout << "    NO X-point in flux function!\n";
-        std::cout << "psip( 1+e,0)           "<<mag.psip()(gp.R_0 + gp.a, 0.)<<"\n";
-        std::cout << "psip( 1-e,0)           "<<mag.psip()(gp.R_0 - gp.a, 0.)<<"\n";
-        std::cout << "psip( 1-de,ke)         "<<mag.psip()(R_H, Z_H)<<"\n";
-        if( !gp.hasXpoint())
-            std::cout << "psipR( 1-de,ke)        "<<mag.psipR()(R_H, Z_H)<<"\n";
-        else
-        {
-            std::cout << "psip( 1-1.1de,-1.1ke)  "<<mag.psip()(R_X, Z_X)<<"\n";
-            std::cout << "psipZ( 1+e,0)          "<<mag.psipZ()(gp.R_0 + gp.a, 0.)<<"\n";
-            std::cout << "psipZ( 1-e,0)          "<<mag.psipZ()(gp.R_0 - gp.a, 0.)<<"\n";
-            std::cout << "psipR( 1-de,ke)        "<<mag.psipR()(R_H,Z_H)<<"\n";
-            std::cout << "psipR( 1-1.1de,-1.1ke) "<<mag.psipR()(R_X,Z_X)<<"\n";
-            std::cout << "psipZ( 1-1.1de,-1.1ke) "<<mag.psipZ()(R_X,Z_X)<<"\n";
-        }
-        std::cout << "psipZZ( 1+e,0)         "<<mag.psipZZ()(gp.R_0+gp.a,0.)+N1*mag.psipR()(gp.R_0+gp.a,0)<<"\n";
-        std::cout << "psipZZ( 1-e,0)         "<<mag.psipZZ()(gp.R_0-gp.a,0.)+N2*mag.psipR()(gp.R_0-gp.a,0)<<"\n";
-        std::cout << "psipRR( 1-de,ke)       "<<mag.psipRR()(R_H,Z_H)+N3*mag.psipZ()(R_H,Z_H)<<"\n";
-    }
-
-
-    std::cout << "Test accuracy of curvatures (values must be close to 0, but Test may be inaccurate for modified Psi_p)\n";
-    //Test NablaTimes B = B^2( curvK - curvB)
-    std::array<dg::HVec, 3> bhat, curvB, curvK;
-    dg::pushForward( bhat_.x(), bhat_.y(), bhat_.z(),
-            bhat[0], bhat[1], bhat[2], grid3d);
-    std::array<dg::HVec, 3> bhat_covariant(bhat);
-    dg::tensor::inv_multiply3d( grid3d.metric(), bhat[0], bhat[1], bhat[2],
-            bhat_covariant[0], bhat_covariant[1], bhat_covariant[2]);
-    dg::HVec normb( bhat[0]), one3d = dg::evaluate( dg::one, grid3d);
-    dg::blas1::pointwiseDot( 1., bhat[0], bhat_covariant[0],
-                             1., bhat[1], bhat_covariant[1],
-                             0., normb);
-    dg::blas1::pointwiseDot( 1., bhat[2], bhat_covariant[2],
-                             1., normb);
-    dg::blas1::axpby( 1., one3d, -1, normb);
-    double error = sqrt(dg::blas1::dot( normb, normb));
-    std::cout << "Error in norm b == 1 :  "<<error<<std::endl;
-
-    std::cout << "Push Forward curvatures ...\n";
-    dg::pushForward( curvB_.x(), curvB_.y(), curvB_.z(),
-            curvB[0], curvB[1], curvB[2], grid3d);
-    dg::pushForward( curvK_.x(), curvK_.y(), curvK_.z(),
-            curvK[0], curvK[1], curvK[2], grid3d);
-    std::cout << "Done!\n";
-    dg::blas1::axpby( 1., curvK, -1., curvB);
-    dg::HVec Bmodule = dg::pullback( dg::geo::Bmodule(mag), grid3d);
-    dg::blas1::pointwiseDot( Bmodule, Bmodule, Bmodule);
-    for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( Bmodule, curvB[i], curvB[i]);
-    dg::HVec R = dg::pullback( dg::cooX3d, grid3d);
-    dg::HVec IR =  dg::pullback( mag.ipolR(), grid3d);
-    dg::blas1::pointwiseDivide( gp.R_0, IR, R, 0., IR);
-    dg::HVec IZ =  dg::pullback( mag.ipolZ(), grid3d);
-    dg::blas1::pointwiseDivide( gp.R_0, IZ, R, 0., IZ);
-    dg::HVec IP =  dg::pullback( JPhi( gp), grid3d);
-    dg::blas1::pointwiseDivide( gp.R_0, IP, R, 0., IP);
-    dg::blas1::axpby( 1., IZ, -1., curvB[0]);
-    dg::blas1::axpby( 1., IR, +1., curvB[1]);
-    dg::blas1::axpby( 1., IP, -1., curvB[2]);
-    for( int i=0; i<3; i++)
-    {
-        error = sqrt(dg::blas1::dot( curvB[i], curvB[i] ) );
-        std::cout << "Error in curv "<<i<<" :   "<<error<<"\n";
-    }
-
     return 0;
 }
