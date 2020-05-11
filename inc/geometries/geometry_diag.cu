@@ -144,24 +144,22 @@ int main( int argc, char* argv[])
     //Test coefficients
     dg::geo::TokamakMagneticField mag_origin = dg::geo::createSolovevField(gp);
     dg::geo::TokamakMagneticField mag = mag_origin;
+    //Find O-point
+    double RO = gp.R_0, ZO = 0.;
+    if( !gp.isToroidal() )
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    const double psipO = mag.psip()( RO, ZO);
+    const double psipmin = mag.psip()(RO, ZO);
+    std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipmin<<std::endl;
+    const double psip0 = mag.psip()(gp.R_0, 0);
+    std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
     if( p.damping_alpha > 0.)
     {
-        double RO=mag.R0(), ZO=0.;
-        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        double psipO = mag.psip()( RO, ZO);
         double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
         double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
         std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
         mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2., fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
     }
-    //Find O-point
-    double R_O = gp.R_0, Z_O = 0.;
-    if( !gp.isToroidal() )
-        dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
-    const double psipmin = mag.psip()(R_O, Z_O);
-    std::cout << "O-point found at "<<R_O<<" "<<Z_O<<" with Psip "<<psipmin<<std::endl;
-    const double psip0 = mag.psip()(gp.R_0, 0);
-    std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
 
 
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
@@ -169,7 +167,6 @@ int main( int argc, char* argv[])
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
     unsigned npsi = 3, Npsi = p.Npsi;//set number of psivalues (NPsi % 8 == 0)
-    double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
         {"Psip", "Flux function", mag.psip()},
@@ -243,6 +240,7 @@ int main( int argc, char* argv[])
     };
 
     /// -------  Elements for fsa on X-point grid ----------------
+    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     if( gp.hasXpoint())
     {
         std::cout << "Generate X-point flux-aligned grid ... \n";
@@ -261,13 +259,15 @@ int main( int argc, char* argv[])
         dg::SparseTensor<dg::HVec> metricX = gX2d.metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
-        dg::HVec dvdzeta;
-        avg_eta( volX2d, dvdzeta, false);
-        dg::blas1::scal( dvdzeta, 4.*M_PI*M_PI);
-        dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
-        dg::HVec X_psi_vol = dg::integrate( dvdzeta, gX1d);
-        map1d.emplace_back( "dvdzeta", dvdzeta,
-            "dvdzeta on X-point grid");
+        const double f0 = (gX2d.x1()-gX2d.x0())/ ( psipmax - psipO);
+        dg::HVec dvdpsip;
+        avg_eta( volX2d, dvdpsip, false);
+        dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
+        dg::Grid1d gX1d(psipmin<psipmax ? psipmin : psipmax,
+            psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
+        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d);
+        map1d.emplace_back( "dvdpsip", dvdpsip,
+            "Derivative of flux volume with respect to flux label psi");
         map1d.emplace_back( "psi_vol", X_psi_vol,
             "Flux volume on X-point grid");
 
@@ -288,11 +288,11 @@ int main( int argc, char* argv[])
             transferH = dg::pullback( std::get<2>(tp), gX2d);
             dg::blas1::pointwiseDot( volX2d, transferH, transferH);
             avg_eta( transferH, transferH1d, false);
-            dg::blas1::scal( transferH1d, 4*M_PI*M_PI); //
-            dg::blas1::pointwiseDivide( transferH1d, dvdzeta, transferH1d );
+            dg::blas1::scal( transferH1d, 4*M_PI*M_PI*f0); //
+            dg::blas1::pointwiseDivide( transferH1d, dvdpsip, transferH1d );
             map1d.emplace_back( std::get<0>(tp)+"_fsa", transferH1d,
                 std::get<1>(tp)+" (Flux surface average)");
-            dg::blas1::pointwiseDot( transferH1d, dvdzeta, transferH1d );
+            dg::blas1::pointwiseDot( transferH1d, dvdpsip, transferH1d );
             transferH1d = dg::integrate( transferH1d, gX1d);
             map1d.emplace_back( std::get<0>(tp)+"_ifs", transferH1d,
                 std::get<1>(tp)+" (Flux surface integral)");
@@ -301,7 +301,7 @@ int main( int argc, char* argv[])
     }
     /// --------- More flux labels --------------------------------
     dg::Grid1d grid1d(psipmin<psipmax ? psipmin : psipmax,
-            psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::NEU);
+            psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
     if( !gp.isToroidal())
     {
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
