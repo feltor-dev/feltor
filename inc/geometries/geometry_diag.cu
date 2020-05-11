@@ -22,7 +22,7 @@
 
 
 // - write magnetic functions into file
-// - test performance and accuracy of Flux surface averages and integrals
+// - compute Flux - surface averages and write into file
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz, Npsi;
@@ -79,7 +79,6 @@ struct Parameters
         os << std::flush;
     }
 };
-
 
 int main( int argc, char* argv[])
 {
@@ -171,23 +170,79 @@ int main( int argc, char* argv[])
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
     unsigned npsi = 3, Npsi = p.Npsi;//set number of psivalues (NPsi % 8 == 0)
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
-    double volumeXGrid;
-    /// -------  Elements for fsa of curvature operators ----------------
-    // This is a numerical test because the fsa of the curvature operators exactly vanishes (at least for I = cte and almost for everything else)!!
-    dg::geo::CylindricalVectorLvl0 bhat_ = dg::geo::createBHat( mag);
-    dg::geo::CylindricalVectorLvl0 curvB_ = dg::geo::createTrueCurvatureNablaB( mag);
-    dg::geo::CylindricalVectorLvl0 curvK_ = dg::geo::createTrueCurvatureKappa( mag);
-    dg::HVec curvNablaBR = dg::evaluate( curvB_.x(), grid2d);
-    dg::HVec curvNablaBZ = dg::evaluate( curvB_.y(), grid2d);
-    dg::HVec curvKappaKR = dg::evaluate( curvK_.x(), grid2d);
-    dg::HVec curvKappaKZ = dg::evaluate( curvK_.y(), grid2d);
-    dg::HVec gradPsipR = dg::evaluate( mag.psipR(), grid2d);
-    dg::HVec gradPsipZ = dg::evaluate( mag.psipZ(), grid2d);
-    dg::HVec curvNablaBGradPsip(curvNablaBR), curvKappaKGradPsip( curvNablaBR), gradPsip(curvNablaBR);
-    dg::blas1::pointwiseDot( 1., curvNablaBR, gradPsipR, 1., curvNablaBZ, gradPsipZ, 0., curvNablaBGradPsip);
-    dg::blas1::pointwiseDot( 1., curvKappaKR, gradPsipR, 1., curvKappaKZ, gradPsipZ, 0., curvKappaKGradPsip);
-    dg::blas1::pointwiseDot( 1., gradPsipR, gradPsipR, 1., gradPsipZ, gradPsipZ, 0., gradPsip);
-    dg::blas1::transform( gradPsip, gradPsip, dg::SQRT<double>());
+    //Generate list of functions to evaluate
+    std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
+        {"Psip", "Flux function", mag.psip()},
+        {"PsipR", "Flux function derivative in R", mag.psipR()},
+        {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
+        {"PsipRR", "Flux function derivative in RR", mag.psipRR()},
+        {"PsipRZ", "Flux function derivative in RZ", mag.psipRZ()},
+        {"PsipZZ", "Flux function derivative in ZZ", mag.psipZZ()},
+        {"Ipol", "Poloidal current", mag.ipol()},
+        {"IpolR", "Poloidal current derivative in R", mag.ipolR()},
+        {"IpolZ", "Poloidal current derivative in Z", mag.ipolZ()},
+        {"Rho_p", "Normalized Poloidal flux label", dg::geo::RhoP(mag)},
+        {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
+        {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
+        {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
+        {"GradLnB", "The parallel derivative of LnB", dg::geo::GradLnB(mag)},
+        {"Divb", "The divergence of the magnetic unit vector", dg::geo::Divb(mag)},
+        {"B_R", "Derivative of Bmodule in R", dg::geo::BR(mag)},
+        {"B_Z", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
+        {"CurvatureNablaBR",  "R-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBR(mag,+1)},
+        {"CurvatureNablaBZ",  "Z-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBZ(mag,+1)},
+        {"CurvatureKappaR",   "R-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaR(mag,+1)},
+        {"CurvatureKappaZ",   "Z-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaZ(mag,+1)},
+        {"DivCurvatureKappa", "Divergence of the (toroidal) Kappa B curvature vector", dg::geo::DivCurvatureKappa(mag,+1)},
+        {"DivCurvatureNablaB","Divergence of the (toroidal) Nabla B curvature vector", dg::geo::DivCurvatureNablaB(mag,+1)},
+        {"TrueCurvatureNablaBR", "R-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBR(mag)},
+        {"TrueCurvatureNablaBZ", "Z-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBZ(mag)},
+        {"TrueCurvatureNablaBP", "Contravariant Phi-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBP(mag)},
+        {"TrueCurvatureKappaR", "R-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaR(mag)},
+        {"TrueCurvatureKappaZ", "Z-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaZ(mag)},
+        {"TrueCurvatureKappaP", "Contravariant Phi-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaP(mag)},
+        {"TrueDivCurvatureKappa", "Divergence of the (true) Kappa B curvature vector", dg::geo::TrueDivCurvatureKappa(mag)},
+        {"TrueDivCurvatureNablaB","Divergence of the (true) Nabla B curvature vector",  dg::geo::TrueDivCurvatureNablaB(mag)},
+        {"BFieldR", "R-component of the magnetic field vector", dg::geo::BFieldR(mag)},
+        {"BFieldZ", "Z-component of the magnetic field vector", dg::geo::BFieldZ(mag)},
+        {"BFieldP", "Contravariant Phi-component of the magnetic field vector", dg::geo::BFieldP(mag)},
+        {"BHatR", "R-component of the magnetic field unit vector", dg::geo::BHatR(mag)},
+        {"BHatZ", "Z-component of the magnetic field unit vector", dg::geo::BHatZ(mag)},
+        {"BHatP", "Contravariant Phi-component of the magnetic field unit vector", dg::geo::BHatP(mag)},
+        {"GradBHatR", "Parallel derivative of BHatR", dg::geo::BHatR(mag)},
+        {"GradBHatZ", "Parallel derivative of BHatZ", dg::geo::BHatZ(mag)},
+        {"GradBHatP", "Parallel derivative of BHatP", dg::geo::BHatP(mag)},
+        {"NormGradPsip", "Norm of gradient of Psip", dg::geo::SquareNorm( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
+        {"CurvatureNablaBGradPsip", "(Toroidal) Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureNablaB(mag, +1), dg::geo::createGradPsip(mag))},
+        {"CurvatureKappaGradPsip", "(Toroidal) Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureKappa(mag, +1), dg::geo::createGradPsip(mag))},
+        {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
+        {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
+        //////////////////////////////////
+        {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( gp.psipmin, gp.psipmax), mag.psip())},
+        {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(gp.psipmaxcut), mag.psip()) },
+        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::compose( dg::GaussianDamping( gp.psipmaxcut, p.source_alpha), mag.psip()) },
+        {"ZonalFlow",  "Flux aligned Sine function", dg::compose( dg::SinX ( p.amp, 0., 2.*M_PI*p.k_psi ), mag.psip())},
+        {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( gp.psipmaxlim), mag.psip() )},
+        {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
+                    p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
+                dg::geo::RhoP(mag))},
+        {"ProfileDamping", "Density profile damping", dg::compose(dg::PolynomialHeaviside(
+            1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)) },
+        {"MagneticTransition", "The region where the magnetic field is modified", dg::compose(dg::DPolynomialHeaviside(
+            p.damping_boundary+p.damping_alpha/2.,
+            p.damping_alpha/2., +1 ), dg::geo::RhoP(mag_origin))},
+        {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
+        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipmin*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
+        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},
+        ////
+        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
+        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
+            M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
+        { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
+
+    };
+
+    /// -------  Elements for fsa on X-point grid ----------------
     if( gp.hasXpoint())
     {
         std::cout << "Generate X-point flux-aligned grid ... \n";
@@ -206,23 +261,15 @@ int main( int argc, char* argv[])
         dg::SparseTensor<dg::HVec> metricX = gX2d.metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
-        dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
-        dg::HVec psip_X = dg::evaluate( dg::one, gX2d), dvdzeta, X_psip1d;
-        dg::blas2::symv( grid2gX2d, (dg::HVec)psipog2d, psip_X);
-        dg::blas1::pointwiseDot( volX2d, psip_X, psip_X);
-        avg_eta( psip_X, X_psip1d, false);
-        dg::blas1::scal( X_psip1d, 4.*M_PI*M_PI);
+        dg::HVec dvdzeta;
         avg_eta( volX2d, dvdzeta, false);
         dg::blas1::scal( dvdzeta, 4.*M_PI*M_PI);
         dg::Grid1d gX1d( gX2d.x0(), gX2d.x1(), npsi, Npsi, dg::NEU);
         dg::HVec X_psi_vol = dg::integrate( dvdzeta, gX1d);
-        map1d.emplace_back( "X_dvdzeta", dvdzeta,
+        map1d.emplace_back( "dvdzeta", dvdzeta,
             "dvdzeta on X-point grid");
-        map1d.emplace_back( "X_psi_vol", X_psi_vol,
+        map1d.emplace_back( "psi_vol", X_psi_vol,
             "Flux volume on X-point grid");
-        dg::blas1::pointwiseDivide( X_psip1d, dvdzeta, X_psip1d);
-        map1d.emplace_back( "X_psip_fsa", X_psip1d,
-            "Flux surface average of psi on X-point grid");
 
         //NOTE: VOLUME is WITHIN cells while AREA is ON gridpoints
         dg::HVec gradZetaX = metricX.value(0,0), X_psi_area;
@@ -230,97 +277,52 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( volX2d, gradZetaX, gradZetaX); //R\sqrt{g}|\nabla\zeta|
         avg_eta( gradZetaX, X_psi_area, false);
         dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
-        map1d.emplace_back( "X_psi_area", X_psi_area,
+        map1d.emplace_back( "psi_area", X_psi_area,
             "Flux area on X-point grid");
-        volumeXGrid = dg::interpolate( dg::xspace, X_psi_vol, gX1d.x1(), gX1d);
+        std::cout << "Total volume within separatrix is "<< dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
 
-        //Compute FSA of curvature operators
-        dg::HVec X_curvNablaBGradPsip( psip_X), X_curvKappaKGradPsip( psip_X), X_gradPsip(psip_X);
-        dg::HVec X_curvNablaB_fsa, X_curvKappaK_fsa, X_gradPsip_fsa;
-        dg::blas2::symv( grid2gX2d, curvNablaBGradPsip, X_curvNablaBGradPsip);
-        dg::blas2::symv( grid2gX2d, curvKappaKGradPsip, X_curvKappaKGradPsip);
-        dg::blas2::symv( grid2gX2d, gradPsip, X_gradPsip);
-        dg::blas1::pointwiseDot( volX2d, X_curvNablaBGradPsip, X_curvNablaBGradPsip);
-        dg::blas1::pointwiseDot( volX2d, X_curvKappaKGradPsip, X_curvKappaKGradPsip);
-        dg::blas1::pointwiseDot( volX2d, X_gradPsip, X_gradPsip);
-        avg_eta( X_curvNablaBGradPsip, X_curvNablaB_fsa, false);
-        avg_eta( X_curvKappaKGradPsip, X_curvKappaK_fsa, false);
-        avg_eta( X_gradPsip, X_gradPsip_fsa, false);
-        dg::blas1::scal( X_curvNablaB_fsa, 4*M_PI*M_PI); //
-        dg::blas1::scal( X_curvKappaK_fsa, 4*M_PI*M_PI); //
-        dg::blas1::scal( X_gradPsip_fsa, 4*M_PI*M_PI); //
-        dg::blas1::pointwiseDivide( X_curvNablaB_fsa, dvdzeta, X_curvNablaB_fsa );
-        dg::blas1::pointwiseDivide( X_curvKappaK_fsa, dvdzeta, X_curvKappaK_fsa );
-        dg::blas1::pointwiseDivide( X_gradPsip_fsa, dvdzeta, X_gradPsip_fsa );
-        map1d.emplace_back( "X_curvNablaB_fsa", X_curvNablaB_fsa,
-            "Flux surface average of true Nabla B curvature Dot Grad Psip");
-        map1d.emplace_back( "X_curvKappaK_fsa", X_curvKappaK_fsa,
-            "Flux surface average of true Kappa curvature Dot Grad Psip");
-        map1d.emplace_back( "X_gradPsip_fsa", X_gradPsip_fsa,
-            "Flux surface average of |Grad Psip|");
-        // h02 factor
-        dg::HVec h02 = dg::pullback( dg::geo::Hoo(mag), gX2d), X_h02_fsa;
-        dg::blas1::pointwiseDot( volX2d, h02, h02);
-        avg_eta( h02, X_h02_fsa, false);
-        dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
-        dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
-        map1d.emplace_back( "X_hoo_fsa", X_h02_fsa,
-            "Flux surface average of novel h02 factor");
-        // total source term
-        h02 = dg::pullback( dg::compose( dg::PolynomialHeaviside(
-                    p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
-                dg::geo::RhoP(mag)), gX2d);
-        dg::blas1::pointwiseDot( volX2d, h02, h02);
-        avg_eta( h02, X_h02_fsa, false);
-        dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
-        dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
-        map1d.emplace_back( "X_sne_fsa", X_h02_fsa,
-            "Flux surface average over source term");
-        dg::blas1::pointwiseDot( X_h02_fsa, dvdzeta, X_h02_fsa );
-        X_h02_fsa = dg::integrate( X_h02_fsa, gX1d);
-        map1d.emplace_back( "X_sne_ifs", X_h02_fsa,
-            "Flux surface integral over source term");
-        //divb
-        h02 = dg::pullback( dg::geo::Divb(mag), gX2d);
-        dg::blas1::pointwiseDot( volX2d, h02, h02);
-        avg_eta( h02, X_h02_fsa, false);
-        dg::blas1::scal( X_h02_fsa, 4*M_PI*M_PI); //
-        dg::blas1::pointwiseDivide( X_h02_fsa, dvdzeta, X_h02_fsa );
-        map1d.emplace_back( "X_divb_fsa", X_h02_fsa,
-            "Flux surface average of divb");
+        //Compute FSA of cylindrical functions
+        dg::HVec transferH, transferH1d;
+        for( auto tp : map)
+        {
+            transferH = dg::pullback( std::get<2>(tp), gX2d);
+            dg::blas1::pointwiseDot( volX2d, transferH, transferH);
+            avg_eta( transferH, transferH1d, false);
+            dg::blas1::scal( transferH1d, 4*M_PI*M_PI); //
+            dg::blas1::pointwiseDivide( transferH1d, dvdzeta, transferH1d );
+            map1d.emplace_back( std::get<0>(tp)+"_fsa", transferH1d,
+                std::get<1>(tp)+" (Flux surface average)");
+            dg::blas1::pointwiseDot( transferH1d, dvdzeta, transferH1d );
+            transferH1d = dg::integrate( transferH1d, gX1d);
+            map1d.emplace_back( std::get<0>(tp)+"_ifs", transferH1d,
+                std::get<1>(tp)+" (Flux surface integral)");
+
+        }
     }
-
-    ///////////////////Compute flux average////////////////////
-    dg::Grid1d grid1d( 0,1,npsi,Npsi, dg::NEU);
-    double deltapsi = 0.1;
+    /// --------- More flux labels --------------------------------
+    dg::Grid1d grid1d(psipmin<psipmax ? psipmin : psipmax,
+            psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::NEU);
     if( !gp.isToroidal())
     {
-        std::cout << "Compute flux averages\n";
-        dg::HVec xpoint_weights = dg::evaluate( dg::cooX2d, grid2d);
-        if( gp.hasXpoint() )
-        {
-            double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-            double Z_X = -1.1*gp.elongation*gp.a;
-            dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
-            dg::blas1::pointwiseDot( xpoint_weights,
-                    dg::evaluate( dg::geo::ZCutter(Z_X), grid2d), xpoint_weights);
-        }
-        dg::geo::FluxSurfaceAverage<dg::DVec>  fsa( grid2d, mag, psipog2d, xpoint_weights);
-        grid1d = dg::Grid1d (psipmin<psipmax ? psipmin : psipmax, psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::NEU);
-        map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
-            "Flux surface average of psi with delta function");
-        dg::HVec qprofile;
+        dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
+        dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
+        map1d.emplace_back("rho", rho,
+            "Alternative flux label rho = -psi/psimin + 1");
+        dg::blas1::transform( rho, rho, dg::SQRT<double>());
+        map1d.emplace_back("rho_p", rho,
+            "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
         if( gp.equilibrium == "solovev")
         {
             dg::geo::SafetyFactor qprof( mag);
-            qprofile = dg::evaluate( qprof, grid1d);
+            dg::HVec qprofile = dg::evaluate( qprof, grid1d);
             map1d.emplace_back("q-profile", qprofile,
                 "q-profile (Safety factor) using direct integration");
             dg::HVec psit = dg::integrate( qprofile, grid1d);
             map1d.emplace_back("psit1d", psit,
                 "Toroidal flux label psi_t integrated  on grid1d using direct q");
             //we need to avoid integrating >=0
-            dg::Grid1d g1d_fine(psipmin<0. ? psipmin : 0., psipmin<0. ? 0. : psipmin, npsi ,Npsi,dg::NEU);
+            dg::Grid1d g1d_fine(psipmin<0. ? psipmin : 0.,
+                    psipmin<0. ? 0. : psipmin, npsi, Npsi,dg::NEU);
             qprofile = dg::evaluate( qprof, g1d_fine);
             dg::HVec w1d = dg::create::weights( g1d_fine);
             double psit_tot = dg::blas1::dot( w1d, qprofile);
@@ -330,72 +332,6 @@ int main( int argc, char* argv[])
             map1d.emplace_back("rho_t", psit,
                 "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
         }
-        dg::geo::SafetyFactorAverage qprof( grid2d, mag);
-        qprofile = dg::evaluate( qprof, grid1d);
-        map1d.emplace_back("q-profile_fsa", qprofile,
-            "q-profile (Safety factor) using average integration");
-        dg::HVec psit = dg::integrate( qprofile, grid1d);
-        map1d.emplace_back("psit1d_fsa", psit,
-            "Toroidal flux label psi_t integrated on grid1d using average q");
-        map1d.emplace_back("psip1d",    dg::evaluate( dg::cooX1d, grid1d),
-            "Poloidal flux label psi_p evaluated on grid1d");
-        dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
-        dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
-        map1d.emplace_back("rho", rho,
-            "Alternative flux label rho = -psi/psimin + 1");
-        dg::blas1::transform( rho, rho, dg::SQRT<double>());
-        map1d.emplace_back("rho_p", rho,
-            "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
-        fsa.set_container( (dg::DVec)curvNablaBGradPsip);
-        map1d.emplace_back("curvNablaB_fsa",   dg::evaluate( fsa,      grid1d),
-            "Flux surface average of true Nabla B curvature Dot Grad Psip with delta function");
-        fsa.set_container( (dg::DVec)curvKappaKGradPsip);
-        map1d.emplace_back("curvKappaK_fsa",   dg::evaluate( fsa,      grid1d),
-            "Flux surface average of true Kappa curvature Dot Grad Psip with delta function");
-        fsa.set_container( (dg::DVec)gradPsip);
-        map1d.emplace_back("gradPsip_fsa",   dg::evaluate( fsa,      grid1d),
-            "Flux surface average of |Grad Psip| with delta function");
-
-        //other flux labels
-        dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag);
-        fsi.set_right( xpoint_weights);
-        deltapsi = fsi.get_deltapsi();
-
-        dg::HVec areaT_psip = dg::evaluate( fsi, grid1d);
-        dg::HVec w1d = dg::create::weights( grid1d);
-        double volumeCoarea = 2.*M_PI*dg::blas1::dot( areaT_psip, w1d);
-
-        //area
-        fsi.set_left( dg::evaluate( dg::geo::GradPsip(mag), grid2d));
-        dg::HVec psi_area = dg::evaluate( fsi, grid1d);
-        dg::blas1::scal(psi_area, 2.*M_PI);
-        map1d.emplace_back( "psi_area", psi_area,
-            "Flux area with delta function");
-        // h02 factor
-        dg::HVec h02 = dg::evaluate( dg::geo::Hoo(mag), grid2d);
-        fsa.set_container( h02);
-        map1d.emplace_back( "hoo_fsa", dg::evaluate( fsa, grid1d),
-           "Flux surface average of novel h02 factor with delta function");
-
-
-
-        dg::geo::FluxVolumeIntegral<dg::HVec> fvi( (dg::CartesianGrid2d)grid2d, mag);
-        //std::cout << "Delta Rho for Flux surface integrals = "<<-deltapsi/psipmin<<"\n";
-
-        fvi.set_right( xpoint_weights);
-        dg::HVec psi_vol = dg::evaluate( fvi, grid1d);
-        dg::blas1::scal(psi_vol, 2.*M_PI);
-        map1d.emplace_back( "psi_vol", psi_vol,
-            "Flux volume with delta function");
-        double volumeFVI = 2.*M_PI*fvi(psipmax);
-        double volumeSep = 2.*M_PI*fvi(0.);
-        std::cout << "volume enclosed by separatrix: "<<volumeSep<<"\n";
-        std::cout << "volume test with coarea formula: "<<volumeCoarea<<" "<<volumeFVI
-                  <<" rel error = "<<fabs(volumeCoarea-volumeFVI)/volumeFVI<<"\n";
-        if(gp.hasXpoint()){
-            std::cout << "volume test with x grid formula: "<<volumeXGrid<<" "<<volumeFVI
-                      <<" rel error = "<<fabs(volumeXGrid-volumeFVI)/volumeFVI<<"\n";
-        };
     }
 
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -450,78 +386,12 @@ int main( int argc, char* argv[])
         err = nc_redef(ncid);
     }
     //write 2d vectors
-    std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map2d{
-        {"Psip", "Flux function", mag.psip()},
-        {"PsipR", "Flux function derivative in R", mag.psipR()},
-        {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
-        {"PsipRR", "Flux function derivative in RR", mag.psipRR()},
-        {"PsipRZ", "Flux function derivative in RZ", mag.psipRZ()},
-        {"PsipZZ", "Flux function derivative in ZZ", mag.psipZZ()},
-        {"Ipol", "Poloidal current", mag.ipol()},
-        {"IpolR", "Poloidal current derivative in R", mag.ipolR()},
-        {"IpolZ", "Poloidal current derivative in Z", mag.ipolZ()},
-        {"Rho_p", "Normalized Poloidal flux label", dg::geo::RhoP(mag)},
-        {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
-        {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
-        {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
-        {"GradLnB", "The parallel derivative of LnB", dg::geo::GradLnB(mag)},
-        {"Divb", "The divergence of the magnetic unit vector", dg::geo::Divb(mag)},
-        {"B_R", "Derivative of Bmodule in R", dg::geo::BR(mag)},
-        {"B_Z", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
-        {"CurvatureNablaBR",  "R-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBR(mag,+1)},
-        {"CurvatureNablaBZ",  "Z-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBZ(mag,+1)},
-        {"CurvatureKappaR",   "R-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaR(mag,+1)},
-        {"CurvatureKappaZ",   "Z-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaZ(mag,+1)},
-        {"DivCurvatureKappa", "Divergence of the (toroidal) Kappa B curvature vector", dg::geo::DivCurvatureKappa(mag,+1)},
-        {"DivCurvatureNablaB","Divergence of the (toroidal) Nabla B curvature vector", dg::geo::DivCurvatureNablaB(mag,+1)},
-        {"TrueCurvatureNablaBR", "R-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBR(mag)},
-        {"TrueCurvatureNablaBZ", "Z-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBZ(mag)},
-        {"TrueCurvatureNablaBP", "Contravariant Phi-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBP(mag)},
-        {"TrueCurvatureKappaR", "R-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaR(mag)},
-        {"TrueCurvatureKappaZ", "Z-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaZ(mag)},
-        {"TrueCurvatureKappaP", "Contravariant Phi-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaP(mag)},
-        {"TrueDivCurvatureKappa", "Divergence of the (true) Kappa B curvature vector", dg::geo::TrueDivCurvatureKappa(mag)},
-        {"TrueDivCurvatureNablaB","Divergence of the (true) Nabla B curvature vector",  dg::geo::TrueDivCurvatureNablaB(mag)},
-        {"BFieldR", "R-component of the magnetic field vector", dg::geo::BFieldR(mag)},
-        {"BFieldZ", "Z-component of the magnetic field vector", dg::geo::BFieldZ(mag)},
-        {"BFieldP", "Contravariant Phi-component of the magnetic field vector", dg::geo::BFieldP(mag)},
-        {"BHatR", "R-component of the magnetic field unit vector", dg::geo::BHatR(mag)},
-        {"BHatZ", "Z-component of the magnetic field unit vector", dg::geo::BHatZ(mag)},
-        {"BHatP", "Contravariant Phi-component of the magnetic field unit vector", dg::geo::BHatP(mag)},
-        {"GradBHatR", "Parallel derivative of BHatR", dg::geo::BHatR(mag)},
-        {"GradBHatZ", "Parallel derivative of BHatZ", dg::geo::BHatZ(mag)},
-        {"GradBHatP", "Parallel derivative of BHatP", dg::geo::BHatP(mag)},
-        {"GradPsip", "Module of gradient of Psip", dg::geo::GradPsip(mag)},
-        //////////////////////////////////
-        {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( gp.psipmin, gp.psipmax), mag.psip())},
-        {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(gp.psipmaxcut), mag.psip()) },
-        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::compose( dg::GaussianDamping( gp.psipmaxcut, p.source_alpha), mag.psip()) },
-        {"ZonalFlow",  "Flux aligned Sine function", dg::compose( dg::SinX ( p.amp, 0., 2.*M_PI*p.k_psi ), mag.psip())},
-        {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( gp.psipmaxlim), mag.psip() )},
-        {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
-                    p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
-                dg::geo::RhoP(mag))},
-        {"ProfileDamping", "Density profile damping", dg::compose(dg::PolynomialHeaviside(
-            1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)) },
-        {"MagneticTransition", "The region where the magnetic field is modified", dg::compose(dg::DPolynomialHeaviside(
-            p.damping_boundary+p.damping_alpha/2.,
-            p.damping_alpha/2., +1 ), dg::geo::RhoP(mag_origin))},
-        {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
-        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipmin*0.2, deltapsi, 1./(sqrt(2.*M_PI)*deltapsi)), mag.psip())},
-        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},
-        ////
-        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
-        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
-            M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
-        { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
-
-    };
     //allocate mem for visual
     dg::HVec hvisual = dg::evaluate( dg::zero, grid2d);
     dg::HVec hvisual3d = dg::evaluate( dg::zero, grid3d);
     dg::fHVec fvisual, fvisual3d;
     std::cout << "WRTING 2D/3D CYLINDRICAL FIELDS ... \n";
-    for(auto tp : map2d)
+    for(auto tp : map)
     {
         int vectorID, vectorID3d;
         err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 2,

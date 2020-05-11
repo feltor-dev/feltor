@@ -1410,7 +1410,7 @@ Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}
 \qquad alpha  & float & 0.2 & - & Transition width $\alpha_p$ in the Heaviside
 at the separatrix
 \\
-source & dict & & & Density source, cf. the output \texttt{sne\_ifs} in \texttt{feltordiag} (or \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates.  \\
+source & dict & & & Density source, cf. the output \texttt{sne\_ifs} in \texttt{feltordiag} (or \texttt{SourceProfile\_ifs} in \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates.  \\
 \qquad rate & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}.
 \\
 \qquad type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};

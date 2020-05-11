@@ -137,8 +137,22 @@ int main( int argc, char* argv[])
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map2d;
-    thrust::host_vector<double> psi_p = dg::pullback( mag.psip(), g2d);
+    dg::HVec psi_p = dg::pullback( mag.psip(), g2d);
     map2d.emplace_back( "Psi_p", psi_p, "Poloidal flux function");
+    //test if interpolation onto grid works
+    dg::HVec psip_X(psi_p);
+    {
+        double Rmin=gp.R_0-1.2*gp.a;
+        double Zmin=-1.2*gp.a*gp.elongation;
+        double Rmax=gp.R_0+1.2*gp.a;
+        double Zmax=1.2*gp.a*gp.elongation;
+        dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, 3,200,200);
+        std::vector<dg::HVec> coordsX = g2d.map();
+        dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
+        dg::HVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
+        dg::blas2::symv( grid2gX2d, psipog2d, psip_X);
+    }
+    map2d.emplace_back( "Psi_p_interpolated", psip_X, "Poloidal flux function");
     g2d.display();
     dg::HVec X( g2d.size()), Y(X), P = dg::evaluate( dg::zero, g2d);
     for( unsigned i=0; i<g2d.size(); i++)

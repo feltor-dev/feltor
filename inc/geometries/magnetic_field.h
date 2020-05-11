@@ -651,6 +651,16 @@ inline CylindricalVectorLvl0 createTrueCurvatureKappa( const TokamakMagneticFiel
 inline CylindricalVectorLvl0 createTrueCurvatureNablaB( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( TrueCurvatureNablaBR(mag), TrueCurvatureNablaBZ(mag), TrueCurvatureNablaBP(mag));
 }
+/**
+ * @brief Gradient Psip vector field (PsipR, PsipZ, 0)
+ *
+ * @param mag the tokamak magnetic field
+ * @return the tuple PsipR, PsipZ, 0 constructed from mag
+ * @note The contravariant components in cylindrical coordinates
+ */
+inline CylindricalVectorLvl0 createGradPsip( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl0( mag.psipR(), mag.psipZ(),Constant(0));
+}
 
 //Necessary to analytically compute Laplacians:
 ///@brief \f$ \nabla_\parallel b^R \f$
@@ -707,20 +717,6 @@ struct GradBHatP: public aCylindricalFunctor<GradBHatP>
     BHatP bhatP_;
     Divb divb_;
     TokamakMagneticField mag_;
-};
-
-///@brief \f$ |\nabla\psi_p| \f$
-struct GradPsip: public aCylindricalFunctor<GradPsip>
-{
-    GradPsip( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
-    {
-        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
-        return sqrt(psipR*psipR +psipZ*psipZ);
-    }
-    private:
-    TokamakMagneticField m_mag;
-
 };
 
 ///@brief \f$ \sqrt{\psi_p/ \psi_{p,\min}} \f$

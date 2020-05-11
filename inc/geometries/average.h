@@ -29,16 +29,16 @@ struct FluxSurfaceIntegral
      * @brief Construct from a grid and a magnetic field
      * f and g are default initialized to 1
      * @param g2d grid
-     * @param c contains psip, psipR and psipZ
+     * @param mag contains psip, psipR and psipZ
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c 0.5*h*GradPsi*width_factor)
      */
-    FluxSurfaceIntegral(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.):
+    FluxSurfaceIntegral(const dg::Grid2d& g2d, const TokamakMagneticField& mag, double width_factor = 1.):
             m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_delta(m_f),
-            m_psi( dg::evaluate( c.psip(), g2d)),
+            m_psi( dg::evaluate( mag.psip(), g2d)),
             m_w2d ( dg::create::weights( g2d))
     {
-        thrust::host_vector<double> psipR  = dg::evaluate( c.psipR(), g2d);
-        thrust::host_vector<double> psipZ  = dg::evaluate( c.psipZ(), g2d);
+        thrust::host_vector<double> psipR  = dg::evaluate( mag.psipR(), g2d);
+        thrust::host_vector<double> psipZ  = dg::evaluate( mag.psipZ(), g2d);
         double psipRmax = dg::blas1::reduce( psipR, 0., dg::AbsMax<double>()  );
         double psipZmax = dg::blas1::reduce( psipZ, 0., dg::AbsMax<double>()  );
         double deltapsi = 0.5*(psipZmax*g2d.hy() +psipRmax*g2d.hx())/g2d.n();
@@ -96,12 +96,12 @@ struct FluxVolumeIntegral
      * @brief Construct from a grid and a magnetic field
      * f and g are default initialized to 1
      * @param g2d grid
-     * @param c contains psip
+     * @param mag contains psip
      */
     template<class Geometry2d>
-    FluxVolumeIntegral(const Geometry2d& g2d, const TokamakMagneticField& c):
+    FluxVolumeIntegral(const Geometry2d& g2d, const TokamakMagneticField& mag):
         m_f(dg::evaluate(dg::one, g2d)), m_g(m_f), m_heavi(m_f),
-        m_psi( dg::pullback( c.psip(), g2d)),
+        m_psi( dg::pullback( mag.psip(), g2d)),
         m_w2d ( dg::create::volume( g2d))
     {
     }
@@ -213,13 +213,13 @@ struct SafetyFactorAverage
      /**
      * @brief Construct from a field and a grid
      * @param g2d 2d grid
-     * @param c contains psip, psipR and psipZ and Ipol
+     * @param mag contains psip, psipR and psipZ and Ipol
      * @param width_factor can be used to tune the width of the numerical delta function (\c width = \c h*GradPsi*width_factor)
      */
-    SafetyFactorAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, double width_factor = 1.) :
-        m_fsi( g2d, c, width_factor)
+    SafetyFactorAverage(const dg::Grid2d& g2d, const TokamakMagneticField& mag, double width_factor = 1.) :
+        m_fsi( g2d, mag, width_factor)
     {
-        thrust::host_vector<double> alpha = dg::evaluate( c.ipol(), g2d);
+        thrust::host_vector<double> alpha = dg::evaluate( mag.ipol(), g2d);
         thrust::host_vector<double> R = dg::evaluate( dg::cooX2d, g2d);
         dg::blas1::pointwiseDivide( alpha, R, alpha);
         m_fsi.set_left( alpha);
@@ -254,8 +254,8 @@ struct SafetyFactorAverage
  */
 struct SafetyFactor
 {
-    SafetyFactor( const TokamakMagneticField& c):
-        m_fpsi( c.get_psip(), c.get_ipol(), c.R0(), 0.,false){}
+    SafetyFactor( const TokamakMagneticField& mag):
+        m_fpsi( mag.get_psip(), mag.get_ipol(), mag.R0(), 0.,false){}
 
     /**
      * @brief Calculate q(psip0)

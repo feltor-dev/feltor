@@ -371,6 +371,39 @@ struct CylindricalVectorLvl0
     std::array<CylindricalFunctor,3> p_;
 };
 
+/**
+ * @brief Return scalar product of two vector fields \f$ v_0w_0 + v_1w_1 + v_2w_2\f$
+ */
+struct ScalarProduct : public aCylindricalFunctor<ScalarProduct>
+{
+    ScalarProduct( CylindricalVectorLvl0 v, CylindricalVectorLvl0 w) : m_v(v), m_w(w){}
+    double do_compute( double R, double Z) const
+    {
+        return m_v.x()(R,Z)*m_w.x()(R,Z)
+             + m_v.y()(R,Z)*m_w.y()(R,Z)
+             + m_v.z()(R,Z)*m_w.z()(R,Z);
+    }
+  private:
+    CylindricalVectorLvl0 m_v, m_w;
+};
+
+/**
+ * @brief Return norm of scalar product of two vector fields \f$ \sqrt{v_0w_0 + v_1w_1 + v_2w_2}\f$
+ *
+ * short for \c dg::compose( sqrt, ScalarProduct( v,w))
+ */
+struct SquareNorm : public aCylindricalFunctor<SquareNorm>
+{
+    SquareNorm( CylindricalVectorLvl0 v, CylindricalVectorLvl0 w) : m_s(v, w){}
+    double do_compute( double R, double Z) const
+    {
+        return sqrt(m_s(R,Z));
+    }
+  private:
+    ScalarProduct m_s;
+};
+
+
 /*!@brief \f[ \chi^{ij} = b^ib^j\f]
  *
  * Creates the two times contravariant tensor that,
