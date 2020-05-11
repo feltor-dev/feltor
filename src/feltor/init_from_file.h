@@ -29,14 +29,18 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     parser["collectComments"] = false;
     std::string errs;
     parseFromStream( parser, is, &jsIN, &errs); //read input without comments
-    const feltor::Parameters pIN(  jsIN);
+    unsigned  pINn       = jsIN["n"].asUInt();
+    unsigned  pINNx      = jsIN["Nx"].asUInt();
+    unsigned  pINNy      = jsIN["Ny"].asUInt();
+    unsigned  pINNz      = jsIN["Nz"].asUInt();
+    double    pINdt      = jsIN["dt"].asDouble();
+    bool      pINsymmetric   = jsIN.get( "symmetric", false).asBool();
     MPI_OUT std::cout << "RESTART from file "<<file_name<< std::endl;
     MPI_OUT std::cout << " file parameters:" << std::endl;
-    MPI_OUT pIN.display( std::cout);
 
     // Now read in last timestep
     Geometry grid_IN( grid.x0(), grid.x1(), grid.y0(), grid.y1(), grid.z0(), grid.z1(),
-        pIN.n, pIN.Nx, pIN.Ny, pIN.symmetric ? 1 : pIN.Nz, pIN.bcxN, pIN.bcyN, dg::PER
+        pINn, pINNx, pINNy, pINsymmetric ? 1 : pINNz, dg::DIR, dg::DIR, dg::PER
         #ifdef FELTOR_MPI
         , grid.communicator()
         #endif //FELTOR_MPI
