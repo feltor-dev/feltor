@@ -388,9 +388,9 @@ struct MultigridCG2d
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         //double norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
-#ifdef DG_BENCHMARK
-        Timer t;
-#endif //DG_BENCHMARK
+//#ifdef DG_BENCHMARK
+//        Timer t;
+//#endif //DG_BENCHMARK
 
         //std::vector<Container> out( x);
 
@@ -407,20 +407,20 @@ struct MultigridCG2d
         dg::blas1::scal( x[p+1], 0.);
         if( p+1 == m_stages-1)
         {
-#ifdef DG_BENCHMARK
-            t.tic();
-#endif //DG_BENCHMARK
+//#ifdef DG_BENCHMARK
+//            t.tic();
+//#endif //DG_BENCHMARK
             int number = m_cg[p+1]( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
                 op[p+1].inv_weights(), eps/2.);
-#ifdef DG_BENCHMARK
-            t.toc();
-#ifdef MPI_VERSION
-            int rank;
-            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-            if(rank==0)
-#endif //MPI
+//#ifdef DG_BENCHMARK
+//            t.toc();
+//#ifdef MPI_VERSION
+//            int rank;
+//            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+//            if(rank==0)
+//#endif //MPI
             //std::cout << "# Multigrid stage: " << p+1 << ", iter: " << number << ", took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+//#endif //DG_BENCHMARK
             //dg::blas2::symv( op[p+1], x[p+1], m_r[p+1]);
             //dg::blas1::axpby( 1., b[p+1], -1., m_r[p+1]);
             //double norm_res = sqrt(dg::blas1::dot( m_r[p+1], m_r[p+1]));
