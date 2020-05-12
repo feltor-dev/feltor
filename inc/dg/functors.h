@@ -82,12 +82,15 @@ struct Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
-     * @param sigma_x x - variance
-     * @param sigma_y y - variance
+     * @param sigma_x x - variance (must be !=0)
+     * @param sigma_y y - variance (must be !=0)
      * @param amp Amplitude
      */
     Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
-        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
+        : m_x0(x0), m_y0(y0), m_sigma_x(sigma_x), m_sigma_y(sigma_y), m_amp(amp){
+            assert( m_sigma_x != 0  &&  "sigma_x must not be 0 in Gaussian");
+            assert( m_sigma_y != 0  &&  "sigma_y must not be 0 in Gaussian");
+    }
     /**
      * @brief Return the value of the Gaussian
      *
@@ -102,9 +105,9 @@ struct Gaussian
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*
+                   exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x +
+                          (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
     /**
      * @brief Return the value of the Gaussian
@@ -123,7 +126,7 @@ struct Gaussian
         return  this->operator()(x,y);
     }
   private:
-    double  x00, y00, sigma_x, sigma_y, amplitude;
+    double  m_x0, m_y0, m_sigma_x, m_sigma_y, m_amp;
 
 };
 
@@ -143,11 +146,14 @@ struct Cauchy
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
-     * @param sigma_x radius in x
-     * @param sigma_y radius in y
+     * @param sigma_x radius in x (must be !=0)
+     * @param sigma_y radius in y (must be !=0)
      * @param amp Amplitude
      */
-    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){}
+    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){
+        assert( sigma_x != 0  &&  "sigma_x must be !=0 in Cauchy");
+        assert( sigma_y != 0  &&  "sigma_y must be !=0 in Cauchy");
+    }
     DG_DEVICE
     double operator()(double x, double y )const{
         double xbar = (x-x0_)/sigmaX_;
@@ -217,13 +223,17 @@ struct Gaussian3d
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
      * @param z0 z-center-coordinate
-     * @param sigma_x x - variance
-     * @param sigma_y y - variance
-     * @param sigma_z z - variance
+     * @param sigma_x x - variance (must be !=0)
+     * @param sigma_y y - variance (must be !=0)
+     * @param sigma_z z - variance (must be !=0)
      * @param amp Amplitude
      */
     Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
-        : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+        : m_x0(x0), m_y0(y0), m_z0(z0), m_sigma_x(sigma_x), m_sigma_y(sigma_y), m_sigma_z(sigma_z), m_amp(amp){
+            assert( m_sigma_x != 0  &&  "sigma_x must be !=0 in Gaussian3d");
+            assert( m_sigma_y != 0  &&  "sigma_y must be !=0 in Gaussian3d");
+            assert( m_sigma_z != 0  &&  "sigma_z must be !=0 in Gaussian3d");
+    }
     /**
      * @brief Return a 2d Gaussian
      *
@@ -238,9 +248,9 @@ struct Gaussian3d
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*
+                   exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x +
+                          (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
     /**
      * @brief Return the value of the Gaussian
@@ -257,13 +267,13 @@ struct Gaussian3d
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-        return  amplitude*
-                exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                       (z-z00)*(z-z00)/2./sigma_z/sigma_z +
-                       (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*
+                exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x +
+                       (z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z +
+                       (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
   private:
-    double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
+    double  m_x0, m_y0, m_z0, m_sigma_x, m_sigma_y, m_sigma_z, m_amp;
 
 };
 /**
@@ -278,15 +288,17 @@ struct GaussianX
      * @brief A Gaussian in x
      *
      * @param x0 x-center-coordinate
-     * @param sigma_x x - variance
+     * @param sigma_x x - variance (must be !=0)
      * @param amp Amplitude
      */
     GaussianX( double x0, double sigma_x, double amp)
-        :x00(x0), sigma_x(sigma_x), amplitude(amp){}
+        :m_x0(x0), m_sigma_x(sigma_x), m_amp(amp){
+            assert( m_sigma_x != 0  &&  "sigma_x must be !=0 in GaussianX");
+    }
     DG_DEVICE
     double operator()(double x) const
     {
-        return  amplitude* exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x ));
+        return  m_amp* exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x ));
     }
     DG_DEVICE
     double operator()(double x, double y) const
@@ -299,7 +311,7 @@ struct GaussianX
         return this->operator()(x);
     }
   private:
-    double  x00, sigma_x, amplitude;
+    double  m_x0, m_sigma_x, m_amp;
 
 };
 /**
@@ -314,11 +326,13 @@ struct GaussianY
      * @brief Functor returning a gaussian
      *
      * @param y0 y-center-coordinate
-     * @param sigma_y y - variance
+     * @param sigma_y y - variance (must be !=0)
      * @param amp Amplitude
      */
     GaussianY( double y0, double sigma_y, double amp)
-        : y00(y0), sigma_y(sigma_y), amplitude(amp){}
+        : m_y0(y0), m_sigma_y(sigma_y), m_amp(amp){
+            assert( m_sigma_y != 0  &&  "sigma_x must be !=0 in GaussianY");
+    }
     /**
      * @brief Return the value of the gaussian
      *
@@ -333,10 +347,10 @@ struct GaussianY
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude*exp( -((y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*exp( -((y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
   private:
-    double  y00, sigma_y, amplitude;
+    double  m_y0, m_sigma_y, m_amp;
 
 };
 /**
@@ -351,11 +365,13 @@ struct GaussianZ
      * @brief Functor returning a gaussian
      *
      * @param z0 z-center-coordinate
-     * @param sigma_z z - variance
+     * @param sigma_z z - variance (must be !=0)
      * @param amp Amplitude
      */
     GaussianZ( double z0, double sigma_z, double amp)
-        : z00(z0), sigma_z(sigma_z), amplitude(amp){}
+        : m_z0(z0), m_sigma_z(sigma_z), m_amp(amp){
+            assert( m_sigma_z != 0  &&  "sigma_z must be !=0 in GaussianZ");
+    }
     /**
      * @brief Return the value of the gaussian
      *
@@ -369,7 +385,7 @@ struct GaussianZ
     DG_DEVICE
     double operator()( double z) const
     {
-        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+        return  m_amp*exp( -((z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z) );
     }
     /**
      * @brief Return the value of the gaussian
@@ -386,10 +402,10 @@ struct GaussianZ
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+        return  m_amp*exp( -((z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z) );
     }
   private:
-    double  z00, sigma_z, amplitude;
+    double  m_z0, m_sigma_z, m_amp;
 
 };
 /**
@@ -401,10 +417,12 @@ struct IslandXY
     /**
      * @brief Construct Island
      *
-     * @param lambda amplitude
+     * @param lambda amplitude (must be != 0)
      * @param eps y-amplitude
      */
-     IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){}
+     IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){
+         assert( lambda != 0 && "Lambda parameter in IslandXY must not be zero!");
+     }
     /**
      * @brief Return profile
      *
@@ -574,15 +592,15 @@ struct InvCoshXsq
      * @param amp amplitude
      * @param kx  kx
      */
-    InvCoshXsq( double amp, double kx):amp_(amp), kx_(kx){}
+    InvCoshXsq( double amp, double kx):m_amp(amp), m_kx(kx){}
     DG_DEVICE
-    double operator()( double x)const{ return amp_/cosh(x*kx_)/cosh(x*kx_);}
+    double operator()( double x)const{ return m_amp/cosh(x*m_kx)/cosh(x*m_kx);}
     DG_DEVICE
     double operator()( double x, double y)const{ return this->operator()(x);}
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
-    double amp_,kx_;
+    double m_amp, m_kx;
 };
 /**
  * @brief Sin prof in x-direction
@@ -597,15 +615,15 @@ struct SinProfX
      * @param bamp backgroundamp B
      * @param kx  kx
      */
-    SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    SinProfX( double amp, double bamp, double kx):m_amp(amp), m_bamp(bamp),m_kx(kx){}
     DG_DEVICE
-    double operator()( double x)const{ return bamp_+amp_*(1.-sin(x*kx_));}
+    double operator()( double x)const{ return m_bamp+m_amp*(1.-sin(x*m_kx));}
     DG_DEVICE
     double operator()( double x, double y)const{ return this->operator()(x);}
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
-    double amp_,bamp_,kx_;
+    double m_amp, m_bamp, m_kx;
 };
 /**
  * @brief Exp prof in x-direction
@@ -618,17 +636,19 @@ struct ExpProfX
      *
      * @param amp amplitude B
      * @param bamp backgroundamp A (choose zero for constant gradient length
-     * @param ln  ln
+     * @param ln  ln (must be !=0)
      */
-    ExpProfX( double amp, double bamp, double ln):amp_(amp), bamp_(bamp),ln_(ln){}
+    ExpProfX( double amp, double bamp, double ln):m_amp(amp),m_bamp(bamp),m_ln(ln){
+        assert( ln!=0 && "ln parameter must be != 0 in ExpProfX!");
+    }
     DG_DEVICE
-    double operator()( double x)const{ return bamp_+amp_*exp(-x/ln_);}
+    double operator()( double x)const{ return m_bamp+m_amp*exp(-x/m_ln);}
     DG_DEVICE
     double operator()( double x, double y)const{ return this->operator()(x);}
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
-    double amp_,bamp_,ln_;
+    double m_amp, m_bamp, m_ln;
 };
 /**
  * @brief A linear function in x-direction
@@ -797,7 +817,9 @@ struct Heaviside
 struct GaussianDamping
 {
     GaussianDamping( double psimax, double alpha):
-        m_psimax(psimax), m_alpha(alpha) { }
+        m_psimax(psimax), m_alpha(alpha) {
+            assert( alpha!= 0 && "Damping width in GaussianDamping must not be zero");
+        }
     DG_DEVICE
     double operator()(double psi)const
     {
@@ -817,7 +839,7 @@ struct TanhProfX {
      * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
-     * @param width damping width \c alpha
+     * @param width damping width \c alpha (must be !=0)
      * @param sign sign of the Tanh, defines the damping direction
      * @param bgamp background amplitude \c B
      * @param profamp profile amplitude \c A
@@ -825,7 +847,9 @@ struct TanhProfX {
      */
     TanhProfX(double xb, double width, int sign =1,double bgamp = 0.,
         double profamp = 1.) :
-        xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
+        xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {
+            assert( width != 0&& "Width in TanhProfX must not be zero!");
+    }
     DG_DEVICE
     double operator() (double x)const
     {
@@ -860,12 +884,14 @@ struct PolynomialHeaviside {
      * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
-     * @param a transition width
+     * @param a transition width (must be != 0)
      * @param sign either +1 (original Heaviside) or -1 (the function is mirrored at the \c x=xb axis: f(2xb-x))
      * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     PolynomialHeaviside(double xb, double a, int sign = +1) :
-        x0(xb), a(a), m_s(sign){}
+        x0(xb), a(a), m_s(sign){
+            assert( a!=0 && "PolynomialHeaviside width must not be zero");
+    }
     DG_DEVICE
     double operator() (double x)const
     {
@@ -901,11 +927,13 @@ struct IPolynomialHeaviside {
      * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
-     * @param a transition width
+     * @param a transition width (must be != 0)
      * @param sign either +1 (original) or -1 (the function is point mirrored at \c x=xb: 2*xb-f(2xb-x))
      */
     IPolynomialHeaviside(double xb, double a, int sign = +1) :
-        x0(xb), a(a), m_s(sign){}
+        x0(xb), a(a), m_s(sign){
+            assert( a!=0 && "IPolynomialHeaviside width must not be zero");
+        }
     DG_DEVICE
     double operator() (double x)const
     {
@@ -944,13 +972,15 @@ struct DPolynomialHeaviside {
      * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
-     * @param a transition width
+     * @param a transition width ( must be !=0)
      * @param sign either +1 (original) or -1 (the function is mirrored at \c x=x0)
      * (since this function is symmetric this parameter is ignored, it's there to be
      * consistent with PolynomialHeaviside)
      */
     DPolynomialHeaviside(double xb, double a, int sign = +1) :
-        x0(xb), a(a){}
+        x0(xb), a(a){
+            assert( a!=0 && "DPolynomialHeaviside width must not be zero");
+    }
     DG_DEVICE
     double operator() (double x)const
     {
@@ -977,7 +1007,7 @@ struct EXP
      * @param amp Amplitude
      * @param lambda coefficient
      */
-    EXP( T amp = 1., T lambda = 1.): amp_(amp), lambda_(lambda){}
+    EXP( T amp = 1., T lambda = 1.): m_amp(amp), m_lambda(lambda){}
     /**
      * @brief return exponential
      *
@@ -988,10 +1018,10 @@ struct EXP
     DG_DEVICE
     T operator() ( T x) const
     {
-        return amp_*exp(lambda_*x);
+        return m_amp*exp(m_lambda*x);
     }
   private:
-    T amp_, lambda_;
+    T m_amp, m_lambda;
 };
 /**
  * @brief natural logarithm
@@ -1218,7 +1248,6 @@ struct POSVALUE
 /**
  * @brief Return a constant
  * \f[ f(x) = c\f]
- *
  */
 struct CONSTANT
 {
@@ -1226,48 +1255,22 @@ struct CONSTANT
      * @brief Construct with a value
      *
      * @param cte the constant value
-     *
      */
-    CONSTANT( double cte): value_(cte){}
+    CONSTANT( double cte): m_value(cte){}
 
-    /**
-     * @brief constant
-     *
-     * @param x
-     *
-     * @return
-     */
     DG_DEVICE
-    double operator()(double x)const{return value_;}
-    /**
-     * @brief constant
-     *
-     * @param x
-     * @param y
-     *
-     * @return
-     */
+    double operator()(double x)const{return m_value;}
     DG_DEVICE
-    double operator()(double x, double y)const{return value_;}
-    /**
-     * @brief constant
-     *
-     * @param x
-     * @param y
-     * @param z
-     *
-     * @return
-     */
+    double operator()(double x, double y)const{return m_value;}
     DG_DEVICE
-    double operator()(double x, double y, double z)const{return value_;}
+    double operator()(double x, double y, double z)const{return m_value;}
     private:
-    double value_;
+    double m_value;
 };
 
 /**
  * @brief Return one
  * \f[ f(x) = 1\f]
- *
  */
 struct ONE
 {
@@ -1281,7 +1284,6 @@ struct ONE
 /**
  * @brief Return zero
  * \f[ f(x) = 0\f]
- *
  */
 struct ZERO
 {
@@ -1807,6 +1809,20 @@ struct Histogram2D
     container count_;
 };
 
+
+/**
+ * @brief Check for NaN
+ * \f[ f(x) = std::isnan(x) \f]
+ */
+template <class T>
+struct ISNAN
+{
+#ifdef __CUDACC__
+    DG_DEVICE bool operator()(T x){return isnan(x);}
+#else
+    bool operator()( T x){ return std::isnan(x);}
+#endif
+};
 
 ///@cond
 namespace detail

@@ -50,21 +50,22 @@ namespace blas1
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
  * @copydoc hide_iterations
  *
- * @note Our implementation guarantees binary reproducible results.
- * The sum is computed with infinite precision and the result is rounded
- * to the nearest double precision number.
- * This is possible with the help of an adapted version of the \c ::exblas library.
-
 For example
 @code
 dg::DVec two( 100,2), three(100,3);
 double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
 @endcode
+ * @attention if one of the input vectors contains \c NaN then the behaviour is undefined and the function may throw
+ * @note Our implementation guarantees binary reproducible results.
+ * The sum is computed with infinite precision and the result is rounded
+ * to the nearest double precision number.
+ * This is possible with the help of an adapted version of the \c ::exblas library.
+
  * @param x Left Container
  * @param y Right Container may alias x
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the
-        implicit memcpy of the result. With mpi the result is broadcasted to all processes. Also note that the behaviour is undefined when one of the containers contains \c nan
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes.
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class ContainerType2>
@@ -86,8 +87,11 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 
 For example
 @code
-dg::DVec x( 100,2);
-double result = dg::blas1::reduce( x, 0., thrust::plus<double>()); // result = 200 ( 0 + 2 + 2 + ... + 2 ))
+//Check if a vector contains NaN
+thrust::device_vector<double> x( 100);
+thrust::device_vector<bool> boolvec ( 100, false);
+dg::blas1::transform( x, boolvec, dg::ISNAN<double>());
+bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
 @endcode
  * @param x Left Container
  * @param init initial value of the reduction
@@ -101,6 +105,7 @@ double result = dg::blas1::reduce( x, 0., thrust::plus<double>()); // result = 2
 template< class ContainerType, class BinaryOp>
 inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op )
 {
+    //init must indeed have the same type as the values of Container since op must be associative
     return dg::blas1::detail::doReduce( dg::get_tensor_category<ContainerType>(), x, init, op);
 }
 

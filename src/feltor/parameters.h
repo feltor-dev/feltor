@@ -94,15 +94,15 @@ struct Parameters
         sigma_z     = js["sigma_z"].asDouble();
         k_psi       = js["k_psi"].asDouble();
 
-        nprofamp   = js["profile"]["amp"].asDouble();
-        profile_alpha = js["profile"]["alpha"].asDouble();
+        nprofamp   = js["profile"].get("amp", 0.).asDouble();
+        profile_alpha = js["profile"].get("alpha", 0.2).asDouble();
 
         source_rate     = js["source"].get("rate", 0.).asDouble();
         source_type     = js["source"].get("type", "profile").asString();
         source_boundary = js["source"].get("boundary", 0.2).asDouble();
         source_alpha    = js["source"].get("alpha", 0.2).asDouble();
         damping_rate = js["damping"].get("rate", 0.).asDouble();
-        damping_alpha= js["damping"].get("alpha", 0.05).asDouble();
+        damping_alpha= js["damping"].get("alpha", 0.).asDouble();
         damping_boundary = js["damping"].get("boundary", 1.2).asDouble();
 
         bcxN = dg::str2bc(js["bc"]["density"][0].asString());

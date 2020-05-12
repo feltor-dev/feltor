@@ -1401,14 +1401,14 @@ amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, tu
 sigma      & float &2      & - & Gaussian variance in units of $\rho_s$ \\
 posX       & float &0.3    & - & Gaussian R-position in units of $a$\\
 posY       & float &0.0    & - & Gaussian Z-position in units of $a$ \\
-sigma\_z    & float &0.25   & - & toroidal variance in units of $R_0$ of the fieldline-following initialization \\
+sigma\_z    & float &0.25   & - & toroidal variance in units of $\pi$ of the fieldline-following initialization \\
 k\_psi     & float &0    & - & zonal mode wave number (only for "zonal" initial condition)  \\
 profile & Dict & & & Density profile \\
-\qquad amp& float &4   & - & Profile amplitude $\triangle n_{peak}$ in
+\qquad amp& float &4   & 0 & Profile amplitude $\triangle n_{peak}$ in
 Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}
 \\
-\qquad alpha  & float & 0.2 & - & Transition width $\alpha_p$ in the Heaviside
-at the separatrix
+\qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
+at the separatrix (must not be zero - even if amp is zero - it is also used for the perturbation)
 \\
 source & dict & & & Density source, cf. the output \texttt{sne\_ifs} in \texttt{feltordiag} (or \texttt{SourceProfile\_ifs} in \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates.  \\
 \qquad rate & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}.
@@ -1420,15 +1420,15 @@ source & dict & & & Density source, cf. the output \texttt{sne\_ifs} in \texttt{
     See the file {\tt init.h} to add your own custom source.
 \\
 \qquad boundary & float & 0.2  & 0.2 & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
-\qquad alpha  & float & 0.2 & - & Transition width $\alpha_p$ in the Heaviside
+\qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
 in the density Eq.~\eqref{eq:density_profile} (with $rho_{p,b}=0$ and source profiles Eq.~\eqref{eq:electron_source} (should be
-small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes)
+small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes, must not be zero)
 \\
 damping & dict & & & magnetic and density damping region \\
 \qquad rate & float & 0    & 0   & Friction coefficient $\omega_d$ in density and velocity damping Eq.~\eqref{eq:velocity_source} \\
 \qquad boundary & float & 0.2  & 1.2 & Modification region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,\min}$ in Eq.~\eqref{eq:modified_psip}.
 \\
-\qquad alpha   & float & 0.05 & - & Transition width $\alpha_p$: yields
+\qquad alpha   & float & 0.25 & 0 & Transition width $\alpha_p$: yields
 $\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,\min}$ for the Heaviside in the modified
 $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the
 magnetic field and damping is ignored.\\

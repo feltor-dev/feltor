@@ -58,9 +58,10 @@ int main( int argc, char* argv[])
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     //Wall damping has to be constructed before modification (!)
-    HVec damping_profile = feltor::wall_damping( grid, p, gp, mag);
+    HVec damping_profile = dg::evaluate( dg::zero, grid);
     if( p.damping_alpha > 0.)
     {
+        damping_profile = feltor::wall_damping( grid, p, gp, mag);
         double RO=mag.R0(), ZO=0.;
         dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         double psipO = mag.psip()( RO, ZO);
