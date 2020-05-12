@@ -199,8 +199,14 @@ struct Explicit
     const Container& density(int i)const{
         return m_fields[0][i];
     }
+    const Container& density_source(int i)const{
+        return m_s[0][i];
+    }
     const Container& velocity(int i)const{
         return m_fields[1][i];
+    }
+    const Container& velocity_source(int i)const{
+        return m_s[1][i];
     }
     const Container& potential(int i) const {
         return m_phi[i];
@@ -220,11 +226,6 @@ struct Explicit
     const std::array<Container, 3> & gradA () const {
         return m_dA;
     }
-    void compute_gradS( int i, std::array<Container,3>& gradS) const{
-        dg::blas2::symv( m_dx_N, m_s[0][i], gradS[0]);
-        dg::blas2::symv( m_dy_N, m_s[1][i], gradS[1]);
-        if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[2][i], gradS[2]);
-    }
     const Container & dsN (int i) const {
         return m_dsN[i];
     }
@@ -236,6 +237,14 @@ struct Explicit
     }
     const Container & dssU(int i) {
         return m_dssU[i];
+    }
+    void compute_gradSN( int i, std::array<Container,3>& gradS) const{
+        // MW: don't like this function, if we need more gradients we might
+        // want a more flexible solution
+        // grad S_ne and grad S_ni
+        dg::blas2::symv( m_dx_N, m_s[0][i], gradS[0]);
+        dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
+        if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
     const Container & compute_dppN(int i) { //2nd varphi derivative
         dg::blas2::symv( m_dz, m_fields[0][i], m_temp0);

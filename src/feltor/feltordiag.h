@@ -173,6 +173,8 @@ struct Record_static{
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //Here is a list of static (time-independent) 3d variables that go into the output
+//Except xc, yc, and zc these are redundant since we have geometry_diag.cu
+//MW: maybe it's a test of sorts
 std::vector<Record_static> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
         []( HVec& result, Variables& v, Geometry& grid){
@@ -278,6 +280,8 @@ std::vector<Record> diagnostics3d_list = {
 };
 
 //Here is a list of static (time-independent) 2d variables that go into the output
+//MW: These are redundant since we have geometry_diag.cu -> remove ? if geometry_diag works as expected (I guess it can also be a test of sorts)
+//MW: if they stay they should be documented in feltor.tex
 //( we make 3d variables here but only the first 2d slice is output)
 std::vector<Record_static> diagnostics2d_static_list = {
     { "Psip2d", "Flux-function psi",
@@ -508,9 +512,9 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( v.p.nu_parallel, v.f.dssN(0), 1., result);
         }
     },
-    {"sne", "Source term for electron density", false,
+    {"sne_tt", "Source term for electron density", true,
         []( DVec& result, Variables& v ) {
-            dg::blas1::copy( v.f.sources()[0][0], result);
+            dg::blas1::copy( v.f.density_source(0), result);
         }
     },
     /// ------------------- Energy terms ------------------------//
@@ -572,21 +576,21 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( -v.p.eta, result, result, 0., result);
         }
     },
-    {"see", "Energy sink/source for electrons", false,
+    {"see_tt", "Energy sink/source for electrons", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
-                v.f.sources()[0][0]
+                v.f.density_source(0)
             );
         }
     },
-    {"sei", "Energy sink/source for ions", false,
+    {"sei_tt", "Energy sink/source for ions", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
-                v.f.sources()[0][1]
+                v.f.density_source(1)
             );
         }
     },
@@ -825,12 +829,12 @@ std::vector<Record> diagnostics2d_list = {
         []( DVec& result, Variables& v){
             routines::dot( v.f.gradP(0), v.gradPsip, result);
             dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
-            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.sources()[0][0], 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.density_source(0), 0., result);
         }
     },
     {"sospi_tt", "Diamagnetic vorticity source term with electron source", true,
         []( DVec& result, Variables& v){
-            v.f.compute_gradS( 0, v.tmp);
+            v.f.compute_gradSN( 0, v.tmp);
             routines::dot( v.tmp, v.gradPsip, result);
             dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
         }
@@ -905,24 +909,24 @@ std::vector<Record> diagnostics2d_list = {
     {"sparsni_tt", "Parallel momentum source by density source", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.sources()[0][1], v.f.velocity(1), 0., result);
+                v.f.density_source(1), v.f.velocity(1), 0., result);
         }
     },
     {"sparsnibphi_tt", "Parallel angular momentum source by density source", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.sources()[0][1], v.f.velocity(0), v.f.bphi(), 0., result);
+                v.f.density_source(1), v.f.velocity(1), v.f.bphi(), 0., result);
         }
     },
     /// --------------------- Mirror force term ---------------------------//
     {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.divb(), v.f.density(0), 0., result);
+            dg::blas1::pointwiseDot( -v.p.tau[0], v.f.divb(), v.f.density(0), 0., result);
         }
     },
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.divb(), v.f.density(1), 0., result);
+            dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
         }
     },
     /// --------------------- Lorentz force terms ---------------------------//
@@ -959,10 +963,10 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( v.f.density(0), result, result);
         }
     },
-    {"snei0", "inertial factor source", false,
+    {"snei0_tt", "inertial factor source", true,
         []( DVec& result, Variables& v ) {
             result = dg::pullback( dg::geo::Hoo( v.mag), v.f.grid());
-            dg::blas1::pointwiseDot( v.f.sources()[0][0], result, result);
+            dg::blas1::pointwiseDot( v.f.density_source(0), result, result);
         }
     },
 
@@ -1001,7 +1005,7 @@ std::vector<Record> restart3d_list = {
 };
 // These two lists signify the quantities involved in accuracy computation
 std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see", "sei"};
+std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see_tt", "sei_tt"};
 
 template<class Container>
 void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)

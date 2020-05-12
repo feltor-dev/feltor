@@ -606,6 +606,7 @@ accordingly.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
 \subsection{Conservative form}
+%MW: don't we have a momentum source in the form we currently give?
 We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyro-frequency $\Omega_0 = eB_0/m_i$.
 The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
 The potential is scaled with $\hat \phi = e/T_e$ and the vector potential with
@@ -999,7 +1000,7 @@ The relevant terms in the output file are
     jsneE\_tt & $ n_e \vec u_E\cn\psi_p$ \\
     lneperp\_tt &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ &
     lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
-    sne & $S_{n_e}$ & \\
+    sne\_tt & $S_{n_e}$ & \\
 \bottomrule
 \end{longtable}
 
@@ -1063,8 +1064,8 @@ The relevant terms in the output file are
     ue2   &$z_i\mu_i N_i u_E^2 /2$ \\
     neue2 &$ z_e\mu_e n_e u_e^2/2$ \\
     niui2 &$ z_i\mu_i N_i U_i^2/2$ \\
-    see & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_e^2) S_{n_e} $ \\
-    sei & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_i^2) S_{N_i} $ \\
+    see\_tt & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_e^2) S_{n_e} $ \\
+    sei\_tt & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_i^2) S_{N_i} $ \\
     resistivity\_tt &-$\eta_\parallel n_e^2 (U_i-u_e)^2$ \\
     jsee\_tt &$z_e(\tau_e \ln n_e + \mu_e u_e^2/2 + \phi)n_e(\vec u_E + \vec u_C + \vec u_K)\cn \psi_p
         + z_e \tau_e n_e u_e^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
@@ -1199,7 +1200,7 @@ where we neglected the term $\RA{n\vec u\cn \mathcal I_0}$ in the continuity equ
 \textbf{Name} &  \textbf{Equation}\\
 \midrule
     nei0 &$n_e \mathcal I_0$ &
-    snei0 & $S_{n_e } \mathcal I_0$ \\
+    snei0\_tt & $S_{n_e } \mathcal I_0$ \\
 \bottomrule
 \end{longtable}
 
@@ -1410,7 +1411,7 @@ Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}
 \qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
 at the separatrix (must not be zero - even if amp is zero - it is also used for the perturbation)
 \\
-source & dict & & & Density source, cf. the output \texttt{sne\_ifs} in \texttt{feltordiag} (or \texttt{SourceProfile\_ifs} in \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates.  \\
+source & dict & & & Density source, cf. the output \texttt{sne\_tt\_ifs} in \texttt{feltordiag} (or \texttt{SourceProfile\_ifs} in \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates and compare to \texttt{jsne\_tt\_fsa} to see how much mass is lost.  \\
 \qquad rate & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}.
 \\
 \qquad type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
