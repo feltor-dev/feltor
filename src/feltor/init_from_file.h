@@ -33,7 +33,6 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     unsigned  pINNx      = jsIN["Nx"].asUInt();
     unsigned  pINNy      = jsIN["Ny"].asUInt();
     unsigned  pINNz      = jsIN["Nz"].asUInt();
-    double    pINdt      = jsIN["dt"].asDouble();
     bool      pINsymmetric   = jsIN.get( "symmetric", false).asBool();
     MPI_OUT std::cout << "RESTART from file "<<file_name<< std::endl;
     MPI_OUT std::cout << " file parameters:" << std::endl;
