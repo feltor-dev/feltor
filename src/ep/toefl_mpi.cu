@@ -5,10 +5,10 @@
 #include <mpi.h> //activate mpi
 
 #include "netcdf_par.h"
-#include "file/nc_utilities.h"
 
-#include "toeflR.cuh"
 #include "dg/algorithm.h"
+#include "dg/file/file.h"
+#include "toeflR.cuh"
 #include "parameters.h"
 
 
@@ -52,19 +52,13 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
-    else 
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+    else
+        file::file2Json( argv[1], js, "strict");
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     if(rank==0)p.display( std::cout);

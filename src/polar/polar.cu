@@ -1,13 +1,13 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <limits.h>  // UINT_MAX is needed in cusp (v0.5.1) but limits.h is not included
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
 
 #include "dg/algorithm.h"
-#include "geometries/geometries.h"
+#include "dg/geometries/geometries.h"
+#include "dg/file/json_utilities.h"
 
 #ifdef OPENGL_WINDOW
 #include "draw/host_window.h"
@@ -98,15 +98,9 @@ int main(int argc, char* argv[])
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
     if( argc == 1)
-    {
-        std::ifstream is("input.json");
-        is >> js;
-    }
+        file::file2Json( "input.json", js, "default");
     else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        file::file2Json( argv[1], js, "default");
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";

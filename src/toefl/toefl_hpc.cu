@@ -7,7 +7,7 @@
 #endif //FELTOR_MPI
 
 #include "dg/algorithm.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "toeflR.cuh"
 #include "parameters.h"
@@ -67,19 +67,13 @@ int main( int argc, char* argv[])
 #endif//TOEFL_MPI
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         MPI_OUT std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        file::file2Json( argv[1], js, "strict");
     MPI_OUT std::cout << js<<std::endl;
     const Parameters p( js);
     MPI_OUT p.display( std::cout);

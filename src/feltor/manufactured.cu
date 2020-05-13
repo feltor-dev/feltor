@@ -4,6 +4,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
+#include "dg/file/json_utilities.h"
 
 #include "parameters.h"
 #define DG_MANUFACTURED
@@ -19,15 +20,9 @@ int main( int argc, char* argv[])
 {
     Json::Value js, gs;
     if( argc == 1)
-    {
-        std::ifstream is("input.json");
-        is >> js;
-    }
+        file::file2Json( "input.json", js, "strict");
     else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        file::file2Json( argv[1], js, "strict");
     else
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile]\n";
@@ -45,7 +40,7 @@ int main( int argc, char* argv[])
     //create RHS
     std::cout << "Initialize explicit" << std::endl;
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag, false);
     std::cout << "Initialize implicit" << std::endl;
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 
@@ -123,7 +118,7 @@ int main( int argc, char* argv[])
     dg::blas1::plus(sol[0][0],-1); //ne-1
     dg::blas1::plus(sol[0][1],-1); //Ni-1
     const std::array<std::array<dg::DVec,2>,2>& num = feltor.fields();
-    const std::array<dg::DVec,2>& num_phi = feltor.potential();
+    const std::array<dg::DVec,2>& num_phi = feltor.potentials();
     const dg::DVec& num_apar = feltor.induction();
     double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
     double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
@@ -149,8 +144,8 @@ int main( int argc, char* argv[])
               <<"    phie: "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))/normphie<<"\t"<<normphie<<"\n"
               <<"    phii: "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))/normphii<<"\t"<<normphii<<"\n"
               <<"    apar: "<<sqrt(dg::blas2::dot( w3d,sol_apar))/normapar<<"\t"<<normapar<<"\n";
-    feltor.update_quantities();
-    feltor.quantities().display();
+    //feltor.update_quantities();
+    //feltor.quantities().display();
 
 
     return 0;

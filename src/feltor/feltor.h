@@ -170,7 +170,7 @@ struct Explicit
     using vector = std::array<std::array<Container,2>,2>;
     using container = Container;
     Explicit( const Geometry& g, feltor::Parameters p,
-        dg::geo::TokamakMagneticField mag, bool full_system );
+        dg::geo::TokamakMagneticField mag, bool full_system ); //full system means explicit AND implicit
 
     //Given N_i-1 initialize n_e-1 such that phi=0
     void initializene( const Container& ni, Container& ne);
@@ -183,6 +183,9 @@ struct Explicit
 
     const std::array<std::array<Container,2>,2>& fields() const{
         return m_fields;
+    }
+    const std::array<Container,2>& potentials() const{
+        return m_phi;
     }
     const std::array<std::array<Container,2>,2>& sources() const{
         return m_s;

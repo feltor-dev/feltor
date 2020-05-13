@@ -4,26 +4,16 @@
 #include <sstream>
 #include <cmath>
 // #define DG_DEBUG
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
 
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-*/
-
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3 && argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
@@ -31,10 +21,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        file::file2Json( argv[1], js, "strict");
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     p.display( std::cout);
@@ -111,18 +98,12 @@ int main( int argc, char* argv[])
       }
     }
     if (argc==4) {
-        file::NC_Error_Handle errIN;
-        int ncidIN;
-        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         ///////////////////read in and show inputfile und geomfile//////////////////
-        size_t lengthIN;
-        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-        std::string inputIN( lengthIN, 'x');
-        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-        
         Json::Value jsIN;
-        std::stringstream is(inputIN);
-        parseFromStream( parser, is, &jsIN, &errs); //read input without comments
+        std::string inputIN;
+        file::netcdf2string( argv[3], "inputfile", inputIN);
+        file::string2Json(argv[3], inputIN, jsIN, "strict");
+
         const eule::Parameters pIN(  jsIN);    
         std::cout << "[input.nc] file parameters" << std::endl;
         pIN.display( std::cout);       
@@ -139,6 +120,9 @@ int main( int argc, char* argv[])
         size_t stepsIN;
         /////////////////////The initial field///////////////////////////////////////////
         /////////////////////Get time length and initial data///////////////////////////
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
         errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
         stepsIN-=1;
@@ -152,7 +136,7 @@ int main( int argc, char* argv[])
         dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
         errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
         dg::blas2::gemv( interpolateIN, transferINH,temp);
-        dg::blas1::transfer(temp,y0[0]);
+        dg::blas1::transfer(temp, y0[0]);
         errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
         errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
         dg::blas2::gemv( interpolateIN, transferINH,temp);
@@ -207,7 +191,7 @@ int main( int argc, char* argv[])
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
     //dim_ids_probe[1] = 
-    file :: define_dimension(ncid, "X_probe", &dim_ids_probe[1], dg::evaluate(dg::LinearX(1.0, 0), grid_probe).data(), 8);
+    file :: define_dimension(ncid,  &dim_ids_probe[1], grid_probe, "X_probe");
     for(unsigned i = 0; i < varname_probes.size(); i++)
     {
         err = nc_def_var(ncid, varname_probes[i].data(), NC_DOUBLE, 2, dim_ids_probe, &ID_probes[i]);

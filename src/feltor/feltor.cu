@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "draw/host_window.h"
+#include "dg/file/json_utilities.h"
 
 #include "feltor.h"
 #include "implicit.h"
@@ -26,21 +27,17 @@ int main( int argc, char* argv[])
     Json::Value js, gs;
     if( argc == 1)
     {
-        std::ifstream is("input.json");
-        std::ifstream ks("geometry_params.json");
-        is >> js;
-        ks >> gs;
+        file::file2Json( "input.json", js, "strict");
+        file::file2Json( "geometry_params.json", gs, "strict");
     }
     else if( argc == 3)
     {
-        std::ifstream is(argv[1]);
-        std::ifstream ks(argv[2]);
-        is >> js;
-        ks >> gs;
+        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[2], gs, "strict");
     }
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
                   << argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
@@ -157,9 +154,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     //
     std::stringstream title;
-    std::ifstream is( "window_params.js");
-    is >> js;
-    is.close();
+    file::file2Json( "window_params.json", js, "default");
     unsigned red = js.get("reduction", 1).asUInt();
     double rows = js["rows"].asDouble(), cols = p.Nz/red+1,
            width = js["width"].asDouble(), height = js["height"].asDouble();

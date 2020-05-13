@@ -8,7 +8,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 using HVec = dg::HVec;
 using DVec = dg::DVec;
 using DMatrix = dg::DMatrix;
@@ -30,28 +30,12 @@ int main( int argc, char* argv[])
     std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    file::NC_Error_Handle err;
-    int ncid;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    size_t length;
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
-    std::string geom( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
-    err = nc_close(ncid);
-
-    //std::cout << "input "<<input<<std::endl;
-    //std::cout << "geome "<<geom <<std::endl;
     Json::Value js,gs;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss( input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
-    ss.str( geom);
-    parseFromStream( parser, ss, &gs, &errs); //read input without comments
+    std::string input, geom;
+    file::netcdf2string( argv[1], "inputfile", input);
+    file::string2Json( argv[1], input, js, "strict");
+    file::netcdf2string( argv[1], "geomfile", geom);
+    file::string2Json( argv[1], geom, gs, "strict");
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
@@ -62,6 +46,7 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
+    file::NC_Error_Handle err;
     err = nc_create(argv[argc-1],NC_NETCDF4|NC_CLOBBER, &ncid_out);
 
     /// Set global attributes
@@ -225,7 +210,7 @@ int main( int argc, char* argv[])
     long_name="Cartesian y-coordinate";
     err = nc_put_att_text( ncid_out, yccID, "long_name",
         long_name.size(), long_name.data());
-    err = nc_enddef( ncid);
+    err = nc_enddef( ncid_out);
     err = nc_put_var_double( ncid_out, xccID, gridX2d.map()[0].data());
     err = nc_put_var_double( ncid_out, yccID, gridX2d.map()[1].data());
     err = nc_redef(ncid_out);
@@ -253,7 +238,7 @@ int main( int argc, char* argv[])
             &dim_ids1d[1], &vid);
         err = nc_put_att_text( ncid_out, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef( ncid);
+        err = nc_enddef( ncid_out);
         err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
         err = nc_redef(ncid_out);
     }
@@ -313,6 +298,7 @@ int main( int argc, char* argv[])
     }
     /////////////////////////////////////////////////////////////////////////
     size_t counter = 0;
+    int ncid;
     for( int j=1; j<argc-1; j++)
     {
         int timeID;

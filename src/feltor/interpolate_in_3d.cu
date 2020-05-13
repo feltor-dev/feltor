@@ -8,7 +8,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 using HVec = dg::HVec;
 using DVec = dg::DVec;
 using DMatrix = dg::DMatrix;
@@ -42,28 +42,12 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    file::NC_Error_Handle err;
-    int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in);
-    size_t length=0;
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string inputfile( length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
-    std::string geom( length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geom[0]);
-    err = nc_close(ncid_in);
-
-    //std::cout << "inputfile "<<input<<std::endl;
-    //std::cout << "geome "<<geom <<std::endl;
     Json::Value js,gs;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss( inputfile);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
-    ss.str( geom);
-    parseFromStream( parser, ss, &gs, &errs); //read input without comments
+    std::string inputfile, geomfile;
+    file::netcdf2string( argv[1], "inputfile", inputfile);
+    file::string2Json(argv[1], inputfile, js, "strict");
+    file::netcdf2string( argv[1], "geomfile", geomfile);
+    file::string2Json(argv[1], geomfile, gs, "strict");
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
@@ -71,6 +55,7 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
+    file::NC_Error_Handle err;
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
 
     /// Set global attributes
@@ -89,7 +74,7 @@ int main( int argc, char* argv[])
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
-    att["geomfile"] = geom;
+    att["geomfile"] = geomfile;
     for( auto pair : att)
         err = nc_put_att_text( ncid_out, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
@@ -126,12 +111,21 @@ int main( int argc, char* argv[])
 
     /////////////////////////////////////////////////////////////////////////
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    if( p.alpha_mag > 0.)
-        mag = dg::geo::createModifiedSolovevField(gp, (1.-p.rho_damping)*mag.psip()(mag.R0(),0.), p.alpha_mag);
+    if( p.damping_alpha > 0.)
+    {
+        double RO=mag.R0(), ZO=0.;
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        double psipO = mag.psip()( RO, ZO);
+        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2.,
+                fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
+    }
     auto bhat = dg::geo::createBHat( mag);
     dg::geo::Fieldaligned<Geometry, IHMatrix, HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, 5, 5);
+    int ncid_in;
     err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation( g3d_out_equidistant, g3d_out);
 

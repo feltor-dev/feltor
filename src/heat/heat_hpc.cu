@@ -9,8 +9,8 @@
 #include <cusp/print.h>
 #include "json/json.h"
 
-#include "dg/file/nc_utilities.h"
 #include "dg/algorithm.h"
+#include "dg/file/file.h"
 #include "dg/geometries/geometries.h"
 
 #include "parameters.h"
@@ -32,10 +32,8 @@ int main( int argc, char* argv[])
     }
     else
     {
-        std::ifstream is(argv[1]);
-        std::ifstream ks(argv[2]);
-        parseFromStream( parser, is, &js, &errs);
-        parseFromStream( parser, ks, &gs, &errs);
+        file::file2Json(argv[1], js, "strict");
+        file::file2Json(argv[2], gs, "strict");
     }
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
@@ -60,25 +58,14 @@ int main( int argc, char* argv[])
     //////////////////////////////open nc file//////////////////////////////////
     if (argc == 5)
     {
-        file::NC_Error_Handle errin;
-        int ncidin;
-        errin = nc_open( argv[4], NC_NOWRITE, &ncidin);
         //////////////read in and show inputfile und geomfile////////////
-        size_t length;
-        errin = nc_inq_attlen( ncidin, NC_GLOBAL, "inputfile", &length);
-        std::string inputin( length, 'x');
-        errin = nc_get_att_text( ncidin, NC_GLOBAL, "inputfile", &inputin[0]);
-        errin = nc_inq_attlen( ncidin, NC_GLOBAL, "geomfile", &length);
-        std::string geomin( length, 'x');
-        errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
+        std::string inputin, geomin;
+        file::netcdf2string( argv[4], "inputfile", inputin);
+        file::string2Json( argv[4],  inputin, js, "strict");
+        file::netcdf2string( argv[4], "geomfile", geomin);
+        file::string2Json( argv[4], geomin, gs, "strict");
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
-        //Now read Tend and interpolate from input grid to our grid
-        std::stringstream is;
-        is.str( inputin);
-        parseFromStream( parser, is, &js, &errs);
-        is.str( geomin);
-        parseFromStream( parser, is, &gs, &errs);
         const heat::Parameters pin(js);
         const dg::geo::solovev::Parameters gpin(gs);
         size_t start3din[4]  = {pin.maxout, 0, 0, 0};
@@ -87,6 +74,10 @@ int main( int argc, char* argv[])
             pin.n_out, pin.Nx_out, pin.Ny_out, pin.Nz_out, p.bcx, p.bcy, dg::PER);
         dg::IHMatrix interpolatef2c = dg::create::interpolation( grid, grid_in);//f2c
         dg::HVec TendIN = dg::evaluate( dg::zero, grid_in);
+        //Now read Tend and interpolate from input grid to our grid
+        file::NC_Error_Handle errin;
+        int ncidin;
+        errin = nc_open( argv[4], NC_NOWRITE, &ncidin);
         int dataIDin;
         errin = nc_inq_varid(ncidin, "T", &dataIDin);
         errin = nc_get_vara_double( ncidin, dataIDin, start3din, count3din,

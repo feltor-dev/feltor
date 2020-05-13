@@ -15,27 +15,19 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
 #endif
     std::array<std::array<DVec,2>,2> y0;
     ///////////////////read in and show inputfile
-    file::NC_Error_Handle errIN;
-    int ncidIN;
-    errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    size_t lengthIN;
-    errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-    std::string inputIN( lengthIN, 'x');
-    errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
 
     Json::Value jsIN;
-    std::stringstream is(inputIN);
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    parseFromStream( parser, is, &jsIN, &errs); //read input without comments
-    unsigned  pINn       = jsIN["n"].asUInt();
-    unsigned  pINNx      = jsIN["Nx"].asUInt();
-    unsigned  pINNy      = jsIN["Ny"].asUInt();
-    unsigned  pINNz      = jsIN["Nz"].asUInt();
+    std::string temp;
+    file::netcdf2string( file_name, "inputfile", temp);
+    file::string2Json(file_name, temp, jsIN, "strict");
+    unsigned  pINn  = jsIN["n"].asUInt();
+    unsigned  pINNx = jsIN["Nx"].asUInt();
+    unsigned  pINNy = jsIN["Ny"].asUInt();
+    unsigned  pINNz = jsIN["Nz"].asUInt();
     bool      pINsymmetric   = jsIN.get( "symmetric", false).asBool();
     MPI_OUT std::cout << "RESTART from file "<<file_name<< std::endl;
     MPI_OUT std::cout << " file parameters:" << std::endl;
+    MPI_OUT std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz<<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
 
     // Now read in last timestep
     Geometry grid_IN( grid.x0(), grid.x1(), grid.y0(), grid.y1(), grid.z0(), grid.z1(),
@@ -69,6 +61,9 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     int timeIDIN;
     size_t size_time, count_time = 1;
     /////////////////////Get time length and initial data///////////////////////////
+    file::NC_Error_Handle errIN;
+    int ncidIN;
+    errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
     errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
     errIN = nc_inq_dimlen(ncidIN, timeIDIN, &size_time);
     errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);

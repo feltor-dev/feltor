@@ -10,7 +10,7 @@
 #include <mpi.h>
 #endif //FELTOR_MPI
 
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltor.h"
 #include "implicit.h"
 
@@ -101,9 +101,6 @@ int main( int argc, char* argv[])
 #endif //FELTOR_MPI
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js, gs;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 4 && argc != 5)
     {
         MPI_OUT std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
@@ -113,10 +110,8 @@ int main( int argc, char* argv[])
     }
     else
     {
-        std::ifstream is(argv[1]);
-        std::ifstream ks(argv[2]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-        parseFromStream( parser, ks, &gs, &errs); //read input without comments
+        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[2], gs, "strict");
     }
     const feltor::Parameters p( js);
     const dg::geo::solovev::Parameters gp(gs);

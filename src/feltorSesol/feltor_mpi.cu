@@ -16,13 +16,6 @@
 #include "parameters.h"
 
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-*/
-
 int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////
@@ -38,9 +31,6 @@ int main( int argc, char* argv[])
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3 && argc != 4)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
@@ -48,10 +38,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        file::file2Json( argv[1], js, "strict");
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     if(rank==0)p.display( std::cout);
@@ -116,18 +103,11 @@ int main( int argc, char* argv[])
         if(rank==0) std::cout << "Done!\n";
     }
     if (argc==4) {
-        file::NC_Error_Handle errIN;
-        int ncidIN;
-        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         ///////////////////read in and show inputfile und geomfile//////////////////
-        size_t lengthIN;
-        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-        std::string inputIN( lengthIN, 'x');
-        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-
+        std::string inputIN;
+        file::netcdf2string( argv[3], "inputfile", inputIN);
         Json::Value jsIN;
-        std::stringstream is(inputIN);
-        parseFromStream( parser, is, &jsIN, &errs); //read input without comments
+        file::string2Json( argv[3], inputIN, jsIN, "strict");
         const eule::Parameters pIN(  jsIN);    
         std::cout << "[input.nc] file parameters" << std::endl;
         pIN.display( std::cout);   
@@ -147,6 +127,9 @@ int main( int argc, char* argv[])
         size_t stepsIN;
         /////////////////////The initial field///////////////////////////////////////////
         /////////////////////Get time length and initial data///////////////////////////
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
         errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
         stepsIN-=1;
