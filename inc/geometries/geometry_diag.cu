@@ -7,10 +7,8 @@
 #include <ctime>
 #include <cmath>
 
-#include "json/json.h"
-
 #include "dg/algorithm.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "solovev.h"
 //#include "taylor.h"
@@ -80,9 +78,29 @@ struct Parameters
     }
 };
 
+
 int main( int argc, char* argv[])
 {
-    if( !(argc == 4 || argc == 3))
+    std::string newfilename;
+    Json::Value input_js, geom_js;
+    if( argc == 4)
+    {
+        newfilename = argv[3];
+        std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
+        file::file2Json( argv[1], input_js, "strict");
+        file::file2Json( argv[2], geom_js, "strict");
+    }
+    else if( argc == 3)
+    {
+        newfilename = argv[2];
+        std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
+        std::string temp;
+        file::netcdf2string( argv[1], "inputfile", temp);
+        file::string2Json( argv[1], temp, input_js, "strict");
+        file::netcdf2string( argv[1], "geomfile", temp);
+        file::string2Json( argv[1], temp, geom_js, "strict");
+    }
+    else
     {
         std::cerr << "ERROR: Wrong number of arguments!\n";
         std::cerr << " Usage: "<< argv[0]<<" [input.json] [geom.json] [output.nc]\n";
@@ -90,43 +108,6 @@ int main( int argc, char* argv[])
         std::cerr << "Or \n Usage: "<< argv[0]<<" [file.nc] [output.nc]\n";
         std::cerr << " ( Program searches for string variables 'inputfile' and 'geomfile' in file.nc and tries a json parser)\n";
         return -1;
-    }
-    std::string newfilename;
-    Json::Value input_js, geom_js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    if( argc == 4)
-    {
-        newfilename = argv[3];
-        std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
-        std::ifstream isI( argv[1]);
-        std::ifstream isG( argv[2]);
-        parseFromStream( parser, isI, &input_js, &errs); //read input without comments
-        parseFromStream( parser, isG, &geom_js, &errs); //read input without comments
-    }
-    else
-    {
-        newfilename = argv[2];
-        std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
-        //////////////////////////open nc file//////////////////////////////////
-        file::NC_Error_Handle err;
-        int ncid;
-        err = nc_open( argv[1], NC_NOWRITE, &ncid);
-        ///////////////read in and show inputfile und geomfile//////////////////
-        std::string input, geom;
-        size_t length;
-        err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-        input.resize( length, 'x');
-        err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
-        err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
-        geom.resize( length, 'x');
-        err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
-        nc_close( ncid);
-        std::stringstream ss( input);
-        parseFromStream( parser, ss, &input_js, &errs); //read input without comments
-        ss.str( geom);
-        parseFromStream( parser, ss, &geom_js, &errs); //read input without comments
     }
     const Parameters p(input_js);
     const dg::geo::solovev::Parameters gp(geom_js);
