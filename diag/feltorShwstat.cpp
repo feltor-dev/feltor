@@ -8,7 +8,7 @@
 #include <iterator>
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 
 double Mean(std::vector<double> v, unsigned imin, unsigned imax)
@@ -49,12 +49,8 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        Json::CharReaderBuilder parser;
-        parser["collectComments"] = false;
-        std::string errs;
-        std::stringstream ss(input);
-        parseFromStream( parser, ss, &js, &errs); //read input without comments
-        const eule::Parameters p(js);   
+        file::string2Json( argv[i], input, js, "strict");
+        const eule::Parameters p(js);
         
 	size_t start0d  = 0;    
         //get maxtime of input file

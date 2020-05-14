@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "dg/algorithm.h"
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "impurities/parameters.h"
 
 struct Heaviside2d
@@ -26,28 +26,27 @@ private:
 };
 
 int main( int argc, char* argv[])
-{ if( argc != 3)   // lazy check: command line parameters
-  { std::cerr << "Usage: "<< argv[0] <<" [input.nc] [output.nc]\n";
-    return -1;
-  }
-  std::cout << argv[1] << " -> " << argv[2]<<std::endl;
-  ////////process parameter from .nc datafile////////
-  file::NC_Error_Handle err_in;
-  int ncid_in;
-  err_in = nc_open(argv[1], NC_NOWRITE, &ncid_in);
-  //read & print parameter string
-  size_t length;
-  err_in = nc_inq_attlen(ncid_in, NC_GLOBAL, "inputfile", &length);
-  std::string input(length, 'x');
-  err_in = nc_get_att_text(ncid_in, NC_GLOBAL, "inputfile", &input[0]);
-  std::cout << "input "<< input << std::endl;
-  //parse: parameter string--json-->p.xxx
+{
+    if( argc != 3)   // lazy check: command line parameters
+    {
+        std::cerr << "Usage: "<< argv[0] <<" [input.nc] [output.nc]\n";
+        return -1;
+    }
+    std::cout << argv[1] << " -> " << argv[2]<<std::endl;
+    ////////process parameter from .nc datafile////////
+    file::NC_Error_Handle err_in;
+    int ncid_in;
+    err_in = nc_open(argv[1], NC_NOWRITE, &ncid_in);
+    //read & print parameter string
+    size_t length;
+    err_in = nc_inq_attlen(ncid_in, NC_GLOBAL, "inputfile", &length);
+    std::string input(length, 'x');
+    err_in = nc_get_att_text(ncid_in, NC_GLOBAL, "inputfile", &input[0]);
+    std::cout << "input "<< input << std::endl;
+    //parse: parameter string--json-->p.xxx
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    file::string2Json( argv[1], input, js, "strict");
+
   const imp::Parameters p(js);
   p.display(std::cout);
   // dimensions

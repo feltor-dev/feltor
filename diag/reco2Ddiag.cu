@@ -11,7 +11,7 @@
 
 #include "dg/functors.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "reco2D/parameters.h"
 int main( int argc, char* argv[])
 {
@@ -21,22 +21,14 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
-    int ncid;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile //////////////////
-    size_t length;
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
-    err = nc_close(ncid); 
-
-    Json::Reader reader;
+    ///////////////////read in and show inputfile//////////////////
+    std::string input;
+    file::netcdf2string( argv[1], "inputfile", input);
+    std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    reader.parse( input, js, false);
+    file::string2Json( argv[1], input, js, "strict");
     const asela::Parameters p(js);
-    
+
     //////////////////////////////Grids//////////////////////////////////////
     //input grid
     dg::Grid2d g2d( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, dg::DIR, dg::PER);
@@ -56,6 +48,9 @@ int main( int argc, char* argv[])
     dg::DVec apareq(dg::evaluate( init0, g2d));
 
     //open netcdf files
+    //////////////////////////////open nc file//////////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     //set min and max timesteps
     double time = 0.;

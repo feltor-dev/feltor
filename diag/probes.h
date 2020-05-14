@@ -8,12 +8,12 @@
 #ifndef PROBES_H
 #define PROBES_H
 
-using namespace std;
 
 #include "dg/algorithm.h"
 #include <fstream>
 #include <sstream>
 
+//using namespace std;
 /* 
  * Class that takes care of probe output
  * 

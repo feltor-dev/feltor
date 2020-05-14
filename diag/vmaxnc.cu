@@ -5,7 +5,7 @@
 #include <string>
 #include <algorithm>
 
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 //scan all imputfiles for maximum radial velocity and write to std::out
 int main( int argc, char* argv[])
@@ -32,7 +32,6 @@ int main( int argc, char* argv[])
 
     }
 
-    
     return 0;
 }
 

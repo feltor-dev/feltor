@@ -11,7 +11,7 @@
 
 #include "dg/functors.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 int main( int argc, char* argv[])
 {
@@ -32,9 +32,8 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
     err = nc_close(ncid); 
 
-    Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false);
+    file::string2Json( argv[1], input, js, "strict");
     const eule::Parameters p(js);
     
     //////////////////////////////Grids//////////////////////////////////////

@@ -6,7 +6,7 @@
 #include <algorithm> 
 
 #include "dg/algorithm.h"
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 
 /**
@@ -42,21 +42,12 @@ int main( int argc, char* argv[])
         return -1;
     }
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;   
-     file::NC_Error_Handle err;
-    int ncid;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
     ///////////////////read in and show inputfile//////////////////
-    size_t length;
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]); 
-    std::cout << "input "<<input<<std::endl;    
+    std::string input;
+    file::netcdf2string( argv[1], "inputfile", input);
+    std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    file::string2Json( argv[1], input, js, "strict");
     const eule::Parameters p(js);
     p.display(std::cout);
 
@@ -73,12 +64,13 @@ int main( int argc, char* argv[])
     std::cout << "Gathering time data " << std::endl;
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    err = nc_close(ncid);
     double time=0.;
     int NepID,phipID;
     double Nep,phip;
     unsigned step=0;
     //read in values into vectors
+    file::NC_Error_Handle err;
+    int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
 
     unsigned imin,imax;
@@ -136,7 +128,7 @@ int main( int argc, char* argv[])
     errout = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncidout); 
     //plot 1
     std::cout << "1d plot of Ne"<<std::endl;
-    errout = file::define_dimension( ncidout,"Ne_", &dim_ids1[0],  g1d1);
+    errout = file::define_dimension( ncidout, &dim_ids1[0],  g1d1, "Ne_");
     errout = nc_def_var( ncidout, "P(Ne)",   NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[0]);
     errout = nc_def_var( ncidout, "Ne",    NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[1]);
     errout = nc_enddef( ncidout);
@@ -145,7 +137,7 @@ int main( int argc, char* argv[])
     //plot 2
     std::cout << "1d plot of Phi"<<std::endl;
     errout = nc_redef(ncidout);
-    errout = file::define_dimension( ncidout,"Phi_", &dim_ids2[0],  g1d2);
+    errout = file::define_dimension( ncidout, &dim_ids2[0],  g1d2,"Phi_");
     errout = nc_def_var( ncidout, "P(Phi)",   NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[0]);
     errout = nc_def_var( ncidout, "Phi",    NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[1]);
     errout = nc_enddef( ncidout);

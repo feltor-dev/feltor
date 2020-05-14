@@ -7,7 +7,7 @@
 
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "ep/parameters.h"
 // #include "probes.h"
 
@@ -62,26 +62,14 @@ int main( int argc, char* argv[])
 //     std::ofstream os( argv[2]);
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
-    //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
-    int ncid;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile und geomfile//////////////////
-    size_t length;
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
+    ///////////////////read in and show inputfile//////////////////
+    std::string input;
+    file::netcdf2string( argv[1], "inputfile", input);
     std::cout << "input "<<input<<std::endl;
-    
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    file::string2Json( argv[1], input, js, "strict");
     const Parameters p(js);
     p.display(std::cout);
-    err = nc_close( ncid);
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
@@ -169,7 +157,10 @@ int main( int argc, char* argv[])
     double posX_max = 0.0,posY_max = 0.0,posX_max_old = 0.0,posY_max_old = 0.0,velX_max=0.0, velY_max=0.0,posX_max_hs=0.0,posY_max_hs=0.0,velCOM=0.0;
     double compactness_ne=0.0;
     //-----------------Start timestepping
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);   
+    //////////////////////////////open nc file//////////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid);
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
     for( unsigned i=0; i<=p.maxout; i++)
     {

@@ -10,7 +10,7 @@
 
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 int main( int argc, char* argv[])
 {
@@ -26,22 +26,14 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile //////////////////
-    size_t length;
-    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
-    err = nc_close(ncid); 
-
-//     std::cout << "input "<<input<<std::endl;    
+    ///////////////////read in and show inputfile//////////////////
+    std::string input;
+    file::netcdf2string( argv[1], "inputfile", input);
+    std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    file::string2Json( argv[1], input, js, "strict");
     const eule::Parameters p(js);
-//     p.display(std::cout);
+    p.display(std::cout);
     
     //////////////////////////////Grids//////////////////////////////////////
     //input grid

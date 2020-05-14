@@ -4,9 +4,10 @@
 #include <vector>
 #include <string>
 #include <algorithm> 
+#include <thrust/random.h>
 
 #include "dg/algorithm.h"
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 /**
  * @brief normalizes input vector 
@@ -97,7 +98,7 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err; 
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid); 
     //plot 1
-    err = file::define_dimension( ncid,"A1_", &dim_ids1[0],  g1d1);
+    err = file::define_dimension( ncid, &dim_ids1[0],  g1d1,"A1_");
     err = nc_def_var( ncid, "P(A1)",   NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[0]);
     err = nc_def_var( ncid, "A1",    NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[1]);
     err = nc_enddef( ncid);
@@ -105,7 +106,7 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, dataIDs1[1], A1.data() );
     err = nc_redef(ncid);
     //plot 2
-    err = file::define_dimension( ncid,"A2_", &dim_ids2[0],  g1d2);
+    err = file::define_dimension( ncid, &dim_ids2[0],  g1d2,"A2_");
     err = nc_def_var( ncid, "P(A2)",   NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[0]);
     err = nc_def_var( ncid, "A2",    NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[1]);
     err = nc_enddef( ncid);
