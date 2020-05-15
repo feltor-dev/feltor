@@ -805,6 +805,21 @@ struct Heaviside
     int m_s;
 };
 
+
+/**
+ * @brief \f[ \sqrt{ (x-x_0)^2 + (y-y_0)^2} \f]
+ */
+struct Distance
+{
+    Distance( double x0, double y0): m_x0(x0), m_y0(y0){}
+    DG_DEVICE
+    double operator()(double x, double y){
+        return sqrt( (x-m_x0)*(x-m_x0) + (y-m_y0)*(y-m_y0));
+    }
+    private:
+    double m_x0, m_y0;
+};
+
 /**
  * @brief One up to \c psimax, then a Gaussian down to zero
      \f[ \begin{cases}
