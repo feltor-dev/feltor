@@ -4,8 +4,6 @@
 
 #include <mpi.h> //activate mpi
 
-#include "netcdf_par.h"
-
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
 #include "toeflR.cuh"
@@ -90,34 +88,25 @@ int main( int argc, char* argv[])
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
-    MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( argv[2],NC_NETCDF4|NC_MPIIO|NC_CLOBBER,comm,info, &ncid);
-    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    if(rank==0)err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
+    if(rank==0)err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
+    if(rank==0)err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     //field IDs
     std::string names[4] = {"electrons", "positrons", "potential", "vorticity"}; 
     int dataIDs[4]; 
     for( unsigned i=0; i<4; i++){
-        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+        if(rank==0)err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
 
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    if(rank==0)err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, dissID, dEdtID;
-    err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
-    err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
-    err = nc_def_var( ncid, "dissipation", NC_DOUBLE, 1, &EtimeID, &dissID);
-    err = nc_def_var( ncid, "dEdt",        NC_DOUBLE, 1, &EtimeID, &dEdtID);
-    for(unsigned i=0; i<4; i++)
-        err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, dissID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
-    err = nc_enddef(ncid);
+    if(rank==0)err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
+    if(rank==0)err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
+    if(rank==0)err = nc_def_var( ncid, "dissipation", NC_DOUBLE, 1, &EtimeID, &dissID);
+    if(rank==0)err = nc_def_var( ncid, "dEdt",        NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    if(rank==0)err = nc_enddef(ncid);
 
     ///////////////////////////////////first output/////////////////////////
     int dims[2],  coords[2];
@@ -127,28 +116,28 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));
-    dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
-    dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); //create local interpolation matrix
+    dg::MDVec transferD( dg::evaluate(dg::zero, grid_out));
+    dg::MHVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::MIDMatrix interpolate = dg::create::interpolation( grid_out, grid);
     for( unsigned i=0; i<2; i++)
     {
-        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
+        dg::blas2::gemv( interpolate, y0[i], transferD);
         dg::blas1::transfer( transferD, transferH);
-        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+        file::put_vara_double( ncid, dataIDs[i], 0, grid_out, transferH);
     }
     //pot
     transfer = test.potential();
-    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas2::gemv( interpolate, transfer, transferD);
     dg::blas1::transfer( transferD, transferH);
-    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+    file::put_vara_double( ncid, dataIDs[2], 0, grid_out, transferH );
     //Vor
     transfer = test.potential();
-    dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        
-    dg::blas2::gemv( interpolate,y1[1].data(), transferD);
+    dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
+    dg::blas2::gemv( interpolate,y1[1], transferD);
     dg::blas1::transfer( transferD, transferH);
-    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    //err = nc_close(ncid);
+    file::put_vara_double( ncid, dataIDs[3], 0, grid_out, transferH );
+    if(rank==0)err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    if(rank==0)err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
@@ -183,34 +172,39 @@ int main( int argc, char* argv[])
             time+=p.dt;
             Estart[0] += 1;
             {
-                //err = nc_open(argv[2], NC_WRITE, &ncid);
                 double ener=test.energy(), mass=test.mass(), diff=test.mass_diffusion(), dEdt=test.energy_diffusion();
-                err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-                err = nc_put_vara_double( ncid, energyID,   Estart, Ecount, &ener);
-                err = nc_put_vara_double( ncid, massID,     Estart, Ecount, &mass);
-                err = nc_put_vara_double( ncid, dissID,     Estart, Ecount, &diff);
-                err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount, &dEdt);
-                //err = nc_close(ncid);
+                if(rank==0)
+                {
+                    err = nc_open(argv[2], NC_WRITE, &ncid);
+                    err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+                    err = nc_put_vara_double( ncid, energyID,   Estart, Ecount, &ener);
+                    err = nc_put_vara_double( ncid, massID,     Estart, Ecount, &mass);
+                    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount, &diff);
+                    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount, &dEdt);
+                    err = nc_close(ncid);
+                }
             }
         }
         //////////////////////////write fields////////////////////////
+        if(rank==0)err = nc_open(argv[2], NC_WRITE, &ncid);
         start[0] = i;
         for( unsigned j=0; j<2; j++)
         {
-            dg::blas2::gemv( interpolate, y0[j].data(), transferD);
+            dg::blas2::gemv( interpolate, y0[j], transferD);
             dg::blas1::transfer( transferD, transferH);
-            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+            file::put_vara_double( ncid, dataIDs[j], i, grid, transferH);
         }
         transfer = test.potential();
-        dg::blas2::gemv( interpolate, transfer.data(), transferD);
+        dg::blas2::gemv( interpolate, transfer, transferD);
         dg::blas1::transfer( transferD, transferH);
-        err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+        file::put_vara_double( ncid, dataIDs[2], i, grid, transferH );
         transfer = test.potential();
         dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?    
-        dg::blas2::gemv( interpolate,y1[1].data(), transferD);
+        dg::blas2::gemv( interpolate,y1[1], transferD);
         dg::blas1::transfer( transferD, transferH);
-        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        file::put_vara_double( ncid, dataIDs[3], i, grid, transferH );
+        if(rank==0)err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        if(rank==0)err = nc_close(ncid);
 
 #ifdef DG_BENCHMARK
         ti.toc();
@@ -231,7 +225,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     if(rank==0)std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     if(rank==0)std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-    nc_close(ncid);
     MPI_Finalize();
 
     return 0;
