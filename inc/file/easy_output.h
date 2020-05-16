@@ -8,10 +8,16 @@
 #include "dg/topology/mpi_grid.h"
 #endif //MPI_VERSION
 
+/*!@file
+ *
+ * Contains Error handling class
+ */
+
 namespace file
 {
+
 /**
- * @brief Class thrown by the NC_ErrorClonePtr
+ * @brief Class thrown by the NC_Error_Handle
  */
 struct NC_Error : public std::exception
 {
@@ -35,7 +41,24 @@ struct NC_Error : public std::exception
 
 /**
  * @brief Empty utitlity class that handles return values of netcdf
- * functions and throws NC_Error if something goes wrong
+ * functions and throws NC_Error(status) if( status != NC_NOERR)
+ *
+ * For example
+ * @code
+ * file::NC_Error_Handle err;
+ * int ncid = -1;
+ * try{
+ *      err = nc_open( "file.nc", NC_WRITE, &ncid);
+ * //throws if for example "file.nc" does not exist
+ * } catch ( std::exception& e)
+ * {
+ *      //log the error and exit
+ *      std::cerr << "An error occured opening file.nc !\n"<<e.what()<<std::endl;
+ *      exit( EXIT_FAILURE);
+ * }
+ * @endcode
+ *
+ * This allows for a C++ style error handling of netcdf errors in that the program either terminates if the NC_Error is not caught or does something graceful in a try catch statement.
  */
 struct NC_Error_Handle
 {

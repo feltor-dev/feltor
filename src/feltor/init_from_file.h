@@ -19,7 +19,7 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     Json::Value jsIN;
     std::string temp;
     file::netcdf2string( file_name, "inputfile", temp);
-    file::string2Json(file_name, temp, jsIN, "strict");
+    file::string2Json(temp, jsIN, "strict");
     unsigned  pINn  = jsIN["n"].asUInt();
     unsigned  pINNx = jsIN["Nx"].asUInt();
     unsigned  pINNy = jsIN["Ny"].asUInt();

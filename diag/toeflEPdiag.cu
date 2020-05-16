@@ -67,7 +67,7 @@ int main( int argc, char* argv[])
     file::netcdf2string( argv[1], "inputfile", input);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( argv[1], input, js, "strict");
+    file::string2Json( input, js, "strict");
     const Parameters p(js);
     p.display(std::cout);
     

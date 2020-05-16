@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     std::cout << "input "<< input << std::endl;
     //parse: parameter string--json-->p.xxx
     Json::Value js;
-    file::string2Json( argv[1], input, js, "strict");
+    file::string2Json( input, js, "strict");
 
   const imp::Parameters p(js);
   p.display(std::cout);

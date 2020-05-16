@@ -16,7 +16,7 @@
 
 /*!@file
  *
- * Contains Error handling class and the define_dimensions functions
+ * The define_dimensions functions
  */
 
 
@@ -314,7 +314,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
  * @param filename Name of the netcdf file to parse
  * @param att_name Name of the netcdf attribute in filename
  * @param att Contains the content of \c att_name on output
-    */
+*/
 static inline void netcdf2string( std::string filename, std::string att_name, std::string& att)
 {
     int ncid;
@@ -323,7 +323,7 @@ static inline void netcdf2string( std::string filename, std::string att_name, st
     {
         std::cerr << "\nAn error occured opening file "<<filename<<"\n";
         std::cerr << nc_strerror(status) <<std::endl;
-        exit( EXIT_FAILURE);
+        throw NC_Error( status);
     }
     size_t length;
     status = nc_inq_attlen( ncid, NC_GLOBAL, att_name.data(), &length);
@@ -332,7 +332,7 @@ static inline void netcdf2string( std::string filename, std::string att_name, st
         std::cerr << "\nAn error occured parsing file *"<<filename<<"* for attribute *"<<att_name<<"*\n";
         std::cerr << nc_strerror(status)<<std::endl;
         nc_close(ncid);
-        exit( EXIT_FAILURE);
+        throw NC_Error( status);
     }
     att.resize( length, 'x');
     status = nc_get_att_text( ncid, NC_GLOBAL, att_name.data(), &att[0]);
@@ -341,7 +341,7 @@ static inline void netcdf2string( std::string filename, std::string att_name, st
         std::cerr << "\nAn error occured parsing file *"<<filename<<"* for attribute *"<<att_name<<"*\n";
         std::cerr << nc_strerror(status)<<std::endl;
         nc_close(ncid);
-        exit( EXIT_FAILURE);
+        throw NC_Error( status);
     }
     nc_close(ncid);
 }

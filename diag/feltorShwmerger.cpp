@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        file::string2Json( argv[i], input, js, "strict");
+        file::string2Json( input, js, "strict");
         const eule::Parameters p(js);
         
         dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);

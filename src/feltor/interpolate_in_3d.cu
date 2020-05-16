@@ -45,9 +45,9 @@ int main( int argc, char* argv[])
     Json::Value js,gs;
     std::string inputfile, geomfile;
     file::netcdf2string( argv[1], "inputfile", inputfile);
-    file::string2Json(argv[1], inputfile, js, "strict");
+    file::string2Json(inputfile, js, "strict");
     file::netcdf2string( argv[1], "geomfile", geomfile);
-    file::string2Json(argv[1], geomfile, gs, "strict");
+    file::string2Json(geomfile, gs, "strict");
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();

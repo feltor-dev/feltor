@@ -102,7 +102,7 @@ int main( int argc, char* argv[])
         Json::Value jsIN;
         std::string inputIN;
         file::netcdf2string( argv[3], "inputfile", inputIN);
-        file::string2Json(argv[3], inputIN, jsIN, "strict");
+        file::string2Json(inputIN, jsIN, "strict");
 
         const eule::Parameters pIN(  jsIN);    
         std::cout << "[input.nc] file parameters" << std::endl;

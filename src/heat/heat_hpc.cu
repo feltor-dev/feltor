@@ -61,9 +61,9 @@ int main( int argc, char* argv[])
         //////////////read in and show inputfile und geomfile////////////
         std::string inputin, geomin;
         file::netcdf2string( argv[4], "inputfile", inputin);
-        file::string2Json( argv[4],  inputin, js, "strict");
+        file::string2Json( inputin, js, "strict");
         file::netcdf2string( argv[4], "geomfile", geomin);
-        file::string2Json( argv[4], geomin, gs, "strict");
+        file::string2Json( geomin, gs, "strict");
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
         const heat::Parameters pin(js);

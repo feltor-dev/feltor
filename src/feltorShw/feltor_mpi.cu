@@ -155,7 +155,7 @@ int main( int argc, char* argv[])
         Json::Value jsIN;
         std::string temp;
         file::netcdf2string( file_name, "inputfile", temp);
-        file::string2Json(file_name, temp, jsIN, "strict");
+        file::string2Json(temp, jsIN, "strict");
         const eule::Parameters pIN(  jsIN);    
         if(rank==0) std::cout << "[input.nc] file parameters" << std::endl;
         if(rank==0) pIN.display( std::cout);   
