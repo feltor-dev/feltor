@@ -207,7 +207,15 @@ int main( int argc, char* argv[])
         }
     }
     if( argc == 5)
-        y0 = feltor::init_from_file(argv[4], grid, p,time);
+    {
+        try{
+            y0 = feltor::init_from_file(argv[4], grid, p,time);
+        }catch (std::exception& e){
+            MPI_OUT std::cerr << "An error occured initializing from file "<<argv[4]<<std::endl;
+            MPI_OUT std::cerr << e.what();
+            return -1;
+        }
+    }
 
     bool fixed_profile;
     {

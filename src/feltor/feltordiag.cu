@@ -30,12 +30,20 @@ int main( int argc, char* argv[])
     std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
+    file::NC_Error_Handle err;
+    int ncid_in;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+    size_t length;
+    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
+    std::string inputfile(length, 'x');
+    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
+    std::string geomfile(length, 'x');
+    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
+    err = nc_close( ncid_in);
     Json::Value js,gs;
-    std::string input, geom;
-    file::netcdf2string( argv[1], "inputfile", input);
-    file::string2Json( input, js, "strict");
-    file::netcdf2string( argv[1], "geomfile", geom);
-    file::string2Json( geom, gs, "strict");
+    file::string2Json(inputfile, js, "strict");
+    file::string2Json(geomfile, gs, "strict");
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
@@ -46,7 +54,6 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
-    file::NC_Error_Handle err;
     err = nc_create(argv[argc-1],NC_NETCDF4|NC_CLOBBER, &ncid_out);
 
     /// Set global attributes
@@ -64,8 +71,8 @@ int main( int argc, char* argv[])
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = input;
-    att["geomfile"] = geom;
+    att["inputfile"] = inputfile;
+    att["geomfile"] = geomfile;
     for( auto pair : att)
         err = nc_put_att_text( ncid_out, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());

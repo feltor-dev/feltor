@@ -42,11 +42,18 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
+    file::NC_Error_Handle err;
+    int ncid_in;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+    size_t length;
+    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
+    std::string inputfile(length, 'x');
+    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
+    std::string geomfile(length, 'x');
+    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
     Json::Value js,gs;
-    std::string inputfile, geomfile;
-    file::netcdf2string( argv[1], "inputfile", inputfile);
     file::string2Json(inputfile, js, "strict");
-    file::netcdf2string( argv[1], "geomfile", geomfile);
     file::string2Json(geomfile, gs, "strict");
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);
@@ -55,7 +62,6 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
-    file::NC_Error_Handle err;
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
 
     /// Set global attributes
@@ -125,8 +131,6 @@ int main( int argc, char* argv[])
     dg::geo::Fieldaligned<Geometry, IHMatrix, HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, 5, 5);
-    int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation( g3d_out_equidistant, g3d_out);
 
 

@@ -94,11 +94,20 @@ int main( int argc, char* argv[])
     {
         newfilename = argv[2];
         std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
-        std::string temp;
-        file::netcdf2string( argv[1], "inputfile", temp);
-        file::string2Json( argv[1], temp, input_js, "strict");
-        file::netcdf2string( argv[1], "geomfile", temp);
-        file::string2Json( argv[1], temp, geom_js, "strict");
+        file::NC_Error_Handle err;
+        int ncid_in;
+        err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+        size_t length;
+        err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
+        std::string inputfile(length, 'x');
+        err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+        err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
+        std::string geomfile(length, 'x');
+        err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
+        err = nc_close( ncid_in);
+        Json::Value js,gs;
+        file::string2Json(inputfile, input_js, "strict");
+        file::string2Json(geomfile, geom_js, "strict");
     }
     else
     {

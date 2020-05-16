@@ -16,10 +16,15 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     std::array<std::array<DVec,2>,2> y0;
     ///////////////////read in and show inputfile
 
+    file::NC_Error_Handle errIN;
+    int ncidIN;
+    errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
     Json::Value jsIN;
-    std::string temp;
-    file::netcdf2string( file_name, "inputfile", temp);
-    file::string2Json(temp, jsIN, "strict");
+    size_t length;
+    errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
+    std::string input(length, 'x');
+    errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
+    file::string2Json( input, jsIN, "strict");
     unsigned  pINn  = jsIN["n"].asUInt();
     unsigned  pINNx = jsIN["Nx"].asUInt();
     unsigned  pINNy = jsIN["Ny"].asUInt();
@@ -61,9 +66,6 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     int timeIDIN;
     size_t size_time, count_time = 1;
     /////////////////////Get time length and initial data///////////////////////////
-    file::NC_Error_Handle errIN;
-    int ncidIN;
-    errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
     errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
     errIN = nc_inq_dimlen(ncidIN, timeIDIN, &size_time);
     errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);

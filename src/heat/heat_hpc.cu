@@ -58,12 +58,20 @@ int main( int argc, char* argv[])
     //////////////////////////////open nc file//////////////////////////////////
     if (argc == 5)
     {
+        file::NC_Error_Handle errin;
+        int ncidin;
+        errin = nc_open( argv[4], NC_NOWRITE, &ncidin);
         //////////////read in and show inputfile und geomfile////////////
-        std::string inputin, geomin;
-        file::netcdf2string( argv[4], "inputfile", inputin);
-        file::string2Json( inputin, js, "strict");
-        file::netcdf2string( argv[4], "geomfile", geomin);
-        file::string2Json( geomin, gs, "strict");
+        size_t length;
+        errin = nc_inq_attlen( ncidin, NC_GLOBAL, "inputfile", &length);
+        std::string inputin(length, 'x');
+        errin = nc_get_att_text( ncidin, NC_GLOBAL, "inputfile", &inputin[0]);
+        errin = nc_inq_attlen( ncidin, NC_GLOBAL, "geomfile", &length);
+        std::string geomin(length, 'x');
+        errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
+        Json::Value js,gs;
+        file::string2Json(inputin, js, "strict");
+        file::string2Json(geomin, gs, "strict");
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
         const heat::Parameters pin(js);
@@ -75,9 +83,6 @@ int main( int argc, char* argv[])
         dg::IHMatrix interpolatef2c = dg::create::interpolation( grid, grid_in);//f2c
         dg::HVec TendIN = dg::evaluate( dg::zero, grid_in);
         //Now read Tend and interpolate from input grid to our grid
-        file::NC_Error_Handle errin;
-        int ncidin;
-        errin = nc_open( argv[4], NC_NOWRITE, &ncidin);
         int dataIDin;
         errin = nc_inq_varid(ncidin, "T", &dataIDin);
         errin = nc_get_vara_double( ncidin, dataIDin, start3din, count3din,

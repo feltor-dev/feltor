@@ -151,11 +151,16 @@ int main( int argc, char* argv[])
       }
     }
     if (argc==4) {
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         ///////////////////read in and show inputfile und geomfile//////////////////
+        size_t length;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
+        std::string inputIN(length, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
         Json::Value jsIN;
-        std::string temp;
-        file::netcdf2string( file_name, "inputfile", temp);
-        file::string2Json(temp, jsIN, "strict");
+        file::string2Json(inputIN, jsIN, "strict");
         const eule::Parameters pIN(  jsIN);    
         if(rank==0) std::cout << "[input.nc] file parameters" << std::endl;
         if(rank==0) pIN.display( std::cout);   
@@ -175,9 +180,6 @@ int main( int argc, char* argv[])
         size_t stepsIN;
         /////////////////////The initial field///////////////////////////////////////////
         /////////////////////Get time length and initial data///////////////////////////
-        file::NC_Error_Handle errIN;
-        int ncidIN;
-        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
         errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
         stepsIN-=1;

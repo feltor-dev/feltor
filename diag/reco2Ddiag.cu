@@ -22,8 +22,13 @@ int main( int argc, char* argv[])
     }
 
     ///////////////////read in and show inputfile//////////////////
-    std::string input;
-    file::netcdf2string( argv[1], "inputfile", input);
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid);
+    size_t length;
+    err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
+    std::string input(length, 'x');
+    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
     file::string2Json( input, js, "strict");
@@ -49,9 +54,6 @@ int main( int argc, char* argv[])
 
     //open netcdf files
     //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
-    int ncid;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
     //set min and max timesteps
     double time = 0.;
     unsigned imin,imax;    
