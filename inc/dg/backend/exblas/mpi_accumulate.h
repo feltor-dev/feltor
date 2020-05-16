@@ -12,6 +12,10 @@
 
 namespace exblas {
 
+namespace detail{
+//we keep track of communicators that were created in the past
+static std::map<MPI_Comm, std::array<MPI_Comm, 2>> comm_mods;
+}
 /**
  * @brief This function can be used to partition communicators for the \c exblas::reduce_mpi_cpu function
  *
@@ -19,26 +23,37 @@ namespace exblas {
  * @param comm the input communicator (unmodified, may not be \c MPI_COMM_NULL)
  * @param comm_mod a subgroup of comm (comm is split)
  * @param comm_mod_reduce a subgroup of comm, consists of all rank 0 processes in comm_mod
- * @note the creation of new communicators involves communication between all participation processes (comm in this case)
+ * @note the creation of new communicators involves communication between all participation processes (comm in this case).
+ * @attention In order to avoid excessive creation of new MPI communicators (there is a limit to how many a program can create), the function keeps record of which communicators it has been called with. If you repeatedly call this function with the same \c comm only the first call will actually create new communicators.
  */
 static void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
     assert( comm != MPI_COMM_NULL);
-    int mod = 128;
-    int rank, size;
-    MPI_Comm_rank( comm, &rank);
-    MPI_Comm_size( comm, &size);
-    MPI_Comm_split( comm, rank/mod, rank%mod, comm_mod); //collective call
-    MPI_Group group, reduce_group;
-    MPI_Comm_group( comm, &group); //local call
-    int reduce_size=(int)ceil((double)size/(double)mod);
-    std::vector<int> reduce_ranks(reduce_size);
-    for( int i=0; i<reduce_size; i++)
-        reduce_ranks[i] = i*mod;
-    MPI_Group_incl( group, reduce_size, reduce_ranks.data(), &reduce_group); //local
-    MPI_Comm_create( comm, reduce_group, comm_mod_reduce); //collective
-    MPI_Group_free( &group);
-    MPI_Group_free( &reduce_group);
-    //returns MPI_COMM_NULL to processes that are not in the group
+    if( detail::comm_mods.count(comm) == 1 )
+    {
+        *comm_mod = detail::comm_mods[comm][0];
+        *comm_mod_reduce = detail::comm_mods[comm][1];
+        return;
+    }
+    else
+    {
+        int mod = 128;
+        int rank, size;
+        MPI_Comm_rank( comm, &rank);
+        MPI_Comm_size( comm, &size);
+        MPI_Comm_split( comm, rank/mod, rank%mod, comm_mod); //collective call
+        MPI_Group group, reduce_group;
+        MPI_Comm_group( comm, &group); //local call
+        int reduce_size=(int)ceil((double)size/(double)mod);
+        std::vector<int> reduce_ranks(reduce_size);
+        for( int i=0; i<reduce_size; i++)
+            reduce_ranks[i] = i*mod;
+        MPI_Group_incl( group, reduce_size, reduce_ranks.data(), &reduce_group); //local
+        MPI_Comm_create( comm, reduce_group, comm_mod_reduce); //collective
+        MPI_Group_free( &group);
+        MPI_Group_free( &reduce_group);
+        detail::comm_mods[comm] = {*comm_mod, *comm_mod_reduce};
+        //returns MPI_COMM_NULL to processes that are not in the group
+    }
 }
 
 /*! @brief reduce a number of superaccumulators distributed among mpi processes
