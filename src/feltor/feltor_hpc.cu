@@ -89,8 +89,12 @@ int main( int argc, char* argv[])
                   << num_threads<<" threads = "
                   <<size*num_threads<<" total"<<std::endl;
 ;
-        assert( size == np[0]*np[1]*np[2] &&
-        "Partition needs to match total number of processes!");
+        if( size != np[0]*np[1]*np[2])
+        {
+            std::cerr << "ERROR: Process partition needs to match total number of processes!"<<std::endl;
+            MPI_Abort(MPI_COMM_WORLD, -1);
+            return -1;
+        }
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
@@ -110,8 +114,17 @@ int main( int argc, char* argv[])
     }
     else
     {
-        file::file2Json( argv[1], js, "strict");
-        file::file2Json( argv[2], gs, "strict");
+        try{
+            file::file2Json( argv[1], js, "strict");
+            file::file2Json( argv[2], gs, "strict");
+        } catch( std::exception& e) {
+            MPI_OUT std::cerr << e.what();
+#ifdef FELTOR_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
+            return -1;
+        }
+
     }
     const feltor::Parameters p( js);
     const dg::geo::solovev::Parameters gp(gs);
@@ -203,7 +216,10 @@ int main( int argc, char* argv[])
             y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
         }catch ( std::out_of_range& error){
             MPI_OUT std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
-        return -1;
+#ifdef FELTOR_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
+            return -1;
         }
     }
     if( argc == 5)
@@ -211,34 +227,47 @@ int main( int argc, char* argv[])
         try{
             y0 = feltor::init_from_file(argv[4], grid, p,time);
         }catch (std::exception& e){
-            MPI_OUT std::cerr << "An error occured initializing from file "<<argv[4]<<std::endl;
-            MPI_OUT std::cerr << e.what();
+            MPI_OUT std::cerr << "ERROR occured initializing from file "<<argv[4]<<std::endl;
+            MPI_OUT std::cerr << e.what()<<std::endl;
+#ifdef FELTOR_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
             return -1;
         }
     }
 
-    bool fixed_profile;
-    {
-    HVec profile, source_profile;
     try{
+        bool fixed_profile;
+        HVec profile, source_profile;
         source_profile = feltor::source_profiles.at(p.source_type)(
-        fixed_profile, profile, grid, p, gp, mag);
+            fixed_profile, profile, grid, p, gp, mag);
+        feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
+            p.source_rate, dg::construct<DVec>(source_profile),
+            p.damping_rate, dg::construct<DVec>(damping_profile)
+        );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
+#ifdef FELTOR_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
         return -1;
-    }
-
-    feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
-        p.source_rate, dg::construct<DVec>(source_profile),
-        p.damping_rate, dg::construct<DVec>(damping_profile)
-    );
     }
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     std::string file_name = argv[3];
     int ncid=-1;
-    MPI_OUT err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    try{
+        MPI_OUT err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    }catch( std::exception& e)
+    {
+        std::cerr << "ERROR creating file "<<file_name<<std::endl;
+        std::cerr << e.what()<<std::endl;
+#ifdef FELTOR_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
+       return -1;
+    }
     /// Set global attributes
     std::map<std::string, std::string> att;
     att["title"] = "Output file of feltor/src/feltor_hpc.cu";
@@ -434,9 +463,20 @@ int main( int argc, char* argv[])
                     karniadakis.step( feltor, im, time, y0);
                     //bdf.step( feltor, time, y0);
                 }
-                catch( dg::Fail& fail) {
-                    MPI_OUT std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                    MPI_OUT std::cerr << "Does Simulation respect CFL condition?\n";
+                catch( dg::Fail& fail){
+                    MPI_OUT std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
+                    MPI_OUT std::cerr << "Does simulation respect CFL condition?"<<std::endl;
+#ifdef FELTOR_MPI
+                    MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
+                    return -1;
+                }
+                catch( std::exception& fail) {
+                    MPI_OUT std::cerr << "ERROR in timestepper\n";
+                    MPI_OUT std::cerr << fail.what()<<std::endl;
+#ifdef FELTOR_MPI
+                    MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
                     return -1;
                 }
                 step++;

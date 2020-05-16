@@ -39,7 +39,6 @@ we can define various differential operations.
 %vector potential $A_\parallel$ via
 %${ \vec b }_\perp := ({\vn \times A_\parallel \bhat)}/{B}$
 \rowcolors{2}{gray!25}{white}
-%\begin{longtable}{>{\RaggedRight}p{7cm}>{\RaggedRight}p{7cm}}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 %\toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Symbol} & \textbf{Definition} \\
@@ -1232,7 +1231,7 @@ Unfortunately, we were unable to find a closed solution for the energy integrals
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
-\begin{longtable}{p{3cm}l>{\RaggedRight}p{8cm}}
+\begin{longtable}{p{3cm}p{3cm}p{8cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
     coordinate system & Cylindrical & equidistant discretization of $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$ (Eq.~\eqref{eq:box}, equal number of Gaussian nodes in $R$ and $Z$, equidistant planes in $\varphi$ with one Gaussian node \\
@@ -1276,7 +1275,7 @@ the output file \texttt{output.nc}.
 Input file format: json
 
 %%This is a booktabs table
-\begin{longtable}{llll>{\RaggedRight}p{6cm}}
+\begin{longtable}{llllp{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
 n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we practically always take 3)
@@ -1435,9 +1434,6 @@ $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the
 magnetic field and damping is ignored.\\
 \bottomrule
 \end{longtable}
-The default value is taken if the value name is not found in the input file. If there is no default and
-the value is not found,
-the program exits with an error message.
 \subsection{Geometry file structure} \label{sec:geometry_file}
 File format: json
 
@@ -1455,9 +1451,6 @@ File format: json
     inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ (used to compute $a$ from $R_0$) \\
 \bottomrule
 \end{longtable}
-The default value is taken if the value name is not found in the input file. If there is no default and
-the value is not found,
-the program exits with an error message.
 
 \subsection{Output} \label{sec:output_file}
 Output file format: netcdf-4/hdf5; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
@@ -1547,7 +1540,7 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
 \texttt{feltor/diag/feltordiag.cu}
- reads one or more previously generated simulation file(s) \texttt{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a second output file \texttt{output.nc} described as follows. \\
+ reads one or more previously generated simulation file(s) \texttt{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a single second output file \texttt{output.nc} described as follows. \\
 Compilation\\
 \texttt{make feltordiag} \\
 Usage \\
@@ -1600,6 +1593,78 @@ Usage \\
 \texttt{./geometry\_diag input.json geometry.json diag\_geometry.nc} \\
 The program outputs a host of static 1d, 2d and 3d geometric quantities.
 The output file is for example useful in connection with the ``Group Datasets'' filter in paraview, which merges Datasets from different files into one using shallow copy only.
+\section{Error conditions}
+All previously mentioned codes can crash for various reasons. Here,
+we list and describe situations, which generally may lead to program
+termination
+\begin{longtable}{p{6cm}p{8cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Error condition} &  \textbf{Handling} \\ \midrule
+An input file does not exist or is otherwise invalid
+&
+Program terminates with an error message to \texttt{std::cerr}
+    \\
+An input netcdf file misses a required field
+&
+Program terminates with a NetCDF error message to \texttt{std::cerr}
+    \\
+No write permission for the output file location
+&
+Program terminates with an error message to \texttt{std::cerr}
+    \\
+An input Json file misses a key or contains a typo in a key
+&
+If a key is not found the parser uses a default value,
+which is $0$ if not otherwise specified
+and the program continues execution.
+This is because the program cannot distinguish between intentional
+omission of a parameter and unintentional
+(a user can intentionally choose to use the default value
+or an older input file is used which does not contain parameters introduced afterward but have a reasonable default)
+Depending on which parameter is wrongly set this may either lead to early termination or actually lead to a long simulation. Usually the program prints the parameters
+it read from the input file into \texttt{std::cout} and into the output file
+for inspection so double check.
+    \\
+    An input Json file has an invalid value, e.g. a  typo in a string value
+&
+Invalid values lead to termination with an error message to \texttt{std::cerr}, once and if program tries to use the value
+    \\
+Number of processes in $x$, $y$ and $z$ direction does not match total number of Processes
+&
+Program terminates with an error message to \texttt{std::cerr}
+    \\
+An MPI error occurs
+&
+Program crashes horribly printing cryptic error messages (stack trace) to \texttt{std::cerr}
+    \\
+A numerical instability occurs
+&
+The program terminates usually caused by a NaN exception raised. However,
+the cause for the instability has to be determined inspecting the
+last output in the output file.
+    \\
+\qquad large fieldaligned oscillations in $u_e$ paired with instability in the edge of the box
+&
+Apply damping region
+    \\
+\qquad Perpendicular grid oscillations in $u_e$ and $\Delta_\perp \phi$ in the damping region, symmetric in $\varphi$
+&
+Increase damping $alpha$, increase damping boundary, make the box larger/smaller
+    \\
+\qquad Spike in $u_e$ shortly after simulation start
+&
+Increase $\nu_\perp$, increase $N_x$, $N_y$, decrease perturbation amplitude
+    \\
+\qquad Grid oscillations far away from the edge
+&
+Probably caused by the perpendicular transport that goes unstable. Increase $\nu_\perp$ and/or $N_x$, $N_y$
+\\
+\qquad Oscillations where fieldlines intersect the wall
+&
+Caused by boundary conditions in FCI method and necessarily underresolved toroidal direction. Increase $N_z$, decrease $N_x$, $N_y$ or better decrease $q$ value by decreasing $\mathcal P_\psi$ in geometry input file
+\\
+\bottomrule
+\end{longtable}
 
 %..................................................................
 \bibliography{../../doc/related_pages/references}
