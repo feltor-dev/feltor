@@ -7,7 +7,9 @@
  */
 #pragma once
 #include <mpi.h>
+#include <array>
 #include <vector>
+#include <map>
 #include "accumulate.h"
 
 namespace exblas {
