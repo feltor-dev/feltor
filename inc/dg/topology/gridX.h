@@ -42,8 +42,13 @@
  * @param Nz # of points in z
  */
 
-
 namespace dg{
+///@cond
+template<class real_type>
+struct RealGridX2d;
+template<class real_type>
+struct RealGridX3d;
+///@endcond
 
 /**
 * @brief 1D grid for X-point topology
@@ -61,9 +66,10 @@ namespace dg{
 template<class real_type>
 struct RealGridX1d
 {
-    typedef SharedTag memory_category;
-    typedef OneDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGridX1d<real_type>;
     /**
      * @brief 1D X-point grid
      *
@@ -249,9 +255,10 @@ struct RealGridX1d
 template<class real_type>
 struct aRealTopologyX2d
 {
-    typedef SharedTag memory_category;
-    typedef TwoDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGridX2d<real_type>;
 
     /**
      * @brief Left boundary in x
@@ -532,9 +539,10 @@ struct RealGridX2d : public aRealTopologyX2d<real_type>
 template<class real_type>
 struct aRealTopologyX3d
 {
-    typedef SharedTag memory_category;
-    typedef ThreeDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGridX3d<real_type>;
     /**
      * @brief left boundary in x
      *

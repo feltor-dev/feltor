@@ -49,7 +49,6 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
                 global().bcx(), global().bcy());
     }
     //These are necessary to help compiler find inherited names
-    using typename dg::aRealMPIGeometry2d<real_type>::host_vector;
     using dg::aRealMPIGeometry2d<real_type>::global;
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final
@@ -80,15 +79,15 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
             map_[i] = global2local( map[i], *this);
     }
 
-    virtual SparseTensor<host_vector> do_compute_jacobian( ) const override final{
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<host_vector> do_compute_metric( ) const override final{
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> do_compute_metric( ) const override final{
         return metric_;
     }
-    virtual std::vector<host_vector > do_compute_map()const override final{return map_;}
-    dg::SparseTensor<host_vector > jac_, metric_;
-    std::vector<host_vector > map_;
+    virtual std::vector<MPI_Vector<thrust::host_vector<real_type>>> do_compute_map()const override final{return map_;}
+    dg::SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> jac_, metric_;
+    std::vector<MPI_Vector<thrust::host_vector<real_type>>> map_;
     dg::ClonePtr<aRealGenerator2d<real_type>> handle_;
 };
 
@@ -125,7 +124,6 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
                 global().bcx(), global().bcy(), global().bcz());
     }
     //These are necessary to help compiler find inherited names
-    using typename dg::aRealMPIGeometry3d<real_type>::host_vector;
     using dg::aRealMPIGeometry3d<real_type>::global;
     private:
     virtual perpendicular_grid* do_perp_grid() const override final{ return new perpendicular_grid(*this);}
@@ -172,15 +170,15 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
                 map_[1].data()[k*size2d+i] = map_[1].data()[(k-1)*size2d+i];
             }
     }
-    virtual SparseTensor<host_vector> do_compute_jacobian( ) const override final{
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<host_vector> do_compute_metric( ) const override final{
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> do_compute_metric( ) const override final{
         return detail::square( jac_, map_[0], handle_->isOrthogonal());
     }
-    virtual std::vector<host_vector > do_compute_map()const override final{return map_;}
-    dg::SparseTensor<host_vector > jac_;
-    std::vector<host_vector > map_;
+    virtual std::vector<MPI_Vector<thrust::host_vector<real_type>>> do_compute_map()const override final{return map_;}
+    dg::SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> jac_;
+    std::vector<MPI_Vector<thrust::host_vector<real_type>>> map_;
     ClonePtr<dg::geo::aRealGenerator2d<real_type>> handle_;
 };
 ///@cond

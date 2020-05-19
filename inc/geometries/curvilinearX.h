@@ -83,16 +83,16 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
         handle_->generate( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), map_[0], map_[1], jac_.values()[2], jac_.values()[3], jac_.values()[4], jac_.values()[5]);
         jac_.idx(0,0) = 2, jac_.idx(0,1) = 3, jac_.idx(1,0)=4, jac_.idx(1,1) = 5;
     }
-    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
+    virtual SparseTensor<thrust::host_vector<real_type>> do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const override final
+    virtual SparseTensor<thrust::host_vector<real_type>> do_compute_metric( ) const override final
     {
         return detail::square( jac_, map_[0], handle_->isOrthogonal());
     }
-    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
-    std::vector<thrust::host_vector<real_type> > map_;
-    SparseTensor<thrust::host_vector<real_type> > jac_;
+    virtual std::vector<thrust::host_vector<real_type>> do_compute_map()const override final{return map_;}
+    std::vector<thrust::host_vector<real_type>> map_;
+    SparseTensor<thrust::host_vector<real_type>> jac_;
     dg::ClonePtr<aRealGeneratorX2d<real_type>> handle_;
 };
 
@@ -131,15 +131,15 @@ struct RealCurvilinearGridX2d : public dg::aRealGeometryX2d<real_type>
         dg::blas1::copy( 1., metric_.values()[3]); //set pp to 1
         map_.pop_back();
     }
-    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
+    virtual SparseTensor<thrust::host_vector<real_type>> do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const override final{
+    virtual SparseTensor<thrust::host_vector<real_type>> do_compute_metric( ) const override final{
         return metric_;
     }
-    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
-    dg::SparseTensor<thrust::host_vector<real_type> > jac_, metric_;
-    std::vector<thrust::host_vector<real_type> > map_;
+    virtual std::vector<thrust::host_vector<real_type>> do_compute_map()const override final{return map_;}
+    dg::SparseTensor<thrust::host_vector<real_type>> jac_, metric_;
+    std::vector<thrust::host_vector<real_type>> map_;
     dg::ClonePtr<aRealGeneratorX2d<real_type>> handle_;
 };
 

@@ -21,7 +21,12 @@ namespace dg
  * @note the paramateres given in the constructor are global parameters
  */
 
-
+///@cond
+template<class real_type>
+struct RealMPIGrid2d;
+template<class real_type>
+struct RealMPIGrid3d;
+///@endcond
 
 
 /**
@@ -38,9 +43,10 @@ namespace dg
 template<class real_type>
 struct aRealMPITopology2d
 {
-    typedef MPITag memory_category;
-    typedef TwoDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid2d<real_type>;
 
     /**
      * @brief Return global x0
@@ -325,9 +331,10 @@ struct aRealMPITopology2d
 template<class real_type>
 struct aRealMPITopology3d
 {
-    typedef MPITag memory_category;
-    typedef ThreeDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid3d<real_type>;
 
     /**
      * @brief Return global x0
@@ -728,18 +735,6 @@ struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
     }
 };
 
-///@cond
-template<class real_type>
-struct MemoryTraits< MPITag, TwoDimensionalTag, real_type> {
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = RealMPIGrid2d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< MPITag, ThreeDimensionalTag, real_type> {
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = RealMPIGrid3d<real_type>;
-};
-///@endcond
 ///@addtogroup gridtypes
 ///@{
 using MPIGrid2d         = dg::RealMPIGrid2d<double>;

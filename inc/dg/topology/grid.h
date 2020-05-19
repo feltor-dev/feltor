@@ -65,6 +65,13 @@
 
 namespace dg{
 
+///@cond
+template<class real_type>
+struct RealGrid2d;
+template<class real_type>
+struct RealGrid3d;
+///@endcond
+
 /**
 * @brief 1D grid
 * @ingroup grid
@@ -73,9 +80,10 @@ namespace dg{
 template<class real_type>
 struct RealGrid1d
 {
-    typedef SharedTag memory_category;
-    typedef OneDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid1d<real_type>;
     /**
      * @brief construct an empty grid
      * this leaves the access functions undefined
@@ -270,9 +278,10 @@ struct RealGrid1d
 template<class real_type>
 struct aRealTopology2d
 {
-    typedef SharedTag memory_category; //!< tag for choosing default host vector type
-    typedef TwoDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid2d<real_type>;
 
     /**
      * @brief Left boundary in x
@@ -488,9 +497,10 @@ struct aRealTopology2d
 template<class real_type>
 struct aRealTopology3d
 {
-    typedef SharedTag memory_category;
-    typedef ThreeDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid3d<real_type>;
 
     /**
      * @brief left boundary in x
@@ -807,29 +817,12 @@ void aRealTopology3d<real_type>::do_set(unsigned new_n, unsigned new_Nx,unsigned
     gy_.set(new_n, new_Ny);
     gz_.set(1,new_Nz);
 }
-template<class MemoryTag, class DimensionalityTag, class real_type>
-struct MemoryTraits { };
-
-template<class real_type>
-struct MemoryTraits< SharedTag, OneDimensionalTag, real_type> {
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid   = RealGrid1d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< SharedTag, TwoDimensionalTag, real_type> {
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid   = RealGrid2d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< SharedTag, ThreeDimensionalTag,real_type> {
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid   = RealGrid3d<real_type>;
-};
 
 template<class Topology>
-using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_vector;
+using get_host_vector = typename Topology::host_vector;
+
 template<class Topology>
-using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_grid;
+using get_host_grid = typename Topology::host_grid;
 
 ///@endcond
 
