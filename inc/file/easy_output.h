@@ -109,7 +109,7 @@ struct NC_Error_Handle
 * writes to the file independently in parallel (\c true)
 * or each process funnels its data through the master rank (\c false),
 * which involves communication but may be faster than the former method.
-* @attention In the MPI version, if \c parallel==true a **parallel netcdf** must be
+* @attention In the MPI version (i) all processes must call this function and (ii) if \c parallel==true a **parallel netcdf** must be
 * linked, the file opened with the \c NC_MPIIO flag from the \c netcdf_par.h header and the variable be marked with \c NC_COLLECTIVE access while if \c parallel==false we need **serial netcdf** and only the master thread needs to open and access the file.
 * Note that serious performance penalties have been observed on some platforms for parallel netcdf.
 */
@@ -143,8 +143,8 @@ void put_var_double(int ncid, int varid, dg::aTopology2d& grid,
 * writes to the file independently in parallel (\c true)
 * or each process funnels its data through the master rank (\c false),
 * which involves communication but may be faster than the former method.
-* @attention In the MPI version, if \c parallel==true a **parallel netcdf** must be
-* linked while if \c parallel==false we need **serial netcdf**.
+* @attention In the MPI version (i) all processes must call this function and (ii) if \c parallel==true a **parallel netcdf** must be
+* linked, the file opened with the \c NC_MPIIO flag from the \c netcdf_par.h header and the variable be marked with \c NC_COLLECTIVE access while if \c parallel==false we need **serial netcdf** and only the master thread needs to open and access the file.
 * Note that serious performance penalties have been observed on some platforms for parallel netcdf.
 */
 template<class host_vector>

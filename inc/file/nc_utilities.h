@@ -282,25 +282,25 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
 
 #ifdef MPI_VERSION
 
-/// Convenience function that just calls the corresponding serial version with the global grid
+/// Only master process should call this!! Convenience function that just calls the corresponding serial version with the global grid.
 template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealMPITopology2d<T>& g, std::array<std::string,2> name_dims = {"y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
 }
-/// Convenience function that just calls the corresponding serial version with the global grid
+///Only master process should call this!! Convenience function that just calls the corresponding serial version with the global grid
 template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealMPITopology2d<T>& g, std::array<std::string,3> name_dims = {"time", "y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
 }
-/// Convenience function that just calls the corresponding serial version with the global grid
+///Only master process should call this!! Convenience function that just calls the corresponding serial version with the global grid
 template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealMPITopology3d<T>& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
 {
     return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
 }
-/// Convenience function that just calls the corresponding serial version with the global grid
+///Only master process should call this!! Convenience function that just calls the corresponding serial version with the global grid
 template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealMPITopology3d<T>& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
 {
