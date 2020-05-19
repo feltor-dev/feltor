@@ -156,6 +156,7 @@ struct Diagnostics
         dg::geo::TokamakMagneticField mag;
         std::array<DVec, 3> gradPsip;
         std::array<DVec, 3> tmp;
+        DVec hoo; //keep hoo there to avoid pullback
     };
     struct Record{
         std::string name;
@@ -968,14 +969,12 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> D
     /// --------------------- Zonal flow energy terms------------------------//
     {"nei0", "inertial factor", false,
         []( DVec& result, Variables& v ) {
-            result = dg::pullback( dg::geo::Hoo( v.mag), v.f.grid());
-            dg::blas1::pointwiseDot( v.f.density(0), result, result);
+            dg::blas1::pointwiseDot( v.f.density(0), v.hoo, result);
         }
     },
     {"snei0_tt", "inertial factor source", true,
         []( DVec& result, Variables& v ) {
-            result = dg::pullback( dg::geo::Hoo( v.mag), v.f.grid());
-            dg::blas1::pointwiseDot( v.f.density_source(0), result, result);
+            dg::blas1::pointwiseDot( v.f.density_source(0), v.hoo, result);
         }
     },
 

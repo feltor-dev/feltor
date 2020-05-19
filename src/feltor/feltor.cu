@@ -88,8 +88,9 @@ int main( int argc, char* argv[])
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  result; //zero
+    DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
     Diagnostics::Variables var = {
-        feltor, p,gp,mag, gradPsip, gradPsip
+        feltor, p,gp,mag, gradPsip, gradPsip, hoo
     };
 
 
