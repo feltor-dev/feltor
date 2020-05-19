@@ -23,8 +23,9 @@ template<class from_ContainerType, class to_ContainerType, class ...Params>
 inline void assign( const from_ContainerType&, to_ContainerType&, Params&& ...ps);
 
 namespace detail{
+
 template<class To, class From, class ...Params>
-To doConstruct( const From& src, ArrayVectorTag, AnyVectorTag, Params&&...ps )
+To doConstruct( const From& src, ArrayVectorTag, SharedVectorTag, Params&&...ps )
 {
     To t;
     using inner_vector = typename To::value_type;
@@ -32,9 +33,27 @@ To doConstruct( const From& src, ArrayVectorTag, AnyVectorTag, Params&&...ps )
         t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
     return t;
 }
+template<class To, class From, class ...Params>
+To doConstruct( const From& src, ArrayVectorTag, MPIVectorTag, Params&&...ps )
+{
+    To t;
+    using inner_vector = typename To::value_type;
+    for (unsigned i=0; i<t.size(); i++)
+        t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
+    return t;
+}
+template<class To, class From, class ...Params>
+To doConstruct( const From& src, ArrayVectorTag, RecursiveVectorTag, Params&&...ps )
+{
+    To t;
+    using inner_vector = typename To::value_type;
+    for (unsigned i=0; i<t.size(); i++)
+        t[i] = dg::construct<inner_vector>(src[i], std::forward<Params>(ps)...);
+    return t;
+}
 
 template<class To, class From, class Size, class ...Params>
-To doConstruct( const From& src, RecursiveVectorTag, AnyVectorTag, Size size, Params&&... ps )
+To doConstruct( const From& src, RecursiveVectorTag, SharedVectorTag, Size size, Params&&... ps )
 {
     To t(size);
     using inner_vector = typename To::value_type;
@@ -42,19 +61,66 @@ To doConstruct( const From& src, RecursiveVectorTag, AnyVectorTag, Size size, Pa
         t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
     return t;
 }
+template<class To, class From, class Size, class ...Params>
+To doConstruct( const From& src, RecursiveVectorTag, MPIVectorTag, Size size, Params&&... ps )
+{
+    To t(size);
+    using inner_vector = typename To::value_type;
+    for (int i=0; i<(int)size; i++)
+        t[i] = dg::construct<inner_vector>(src, std::forward<Params>(ps)...);
+    return t;
+}
+template<class To, class From, class ...Params>
+To doConstruct( const From& src, RecursiveVectorTag, RecursiveVectorTag, Params&&...ps )
+{
+    unsigned size = src.size();
+    To t(size);
+    using inner_vector = typename To::value_type;
+    for (unsigned i=0; i<size; i++)
+        t[i] = dg::construct<inner_vector>(src[i], std::forward<Params>(ps)...);
+    return t;
+}
+
 template<class From, class To, class ...Params>
-void doAssign( const From& src, To& to, AnyVectorTag, ArrayVectorTag, Params&&...ps )
+void doAssign( const From& src, To& to, SharedVectorTag, ArrayVectorTag, Params&&...ps )
 {
     for (unsigned i=0; i<to.size(); i++)
         dg::assign(src, to[i], std::forward<Params>(ps)...);
 }
+template<class From, class To, class ...Params>
+void doAssign( const From& src, To& to, MPIVectorTag, ArrayVectorTag, Params&&...ps )
+{
+    for (unsigned i=0; i<to.size(); i++)
+        dg::assign(src, to[i], std::forward<Params>(ps)...);
+}
+template<class From, class To, class ...Params>
+void doAssign( const From& src, To& to, RecursiveVectorTag, ArrayVectorTag, Params&&...ps )
+{
+    for (unsigned i=0; i<to.size(); i++)
+        dg::assign(src[i], to[i], std::forward<Params>(ps)...);
+}
 
 template<class From, class To, class Size, class ...Params>
-void doAssign( const From& src, To& to, AnyVectorTag, RecursiveVectorTag, Size size, Params&&... ps )
+void doAssign( const From& src, To& to, SharedVectorTag, RecursiveVectorTag, Size size, Params&&... ps )
 {
     to.resize(size);
     for (int i=0; i<(int)size; i++)
         dg::assign(src, to[i], std::forward<Params>(ps)...);
+}
+template<class From, class To, class Size, class ...Params>
+void doAssign( const From& src, To& to, MPIVectorTag, RecursiveVectorTag, Size size, Params&&... ps )
+{
+    to.resize(size);
+    for (int i=0; i<(int)size; i++)
+        dg::assign(src, to[i], std::forward<Params>(ps)...);
+}
+template<class From, class To, class ...Params>
+void doAssign( const From& src, To& to, RecursiveVectorTag, RecursiveVectorTag, Params&&...ps )
+{
+    unsigned size = src.size();
+    to.resize(size);
+    for (unsigned i=0; i<size; i++)
+        dg::assign(src[i], to[i], std::forward<Params>(ps)...);
 }
 
 } //namespace detail
