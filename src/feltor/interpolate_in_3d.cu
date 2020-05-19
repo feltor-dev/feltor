@@ -18,7 +18,6 @@ using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #include "feltordiag.h"
-using Diagnostics = feltor::Diagnostics<Geometry, IDMatrix, DMatrix, DVec>;
 
 thrust::host_vector<float> append( const thrust::host_vector<float>& in, const dg::aRealTopology3d<double>& g)
 {
@@ -135,7 +134,7 @@ int main( int argc, char* argv[])
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation( g3d_out_equidistant, g3d_out);
 
 
-    for( auto& record : Diagnostics::static_list_3d)
+    for( auto& record : feltor::diagnostics3d_static_list)
     {
         if( record.name != "xc" && record.name != "yc" && record.name != "zc" )
         {
@@ -158,7 +157,7 @@ int main( int argc, char* argv[])
             err = nc_redef(ncid_out);
         }
     }
-    for( auto record : Diagnostics::generate_cyl2cart( g3d_out_equidistant) )
+    for( auto record : feltor::generate_cyl2cart( g3d_out_equidistant) )
     {
         int vID;
         err = nc_def_var( ncid_out, std::get<0>(record).data(), NC_FLOAT, 3, &dim_ids[1],
@@ -171,7 +170,7 @@ int main( int argc, char* argv[])
         err = nc_redef(ncid_out);
 
     }
-    for( auto& record : Diagnostics::list_3d)
+    for( auto& record : feltor::diagnostics3d_list)
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
@@ -203,7 +202,7 @@ int main( int argc, char* argv[])
         std::cout << "  time = " << time << std::endl;
         start3d[0] = i/10;
         err = nc_put_vara_double( ncid_out, tvarID, start3d, count3d_out, &time);
-        for( auto& record : Diagnostics::list_3d)
+        for( auto& record : feltor::diagnostics3d_list)
         {
             std::string record_name = record.name;
             int dataID =0;

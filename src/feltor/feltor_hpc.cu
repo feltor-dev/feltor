@@ -14,10 +14,6 @@
 #include "feltor.h"
 #include "implicit.h"
 
-#include "init.h"
-#include "init_from_file.h"
-#include "feltordiag.h"
-
 #ifdef FELTOR_MPI
 using HVec = dg::MHVec;
 using DVec = dg::MDVec;
@@ -38,9 +34,9 @@ using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
-using Initialize = feltor::Initialize<Geometry, IHMatrix, IDMatrix, DMatrix, DVec>;
-using Sources = feltor::Sources<Geometry, IDMatrix, DMatrix, DVec>;
-using Diagnostics = feltor::Diagnostics<Geometry, IDMatrix, DMatrix, DVec>;
+#include "init.h"
+#include "init_from_file.h"
+#include "feltordiag.h"
 
 #ifdef FELTOR_MPI
 //ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
@@ -203,7 +199,7 @@ int main( int argc, char* argv[])
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  resultD; //zero
     DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
-    Diagnostics::Variables var = {
+    feltor::Variables var = {
         feltor, p, gp, mag, gradPsip, gradPsip, hoo
     };
     // the vector ids
@@ -218,7 +214,7 @@ int main( int argc, char* argv[])
     if( argc == 4)
     {
         try{
-            y0 = Initialize::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+            y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
         }catch ( std::out_of_range& error){
             MPI_OUT std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
 #ifdef FELTOR_MPI
@@ -230,7 +226,7 @@ int main( int argc, char* argv[])
     if( argc == 5)
     {
         try{
-            dg::assign( feltor::init_from_file<Geometry, IHMatrix>(argv[4], grid, p,time), y0);
+            y0 = feltor::init_from_file(argv[4], grid, p,time);
         }catch (std::exception& e){
             MPI_OUT std::cerr << "ERROR occured initializing from file "<<argv[4]<<std::endl;
             MPI_OUT std::cerr << e.what()<<std::endl;
@@ -244,7 +240,7 @@ int main( int argc, char* argv[])
     try{
         bool fixed_profile;
         HVec profile, source_profile;
-        source_profile = Sources::source_profiles.at(p.source_type)(
+        source_profile = feltor::source_profiles.at(p.source_type)(
             fixed_profile, profile, grid, p, gp, mag);
         feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
             p.source_rate, dg::construct<DVec>(source_profile),
@@ -307,7 +303,7 @@ int main( int argc, char* argv[])
 #endif //FELTOR_MPI
 
     //create & output static 3d variables into file
-    for ( auto& record : Diagnostics::static_list_3d)
+    for ( auto& record : feltor::diagnostics3d_static_list)
     {
         int vecID;
         MPI_OUT err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 3,
@@ -322,7 +318,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_redef(ncid);
     }
     //create & output static 2d variables into file
-    for ( auto& record : Diagnostics::static_list_2d)
+    for ( auto& record : feltor::diagnostics2d_static_list)
     {
         int vecID;
         MPI_OUT err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 2,
@@ -338,7 +334,7 @@ int main( int argc, char* argv[])
     }
 
     //Create field IDs
-    for( auto& record : Diagnostics::list_3d)
+    for( auto& record : feltor::diagnostics3d_list)
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
@@ -348,7 +344,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_put_att_text( ncid, id4d.at(name), "long_name", long_name.size(),
             long_name.data());
     }
-    for( auto& record : Diagnostics::restart3d_list)
+    for( auto& record : feltor::restart3d_list)
     {
         std::string name = record.name;
         std::string long_name = record.long_name;
@@ -358,7 +354,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_put_att_text( ncid, restart_ids.at(name), "long_name", long_name.size(),
             long_name.data());
     }
-    for( auto& record : Diagnostics::list_2d)
+    for( auto& record : feltor::diagnostics2d_list)
     {
         std::string name = record.name + "_ta2d";
         std::string long_name = record.long_name + " (Toroidal average)";
@@ -394,20 +390,20 @@ int main( int argc, char* argv[])
 
     size_t start = 0, count = 1;
     MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-    for( auto& record : Diagnostics::list_3d)
+    for( auto& record : feltor::diagnostics3d_list)
     {
         record.function( resultD, var);
         dg::blas2::symv( projectD, resultD, transferD);
         dg::assign( transferD, transferH);
         file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
     }
-    for( auto& record : Diagnostics::restart3d_list)
+    for( auto& record : feltor::restart3d_list)
     {
         record.function( resultD, var);
         dg::assign( resultD, resultH);
         file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
     }
-    for( auto& record : Diagnostics::list_2d)
+    for( auto& record : feltor::diagnostics2d_list)
     {
         dg::Timer tti;
         tti.tic();
@@ -490,7 +486,7 @@ int main( int argc, char* argv[])
             tti.tic();
             double deltat = time - previous_time;
             double energy = 0, ediff = 0.;
-            for( auto& record : Diagnostics::list_2d)
+            for( auto& record : feltor::diagnostics2d_list)
             {
                 if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
@@ -511,9 +507,7 @@ int main( int argc, char* argv[])
                     dg::assign( transferD2d, transferH2d);
                     time_integrals.at(record.name+"_2d").add( time, transferH2d);
                     if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
-                    {
                         ediff += dg::blas1::dot( resultD, feltor.vol3d());
-                    }
                 }
 
             }
@@ -554,20 +548,20 @@ int main( int argc, char* argv[])
         start = i;
         MPI_OUT err = nc_open(file_name.data(), NC_WRITE, &ncid);
         MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-        for( auto& record : Diagnostics::list_3d)
+        for( auto& record : feltor::diagnostics3d_list)
         {
             record.function( resultD, var);
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
             file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
         }
-        for( auto& record : Diagnostics::restart3d_list)
+        for( auto& record : feltor::restart3d_list)
         {
             record.function( resultD, var);
             dg::assign( resultD, resultH);
             file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
-        for( auto& record : Diagnostics::list_2d)
+        for( auto& record : feltor::diagnostics2d_list)
         {
             if(record.integral) // we already computed the output...
             {

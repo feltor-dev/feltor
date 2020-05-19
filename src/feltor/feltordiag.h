@@ -13,8 +13,9 @@
 namespace feltor{
 
 // This file constitutes the diagnostics module for feltor
-// The way it works is that it defines a Dignostics class that holds lists of Records that describe what goes into the file
-// You can register you own diagnostics in one of the diagnostics lists
+// The way it works is that it allocates global lists of Records that describe what goes into the file
+// You can register you own diagnostics in one of three diagnostics lists (static 3d, dynamic 3d and
+// dynamic 2d) further down
 // which will then be applied during a simulation
 
 namespace routines{
@@ -144,49 +145,30 @@ void jacobian(
 }
 }//namespace routines
 
-template< class Geometry, class IDMatrix, class DMatrix, class DVec >
-struct Diagnostics
-{
-    using HVec = typename Geometry::host_vector;
+//From here on, we use the typedefs to ease the notation
 
-    struct Variables{
-        feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
-        feltor::Parameters p;
-        dg::geo::solovev::Parameters gp;
-        dg::geo::TokamakMagneticField mag;
-        std::array<DVec, 3> gradPsip;
-        std::array<DVec, 3> tmp;
-        DVec hoo; //keep hoo there to avoid pullback
-    };
-    struct Record{
-        std::string name;
-        std::string long_name;
-        bool integral; //indicates whether the function should be time-integrated
-        std::function<void( DVec&, Variables&)> function;
-    };
-    struct Record_static{
-        std::string name;
-        std::string long_name;
-        std::function<void( HVec&, Variables&, Geometry& grid)> function;
-    };
-    static std::array<std::tuple<std::string, std::string, HVec>, 3> generate_cyl2cart( Geometry& grid)
-    {
-        HVec xc = dg::evaluate( dg::cooRZP2X, grid);
-        HVec yc = dg::evaluate( dg::cooRZP2Y, grid);
-        HVec zc = dg::evaluate( dg::cooRZP2Z, grid);
-        std::array<std::tuple<std::string, std::string, HVec>, 3> list = {{
-            { "xc", "x-coordinate in Cartesian coordinate system", xc },
-            { "yc", "y-coordinate in Cartesian coordinate system", yc },
-            { "zc", "z-coordinate in Cartesian coordinate system", zc }
-        }};
-        return list;
-    }
-    static std::vector<Record_static> static_list_3d;
-    static std::vector<Record_static> static_list_2d;
-    static std::vector<Record> list_3d;
-    static std::vector<Record> list_2d;
-    static std::vector<Record> restart3d_list;
-};//Diagnostics
+struct Variables{
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
+    feltor::Parameters p;
+    dg::geo::solovev::Parameters gp;
+    dg::geo::TokamakMagneticField mag;
+    std::array<DVec, 3> gradPsip;
+    std::array<DVec, 3> tmp;
+    DVec hoo; //keep hoo there to avoid pullback
+};
+
+struct Record{
+    std::string name;
+    std::string long_name;
+    bool integral; //indicates whether the function should be time-integrated
+    std::function<void( DVec&, Variables&)> function;
+};
+
+struct Record_static{
+    std::string name;
+    std::string long_name;
+    std::function<void( HVec&, Variables&, Geometry& grid)> function;
+};
 
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -194,8 +176,7 @@ struct Diagnostics
 //Here is a list of static (time-independent) 3d variables that go into the output
 //Except xc, yc, and zc these are redundant since we have geometry_diag.cu
 //MW: maybe it's a test of sorts
-template< class Geometry, class IDMatrix, class DMatrix, class DVec >
-std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record_static> Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::static_list_3d = {
+std::vector<Record_static> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
         []( HVec& result, Variables& v, Geometry& grid){
             dg::geo::BFieldR fieldR(v.mag);
@@ -223,7 +204,7 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record_st
         []( HVec& result, Variables& v, Geometry& grid ){
             result = dg::evaluate( dg::zero, grid);
             bool fixed_profile;
-            HVec source = feltor::Sources<Geometry, IDMatrix, DMatrix, DVec>::source_profiles.at(v.p.source_type)(
+            HVec source = feltor::source_profiles.at(v.p.source_type)(
                 fixed_profile, result, grid, v.p, v.gp, v.mag);
         }
     },
@@ -231,7 +212,7 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record_st
         []( HVec& result, Variables& v, Geometry& grid ){
             bool fixed_profile;
             HVec profile;
-            result = feltor::Sources<Geometry, IDMatrix, DMatrix, DVec>::source_profiles.at(v.p.source_type)(
+            result = feltor::source_profiles.at(v.p.source_type)(
                 fixed_profile, profile, grid, v.p, v.gp, v.mag);
         }
     },
@@ -252,9 +233,21 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record_st
     },
 };
 
+std::array<std::tuple<std::string, std::string, HVec>, 3> generate_cyl2cart( Geometry& grid)
+{
+    HVec xc = dg::evaluate( dg::cooRZP2X, grid);
+    HVec yc = dg::evaluate( dg::cooRZP2Y, grid);
+    HVec zc = dg::evaluate( dg::cooRZP2Z, grid);
+    std::array<std::tuple<std::string, std::string, HVec>, 3> list = {{
+        { "xc", "x-coordinate in Cartesian coordinate system", xc },
+        { "yc", "y-coordinate in Cartesian coordinate system", yc },
+        { "zc", "z-coordinate in Cartesian coordinate system", zc }
+    }};
+    return list;
+}
+
 // Here are all 3d outputs we want to have
-template< class Geometry, class IDMatrix, class DMatrix, class DVec >
-std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::list_3d = {
+std::vector<Record> diagnostics3d_list = {
     {"electrons", "electron density", false,
         []( DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.density(0), result);
@@ -291,8 +284,7 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> D
 //MW: These are redundant since we have geometry_diag.cu -> remove ? if geometry_diag works as expected (I guess it can also be a test of sorts)
 //MW: if they stay they should be documented in feltor.tex
 //( we make 3d variables here but only the first 2d slice is output)
-template< class Geometry, class IDMatrix, class DMatrix, class DVec >
-std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record_static> Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::static_list_2d = {
+std::vector<Record_static> diagnostics2d_static_list = {
     { "Psip2d", "Flux-function psi",
         []( HVec& result, Variables& v, Geometry& grid ){
             result = dg::pullback( v.mag.psip(), grid);
@@ -360,8 +352,7 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record_st
     }
 };
 // and here are all the 2d outputs we want to produce
-template< class Geometry, class IDMatrix, class DMatrix, class DVec >
-std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::list_2d = {
+std::vector<Record> diagnostics2d_list = {
     {"electrons", "Electron density", false,
         []( DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.density(0), result);
@@ -984,8 +975,7 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> D
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-template< class Geometry, class IDMatrix, class DMatrix, class DVec >
-std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::restart3d_list = {
+std::vector<Record> restart3d_list = {
     {"restart_electrons", "electron density", false,
         []( DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.density(0), result);
@@ -1013,8 +1003,8 @@ std::vector<typename Diagnostics< Geometry, IDMatrix, DMatrix, DVec >::Record> D
     }
 };
 // These two lists signify the quantities involved in accuracy computation
-static std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-static std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see_tt", "sei_tt"};
+std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
+std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see_tt", "sei_tt"};
 
 template<class Container>
 void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)

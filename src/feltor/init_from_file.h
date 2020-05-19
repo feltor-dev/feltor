@@ -4,12 +4,16 @@
 #include "dg/file/nc_utilities.h"
 
 namespace feltor
-{
-    //
+{//We use the typedefs and MPI_OUT
+//
 //everyone reads their portion of the input data
-template<class Geometry, class IHMatrix>
-std::array<std::array<typename Geometry::host_vector,2>,2> init_from_file( std::string file_name, const Geometry& grid, const Parameters& p, double& time){
-
+//don't forget to also read source profiles
+std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Geometry& grid, const Parameters& p, double& time){
+#ifdef FELTOR_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
+    std::array<std::array<DVec,2>,2> y0;
     ///////////////////read in and show inputfile
 
     file::NC_Error_Handle errIN;
@@ -26,17 +30,9 @@ std::array<std::array<typename Geometry::host_vector,2>,2> init_from_file( std::
     unsigned  pINNy = jsIN["Ny"].asUInt();
     unsigned  pINNz = jsIN["Nz"].asUInt();
     bool      pINsymmetric   = jsIN.get( "symmetric", false).asBool();
-#ifdef FELTOR_MPI
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if(rank==0){
-#endif
-    std::cout << "RESTART from file "<<file_name<< std::endl;
-    std::cout << " file parameters:" << std::endl;
-    std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz<<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
-#ifdef FELTOR_MPI
-    }
-#endif
+    MPI_OUT std::cout << "RESTART from file "<<file_name<< std::endl;
+    MPI_OUT std::cout << " file parameters:" << std::endl;
+    MPI_OUT std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz<<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
 
     // Now read in last timestep
     Geometry grid_IN( grid.x0(), grid.x1(), grid.y0(), grid.y1(), grid.z0(), grid.z1(),
@@ -62,8 +58,8 @@ std::array<std::array<typename Geometry::host_vector,2>,2> init_from_file( std::
     size_t countIN[3] = {grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
         grid_IN.n()*grid_IN.Nx()};
     #endif //FELTOR_MPI
-    std::vector<typename Geometry::host_vector> transferINHvec( 5, dg::evaluate( dg::zero, grid));
-    typename Geometry::host_vector transferINH( dg::evaluate(dg::zero, grid_IN));
+    std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid));
+    HVec transferINH( dg::evaluate(dg::zero, grid_IN));
 
     std::string namesIN[5] = {"restart_electrons", "restart_ions", "restart_Ue", "restart_Ui", "restart_induction"};
 
@@ -75,10 +71,7 @@ std::array<std::array<typename Geometry::host_vector,2>,2> init_from_file( std::
     errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);
     size_time -= 1;
     errIN = nc_get_vara_double( ncidIN, timeIDIN, &size_time, &count_time, &time);
-#ifdef FELTOR_MPI
-    if(rank==0)
-#endif
-    std::cout << " Current time = "<< time <<  std::endl;
+    MPI_OUT std::cout << " Current time = "<< time <<  std::endl;
     for( unsigned i=0; i<5; i++)
     {
         int dataID;
@@ -101,7 +94,6 @@ std::array<std::array<typename Geometry::host_vector,2>,2> init_from_file( std::
     dg::blas1::axpby( 1., transferINHvec[2], 1./p.mu[0], transferINHvec[4], transferINHvec[2]);
     dg::blas1::axpby( 1., transferINHvec[3], 1./p.mu[1], transferINHvec[4], transferINHvec[3]);
 
-    std::array<std::array<typename Geometry::host_vector,2>,2> y0;
     dg::assign( transferINHvec[0], y0[0][0]); //ne-1
     dg::assign( transferINHvec[1], y0[0][1]); //Ni-1
     dg::assign( transferINHvec[2], y0[1][0]); //We
