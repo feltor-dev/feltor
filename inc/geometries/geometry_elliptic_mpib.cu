@@ -2,7 +2,6 @@
 #include <memory>
 #include <mpi.h>
 
-#include <netcdf_par.h>
 #include "json/json.h"
 
 #include "dg/file/nc_utilities.h"
@@ -56,36 +55,19 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
     file::NC_Error_Handle ncerr;
-    MPI_Info info = MPI_INFO_NULL;
-    ncerr = nc_create_par( "testE_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+    if(rank==0)ncerr = nc_create( "testE_mpi.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    ncerr = file::define_dimensions(  ncid, dim2d, g2d->global());
+    if(rank==0)ncerr = file::define_dimensions(  ncid, dim2d, *g2d);
     int coordsID[2], psiID, functionID, function2ID;
-    ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
-    ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
-    ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
+    if(rank==0)ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
+    if(rank==0)ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
+    if(rank==0)ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
+    if(rank==0)ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
+    if(rank==0)ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
 
-    int dims[2], periods[2],  coords[2];
-    MPI_Cart_get( g2d->communicator(), 2, dims, periods, coords);
-    size_t count[2] = {g2d->local().n()*g2d->local().Ny(), g2d->local().n()*g2d->local().Nx()};
-    size_t start[2] = {coords[1]*count[0], coords[0]*count[1]};
-
-    ncerr = nc_var_par_access( ncid, coordsID[0], NC_COLLECTIVE);
-    ncerr = nc_var_par_access( ncid, coordsID[1], NC_COLLECTIVE);
-    ncerr = nc_var_par_access( ncid, psiID, NC_COLLECTIVE);
-    ncerr = nc_var_par_access( ncid, functionID, NC_COLLECTIVE);
-    ncerr = nc_var_par_access( ncid, function2ID, NC_COLLECTIVE);
-
-    dg::HVec X( g2d->local().size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d->local().size(); i++)
-    {
-        X[i] = g2d->map()[0].data()[i];
-        Y[i] = g2d->map()[1].data()[i];
-    }
-    ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
-    ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
+    dg::MHVec X( g2d->map()[0]), Y( g2d->map()[1]);
+    file::put_var_double( ncid, coordsID[0], *g2d, X);
+    file::put_var_double( ncid, coordsID[1], *g2d, Y);
     ///////////////////////////////////////////////////////////////////////////
     dg::MDVec x =    dg::evaluate( dg::zero, *g2d);
     const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM(c, psi_0, psi_1, 4), *g2d);
@@ -121,13 +103,14 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << *thrust::max_element( gyy.data().begin(), gyy.data().end()) << "\t";
     if(rank==0)std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
-    dg::blas1::transfer( error.data(), X );
-    ncerr = nc_put_vara_double( ncid, psiID, start, count, X.data());
-    dg::blas1::transfer( x.data(), X );
-    ncerr = nc_put_vara_double( ncid, functionID, start, count, X.data());
-    dg::blas1::transfer( solution.data(), X );
-    ncerr = nc_put_vara_double( ncid, function2ID, start, count, X.data());
-    ncerr = nc_close( ncid);
+    dg::MHVec transfer;
+    dg::assign( error, transfer);
+    file::put_var_double( ncid, psiID, *g2d, transfer);
+    dg::assign( x, transfer);
+    file::put_var_double( ncid, functionID, *g2d, transfer);
+    dg::assign( solution, transfer);
+    file::put_var_double( ncid, function2ID, *g2d, transfer);
+    if(rank==0)ncerr = nc_close( ncid);
     MPI_Finalize();
 
 

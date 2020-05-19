@@ -16,7 +16,6 @@
 #include "simple_orthogonal.h"
 //#include "ds.h"
 
-#include <netcdf_par.h>
 #include "dg/file/nc_utilities.h"
 
 double sineX( double x, double y) {return sin(x)*sin(y);}
@@ -64,56 +63,35 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
     file::NC_Error_Handle err;
-    MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( "test_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, g2d->communicator(), info, &ncid); //MPI ON
+    if(rank==0)err = nc_create( "test_mpi.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
-    err = file::define_dimensions(  ncid, dim3d, g2d->global());
+    if(rank==0)err = file::define_dimensions(  ncid, dim3d, *g2d);
     int coordsID[2], onesID, defID,confID, volID, divBID;
-    err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim3d, &coordsID[1]);
-    //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
-    err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
-    err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
-    err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &confID);
-    err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
-    err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
-
-    int dims[2], periods[2],  coords[2];
-    MPI_Cart_get( g2d->communicator(), 2, dims, periods, coords);
-    size_t count[2] = {g2d->local().n()*g2d->local().Ny(), g2d->local().n()*g2d->local().Nx()};
-    size_t start[2] = {coords[1]*count[0], coords[0]*count[1]};
-    err = nc_var_par_access( ncid, coordsID[0], NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, coordsID[1], NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, onesID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, defID, NC_COLLECTIVE);
-    err = nc_var_par_access( ncid, divBID, NC_COLLECTIVE);
+    if(rank==0)err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim3d, &coordsID[0]);
+    if(rank==0)err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim3d, &coordsID[1]);
+    if(rank==0)err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
+    if(rank==0)err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
+    if(rank==0)err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &confID);
+    if(rank==0)err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
+    if(rank==0)err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
     dg::MHVec psi_p = dg::pullback( psip.f(), *g2d);
     //g.display();
-    err = nc_put_vara_double( ncid, onesID, start, count, psi_p.data().data());
-    dg::HVec X( g2d->local().size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d->local().size(); i++)
-    {
-        X[i] = g2d->map()[0].data()[i];
-        Y[i] = g2d->map()[0].data()[i];
-    }
+    file::put_var_double( ncid, onesID, *g2d, psi_p);
+    dg::MHVec X = g2d->map()[0], Y = g2d->map()[1];
+    file::put_var_double( ncid, coordsID[0], *g2d, X);
+    file::put_var_double( ncid, coordsID[1], *g2d, Y);
 
     dg::MHVec temp0( dg::evaluate(dg::zero, *g2d)), temp1(temp0);
     dg::MHVec w2d = dg::create::weights( *g2d);
 
-    err = nc_put_vara_double( ncid, coordsID[0], start,count, X.data());
-    err = nc_put_vara_double( ncid, coordsID[1], start,count, Y.data());
-
     dg::SparseTensor<dg::MHVec> metric = g2d->metric();
     dg::MHVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
     dg::MHVec vol = dg::tensor::volume(metric);
-    //err = nc_put_vara_double( ncid, coordsID[2], g.z().data());
-    //dg::blas1::pointwiseDivide( g2d->g_xy(), g2d->g_xx(), temp0);
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::MHVec ones = dg::evaluate( dg::one, *g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    dg::blas1::transfer( temp0.data(), X);
-    err = nc_put_vara_double( ncid, defID, start,count, X.data());
+    file::put_var_double( ncid, defID, *g2d, temp0);
 
     if(rank==0)std::cout << "Construction successful!\n";
 
@@ -133,8 +111,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::transfer( temp0.data(), X);
-    err = nc_put_var_double( ncid, volID, X.data());
+    file::put_var_double( ncid, volID, *g2d, temp0);
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     if(rank==0)std::cout << "Rel Consistency  of volume is "<<error<<"\n";
@@ -165,7 +142,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     if(rank==0)std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
-    err = nc_close( ncid);
+    if(rank==0)err = nc_close( ncid);
     MPI_Finalize();
 
 

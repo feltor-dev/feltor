@@ -154,12 +154,7 @@ int main( int argc, char* argv[])
     }
     map2d.emplace_back( "Psi_p_interpolated", psip_X, "Poloidal flux function");
     g2d.display();
-    dg::HVec X( g2d.size()), Y(X), P = dg::evaluate( dg::zero, g2d);
-    for( unsigned i=0; i<g2d.size(); i++)
-    {
-        X[i] = g2d.map()[0][i];
-        Y[i] = g2d.map()[1][i];
-    }
+    dg::HVec X( g2d.map()[0]), Y(g2d.map()[1]), P = dg::evaluate( dg::zero, g2d);
     map2d.emplace_back( "xc", X, "X-coordinate Cartesian");
     map2d.emplace_back( "yc", Y, "Y-coordinate Cartesian");
     map2d.emplace_back( "zc", P, "Z-coordinate Cartesian");

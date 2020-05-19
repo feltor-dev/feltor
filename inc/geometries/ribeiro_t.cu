@@ -91,18 +91,12 @@ int main( int argc, char* argv[])
     thrust::host_vector<double> psi_p = dg::pullback( psip.f(), *g2d);
     //g.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
-    dg::HVec X( g2d->size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d->size(); i++)
-    {
-        X[i] = g2d->map()[0][i];
-        Y[i] = g2d->map()[1][i];
-    }
+    dg::HVec X( g2d->map()[0]), Y(g2d->map()[1]);
+    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
     dg::HVec temp0( g2d->size()), temp1(temp0);
     dg::HVec w2d = dg::create::weights( *g2d);
-
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
     dg::SparseTensor<dg::HVec> metric = g2d->metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);

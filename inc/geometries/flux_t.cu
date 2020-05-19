@@ -97,7 +97,7 @@ int main( int argc, char* argv[])
     int coordsID[2];
     err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    dg::HVec X=dg::pullback(dg::cooX2d, g2d), Y=dg::pullback(dg::cooY2d, g2d); //P = dg::pullback( dg::coo3, g);
+    dg::HVec X=g2d.map()[0], Y=g2d.map()[1];
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
