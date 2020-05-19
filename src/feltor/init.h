@@ -36,24 +36,26 @@ struct Radius : public dg::geo::aCylindricalFunctor<Radius>
     private:
     double m_R0, m_Z0;
 };
-HVec circular_damping( const Geometry& grid,
+template<class Geometry>
+dg::get_host_vector<Geometry> circular_damping( const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
     if( p.profile_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
-    HVec circular = dg::pullback( dg::compose(
+    dg::get_host_vector<Geometry> circular = dg::pullback( dg::compose(
                 dg::PolynomialHeaviside( gp.a, gp.a*p.profile_alpha/2., -1),
                 Radius( mag.R0(), 0.)), grid);
     return circular;
 }
 
 
-HVec xpoint_damping(const Geometry& grid,
+template<class Geometry>
+dg::get_host_vector<Geometry> xpoint_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
-    HVec xpoint_damping = dg::evaluate( dg::one, grid);
+    dg::get_host_vector<Geometry> xpoint_damping = dg::evaluate( dg::one, grid);
     if( gp.hasXpoint() )
     {
         double RX = gp.R_0 - 1.1*gp.triangularity*gp.a;
@@ -64,37 +66,40 @@ HVec xpoint_damping(const Geometry& grid,
     }
     return xpoint_damping;
 }
-HVec profile_damping(const Geometry& grid,
+template<class Geometry>
+dg::get_host_vector<Geometry> profile_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
     if( p.profile_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
-    HVec profile_damping = dg::pullback( dg::compose(dg::PolynomialHeaviside(
+    dg::get_host_vector<Geometry> profile_damping = dg::pullback( dg::compose(dg::PolynomialHeaviside(
         1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)), grid);
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag),
         profile_damping, profile_damping);
     return profile_damping;
 }
-HVec profile(const Geometry& grid,
+template<class Geometry>
+dg::get_host_vector<Geometry> profile(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag ){
     double RO=mag.R0(), ZO=0.;
     dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     double psipO = mag.psip()( RO, ZO);
     //First the profile and the source (on the host since we want to output those)
-    HVec profile = dg::pullback( dg::compose(dg::LinearX(
+    dg::get_host_vector<Geometry> profile = dg::pullback( dg::compose(dg::LinearX(
         p.nprofamp/psipO, 0.), mag.psip()), grid);
     dg::blas1::pointwiseDot( profile_damping(grid,p,gp,mag), profile, profile);
     return profile;
 }
-HVec source_damping(const Geometry& grid,
+template<class Geometry>
+dg::get_host_vector<Geometry> source_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
     if( p.source_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: source alpha must not be 0\n");
-    HVec source_damping = dg::pullback(
+    dg::get_host_vector<Geometry> source_damping = dg::pullback(
         dg::compose(dg::PolynomialHeaviside(
             p.source_boundary-p.source_alpha/2.,
         p.source_alpha/2., -1 ), dg::geo::RhoP(mag)), grid);
@@ -104,20 +109,15 @@ HVec source_damping(const Geometry& grid,
 }
 
 
+template<class Geometry, class IDMatrix, class DMatrix, class DVec>
 void init_ni(
     std::array<std::array<DVec,2>,2>& y0,
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& feltor,
     const Geometry& grid, const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
 {
-#ifdef FELTOR_MPI
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif
-    MPI_OUT std::cout << "initialize ni with "<<p.initphi << std::endl;
     feltor.initializeni( y0[0][0], y0[0][1], p.initphi);
     double minimalni = dg::blas1::reduce( y0[0][1], 1, thrust::minimum<double>());
-    MPI_OUT std::cerr << "Minimum Ni value "<<minimalni+1<<std::endl;
     if( minimalni <= -1)
     {
         throw dg::Error(dg::Message()<< "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n"
@@ -127,13 +127,14 @@ void init_ni(
 }//namespace detail
 
 //for wall shadow
-HVec wall_damping(const Geometry& grid,
+template<class Geometry>
+dg::get_host_vector<Geometry> wall_damping(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
     if( p.source_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: damping alpha must not be 0\n");
-    HVec wall_damping = dg::pullback(dg::compose( dg::PolynomialHeaviside(
+    dg::get_host_vector<Geometry> wall_damping = dg::pullback(dg::compose( dg::PolynomialHeaviside(
         p.damping_boundary+p.damping_alpha/2., p.damping_alpha/2., +1),
                 dg::geo::RhoP(mag)), grid);
     return wall_damping;
@@ -143,11 +144,34 @@ HVec wall_damping(const Geometry& grid,
  * source profiles.  Just add your own to the relevant map below.
  */
 
+template< class Geometry, class IHMatrix, class IDMatrix, class DMatrix, class DVec >
+struct Initialize
+{
+    using HVec = typename Geometry::host_vector;
+    static std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
+        Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
+        const Geometry& grid, const feltor::Parameters& p,
+        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+    > > initial_conditions;
+};
+template< class Geometry, class IDMatrix, class DMatrix, class DVec >
+struct Sources
+{
+    using HVec = typename Geometry::host_vector;
+    static std::map<std::string, std::function< HVec(
+        bool& fixed_profile,
+        HVec& ne_profile,
+        Geometry& grid, const feltor::Parameters& p,
+        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+    > > source_profiles;
+};
+
+template< class Geometry, class IHMatrix, class IDMatrix, class DMatrix, class DVec >
 std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
     const Geometry& grid, const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
-> > initial_conditions =
+> > Initialize<Geometry, IHMatrix, IDMatrix, DMatrix, DVec>::initial_conditions =
 {
     { "blob",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
@@ -303,12 +327,13 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     }
 };
 
-std::map<std::string, std::function< HVec(
+template< class Geometry, class IDMatrix, class DMatrix, class DVec >
+std::map<std::string, std::function< typename Geometry::host_vector(
     bool& fixed_profile, //indicate whether a profile should be forced (yes or no)
-    HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file in any case
+    typename Geometry::host_vector& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file in any case
     Geometry& grid, const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
-> > source_profiles =
+> > Sources<Geometry, IDMatrix, DMatrix, DVec>::source_profiles =
 {
     {"profile",
         []( bool& fixed_profile, HVec& ne_profile,

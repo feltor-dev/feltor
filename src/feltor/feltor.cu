@@ -9,6 +9,8 @@
 
 #include "feltor.h"
 #include "implicit.h"
+#include "init.h"
+#include "feltordiag.h"
 
 using HVec = dg::HVec;
 using DVec = dg::DVec;
@@ -18,8 +20,9 @@ using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 
-#include "init.h"
-#include "feltordiag.h"
+using Initialize = feltor::Initialize<Geometry, IHMatrix, IDMatrix, DMatrix, DVec>;
+using Sources = feltor::Sources<Geometry, IDMatrix, DMatrix, DVec>;
+using Diagnostics = feltor::Diagnostics<Geometry, IDMatrix, DMatrix, DVec>;
 
 int main( int argc, char* argv[])
 {
@@ -85,7 +88,7 @@ int main( int argc, char* argv[])
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  result; //zero
-    feltor::Variables var = {
+    Diagnostics::Variables var = {
         feltor, p,gp,mag, gradPsip, gradPsip
     };
 
@@ -95,7 +98,7 @@ int main( int argc, char* argv[])
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
     try{
-        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+        y0 = Initialize::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
         return -1;
@@ -105,7 +108,7 @@ int main( int argc, char* argv[])
     HVec profile = dg::evaluate( dg::zero, grid);
     HVec source_profile;
     try{
-        source_profile = feltor::source_profiles.at(p.source_type)(
+        source_profile = Sources::source_profiles.at(p.source_type)(
             fixed_profile, profile, grid, p, gp, mag);
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
@@ -234,7 +237,7 @@ int main( int argc, char* argv[])
             }
             double deltat = time - previous_time;
             double energy = 0, ediff = 0.;
-            for( auto& record : feltor::diagnostics2d_list)
+            for( auto& record : Diagnostics::list_2d)
             {
                 if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {

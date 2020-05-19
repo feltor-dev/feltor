@@ -9,6 +9,8 @@
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 #include "dg/file/file.h"
+#include "feltordiag.h"
+
 using HVec = dg::HVec;
 using DVec = dg::DVec;
 using DMatrix = dg::DMatrix;
@@ -16,7 +18,8 @@ using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
-#include "feltordiag.h"
+
+using Diagnostics = feltor::Diagnostics<Geometry, IDMatrix, DMatrix, DVec>;
 
 int main( int argc, char* argv[])
 {
@@ -250,7 +253,7 @@ int main( int argc, char* argv[])
         err = nc_redef(ncid_out);
     }
 
-    for( auto& record : feltor::diagnostics2d_list)
+    for( auto& record : Diagnostics::list_2d)
     {
         std::string record_name = record.name;
         if( record_name[0] == 'j')
@@ -329,7 +332,7 @@ int main( int argc, char* argv[])
             std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
             counter++;
             err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
-            for( auto& record : feltor::diagnostics2d_list)
+            for( auto& record : Diagnostics::list_2d)
             {
                 std::string record_name = record.name;
                 if( record_name[0] == 'j')
