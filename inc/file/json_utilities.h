@@ -215,13 +215,21 @@ Json::Value get_idx( enum ErrorMode mode, const Json::Value& js, std::string key
  * @note included in \c json_utilities.h
  * @param filename Name of the JSON file to parse
  * @param js Contains all the found Json variables on output
- * @param mode Either "default" in which case comments are allowed or "strict" in which case they are not
+ * @param mode "default": comments are allowed and read;
+ * "discardComments": comments are allowed but ignored;
+ * "strict": comments are not allowed;
  */
-static inline void file2Json( std::string filename, Json::Value& js, std::string mode = "default")
+static inline void file2Json( std::string filename, Json::Value& js, std::string mode = "discardComments")
 {
     Json::CharReaderBuilder parser;
     if( "strict" == mode )
         Json::CharReaderBuilder::strictMode( &parser.settings_);
+    else if( "discardComments" == mode )
+    {
+        Json::CharReaderBuilder::strictMode( &parser.settings_);
+        parser.settings_["allowComments"] = true;
+        parser.settings_["collectComments"] = false;
+    }
     else
         Json::CharReaderBuilder::setDefaults( &parser.settings_);
 

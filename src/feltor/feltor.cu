@@ -46,7 +46,16 @@ int main( int argc, char* argv[])
         std::cerr <<e.what()<<std::endl;
         return -1;
     }
-    file::file2Json( geomfile, gs, "default"); //comments allowed
+    try{
+        file::file2Json( geomfile, gs, "default");
+        dg::geo::solovev::Parameters(gs, file::throwOnError);
+    }catch(std::runtime_error& e)
+    {
+
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
 
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);

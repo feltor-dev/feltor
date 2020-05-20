@@ -1466,8 +1466,8 @@ since the internal netcdf information does not display equations.
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &     text attribute & - & verbose input file as a string (valid JSON, no comments) \\
-geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, C-style comments are allowed but discarded) \\
+geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, C-style comments are allowed but discarded) \\
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
@@ -1551,8 +1551,8 @@ Output file format: netcdf-4/hdf5, Conventions: CF-1.7; A \textit{coordinate var
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &     text attribute & - & verbose input file as a string (valid JSON, no comments) \\
-geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, no comments) \\
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, C-style comments are allowed but discarded) \\
+geomfile   &     text attribute & - & verbose geometry input file as a string (valid JSON, C-style comments are allowed but discarded) \\
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $3\cdot 64$) \\
