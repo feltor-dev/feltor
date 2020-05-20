@@ -118,6 +118,7 @@ int main( int argc, char* argv[])
         std::cerr << " ( Program searches for string variables 'inputfile' and 'geomfile' in file.nc and tries a json parser)\n";
         return -1;
     }
+    std::cout << input_js<<std::endl;
     const Parameters p(input_js);
     const dg::geo::solovev::Parameters gp(geom_js);
     p.display( std::cout);
@@ -231,6 +232,7 @@ int main( int argc, char* argv[])
 
     /// -------  Elements for fsa on X-point grid ----------------
     double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
+    std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
     if( gp.hasXpoint())
     {
         std::cout << "Generate X-point flux-aligned grid ... \n";
@@ -242,14 +244,14 @@ int main( int argc, char* argv[])
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipmin;
         //std::cout << "psi 1 is          "<<psipmax<<"\n";
-        dg::geo::CurvilinearGridX2d gX2d( generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
+        gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";
-        dg::Average<dg::HVec > avg_eta( gX2d.grid(), dg::coo2d::y);
-        std::vector<dg::HVec> coordsX = gX2d.map();
-        dg::SparseTensor<dg::HVec> metricX = gX2d.metric();
+        dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
+        std::vector<dg::HVec> coordsX = gX2d->map();
+        dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
-        const double f0 = (gX2d.x1()-gX2d.x0())/ ( psipmax - psipO);
+        const double f0 = (gX2d->x1()-gX2d->x0())/ ( psipmax - psipO);
         dg::HVec dvdpsip;
         avg_eta( volX2d, dvdpsip, false);
         dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
@@ -275,7 +277,7 @@ int main( int argc, char* argv[])
         dg::HVec transferH, transferH1d;
         for( auto tp : map)
         {
-            transferH = dg::pullback( std::get<2>(tp), gX2d);
+            transferH = dg::pullback( std::get<2>(tp), *gX2d);
             dg::blas1::pointwiseDot( volX2d, transferH, transferH);
             avg_eta( transferH, transferH1d, false);
             dg::blas1::scal( transferH1d, 4*M_PI*M_PI*f0); //
@@ -352,10 +354,38 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    err = file::define_dimension( ncid, &dim1d_ids[0], grid1d, "psi");
-    std::string psi_long_name = "Flux surface label";
-    err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
-        psi_long_name.size(), psi_long_name.data());
+    if( gp.hasXpoint())
+    {
+        int dim_idsX[2] = {0,0};
+        err = file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "psi"} );
+        std::string long_name = "Flux surface label";
+        err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
+            long_name.size(), long_name.data());
+        long_name = "Flux angle";
+        err = nc_put_att_text( ncid, dim_idsX[1], "long_name",
+            long_name.size(), long_name.data());
+        int xccID, yccID;
+        err = nc_def_var( ncid, "xcc", NC_DOUBLE, 2, dim_idsX, &xccID);
+        err = nc_def_var( ncid, "ycc", NC_DOUBLE, 2, dim_idsX, &yccID);
+        long_name="Cartesian x-coordinate";
+        err = nc_put_att_text( ncid, xccID, "long_name",
+            long_name.size(), long_name.data());
+        long_name="Cartesian y-coordinate";
+        err = nc_put_att_text( ncid, yccID, "long_name",
+            long_name.size(), long_name.data());
+        err = nc_enddef( ncid);
+        err = nc_put_var_double( ncid, xccID, gX2d->map()[0].data());
+        err = nc_put_var_double( ncid, yccID, gX2d->map()[1].data());
+        err = nc_redef(ncid);
+        dim1d_ids[0] = dim_idsX[1];
+    }
+    else
+    {
+        err = file::define_dimension( ncid, &dim1d_ids[0], grid1d, "psi");
+        std::string psi_long_name = "Flux surface label";
+        err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
+            psi_long_name.size(), psi_long_name.data());
+    }
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
 

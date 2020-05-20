@@ -199,38 +199,15 @@ int main( int argc, char* argv[])
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
     dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU);
 
-    //define eta, psi
-    int dim_idsX[2] = {0,0};
-    err = file::define_dimensions( ncid_out, dim_idsX, gridX2d.grid(), {"eta", "psi"} );
-    std::string long_name = "Flux surface label";
-    err = nc_put_att_text( ncid_out, dim_idsX[0], "long_name",
-        long_name.size(), long_name.data());
-    long_name = "Flux angle";
-    err = nc_put_att_text( ncid_out, dim_idsX[1], "long_name",
-        long_name.size(), long_name.data());
-    int xccID, yccID;
-    err = nc_def_var( ncid_out, "xcc", NC_DOUBLE, 2, dim_idsX, &xccID);
-    err = nc_def_var( ncid_out, "ycc", NC_DOUBLE, 2, dim_idsX, &yccID);
-    long_name="Cartesian x-coordinate";
-    err = nc_put_att_text( ncid_out, xccID, "long_name",
-        long_name.size(), long_name.data());
-    long_name="Cartesian y-coordinate";
-    err = nc_put_att_text( ncid_out, yccID, "long_name",
-        long_name.size(), long_name.data());
-    err = nc_enddef( ncid_out);
-    err = nc_put_var_double( ncid_out, xccID, gridX2d.map()[0].data());
-    err = nc_put_var_double( ncid_out, yccID, gridX2d.map()[1].data());
-    err = nc_redef(ncid_out);
-
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
     //Write long description
-    long_name = "Time at which 2d fields are written";
+    std::string long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
-    int dim_ids1d[2] = {dim_ids[0], dim_idsX[1]}; //time,  psi
-
+    int dim_ids1d[2] = {dim_ids[0], 0}; //time,  psi
+    err = file::define_dimension( ncid_out, &dim_ids1d[1], g1d_out, {"psi"} );
     std::map<std::string, int> id0d, id1d, id2d;
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
