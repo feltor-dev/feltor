@@ -128,9 +128,10 @@ int main( int argc, char* argv[])
     double volume = dg::blas1::dot( vol, ones3d);
 
     if(rank==0)std::cout << "TEST VOLUME IS:\n";
-    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
-    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    auto iris = dg::compose( dg::Iris(gp.psipmin, gp.psipmax), psip.f());
+    double psipmin, psipmax;
+    if( psi_0 < psi_1) psipmax = psi_1, psipmin = psi_0;
+    else               psipmax = psi_0, psipmin = psi_1;
+    auto iris = dg::compose( dg::Iris(psipmin, psipmax), psip.f());
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianMPIGrid2d g2dC( gp.R_0 -2.*gp.a, gp.R_0 + 2.*gp.a, -2.*gp.a, 2.*gp.a, 1, 2e3, 2e3, dg::DIR, dg::PER, g2d->communicator());
     dg::MHVec vec  = dg::evaluate( iris, g2dC);

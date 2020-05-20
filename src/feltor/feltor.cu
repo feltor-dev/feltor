@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
         std::cerr <<e.what()<<std::endl;
         return -1;
     }
-    file::file2Json( geomfile, gs, "strict");
+    file::file2Json( geomfile, gs, "default"); //comments allowed
 
     const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);

@@ -162,9 +162,10 @@ int main( int argc, char* argv[])
     vol = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
-    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
-    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    auto iris = dg::compose( dg::Iris(gp.psipmin, gp.psipmax), psip.f());
+    double psipmax, psipmin;
+    if( psi_0 < psi_1) psipmax = psi_1, psipmin = psi_0;
+    else               psipmax = psi_0, psipmin = psi_1;
+    auto iris = dg::compose( dg::Iris(psipmin, psipmax), psip.f());
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
 
     dg::HVec vec  = dg::evaluate( iris, g2dC);

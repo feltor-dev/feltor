@@ -206,11 +206,11 @@ int main( int argc, char* argv[])
         {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
         //////////////////////////////////
-        {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( gp.psipmin, gp.psipmax), mag.psip())},
-        {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(gp.psipmaxcut), mag.psip()) },
-        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::compose( dg::GaussianDamping( gp.psipmaxcut, p.source_alpha), mag.psip()) },
+        {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
+        {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
+        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::compose( dg::GaussianDamping( 0.8, p.source_alpha), dg::geo::RhoP(mag)) },
         {"ZonalFlow",  "Flux aligned Sine function", dg::compose( dg::SinX ( p.amp, 0., 2.*M_PI*p.k_psi ), mag.psip())},
-        {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( gp.psipmaxlim), mag.psip() )},
+        {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
         {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
                     p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
                 dg::geo::RhoP(mag))},
@@ -227,7 +227,6 @@ int main( int argc, char* argv[])
         {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
             M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
-
     };
 
     /// -------  Elements for fsa on X-point grid ----------------

@@ -196,8 +196,8 @@ int main( int argc, char* argv[])
 
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e2, 5e2, dg::PER, dg::PER);
-    gp.psipmax = 0., gp.psipmin = psi_0;
-    auto iris = dg::compose( dg::Iris( gp.psipmin, gp.psipmax), mag.psip());
+    double psipmax = 0., psipmin_iris = psi_0;
+    auto iris = dg::compose( dg::Iris( psipmin_iris, psipmax), mag.psip());
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);

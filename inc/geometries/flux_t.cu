@@ -188,9 +188,10 @@ int main( int argc, char* argv[])
     double volume2d = dg::blas1::dot( vol2d, ones2d);
 
     std::cout << "TEST VOLUME IS:\n";
-    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
-    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    auto iris = dg::compose( dg::Iris( gp.psipmin, gp.psipmax), c.psip());
+    double psipmin, psipmax;
+    if( psi_0 < psi_1) psipmax = psi_1, psipmin = psi_0;
+    else               psipmax = psi_0, psipmin = psi_1;
+    auto iris = dg::compose( dg::Iris(psipmin, psipmax), c.psip());
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,3, 2e2, 2e2, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
