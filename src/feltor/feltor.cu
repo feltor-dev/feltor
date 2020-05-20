@@ -25,23 +25,30 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js, gs;
+    std::string inputfile, geomfile;
     if( argc == 1)
-    {
-        file::file2Json( "input.json", js, "strict");
-        file::file2Json( "geometry_params.json", gs, "strict");
-    }
+        inputfile = "input.json", geomfile= "geometry_params.json";
     else if( argc == 3)
-    {
-        file::file2Json( argv[1], js, "strict");
-        file::file2Json( argv[2], gs, "strict");
-    }
+        inputfile = argv[1], geomfile= argv[2];
     else
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
                   << argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const feltor::Parameters p( js);
+    try{
+        file::file2Json( inputfile, js, "strict");
+        feltor::Parameters(js, file::throwOnError);
+    }catch(std::runtime_error& e)
+    {
+
+        std::cerr << "ERROR in input file "<<inputfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
+    file::file2Json( geomfile, gs, "strict");
+
+    const feltor::Parameters p(js);
     const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);

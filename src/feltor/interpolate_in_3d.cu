@@ -55,7 +55,7 @@ int main( int argc, char* argv[])
     Json::Value js,gs;
     file::string2Json(inputfile, js, "strict");
     file::string2Json(geomfile, gs, "strict");
-    const feltor::Parameters p(js);
+    const feltor::Parameters p(js, file::warning);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();

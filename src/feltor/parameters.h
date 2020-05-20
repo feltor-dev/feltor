@@ -4,6 +4,7 @@
 #include <string>
 #include "dg/enums.h"
 #include "json/json.h"
+#include "dg/file/json_utilities.h"
 
 namespace feltor{
 /// If you need more parameters, just go ahead and extend the list
@@ -50,75 +51,76 @@ struct Parameters
     std::string source_type;
     bool symmetric, periodify;
     Parameters() = default;
-    Parameters( const Json::Value& js) {
-        n       = js["n"].asUInt();
-        Nx      = js["Nx"].asUInt();
-        Ny      = js["Ny"].asUInt();
-        Nz      = js["Nz"].asUInt();
-        dt      = js["dt"].asDouble();
-        cx      = js["compression"].get(0u,1).asUInt();
-        cy      = js["compression"].get(1u,1).asUInt();
+    Parameters( const Json::Value& js, enum file::ErrorMode mode = file::silent ) {
+        //We need to check if a member is present
+        n       = file::get(mode, js,"n", 3).asUInt();
+        Nx      = file::get(mode, js,"Nx", 0).asUInt();
+        Ny      = file::get(mode, js,"Ny", 0).asUInt();
+        Nz      = file::get(mode, js,"Nz", 0).asUInt();
+        dt      = file::get(mode, js,"dt", 0.).asDouble();
+        cx      = file::get_idx(mode, js,"compression",0u,1).asUInt();
+        cy      = file::get_idx(mode, js,"compression",1u,1).asUInt();
         n_out = n, Nx_out = Nx/cx, Ny_out = Ny/cy, Nz_out = Nz;
-        inner_loop = js.get("inner_loop",1).asUInt();
-        itstp   = js["itstp"].asUInt();
-        maxout  = js["maxout"].asUInt();
-        eps_time    = js["eps_time"].asDouble();
-        rtol        = js["rtol"].asDouble();
+        inner_loop = file::get(mode, js, "inner_loop",1).asUInt();
+        itstp   = file::get( mode, js, "itstp", 0).asUInt();
+        maxout  = file::get( mode, js, "maxout", 0).asUInt();
+        eps_time    = file::get( mode, js, "eps_time", 1e-10).asDouble();
+        rtol        = file::get( mode, js, "rtol", 1e-5).asDouble();
 
-        eps_pol     = js["eps_pol"].asDouble();
-        jfactor     = js.get("jumpfactor",1).asDouble();
+        eps_pol     = file::get( mode, js, "eps_pol", 1e-6).asDouble();
+        jfactor     = file::get( mode, js, "jumpfactor", 1).asDouble();
 
-        eps_gamma   = js["eps_gamma"].asDouble();
-        stages      = js.get( "stages", 3).asUInt();
-        mx          = js["FCI"]["refine"].get( 0u, 1).asUInt();
-        my          = js["FCI"]["refine"].get( 1u, 1).asUInt();
-        rk4eps      = js["FCI"].get( "rk4eps", 1e-6).asDouble();
-        periodify   = js["FCI"].get( "periodify", true).asBool();
+        eps_gamma   = file::get( mode, js, "eps_gamma", 1e-6).asDouble();
+        stages      = file::get( mode, js, "stages", 3).asUInt();
+        mx          = file::get_idx( mode, js,"FCI","refine", 0u, 1).asUInt();
+        my          = file::get_idx( mode, js,"FCI","refine", 1u, 1).asUInt();
+        rk4eps      = file::get( mode, js,"FCI", "rk4eps", 1e-6).asDouble();
+        periodify   = file::get( mode, js,"FCI", "periodify", true).asBool();
 
-        mu[0]       = js["mu"].asDouble();
+        mu[0]       = file::get( mode, js, "mu", -0.000272121).asDouble();
         mu[1]       = +1.;
         tau[0]      = -1.;
-        tau[1]      = js["tau"].asDouble();
-        beta        = js.get("beta",0.).asDouble();
-        nu_perp     = js["nu_perp"].asDouble();
-        perp_diff   = js.get("perp_diff", "viscous").asString();
-        nu_parallel = js["nu_parallel"].asDouble();
-        eta         = js["resistivity"].asDouble();
+        tau[1]      = file::get( mode, js, "tau", 0.).asDouble();
+        beta        = file::get( mode, js, "beta", 0.).asDouble();
+        nu_perp     = file::get( mode, js, "nu_perp", 0.).asDouble();
+        perp_diff   = file::get( mode, js, "perp_diff", "viscous").asString();
+        nu_parallel = file::get( mode, js, "nu_parallel", 0.).asDouble();
+        eta         = file::get( mode, js, "resistivity", 0.).asDouble();
 
-        initne      = js.get( "initne", "blob").asString();
-        initphi     = js.get( "initphi", "zero").asString();
-        amp         = js["amp"].asDouble();
-        sigma       = js["sigma"].asDouble();
-        posX        = js["posX"].asDouble();
-        posY        = js["posY"].asDouble();
-        sigma_z     = js["sigma_z"].asDouble();
-        k_psi       = js["k_psi"].asDouble();
+        initne      = file::get( mode, js, "initne", "blob").asString();
+        initphi     = file::get( mode, js, "initphi", "zero").asString();
+        amp         = file::get( mode, js, "amplitude", 0.).asDouble();
+        sigma       = file::get( mode, js, "sigma", 0.).asDouble();
+        posX        = file::get( mode, js, "posX", 0.).asDouble();
+        posY        = file::get( mode, js, "posY", 0.).asDouble();
+        sigma_z     = file::get( mode, js, "sigma_z", 0.).asDouble();
+        k_psi       = file::get( mode, js, "k_psi", 0.).asDouble();
 
-        nprofamp   = js["profile"].get("amp", 0.).asDouble();
-        profile_alpha = js["profile"].get("alpha", 0.2).asDouble();
+        nprofamp   = file::get( mode, js, "profile", "amp", 0.).asDouble();
+        profile_alpha = file::get( mode, js, "profile", "alpha", 0.2).asDouble();
 
-        source_rate     = js["source"].get("rate", 0.).asDouble();
-        source_type     = js["source"].get("type", "profile").asString();
-        source_boundary = js["source"].get("boundary", 0.2).asDouble();
-        source_alpha    = js["source"].get("alpha", 0.2).asDouble();
-        damping_rate = js["damping"].get("rate", 0.).asDouble();
-        damping_alpha= js["damping"].get("alpha", 0.).asDouble();
-        damping_boundary = js["damping"].get("boundary", 1.2).asDouble();
+        source_rate     = file::get( mode, js, "source", "rate", 0.).asDouble();
+        source_type     = file::get( mode, js, "source", "type", "profile").asString();
+        source_boundary = file::get( mode, js, "source", "boundary", 0.5).asDouble();
+        source_alpha    = file::get( mode, js, "source", "alpha", 0.2).asDouble();
+        damping_rate = file::get( mode, js, "damping", "rate", 0.).asDouble();
+        damping_alpha= file::get( mode, js, "damping", "alpha", 0.).asDouble();
+        damping_boundary = file::get( mode, js, "damping", "boundary", 1.2).asDouble();
 
-        bcxN = dg::str2bc(js["bc"]["density"][0].asString());
-        bcyN = dg::str2bc(js["bc"]["density"][1].asString());
-        bcxU = dg::str2bc(js["bc"]["velocity"][0].asString());
-        bcyU = dg::str2bc(js["bc"]["velocity"][1].asString());
-        bcxP = dg::str2bc(js["bc"]["potential"][0].asString());
-        bcyP = dg::str2bc(js["bc"]["potential"][1].asString());
+        bcxN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 0, "").asString());
+        bcyN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 1, "").asString());
+        bcxU = dg::str2bc(file::get_idx( mode, js, "bc", "velocity", 0, "").asString());
+        bcyU = dg::str2bc(file::get_idx( mode, js, "bc", "velocity", 1, "").asString());
+        bcxP = dg::str2bc(file::get_idx( mode, js, "bc", "potential", 0, "").asString());
+        bcyP = dg::str2bc(file::get_idx( mode, js, "bc", "potential", 1, "").asString());
 
-        boxscaleRm  = js["box"]["scaleR"].get(0u,1.05).asDouble();
-        boxscaleRp  = js["box"]["scaleR"].get(1u,1.05).asDouble();
-        boxscaleZm  = js["box"]["scaleZ"].get(0u,1.05).asDouble();
-        boxscaleZp  = js["box"]["scaleZ"].get(1u,1.05).asDouble();
+        boxscaleRm  = file::get_idx( mode, js, "box", "scaleR", 0u, 1.05).asDouble();
+        boxscaleRp  = file::get_idx( mode, js, "box", "scaleR", 1u, 1.05).asDouble();
+        boxscaleZm  = file::get_idx( mode, js, "box", "scaleZ", 0u, 1.05).asDouble();
+        boxscaleZp  = file::get_idx( mode, js, "box", "scaleZ", 1u, 1.05).asDouble();
 
-        curvmode    = js.get( "curvmode", "toroidal").asString();
-        symmetric   = js.get( "symmetric", false).asBool();
+        curvmode    = file::get( mode, js, "curvmode", "toroidal").asString();
+        symmetric   = file::get( mode, js, "symmetric", false).asBool();
     }
     void display( std::ostream& os = std::cout ) const
     {

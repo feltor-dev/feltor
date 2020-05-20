@@ -116,15 +116,25 @@ int main( int argc, char* argv[])
     {
         try{
             file::file2Json( argv[1], js, "strict");
-            file::file2Json( argv[2], gs, "strict");
+            feltor::Parameters( js, file::throwOnError);
         } catch( std::exception& e) {
+            MPI_OUT std::cerr << "ERROR in input parameter file "<<argv[1]<<std::endl;
             MPI_OUT std::cerr << e.what();
 #ifdef FELTOR_MPI
             MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //FELTOR_MPI
             return -1;
         }
-
+        try{
+            file::file2Json( argv[2], gs, "strict");
+        } catch( std::exception& e) {
+            MPI_OUT std::cerr << "ERROR in geometry file "<<argv[1]<<std::endl;
+            MPI_OUT std::cerr << e.what();
+#ifdef FELTOR_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
+            return -1;
+        }
     }
     const feltor::Parameters p( js);
     const dg::geo::solovev::Parameters gp(gs);

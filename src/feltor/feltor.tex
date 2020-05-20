@@ -1419,7 +1419,7 @@ source & dict & & & Density source, cf. the output \texttt{sne\_tt\_ifs} in \tex
 "gaussian": Gaussian shaped source profile - uses \texttt{posX}, \texttt{posY} and \texttt{sigma},
     See the file {\tt init.h} to add your own custom source.
 \\
-\qquad boundary & float & 0.2  & 0.2 & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
+\qquad boundary & float & 0.2  & 0.5 & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 \qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
 in the density Eq.~\eqref{eq:density_profile} (with $rho_{p,b}=0$ and source profiles Eq.~\eqref{eq:electron_source} (should be
 small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes, must not be zero)
@@ -1539,10 +1539,10 @@ the whole simulation is lost. It is safer to just merge files afterwards with fo
 \texttt{ncrcat output1.nc output2.nc output.nc}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
-\texttt{feltor/diag/feltordiag.cu}
+\texttt{feltor/src/feltor/feltordiag.cu}
  reads one or more previously generated simulation file(s) \texttt{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a single second output file \texttt{output.nc} described as follows. \\
 Compilation\\
-\texttt{make feltordiag} \\
+\texttt{make feltordiag device=\{gpu,omp\}} \\
 Usage \\
 \texttt{./feltordiag input0.nc ... inputN.nc output.nc} \\
 
@@ -1556,10 +1556,7 @@ geomfile   &     text attribute & - & verbose geometry input file as a string (v
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $3\cdot 64$) \\
-eta              & Coord. var. & 1 (eta) & $\eta$-coordinate of the X-point grid ( size: $3\cdot 640$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-xcc              & Dataset & 2 (eta,psi) & Cartesian x-coordinate $x(\psi,\eta)$ \\
-ycc              & Dataset & 2 (eta,psi) & Cartesian y-coordinate $y(\psi,\eta)$ \\
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
 psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
@@ -1588,7 +1585,7 @@ We also have a useful geometry diagnostic program:
 generated simulation file \texttt{input.nc} or the input json files
 \texttt{input.json} and \texttt{geometry.json} and writes an output file \texttt{diag\_geometry.nc} as\\
 Compilation\\
-\texttt{make geometry\_diag device=omp} \\
+\texttt{make geometry\_diag device=\{gpu,omp\}} \\
 Usage \\
 \texttt{./geometry\_diag input.json geometry.json diag\_geometry.nc} \\
 The program outputs a host of static 1d, 2d and 3d geometric quantities.
@@ -1614,18 +1611,17 @@ Program terminates with an error message to \texttt{std::cerr}
     \\
 An input Json file misses a key or contains a typo in a key
 &
-If a key is not found the parser uses a default value,
-which is $0$ if not otherwise specified
-and the program continues execution.
-This is because the program cannot distinguish between intentional
-omission of a parameter and unintentional
-(a user can intentionally choose to use the default value
-or an older input file is used which does not contain parameters introduced afterward but have a reasonable default)
-Depending on which parameter is wrongly set this may either lead to early termination or actually lead to a long simulation. Usually the program prints the parameters
-it read from the input file into \texttt{std::cout} and into the output file
-for inspection so double check.
+The programs \texttt{feltor.cu} and \texttt{feltor\_hpc.cu}
+will exit with an error message. (The reason why we do not
+silently use the default value is that the danger of wasting
+valuable computing time on the cluster due to a typo is bigger than the
+added convenience. We want to be sure that the program
+does what the user wants).
+The other programs just issue warnings
+if a key is not found and just use a default value
+which is $0$ if not otherwise specified.
     \\
-    An input Json file has an invalid value, e.g. a  typo in a string value
+    An input Json file has an invalid value, e.g. a typo in a string value
 &
 Invalid values lead to termination with an error message to \texttt{std::cerr}, once and if program tries to use the value
     \\

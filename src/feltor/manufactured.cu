@@ -28,7 +28,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile]\n";
         return -1;
     }
-    const feltor::Parameters p( js);// p.display( std::cout);
+    const feltor::Parameters p( js, file::throwOnError);// p.display( std::cout);
     std::cout << "# "<<p.n<<" x "<<p.Nx<<" x "<<p.Ny<<" x "<<p.Nz<<"\n";
     const double R_0 = 10;
     const double I_0 = 20; //q factor at r=1 is I_0/R_0
