@@ -137,8 +137,7 @@ int main()
     {
         //try the compute_in_2d handle of Elliptic3d
 	    dg::CartesianGrid3d grid( 0, lx, 0, ly, 0,1,n, Nx, Ny, 1, bcx, bcy, dg::PER);
-		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
-        pol_backward.set_compute_in_2d(true);
+		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor, dg::compute::in_2d);
 		pol_backward.set_chi( chi);
 		x = temp;
 		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);

@@ -143,5 +143,11 @@ enum class coo3d : char
     xz = 'c', //!< xz plane
 };
 
+///@brief compute mode in Elliptic3d
+enum class compute{
+    in_2d, //!< compute in 2d
+    in_3d //!< compute in 3d
+};
+
 ///@}
 }//namespace dg

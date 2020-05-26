@@ -25,7 +25,10 @@ struct ImplicitDensity
         dg::geo::TokamakMagneticField mag)
     {
         m_p = p;
-        m_lapM_perpN.construct( g, p.bcxN, p.bcyN,dg::PER, dg::normed, dg::centered);
+        dg::compute comp = dg::compute::in_2d;
+        if( p.curvmode == "true")
+            comp = dg::compute::in_3d;
+        m_lapM_perpN.construct( g, p.bcxN, p.bcyN,dg::PER, dg::normed, dg::centered, 1., comp);
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
         auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
         if( p.curvmode == "true")
@@ -36,8 +39,6 @@ struct ImplicitDensity
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
         m_lapM_perpN.set_chi( hh);
-        if( p.curvmode != "true")
-            m_lapM_perpN.set_compute_in_2d( true);
     }
 
     void operator()( double t, const std::array<Container,2>& y,
@@ -90,9 +91,12 @@ struct ImplicitVelocity
     void construct( const Geometry& g, feltor::Parameters p,
             dg::geo::TokamakMagneticField mag)
     {
+        dg::compute comp = dg::compute::in_2d;
+        if( p.curvmode == "true")
+            comp = dg::compute::in_3d;
         m_p=p;
         m_lapM_perpU.construct( g, p.bcxU,p.bcyU,dg::PER,
-            dg::normed, dg::centered);
+            dg::normed, dg::centered, 1., comp);
         if( !(p.perp_diff == "viscous" || p.perp_diff == "hyperviscous") )
             throw dg::Error(dg::Message(_ping_)<<"Warning! perp_diff value '"<<p.perp_diff<<"' not recognized!! I do not know how to proceed! Exit now!");
         dg::assign( dg::evaluate( dg::zero, g), m_temp);
@@ -108,8 +112,6 @@ struct ImplicitVelocity
             = dg::geo::createProjectionTensor( bhat, g);
         //set perpendicular projection tensor h
         m_lapM_perpU.set_chi( hh);
-        if( p.curvmode != "true")
-            m_lapM_perpU.set_compute_in_2d(true);
         //m_induction.construct(  g,
         //    p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
         //m_induction.elliptic().set_chi( hh);
@@ -122,10 +124,8 @@ struct ImplicitVelocity
             dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
                 bhat, m_multigrid.grid(u));
             m_multi_induction[u].construct(  m_multigrid.grid(u),
-                p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
+                p.bcxU, p.bcyU, dg::PER, -1., dg::centered, 1., comp);
             m_multi_induction[u].elliptic().set_chi( hh);
-            if( p.curvmode != "true")
-                m_multi_induction[u].elliptic().set_compute_in_2d(true);
         }
         m_multi_chi = m_multigrid.project( m_temp);
         m_old_apar = dg::Extrapolation<Container>( 1, dg::evaluate( dg::zero, g));

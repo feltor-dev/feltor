@@ -365,10 +365,16 @@ class Elliptic3d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param comp if compute::in_2d, the dz derivatives are not constructed and
+     * the symv function avoids the derivative in z,
+     * compute::in_3d represents the original behaviour.
+     * Restrict the problem to the first 2 dimensions.
+     * This effectively makes the behaviour of \c dg::Elliptic3d
+     * identical to the \c dg::Elliptic class.
      * @note chi is assumed 1 per default
      */
-    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.):
-        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor)
+    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., enum compute comp = compute::in_3d ):
+        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor, comp)
     {
     }
 
@@ -384,17 +390,28 @@ class Elliptic3d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param comp if compute::in_2d, the dz derivatives are not constructed and
+     * the symv function avoids the derivative in z,
+     * compute::in_3d represents the original behaviour.
+     * Restrict the problem to the first 2 dimensions.
+     * This effectively makes the behaviour of \c dg::Elliptic3d
+     * identical to the \c dg::Elliptic class.
      * @note chi is the metric tensor multiplied by the volume element per default
      */
-    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
+    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1., enum compute comp = compute::in_3d )
     {
         m_no=no, m_jfactor=jfactor;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
-        dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
+        m_multiplyZ = false;
+        if(comp == compute::in_3d)
+            m_multiplyZ = true;
+        if(m_multiplyZ)
+            dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
-        dg::blas2::transfer( dg::create::dz( g, bcz, dg::centered), m_rightz);
+        if(m_multiplyZ)
+            dg::blas2::transfer( dg::create::dz( g, bcz, dg::centered), m_rightz);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
 
@@ -471,17 +488,6 @@ class Elliptic3d
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     ///@copydoc Elliptic::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
-
-    /**
-     * @brief Restrict the problem to the first 2 dimensions
-     *
-     * This effectively makes the behaviour of dg::Elliptic3d
-     * identical to the dg::Elliptic class.
-     * @param compute_in_2d if true, the symv function avoids the derivative in z, false reverts to the original behaviour.
-     */
-    void set_compute_in_2d( bool compute_in_2d ) {
-        m_multiplyZ = !compute_in_2d;
-    }
 
     ///@copydoc Elliptic::symv(const ContainerType0&,ContainerType1&)
     template<class ContainerType0, class ContainerType1>
