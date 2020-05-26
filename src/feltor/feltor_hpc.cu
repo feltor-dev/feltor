@@ -70,6 +70,7 @@ int main( int argc, char* argv[])
     cudaGetDeviceCount(&num_devices);
     if(num_devices==0){
         std::cerr << "No CUDA capable devices found"<<std::endl;
+        MPI_Abort(MPI_COMM_WORLD, -1);
         return -1;
     }
     int device = rank % num_devices; //assume # of gpus/node is fixed
@@ -92,7 +93,9 @@ int main( int argc, char* argv[])
         if( size != np[0]*np[1]*np[2])
         {
             std::cerr << "ERROR: Process partition needs to match total number of processes!"<<std::endl;
+#ifdef FELTOR_MPI
             MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
             return -1;
         }
     }
@@ -109,7 +112,8 @@ int main( int argc, char* argv[])
     {
         MPI_OUT std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
                 << argv[0]<<" [input.json] [geometry.json] [output.nc]\n OR \n"
-                << argv[0]<<" [input.json] [geometry.json] [output.nc] [initial.nc] \n";
+                << argv[0]<<" [input.json] [geometry.json] [output.nc] [initial.nc] "<<std::endl;
+        MPI_Abort(MPI_COMM_WORLD, -1);
         return -1;
     }
     else
@@ -227,7 +231,7 @@ int main( int argc, char* argv[])
         try{
             y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
         }catch ( std::out_of_range& error){
-            MPI_OUT std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
+            MPI_OUT std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
 #ifdef FELTOR_MPI
             MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //FELTOR_MPI
@@ -258,7 +262,7 @@ int main( int argc, char* argv[])
             p.damping_rate, dg::construct<DVec>(damping_profile)
         );
     }catch ( std::out_of_range& error){
-        std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
+        std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
 #ifdef FELTOR_MPI
         MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //FELTOR_MPI
@@ -393,8 +397,11 @@ int main( int argc, char* argv[])
             feltor( time, y0, y1);
         } catch( dg::Fail& fail) {
             MPI_OUT std::cerr << "CG failed to converge in first step to "
-                              <<fail.epsilon()<<"\n";
+                              <<fail.epsilon()<<std::endl;
             MPI_OUT err = nc_close(ncid);
+#ifdef FELTOR_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
             return -1;
         }
     }

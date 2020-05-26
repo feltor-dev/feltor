@@ -209,7 +209,7 @@ int main( int argc, char* argv[])
             bool available = true;
             try{
                 err = nc_inq_varid(ncid_in, record.name.data(), &dataID);
-            } catch ( file::NC_Error error)
+            } catch ( file::NC_Error& error)
             {
                 if(  i == 0)
                 {
