@@ -858,11 +858,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
        y[1][1] := W_i
     */
 
+    dg::Timer timer;
+    double accu = 0.;//accumulated time
+    timer.tic();
     // set m_phi[0]
     compute_phi( t, y[0]);
 
     // set m_phi[1], m_dP[0], m_dP[1] and m_UE2 --- needs m_phi[0]
     compute_psi( t);
+
+    timer.toc();
+    accu += timer.diff();
+    #ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if(rank==0)
+    #endif
+    std::cout << "## Compute phi and psi               took "<<timer.diff()<<"s\t A: "<<accu<<"s\n";
+    timer.tic();
 
     // Transform n-1 to n and n to logn
     dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
@@ -883,9 +896,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
 #endif
 
-    // Add parallel dynamics --- needs m_logn
-    dg::Timer timer;
+    timer.toc();
+    accu += timer.diff();
+    #ifdef MPI_VERSION
+        if(rank==0)
+    #endif
+    std::cout << "## Compute Apar and perp dynamics    took "<<timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic();
+
+    // Add parallel dynamics --- needs m_logn
 #if FELTORPARALLEL == 1
     compute_parallel( t, y, m_fields, yp);
 #endif
@@ -965,11 +984,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();
+    accu += timer.diff();
     #ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         if(rank==0)
     #endif
-    std::cout << "#Add parallel dynamics took "<<timer.diff()<<"s\n";
+    std::cout << "## Add parallel dynamics and sources took "<<timer.diff()<<"s\t A: "<<accu<<"\n";
 }
 } //namespace feltor
