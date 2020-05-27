@@ -172,9 +172,23 @@ void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& 
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\
     \gamma_0 = \frac{6}{11}
 \f]
+    for the default third order method and
+    \f[
+    \alpha_0 = \frac{4}{3}\ \alpha_1 = -\frac{1}{3}\ \alpha_2 = 0 \\
+    \beta_0  = \frac{4}{3}\ \beta_1 = -\frac{2}{3}\ \beta_2 = 0 \\
+    \gamma_0 = \frac{2}{3}
+\f]
+    for a second order method and
+    \f[
+    \alpha_0 = 1\ \alpha_1 = 0\ \alpha_2 = 0\\
+    \beta_0  = 1\ \beta_1 = 0\ \beta_2 = 0\\
+    \gamma_0 = 1
+\f]
+for a semi-implicit (first order) Euler method
 *
 * The necessary Inversion in the imlicit part is provided by the \c SolverType class.
 * Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
+* @note This scheme implements <a href = "https://dx.doi.org/10.1016/0021-9991(91)90007-8"> Karniadakis, et al. J. Comput. Phys. 97 (1991)</a>
 * @note The implicit part equals a third order backward differentiation formula (BDF) https://en.wikipedia.org/wiki/Backward_differentiation_formula
 *
 The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
@@ -201,7 +215,7 @@ struct Karniadakis
     template<class ...SolverParams>
     Karniadakis( SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...){
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
-        init_coeffs();
+        set_coefficients(3);
     }
     /**
      * @brief Reserve memory for the integration
@@ -213,7 +227,7 @@ struct Karniadakis
     void construct( SolverParams&& ...ps){
         m_solver = Solver( std::forward<SolverParams>(ps)...);
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
-        init_coeffs();
+        set_coefficients(3);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -248,15 +262,36 @@ struct Karniadakis
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
 
-  private:
-    void init_coeffs(){
-        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
-        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
-        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
-        a[0] =  18./11.;    b[0] =  18./11.;
-        a[1] = -9./11.;     b[1] = -18./11.;
-        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
+    /**
+     * @brief Set the order of the method
+     *
+     * Change the coefficients \f$ \alpha_i,\ \beta_i,\ \gamma_0\f$ to a first,
+     * second or third order set.
+     * @param order 1 (Euler), 2 or 3 (default)
+     */
+    void set_coefficients(unsigned order){
+        switch( order){
+            case 1:
+                a[0] = 1.;  b[0] = 1.;
+                a[1] = 0.;  b[1] = 0.;
+                a[2] = 0.;  b[2] = 0.;   //Euler
+                g0 = 1.;
+                break;
+            case 2:
+                a[0] =  4./3.;  b[0] = 4./3.;
+                a[1] = -1./3.;  b[1] = -2./3.;
+                a[2] = 0.;      b[2] = 0.;   //2nd Karniadakis
+                g0 = 2./3.;
+                break;
+            default:
+                a[0] =  18./11.;    b[0] =  18./11.;
+                a[1] = -9./11.;     b[1] = -18./11.;
+                a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis
+                g0 = 6./11.;
+                break;
+        }
     }
+  private:
     SolverType m_solver;
     std::array<ContainerType,3> m_u, m_f;
     value_type m_t, m_dt;

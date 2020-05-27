@@ -154,7 +154,7 @@ int main()
     }
     Explicit<dg::DVec> ex( grid, nu);
     Implicit<dg::DMatrix, dg::DVec> im( grid, nu);
-    std::cout << "### Test semi-implicit Karniadakis methods with "<<NT<<"steps\n";
+    std::cout << "### Test semi-implicit Karniadakis methods with "<<NT<<" steps\n";
     //![karniadakis]
     //construct time stepper
     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
@@ -167,7 +167,18 @@ int main()
     //![karniadakis]
     dg::blas1::axpby( -1., sol, 1., y0);
     res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error Karniadakis is "<< res.d<<"\t"<<res.i<<std::endl;
+    std::cout << "Relative error Karniadakis 3 is "<< res.d<<"\t"<<res.i<<std::endl;
+    for( unsigned i=2; i>0; i--)
+    {
+        time = 0., y0 = init;
+        karniadakis.set_coefficients(i);
+        karniadakis.init( ex, im, time, y0, dt);
+        for( unsigned i=0; i<NT; i++)
+            karniadakis.step( ex, im, time, y0);
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+        std::cout << "Relative error Karniadakis "<<i<<" is "<< res.d<<"\t"<<res.i<<std::endl;
+    }
 
 
     std::cout << "### Test semi-implicit ARK methods\n";
