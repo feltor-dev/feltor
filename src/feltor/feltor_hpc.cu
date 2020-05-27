@@ -148,6 +148,14 @@ int main( int argc, char* argv[])
     MPI_OUT p.display( std::cout);
     MPI_OUT gp.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
+#ifdef FELTOR_MPI
+    if( np[2] >= (int)p.Nz)
+    {
+        MPI_OUT std::cerr << "ERROR: Number of processes in z "<<np[2]<<" may not be larger or equal Nz "<<p.Nz<<std::endl;
+        MPI_Finalize();
+        return -1;
+    }
+#endif //FELTOR_MPI
     ////////////////////////////////set up computations///////////////////////////
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;

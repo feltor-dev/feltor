@@ -1254,7 +1254,7 @@ Compilation:\\
 \texttt{make feltor\_mpi device=\{gpu,omp,skl,knl\}} Compile \texttt{feltor\_hpc.cu} for distributed memory systems. Also needs {\it serial netcdf}\\
 Usage:\\
 \texttt{./feltor\_hpc input.json geometry.json output.nc [initial.nc]} \\
-\texttt{./feltor\_mpi input.json geometry.json output.nc [initial.nc]} \\
+\texttt{echo npx npy npz | mpirun -n np ./feltor\_mpi input.json geometry.json output.nc [initial.nc]} \\
 \texttt{./feltor input.json geometry.json } \\
 
 The programs \texttt{feltor\_hpc.cu} and \texttt{feltor.cu} expect two input
@@ -1269,6 +1269,14 @@ the output file \texttt{output.nc}.
  This behavior is described in Section~\ref{sec:restart_file}.
  Both programs write unstructured human readable performance information of the running simulation
  to \texttt{std::cout}.
+
+Note that when compiled for mpi, the program \texttt{feltor\_hpc.cu} expects the
+partition of the total number of processes np into the three directions x, y and z
+as an input from the command line. Make sure that \texttt{npx*npy*npz==np} and that
+they evenly divide the number of grid points in the respective direction! The
+number of stages in the multigrid algorithm and the compression parameters further
+restrict this choice. Also note that the number of processes in a direction must
+not equal the number of grid points in that direction!
 
 
 \subsection{Input file structure} \label{sec:input_file}
@@ -1599,7 +1607,7 @@ termination
 \rowcolor{gray!50}\textbf{Error condition} &  \textbf{Handling} \\ \midrule
 An input file does not exist or is otherwise invalid
 &
-Program terminates with an error message to \texttt{std::cerr}
+Program terminates with an error message to \texttt{std::cerr}. \texttt{feltordiag.cu} writes an error to \texttt{std::cerr} and continues with the next input file.
     \\
 An input netcdf file misses a required field
 &
@@ -1618,16 +1626,24 @@ valuable computing time on the cluster due to a typo is bigger than the
 added convenience. We want to be sure that the program
 does what the user wants).
 The other programs just issue warnings
-if a key is not found and just use a default value
+if a key is not found and use a default value
 which is $0$ if not otherwise specified.
     \\
     An input Json file has an invalid value, e.g. a typo in a string value
 &
 Invalid values lead to termination with an error message to \texttt{std::cerr}, once and if program tries to use the value
     \\
-Number of processes in $x$, $y$ and $z$ direction does not match total number of Processes
+    Number of processes in $x$, $y$ and $z$ direction does not match total number of Processes
 &
-Program terminates with an error message to \texttt{std::cerr}
+Program terminates with an error message to \texttt{std::cerr}.
+    \\
+    $2^{s-1}$ or $c_x$ or $c_y$ does not evenly divide $N_x$ and $N_y$, where $s$ is the number of stages in the multigrid algorithm.
+&
+Program terminates on thrown error. Make sure the numbers add up.
+    \\
+    Number of processes in $x$, $y$ and $z$ direction does not evenly divide or is greater or equal $N_x/2^{s-1}$, $N_y/2^{s-1}$ and $N_z$, where $s$ is the number of stages in the multigrid algorithm.
+&
+Program terminates on failed assert
     \\
 An MPI error occurs
 &

@@ -289,7 +289,15 @@ int main( int argc, char* argv[])
 
         size_t steps;
         std::cout << "Opening file "<<argv[j]<<"\n";
-        err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
+        try{
+            err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
+        } catch ( file::NC_Error& error)
+        {
+            std::cerr << "An error occurded opening file "<<argv[j]<<"\n";
+            std::cerr << error.what()<<std::endl;
+            std::cerr << "Continue with next file\n";
+            continue;
+        }
         err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
         err = nc_inq_dimlen( ncid, timeID, &steps);
         //steps = 3;
