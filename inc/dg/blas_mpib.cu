@@ -22,6 +22,25 @@ struct Expression{
        u = param*u*v + w;
    }
 };
+struct test_routine{
+    test_routine( double mu, double alpha):m_mu(mu), m_alpha(alpha){}
+    DG_DEVICE
+    void operator()( double g11, double g12, double g22, double in1, double in2, double& out1, double& out2){
+        out1 = (g11)*(in1) + (g12)*(in2) + m_mu;
+        out2 = (g12)*(in1) + (g22)*(in2) + m_alpha;
+    }
+private:
+    double m_mu, m_alpha;
+};
+
+struct test_inplace{
+    DG_DEVICE
+    void operator()( double g11, double g12, double g22, double& inout1, double& inout2){
+        double t = g11*inout1 + g12*inout2;
+        inout2 = g12*inout1 + g22*inout2;
+        inout1 = t;
+    }
+};
 
 using value_type= double;
 using Vector    = dg::MDVec;
@@ -66,7 +85,7 @@ int main( int argc, char* argv[])
 
     int multi=100;
     if(rank==0)std::cout<<"\nNo communication\n";
-    ArrayVec y(x), z(x), u(x), v(x);
+    ArrayVec y(x), z(x), u(x), v(x), w(x), h(x);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpby( 1., y, -1., x);
@@ -103,7 +122,17 @@ int main( int argc, char* argv[])
     for( int i=0; i<multi; i++)
         dg::blas1::subroutine( Expression(), u, v, x, array_p);
     t.toc();
-    if(rank==0)std::cout<<"SUBroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    if(rank==0)std::cout<<"Subroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::subroutine( test_routine(2.,4.), x, y, z, u, v, w, h);
+    t.toc();
+    if(rank==0)std::cout<<"Subroutine ( G Cdot x = y)       "<<t.diff()/multi<<"s\t"<<9*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::subroutine( test_inplace(), x, y, z, u, v);
+    t.toc();
+    if(rank==0)std::cout<<"Subroutine ( G Cdot x = x)       "<<t.diff()/multi<<"s\t"<<7*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
     if(rank==0)std::cout<<"\nLocal communication\n";
     Matrix M;
