@@ -178,20 +178,9 @@ struct Helmholtz3d
         m_chi( m_laplaceM.weights())
     {
     }
-    /**
-     * @brief Construct
-     *
-     * @param g The grid to use (boundary conditions are taken from there)
-     * @param alpha Scalar in the above formula
-     * @param dir Direction of the Laplace operator
-     * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @param comp if compute::in_2d, the dz derivatives are not constructed and
-     * the symv function avoids the derivative in z and uses a 2d Laplacian;
-     * compute::in_3d represents the original behaviour.
-     * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
-     */
-    Helmholtz3d( const Geometry& g, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1., enum compute comp = compute::in_3d):
-        Helmholtz3d( g, g.bcx(), g.bcy(), g.bcz(), alpha, dir, jfactor, comp)
+    ///@copydoc Helmholtz::Helmholtz(const Geometry&,value_type,direction,value_type)
+    Helmholtz3d( const Geometry& g, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
+        Helmholtz3d( g, g.bcx(), g.bcy(), g.bcz(), alpha, dir, jfactor)
     {
     }
     /**
@@ -204,13 +193,10 @@ struct Helmholtz3d
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @param comp if compute::in_2d, the dz derivatives are not constructed and
-     * the symv function avoids the derivative in z and uses a 2d Laplacian;
-     * compute::in_3d represents the original behaviour.
      * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
-    Helmholtz3d( const Geometry& g, bc bcx, bc bcy, bc bcz, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1., enum compute comp = compute::in_3d):
-        m_laplaceM( g, bcx, bcy, bcz, dg::not_normed, dir, jfactor, comp),
+    Helmholtz3d( const Geometry& g, bc bcx, bc bcy, bc bcz, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
+        m_laplaceM( g, bcx, bcy, bcz, dg::not_normed, dir, jfactor),
         m_chi( m_laplaceM.weights()),
         m_alpha(alpha)
     {

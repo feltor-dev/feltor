@@ -13,7 +13,6 @@
 
 namespace feltor
 {
-//the memory access to explicit zeros in the case of non-true curvature mode is negligible in the following
 
 namespace routines{
 struct ComputePerpDrifts{
@@ -219,7 +218,6 @@ struct Explicit
         return m_apar;
     }
     const std::array<Container, 3> & gradN (int i) const {
-        //note that gradN[2] is zero if curvmore != "true"
         return m_dN[i];
     }
     const std::array<Container, 3> & gradU (int i) const {
@@ -249,18 +247,22 @@ struct Explicit
         // grad S_ne and grad S_ni
         dg::blas2::symv( m_dx_N, m_s[0][i], gradS[0]);
         dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
-        if( "true" == m_p.curvmode) dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
-        else dg::blas1::copy( 0., gradS[2]);
+        if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
+    }
+    const Container & compute_dppN(int i) { //2nd varphi derivative
+        dg::blas2::symv( m_dz, m_fields[0][i], m_temp0);
+        dg::blas2::symv( m_dz, m_temp0, m_temp1);
+        return m_temp1;
+    }
+    const Container & compute_dppP(int i) {
+        dg::blas2::symv( m_dz, m_phi[i], m_temp0);
+        dg::blas2::symv( m_dz, m_temp0, m_temp1);
+        return m_temp1;
     }
     const Container & compute_dppU(int i) {
-        if( "true" == m_p.curvmode)
-        {
-            dg::blas2::symv( m_dz, m_fields[1][i], m_temp0);
-            dg::blas2::symv( m_dz, m_temp0, m_temp1);
-            return m_temp1;
-        }
-        else
-            return m_fields[1][i];
+        dg::blas2::symv( m_dz, m_fields[1][i], m_temp0);
+        dg::blas2::symv( m_dz, m_temp0, m_temp1);
+        return m_temp1;
     }
     const dg::SparseTensor<Container>& projection() const{
         return m_hh;
@@ -480,15 +482,18 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( vol, m_b[i], m_b[i]); //b_i/vol/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
-    dg::compute comp = dg::compute::in_2d;
-    if( p.curvmode == "true")
-        comp = dg::compute::in_3d;
-    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered, 1., comp),
-    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered, 1., comp),
-    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER, dg::normed, dg::centered, 1., comp),
+    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
+    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
+    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER, dg::normed, dg::centered),
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
     m_lapperpP.set_chi( m_hh);
+    if( p.curvmode != "true")
+    {
+        m_lapperpN.set_compute_in_2d(true);
+        m_lapperpU.set_compute_in_2d(true);
+        m_lapperpP.set_compute_in_2d(true);
+    }
     m_lapperpP.set_jfactor(0); //we don't want jump terms in source
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
@@ -506,20 +511,17 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     m_multi_invgammaP.resize(p.stages);
     m_multi_invgammaN.resize(p.stages);
     m_multi_induction.resize(p.stages);
-    dg::compute comp = dg::compute::in_2d;
-    if( p.curvmode == "true")
-        comp = dg::compute::in_3d;
     for( unsigned u=0; u<p.stages; u++)
     {
         m_multi_pol[u].construct( m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, dg::not_normed,
-            dg::centered, p.jfactor, comp);
+            dg::centered, p.jfactor);
         m_multi_invgammaP[u].construct(  m_multigrid.grid(u),
-            p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered, 1., comp);
+            p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
         m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
-            p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered, 1., comp);
+            p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
         m_multi_induction[u].construct(  m_multigrid.grid(u),
-            p.bcxU, p.bcyU, dg::PER, -1., dg::centered, 1., comp);
+            p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
 
         dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
             bhat, m_multigrid.grid(u));
@@ -527,6 +529,12 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
         m_multi_invgammaP[u].elliptic().set_chi( hh);
         m_multi_invgammaN[u].elliptic().set_chi( hh);
         m_multi_induction[u].elliptic().set_chi( hh);
+        if(p.curvmode != "true"){
+            m_multi_pol[u].set_compute_in_2d( true);
+            m_multi_invgammaP[u].elliptic().set_compute_in_2d( true);
+            m_multi_invgammaN[u].elliptic().set_compute_in_2d( true);
+            m_multi_induction[u].elliptic().set_compute_in_2d( true);
+        }
     }
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
@@ -543,13 +551,12 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dy_N( dg::create::dy( g, p.bcyN) ),
     m_dy_U( dg::create::dy( g, p.bcyU) ),
     m_dy_P( dg::create::dy( g, p.bcyP) ),
+    m_dz( dg::create::dz( g, dg::PER) ),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
     m_p(p), m_full_system(full_system)
 {
-    if( "true" == m_p.curvmode)
-        m_dz = dg::create::dz( g, dg::PER);
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_UE2 = m_temp2 = m_temp1 = m_temp0;
@@ -695,7 +702,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
     //-------Compute Psi and derivatives
     dg::blas2::symv( m_dx_P, m_phi[0], m_dP[0][0]);
     dg::blas2::symv( m_dy_P, m_phi[0], m_dP[0][1]);
-    if( "true" == m_p.curvmode) dg::blas2::symv( m_dz, m_phi[0], m_dP[0][2]);
+    if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[0], m_dP[0][2]);
     dg::tensor::multiply3d( m_hh, //grad_perp
         m_dP[0][0], m_dP[0][1], m_dP[0][2], m_UE2, m_temp0, m_temp1);
     dg::blas1::subroutine( routines::ComputePsi(), m_phi[1],
@@ -708,7 +715,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
     //m_UE2 now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dx_P, m_phi[1], m_dP[1][0]);
     dg::blas2::symv( m_dy_P, m_phi[1], m_dP[1][1]);
-    if( "true" == m_p.curvmode) dg::blas2::symv( m_dz, m_phi[1], m_dP[1][2]);
+    if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[1], m_dP[1][2]);
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
@@ -743,7 +750,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
     //----------Compute Derivatives----------------------------//
     dg::blas2::symv( m_dx_U, m_apar, m_dA[0]);
     dg::blas2::symv( m_dy_U, m_apar, m_dA[1]);
-    if( "true" == m_p.curvmode) dg::blas2::symv( m_dz, m_apar, m_dA[2]);
+    if(!m_p.symmetric) dg::blas2::symv( m_dz, m_apar, m_dA[2]);
 
     //----------Compute Velocities-----------------------------//
     dg::blas1::axpby( 1., fields[1][0], -1./m_p.mu[0], m_apar, fields[1][0]);
@@ -763,10 +770,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
         ////////////////////perpendicular dynamics////////////////////////
         dg::blas2::symv( m_dx_N, y[0][i], m_dN[i][0]);
         dg::blas2::symv( m_dy_N, y[0][i], m_dN[i][1]);
-        if( "true" == m_p.curvmode) dg::blas2::symv( m_dz, y[0][i], m_dN[i][2]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, y[0][i], m_dN[i][2]);
         dg::blas2::symv( m_dx_U, fields[1][i], m_dU[i][0]);
         dg::blas2::symv( m_dy_U, fields[1][i], m_dU[i][1]);
-        if( "true" == m_p.curvmode) dg::blas2::symv( m_dz, fields[1][i], m_dU[i][2]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dU[i][2]);
         if( m_p.beta == 0){
             dg::blas1::subroutine( routines::ComputePerpDrifts(
                 m_p.mu[i], m_p.tau[i]),

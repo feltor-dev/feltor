@@ -404,16 +404,16 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::copy(v.f.dssU(0), result);
         }
     },
-    //{"dppue", "2nd varphi derivative of electron velocity", false,
-    //    []( DVec& result, Variables& v ) {
-    //         dg::blas1::copy(v.f.compute_dppU(0), result);
-    //    }
-    //},
-    //{"dpue2", "1st varphi derivative squared of electron velocity", false,
-    //    []( DVec& result, Variables& v ) {
-    //         dg::blas1::pointwiseDot(v.f.gradU(0)[2], v.f.gradU(0)[2], result);
-    //    }
-    //},
+    {"dppue", "2nd varphi derivative of electron velocity", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.compute_dppU(0), result);
+        }
+    },
+    {"dpue2", "1st varphi derivative squared of electron velocity", false,
+        []( DVec& result, Variables& v ) {
+             dg::blas1::pointwiseDot(v.f.gradU(0)[2], v.f.gradU(0)[2], result);
+        }
+    },
     {"lperpinv", "Perpendicular density gradient length scale", false,
         []( DVec& result, Variables& v ) {
             const std::array<DVec, 3>& dN = v.f.gradN(0);
