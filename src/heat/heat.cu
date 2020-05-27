@@ -22,13 +22,13 @@ int main( int argc, char* argv[])
     Json::Value js, gs;
     if( argc == 1)
     {
-        file::file2Json("input/default.json", js, "default");
-        file::file2Json("geometry/geometry_params.json", gs, "default");
+        file::file2Json("input/default.json", js, file::comments::are_discarded);
+        file::file2Json("geometry/geometry_params.json", gs, file::comments::are_discarded);
     }
     else if( argc == 3)
     {
-        file::file2Json(argv[1], js, "strict");
-        file::file2Json(argv[2], gs, "strict");
+        file::file2Json(argv[1], js, file::comments::are_forbidden);
+        file::file2Json(argv[2], gs, file::comments::are_forbidden);
     }
     else
     {
@@ -53,7 +53,7 @@ int main( int argc, char* argv[])
     std::cout << "Initialize implicit" << std::endl;
     heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
     /////////glfw initialisation ////////////////////////////////////////
-    file::file2Json("window_params.json", js, "default");
+    file::file2Json("window_params.json", js, file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     //////////////////////////////////////////////////////////////////////

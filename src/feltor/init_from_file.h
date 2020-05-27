@@ -24,7 +24,7 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
     std::string input(length, 'x');
     errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    file::string2Json( input, jsIN, "strict");
+    file::string2Json( input, jsIN, file::comments::are_forbidden);
     unsigned  pINn  = jsIN["n"].asUInt();
     unsigned  pINNx = jsIN["Nx"].asUInt();
     unsigned  pINNy = jsIN["Ny"].asUInt();

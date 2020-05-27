@@ -20,7 +20,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     std::cout << js<<std::endl;
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);

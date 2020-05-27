@@ -36,10 +36,11 @@ struct Parameters
      * @param js Can contain the variables "A" (0), "c" (0), "PP" (1.), "PI"
      * (1.), "R_0" , "inverseaspectratio" , "elongation" (1), "triangularity"
      * (0), "equilibrium" ("solovev")
+     * @param mode determine what happens when a key is missing
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
-    Parameters( const Json::Value& js, file::ErrorMode mode = file::silent) {
+    Parameters( const Json::Value& js, file::error mode = file::error::is_silent) {
         A  = file::get( mode, js, "A", 0).asDouble();
         pp  = file::get( mode, js, "PP", 1).asDouble();
         pi  = file::get( mode, js, "PI", 1).asDouble();

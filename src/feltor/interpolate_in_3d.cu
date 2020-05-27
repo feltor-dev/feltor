@@ -53,9 +53,9 @@ int main( int argc, char* argv[])
     std::string geomfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
     Json::Value js,gs;
-    file::string2Json(inputfile, js, "strict");
-    file::string2Json(geomfile, gs, "strict");
-    const feltor::Parameters p(js, file::warning);
+    file::string2Json(inputfile, js, file::comments::are_forbidden);
+    file::string2Json(geomfile, gs, file::comments::are_forbidden);
+    const feltor::Parameters p(js, file::error::is_warning);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();

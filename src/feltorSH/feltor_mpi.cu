@@ -40,7 +40,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const eule::Parameters p( js);
     if(rank==0)p.display( std::cout);

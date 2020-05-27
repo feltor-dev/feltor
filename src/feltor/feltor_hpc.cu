@@ -113,14 +113,16 @@ int main( int argc, char* argv[])
         MPI_OUT std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
                 << argv[0]<<" [input.json] [geometry.json] [output.nc]\n OR \n"
                 << argv[0]<<" [input.json] [geometry.json] [output.nc] [initial.nc] "<<std::endl;
+#ifdef FELTOR_MPI
         MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
         return -1;
     }
     else
     {
         try{
-            file::file2Json( argv[1], js, "discardComments");
-            feltor::Parameters( js, file::throwOnError);
+            file::file2Json( argv[1], js, file::comments::are_discarded);
+            feltor::Parameters( js, file::error::is_throw);
         } catch( std::exception& e) {
             MPI_OUT std::cerr << "ERROR in input parameter file "<<argv[1]<<std::endl;
             MPI_OUT std::cerr << e.what()<<std::endl;
@@ -130,8 +132,8 @@ int main( int argc, char* argv[])
             return -1;
         }
         try{
-            file::file2Json( argv[2], gs, "discardComments");
-            dg::geo::solovev::Parameters( gs, file::throwOnError);
+            file::file2Json( argv[2], gs, file::comments::are_discarded);
+            dg::geo::solovev::Parameters( gs, file::error::is_throw);
         } catch( std::exception& e) {
             MPI_OUT std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
             MPI_OUT std::cerr << e.what()<<std::endl;

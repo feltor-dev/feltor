@@ -51,7 +51,7 @@ struct Parameters
     std::string source_type;
     bool symmetric, periodify;
     Parameters() = default;
-    Parameters( const Json::Value& js, enum file::ErrorMode mode = file::silent ) {
+    Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
         //We need to check if a member is present
         n       = file::get(mode, js,"n", 3).asUInt();
         Nx      = file::get(mode, js,"Nx", 0).asUInt();

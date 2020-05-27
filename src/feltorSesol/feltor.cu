@@ -18,9 +18,9 @@ int main( int argc, char* argv[])
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
     if( argc == 1)
-        file::file2Json("input.json", js, "default");
+        file::file2Json("input.json", js, file::comments::are_discarded);
     else if( argc == 2)
-        file::file2Json(argv[1], js, "default");
+        file::file2Json(argv[1], js, file::comments::are_discarded);
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
@@ -30,7 +30,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
-    file::file2Json( "window_params.json", js, "default");
+    file::file2Json( "window_params.json", js, file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
     draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////

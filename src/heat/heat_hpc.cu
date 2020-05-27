@@ -32,8 +32,8 @@ int main( int argc, char* argv[])
     }
     else
     {
-        file::file2Json(argv[1], js, "strict");
-        file::file2Json(argv[2], gs, "strict");
+        file::file2Json(argv[1], js, file::comments::are_forbidden);
+        file::file2Json(argv[2], gs, file::comments::are_forbidden);
     }
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
@@ -70,8 +70,8 @@ int main( int argc, char* argv[])
         std::string geomin(length, 'x');
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
         Json::Value js,gs;
-        file::string2Json(inputin, js, "strict");
-        file::string2Json(geomin, gs, "strict");
+        file::string2Json(inputin, js, file::comments::are_forbidden);
+        file::string2Json(geomin, gs, file::comments::are_forbidden);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
         const heat::Parameters pin(js);

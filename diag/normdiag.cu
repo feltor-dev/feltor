@@ -33,7 +33,7 @@ int main( int argc, char* argv[])
     err = nc_close(ncid); 
 
     Json::Value js;
-    file::string2Json( input, js, "strict");
+    file::string2Json( input, js, file::comments::are_forbidden);
     const eule::Parameters p(js);
     
     //////////////////////////////Grids//////////////////////////////////////

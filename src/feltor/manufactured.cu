@@ -20,15 +20,15 @@ int main( int argc, char* argv[])
 {
     Json::Value js, gs;
     if( argc == 1)
-        file::file2Json( "input.json", js, "strict");
+        file::file2Json( "input.json", js, file::comments::are_forbidden);
     else if( argc == 2)
-        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     else
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile]\n";
         return -1;
     }
-    const feltor::Parameters p( js, file::throwOnError);// p.display( std::cout);
+    const feltor::Parameters p( js, file::error::is_throw);// p.display( std::cout);
     std::cout << "# "<<p.n<<" x "<<p.Nx<<" x "<<p.Ny<<" x "<<p.Nz<<"\n";
     const double R_0 = 10;
     const double I_0 = 20; //q factor at r=1 is I_0/R_0

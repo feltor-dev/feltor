@@ -29,7 +29,7 @@ int main( int argc, char* argv[])
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
     if( argc == 1)
-        file::file2Json( "input/default.json", js, "default");
+        file::file2Json( "input/default.json", js, file::comments::are_discarded);
     else if( argc == 2)
         file::file2Json( argv[1], js);
     else

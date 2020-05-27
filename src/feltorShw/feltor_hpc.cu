@@ -21,7 +21,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     p.display( std::cout);
@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
         std::string inputIN(length, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
         Json::Value jsIN;
-        file::string2Json(inputIN, jsIN, "strict");
+        file::string2Json(inputIN, jsIN, file::comments::are_forbidden);
 
         const eule::Parameters pIN(  jsIN);    
         std::cout << "[input.nc] file parameters" << std::endl;

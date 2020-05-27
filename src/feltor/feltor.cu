@@ -37,8 +37,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     try{
-        file::file2Json( inputfile, js, "strict");
-        feltor::Parameters(js, file::throwOnError);
+        file::file2Json( inputfile, js, file::comments::are_forbidden);
+        feltor::Parameters(js, file::error::is_throw);
     }catch(std::runtime_error& e)
     {
 
@@ -47,8 +47,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     try{
-        file::file2Json( geomfile, gs, "default");
-        dg::geo::solovev::Parameters(gs, file::throwOnError);
+        file::file2Json( geomfile, gs, file::comments::are_discarded);
+        dg::geo::solovev::Parameters(gs, file::error::is_throw);
     }catch(std::runtime_error& e)
     {
 
@@ -171,7 +171,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     //
     std::stringstream title;
-    file::file2Json( "window_params.json", js, "default");
+    file::file2Json( "window_params.json", js, file::comments::are_discarded);
     unsigned red = js.get("reduction", 1).asUInt();
     double rows = js["rows"].asDouble(), cols = p.Nz/red+1,
            width = js["width"].asDouble(), height = js["height"].asDouble();

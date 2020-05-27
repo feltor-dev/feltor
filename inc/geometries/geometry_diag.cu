@@ -87,8 +87,8 @@ int main( int argc, char* argv[])
     {
         newfilename = argv[3];
         std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
-        file::file2Json( argv[1], input_js, "strict");
-        file::file2Json( argv[2], geom_js, "strict");
+        file::file2Json( argv[1], input_js, file::comments::are_discarded);
+        file::file2Json( argv[2], geom_js, file::comments::are_discarded);
     }
     else if( argc == 3)
     {
@@ -106,8 +106,8 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
         err = nc_close( ncid_in);
         Json::Value js,gs;
-        file::string2Json(inputfile, input_js, "strict");
-        file::string2Json(geomfile, geom_js, "strict");
+        file::string2Json(inputfile, input_js, file::comments::are_discarded);
+        file::string2Json(geomfile, geom_js, file::comments::are_discarded);
     }
     else
     {

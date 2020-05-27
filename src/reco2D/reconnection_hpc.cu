@@ -19,7 +19,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     const asela::Parameters p( js);
     p.display( std::cout);
     std::string input = js.toStyledString();

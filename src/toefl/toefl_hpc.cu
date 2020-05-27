@@ -73,7 +73,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-        file::file2Json( argv[1], js, "strict");
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     MPI_OUT std::cout << js<<std::endl;
     const Parameters p( js);
     MPI_OUT p.display( std::cout);
