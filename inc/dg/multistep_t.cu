@@ -168,16 +168,16 @@ int main()
     dg::blas1::axpby( -1., sol, 1., y0);
     res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error Karniadakis 3 is "<< res.d<<"\t"<<res.i<<std::endl;
-    for( unsigned i=2; i>0; i--)
+    for( unsigned s=2; s>0; s--)
     {
         time = 0., y0 = init;
-        karniadakis.set_coefficients(i);
+        karniadakis.set_order(s);
         karniadakis.init( ex, im, time, y0, dt);
         for( unsigned i=0; i<NT; i++)
             karniadakis.step( ex, im, time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-        std::cout << "Relative error Karniadakis "<<i<<" is "<< res.d<<"\t"<<res.i<<std::endl;
+        std::cout << "Relative error Karniadakis "<<s<<" is "<< res.d<<"\t"<<res.i<<std::endl;
     }
 
 

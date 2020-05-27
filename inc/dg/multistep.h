@@ -215,7 +215,7 @@ struct Karniadakis
     template<class ...SolverParams>
     Karniadakis( SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...){
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
-        set_coefficients(3);
+        set_order(3);
     }
     /**
      * @brief Reserve memory for the integration
@@ -227,7 +227,7 @@ struct Karniadakis
     void construct( SolverParams&& ...ps){
         m_solver = Solver( std::forward<SolverParams>(ps)...);
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
-        set_coefficients(3);
+        set_order(3);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -269,7 +269,7 @@ struct Karniadakis
      * second or third order set.
      * @param order 1 (Euler), 2 or 3 (default)
      */
-    void set_coefficients(unsigned order){
+    void set_order(unsigned order){
         switch( order){
             case 1:
                 a[0] = 1.;  b[0] = 1.;
