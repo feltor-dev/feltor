@@ -78,7 +78,7 @@ Json::Value get_idx( enum error err, const Json::Value& js, std::string key, uns
 {
     if( js.isMember(key))
     {
-        if( js[key].isValidIndex(idx))
+        if( js[key].isArray() && js[key].isValidIndex(idx))
             return js[key][idx];
         else
         {
@@ -123,7 +123,7 @@ Json::Value get( enum error err, const Json::Value& js, std::string key, std::st
 {
     if( js.isMember(key))
     {
-        if( js[key].isMember(key2))
+        if( js[key].isObject() && js[key].isMember(key2))
             return js[key][key2];
         else
         {
@@ -169,9 +169,9 @@ Json::Value get_idx( enum error err, const Json::Value& js, std::string key, std
 {
     if( js.isMember(key))
     {
-        if( js[key].isMember(key2))
+        if( js[key].isObject() && js[key].isMember(key2))
         {
-            if( js[key][key2].isValidIndex(idx))
+            if( js[key][key2].isArray() && js[key][key2].isValidIndex(idx))
                 return js[key][key2][idx];
             else
             {
@@ -244,13 +244,13 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
     {
         std::string message = "\nAn error occured while parsing "+filename+"\n";
         message +=  "*** File does not exist! *** \n\n";
-        throw std::runtime_error( message);
         if( err == error::is_throw)
             throw std::runtime_error( message);
         else if (err == error::is_warning)
             std::cerr << "WARNING: "<<message<<std::endl;
         else
-            return;
+            ;
+        return;
     }
     std::string errs;
     if( !parseFromStream( parser, isI, &js, &errs) )
@@ -261,7 +261,8 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
         else if (err == error::is_warning)
             std::cerr << "WARNING: "<<message<<std::endl;
         else
-            return;
+            ;
+        return;
     }
 }
 /**
@@ -301,7 +302,8 @@ static inline void string2Json(std::string input, Json::Value& js, enum comments
         else if (err == error::is_warning)
             std::cerr << "WARNING: "<<errs<<std::endl;
         else
-            return;
+            ;
+        return;
     }
 }
 

@@ -44,6 +44,7 @@ int main( int argc, char* argv[])
     Json::Value js,gs;
     file::string2Json(inputfile, js, file::comments::are_forbidden);
     file::string2Json(geomfile, gs, file::comments::are_forbidden);
+    //we only need some parameters from p, not all
     const feltor::Parameters p(js, file::error::is_warning);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
