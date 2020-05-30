@@ -621,7 +621,7 @@ struct aRealMPITopology3d
         unsigned Ny = g.Ny()/dims[1];
         unsigned Nz = g.Nz()/dims[2];
 
-        l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
+        l = RealGrid3d<real_type>(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
     RealGrid3d<real_type> g, l; //global grid
     MPI_Comm comm, planeComm; //just an integer...

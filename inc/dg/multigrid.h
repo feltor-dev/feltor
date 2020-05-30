@@ -175,7 +175,7 @@ struct MultigridCG2d
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
-    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, double eps)
+    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps)
     {
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
         // compute residual r = Wb - A x
@@ -256,8 +256,8 @@ struct MultigridCG2d
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     void fmg_solve( std::vector<SymmetricOp>& op,
-    ContainerType0& x, const ContainerType1& b, std::vector<double> ev, unsigned nu_pre, unsigned
-    nu_post, unsigned gamma, double eps)
+    ContainerType0& x, const ContainerType1& b, std::vector<value_type> ev, unsigned nu_pre, unsigned
+    nu_post, unsigned gamma, value_type eps)
     {
         //FULL MULTIGRID
         //solve for residuum ( if not we always get the same solution)
@@ -316,8 +316,8 @@ struct MultigridCG2d
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     void pcg_solve( std::vector<SymmetricOp>& op,
-    ContainerType0& x, const ContainerType1& b, std::vector<double> ev, unsigned nu_pre, unsigned
-    nu_post, unsigned gamma, double eps)
+    ContainerType0& x, const ContainerType1& b, std::vector<value_type> ev, unsigned nu_pre, unsigned
+    nu_post, unsigned gamma, value_type eps)
     {
 
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
@@ -368,8 +368,8 @@ struct MultigridCG2d
     template<class SymmetricOp>
     void multigrid_cycle( std::vector<SymmetricOp>& op,
     std::vector<Container>& x, std::vector<Container>& b,
-    std::vector<double> ev,
-        unsigned nu1, unsigned nu2, unsigned gamma, unsigned p, double eps)
+    std::vector<value_type> ev,
+        unsigned nu1, unsigned nu2, unsigned gamma, unsigned p, value_type eps)
     {
         // 1 multigrid cycle beginning on grid p
         // p < m_stages-1
@@ -386,7 +386,7 @@ struct MultigridCG2d
         //std::cout << "STAGE "<<p<<"\n";
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
-        //double norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //value_type norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
 //#ifdef DG_BENCHMARK
 //        Timer t;
@@ -423,7 +423,7 @@ struct MultigridCG2d
 //#endif //DG_BENCHMARK
             //dg::blas2::symv( op[p+1], x[p+1], m_r[p+1]);
             //dg::blas1::axpby( 1., b[p+1], -1., m_r[p+1]);
-            //double norm_res = sqrt(dg::blas1::dot( m_r[p+1], m_r[p+1]));
+            //value_type norm_res = sqrt(dg::blas1::dot( m_r[p+1], m_r[p+1]));
             //std::cout<< " Exact solution "<<norm_res<<"\n";
         }
         else
@@ -444,15 +444,15 @@ struct MultigridCG2d
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
-        //double norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
+        //value_type norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum after "<<norm_res<<"\n";
     }
 
 
 	template<class SymmetricOp>
     void full_multigrid( std::vector<SymmetricOp>& op,
-        std::vector<Container>& x, std::vector<Container>& b, std::vector<double> ev,
-        unsigned nu1, unsigned nu2, unsigned gamma, unsigned mu, double eps)
+        std::vector<Container>& x, std::vector<Container>& b, std::vector<value_type> ev,
+        unsigned nu1, unsigned nu2, unsigned gamma, unsigned mu, value_type eps)
     {
         for( unsigned u=0; u<m_stages-1; u++)
         {
