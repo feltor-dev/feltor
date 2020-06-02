@@ -13,12 +13,12 @@
 //
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
-//using value_type = float;
-//using Vector = dg::fMDVec;
-//using Matrix = dg::fMDMatrix;
-using value_type = double;
-using Vector = dg::MDVec;
-using Matrix = dg::MDMatrix;
+using value_type = float;
+using Vector = dg::fMDVec;
+using Matrix = dg::fMDMatrix;
+//using value_type = double;
+//using Vector = dg::MDVec;
+//using Matrix = dg::MDMatrix;
 
 const value_type lx = M_PI;
 const value_type ly = 2.*M_PI;

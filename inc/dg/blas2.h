@@ -65,7 +65,8 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * Furthermore, the sum is computed with infinite precision and the result is then rounded
  * to the nearest double precision number. Although the products are not computed with
  * infinite precision, the order of multiplication is guaranteed.
- * This is possible with the help of an adapted version of the \c ::exblas library.
+ * This is possible with the help of an adapted version of the \c ::exblas library and
+* works for single and double precision.
  *
  * @param x Left input
  * @param m The diagonal Matrix.

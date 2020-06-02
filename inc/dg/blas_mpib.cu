@@ -12,10 +12,14 @@
 #include "topology/mpi_weights.h"
 #include "topology/fast_interpolation.h"
 
-using value_type= double;
-using Vector    = dg::MDVec;
-using Matrix    = dg::MDMatrix;
-using ArrayVec  = std::array<Vector, 3>;
+//using value_type = float;
+//using Vector     = dg::fMDVec;
+//using Matrix     = dg::fMDMatrix;
+using value_type = double;
+using Vector     = dg::MDVec;
+using Matrix     = dg::MDMatrix;
+
+using ArrayVec   = std::array<Vector, 3>;
 
 const value_type lx = 2.*M_PI;
 const value_type ly = 2.*M_PI;
