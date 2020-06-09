@@ -197,7 +197,7 @@ struct MultigridCG2d
             t.tic();
 #endif //DG_BENCHMARK
             number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(),
-                op[u].inv_weights(), eps/2, 1.);
+                op[u].inv_weights(), eps*1.5, 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();

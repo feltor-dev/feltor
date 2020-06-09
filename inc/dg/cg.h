@@ -98,6 +98,7 @@ class CG
      * @param S (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
+     * @param test_frequency if set to 1 then the norm of the error is computed in every iteration to test if the loop can be terminated. Sometimes, especially for small sizes the dot product is expensive to compute, then it is beneficial to set this parameter to e.g. 10, which means that the errror condition is only evaluated every 10th iteration.
      *
      * @return Number of iterations used to achieve desired precision
      * @note Required memops per iteration (\c P and \c S are assumed vectors):
@@ -109,7 +110,7 @@ class CG
      * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
@@ -178,13 +179,13 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
         nrm2r_new = blas2::dot( P, r);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
-    if(rank==0)
+        if(rank==0)
 #endif //MPI
-    {
-        std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
-    }
+        {
+            std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
+            std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+            std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+        }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction))
             return i;
@@ -197,7 +198,7 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 
 template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, int save_on_dots )
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -230,18 +231,21 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
         alpha =  nrmzr_old/blas1::dot( p, ap);
         blas1::axpby( alpha, p, 1.,x);
         blas1::axpby( -alpha, ap, 1., r);
+        if( 0 == i%save_on_dots )
+        {
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
-    if(rank==0)
+            if(rank==0)
 #endif //MPI
-    {
-        std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
-    }
+            {
+                std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+                std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+                std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+            }
 #endif //DG_DEBUG
-        if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
-            return i;
+                if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
+                    return i;
+        }
         blas2::symv(P,r,ap);
         nrmzr_new = blas1::dot( ap, r);
         blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
