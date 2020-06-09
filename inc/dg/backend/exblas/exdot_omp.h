@@ -114,39 +114,38 @@ void ExDOTFPE(int N, PointerOrValue1 a, PointerOrValue2 b, int64_t* h_superacc, 
 #ifndef _MSC_VER
             asm ("# myloop");
 #endif
-            vcl::Vec8d r1 ;
-            vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,i), make_vcl_vec8d(b,i), r1);
-            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
-            //vcl::Vec8d x  = vcl::mul_add( vcl::Vec8d().load(a+i),vcl::Vec8d().load(b+i),0);
+            //vcl::Vec8d r1 ;
+            //vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,i), make_vcl_vec8d(b,i), r1);
+            vcl::Vec8d x  = make_vcl_vec8d(a,i)*make_vcl_vec8d(b,i);
             //MW: check sanity of input
             vcl::Vec8db finite = vcl::is_finite( x);
             if( !vcl::horizontal_and( finite) ) error[tid] = true;
 
             cache.Accumulate(x);
-            cache.Accumulate(r1); //MW: exact product but halfs the speed
+            //cache.Accumulate(r1); //MW: exact product but halfs the speed
         }
         if( tid+1==tnum && r != N-1) {
             r+=1;
             //accumulate remainder
-            vcl::Vec8d r1;
-            vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,r,N-r), make_vcl_vec8d(b,r,N-r), r1);
-            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
-            //vcl::Vec8d x  = vcl::mul_add( vcl::Vec8d().load_partial(N-r,a+r),vcl::Vec8d().load_partial(N-r,b+r),0);
+            //vcl::Vec8d r1;
+            //vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,r,N-r), make_vcl_vec8d(b,r,N-r), r1);
+            vcl::Vec8d x  = make_vcl_vec8d(a,r,N-r)*make_vcl_vec8d(b,r,N-r);
 
             //MW: check sanity of input
             vcl::Vec8db finite = vcl::is_finite( x);
             if( !vcl::horizontal_and( finite) ) error[tid] = true;
             cache.Accumulate(x);
-            cache.Accumulate(r1);
+            //cache.Accumulate(r1);
         }
 #else// _WITHOUT_VCL
         int l = ((tid * int64_t(N)) / tnum);
         int r = ((((tid+1) * int64_t(N)) / tnum) ) - 1;
         for(int i = l; i <= r; i++) {
-            double r1;
-            double x = TwoProductFMA(get_element(a,i),get_element(b,i),r1);
+            //double r1;
+            //double x = TwoProductFMA(get_element(a,i),get_element(b,i),r1);
+            double x = get_element(a,i)*get_element(b,i);
             cache.Accumulate(x);
-            cache.Accumulate(r1);
+            //cache.Accumulate(r1);
         }
 #endif// _WITHOUT_VCL
         cache.Flush();
@@ -191,8 +190,8 @@ void ExDOTFPE(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c, in
             //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
             //vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load(a+i),vcl::Vec8d().load(b+i), 0);
             //vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load(c+i), 0);
-            vcl::Vec8d x1  = vcl::mul_add(make_vcl_vec8d(a,i),make_vcl_vec8d(b,i), 0);
-            vcl::Vec8d x2  = vcl::mul_add( x1                ,make_vcl_vec8d(c,i), 0);
+            vcl::Vec8d x1  = make_vcl_vec8d(a,i)*make_vcl_vec8d(b,i);
+            vcl::Vec8d x2  =  x1                *make_vcl_vec8d(c,i);
             vcl::Vec8db finite = vcl::is_finite( x2);
             if( !vcl::horizontal_and( finite) ) error[tid] = true;
             cache.Accumulate(x2);
@@ -209,8 +208,8 @@ void ExDOTFPE(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c, in
             //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
             //vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load_partial(N-r, a+r),vcl::Vec8d().load_partial(N-r,b+r), 0);
             //vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load_partial(N-r,c+r), 0);
-            vcl::Vec8d x1  = vcl::mul_add(make_vcl_vec8d(a,r,N-r),make_vcl_vec8d(b,r,N-r), 0);
-            vcl::Vec8d x2  = vcl::mul_add( x1                    ,make_vcl_vec8d(c,r,N-r), 0);
+            vcl::Vec8d x1  = make_vcl_vec8d(a,r,N-r)*make_vcl_vec8d(b,r,N-r);
+            vcl::Vec8d x2  =  x1                    *make_vcl_vec8d(c,r,N-r);
             vcl::Vec8db finite = vcl::is_finite( x2);
             if( !vcl::horizontal_and( finite) ) error[tid] = true;
             cache.Accumulate(x2);

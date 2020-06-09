@@ -38,33 +38,34 @@ void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, int64_t* acc, boo
 #ifndef _MSC_VER
         asm ("# myloop");
 #endif
-        vcl::Vec8d r1 ;
-        vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,i), make_vcl_vec8d(b,i), r1);
+        //vcl::Vec8d r1 ;
+        //vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,i), make_vcl_vec8d(b,i), r1);
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
-        //vcl::Vec8d x  = vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i);
+        vcl::Vec8d x  = make_vcl_vec8d(a,i)* make_vcl_vec8d(b,i);
         vcl::Vec8db finite = vcl::is_finite( x);
         if( !vcl::horizontal_and( finite) ) *error = true;
         cache.Accumulate(x);
-        cache.Accumulate(r1);
+        //cache.Accumulate(r1);
     }
     if( r != N) {
         //accumulate remainder
-        vcl::Vec8d r1;
-        vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,r,N-r), make_vcl_vec8d(b,r,N-r), r1);
+        //vcl::Vec8d r1;
+        //vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,r,N-r), make_vcl_vec8d(b,r,N-r), r1);
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
-        //vcl::Vec8d x  = vcl::Vec8d().load_partial(N-r, a+r)*vcl::Vec8d().load_partial(N-r,b+r);
+        vcl::Vec8d x  = make_vcl_vec8d(a,r,N-r)*make_vcl_vec8d(b,r,N-r);
         vcl::Vec8db finite = vcl::is_finite( x);
         if( !vcl::horizontal_and( finite) ) *error = true;
         cache.Accumulate(x);
-        cache.Accumulate(r1);
+        //cache.Accumulate(r1);
     }
 #else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
-        double r1;
-        double x = TwoProductFMA(get_element(a,i),get_element(b,i),r1);
+        //double r1;
+        //double x = TwoProductFMA(get_element(a,i),get_element(b,i),r1);
+        double x = get_element(a,i)*get_element(b,i);
         if( !std::isfinite(x) ) *error = true;
         cache.Accumulate(x);
-        cache.Accumulate(r1);
+        //cache.Accumulate(r1);
     }
 #endif// _WITHOUT_VCL
     cache.Flush();

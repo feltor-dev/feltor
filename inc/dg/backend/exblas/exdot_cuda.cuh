@@ -62,9 +62,10 @@ __global__ void ExDOT(
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
-        double r = 0.0;
-        double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
-        //double x = d_a[pos]*d_b[pos];//ATTENTION: if we write it like this, cpu compiler might generate an fma from this while nvcc does not...
+        //double r = 0.0;
+        //double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
+        double x = d_a[pos]*d_b[pos];
+        //we do not accumulate the rest of this multiplication
 
         //Check if the input is sane
         if( !isfinite(x) ) *error = true;
@@ -85,23 +86,23 @@ __global__ void ExDOT(
             }
         }
 
-        if (r != 0.0) {//add the rest r in the same manner
-            #pragma unroll
-            for(uint i = 0; i != NBFPE; ++i) {
-                double s;
-                a[i] = KnuthTwoSum(a[i], r, &s);
-                r = s;
-            }
-            if (r != 0.0) {
-                Accumulate(l_workingBase, r, WARP_COUNT);
-                // Flush FPEs to superaccs
-                #pragma unroll
-                for(uint i = 0; i != NBFPE; ++i) {
-                    Accumulate(l_workingBase, a[i], WARP_COUNT);
-                    a[i] = 0.0;
-                }
-            }
-        }
+        //if (r != 0.0) {//add the rest r in the same manner
+        //    #pragma unroll
+        //    for(uint i = 0; i != NBFPE; ++i) {
+        //        double s;
+        //        a[i] = KnuthTwoSum(a[i], r, &s);
+        //        r = s;
+        //    }
+        //    if (r != 0.0) {
+        //        Accumulate(l_workingBase, r, WARP_COUNT);
+        //        // Flush FPEs to superaccs
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            Accumulate(l_workingBase, a[i], WARP_COUNT);
+        //            a[i] = 0.0;
+        //        }
+        //    }
+        //}
     }
     //Flush FPEs to superaccs
     #pragma unroll
@@ -156,8 +157,8 @@ __global__ void ExDOT(
         //double r  = 0.0, r2 = 0.0;
         //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
         //double x2 = TwoProductFMA(x , d_c[pos], &r2);
-        double x1 = __fma_rn( get_element(d_a,pos), get_element(d_b,pos), 0);
-        double x2 = __fma_rn( x1                  , get_element(d_c,pos), 0);
+        double x1 = get_element(d_a,pos)*get_element(d_b,pos);
+        double x2 = x1                  *get_element(d_c,pos);
 
         //Check if the input is sane
         if( !isfinite(x2) ) *error = true;
