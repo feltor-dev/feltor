@@ -412,6 +412,7 @@ struct MultigridCG2d
 //#endif //DG_BENCHMARK
             int number = m_cg[p+1]( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
                 op[p+1].inv_weights(), eps/2.);
+            number++;//avoid compiler warning
 //#ifdef DG_BENCHMARK
 //            t.toc();
 //#ifdef MPI_VERSION
@@ -468,6 +469,7 @@ struct MultigridCG2d
 #endif //DG_BENCHMARK
         int number = m_cg[s]( op[s], x[s], b[s], op[s].precond(),
             op[s].inv_weights(), eps/2.);
+        number++;//avoid compiler warning
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION

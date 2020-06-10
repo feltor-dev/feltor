@@ -26,6 +26,8 @@ namespace dg
 * For more information see the book "Iteratvie Methods for Sparse
 * Linear Systems" 2nd edition by Yousef Saad
 *
+* @attention Chebyshev iteration may diverge if the elliptical bound of the Eigenvaleus is not accurate or if an ellipsis is not a good fit for the spectrum of the matrix
+*
 * @ingroup invert
 *
 * @copydoc hide_ContainerType
