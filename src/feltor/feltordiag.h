@@ -218,17 +218,17 @@ std::vector<Record_static> diagnostics3d_static_list = {
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( HVec& result, Variables& v, Geometry& grid ){
-            return dg::evaluate( dg::cooRZP2X, grid);
+            result = dg::evaluate( dg::cooRZP2X, grid);
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
         []( HVec& result, Variables& v, Geometry& grid ){
-            return dg::evaluate( dg::cooRZP2Y, grid);
+            result = dg::evaluate( dg::cooRZP2Y, grid);
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
         []( HVec& result, Variables& v, Geometry& grid ){
-            return dg::evaluate( dg::cooRZP2Z, grid);
+            result = dg::evaluate( dg::cooRZP2Z, grid);
         }
     },
 };
