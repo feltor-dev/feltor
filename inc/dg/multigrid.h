@@ -231,6 +231,104 @@ struct MultigridCG2d
         return number;
     }
 
+    /**
+     * @brief Nested iterations with Chebyshev as preconditioner for CG
+     *
+     * - Compute residual with given initial guess.
+     * - Project residual down to the coarsest grid.
+     * - Solve equation on the coarse grid
+     * - interpolate solution up to next finer grid and repeat until the original grid is reached.
+     * @note The preconditioner for the CG solver on the coarse grids is a Chebyshev polynomial preconditioner
+     * @copydoc hide_symmetric_op
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+     * @param x (read/write) contains initial guess on input and the solution on output
+     * @param b The right hand side (will be multiplied by \c weights)
+     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$
+     * @return the number of iterations in each of the stages beginning with the finest grid
+     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
+    */
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> direct_solve_with_chebyshev( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps, unsigned num_cheby)
+    {
+#ifdef DG_BENCHMARK
+        Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
+        dg::blas2::symv(op[0].weights(), b, m_b[0]);
+        // compute residual r = Wb - A x
+        dg::blas2::symv(op[0], x, m_r[0]);
+        dg::blas1::axpby(-1.0, m_r[0], 1.0, m_b[0], m_r[0]);
+        // project residual down to coarse grid
+        for( unsigned u=0; u<m_stages-1; u++)
+            dg::blas2::gemv( m_interT[u], m_r[u], m_r[u+1]);
+        std::vector<unsigned> number(m_stages);
+
+        dg::blas1::scal( m_x[m_stages-1], 0.0);
+        unsigned lowest = m_stages-1;
+        dg::EVE<Container> eve( m_x[lowest]);
+        double evu_max;
+        Container tmp = m_x[lowest];
+        dg::blas1::scal( tmp, 0.);
+        //unsigned counter = eve( op[u], tmp, m_b[u], op[u].precond(), evu_max, 1e-16);
+        unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+        std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
+            t.toc();
+            std::cout << " took "<<t.diff()<<"s\n";
+        //now solve residual equations
+		for( unsigned u=m_stages-1; u>0; u--)
+        {
+#ifdef DG_BENCHMARK
+            t.tic();
+#endif //DG_BENCHMARK
+
+            //double evu_min;
+            //dg::detail::WrapperSpectralShift<SymmetricOp, Container> shift(
+            //        op[u], evu_max);
+            //counter = eve( shift, m_x[u], m_r[u], evu_min, eps);
+            //evu_min = evu_max - evu_min;
+            //std::cout << "# MIN EV is "<<evu_min<<" in "<<counter<<"iterations\n";
+            dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
+                    op[u], m_x[u], 0.01*evu_max, 1.1*evu_max, num_cheby );
+            //dg::LeastSquaresPreconditioner<SymmetricOp&, const Container&, Container> precond(
+            //        op[u], op[u].precond(), m_x[u], evu_max, num_cheby );
+            number[u] = m_cg[u]( op[u], m_x[u], m_r[u], precond,
+                op[u].inv_weights(), eps, 1., 3);
+            dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
+#ifdef DG_BENCHMARK
+            t.toc();
+#ifdef MPI_VERSION
+            int rank;
+            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+            if(rank==0)
+#endif //MPI
+            std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
+
+        }
+#ifdef DG_BENCHMARK
+        t.tic();
+#endif //DG_BENCHMARK
+
+        dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
+                op[0], m_x[0], 0.01*evu_max, 1.1*evu_max, num_cheby );
+        //update initial guess
+        dg::blas1::axpby( 1., m_x[0], 1., x);
+        number[0] = m_cg[0]( op[0], x, m_b[0],// op[0].precond(),
+                precond,
+            op[0].inv_weights(), eps);
+#ifdef DG_BENCHMARK
+        t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
+
+        return number;
+    }
 
     /**
      * @brief Full multigrid cycles (experimental, use at own risk)
@@ -252,7 +350,7 @@ struct MultigridCG2d
      * @attention This method is rather unreliable, it only converges if the
      * parameters are chosen correctly ( there need to be enough smooting steps
      * for instance, and a large jump  factor in the Elliptic class also seems
-     * to help) and otherwise just iterates to infinity
+     * to help) and otherwise just iterates to infinity. This behaviour is probably related to the use of the Chebyshev solver as a smoother
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     void fmg_solve( std::vector<SymmetricOp>& op,
@@ -394,7 +492,7 @@ struct MultigridCG2d
 
         //std::vector<Container> out( x);
 
-        m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu1);
+        m_cheby[p].solve( op[p], x[p], b[p], op[p].precond(), 1e-2*ev[p], 1.1*ev[p], nu1);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1, op[p].inv_weights());
         // 2. Residuum
         dg::blas2::symv( op[p], x[p], m_r[p]);
@@ -441,7 +539,7 @@ struct MultigridCG2d
         //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
         // 6. Post-Smooth nu2 times
-        m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu2);
+        m_cheby[p].solve( op[p], x[p], b[p], op[p].precond(), 1e-2*ev[p], 1.1*ev[p], nu2);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
@@ -493,7 +591,7 @@ struct MultigridCG2d
     std::vector< MultiMatrix<Matrix, Container> >  m_interT;
     std::vector< MultiMatrix<Matrix, Container> >  m_project;
     std::vector< CG<Container> > m_cg;
-    std::vector< Chebyshev<Container>> m_cheby;
+    std::vector< ChebyshevIteration<Container>> m_cheby;
     std::vector< Container> m_x, m_r, m_b;
     Container  m_p, m_cgr;
 

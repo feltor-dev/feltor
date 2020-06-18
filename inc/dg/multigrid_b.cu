@@ -60,16 +60,17 @@ int main()
     unsigned stages = 3;
     std::cout<< "Type number of stages (3) and jfactor (10) !\n";
     std::cin >> stages >> jfactor;
+    std::cout << stages << " "<<jfactor<<std::endl;
     dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
         grid, stages);
     const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
 
     std::vector<dg::DVec> multi_x = multigrid.project( x);
-    const std::vector<dg::DVec> multi_b = multigrid.project( b);
+    std::vector<dg::DVec> multi_b = multigrid.project( b);
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
     std::vector<dg::EVE<dg::DVec> > multi_eve(stages);
     std::vector<double> multi_ev(stages);
-    double eps_ev = 1e-4;
+    double eps_ev = 1e-10;
     double hxhy = lx*ly/(n*n*Nx*Ny);
     unsigned counter;
     std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
@@ -80,7 +81,9 @@ int main()
         multi_pol[u].set_chi( multi_chi[u]);
         //estimate EVs
         multi_eve[u].construct( multi_chi[u]);
+        dg::blas2::symv(multi_pol[u].weights(), multi_b[u], multi_b[u]);
         counter = multi_eve[u]( multi_pol[u], multi_x[u], multi_b[u],
+                multi_pol[u].precond(),
             multi_ev[u], eps_ev);
         //multi_ev[u]/=hxhy;
         std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
@@ -92,13 +95,14 @@ int main()
     std::cout << "Type nu1 (20), nu2 (20) gamma (1) \n";
     unsigned nu1, nu2, gamma;
     std::cin >> nu1 >> nu2 >> gamma;
+    std::cout << nu1 << " "<<nu2<<" "<<gamma<<std::endl;
     dg::Timer t;
     std::cout << "MULTIGRID NESTED ITERATIONS SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
     multigrid.direct_solve(multi_pol, x, b, eps);
     t.toc();
-    const double norm = dg::blas2::dot( w2d, solution);
+    double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
@@ -106,6 +110,18 @@ int main()
     std::cout << " Error of nested iterations "<<err<<"\n";
     std::cout << "Took "<<t.diff()<<"s\n\n";
     ////////////////////////////////////////////////////
+    std::cout << "MULTIGRID NESTED ITERATIONS WITH CHEBYSHEV SOLVE:\n";
+    x = dg::evaluate( initial, grid);
+    t.tic();
+    multigrid.direct_solve_with_chebyshev(multi_pol, x, b, eps, nu1);
+    t.toc();
+    norm = dg::blas2::dot( w2d, solution);
+    error= solution;
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    err = sqrt( err/norm);
+    std::cout << " Error of nested iterations "<<err<<"\n";
+    std::cout << "Took "<<t.diff()<<"s\n\n";
     {
         std::cout << "MULTIGRID PCG SOLVE:\n";
         x = dg::evaluate( initial, grid);

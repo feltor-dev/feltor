@@ -22,7 +22,7 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
     if( "cheby" == solver)
     {
         std::cout <<" CHEBYSHEV SOLVER:\n";
-        dg::Chebyshev<Container> cheby( x);
+        dg::ChebyshevIteration<Container> cheby( x);
         double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         double hxhy = lx*ly/(n*n*Nx*Ny);
         lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d

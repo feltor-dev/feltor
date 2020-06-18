@@ -322,8 +322,8 @@ struct LeastSquaresPreconditioner
 };
 
 ///@cond
-template<class M, class P, class V>
-struct TensorTraits<ChebyshevPreconditioner<M,P,V>>
+template<class M, class V>
+struct TensorTraits<ChebyshevPreconditioner<M,V>>
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
