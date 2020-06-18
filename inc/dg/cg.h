@@ -20,10 +20,13 @@ namespace dg{
 
 /**
 * @brief Preconditioned conjugate gradient method to solve
-* \f[ Ax=b\f]
+* \f[ M^{-1}Ax=M^{-1}b\f]
 *
 * @ingroup invert
 *
+* @sa This implements the PCG algorithm as given in https://en.wikipedia.org/wiki/Conjugate_gradient_method
+or the book
+* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note Conjugate gradients might become unstable for positive semidefinite
 * matrices arising e.g. in the discretization of the periodic laplacian
 * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
