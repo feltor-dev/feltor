@@ -819,10 +819,38 @@ std::vector<Record> diagnostics2d_list = {
                 dg::blas1::scal( result, 0.);
             else
             {
-                // - AxB Dot GradPsi
-                routines::jacobian( v.f.bhatgB(), v.gradPsip, v.f.gradA(), result);
+                routines::jacobian( v.f.bhatgB(), v.f.gradA(), v.gradPsip, result);
                 routines::dot( v.f.gradA(), v.gradPsip, v.tmp[0]);
-                dg::blas1::pointwiseDot( 1./v.p.beta, result, v.tmp[0], 0., result);
+                dg::blas1::pointwiseDot( -1./v.p.beta, result, v.tmp[0], 0., result);
+            }
+        }
+    },
+    {"jsodiaApar_tt", "A parallel diamagnetic vorticity flux term (magnetization stress) (Time average)", true,
+        []( DVec& result, Variables& v){
+            if( v.p.beta == 0)
+                dg::blas1::scal( result, 0.);
+            else
+            {
+                routines::dot( v.gradPsip, v.f.gradU(1), v.tmp[0]);
+                routines::dot( v.gradPsip, v.f.gradN(1), v.tmp[1]);
+                dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.density(1), 1., v.tmp[0], v.f.velocity(1), 0., result);
+
+                routines::jacobian( v.f.bhatgB(), v.f.gradA(), v.gradPsip, result);
+                dg::blas1::pointwiseDot( -1./2.*v.p.tau[1], result, v.tmp[0], 0., result);
+            }
+        }
+    },
+    {"jsoexbApar_tt", "A parallel ExB vorticity flux term (magnetization stress) (Time average)", true,
+        []( DVec& result, Variables& v){
+            if( v.p.beta == 0)
+                dg::blas1::scal( result, 0.);
+            else
+            {
+                routines::jacobian( v.f.bhatgB(), v.f.gradU(1), v.gradPsip, v.tmp[0]);
+                routines::jacobian( v.f.bhatgB(), v.f.gradN(1), v.gradPsip, v.tmp[1]);
+                dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.density(1), 1., v.tmp[1], v.f.velocity(1), 0., result);
+                routines::dot( v.f.gradA(), v.gradPsip, v.tmp[2]);
+                dg::blas1::pointwiseDot( -1./2.*v.p.tau[1], result, v.tmp[2], 0., result);
             }
         }
     },
@@ -904,6 +932,45 @@ std::vector<Record> diagnostics2d_list = {
 
             // Multiply everything
             dg::blas1::pointwiseDot( 1., result, v.tmp[0],v.f.bphi(), 0., result);
+        }
+    },
+    {"jsparApar_tt", "Parallel momentum radial flux by magnetic flutter (Time average)", true,
+        []( DVec& result, Variables& v){
+            if( v.p.beta == 0)
+            {
+                dg::blas1::scal( result, 0.);
+            }
+            else
+            {
+                //b_\perp^v
+                routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.gradPsip, v.tmp[2]);
+                dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., v.tmp[0]);
+                dg::blas1::pointwiseDot( +v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  0., v.tmp[1]);
+                dg::blas1::pointwiseDot( -v.p.tau[0], v.f.density(0), v.tmp[2], 0., result);
+                dg::blas1::pointwiseDot( +v.p.tau[1], v.f.density(1), v.tmp[2], 1., result);
+                dg::blas1::pointwiseDot( 1., v.tmp[0], v.tmp[2], 1., result);
+                dg::blas1::pointwiseDot( 1., v.tmp[1], v.tmp[2], 1., result);
+            }
+        }
+    },
+    {"jsparbphiApar_tt", "Parallel angular momentum radial flux by magnetic flutter (Time average)", true,
+        []( DVec& result, Variables& v){
+            if( v.p.beta == 0)
+            {
+                dg::blas1::scal( result, 0.);
+            }
+            else
+            {
+                //b_\perp^v
+                routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.gradPsip, v.tmp[2]);
+                dg::blas1::pointwiseDot( v.tmp[2], v.f.bphi(), v.tmp[2]);
+                dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., v.tmp[0]);
+                dg::blas1::pointwiseDot( +v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  0., v.tmp[1]);
+                dg::blas1::pointwiseDot( -v.p.tau[0], v.f.density(0), v.tmp[2], 0., result);
+                dg::blas1::pointwiseDot( +v.p.tau[1], v.f.density(1), v.tmp[2], 1., result);
+                dg::blas1::pointwiseDot( 1., v.tmp[0], v.tmp[2], 1., result);
+                dg::blas1::pointwiseDot( 1., v.tmp[1], v.tmp[2], 1., result);
+            }
         }
     },
     /// --------------------- Parallel momentum source terms ---------------------//

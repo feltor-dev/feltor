@@ -1096,7 +1096,7 @@ Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continui
 &\partial_t \RA{\Omega_E} + \frac{\partial}{\partial v} \frac{\d v}{\d \psi_p}\RA{ \vec j_{\Omega_E}\cn\psi_p} = -\RA{F_{L,\varphi}}+ \RA{\mathcal S_{\Omega_E}} + \RA{\Lambda_{\Omega_E}} \label{eq:exb_average} \\
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \equiv \mu_i N_i u_{E,\varphi} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
-    - \frac{1}{\beta} \vn A_\parallel\cn\psi_p \left(\frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
+    - \vn A_\parallel\cn\psi_p \left(\frac{1}{\beta} \frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \tau_i N_iU_i\right) \\
     \mathcal S_{\Omega_E} &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn\phi}{B^2} \quad
     \Lambda_{\Omega_E} := \mu_i \Lambda_{n_e}\frac{\vn\psi_p\cn\phi}{B^2}
 \end{align}
@@ -1117,7 +1117,9 @@ In the output file we have
     jsodiaeUE\_tt &$\mu_i \tau_i\vn\psi_p\cn n_e \frac{\bhat\times\vn\phi\cn \psi_p}{B}$ \\
     jsoexbiUD\_tt &$\mu_i\tau_i \frac{\vn\psi_p\cn\phi}{B^2} \frac{\bhat\times\vn N_i\cn \psi_p}{B}$ &
     jsoexbeUD\_tt &$\mu_i\tau_i \frac{\vn\psi_p\cn\phi}{B^2} \frac{\bhat\times\vn n_e\cn \psi_p}{B}$ \\
-    jsoapar\_tt &$ \vn\psi_p\cn A_\parallel \frac{\bhat\times\vn A_\parallel\cn \psi_p}{B\beta}$ &
+    jsoapar\_tt &$ -\vn\psi_p\cn A_\parallel \frac{\bhat\times\vn A_\parallel\cn \psi_p}{B\beta}$ &
+    jsodiaApar\_tt & $ -\frac{1}{2}\tau_i \vn\psi_p\cn  (N_iU_i)\frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p$ \\
+    jsoexbApar\_tt & $ -\frac{1}{2}\tau_i \bhat\times\vn  (N_iU_i)\cn\psi_p \vn A_\parallel\cn\psi_p$ &
     socurve\_tt &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
     socurvi\_tt &$z_i\tau_i N_i \mathcal K(\psi_p)$ &
     socurvkappae\_tt &$z_e\mu_e n_eu_e^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
@@ -1134,7 +1136,7 @@ The flux surface average over the parallel momentum equation under species summa
 \begin{align}
   \frac{\partial}{\partial t}\RA{\mu_iN_iU_{i} }
     % \nonumber\\
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + \mu_s N_sU_s^2) b_{\perp}^{\;v}  }
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + z_s\mu_s N_sU_s^2) b_{\perp}^{\;v}  }
     \nonumber\\
    = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_i}
    \label{eq:parallel_momentum}
@@ -1142,7 +1144,7 @@ The flux surface average over the parallel momentum equation under species summa
 while the toroidal parallel angular momentum contribution reads
 \begin{align}\label{eq:parallel_momentum_direction}
     \frac{\partial}{\partial t}  \RA{\mu_iN_iU_i b_\varphi}
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + \mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + z_s\mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
     \nonumber\\
    = \RA{F_{L,\varphi}} + \mu_i \RA{ S_{N_i} U_i b_\varphi}
 \end{align}
@@ -1159,6 +1161,8 @@ The relevant terms in the output file are (the Lorentz force term is described i
     niuibphi &$\mu_i N_iU_ib_\varphi$ \\
     jsparexbi\_tt       & $\mu_i N_iU_i(\bhat\times\vn\phi)\cn \psi_p/B$ &
     jsparbphiexbi\_tt   & $\mu_i N_iU_ib_\varphi(\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsparApar\_tt       & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_s^2)b_\perp^v$ &
+    jsparbphiApar\_tt   & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_s^2)b_\varphi b_\perp^v$ \\
     sparmirrore\_tt & $-z_e\tau_en_e\npar \ln B$ &
     sparmirrori\_tt & $-z_i\tau_iN_i\npar \ln B$ \\
     sparsni\_tt & $\mu_i S_{N_i} U_i$ &
