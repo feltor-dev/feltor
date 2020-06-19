@@ -175,8 +175,7 @@ class ChebyshevIteration
         else
         {
             dg::blas1::scal( m_xm1, 0.);
-            dg::blas1::copy( b, m_ax); //r_0
-            dg::blas2::symv( P, m_ax, m_z);
+            dg::blas2::symv( P, b, m_z);
             dg::blas1::axpby( 1./theta, m_z, 0., x);
         }
         for ( unsigned k=1; k<num_iter; k++)
@@ -230,7 +229,7 @@ struct ChebyshevPreconditioner
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y)
     {
-        //m_ch.solve( m_op, y, x, m_p, m_ev_min, m_ev_max, m_degree+1, true);
+        //m_ch.solve( m_op, y, x, m_op.precond(), m_ev_min, m_ev_max, m_degree+1, true);
         m_ch.solve( m_op, y, x, m_ev_min, m_ev_max, m_degree+1, true);
     }
     private:

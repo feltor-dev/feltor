@@ -668,8 +668,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, m_phi[0]);
-    std::vector<unsigned> number = m_multigrid.direct_solve_with_chebyshev(
-        m_multi_pol, m_phi[0], m_temp0, m_p.eps_pol, 5);
+    std::vector<unsigned> number = m_multigrid.direct_solve(
+        m_multi_pol, m_phi[0], m_temp0, m_p.eps_pol);
     m_old_phi.update( time, m_phi[0]);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol);
