@@ -170,7 +170,10 @@ struct MultigridCG2d
      * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
      * @param x (read/write) contains initial guess on input and the solution on output
      * @param b The right hand side (will be multiplied by \c weights)
-     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$
+     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon(
+     * ||b|| + 1) \f$. If needed (and it is recommended to tune these values)
+     * the accuracy can be set for each stage separately. Per default the same
+     * accuracy is used at all stages.
      * @return the number of iterations in each of the stages beginning with the finest grid
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
@@ -241,22 +244,16 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief Nested iterations with Chebyshev as preconditioner for CG
+     * @brief Nested iterations with Chebyshev as preconditioner for CG (experimental)
      *
-     * - Compute residual with given initial guess.
-     * - Project residual down to the coarsest grid.
-     * - Solve equation on the coarse grid
-     * - interpolate solution up to next finer grid and repeat until the original grid is reached.
-     * @note The preconditioner for the CG solver on the coarse grids is a Chebyshev polynomial preconditioner
-     * @copydoc hide_symmetric_op
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
-     * @param x (read/write) contains initial guess on input and the solution on output
-     * @param b The right hand side (will be multiplied by \c weights)
-     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$
-     * @param num_cheby Number of chebyshev iterations
-     * @return the number of iterations in each of the stages beginning with the finest grid
-     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
+     * @note This function does the same as direct_solve but uses a
+     * ChebyshevPreconditioner (with EVE to estimate the largest EV) at the coarse
+     * grid levels (but not the fine level).
+     * @copydetails direct_solve()
+     * @param num_cheby Number of chebyshev iterations. If needed can be set
+     * for each stage separately. Per default it is the same for all stages.
+     * The 0 stage does not use the Chebyshev preconditioner, therefore
+     * num_cheby[0] will be ignored.
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve_with_chebyshev( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps, unsigned num_cheby)
@@ -313,6 +310,8 @@ struct MultigridCG2d
             //std::cout << "# MIN EV is "<<evu_min<<" in "<<counter<<"iterations\n";
             dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
                     op[u], m_x[u], 0.01*evu_max, 1.1*evu_max, num_cheby[u] );
+            //dg::ModifiedChebyshevPreconditioner<SymmetricOp&, Container> precond(
+            //        op[u], m_x[u], evu_max/5./(num_cheby[u]), evu_max, num_cheby[u] );
             //dg::LeastSquaresPreconditioner<SymmetricOp&, const Container&, Container> precond(
             //        op[u], op[u].precond(), m_x[u], evu_max, num_cheby );
             number[u] = m_cg[u]( op[u], m_x[u], m_r[u], precond,

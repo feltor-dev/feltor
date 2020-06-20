@@ -17,9 +17,9 @@ namespace dg
 * \f[ M^{-1}Ax=M^{-1}b\f]
 *
 * Chebyshev iteration is not well-suited for solving matrix equations
-* on its own. Rather, it is very well-suited as a smoother for a multigrid algorithm
+* on its own. Rather, it is suited as a smoother for a multigrid algorithm
 * and also as a Preconditioner for the Conjugate Gradient method.
-* In both cases its appeal stems from not having any scalar products,
+* It does not contain scalar products,
 * which makes it appaeling for both small and highly parallelized systems.
 *
 * Given the minimum and maximum Eigenvalue of the matrix A we define
@@ -174,9 +174,10 @@ class ChebyshevIteration
         }
         else
         {
+            dg::blas2::symv( P, b, x);
+            if( num_iter == 1) return;
             dg::blas1::scal( m_xm1, 0.);
-            dg::blas2::symv( P, b, m_z);
-            dg::blas1::axpby( 1./theta, m_z, 0., x);
+            dg::blas1::scal( x, 1./theta);
         }
         for ( unsigned k=1; k<num_iter; k++)
         {
@@ -197,10 +198,21 @@ class ChebyshevIteration
     ContainerType m_ax, m_z, m_xm1;
 };
 
+ /** @class hide_polynomial
+ *
+ * @note This class can be used as a Preconditioner in the CG algorithm. The CG
+ * algorithm forms an approximation to the solution in the form \f$ x_{k+1} =
+ * x_0 + P_k(A) r_0\f$ where \f$ P_k\f$ is a polynomial of degree \c k, which
+ * is optimal in minimizing the A-norm. Thus a polynomial preconditioner cannot
+ * decrease the number of matrix-vector multiplications needed to achieve a
+ * certain accuracy.  However, since polynomial preconditioners do not use scalar products they may
+ * offset the increased overhead if the dot product becomes a bottleneck for performance or scalability.
+  */
+
 /**
  * @brief Chebyshev Polynomial Preconditioner \f[ C( A)\f]
  *
- * This class can be used as a Preconditioner in the CG algorithm
+ * @copydoc hide_polynomial
  * @sa ChebyshevIteration
  * @tparam Matrix Preferably a reference type
  * @tparam ContainerType
@@ -240,14 +252,79 @@ struct ChebyshevPreconditioner
 };
 
 /**
- * @brief Least Squares Polynomial Preconditioner \f[ M^{-1} s( AM^{-1})\f]
+ * @brief Approximate inverse Chebyshev Polynomial Preconditioner \f[ A^{-1} = \frac{c_0}{2} I + \sum_{k=1}^{r}c_kT_k( Z)\f]
  *
- * This class can be used as a Preconditioner in the CG algorithm.
+ * This is the polynomial preconditioner as proposed by <a href="https://ieeexplore.ieee.org/document/1245544">Dag and Semlyen, A New Preconditioned Conjugate Gradient Power Flow, IEEE Transactions on power Systems, 18, (2003)</a>
+ * We have \f$ c_k = \sqrt{\lambda_\min\lambda_\max}^{-1} (\sqrt{\lambda_\min/\lambda_\max}-1)^k / (\sqrt{\lambda_\min/\lambda_\max }+ 1)^k\f$ and \f$ Z = 2 ( A - (\lambda_\max + \lambda_\min)I/2)/(\lambda_\max-\lambda_\min)\f$
+ *
+ * They propose to use \f$ \lambda_\min = \lambda_\max / (5r)\f$ where r is the degree
+ * of the polynomial
+ * @copydoc hide_polynomial
+ * @tparam Matrix Preferably a reference type
+ * @tparam ContainerType
+ * @ingroup invert
+ */
+template<class Matrix, class ContainerType>
+struct ModifiedChebyshevPreconditioner
+{
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
+    /**
+     * @brief  Construct the k-th Chebyshev Polynomial approximate
+     *
+     * @param op The Matrix (copied, so maybe choose a reference type for shallow copying) will be called as \c dg::blas2::symv( op, x, y)
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param ev_min an estimate of the minimum Eigenvalue (It is important to
+     * get a good value here. The authors propose to use
+     * \f$ \lambda_\min = \lambda_\max / (5r)\f$ where \c r is the \c degree
+     * @param ev_max an estimate of the maximum Eigenvalue of \f$ A\f$ (must be larger than \c min_ev)
+     * Use \c EVE to get this value
+     * @param degree degree k of the Polynomial (5 should be a good number)
+     */
+    ModifiedChebyshevPreconditioner( Matrix op, const ContainerType& copyable, value_type ev_min,
+            value_type ev_max, unsigned degree):
+        m_op(op), m_ax(copyable), m_z1(m_ax), m_z2(m_ax),
+        m_ev_min(ev_min), m_ev_max(ev_max), m_degree(degree){}
+
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
+    {
+        value_type theta = (m_ev_min+m_ev_max)/2., delta = (m_ev_max-m_ev_min)/2.;
+        value_type c_k = 1./sqrt(m_ev_min*m_ev_max);
+        dg::blas1::axpby( c_k/2., x, 0., y);
+        if( m_degree == 0) return;
+        dg::blas2::symv( m_op, x, m_ax);
+        dg::blas1::axpby( 1./delta, m_ax, -theta/delta, x, m_z1); //T_{k-1} x
+        c_k *= (sqrt( m_ev_min/m_ev_max) - 1.)/(sqrt(m_ev_min/m_ev_max)+1);
+        dg::blas1::axpby( c_k, m_z1, 1., y);
+        if( m_degree == 1) return;
+        dg::blas1::copy( x, m_z2); //T_{k-2} x
+        for( unsigned i=1; i<m_degree; i++)
+        {
+            dg::blas2::symv( m_op, m_z1, m_ax);
+            dg::blas1::axpby( 1./delta, m_ax, -theta/delta, m_z1, m_ax); //Z T_{k-1}
+            dg::blas1::axpby( 2., m_ax, -1., m_z2, m_z2); //T_k
+            c_k *= (sqrt( m_ev_min/m_ev_max) - 1.)/(sqrt(m_ev_min/m_ev_max)+1);
+            dg::blas1::axpby( c_k, m_z2, 1., y);
+            m_z1.swap(m_z2);
+        }
+    }
+    private:
+    Matrix m_op;
+    ContainerType m_ax, m_z1, m_z2;
+    value_type m_ev_min, m_ev_max;
+    unsigned m_degree;
+};
+
+/**
+ * @brief Least Squares Polynomial Preconditioner \f[ M^{-1} s( AM^{-1})\f]
  *
  * Implements the least squares polynomial preconditioner as suggested by
  * <a href= "https://doi.org/10.1137/0906059"> Youcef Saad, Practical Use of Polynomial Preconditionings for the Conjugate Gradient Method,SIAM J. Sci. and Stat. Comput., 6(4), 865–881 (1985) </a>
- * @note The least squares polynomial might perform better than Chebyshev Polynomials
- * and they do not need an estimate of the lowest Eigenvalue
+ * @note The least squares polynomial might (or might not) perform
+ * better than Chebyshev Polynomials and does not need an estimate of the
+ * lowest Eigenvalue
+ * @copydoc hide_polynomial
  *
  * \sa For more information see the book
  * <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
@@ -324,6 +401,12 @@ struct LeastSquaresPreconditioner
 ///@cond
 template<class M, class V>
 struct TensorTraits<ChebyshevPreconditioner<M,V>>
+{
+    using value_type      = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
+};
+template<class M, class V>
+struct TensorTraits<ModifiedChebyshevPreconditioner<M,V>>
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
