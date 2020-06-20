@@ -2,6 +2,7 @@
 #include <iomanip>
 
 #include "cg.h"
+#include "eve.h"
 #include "bicgstabl.h"
 #include "lgmres.h"
 #include "elliptic.h"
@@ -19,6 +20,28 @@ template<class Matrix, class Container>
 void solve( std::string solver, Matrix& A, Container& x, const Container& b, const dg::Grid2d& grid)
 {
     unsigned n = grid.n(), Nx = grid.Nx(), Ny = grid.Ny();
+    if( "eve cg" == solver)
+    {
+        std::cout <<" EVE SOLVER:\n";
+        dg::EVE<Container> eve( x);
+        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+        double hxhy = lx*ly/(n*n*Nx*Ny);
+        lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
+        std::cout << "L_min     "<<lmin<<" L_max     "<<lmax<<"\n";
+        double eve_max;
+        unsigned counter = eve( A, x, b, eve_max, 1e-10);
+        std::cout << "Maximum EV mod "<<eve_max<<" after "<<counter<<" EVE iterations\n";
+    }
+    if( "eve pcg" == solver)
+    {
+        std::cout <<" PRECONDITIONED EVE SOLVER:\n";
+        dg::EVE<Container> eve( x);
+        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+        std::cout << "L_min     "<<lmin<<" L_max     "<<lmax<<"\n";
+        double eve_max;
+        unsigned counter = eve( A, x, b, A.inv_weights(), eve_max, 1e-10);
+        std::cout << "Maximum EV     "<<eve_max<<" after "<<counter<<" EVE iterations\n";
+    }
     if( "cheby" == solver)
     {
         std::cout <<" CHEBYSHEV SOLVER:\n";
@@ -26,10 +49,17 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
         double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         double hxhy = lx*ly/(n*n*Nx*Ny);
         lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
-        //std::cout << "Type number of Chebyshev iterations\n";
         unsigned num_iter =200;
-        //std::cin >> num_iter;
-        cheby.solve( A, x, b, lmin, lmax, num_iter);
+        cheby.solve( A, x, b, lmin, lmax/2., num_iter);
+        std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
+    }
+    if( "P cheby" == solver)
+    {
+        std::cout <<" PRECONDITIONED CHEBYSHEV SOLVER:\n";
+        dg::ChebyshevIteration<Container> cheby( x);
+        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+        unsigned num_iter =200;
+        cheby.solve( A, x, b, A.inv_weights(), lmin, lmax/2., num_iter);
         std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
     }
     if( "bicgstabl" == solver)
@@ -107,7 +137,7 @@ int main()
     std::cout << "L2 Norm of Residuum is        " << res.d<<"\t"<<res.i << std::endl<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 
-    std::vector<std::string> solvers{ "cheby", "bicgstabl", "lgmres"};
+    std::vector<std::string> solvers{ "eve cg", "eve pcg", "cheby", "P cheby", "bicgstabl", "lgmres"};
     for(auto solver : solvers)
     {
         dg::blas1::copy( 0., x);
