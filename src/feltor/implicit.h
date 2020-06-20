@@ -159,7 +159,7 @@ struct ImplicitVelocity
             //    inv_weights(), precond());
             m_old_apar.extrapolate( m_apar);
             std::vector<unsigned> number = m_multigrid.direct_solve(
-                m_multi_induction, m_apar, m_temp, m_p.eps_pol);
+                m_multi_induction, m_apar, m_temp, {m_p.eps_pol,m_p.eps_pol,m_p.eps_pol});
             m_old_apar.update( m_apar);
             if(  number[0] == m_multigrid.max_iter())
                 throw dg::Fail( m_p.eps_pol);
