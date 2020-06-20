@@ -24,7 +24,7 @@ namespace dg
 *
 * Given the minimum and maximum Eigenvalue of the matrix A we define
 * \f[ \theta = (\lambda_\min+\lambda_\max)/2 \quad \delta = (\lambda_\max - \lambda_\min)/2 \\
-*     \rho_0 := \frac{\delta}{\theta},\ x_0 := x, \ x_{1} = x_0+\frac{1}{\theta} (b-Ax_0) \\
+*     \rho_0 := \frac{\delta}{\theta},\ x_0 := x, \ x_{1} = x_0+\frac{1}{\theta} M^{-1}(b-Ax_0) \\
 *     \rho_{k}:=\left(\frac{2\theta}{\delta}-\rho_{k-1}\right)^{-1} \\
 *     x_{k+1} := x_k + \rho_k\left( \rho_{k-1}(x_k - x_{k-1})
 *     + \frac{2}{\delta} M^{-1}( b - Ax_k) \right)
@@ -45,7 +45,7 @@ namespace dg
 * {E^{-1}}^\mathrm{T} A E^{-1}){E^{-1}}^\mathrm{T}\f$
 *
 * @attention Chebyshev iteration may diverge if the elliptical bound of the
-* Eigenvalues is not accurate or if an ellipsis is not a good fit for the
+* Eigenvalues is not accurate (in particular if \f$\lambda_\max\f$ is underestimated) or if an ellipsis is not a good fit for the
 * spectrum of the matrix
 *
 * @ingroup invert
@@ -204,6 +204,7 @@ class ChebyshevIteration
  * @sa ChebyshevIteration
  * @tparam Matrix Preferably a reference type
  * @tparam ContainerType
+ * @ingroup invert
  */
 template<class Matrix, class ContainerType>
 struct ChebyshevPreconditioner
@@ -214,12 +215,11 @@ struct ChebyshevPreconditioner
      * @brief  Construct the k-th Chebyshev Polynomial
      *
      * @param op The Matrix (copied, so maybe choose a reference type for shallow copying) will be called as \c dg::blas2::symv( op, x, y)
-     * @param P The inner Preconditioner (copied, so maybe choose a reference type for shallow copying) will be called as \c dg::blas2::symv( op, x, y)
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param min_ev an estimate of the minimum Eigenvalue (It is important to get a good value here. Unfortunately, we currently have no perfect way of getting this value, as a suggestion use \c 0.01*max_ev)
-     * @param max_ev an estimate of the maximum Eigenvalue of \f$ A\f$ (must be larger than \c min_ev)
+     * @param ev_min an estimate of the minimum Eigenvalue (It is important to get a good value here. Unfortunately, we currently have no perfect way of getting this value, as a suggestion use \c 0.01*max_ev)
+     * @param ev_max an estimate of the maximum Eigenvalue of \f$ A\f$ (must be larger than \c min_ev)
      * Use \c EVE to get this value
-     * @param degree degree k of the Polynomial (5 should be a good number - only up to degree 10 polynomials are implemented at the moment)
+     * @param degree degree k of the Polynomial (5 should be a good number)
      */
     ChebyshevPreconditioner( Matrix op, const ContainerType& copyable, value_type ev_min,
             value_type ev_max, unsigned degree):
@@ -254,6 +254,7 @@ struct ChebyshevPreconditioner
  * @tparam Matrix Preferably a reference type
  * @tparam InnerPreconditioner Preferably a reference type
  * @tparam ContainerType
+ * @ingroup invert
  */
 template<class Matrix, class InnerPreconditioner, class ContainerType>
 struct LeastSquaresPreconditioner

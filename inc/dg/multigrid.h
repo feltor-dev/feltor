@@ -177,6 +177,15 @@ struct MultigridCG2d
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps)
     {
+        std::vector<value_type> v_eps( m_stages, eps);
+		for( unsigned u=m_stages-1; u>0; u--)
+            v_eps[u] = 1.5*eps;
+        return direct_solve( op, x, b, v_eps);
+    }
+    ///@copydoc direct_solve()
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
+    {
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
@@ -197,7 +206,7 @@ struct MultigridCG2d
             t.tic();
 #endif //DG_BENCHMARK
             number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(),
-                op[u].inv_weights(), eps*1.5, 1., 10);
+                op[u].inv_weights(), eps[u], 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();
@@ -217,7 +226,7 @@ struct MultigridCG2d
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
         number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(),
-            op[0].inv_weights(), eps);
+            op[0].inv_weights(), eps[0]);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -245,11 +254,23 @@ struct MultigridCG2d
      * @param x (read/write) contains initial guess on input and the solution on output
      * @param b The right hand side (will be multiplied by \c weights)
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$
+     * @param num_cheby Number of chebyshev iterations
      * @return the number of iterations in each of the stages beginning with the finest grid
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve_with_chebyshev( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps, unsigned num_cheby)
+    {
+        std::vector<value_type> v_eps( m_stages, eps);
+        std::vector<unsigned> v_num_cheby( m_stages, num_cheby);
+        v_num_cheby[0] = 0;
+		for( unsigned u=m_stages-1; u>0; u--)
+            v_eps[u] = 1.5*eps;
+        return direct_solve_with_chebyshev( op, x, b, v_eps, v_num_cheby);
+    }
+    ///@copydoc direct_solve_with_chebyshev()
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> direct_solve_with_chebyshev( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps, std::vector<unsigned> num_cheby)
     {
 #ifdef DG_BENCHMARK
         Timer t;
@@ -278,6 +299,7 @@ struct MultigridCG2d
         dg::blas1::scal( tmp, 0.);
         //unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
         unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+        counter++;
         //std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
         //    t.toc();
         //    std::cout << " took "<<t.diff()<<"s\n";
@@ -290,11 +312,11 @@ struct MultigridCG2d
             //evu_min = evu_max - evu_min;
             //std::cout << "# MIN EV is "<<evu_min<<" in "<<counter<<"iterations\n";
             dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
-                    op[u], m_x[u], 0.01*evu_max, 1.1*evu_max, num_cheby );
+                    op[u], m_x[u], 0.01*evu_max, 1.1*evu_max, num_cheby[u] );
             //dg::LeastSquaresPreconditioner<SymmetricOp&, const Container&, Container> precond(
             //        op[u], op[u].precond(), m_x[u], evu_max, num_cheby );
             number[u] = m_cg[u]( op[u], m_x[u], m_r[u], precond,
-                op[u].inv_weights(), eps, 1., 10);
+                op[u].inv_weights(), eps[u], 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();
@@ -310,14 +332,22 @@ struct MultigridCG2d
 #ifdef DG_BENCHMARK
         t.tic();
 #endif //DG_BENCHMARK
+        //unsigned lowest = 0;
+        //dg::EVE<Container> eve( m_x[lowest]);
+        //double evu_max;
+        //Container tmp = m_x[lowest];
+        //dg::blas1::scal( tmp, 0.);
+        ////unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
+        //unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+        //counter++;
 
         //dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
-        //        op[0], m_x[0], 0.01*evu_max, 1.1*evu_max, num_cheby );
+        //        op[0], m_x[0], 0.01*evu_max, 1.1*evu_max, num_cheby[0] );
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
         number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(),
                 //precond,
-            op[0].inv_weights(), eps);
+            op[0].inv_weights(), eps[0]);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
