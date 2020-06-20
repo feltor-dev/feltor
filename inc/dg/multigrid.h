@@ -265,22 +265,23 @@ struct MultigridCG2d
         std::vector<unsigned> number(m_stages);
 
         dg::blas1::scal( m_x[m_stages-1], 0.0);
-        unsigned lowest = m_stages-1;
-        dg::EVE<Container> eve( m_x[lowest]);
-        double evu_max;
-        Container tmp = m_x[lowest];
-        dg::blas1::scal( tmp, 0.);
-        //unsigned counter = eve( op[u], tmp, m_b[u], op[u].precond(), evu_max, 1e-16);
-        unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
-        std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
-            t.toc();
-            std::cout << " took "<<t.diff()<<"s\n";
         //now solve residual equations
 		for( unsigned u=m_stages-1; u>0; u--)
         {
 #ifdef DG_BENCHMARK
             t.tic();
 #endif //DG_BENCHMARK
+        unsigned lowest = u;
+        dg::EVE<Container> eve( m_x[lowest]);
+        double evu_max;
+        Container tmp = m_x[lowest];
+        dg::blas1::scal( tmp, 0.);
+        //unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
+        unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+        //std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
+        //    t.toc();
+        //    std::cout << " took "<<t.diff()<<"s\n";
+        //    t.tic();
 
             //double evu_min;
             //dg::detail::WrapperSpectralShift<SymmetricOp, Container> shift(
@@ -293,7 +294,7 @@ struct MultigridCG2d
             //dg::LeastSquaresPreconditioner<SymmetricOp&, const Container&, Container> precond(
             //        op[u], op[u].precond(), m_x[u], evu_max, num_cheby );
             number[u] = m_cg[u]( op[u], m_x[u], m_r[u], precond,
-                op[u].inv_weights(), eps, 1., 3);
+                op[u].inv_weights(), eps, 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();
@@ -310,12 +311,12 @@ struct MultigridCG2d
         t.tic();
 #endif //DG_BENCHMARK
 
-        dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
-                op[0], m_x[0], 0.01*evu_max, 1.1*evu_max, num_cheby );
+        //dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
+        //        op[0], m_x[0], 0.01*evu_max, 1.1*evu_max, num_cheby );
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
-        number[0] = m_cg[0]( op[0], x, m_b[0],// op[0].precond(),
-                precond,
+        number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(),
+                //precond,
             op[0].inv_weights(), eps);
 #ifdef DG_BENCHMARK
         t.toc();
@@ -492,7 +493,7 @@ struct MultigridCG2d
 
         //std::vector<Container> out( x);
 
-        m_cheby[p].solve( op[p], x[p], b[p], op[p].precond(), 1e-2*ev[p], 1.1*ev[p], nu1);
+        m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu1);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu1, op[p].inv_weights());
         // 2. Residuum
         dg::blas2::symv( op[p], x[p], m_r[p]);
@@ -539,7 +540,7 @@ struct MultigridCG2d
         //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
         //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
         // 6. Post-Smooth nu2 times
-        m_cheby[p].solve( op[p], x[p], b[p], op[p].precond(), 1e-2*ev[p], 1.1*ev[p], nu2);
+        m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu2);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
@@ -575,7 +576,7 @@ struct MultigridCG2d
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
 #endif //MPI
-        //std::cout << "# Multigrid stage: " << s << ", iter: " << number << ", took "<<t.diff()<<"s\n";
+        std::cout << "# Multigrid stage: " << s << ", iter: " << number << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
 
 		for( int p=m_stages-2; p>=0; p--)
