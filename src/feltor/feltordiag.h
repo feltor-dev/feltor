@@ -448,6 +448,11 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
     },
+    {"curvne_tt", "Curvature operator applied to electron density", true,
+        []( DVec& result, Variables& v ) {
+            routines::dot( v.f.curv(), v.f.gradN(0), result);
+        }
+    },
     /// ------------------ Correlation terms --------------------//
     {"ne2", "Square of electron density", false,
         []( DVec& result, Variables& v ) {
