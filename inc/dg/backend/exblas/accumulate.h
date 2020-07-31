@@ -60,7 +60,7 @@ inline double get_element( T x, int i){
 	return (double)x;
 }
 template<class T>
-inline double get_element( const T* x, int i){
+inline double get_element( T* x, int i){
 	return (double)(*(x+i));
 }
 

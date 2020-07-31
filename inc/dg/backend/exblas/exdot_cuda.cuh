@@ -43,6 +43,11 @@ static inline double KnuthTwoSum(double a, double b, double *s) {
     return r;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Main Kernels
+////////////////////////////////////////////////////////////////////////////////
+//In the first kernel each block produces exactly one superacc (because threads within a block can be synchronized and shared memory lives for a block )
+//the second kernel reduces all superaccs from the first kernel (because we need a global synchronization, which is induced by separate kernel launches)
 
 template<uint NBFPE, uint WARP_COUNT, class PointerOrValue1, class PointerOrValue2>
 __global__ void ExDOT(
@@ -302,6 +307,7 @@ void ExDOTComplete(
         Normalize(&d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE], imin, imax);
     }
 
+    //MW: don't we need a global synchronization here??
     __syncthreads();
     if ((lid < BIN_COUNT) && (gid == 0)) {
         int64_t sum = 0;
