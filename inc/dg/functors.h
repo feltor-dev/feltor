@@ -650,6 +650,21 @@ struct ExpProfX
   private:
     double m_amp, m_bamp, m_ln;
 };
+
+/**
+ * @brief The linear interpolation polynomial
+ * \f[ f(x) = y_1\frac{x-x_0}{x_1-x_0} + y_0\frac{x-x_1}{x_0-x_1}\f]
+ */
+struct Line{
+    Line(double x0, double y0, double x1, double y1) :
+        m_x0(x0), m_y0(y0), m_x1(x1), m_y1(y1){}
+    double operator()(double x){
+        return m_y1*(x-m_x0)/(m_x1-m_x0) + m_y0*(x-m_x1)/(m_x0-m_x1);
+    }
+    private:
+    double m_x0, m_y0, m_x1, m_y1;
+};
+
 /**
  * @brief A linear function in x-direction
  * \f[ f(x) = f(x,y) = f(x,y,z) = ax+b \f]
@@ -1873,8 +1888,10 @@ struct Compose
  * @tparam G Inner functor
  * @param f outer functor
  * @param g inner functor
- * @note only works for host functions. If a version for device functions is ever needed
- * it can be easily provided
+ * @note only works for host functions. The rationale is that this function is
+ * intended to work with lambda functions and is to be used in the \c dg::evaluate function.
+ * If a version for device functions is ever needed
+ * it can be easily provided but the lambda support for CUDA is rather poor.
  *
  * @return a function object that forwards all parameters to g and returns the
  * return value of f, which is \f$ f(g(x_0,x_1,...)) \f$
