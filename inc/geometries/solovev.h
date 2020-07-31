@@ -561,7 +561,7 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
  * @param gp Solovev parameters
  * @param psi0 boundary value where psi is modified to a constant psi0
  * @param alpha radius of the transition region where the modification acts (smaller is quicker)
- * @param sign determines which side of Psi to dampen (negative or positive)
+ * @param sign determines which side of Psi to dampen (negative or positive, forwarded to \c dg::IPolynomialHeaviside)
  * @return A magnetic field object
  * @ingroup geom
  */

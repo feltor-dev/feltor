@@ -118,7 +118,7 @@ struct RealCurvilinearRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
     /*!@brief Constructor
 
      * @param ref a X-point refinement
-     * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
+     * @param generator must generate an orthogonal grid
      * @param fx a rational number indicating partition of the x - direction
      * @param fy a rational number indicating partition of the y - direction
      * @param n number of polynomial coefficients
