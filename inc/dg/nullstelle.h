@@ -19,19 +19,19 @@ namespace dg{
 class NoRoot1d: public std::exception
 {
   private:
-    double x1, x2;
+    double x1, x2, wert_min, wert_max;
   public:
     /*! @brief construct
      *
      * \param x_min left boundary
      * \param x_max right boundary
      */
-    NoRoot1d(double x_min, double x_max): x1(x_min), x2(x_max){}
+    NoRoot1d(double x_min, double x_max, double wert_min, double wert_max): x1(x_min), x2(x_max), wert_min(wert_min), wert_max(wert_max){}
     /*! @brief display left and right boundary on std::cerr
      */
     void display() const
     {
-      std::cerr << "Between " <<x1 << " and "<<x2<<" is no root!\n";
+      std::cerr << "Between " <<x1<<"/"<<wert_min << " and "<<x2<<"/"<<wert_max<<" is no root!\n";
     }
     /**
      * @brief what string
@@ -66,7 +66,7 @@ int bisection1d (UnaryOp& op, double& x_min, double& x_max, const double eps)
     wert_min=op(x_min);
 
     if(wert_max*wert_min>=0)
-        throw NoRoot1d(x_min, x_max);
+        throw NoRoot1d(x_min, x_max, wert_min, wert_max);
 
     int j_max = 60;
     for(int j=0; j<j_max; j++)
