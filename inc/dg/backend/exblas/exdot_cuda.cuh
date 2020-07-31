@@ -64,7 +64,7 @@ __global__ void ExDOT(
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
         //double r = 0.0;
         //double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
-        double x = d_a[pos]*d_b[pos];
+        double x = get_element(d_a,pos)*get_element(d_b,pos);
         //we do not accumulate the rest of this multiplication
 
         //Check if the input is sane
