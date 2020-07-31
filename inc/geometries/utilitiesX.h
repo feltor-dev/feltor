@@ -375,20 +375,23 @@ struct SeparatriX
         double R_X = xX; double Z_X = yX;
         PsipSep psip_sep( psi.f());
         psip_sep.set_Z( Z_X + 1.);
-        double R_min = R_X, R_max = R_X + 10;
+        double R_min = R_X, R_max = R_X + 10.;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
         R_i[0] = (R_min+R_max)/2., Z_i[0] = Z_X+1.;
+        if(m_verbose)std::cout << "Found 1st point "<<R_i[0]<<" "<<Z_i[0]<<"\n";
         R_min = R_X-10, R_max = R_X;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
         R_i[1] = (R_min+R_max)/2., Z_i[1] = Z_X+1.;
+        if(m_verbose)std::cout << "Found 2nd point "<<R_i[1]<<" "<<Z_i[1]<<"\n";
         psip_sep.set_Z( Z_X - 1.);
         R_min = R_X-10, R_max = R_X;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
         R_i[2] = (R_min+R_max)/2., Z_i[2] = Z_X-1.;
+        if(m_verbose)std::cout << "Found 3rd point "<<R_i[2]<<" "<<Z_i[2]<<"\n";
         R_min = R_X, R_max = R_X+10;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
         R_i[3] = (R_min+R_max)/2., Z_i[3] = Z_X-1.;
-        if(m_verbose)std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
+        if(m_verbose)std::cout << "Found 4th point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
         //now measure y distance to X-point
         std::array<double, 3> begin2d{ {0,0,0} }, end2d(begin2d);
         for( int i=0; i<4; i++)
