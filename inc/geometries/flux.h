@@ -69,13 +69,14 @@ struct Fpsi
         begin[0] = R_0, begin[1] = Z_0;
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
+        unsigned nan_counter = 0;
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps, end_old = end; N*=2;
             dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
-            //Attention: if this succeeds on the first attempt end_old won't be updated
+            if( std::isnan( eps) && nan_counter < 4) eps = 1e10, end = end_old, nan_counter++;
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
         if(m_verbose)std::cout <<end_old[2] << " "<<end[2] <<"\n";
