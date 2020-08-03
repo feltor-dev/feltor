@@ -412,27 +412,28 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     }
     else if( p.curvmode == "low beta")
     {
-        curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, +1);
+        if( mag.ipol()( g.x0(), g.y0()) < 0)
+            curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, -1);
+        else
+            curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, +1);
         dg::assign( dg::evaluate(dg::zero, g), m_divCurvKappa);
     }
     else if( p.curvmode == "toroidal")
     {
-        curvNabla = dg::geo::createCurvatureNablaB(mag, +1);
-        curvKappa = dg::geo::createCurvatureKappa(mag, +1);
-        dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, +1), g),
-            m_divCurvKappa);
-    }
-    else if( p.curvmode == "low beta negative")
-    {
-        curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, -1);
-        dg::assign( dg::evaluate(dg::zero, g), m_divCurvKappa);
-    }
-    else if( p.curvmode == "toroidal negative")
-    {
-        curvNabla = dg::geo::createCurvatureNablaB(mag, -1);
-        curvKappa = dg::geo::createCurvatureKappa(mag, -1);
-        dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, -1), g),
-            m_divCurvKappa);
+        if( mag.ipol()( g.x0(), g.y0()) < 0)
+        {
+            curvNabla = dg::geo::createCurvatureNablaB(mag, -1);
+            curvKappa = dg::geo::createCurvatureKappa(mag, -1);
+            dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, -1), g),
+                m_divCurvKappa);
+        }
+        else
+        {
+            curvNabla = dg::geo::createCurvatureNablaB(mag, +1);
+            curvKappa = dg::geo::createCurvatureKappa(mag, +1);
+            dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, +1), g),
+                m_divCurvKappa);
+        }
     }
     else
         throw dg::Error(dg::Message(_ping_)<<"Warning! curvmode value '"<<p.curvmode<<"' not recognized!! I don't know what to do! I exit!\n");
@@ -470,7 +471,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     bhat = dg::geo::createEPhi(+1);
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
-    else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+    else if( mag.ipol()( g.x0(), g.y0()) < 0)
         bhat = dg::geo::createEPhi(-1);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
     dg::SparseTensor<Container> metric = g.metric();
@@ -504,7 +505,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat( mag);
-    else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+    else if( mag.ipol()( g.x0(), g.y0()) < 0)
         bhat = dg::geo::createEPhi(-1);
     m_multi_chi = m_multigrid.project( m_temp0);
     m_multi_pol.resize(p.stages);

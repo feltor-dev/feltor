@@ -30,7 +30,7 @@ struct ImplicitDensity
         auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
         if( p.curvmode == "true")
             bhat = dg::geo::createBHat(mag);
-        else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+        else if( mag.ipol()( g.x0(), g.y0()) < 0)
             bhat = dg::geo::createEPhi(-1);
         dg::SparseTensor<Container> hh
             = dg::geo::createProjectionTensor( bhat, g);
@@ -102,7 +102,7 @@ struct ImplicitVelocity
         auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
         if( p.curvmode == "true")
             bhat = dg::geo::createBHat(mag);
-        else if ( p.curvmode == "toroidal negative" || p.curvmode == "low beta negative")
+        else if( mag.ipol()( g.x0(), g.y0()) < 0)
             bhat = dg::geo::createEPhi(-1);
         dg::SparseTensor<Container> hh
             = dg::geo::createProjectionTensor( bhat, g);

@@ -313,7 +313,7 @@ Note that in an actual toroidal field we have
   \vec B(R) := \pm \frac{R_0}{R} \ehat_\varphi
   \label{}
 \end{align}
-We then have $\bhat = \ehat_\varphi$ and the curvature operators further
+We then have $\bhat = \pm\ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
   \vec{ \mathcal K_{\vn\times\bhat}} = \vec{ \mathcal K_{\vn B}} = -\frac{\pm 1}{R_0} \ehat_Z =
@@ -322,6 +322,7 @@ simplify to
     \npar \ln B = 0
     \label{}
 \end{align}
+Note: the negative sign is automatically chosen in code if $I(R_0, 0)<0$.
 
 \subsubsection{Low beta approximation}\label{sec:lowbetaapprox}
 In this approximation we apply the toroidal field line approximation
@@ -678,14 +679,10 @@ If we change the direction of the magnetic field vector $\bhat$, we immediately 
 drifts and $U\bhat$ change directions. On the other side, the diffusive and resistive terms remain unchanged.
 Without resistivity and diffusion a change in direction of the magnetic field thus corresponds to
 a time reversal $t\rightarrow t'=-t$.
+In the code $\bhat$ changes sign by using both $-\mathcal P_\psi$ and $-\mathcal P_I$.
 
 Also note that changing the sign of the magnetic field only in the parallel derivatives $\npar \rightarrow -\npar$ does not
 have any effect. This can be seen by simply renormalizing $U'=-U$. This reverts the equations back to the original equations.
-In the code this situation can happen when you change the sign of $\bhat$ using $\mathcal P_\psi$  and $\mathcal P_I$
-and use the toroidal field approximation at the same time, because $\ehat_\varphi$
-does not change sign automatically.
-To actually change the sign of the magnetic field in code you need to use the "toroidal
-negative" value for the \textit{curvmode} input parameter, which reverts $\ehat_\varphi$ in the other direction.
 \subsubsection{Scaling of density}
 If $N, U, \phi, A_\parallel$ are a solution to the model equations
 then so are $N'=\alpha N$, $U'=U$, $\phi'=\phi$ and $A_\parallel'=A_\parallel$ with the changed parameters $S_N' = \alpha S_N$, $\eta' = \eta/\alpha$ and $ \beta' = \beta/\alpha$. If $N$
@@ -1384,9 +1381,7 @@ curvature mode (
 "low beta",
 "true": no approximation - requires significantly more resolution in Nz,
 "toroidal": toroidal field approx - elliptic equation does not need
-communication in z,
-"low beta negative": reversed sign of low beta,
-"toroidal negative": reversed sign of toroidal
+communication in z
 )
 \\
 symmetric & bool & false & false & If true, initialize all quantities symmetric
