@@ -137,14 +137,20 @@ The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
 In cylindrical coordinates the general axisymmetric  magnetic field can be written as (dimensionless)
 \begin{align}
- \vec{B} &= \frac{R_0}{R}\left[I(\psi) \ehat_{\varphi} + \frac{\partial
+ \vec{B} &= \frac{R_0}{R}\left[I(\psi_p) \ehat_{\varphi} + \frac{\partial
  \psi_p}{\partial Z} \ehat_R -  \frac{\partial \psi_p}{\partial R} \ehat_Z\right] ,
 \end{align}
 which can obviously not be manipulated to be in Clebsch form.
 Hence we are dealing with a non-flux aligned coordinate system.
-For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi}{\partial Z}\ehat_R - \frac{\partial \psi}{\partial R}\ehat_Z\right)
+For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi_p}{\partial Z}\ehat_R - \frac{\partial \psi_p}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
-Note that with a typically convex function $\psi$, $I(\psi)>0$ and the previously defined coordinate system the field line winding is a {\bf left handed screw} in the positive $\vec B$-direction.
+Note that with a typically convex function $\psi_p$ (second derivative is
+positive), $I(\psi_p)>0$ and the previously defined coordinate system the field
+line winding is a {\bf left handed screw} in the positive $\ehat_\varphi$-direction.
+Also note that then $\vec B\times\vn\vec B$ points {\bf down}, towards the magnetic X-point,
+and we have the {\bf favourable} drift direction (since in experiments H-mode
+is reached easier in this configuration).
+
 
 We scaled $R$, $Z$ and $R_0$ with $\rho_s = \sqrt{T_e m_i}/(eB_0)$, the
 magnetic field with $B_0$, the poloidal flux with $\psi_{p0} = B_0\rho_s \hat
@@ -172,7 +178,7 @@ with $\Delta^*_\perp \psi_p = R\partial_R (R^{-1}\psi_R) + \psi_{ZZ}$.
 The Solov'ev assumptions consist of \(A/R_0 = -I \frac{d I}{d  \psi_p }\) and \((1-A)/R_0 = -\frac{d p}{d  \psi_p }\), where \(A\) is a constant~\cite{Cerfon2010,Cerfon2014}.
 By integration over \(\psi_p\) we find
 $
-p(\psi_p) = (A-1)\psi_p/R_0/\beta + p(0)$,
+p(\psi_p) = (A-1)\psi_p/R_0/\beta + p(0)$, %Does that mean that psi_p has to be negative if A=0?
  $I(\psi_p) = \sqrt{-2 A \psi_p/R_0 + 1}$,
  and
     $j_{\hat\varphi} = \left[(A-1)R^2/R_0^2 - A \right]/R/\beta $.
@@ -228,6 +234,14 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
    & \\
 \bottomrule
 \end{longtable}
+Since Eq.~\eqref{eq:solovev} is given analytically we can numerically evaluate $\psi_p$ and $I$
+and all their derivatives
+at arbitrary points to machine precision, which is simple to implement and fast to execute.
+This translates to an exact representation of the magnetic field and related
+quantities like the curvature operators in code. In particular,
+the X-point and O-point can be determined to machine
+precision via a few Newton iterations.
+
 The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form
 of the magnetic field.
 Eq.~\eqref{eq:solovev} can for example represent single and asymmetric double X-point configurations, force-free states,
@@ -236,11 +250,8 @@ $R_0$ appears as an artificial scaling factor
 (note here that a change in $\rho_s$ changes $R_0$ but not the form or size of
 the dimensional equilibrium magnetic field).
 The scaling factors $\mathcal P_\psi$ and $\mathcal P_I$ are mainly introduced to maximize the flexibility e.g. to adapt the solution to experimental equilibria or to reverse the sign of the magnetic field.
-
-Since Eq.~\eqref{eq:solovev} is given analytically we can numerically evaluate $\psi_p$ and $I$
-and all their derivatives
-at arbitrary points to machine precision, which is simple to implement and fast to execute.
-This translates to an exact representation of the magnetic field and related quantities like the curvature operators in code.
+If an X-point is present, we choose $c_1$ such that
+$\psi_p(R_X, Z_X) = 0$ that is the separatrix is given by $\psi_p(R,Z) = 0$.
 
 Note that
 \begin{align}
@@ -445,7 +456,7 @@ With the help of the volume
 flux label (notice that both the volume $v$ as well as the poloidal flux $\psi_p$ have physical
 meaning while the coordinate $\zeta(\psi_p)$ is an arbitrary choice) we define
 \begin{align} \label{eq:fsa_vol}
-v(\psi_p) :=& \int_{\psi_{p,\min}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\zeta\d\eta\d\varphi,
+v(\psi_p) :=& \int_{\psi_{p,O}}^\psi \dV = \int^{\zeta(\psi_p)} \sqrt{g}\d\zeta\d\eta\d\varphi,
 \\
 \frac{\d v}{\d\psi_p} =& \int\dA |\vn\psi_p|^{-1} = 2\pi f_0\oint_{\zeta(\psi_p)} \sqrt{g}\d\eta \\
 \RA{ f }_\psi :=& \frac{\partial}{\partial v} \int \dV f
@@ -536,17 +547,17 @@ We integrate this equation with the help of one of our ODE integrators, i.e. we 
 and refine the stepsize until machine-precision is reached.
 Notice that the safety factor diverges on the last closed flux
 surface whereas Eq.~\eqref{eq:total_flux}
-remains finite due to the $\vn\psi$ factor.
+remains finite due to the $\vn\psi_p$ factor.
 \subsection{Alternative flux labels}
 We find the toroidal flux $\psi_t$ by integrating the q-profile $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$. Since $q$ diverges, $\psi_t$, in contrast to $\psi_p$,
 is not defined outside the last closed flux-surface (but has a finite value on the last closed flux surface). We now define the normalized poloidal and toroidal flux labels $\rho_p$ and $\rho_t$
 \begin{align}
-    \rho_p&:= \sqrt{1-\frac{\psi_p}{\psi_{p,\min}}} \ \leftrightarrow\ \psi_p = (1-\rho_p^2)\psi_{p,\min} \\
+    \rho_p&:= \sqrt{1-\frac{\psi_p }{\psi_{p,O}}} \ \leftrightarrow\ \psi_p = (1-\rho_p^2)\psi_{p,O} \\
     \rho_t&:= \sqrt{\frac{\psi_t}{\psi_{t,\mathrm{sep}}}},\\
-    \text{In general }\psi_{p,\min} &= \psi_p(R_O, Z_O) \neq\psi_{p}(R_0,0)
+    \text{with }\psi_{p,O} &= \psi_p(R_O, Z_O)% \text{ and } \psi_{p,X} = \psi_p(R_X, Z_X)
 \end{align}
 where $R_O$, $Z_O$ are the coordinates of the O-point.
-These labels are useful because
+The labels $\rho_t$ and $\rho_p$ are useful because
 equidistant $\rho_p$ and $\rho_t$ values tend to translate to equidistant flux-surfaces
 in configuration space.
 
@@ -597,9 +608,10 @@ instead of $\psi_p$ for the computation of the
 magnetic field, which introduces a shear layer between $\psi_{p,b}$ and $\psi_{p,b}+\alpha$ where the
 fieldlines are straightened to match $\ehat_\varphi$.
 In order to simplify the setup of this region we give $\psi_{p,b}$ and $\alpha$ in terms of
-$\rho_p$ and $\alpha_p$ via $\psi_{p,b} = (1-\rho_{p,b}^2)\psi_{p,\min}$ and $\alpha = -(2\rho_{p,b} \alpha_p + \alpha_p^2)\psi_{p,\min}$. In case we change the sign
-of $\psi_p$ vie $\mathcal P_\psi$ we need to adapt Eq.~\eqref{eq:modified_psip}
-accordingly.
+$\rho_p$ and $\alpha_p$ via $\psi_{p,b} = (1-\rho_{p,b}^2)\psi_{p,O}$ and $\alpha = -(2\rho_{p,b} \alpha_p + \alpha_p^2)\psi_{p,O}$. In case we change the sign
+of $\psi_p$ via $\mathcal P_\psi$ (to make it concave) note that $\alpha$ becomes
+negative and $\psi_{p,O}$ is positive).
+We then need to point mirror Eq.~\eqref{eq:modified_psip} at $\psi_{p,b}+\frac{\alpha}{2}$.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -770,7 +782,7 @@ Note that we should take care to intitialize a smooth profile with ideally well-
 We define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
   n_{\text{prof}}(R,Z)=
-  n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_{p,\min}}\Theta_{\alpha_p/2}\left(-\rho_p(R, Z)-\frac{\alpha_p}{2}\right) H(Z-Z_X)
+  n_0 + \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_{p,O}}\Theta_{\alpha_p/2}\left(1-\rho_p(R, Z)-\frac{\alpha_p}{2}\right) H(Z-Z_X)
 \end{align}
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
 X-point and avoids a profile in the private flux region. The factor $\alpha_p$ provides a smooth transition
@@ -1436,10 +1448,10 @@ small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes, 
 \\
 damping & dict & & & magnetic and density damping region \\
 \qquad rate & float & 0    & 0   & Friction coefficient $\omega_d$ in density and velocity damping Eq.~\eqref{eq:velocity_source} \\
-\qquad boundary & float & 0.2  & 1.2 & Modification region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,\min}$ in Eq.~\eqref{eq:modified_psip}.
+\qquad boundary & float & 0.2  & 1.2 & Modification region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.~\eqref{eq:modified_psip}.
 \\
 \qquad alpha   & float & 0.25 & 0 & Transition width $\alpha_p$: yields
-$\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,\min}$ for the Heaviside in the modified
+$\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside in the modified
 $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the
 magnetic field and damping is ignored.\\
 \bottomrule
@@ -1573,8 +1585,8 @@ psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) 
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but unavailable outside separatrix) \\
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$ \\
-rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= 1 - \psi_p/\psi_{p,\min}$ \\
-rho\_p           & Dataset & 1 (psi) & poloidal flux label $\rho_p:= \sqrt{1 - \psi_p/\psi_{p,\min}}$ \\
+rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= 1 - \psi_p/\psi_{p,O}$ \\
+rho\_p           & Dataset & 1 (psi) & poloidal flux label $\rho_p:= \sqrt{1 - \psi_p/\psi_{p,O}}$ \\
 rho\_t           & Dataset & 1 (psi) & Toroidal flux label $\rho_t := \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$ (is similar to $\rho$ in the edge but $\rho_t$ is nicer in the core domain, because equidistant $\rho_t$ make more equidistant flux-surfaces)\\
 Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane ($\varphi= 0$) $\delta Z := Z(R,Z,0) - \RA{ Z}(R,Z)$ \\
 Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\RA{ Z}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\

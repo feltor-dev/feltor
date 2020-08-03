@@ -137,11 +137,15 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField mag = mag_origin;
     //Find O-point
     double RO = gp.R_0, ZO = 0.;
+    int point = 1;
     if( !gp.isToroidal() )
-        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     const double psipO = mag.psip()( RO, ZO);
-    const double psipmin = mag.psip()(RO, ZO);
-    std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipmin<<std::endl;
+    std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
+    if( point == 1 )
+        std::cout << " (minimum)"<<std::endl;
+    if( point == 2 )
+        std::cout << " (maximum)"<<std::endl;
     const double psip0 = mag.psip()(gp.R_0, 0);
     std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
     if( p.damping_alpha > 0.)
@@ -220,7 +224,7 @@ int main( int argc, char* argv[])
             p.damping_boundary+p.damping_alpha/2.,
             p.damping_alpha/2., +1 ), dg::geo::RhoP(mag_origin))},
         {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
-        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipmin*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
+        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
         {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},
         ////
         {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
@@ -237,11 +241,18 @@ int main( int argc, char* argv[])
         std::cout << "Generate X-point flux-aligned grid ... \n";
         double RX = gp.R_0-1.1*gp.triangularity*gp.a;
         double ZX = -1.1*gp.elongation*gp.a;
+        double psipX = mag.psip()(RX, ZX);
+        std::cout << "Found X-point at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
+        if( fabs(psipX ) > 1e-10)
+        {
+            std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
+            return -1;
+        }
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipmin, RX, ZX, mag.R0(), 0, 0, false);
+        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, false);
         double fx_0 = 1./8.;
-        psipmax = -fx_0/(1.-fx_0)*psipmin;
+        psipmax = -fx_0/(1.-fx_0)*psipO;
         //std::cout << "psi 1 is          "<<psipmax<<"\n";
         gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";
@@ -254,8 +265,8 @@ int main( int argc, char* argv[])
         dg::HVec dvdpsip;
         avg_eta( volX2d, dvdpsip, false);
         dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
-        dg::Grid1d gX1d(psipmin<psipmax ? psipmin : psipmax,
-            psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
+        dg::Grid1d gX1d(psipO<psipmax ? psipO : psipmax,
+            psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
         dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d);
         map1d.emplace_back( "dvdpsip", dvdpsip,
             "Derivative of flux volume with respect to flux label psi");
@@ -291,12 +302,12 @@ int main( int argc, char* argv[])
         }
     }
     /// --------- More flux labels --------------------------------
-    dg::Grid1d grid1d(psipmin<psipmax ? psipmin : psipmax,
-            psipmin<psipmax ? psipmax : psipmin, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
+    dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
+            psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
     if( !gp.isToroidal())
     {
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
-        dg::blas1::axpby( -1./psipmin, rho, +1., 1., rho); //transform psi to rho
+        dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
         map1d.emplace_back("rho", rho,
             "Alternative flux label rho = -psi/psimin + 1");
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
@@ -312,8 +323,8 @@ int main( int argc, char* argv[])
             map1d.emplace_back("psit1d", psit,
                 "Toroidal flux label psi_t integrated  on grid1d using direct q");
             //we need to avoid integrating >=0
-            dg::Grid1d g1d_fine(psipmin<0. ? psipmin : 0.,
-                    psipmin<0. ? 0. : psipmin, npsi, Npsi,dg::NEU);
+            dg::Grid1d g1d_fine(psipO<0. ? psipO : 0.,
+                    psipO<0. ? 0. : psipO, npsi, Npsi,dg::NEU);
             qprofile = dg::evaluate( qprof, g1d_fine);
             dg::HVec w1d = dg::create::weights( g1d_fine);
             double psit_tot = dg::blas1::dot( w1d, qprofile);
@@ -356,7 +367,7 @@ int main( int argc, char* argv[])
     if( gp.hasXpoint())
     {
         int dim_idsX[2] = {0,0};
-        err = file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "psi"} );
+        err = file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
         std::string long_name = "Flux surface label";
         err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
             long_name.size(), long_name.data());
@@ -380,7 +391,7 @@ int main( int argc, char* argv[])
     }
     else
     {
-        err = file::define_dimension( ncid, &dim1d_ids[0], grid1d, "psi");
+        err = file::define_dimension( ncid, &dim1d_ids[0], grid1d, "zeta");
         std::string psi_long_name = "Flux surface label";
         err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
             psi_long_name.size(), psi_long_name.data());
