@@ -15,7 +15,7 @@ int main( int argc, char* argv[])
     }
     else
     {
-        std::cerr << "This program reads solovev parameters from an input json file and subtracts a constant such that the resulting Psi_p is zero on the X-point. The resulting parameters are written into an output file, which may overwrite the input file. This assumes that there is an X-point!\n";
+        std::cerr << "This program reads solovev parameters from an input json file and modifies c[0] such that the resulting Psi_p is zero on the X-point. The resulting parameters are written into an output file, which may overwrite the input file. The program aborts if it is unable to find an X-point\n";
         std::cerr << " Usage: "<< argv[0]<<" [input.json] [normalized.json]\n";
         return -1;
     }
@@ -24,12 +24,12 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     double RX = gp.R_0-1.1*gp.triangularity*gp.a;
     double ZX = -1.1*gp.elongation*gp.a;
-    if( gp.hasXpoint())
+    try{
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-    else
+    }catch ( std::exception& e)
     {
-        std::cerr << "Parameters have no X-point!\n";
-        return -1;
+        std::cerr << e.what() << std::endl;
+        return -1.;
     }
     const double psipX = mag.psip()( RX, ZX);
     std::cout << "X-point found at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;

@@ -114,16 +114,18 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    double Z_X = -1.1*gp.elongation*gp.a;
+    double RX = gp.R_0-1.1*gp.triangularity*gp.a;
+    double ZX = -1.1*gp.elongation*gp.a;
+    dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+    const double psipX = mag.psip()( RX, ZX);
     //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
-    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
-    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( mag.get_psip(), R_X, Z_X, 100, 100) ;
-    std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( ag.get_psip(), RX, ZX, 100, 100) ;
+    std::cout << "X-point set at "<<RX<<" "<<ZX<<" with Psi_p = "<<psipX<<"\n";
 
-    double R0 = gp.R_0, Z0 = 0;
-    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0, true);
-    //dg::geo::SimpleOrthogonalX generator(mag.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psi_0, RX,ZX, mag.R0(), 0, 0, true);
+    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psi_0, RX, ZX, mag.R0(), 0, 0, true);
+    //dg::geo::SimpleOrthogonalX generator(mag.get_psip(), psi_0, RX,ZX, mag.R0(), 0,0);
     dg::EquidistXRefinement equi(add_x, add_y, 1,1);
     dg::geo::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::geo::CurvilinearRefinedGridX2d g2d(equi, generator, fx_0, fy_0, n, Nx, Ny,dg::DIR, dg::NEU);
@@ -195,7 +197,7 @@ int main( int argc, char* argv[])
     std::cout << "FILE orthogonalX.nc CLOSED AND READY TO USE NOW!\n" <<std::endl;
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e2, 5e2, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, ZX, 1.2*gp.a*gp.elongation, 1, 5e2, 5e2, dg::PER, dg::PER);
     double psipmax = 0., psipmin_iris = psi_0;
     auto iris = dg::compose( dg::Iris( psipmin_iris, psipmax), mag.psip());
     dg::HVec vec  = dg::evaluate( iris, g2dC);
@@ -203,7 +205,7 @@ int main( int argc, char* argv[])
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
 
     dg::HVec cutter = dg::pullback( iris, g2d), vol_cut( cutter);
-    dg::geo::ZCutter cut(Z_X);
+    dg::geo::ZCutter cut(ZX);
     dg::HVec zcutter = dg::pullback( cut, g2d);
     w2d = dg::create::weights( g2d);//make weights w/o refined weights
     dg::blas1::pointwiseDot(cutter, w2d, vol_cut);

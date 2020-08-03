@@ -262,36 +262,82 @@ struct CylindricalFunctorsLvl2
  * @brief This function finds critical points of psi (any point with vanishing gradient, including the X-point or O-point) via Newton iteration applied to the gradient of psi
  *
  * The inverse of the Hessian matrix is computed analytically
- * @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
- * @param R_X start value on input, critical point on output
- * @param Z_X start value on input, critical point on output
+ * @param psi \f$ \psi(R,Z)\f$
+ * @param RC start value on input, critical point on output
+ * @param ZC start value on input, critical point on output
+ * @return 0 if no critical point or Hessian is 0,
+ * 1 if local minimum,
+ * 2 if local maximum,
+ * 3 if saddle point
  * @ingroup misc_geo
  */
-static inline void findOpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
+static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
-    X[0] = R_X, X[1] = Z_X;
+    X[0] = RC, X[1] = ZC;
     double eps = 1e10, eps_old= 2e10;
-    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10)
+    unsigned counter = 0; //safety measure to avoid deadlock
+    double Dinv = 0., psipRR  = 0., psipZZ = 0., psipRZ = 0.;
+    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10 && counter < 100)
     {
         X_OLD = X; eps= eps_old;
-        double psipRZ = psi.dfxy()(X[0], X[1]);
-        double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+        psipRZ = psi.dfxy()(X[0], X[1]);
+        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
         double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
-        double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
         XN[0] = X[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
         XN[1] = X[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
         XN.swap(X);
         eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
+        counter++;
     }
-    R_X = X[0], Z_X = X[1];
+    if ( counter >= 100 || std::isnan( Dinv) )
+        return 0;
+    RC = X[0], ZC = X[1];
+    if( Dinv > 0 &&  psipRR > 0)
+        return 1; //local minimum
+    if( Dinv < 0 &&  psipRR < 0)
+        return 2; //local maximum
+    //if( Dinv < 0)
+    return 3; //saddle point
 }
 
-///@copydoc findOpoint()
-static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
+/**
+ * @brief This function finds O-points of psi
+ *
+ * Same as \c findCriticalPoint except that this function throws if it does
+ * not find a local minimum or a local maximum
+ * @param psi \f$ \psi(R,Z)\f$
+ * @param RC start value on input, O-point on output
+ * @param ZC start value on input, O-point on output
+ * @return 1 if local minimum, 2 if local maximum,
+ * @ingroup misc_geo
+ */
+static inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
-    findOpoint( psi, R_X, Z_X);
+    int point = findCriticalPoint( psi, RC, ZC);
+    if( point == 3 || point == 0 )
+        throw dg::Error(dg::Message(_ping_)<<"There is no O-point near "<<RC<<" "<<ZC);
+    return point;
 }
+
+/**
+ * @brief This function finds X-points of psi
+ *
+ * Same as \c findCriticalPoint except that this function throws if it does
+ * not find a saddle point
+ * @param psi \f$ \psi(R,Z)\f$
+ * @param RC start value on input, X-point on output
+ * @param ZC start value on input, X-point on output
+ * @ingroup misc_geo
+ */
+static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+{
+    int point = findCriticalPoint( psi, RC, ZC);
+    if( point != 3)
+        throw dg::Error(dg::Message(_ping_)<<"There is no X-point near "<<RC<<" "<<ZC);
+}
+
 
 /// A symmetric 2d tensor field and its divergence
 ///@snippet hector_t.cu doxygen
