@@ -160,10 +160,11 @@ struct MultigridCG2d
     /**
      * @brief Nested iterations (USE THIS ONE!)
      *
-     * - Compute residual with given initial guess.
-     * - Project residual down to the coarsest grid.
-     * - Solve equation on the coarse grid
-     * - interpolate solution up to next finer grid and repeat until the original grid is reached.
+     * Equivalent to the following
+     * -# Compute residual with given initial guess.
+     * -# Project residual down to the coarsest grid.
+     * -# Solve equation on the coarse grid.
+     * -# interpolate solution up to next finer grid and repeat 3 and 4 until the original grid is reached.
      * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
      * @copydoc hide_symmetric_op
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch

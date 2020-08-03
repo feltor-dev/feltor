@@ -145,7 +145,7 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
     }
 
 
-    ///@copydoc CurvilinearGrid2d::generator()const
+    ///@copydoc RealCurvilinearGrid2d::generator()const
     const aRealGenerator2d<real_type> & generator() const{return *handle_;}
     virtual RealCurvilinearProductGrid3d* clone()const override final{return new RealCurvilinearProductGrid3d(*this);}
     private:

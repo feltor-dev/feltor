@@ -25,6 +25,8 @@ class NoRoot1d: public std::exception
      *
      * \param x_min left boundary
      * \param x_max right boundary
+     * @param wert_min value at left boundary
+     * @param wert_max value at right boundary
      */
     NoRoot1d(double x_min, double x_max, double wert_min, double wert_max): x1(x_min), x2(x_max), wert_min(wert_min), wert_max(wert_max){}
     /*! @brief display left and right boundary on std::cerr
