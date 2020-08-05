@@ -32,8 +32,8 @@ struct Parameters
     double profile_alpha;
     Parameters( const Json::Value& js){
         n = js.get("n",3).asUInt();
-        Nx = js.get("Nx",100).asUInt();
-        Ny = js.get("Ny",100).asUInt();
+        Nx = js.get("Nx",100).asUInt()/js["compression"].get(0u,1).asUInt();
+        Ny = js.get("Ny",100).asUInt()/js["compression"].get(1u,1).asUInt();
         Nz = js.get("Nz", 1).asUInt();
         Npsi = js.get("Npsi", 32).asUInt();
         boxscaleRm = js["box"]["scaleR"].get(0u, 1.1).asDouble();
@@ -241,6 +241,7 @@ int main( int argc, char* argv[])
         std::cout << "Generate X-point flux-aligned grid ... \n";
         double RX = gp.R_0-1.1*gp.triangularity*gp.a;
         double ZX = -1.1*gp.elongation*gp.a;
+        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         double psipX = mag.psip()(RX, ZX);
         std::cout << "Found X-point at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
         if( fabs(psipX ) > 1e-10)
@@ -248,7 +249,6 @@ int main( int argc, char* argv[])
             std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
             return -1;
         }
-        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
         dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, false);
         double fx_0 = 1./8.;
