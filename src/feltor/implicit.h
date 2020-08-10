@@ -128,16 +128,23 @@ struct ImplicitVelocity
                 m_multi_induction[u].elliptic().set_compute_in_2d(true);
         }
         m_multi_chi = m_multigrid.project( m_temp);
-        m_old_apar = dg::Extrapolation<Container>( 1, dg::evaluate( dg::zero, g));
+        m_old_apar = dg::Extrapolation<Container>( 2, dg::evaluate( dg::zero, g));
     }
     void set_density( const std::array<Container, 2>& dens){
-        dg::blas1::transform( dens, m_fields[0], dg::PLUS<double>(+1));
-        dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_fields[0][1],
-                          -m_p.beta/m_p.mu[0], m_fields[0][0], m_temp);
-        //m_induction.set_chi( m_temp);
-        m_multigrid.project( m_temp, m_multi_chi);
-        for( unsigned u=0; u<m_p.stages; u++)
-            m_multi_induction[u].set_chi( m_multi_chi[u]);
+        if( m_p.beta != 0)
+        {
+            dg::blas1::transform( dens, m_fields[0], dg::PLUS<double>(+1));
+            dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_fields[0][1],
+                              -m_p.beta/m_p.mu[0], m_fields[0][0], m_temp);
+            //m_induction.set_chi( m_temp);
+            m_multigrid.project( m_temp, m_multi_chi);
+            for( unsigned u=0; u<m_p.stages; u++)
+                m_multi_induction[u].set_chi( m_multi_chi[u]);
+        }
+    }
+    void update(){
+        if( m_p.beta != 0)
+            m_old_apar.update( m_apar);
     }
 
     void operator()( double t, const std::array<Container,2>& w,
@@ -158,9 +165,10 @@ struct ImplicitVelocity
             //m_invert( m_induction, m_apar, m_temp, weights(),
             //    inv_weights(), precond());
             m_old_apar.extrapolate( m_apar);
+            //dg::blas1::scal( m_apar, 0.);
             std::vector<unsigned> number = m_multigrid.direct_solve(
                 m_multi_induction, m_apar, m_temp, {m_p.eps_pol,m_p.eps_pol,m_p.eps_pol});
-            m_old_apar.update( m_apar);
+            //m_old_apar.update( m_apar); //don't update here: makes the solver potentially unstable
             if(  number[0] == m_multigrid.max_iter())
                 throw dg::Fail( m_p.eps_pol);
 
@@ -275,6 +283,7 @@ struct FeltorSpecialSolver
         m_solver.solve( alpha, m_imdens, t, y[0], rhs[0]);
         m_imvelo.set_density( y[0]);
         m_solver.solve( alpha, m_imvelo, t, y[1], rhs[1]);
+        m_imvelo.update();
     }
     private:
     dg::DefaultSolver<std::array<Container,2>> m_solver;
