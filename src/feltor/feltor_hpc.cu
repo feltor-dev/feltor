@@ -353,9 +353,9 @@ int main( int argc, char* argv[])
             "long_name", record.long_name.size(), record.long_name.data());
         MPI_OUT err = nc_enddef( ncid);
         MPI_OUT std::cout << "Computing2d "<<record.name<<"\n";
-        record.function( transferH, var, g3d_out);
-        //record.function( resultH, var, grid);
-        //dg::blas2::symv( projectH, resultH, transferH);
+        //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal varialbes return full grid functions
+        record.function( resultH, var, grid);
+        dg::blas2::symv( projectH, resultH, transferH);
         if(write2d)file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
         MPI_OUT err = nc_redef(ncid);
     }
