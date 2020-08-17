@@ -129,7 +129,8 @@ int main( int argc, char* argv[])
     std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
     std::cout << "DONE!\n";
     //Create 1d grid
-    dg::Grid1d g1d_out(psipO, psipmax, 3, Npsi, dg::DIR_NEU); //inner value is always 0
+    dg::Grid1d g1d_out(psipO, psipmax, npsi, Npsi, dg::DIR_NEU); //inner value is always 0
+    std::cout << "Cell separatrix boundary is "<<Npsi*(1.-fx_0)*g1d_out.h()+g1d_out.x0()<<"\n";
     const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
@@ -198,7 +199,8 @@ int main( int argc, char* argv[])
 
     dg::HVec dvdpsip2d = dg::evaluate( dg::zero, g2d_out);
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
-    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU);
+    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+    //although the first point outside LCFS is still wrong
 
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
@@ -390,14 +392,14 @@ int main( int argc, char* argv[])
                         dg::blas2::symv( dpsi, fsa1d, t1d);
                         dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
 
-                        result = dg::interpolate( dg::xspace, fsa1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, fsa1d, -1e-12, g1d_out);
                     }
                     else
                     {
                         dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
                         transfer1d = dg::integrate( t1d, g1d_out);
 
-                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out); //make sure to take inner cell for interpolation
                     }
                     err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_ifs"),
                         start1d_out, count1d, transfer1d.data());
@@ -412,7 +414,7 @@ int main( int argc, char* argv[])
                         dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
                         transfer1d = dg::integrate( t1d, g1d_out);
-                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
                         result = sqrt(result);
                     }
                     else
@@ -421,7 +423,7 @@ int main( int argc, char* argv[])
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
                         transfer1d = dg::integrate( t1d, g1d_out);
 
-                        result = dg::interpolate( dg::xspace, transfer1d, 0., g1d_out);
+                        result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
                         result = sqrt(result);
                     }
                     err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),

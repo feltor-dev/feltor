@@ -77,6 +77,7 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
  * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
  (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
  * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
+ * Note that if a point lies directly on the boundary between two grid cells, the value of the polynomial to the right is taken.
 */
 
 /**

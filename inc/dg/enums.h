@@ -101,9 +101,9 @@ enum norm{
 //
 ///@brief Direction of a discrete derivative
 enum direction{
-    forward, //!< forward derivative
-    backward, //!< backward derivative
-    centered //!< centered derivative
+    forward, //!< forward derivative (cell to the right and current cell)
+    backward, //!< backward derivative (cell to the left and current cell)
+    centered //!< centered derivative (cell to the left and right and current cell)
 };
 
 
