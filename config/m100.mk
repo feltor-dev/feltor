@@ -14,6 +14,7 @@ NVCCARCH=-arch sm_70 -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppre
 NVCCFLAGS= -std=c++14 -Xcompiler "-mcpu=power9 -Wall"# -mavx -mfma" #flags for NVCC
 
 INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC)
+JSONLIB=-L$(HOME)/include/json/../../lib -ljsoncpp_static # json library for input parameters
 LIBS    +=-L$(HDF5_LIB) -lhdf5 -lhdf5_hl
 LIBS    +=-L$(NETCDF_LIB) -lnetcdf -lcurl
 #is the novel jsoncpp lib folder changed?
