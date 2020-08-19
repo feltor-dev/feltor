@@ -181,7 +181,7 @@ int main( int argc, char* argv[])
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
-    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, 3 ,Npsi,dg::DIR_NEU);
+    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, npsi ,Npsi,dg::DIR_NEU);
     qprofile = dg::evaluate( qprof, g1d_fine);
     dg::HVec w1d = dg::create::weights( g1d_fine);
     double psit_tot = dg::blas1::dot( w1d, qprofile);
