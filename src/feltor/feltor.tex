@@ -854,6 +854,10 @@ We can choose the constant influx
 \begin{align} \label{eq:electron_source_influx}
     S_{prof}(R,Z) &= \Theta_{\alpha_p/2}\left( \rho_{p,s} - \frac{\alpha_p}{2} - \rho_p(R,Z) \right) H(Z-Z_X)
 \end{align}
+%or a ringed Gaussian source of the form
+%\begin{align}
+%    S_{prof}(R,Z) &= \exp\left( -\frac{(\psi_p-\psi_{p,0})^2}{\sigma^2}\right)H(Z-Z_X)
+%\end{align}
 or a Torpex inspired source profile
 \begin{align} \label{eq:electron_source_torpex}
   S_{prof}(R,Z) &=
@@ -884,7 +888,7 @@ Now, our idea is to dampen the density and velocity in the region defined by the
 magnetic field straightening.
 The idea for the terms $S_U$ is mainly to provide more numerical stability
 in the corner regions of the domain, where the parallel derivative may lead
-to unfavourable numerical instabilities.
+to unwelcome numerical instabilities.
 For both electrons and ions we choose
 \begin{subequations} \label{eq:velocity_source}
 \begin{align}
@@ -1090,8 +1094,8 @@ The relevant terms in the output file are
 \bottomrule
 \end{longtable}
 
-\subsubsection{Vorticity and toroidal ExB angular momentum equation} \label{sec:vorticity_eq}
-We write the vorticity equation (in the LWL)
+\subsubsection{Toroidal ExB angular momentum equation} \label{sec:vorticity_eq}
+We integrate the polarisation equation over volume and derive by time (in the LWL)
 \begin{align}
     &\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} + \RA{\mathcal S_\Omega} \label{eq:vorticity_average} \\
 \Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\ln N_i\cn\psi_p\right) \equiv \mu_i N_i(u_{E,\varphi} + u_{D,\varphi}) \\
@@ -1100,7 +1104,7 @@ We write the vorticity equation (in the LWL)
     F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
     \mathcal S_\Omega &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn \phi}{B^2} + \mu_i\tau_i\vn\psi_p\cn S_{n_e} \label{eq:em_source}
 \end{align}
-Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB velocity
+Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB angular momentum
 \begin{align}
 &\partial_t \RA{\Omega_E} + \frac{\partial}{\partial v} \frac{\d v}{\d \psi_p}\RA{ \vec j_{\Omega_E}\cn\psi_p} = -\RA{F_{L,\varphi}}+ \RA{\mathcal S_{\Omega_E}} + \RA{\Lambda_{\Omega_E}} \label{eq:exb_average} \\
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \equiv \mu_i N_i u_{E,\varphi} \\
@@ -1438,7 +1442,7 @@ source & dict & & & Density source, cf. the output \texttt{sne\_tt\_ifs} in \tex
 \\
 \qquad boundary & float & 0.2  & 0.5 & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
 \qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
-in the density Eq.~\eqref{eq:density_profile} (with $rho_{p,b}=0$ and source profiles Eq.~\eqref{eq:electron_source} (should be
+in the density Eq.~\eqref{eq:density_profile} (with $\rho_{p,b}=0$ and source profiles Eq.~\eqref{eq:electron_source} (should be
 small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes, must not be zero)
 \\
 damping & dict & & & magnetic and density damping region \\
