@@ -305,7 +305,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
 
 std::map<std::string, std::function< HVec(
     bool& fixed_profile, //indicate whether a profile should be forced (yes or no)
-    HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file in any case
+    HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file
     Geometry& grid, const feltor::Parameters& p,
     const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
 > > source_profiles =
@@ -350,6 +350,21 @@ std::map<std::string, std::function< HVec(
             return source_profile;
         }
     },
+    //{"tcv",
+    //    []( bool& fixed_profile, HVec& ne_profile,
+    //    Geometry& grid, const feltor::Parameters& p,
+    //    const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+    //    {
+    //        const double psi0 = 0.4, R_0 = 1.075/1e-3, Z_0 = -0.01/1e-3, sigma = 9.3e-3;
+
+    //        fixed_profile = false;
+    //        //ignore ne_profile
+    //        HVec source_profile = dg::pullback(
+    //            dg::compose( dg::Gaussian( R_0));
+
+
+    //    }
+    //},
     {"gaussian",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,

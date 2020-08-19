@@ -131,12 +131,11 @@ struct ImplicitVelocity
         m_old_apar = dg::Extrapolation<Container>( 2, dg::evaluate( dg::zero, g));
     }
     void set_density( const std::array<Container, 2>& dens){
+        dg::blas1::transform( dens, m_fields[0], dg::PLUS<double>(+1));
         if( m_p.beta != 0)
         {
-            dg::blas1::transform( dens, m_fields[0], dg::PLUS<double>(+1));
             dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_fields[0][1],
                               -m_p.beta/m_p.mu[0], m_fields[0][0], m_temp);
-            //m_induction.set_chi( m_temp);
             m_multigrid.project( m_temp, m_multi_chi);
             for( unsigned u=0; u<m_p.stages; u++)
                 m_multi_induction[u].set_chi( m_multi_chi[u]);
