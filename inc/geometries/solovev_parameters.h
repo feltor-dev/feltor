@@ -29,13 +29,12 @@ struct Parameters
            elongation, //!< elongation of the magnetic surfaces
            triangularity; //!< triangularity of the magnetic surfaces
     std::vector<double> c;  //!< 12 coefficients for the solovev equilibrium;
-    std::string equilibrium;
 #ifdef JSONCPP_VERSION_STRING
     /**
      * @brief Construct from Json dataset
      * @param js Can contain the variables "A" (0), "c" (0), "PP" (1.), "PI"
      * (1.), "R_0" , "inverseaspectratio" , "elongation" (1), "triangularity"
-     * (0), "equilibrium" ("solovev")
+     * (0)
      * @param mode determine what happens when a key is missing
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
@@ -52,7 +51,6 @@ struct Parameters
         a  = R_0*file::get( mode, js, "inverseaspectratio", 0.).asDouble();
         elongation=file::get( mode, js, "elongation", 1.).asDouble();
         triangularity=file::get( mode, js, "triangularity", 0.).asDouble();
-        equilibrium = file::get( mode, js, "equilibrium", "solovev").asString();
     }
     /**
      * @brief Put values into a json string
@@ -71,7 +69,7 @@ struct Parameters
         js["inverseaspectratio"] = a/R_0;
         js["elongation"] = elongation;
         js["triangularity"] = triangularity;
-        js[ "equilibrium"] = equilibrium;
+        js[ "equilibrium"] = "solovev";
         return js;
     }
 #endif // JSONCPP_VERSION_STRING
@@ -104,7 +102,7 @@ struct Parameters
     ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
-        os << "Geometrical parameters are: \n"
+        os << "Solovev Geometrical parameters are: \n"
             <<" A               = "<<A<<"\n"
             <<" Prefactor Psi   = "<<pp<<"\n"
             <<" Prefactor I     = "<<pi<<"\n";

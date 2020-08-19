@@ -6,7 +6,6 @@
 
 #include "dg/blas.h"
 
-#include "guenther_parameters.h"
 #include "magnetic_field.h"
 
 //TODO somebody document the functions as in solovev/geometry.h

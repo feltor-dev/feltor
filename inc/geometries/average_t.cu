@@ -68,7 +68,7 @@ int main( int argc, char* argv[])
         map1d.emplace_back("psi_fsa",   dg::evaluate( fsa,      grid1d),
             "Flux surface average of psi with delta function");
         dg::HVec qprofile;
-        if( gp.equilibrium == "solovev")
+        //if( gp.equilibrium == "solovev")
         {
             dg::geo::SafetyFactor qprof( mag);
             qprofile = dg::evaluate( qprof, grid1d);

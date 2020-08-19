@@ -26,7 +26,6 @@
     solovev_parameters.h
     taylor.h
     guenther.h
-    guenther_parameters.h
     toroidal.h
 
     #utilities

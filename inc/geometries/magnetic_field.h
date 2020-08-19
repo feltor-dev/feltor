@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include "fluxfunctions.h"
 
 /*!@file

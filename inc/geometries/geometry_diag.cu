@@ -313,7 +313,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
         map1d.emplace_back("rho_p", rho,
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
-        if( gp.equilibrium == "solovev")
+        //if( gp.equilibrium == "solovev")
         {
             dg::geo::SafetyFactor qprof( mag);
             dg::HVec qprofile = dg::evaluate( qprof, grid1d);
