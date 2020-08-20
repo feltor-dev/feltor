@@ -24,6 +24,7 @@
 	],
 	"elongation" : 1,
 	"equilibrium" : "solovev",
+    "form" : "standardO",
 	"inverseaspectratio" : 0.1666666666666667,
 	"triangularity" : 0
 }

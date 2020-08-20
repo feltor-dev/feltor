@@ -20,6 +20,7 @@
    	],
    	"elongation": 1.6594,
    	"equilibrium": "solovev",
+    "form" : "standardX",
    	"inverseaspectratio": 0.2857142857142857,
    	"triangularity": 0.4
 }

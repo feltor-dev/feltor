@@ -22,13 +22,8 @@
 		0
 	],
 	"elongation" : 1,
+	"triangularity" : 0,
 	"equilibrium" : "solovev",
-	"inverseaspectratio" : 0.016666666666666666,
-	"psip_max" : 0,
-	"psip_max_cut" : 0,
-	"psip_max_lim" : 0.20000000000000001,
-	"psip_min" : -0.69999999999999996,
-	"qampl" : 1,
-	"rk4eps" : 1.0000000000000001e-05,
-	"triangularity" : 0
+    "form": "standardO",
+	"inverseaspectratio" : 0.016666666666666666
 }

@@ -22,7 +22,8 @@
     "inverseaspectratio" : 0.41071428571428575, //a/R_0
     "elongation"         : 1.75,
     "triangularity"      : 0.47,
-    "qampl"         :  1
+    "equilibrium" : "solovev",
+    "form" : "standardX"
 }
 //@ ----------------------------------------------------------
 
