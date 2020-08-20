@@ -123,22 +123,23 @@ int main( int argc, char* argv[])
     const dg::geo::solovev::Parameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
+    //Test coefficients
+    dg::geo::TokamakMagneticField mag_origin = dg::geo::createSolovevField(gp);
+    dg::geo::TokamakMagneticField mag = mag_origin;
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
     unsigned n, Nx, Ny, Nz;
     n = p.n, Nx = p.Nx, Ny = p.Ny, Nz = p.Nz;
-    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
+    double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
 
-    //Test coefficients
-    dg::geo::TokamakMagneticField mag_origin = dg::geo::createSolovevField(gp);
-    dg::geo::TokamakMagneticField mag = mag_origin;
     //Find O-point
-    double RO = gp.R_0, ZO = 0.;
+    double RO = mag.R0(), ZO = 0.;
     int point = 1;
-    if( !gp.isToroidal() )
+    dg::geo::form mag_form = mag.params().getForm();
+    if( mag_form == dg::geo::form::standardX || mag_form == dg::geo::form::standardO )
         point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     const double psipO = mag.psip()( RO, ZO);
     std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
@@ -146,7 +147,7 @@ int main( int argc, char* argv[])
         std::cout << " (minimum)"<<std::endl;
     if( point == 2 )
         std::cout << " (maximum)"<<std::endl;
-    const double psip0 = mag.psip()(gp.R_0, 0);
+    const double psip0 = mag.psip()(mag.R0(), 0);
     std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
     if( p.damping_alpha > 0.)
     {
@@ -228,7 +229,7 @@ int main( int argc, char* argv[])
         {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},
         ////
         {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
-        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(gp.R_0+p.posX*gp.a, p.posY*gp.a,
+        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(),
             M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
     };
@@ -236,11 +237,11 @@ int main( int argc, char* argv[])
     /// -------  Elements for fsa on X-point grid ----------------
     double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
-    if( gp.hasXpoint())
+    if( mag.params().getForm() == dg::geo::form::standardX)
     {
         std::cout << "Generate X-point flux-aligned grid ... \n";
-        double RX = gp.R_0-1.1*gp.triangularity*gp.a;
-        double ZX = -1.1*gp.elongation*gp.a;
+        double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+        double ZX = -1.1*mag.params().elongation()*mag.params().a();
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         double psipX = mag.psip()(RX, ZX);
         std::cout << "Found X-point at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
@@ -304,7 +305,7 @@ int main( int argc, char* argv[])
     /// --------- More flux labels --------------------------------
     dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
-    if( !gp.isToroidal())
+    if( mag_form != dg::geo::form::none && mag_form != dg::geo::form::centeredX)
     {
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
         dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
@@ -313,7 +314,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
         map1d.emplace_back("rho_p", rho,
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
-        //if( gp.equilibrium == "solovev")
+        if( mag_form == dg::geo::form::standardX || mag_form == dg::geo::form::standardO)
         {
             dg::geo::SafetyFactor qprof( mag);
             dg::HVec qprofile = dg::evaluate( qprof, grid1d);
@@ -364,7 +365,7 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    if( gp.hasXpoint())
+    if( mag_form == dg::geo::form::standardX)
     {
         int dim_idsX[2] = {0,0};
         err = file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
