@@ -26,7 +26,7 @@ enum class equilibrium
 {
     solovev, //!< dg::geo::solovev::Psip
     taylor, //!< dg::geo::taylor::Psip
-    //polynomial, ///!< dg::geo::polynomial::Psip
+    polynomial, ///!< dg::geo::polynomial::Psip
     guenther, //!< dg::geo::guenther::Psip
     toroidal, //!< dg::geo::toroidal::Psip
     circular //!< dg::geo::circular::Psip
@@ -50,7 +50,7 @@ enum class form
 static const std::map<std::string, equilibrium> str2equilibrium{
     {"solovev", equilibrium::solovev},
     {"taylor", equilibrium::taylor},
-    //{"polynomial": equilibrium::polynomial},
+    {"polynomial", equilibrium::polynomial},
     {"guenther", equilibrium::guenther},
     {"toroidal", equilibrium::toroidal},
     {"circular", equilibrium::circular}
@@ -82,12 +82,50 @@ static const std::map<std::string, form> str2form{
  */
 struct MagneticFieldParameters
 {
-    double a, //!< The minor radius; the purpose of this parameter is not to be exact but to serve as a refernce of how to setup the size of a simulation box
-           elongation, //!< (maximum Z - minimum Z of lcfs)/2a; 1 for a circle; the purpose of this parameter is not to be exact but more to be a reference of how to setup the aspect ratio of a simulation box
-           triangularity; //!< (R_0 - R_X) /a;  The purpose of this parameter is to find the approximate location of R_X (if an X-point is present, Z_X is given by elongation) the exact location can be computed by the \c findXpoint function
-    equilibrium equ; //!< the way the flux function is computed
-    modifier mod; //!<  the way the flux function is modified
-    form frm; //!< human readable descriptor of how the flux function looks
+    /**
+     * @brief Default values are for a Toroidal field
+     */
+    MagneticFieldParameters( ){
+        m_a = 1, m_elongation = 1, m_triangularity = 0;
+        m_equilibrium = equilibrium::toroidal;
+        m_modifier = modifier::none;
+        m_form = form::none;
+    }
+    /**
+     * @brief Constructor
+     *
+     * @param a The minor radius; the purpose of this parameter is not to be exact but to serve as a refernce of how to setup the size of a simulation box
+     * @param elongation (maximum Z - minimum Z of lcfs)/2a; 1 for a circle; the purpose of this parameter is not to be exact but more to be a reference of how to setup the aspect ratio of a simulation box
+     * @param triangularity (R_0 - R_X) /a;  The purpose of this parameter is to find the approximate location of R_X (if an X-point is present, Z_X is given by elongation) the exact location can be computed by the \c findXpoint function
+     * @param equ the way the flux function is computed
+     * @param mod the way the flux function is modified
+     * @param frm human readable descriptor of how the flux function looks
+     */
+    MagneticFieldParameters( double a, double elongation, double triangularity,
+            equilibrium equ, modifier mod, form frm): m_a(a),
+        m_elongation(elongation),
+        m_triangularity( triangularity),
+        m_equilibrium( equ),
+        m_modifier(mod), m_form( frm){}
+ //!< The minor radius; the purpose of this parameter is not to be exact but to serve as a refernce of how to setup the size of a simulation box
+    double a() const{return m_a;}
+ //!< (maximum Z - minimum Z of lcfs)/2a; 1 for a circle; the purpose of this parameter is not to be exact but more to be a reference of how to setup the aspect ratio of a simulation box
+    double elongation() const{return m_elongation;}
+ //!< (R_0 - R_X) /a;  The purpose of this parameter is to find the approximate location of R_X (if an X-point is present, Z_X is given by elongation) the exact location can be computed by the \c findXpoint function
+    double triangularity() const{return m_triangularity;}
+ //!< the way the flux function is computed
+    equilibrium getEquilibrium() const{return m_equilibrium;}
+ //!<  the way the flux function is modified
+    modifier getModifier() const{return m_modifier;}
+ //!< human readable descriptor of how the flux function looks
+    form getForm() const{return m_form;}
+    private:
+    double m_a,
+           m_elongation,
+           m_triangularity;
+    equilibrium m_equilibrium;
+    modifier m_modifier;
+    form m_form;
 };
 
 /**
