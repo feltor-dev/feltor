@@ -35,7 +35,7 @@ int main(int argc, char**argv)
         is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
-    dg::geo::TokamakMagneticField c = dg::geo::solovev::createMagField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     if(rank==0)std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;

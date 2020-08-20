@@ -27,16 +27,6 @@ static inline CylindricalFunctorsLvl1 createIpol( )
     return ipol;
 }
 
-/**
- * @brief Models a slab toroidal field
- *
- * \f$ B=\frac{R_0}{R}\f$, \f$ \psi_p = 1\f$ and \f$ I = 1\f$.
- @note The solovev field can also be made to model a todoidal slab field
- */
-static inline TokamakMagneticField createMagField( double R0)
-{
-    return TokamakMagneticField( R0, createPsip(), createIpol());
-}
 ///@}
 
 }//namespace toroidal
@@ -117,7 +107,9 @@ static inline CylindricalFunctorsLvl1 createIpol( double I0 )
  */
 static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 {
-    return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol());
+    MagneticFieldParameters params = { 1., 1., 0.,
+            equilibrium::circular, modifier::none, form::none};
+    return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol(), params);
 }
 /**
  * @brief Create a Magnetic field with circular flux surfaces and constant current
@@ -130,7 +122,9 @@ static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
  */
 static inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
 {
-    return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol(I0));
+    MagneticFieldParameters params = { 1., 1., 0.,
+            equilibrium::circular, modifier::none, form::standardO};
+    return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol(I0), params);
 }
 
 }//namespace geo

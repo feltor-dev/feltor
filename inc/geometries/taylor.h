@@ -301,10 +301,6 @@ static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
     return CylindricalFunctorsLvl1( Ipol(gp), IpolR(gp), IpolZ(gp));
 }
-static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
-{
-    return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
-}
 
 ///@}
 
@@ -320,7 +316,9 @@ static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters 
  */
 static inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {
-    return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
+    MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
+            equilibrium::solovev, modifier::none, str2form.at( gp.form)};
+    return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp), params);
 }
 } //namespace geo
 

@@ -21,7 +21,7 @@ namespace geo
 ///@addtogroup magnetic
 ///@{
 
-///@brief How flux-function is computed
+///@brief How flux-function is computed. Decides how to construct magnetic field.
 enum class equilibrium
 {
     solovev, //!< dg::geo::solovev::Psip
@@ -37,11 +37,12 @@ enum class modifier
     none, //!< no modification
     heaviside //!< Psip is dampened to a constant outside a critical value
 };
-///@brief How flux-function looks like
+///@brief How flux function looks like. Decider on whether and what flux aligned grid to construct
 enum class form
 {
     standardO, //!< closed flux surfaces centered around an O-point located near (R_0, 0); flux-aligned grids can be constructed
     standardX, //!< closed flux surfaces centered around an O-point located near (R_0, 0) and bordered by a separatrix with a single X-point; flux-aligned X-grids can be constructed
+    none, //!< no shaping: Purely toroidal magnetic field
     square, //!< closed flux surfaces centered around an O-point and bordered by a square  with four X-points in the corners (mainly the Guenther field)
     centeredX //!< one X-point in the middle, no O-point, only open flux surfaces, X-grids cannot be constructed
 };
@@ -62,6 +63,7 @@ static const std::map<std::string, form> str2form{
     {"standardO", form::standardO},
     {"standardX", form::standardX},
     {"square", form::square},
+    {"none", form::none},
     {"centeredX", form::centeredX}
 };
 ///@endcond
@@ -89,7 +91,7 @@ struct MagneticFieldParameters
 };
 
 /**
-* @brief A tokamak field as given by R0, Psi and Ipol
+* @brief A tokamak field as given by R0, Psi and Ipol plus Meta-data like shape and equilibrium
 
  This is the representation of toroidally axisymmetric magnetic fields that can be modeled in the form
  \f$
@@ -104,18 +106,15 @@ struct TokamakMagneticField
     ///as long as the field stays empty the access functions are undefined
     TokamakMagneticField(){}
     TokamakMagneticField( double R0, const CylindricalFunctorsLvl2& psip, const
-            CylindricalFunctorsLvl1& ipol
-            //, MagneticFieldParameters gp
-            ): m_R0(R0), m_psip(psip), m_ipol(ipol) {}//, m_params(gp){}
+            CylindricalFunctorsLvl1& ipol , MagneticFieldParameters gp
+            ): m_R0(R0), m_psip(psip), m_ipol(ipol), m_params(gp){}
     void set( double R0, const CylindricalFunctorsLvl2& psip, const
-            CylindricalFunctorsLvl1& ipol
-            //, MagneticFieldParameters gp
-            )
+            CylindricalFunctorsLvl1& ipol , MagneticFieldParameters gp)
     {
         m_R0=R0;
         m_psip=psip;
         m_ipol=ipol;
-        //m_params = gp;
+        m_params = gp;
     }
     /// \f$ R_0 \f$
     double R0()const {return m_R0;}
@@ -140,13 +139,13 @@ struct TokamakMagneticField
 
     const CylindricalFunctorsLvl2& get_psip() const{return m_psip;}
     const CylindricalFunctorsLvl1& get_ipol() const{return m_ipol;}
-    //const MagneticFieldParameters& params() const{return m_params;}
+    const MagneticFieldParameters& params() const{return m_params;}
 
     private:
     double m_R0;
     CylindricalFunctorsLvl2 m_psip;
     CylindricalFunctorsLvl1 m_ipol;
-    //MagneticFieldParamters m_params;
+    MagneticFieldParameters m_params;
 };
 
 ///@cond
@@ -188,7 +187,7 @@ TokamakMagneticField periodify( const TokamakMagneticField& mag, double R0, doub
     return TokamakMagneticField( mag.R0(),
             periodify( mag.get_psip(), R0, R1, Z0, Z1, bcx, bcy),
             //what if Dirichlet BC in the current? Won't that generate a NaN?
-            periodify( mag.get_ipol(), R0, R1, Z0, Z1, bcx, bcy));
+            periodify( mag.get_ipol(), R0, R1, Z0, Z1, bcx, bcy), mag.params());
 }
 
 ///@brief \f$   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f$
