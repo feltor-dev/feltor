@@ -350,21 +350,24 @@ std::map<std::string, std::function< HVec(
             return source_profile;
         }
     },
-    //{"tcv",
-    //    []( bool& fixed_profile, HVec& ne_profile,
-    //    Geometry& grid, const feltor::Parameters& p,
-    //    const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
-    //    {
-    //        const double psi0 = 0.4, R_0 = 1.075/1e-3, Z_0 = -0.01/1e-3, sigma = 9.3e-3;
+    {"tcv",
+        []( bool& fixed_profile, HVec& ne_profile,
+        Geometry& grid, const feltor::Parameters& p,
+        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        {
+            const double R_0 = 1075., Z_0 = -10.;
+            const double psip0 = mag.psip()( R_0, Z_0);
+            const double sigma = 9.3e-3*psip0/0.4;
 
-    //        fixed_profile = false;
-    //        //ignore ne_profile
-    //        HVec source_profile = dg::pullback(
-    //            dg::compose( dg::Gaussian( R_0));
-
-
-    //    }
-    //},
+            fixed_profile = false;
+            ne_profile = dg::construct<HVec>( detail::profile(grid, p,gp,mag));
+            dg::HVec source_profile = dg::pullback(
+                dg::compose( dg::GaussianX( psip0, sigma, 1.),  mag.psip() ), grid);
+            dg::blas1::pointwiseDot( detail::xpoint_damping(grid,p,gp,mag),
+                   source_profile, source_profile);
+            return source_profile;
+        }
+    },
     {"gaussian",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
