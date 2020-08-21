@@ -186,7 +186,7 @@ int main( int argc, char* argv[])
     HVec damping_profile = dg::evaluate( dg::zero, grid);
     if( p.damping_alpha > 0.)
     {
-        damping_profile = feltor::wall_damping( grid, p, gp, mag);
+        damping_profile = feltor::wall_damping( grid, p, mag);
         double RO=mag.R0(), ZO=0.;
         dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         double psipO = mag.psip()( RO, ZO);
@@ -225,7 +225,7 @@ int main( int argc, char* argv[])
     gradPsip[2] =  resultD; //zero
     DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
     feltor::Variables var = {
-        feltor, p, gp, mag, gradPsip, gradPsip, hoo
+        feltor, p, mag, gradPsip, gradPsip, hoo
     };
     // the vector ids
     std::map<std::string, int> id3d, id4d, restart_ids;
@@ -239,7 +239,7 @@ int main( int argc, char* argv[])
     if( argc == 4)
     {
         try{
-            y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+            y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,mag );
         }catch ( std::out_of_range& error){
             MPI_OUT std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
 #ifdef FELTOR_MPI
@@ -266,7 +266,7 @@ int main( int argc, char* argv[])
         bool fixed_profile;
         HVec profile, source_profile;
         source_profile = feltor::source_profiles.at(p.source_type)(
-            fixed_profile, profile, grid, p, gp, mag);
+            fixed_profile, profile, grid, p, mag);
         feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
             p.source_rate, dg::construct<DVec>(source_profile),
             p.damping_rate, dg::construct<DVec>(damping_profile)

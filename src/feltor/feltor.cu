@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
     HVec damping_profile = dg::evaluate( dg::zero, grid);
     if( p.damping_alpha > 0.)
     {
-        damping_profile = feltor::wall_damping( grid, p, gp, mag);
+        damping_profile = feltor::wall_damping( grid, p, mag);
         double RO=mag.R0(), ZO=0.;
         dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         double psipO = mag.psip()( RO, ZO);
@@ -103,7 +103,7 @@ int main( int argc, char* argv[])
     gradPsip[2] =  result; //zero
     DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
     feltor::Variables var = {
-        feltor, p,gp,mag, gradPsip, gradPsip, hoo
+        feltor, p,mag, gradPsip, gradPsip, hoo
     };
 
 
@@ -112,7 +112,7 @@ int main( int argc, char* argv[])
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
     try{
-        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,gp,mag );
+        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,mag );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
         return -1;
@@ -123,7 +123,7 @@ int main( int argc, char* argv[])
     HVec source_profile;
     try{
         source_profile = feltor::source_profiles.at(p.source_type)(
-            fixed_profile, profile, grid, p, gp, mag);
+            fixed_profile, profile, grid, p,  mag);
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
         return -1;

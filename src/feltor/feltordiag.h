@@ -150,7 +150,6 @@ void jacobian(
 struct Variables{
     feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec>& f;
     feltor::Parameters p;
-    dg::geo::solovev::Parameters gp;
     dg::geo::TokamakMagneticField mag;
     std::array<DVec, 3> gradPsip;
     std::array<DVec, 3> tmp;
@@ -205,7 +204,7 @@ std::vector<Record_static> diagnostics3d_static_list = {
             result = dg::evaluate( dg::zero, grid);
             bool fixed_profile;
             HVec source = feltor::source_profiles.at(v.p.source_type)(
-                fixed_profile, result, grid, v.p, v.gp, v.mag);
+                fixed_profile, result, grid, v.p, v.mag);
         }
     },
     { "Source", "Source region",
@@ -213,7 +212,7 @@ std::vector<Record_static> diagnostics3d_static_list = {
             bool fixed_profile;
             HVec profile;
             result = feltor::source_profiles.at(v.p.source_type)(
-                fixed_profile, profile, grid, v.p, v.gp, v.mag);
+                fixed_profile, profile, grid, v.p, v.mag);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",

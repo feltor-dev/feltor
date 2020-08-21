@@ -38,7 +38,7 @@ struct Radius : public dg::geo::aCylindricalFunctor<Radius>
 };
 HVec circular_damping( const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+    const dg::geo::TokamakMagneticField& mag )
 {
     if( p.profile_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
@@ -51,7 +51,7 @@ HVec circular_damping( const Geometry& grid,
 
 HVec xpoint_damping(const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+    const dg::geo::TokamakMagneticField& mag )
 {
     HVec xpoint_damping = dg::evaluate( dg::one, grid);
     if( mag.params().getForm() == dg::geo::form::standardX)
@@ -66,31 +66,31 @@ HVec xpoint_damping(const Geometry& grid,
 }
 HVec profile_damping(const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+    const dg::geo::TokamakMagneticField& mag )
 {
     if( p.profile_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
     HVec profile_damping = dg::pullback( dg::compose(dg::PolynomialHeaviside(
         1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)), grid);
-    dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag),
+    dg::blas1::pointwiseDot( xpoint_damping(grid,p,mag),
         profile_damping, profile_damping);
     return profile_damping;
 }
 HVec profile(const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag ){
+    const dg::geo::TokamakMagneticField& mag ){
     double RO=mag.R0(), ZO=0.;
     dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     double psipO = mag.psip()( RO, ZO);
     //First the profile and the source (on the host since we want to output those)
     HVec profile = dg::pullback( dg::compose(dg::LinearX(
         p.nprofamp/psipO, 0.), mag.psip()), grid);
-    dg::blas1::pointwiseDot( profile_damping(grid,p,gp,mag), profile, profile);
+    dg::blas1::pointwiseDot( profile_damping(grid,p,mag), profile, profile);
     return profile;
 }
 HVec source_damping(const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+    const dg::geo::TokamakMagneticField& mag )
 {
     if( p.source_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: source alpha must not be 0\n");
@@ -98,7 +98,7 @@ HVec source_damping(const Geometry& grid,
         dg::compose(dg::PolynomialHeaviside(
             p.source_boundary-p.source_alpha/2.,
         p.source_alpha/2., -1 ), dg::geo::RhoP(mag)), grid);
-    dg::blas1::pointwiseDot( xpoint_damping(grid,p,gp,mag),
+    dg::blas1::pointwiseDot( xpoint_damping(grid,p,mag),
            source_damping, source_damping);
     return source_damping;
 }
@@ -108,7 +108,7 @@ void init_ni(
     std::array<std::array<DVec,2>,2>& y0,
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& feltor,
     const Geometry& grid, const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+    dg::geo::TokamakMagneticField& mag )
 {
 #ifdef FELTOR_MPI
     int rank;
@@ -129,7 +129,7 @@ void init_ni(
 //for wall shadow
 HVec wall_damping(const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
+    const dg::geo::TokamakMagneticField& mag )
 {
     if( p.source_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: damping alpha must not be 0\n");
@@ -146,16 +146,16 @@ HVec wall_damping(const Geometry& grid,
 std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
     const Geometry& grid, const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+    dg::geo::TokamakMagneticField& mag )
 > > initial_conditions =
 {
     { "blob",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
-            const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+            dg::geo::TokamakMagneticField& mag )
         {
             std::array<std::array<DVec,2>,2> y0;
-            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,gp,mag));
+            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
             HVec ntilde = dg::evaluate(dg::zero,grid);
             if( p.sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in straight blob initial condition\n");
@@ -174,7 +174,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 3);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
-            detail::init_ni( y0, f,grid,p,gp,mag);
+            detail::init_ni( y0, f,grid,p,mag);
 
             dg::blas1::copy( 0., y0[1][0]); //set we = 0
             dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -184,10 +184,10 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     { "straight blob",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
-            const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+            dg::geo::TokamakMagneticField& mag )
         {
             std::array<std::array<DVec,2>,2> y0;
-            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,gp,mag));
+            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
             HVec ntilde = dg::evaluate(dg::zero,grid);
             if( p.sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in straight blob initial condition\n");
@@ -206,7 +206,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
-            detail::init_ni( y0, f,grid,p,gp,mag);
+            detail::init_ni( y0, f,grid,p,mag);
 
             dg::blas1::copy( 0., y0[1][0]); //set we = 0
             dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -216,10 +216,10 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     { "turbulence",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
-            const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+            dg::geo::TokamakMagneticField& mag )
         {
             std::array<std::array<DVec,2>,2> y0;
-            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,gp,mag));
+            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
             HVec ntilde = dg::evaluate(dg::zero,grid);
             if( p.sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
@@ -235,9 +235,9 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
-            dg::blas1::pointwiseDot( detail::profile_damping(grid,p,gp,mag), ntilde, ntilde);
+            dg::blas1::pointwiseDot( detail::profile_damping(grid,p,mag), ntilde, ntilde);
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
-            detail::init_ni( y0, f,grid,p,gp,mag);
+            detail::init_ni( y0, f,grid,p,mag);
 
             dg::blas1::copy( 0., y0[1][0]); //set we = 0
             dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -247,16 +247,16 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     { "zonal",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
-            const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+            dg::geo::TokamakMagneticField& mag )
         {
             std::array<std::array<DVec,2>,2> y0;
-            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,gp,mag));
+            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
             HVec ntilde = dg::evaluate(dg::zero,grid);
             dg::SinX sinX( p.amp, 0., p.k_psi);
             ntilde = dg::pullback( dg::compose( sinX, mag.psip()), grid);
-            dg::blas1::pointwiseDot( detail::profile_damping(grid,p,gp,mag), ntilde, ntilde);
+            dg::blas1::pointwiseDot( detail::profile_damping(grid,p,mag), ntilde, ntilde);
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
-            detail::init_ni( y0, f,grid,p,gp,mag);
+            detail::init_ni( y0, f,grid,p,mag);
 
             dg::blas1::copy( 0., y0[1][0]); //set we = 0
             dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -266,7 +266,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     { "turbulence on gaussian",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
-            const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+            dg::geo::TokamakMagneticField& mag )
         {
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in turbulence on gaussian\n");
@@ -292,9 +292,9 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
             }
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0] );
-            dg::blas1::pointwiseDot( dg::construct<DVec>(detail::circular_damping(grid,p,gp,mag)),
+            dg::blas1::pointwiseDot( dg::construct<DVec>(detail::circular_damping(grid,p,mag)),
                 y0[0][0], y0[0][0] );
-            detail::init_ni( y0, f,grid,p,gp,mag);
+            detail::init_ni( y0, f,grid,p,mag);
 
             dg::blas1::copy( 0., y0[1][0]); //set we = 0
             dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
@@ -307,35 +307,35 @@ std::map<std::string, std::function< HVec(
     bool& fixed_profile, //indicate whether a profile should be forced (yes or no)
     HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file
     Geometry& grid, const feltor::Parameters& p,
-    const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+    dg::geo::TokamakMagneticField& mag )
 > > source_profiles =
 {
     {"profile",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
-        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        dg::geo::TokamakMagneticField& mag )
         {
             fixed_profile = true;
-            ne_profile = dg::construct<HVec>( detail::profile(grid, p,gp,mag));
-            HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,gp,mag));
+            ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,mag));
             return source_profile;
         }
     },
     {"influx",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
-        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        dg::geo::TokamakMagneticField& mag )
         {
             fixed_profile = false;
-            ne_profile = dg::construct<HVec>( detail::profile(grid, p,gp,mag));
-            HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,gp,mag));
+            ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,mag));
             return source_profile;
         }
     },
     {"torpex",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
-        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        dg::geo::TokamakMagneticField& mag )
         {
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 for torpex source profile\n");
@@ -353,17 +353,17 @@ std::map<std::string, std::function< HVec(
     {"tcv",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
-        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        dg::geo::TokamakMagneticField& mag )
         {
             const double R_0 = 1075., Z_0 = -10.;
             const double psip0 = mag.psip()( R_0, Z_0);
             const double sigma = 9.3e-3*psip0/0.4;
 
             fixed_profile = false;
-            ne_profile = dg::construct<HVec>( detail::profile(grid, p,gp,mag));
-            dg::HVec source_profile = dg::pullback(
+            ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            HVec source_profile = dg::pullback(
                 dg::compose( dg::GaussianX( psip0, sigma, 1.),  mag.psip() ), grid);
-            dg::blas1::pointwiseDot( detail::xpoint_damping(grid,p,gp,mag),
+            dg::blas1::pointwiseDot( detail::xpoint_damping(grid,p,mag),
                    source_profile, source_profile);
             return source_profile;
         }
@@ -371,7 +371,7 @@ std::map<std::string, std::function< HVec(
     {"gaussian",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
-        const dg::geo::solovev::Parameters& gp, dg::geo::TokamakMagneticField& mag )
+        dg::geo::TokamakMagneticField& mag )
         {
             fixed_profile = false;
             if( p.sigma == 0)
