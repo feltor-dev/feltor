@@ -10,8 +10,7 @@
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
 
-#include "solovev.h"
-//#include "taylor.h"
+#include "make_field.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 #include "curvilinearX.h"
@@ -124,7 +123,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     gp.display( std::cout);
     //Test coefficients
-    dg::geo::TokamakMagneticField mag_origin = dg::geo::createSolovevField(gp);
+    dg::geo::TokamakMagneticField mag_origin = dg::geo::createMagneticField(geom_js, file::error::is_warning);
     dg::geo::TokamakMagneticField mag = mag_origin;
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
@@ -135,26 +134,33 @@ int main( int argc, char* argv[])
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
 
-    //Find O-point
-    double RO = mag.R0(), ZO = 0.;
-    int point = 1;
     dg::geo::form mag_form = mag.params().getForm();
+    double psipO = 1.;
     if( mag_form == dg::geo::form::standardX || mag_form == dg::geo::form::standardO )
-        point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-    const double psipO = mag.psip()( RO, ZO);
-    std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
-    if( point == 1 )
-        std::cout << " (minimum)"<<std::endl;
-    if( point == 2 )
-        std::cout << " (maximum)"<<std::endl;
-    const double psip0 = mag.psip()(mag.R0(), 0);
-    std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
-    if( p.damping_alpha > 0.)
     {
-        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
-        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2., fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
+        //Find O-point
+        double RO = mag.R0(), ZO = 0.;
+        int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        const double psipO = mag.psip()( RO, ZO);
+        std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
+        if( point == 1 )
+            std::cout << " (minimum)"<<std::endl;
+        if( point == 2 )
+            std::cout << " (maximum)"<<std::endl;
+        double psip0 = mag.psip()(mag.R0(), 0);
+        std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
+        if( p.damping_alpha > 0.)
+        {
+            double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
+            double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
+            std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
+            Json::Value jsmod;
+            jsmod["modifier"] = "heaviside";
+            jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
+            jsmod["alpha"] = fabs( damping_alphap/2.);
+            jsmod["sign"] = ((psipO>0)-(psipO<0));
+            mag = dg::geo::createModifiedField(geom_js, jsmod, file::error::is_warning);
+        }
     }
 
 
@@ -237,7 +243,7 @@ int main( int argc, char* argv[])
     /// -------  Elements for fsa on X-point grid ----------------
     double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
-    if( mag.params().getForm() == dg::geo::form::standardX)
+    if( mag_form == dg::geo::form::standardX)
     {
         std::cout << "Generate X-point flux-aligned grid ... \n";
         double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();

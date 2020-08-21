@@ -1,9 +1,7 @@
 {
     "equilibrium"       : "guenther",
     "I_0"               :  20.,
-    "R_0"               :  10.,
-    "a"                 :  1,
-    "form"              : "square"
+    "R_0"               :  10.
 }
 
 
