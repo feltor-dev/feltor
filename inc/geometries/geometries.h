@@ -24,6 +24,7 @@
 #include "guenther.h"
 #include "toroidal.h"
 #include "polynomial.h"
+#include "make_field.h"
 
 #include "fluxfunctions.h"
 #include "magnetic_field.h"

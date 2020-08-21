@@ -43,7 +43,7 @@ HVec circular_damping( const Geometry& grid,
     if( p.profile_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
     HVec circular = dg::pullback( dg::compose(
-                dg::PolynomialHeaviside( gp.a, gp.a*p.profile_alpha/2., -1),
+                dg::PolynomialHeaviside( mag.params().a(), mag.params().a()*p.profile_alpha/2., -1),
                 Radius( mag.R0(), 0.)), grid);
     return circular;
 }
@@ -54,10 +54,10 @@ HVec xpoint_damping(const Geometry& grid,
     const dg::geo::solovev::Parameters& gp, const dg::geo::TokamakMagneticField& mag )
 {
     HVec xpoint_damping = dg::evaluate( dg::one, grid);
-    if( gp.hasXpoint() )
+    if( mag.params().getForm() == dg::geo::form::standardX)
     {
-        double RX = gp.R_0 - 1.1*gp.triangularity*gp.a;
-        double ZX = -1.1*gp.elongation*gp.a;
+        double RX = mag.R0() - 1.1*mag.params().triangularity()*mag.params().a();
+        double ZX = -1.1*mag.params().elongation()*mag.params().a();
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         xpoint_damping = dg::pullback(
             dg::geo::ZCutter(ZX), grid);
@@ -162,7 +162,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in straight blob initial condition\n");
-            dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+            dg::Gaussian init0( mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(), p.sigma, p.sigma, p.amp);
             if( p.symmetric)
                 ntilde = dg::pullback( init0, grid);
             else
@@ -194,7 +194,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in straight blob initial condition\n");
-            dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+            dg::Gaussian init0( mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(), p.sigma, p.sigma, p.amp);
             if( p.symmetric)
                 ntilde = dg::pullback( init0, grid);
             else
@@ -270,7 +270,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
         {
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in turbulence on gaussian\n");
-            dg::Gaussian prof( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma,
+            dg::Gaussian prof( mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(), p.sigma,
                 p.sigma, p.nprofamp);
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(
@@ -339,11 +339,11 @@ std::map<std::string, std::function< HVec(
         {
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 for torpex source profile\n");
-            dg::Gaussian prof( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma,
+            dg::Gaussian prof( mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(), p.sigma,
                 p.sigma, p.nprofamp);
             ne_profile = dg::pullback( prof, grid);
             fixed_profile = false;
-            double rhosinm = 0.98 / gp.R_0;
+            double rhosinm = 0.98 / mag.R0();
             double rhosinm2 = rhosinm*rhosinm;
             HVec source_profile = dg::construct<HVec> ( dg::pullback(
                 detail::TorpexSource(0.98/rhosinm, -0.02/rhosinm, 0.0335/rhosinm, 0.05/rhosinm, 565*rhosinm2 ), grid) );
@@ -376,7 +376,7 @@ std::map<std::string, std::function< HVec(
             fixed_profile = false;
             if( p.sigma == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 for gaussian source profile\n");
-            dg::Gaussian prof( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma,
+            dg::Gaussian prof( mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(), p.sigma,
                 p.sigma, 1.);
             return dg::pullback( prof, grid);
         }
