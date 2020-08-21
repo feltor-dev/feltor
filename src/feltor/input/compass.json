@@ -1,0 +1,69 @@
+{
+    "n"  : 3,
+    "Nx" : 224,
+    "Ny" : 384,
+    "Nz" : 32,
+    "dt" : 2e-3,
+    "compression" : [2,2],
+    "FCI":
+    {
+        "refine": [1,1],
+        "rk4eps": 1e-6,
+        "periodify": true
+    },
+    "inner_loop": 5, 
+    "itstp": 500, 
+    "maxout": 50, 
+    "eps_pol"    : 1e-6,
+    "jumpfactor" : 1,
+    "eps_gamma"  : 1e-6,
+    "stages"     : 3,
+    "eps_time"   : 1e-10,
+    "rtol"       : 1e-5,
+    "mu"          : -0.000272121,
+    "tau"         : 1.0,
+    "beta"        : 0e-4,
+    "nu_perp"     : 2e-3,
+    "perp_diff"   : "hyperviscous",
+    "nu_parallel" : 4e2,
+    "resistivity" : 1e-4,
+    "curvmode"   : "toroidal",
+    "symmetric"  : false,
+    "bc" :
+    {
+        "density" : ["DIR", "DIR"],
+        "velocity": ["NEU", "NEU"],
+        "potential":["DIR", "DIR"]
+    },
+    "box" :
+    {
+        "scaleR" :  [1.3,1.25],
+        "scaleZ" :  [1.4,1.3]
+    },
+    "initne"     : "turbulence",
+    "initphi"    : "zero",
+    "amplitude" : 0.001,
+    "sigma"     : 2.0,
+    "posX"      : 0.6,
+    "posY"      : 0,
+    "sigma_z"   : 0.25,
+    "k_psi"     : 0,
+    "profile":
+    {
+        "amp": 0,
+        "alpha": 0.2
+    },
+    "source" : 
+    {
+        "rate": 2e-3,
+        "type": "influx",
+        "boundary": 0.55,
+        "alpha" : 0.2
+    },
+    "damping":
+    {
+        "rate" : 1e-2,
+        "boundary": 1.1,
+        "alpha": 0.25
+    }
+}

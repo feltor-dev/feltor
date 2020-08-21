@@ -45,7 +45,7 @@ struct Parameters
         pp  = file::get( mode, js, "PP", 1).asDouble();
         pi  = file::get( mode, js, "PI", 1).asDouble();
         M = file::get( mode, js, "M", 1).asUInt();
-        M = file::get( mode, js, "N", 1).asUInt();
+        N = file::get( mode, js, "N", 1).asUInt();
         c.resize(M*N);
         for (unsigned i=0;i<M*N;i++)
             c[i] = file::get_idx( mode, js, "c", i, 0.).asDouble();

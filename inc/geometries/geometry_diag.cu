@@ -119,11 +119,9 @@ int main( int argc, char* argv[])
     }
     std::cout << input_js<<std::endl;
     const Parameters p(input_js);
-    const dg::geo::solovev::Parameters gp(geom_js);
     p.display( std::cout);
-    gp.display( std::cout);
     //Test coefficients
-    dg::geo::TokamakMagneticField mag_origin = dg::geo::createMagneticField(geom_js, file::error::is_warning);
+    dg::geo::TokamakMagneticField mag_origin = dg::geo::createMagneticField(geom_js, file::error::is_throw);
     dg::geo::TokamakMagneticField mag = mag_origin;
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
@@ -135,13 +133,13 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
 
     dg::geo::form mag_form = mag.params().getForm();
-    double psipO = 1.;
+    double psipO = -1.;
     if( mag_form == dg::geo::form::standardX || mag_form == dg::geo::form::standardO )
     {
         //Find O-point
         double RO = mag.R0(), ZO = 0.;
         int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        const double psipO = mag.psip()( RO, ZO);
+        psipO = mag.psip()( RO, ZO);
         std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
         if( point == 1 )
             std::cout << " (minimum)"<<std::endl;
@@ -159,7 +157,7 @@ int main( int argc, char* argv[])
             jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
             jsmod["alpha"] = fabs( damping_alphap/2.);
             jsmod["sign"] = ((psipO>0)-(psipO<0));
-            mag = dg::geo::createModifiedField(geom_js, jsmod, file::error::is_warning);
+            mag = dg::geo::createModifiedField(geom_js, jsmod, file::error::is_throw);
         }
     }
 
@@ -260,7 +258,7 @@ int main( int argc, char* argv[])
         dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, false);
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipO;
-        //std::cout << "psi 1 is          "<<psipmax<<"\n";
+        std::cout << "psi 1 is          "<<psipmax<<"\n";
         gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";
         dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
