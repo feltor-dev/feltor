@@ -58,18 +58,17 @@ int main( int argc, char* argv[])
     }
 
     const feltor::Parameters p(js);
-    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
-    gp.display( std::cout);
+    std::cout << gs.toStyledString() << std::endl;
+    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(gs, file::error::is_warning);
     /////////////////////////////////////////////////////////////////////////
-    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
+    double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     //Wall damping has to be constructed before modification (!)
     HVec damping_profile = dg::evaluate( dg::zero, grid);
     if( p.damping_alpha > 0.)
@@ -80,8 +79,13 @@ int main( int argc, char* argv[])
         double psipO = mag.psip()( RO, ZO);
         double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
         double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2.,
-                fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
+        std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
+        Json::Value jsmod;
+        jsmod["modifier"] = "heaviside";
+        jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
+        jsmod["alpha"] = fabs( damping_alphap/2.);
+        jsmod["sign"] = ((psipO>0)-(psipO<0));
+        mag = dg::geo::createModifiedField(gs, jsmod, file::error::is_warning);
     }
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
