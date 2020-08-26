@@ -257,8 +257,6 @@ int main( int argc, char* argv[])
             long_name.data());
 
         name = record_name + "_cta2d";
-        if( name[0] == 'j')
-            name[1] = 's';
         long_name = record.long_name + " (Convoluted toroidal average on 2d plane.)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
             &id2d[name]);
@@ -274,6 +272,12 @@ int main( int argc, char* argv[])
 
         name = record_name + "_fsa";
         long_name = record.long_name + " (Flux surface average.)";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+            &id1d[name]);
+        err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
+            long_name.data());
+        name = record_name + "_std_fsa";
+        long_name = record.long_name + " (Flux surface average standard deviation on outboard midplane.)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
@@ -373,9 +377,11 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
                     poloidal_average( transferH2dX, t1d, false); //average over eta
                     dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
-                    dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
-                    if( record_name[0] == 'j')
-                        dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
+                    dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
+                    if( record_name[0] != 'j')
+                        dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
+                    else
+                        dg::blas1::copy( t1d, fsa1d);
                     //3. Interpolate fsa on 2d plane : <f>
                     dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
                 }
@@ -390,11 +396,9 @@ int main( int argc, char* argv[])
                 err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fsa2d"),
                     start2d_out, count2d, transferH2d.data() );
                 if( record_name[0] == 'j')
-                    record_name[1] = 's';
+                    dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );//make it jv
                 err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_cta2d"),
-                    start2d_out, count2d, t2d_mp.data() ); //this is still js...
-                if( record_name[0] == 'j')
-                    record_name[1] = 'v';
+                    start2d_out, count2d, t2d_mp.data() );
                 //4. Read 2d variable and compute fluctuations
                 available = true;
                 try{
@@ -462,6 +466,16 @@ int main( int argc, char* argv[])
                     }
                     err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
                         start2d_out, count2d, &result );
+                    //7. Compute midplane fluctuation amplitudes
+                    dg::blas1::pointwiseDot( transferH2d, transferH2d, transferH2d);
+                    dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
+                    dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
+                    dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
+                    dg::blas1::transform ( fsa1d, fsa1d, dg::SQRT<double>() );
+                    err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_std_fsa"),
+                        start1d_out, count1d, fsa1d.data());
                 }
                 else
                 {
@@ -476,6 +490,8 @@ int main( int argc, char* argv[])
                         start2d_out, count2d, &result );
                     err = nc_put_vara_double( ncid_out, id0d.at(record_name+"_ifs_norm"),
                         start2d_out, count2d, &result );
+                    err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_std_fsa"),
+                        start1d_out, count1d, transfer1d.data());
                 }
 
             }
