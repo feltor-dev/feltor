@@ -360,9 +360,17 @@ struct Fieldaligned
     * @param coarse the coarse input vector
     *
     * @return the input interpolated onto the grid given in the constructor
-    * @note the interpolation weights are taken in the phi distance not the s-distancewhich makes the interpolation linear in phi
+    * @note the interpolation weights are taken in the phi distance not the s-distance, which makes the interpolation linear in phi
     */
     container interpolate_from_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse);
+    /**
+    * @brief Integrate a 2d function on the fine grid \f[ \frac{1}{\Delta\varphi} \int_{-\Delta\varphi}^{\Delta\varphi}d \varphi w(\varphi) f(R(\varphi), Z(\varphi) \f]
+    *
+    * @param grid_coarse The coarse grid (\c coarse_grid.Nz() must integer divide \c Nz from input grid) The x and y dimensions must be equal
+    * @param coarse the 2d input vector
+    * @param out the integral (2d vector)
+    */
+    void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out );
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -588,6 +596,30 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& g
             dg::blas1::axpby( alpha, out_split[i*cphi+j], beta, m_temp[i*cphi+j], out_split[i*cphi+j]);
         }
     return out;
+}
+template<class G, class I, class container>
+void Fieldaligned<G, I,container>::integrate_between_coarse_grid( const G& grid, const container& in, container& out)
+{
+    assert( m_g->Nz() % grid.Nz() == 0);
+    unsigned Nz_coarse = grid.Nz(), Nz = m_g->Nz();
+    unsigned cphi = Nz / Nz_coarse;
+
+    out = in;
+    container helperP( in), helperM(in), tempP(in), tempM(in);
+
+    //1. Apply plus and minus T and sum up
+    for( int j=1; j<(int)cphi; j++)
+    {
+        //!!! The value of f at the plus plane is I^- of the current plane
+        dg::blas2::symv( m_minus, helperP, tempP);
+        dg::blas1::axpby( (double)(cphi-j)/(double)cphi, tempP, 1., out  );
+        helperP.swap(tempP);
+        //!!! The value of f at the minus plane is I^+ of the current plane
+        dg::blas2::symv( m_plus, helperM, tempM);
+        dg::blas1::axpby( (double)(cphi-j)/(double)cphi, tempM, 1., out  );
+        helperM.swap(tempM);
+    }
+    dg::blas1::scal( out, 1./(double)cphi);
 }
 
 template<class G, class I, class container>

@@ -85,9 +85,15 @@ int main( int argc, char* argv[])
     const double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     const double Rmax=gp.R_0+p.boxscaleRp*gp.a;
     const double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    const unsigned FACTOR=10;
 
-    dg::Grid2d   g2d_out( Rmin,Rmax, Zmin,Zmax,
+    dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
         p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
+    /////////////////////////////////////////////////////////////////////////
+    Geometry g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+        p.n_out, p.Nx_out, p.Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
+    Geometry g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     double RO=mag.R0(), ZO=0.;
@@ -105,12 +111,19 @@ int main( int argc, char* argv[])
 
     dg::HVec transferH2d = dg::evaluate(dg::zero,g2d_out);
     dg::HVec t2d_mp = dg::evaluate(dg::zero,g2d_out);
+    std::cout << "Construct Fieldaligned derivative ... \n";
+
+    auto bhat = dg::geo::createBHat( mag);
+    dg::geo::Fieldaligned<Geometry, IDMatrix, DVec> fieldaligned(
+        bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
+        p.rk4eps, 5, 5);
 
 
     ///--------------- Construct X-point grid ---------------------//
 
 
     //std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
+    //we use so many Neta so that we get close to the X-point
     std::cout << "Using default X-point grid resolution (n(3), Npsi(64), Neta(640))\n";
     unsigned npsi = 3, Npsi = 64, Neta = 640;//set number of psivalues (NPsi % 8 == 0)
     //std::cin >> npsi >> Npsi >> Neta;
@@ -243,6 +256,15 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id2d[name], "long_name", long_name.size(),
             long_name.data());
 
+        name = record_name + "_cta2d";
+        if( name[0] == 'j')
+            name[1] = 's';
+        long_name = record.long_name + " (Convoluted toroidal average on 2d plane.)";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
+            &id2d[name]);
+        err = nc_put_att_text( ncid_out, id2d[name], "long_name", long_name.size(),
+            long_name.data());
+
         name = record_name + "_fsa2d";
         long_name = record.long_name + " (Flux surface average interpolated to 2d plane.)";
         err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids,
@@ -304,7 +326,7 @@ int main( int argc, char* argv[])
         }
         err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
         err = nc_inq_dimlen( ncid, timeID, &steps);
-        //steps = 3;
+        steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
             if( j > 1 && i == 0)
@@ -342,6 +364,10 @@ int main( int argc, char* argv[])
                 {
                     err = nc_get_vara_double( ncid, dataID,
                         start2d, count2d, transferH2d.data());
+                    DVec transferD2d = transferH2d;
+                    fieldaligned.integrate_between_coarse_grid( g3d, transferD2d, transferD2d);
+                    transferH2d = transferD2d;
+                    t2d_mp = transferH2d; //save toroidal average
                     //2. Compute fsa and output fsa
                     dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
@@ -357,11 +383,18 @@ int main( int argc, char* argv[])
                 {
                     dg::blas1::scal( fsa1d, 0.);
                     dg::blas1::scal( transferH2d, 0.);
+                    dg::blas1::scal( t2d_mp, 0.);
                 }
                 err = nc_put_vara_double( ncid_out, id1d.at(record_name+"_fsa"),
                     start1d_out, count1d, fsa1d.data());
                 err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fsa2d"),
                     start2d_out, count2d, transferH2d.data() );
+                if( record_name[0] == 'j')
+                    record_name[1] = 's';
+                err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_cta2d"),
+                    start2d_out, count2d, t2d_mp.data() ); //this is still js...
+                if( record_name[0] == 'j')
+                    record_name[1] = 'v';
                 //4. Read 2d variable and compute fluctuations
                 available = true;
                 try{
