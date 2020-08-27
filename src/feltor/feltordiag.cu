@@ -330,7 +330,7 @@ int main( int argc, char* argv[])
         }
         err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
         err = nc_inq_dimlen( ncid, timeID, &steps);
-        steps = 3;
+        //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
             if( j > 1 && i == 0)
