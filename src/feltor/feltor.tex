@@ -1073,29 +1073,31 @@ In the output file we have
 \end{longtable}
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
-The density equation directly yields the particle conservation
+The density equations directly yield the particle conservation
 \begin{align} \label{eq:mass_theorem}
-  \frac{\partial}{\partial t} n_e
-  + \nc\vec{ j_{n_e}}
-  =  \Lambda_{n_e}+S_{n_e}
+  \frac{\partial}{\partial t} N
+  + \nc\vec{ j_{N}}
+  =  \Lambda_{N}+S_{N}
 \end{align}
 The terms of the particle conservation thus read
 \begin{align}
-  n_e= & n_e,\\
-  \vec j_{n_e} =& n_e\left(
-  \vec u_E + \vec u_C + \vec u_{K} +u_e\left(\bhat+{\vec b}_\perp\right)  \right) \nonumber\\
-  =& n_e \left(\frac{\bhat\times \vn\phi}{B} 
-  + \tau_e \frac{\bhat\times\vn n_e}{n_eB} 
-  + \mu_e u_e^2\vec K_{\vn\times\bhat} 
-  + u_e(\bhat + {\vec b}_\perp) \right), \label{eq:particle_flux} \\
-  \Lambda_{n_e} =&
-  \nu_\perp\Delta_\perp n_e + \nu_\parallel\Delta_\parallel n_e
+  N= & N,\\
+  \vec j_{N} =& N\left(
+  \vec u_\psi + \vec u_C + \vec u_{K} +U\left(\bhat+{\vec b}_\perp\right)  \right)
+\label{eq:particle_flux}\\
+  %\nonumber\\
+  %=& N \left(\frac{\bhat\times \vn\phi}{B}
+  %+ \tau_e \frac{\bhat\times\vn n_e}{n_eB}
+  %+ \mu_e u_e^2\vec K_{\vn\times\bhat}
+  %+ u_e(\bhat + {\vec b}_\perp) \right), \\
+  \Lambda_{N} =&
+  \nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N
 \\
-  S_{n_e} =&  S_{n_e}
+  S_{N} =&  S_{N}
 \end{align}
 Notice that
 \begin{align}
-n_e \vec K = n_e\vn\times\frac{\bhat}{B} = \vn\times n_e\frac{\bhat}{B} + \frac{\bhat\times\vn n_e}{B}
+\tau N \vec K = \tau N\vn\times\frac{\bhat}{B} = \tau \vn\times N\frac{\bhat}{B} + \tau \frac{\bhat\times\vn N}{B}
 \label{}
 \end{align}
 such that we can define the diamagnetic flux in the particle flux since
@@ -1118,12 +1120,21 @@ The relevant terms in the output file are
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation}\\
 \midrule
     electrons & $n_e$ &
-    jsne\_tt &$ n_e (\vec u_E + \vec u_K + \vec u_C )\cn \psi_p$ \\
+    jsneC\_tt &$ n_e ( \vec u_K + \vec u_C )\cn \psi_p$ \\
     jsneA\_tt &$ n_e u_e \vec{ b}_\perp  \cn \psi_p$ &
     jsneE\_tt & $ n_e \vec u_E\cn\psi_p$ \\
     lneperp\_tt &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ &
     lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
-    sne\_tt & $S_{n_e}$ & \\
+    sne\_tt & $S_{n_e}$ &
+    jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
+    ions & $N_i$ &
+    jsniC\_tt &$ N_i ( \vec u_K + \vec u_C )\cn \psi_p$ \\
+    jsniA\_tt &$ N_i U_i \vec{ b}_\perp  \cn \psi_p$ &
+    jsniE\_tt & $ N_i \vec u^i_E\cn\psi_p$ \\
+    lniperp\_tt &$ \Lambda_{\perp,N_i} = \nu_\perp \Delta_\perp N_i$ or $-\nu_\perp \Delta^2_\perp N_i$ &
+    lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_\parallel \Delta_\parallel N_i$ \\
+    sni\_tt & $S_{N_i}$ &
+    jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
 \bottomrule
 \end{longtable}
 
@@ -1206,7 +1217,7 @@ The relevant terms in the output file are
 \end{longtable}
 
 \subsubsection{Toroidal ExB angular momentum equation} \label{sec:vorticity_eq}
-We integrate the polarisation equation over volume and derive by time (in the LWL)
+We integrate the polarisation equation over volume and derive by time. In the drift-ordering up to order $\mathcal O(\delta^3)$ we get
 \begin{align}
     &\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} + \RA{\mathcal S_\Omega} \label{eq:vorticity_average} \\
 \Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\ln N_i\cn\psi_p\right) \equiv \mu_i N_i(u_{E,\varphi} + u_{D,\varphi}) \\
@@ -1215,7 +1226,8 @@ We integrate the polarisation equation over volume and derive by time (in the LW
     F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
     \mathcal S_\Omega &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn \phi}{B^2} + \mu_i\tau_i\vn\psi_p\cn S_{n_e} \label{eq:em_source}
 \end{align}
-Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB angular momentum
+Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB angular momentum. Again up to order $\mathcal O(\delta^3)$ in the drift ordering we obtain
+(the diffusive term is for testing purposes)
 \begin{align}
 &\partial_t \RA{\Omega_E} + \frac{\partial}{\partial v} \frac{\d v}{\d \psi_p}\RA{ \vec j_{\Omega_E}\cn\psi_p} = -\RA{F_{L,\varphi}}+ \RA{\mathcal S_{\Omega_E}} + \RA{\Lambda_{\Omega_E}} \label{eq:exb_average} \\
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \equiv \mu_i N_i u_{E,\varphi} \\
@@ -1256,7 +1268,7 @@ In the output file we have
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Parallel momentum balance}
-The flux surface average over the parallel momentum equation under species summation and the LWL yields
+The flux surface average over the parallel momentum equation under species summation  yields up to order $\mathcal O(\delta^3)$ in the drift-ordering
 \begin{align}
   \frac{\partial}{\partial t}\RA{\mu_iN_iU_{i} }
     % \nonumber\\
@@ -1265,7 +1277,7 @@ The flux surface average over the parallel momentum equation under species summa
    = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_i}
    \label{eq:parallel_momentum}
 \end{align}
-while the toroidal parallel angular momentum contribution reads
+while the toroidal parallel angular momentum contribution reads up to order $\mathcal O(\delta^3)$
 \begin{align}\label{eq:parallel_momentum_direction}
     \frac{\partial}{\partial t}  \RA{\mu_iN_iU_i b_\varphi}
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + z_s\mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
