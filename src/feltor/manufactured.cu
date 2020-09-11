@@ -29,7 +29,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     const feltor::Parameters p( js, file::error::is_throw);// p.display( std::cout);
-    std::cout << "# "<<p.n<<" x "<<p.Nx<<" x "<<p.Ny<<" x "<<p.Nz<<"\n";
+    p.display( std::cout);
+//std::cout << "# "<<p.n<<" x "<<p.Nx<<" x "<<p.Ny<<" x "<<p.Nz<<"\n";
     const double R_0 = 10;
     const double I_0 = 20; //q factor at r=1 is I_0/R_0
     const double a  = 1; //small radius
@@ -83,22 +84,12 @@ int main( int argc, char* argv[])
         feltor::FeltorSpecialSolver<
             dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
         > karniadakis( grid, p, mag);
-    double time = 0, dt_new = p.dt, TMAX = 1e-3;
+    double time = 0, TMAX = 0.1;
     karniadakis.init( feltor, im, time, y0, p.dt);
     while( time < TMAX)
     {
-        if( time + dt_new > TMAX)
-            dt_new = TMAX - time;
-
         try{
             karniadakis.step( feltor, im, time, y0);
-            //do
-            //{
-            //    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
-            //        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-            //    if( adaptive.failed())
-            //        std::cout << "FAILED STEP! REPEAT!\n";
-            //}while ( adaptive.failed());
         }
         catch( dg::Fail& fail) {
             std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -144,9 +135,6 @@ int main( int argc, char* argv[])
               <<"    phie: "<<sqrt(dg::blas2::dot( w3d,sol_phi[0]))/normphie<<"\t"<<normphie<<"\n"
               <<"    phii: "<<sqrt(dg::blas2::dot( w3d,sol_phi[1]))/normphii<<"\t"<<normphii<<"\n"
               <<"    apar: "<<sqrt(dg::blas2::dot( w3d,sol_apar))/normapar<<"\t"<<normapar<<"\n";
-    //feltor.update_quantities();
-    //feltor.quantities().display();
-
 
     return 0;
 

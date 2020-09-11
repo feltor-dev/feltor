@@ -121,7 +121,7 @@ int main( int argc, char* argv[])
     else
     {
         try{
-            file::file2Json( argv[1], js, file::comments::are_discarded);
+            file::file2Json( argv[1], js, file::comments::are_discarded, file::error::is_throw);
             feltor::Parameters( js, file::error::is_throw);
         } catch( std::exception& e) {
             MPI_OUT std::cerr << "ERROR in input parameter file "<<argv[1]<<std::endl;
@@ -132,8 +132,7 @@ int main( int argc, char* argv[])
             return -1;
         }
         try{
-            file::file2Json( argv[2], gs, file::comments::are_discarded);
-            dg::geo::solovev::Parameters( gs, file::error::is_throw);
+            file::file2Json( argv[2], gs, file::comments::are_discarded, file::error::is_throw);
         } catch( std::exception& e) {
             MPI_OUT std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
             MPI_OUT std::cerr << e.what()<<std::endl;
@@ -147,7 +146,18 @@ int main( int argc, char* argv[])
     MPI_OUT p.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
     MPI_OUT std::cout << geom << std::endl;
-    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(gs, file::error::is_warning);
+    dg::geo::TokamakMagneticField mag;
+    try{
+        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+#ifdef FELTOR_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //FELTOR_MPI
+        return -1;
+    }
 #ifdef FELTOR_MPI
     if( np[2] >= (int)p.Nz)
     {

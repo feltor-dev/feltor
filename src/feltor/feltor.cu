@@ -37,7 +37,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     try{
-        file::file2Json( inputfile, js, file::comments::are_forbidden);
+        file::file2Json( inputfile, js, file::comments::are_forbidden, file::error::is_throw);
         feltor::Parameters(js, file::error::is_throw);
     }catch(std::runtime_error& e)
     {
@@ -47,8 +47,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     try{
-        file::file2Json( geomfile, gs, file::comments::are_discarded);
-        dg::geo::solovev::Parameters(gs, file::error::is_throw);
+        file::file2Json( geomfile, gs, file::comments::are_discarded, file::error::is_throw);
     }catch(std::runtime_error& e)
     {
 
@@ -60,7 +59,15 @@ int main( int argc, char* argv[])
     const feltor::Parameters p(js);
     p.display( std::cout);
     std::cout << gs.toStyledString() << std::endl;
-    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(gs, file::error::is_warning);
+    dg::geo::TokamakMagneticField mag;
+    try{
+        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
     /////////////////////////////////////////////////////////////////////////
     double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
     double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
