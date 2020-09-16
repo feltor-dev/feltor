@@ -821,7 +821,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         //---------------------density--------------------------//
         //density: -Div ( NUb)
         m_ds_N.centered( y[0][i], m_dsN[i]);
-        m_ds_U.backward( fields[1][i], m_dsU[i]);
+        m_ds_U.centered( fields[1][i], m_dsU[i]);
         dg::blas1::pointwiseDot(-1., m_dsN[i], fields[1][i],
             -1., fields[0][i], m_dsU[i], 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
@@ -837,8 +837,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
         // (These two terms converge slowly and require high z resolution)
-        m_ds_N.forward(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
-        m_ds_P.forward(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
+        m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
+        m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
         // diffusion: + nu_par Delta_par U
         dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
                                 1., yp[1][i]);
