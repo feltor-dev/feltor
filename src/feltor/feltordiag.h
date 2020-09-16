@@ -1003,6 +1003,26 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., result, v.tmp[0],v.f.bphi(), 0., result);
         }
     },
+    {"jspardiai_tt", "Parallel momentum radial flux by Diamagnetic velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // DiaN Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradN(1), v.gradPsip, v.tmp[0]);
+            // DiaU Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradU(1), v.gradPsip, v.tmp[1]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.tmp[0], v.f.velocity(1), v.p.mu[1]*v.p.tau[1], v.tmp[1], v.f.density(1), 0., result);
+        }
+    },
+    {"jsparbphidiai_tt", "Parallel angular momentum radial flux by Diamagnetic velocity with ion density (Time average)", true,
+        []( DVec& result, Variables& v){
+            // bphi K Dot GradPsi
+            routines::dot( v.f.curv(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( result, v.f.bphi(), result);
+            // Multiply everything
+            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], result, v.f.velocity(1), v.f.density(1), 0., result);
+        }
+    },
     {"jsparApar_tt", "Parallel momentum radial flux by magnetic flutter (Time average)", true,
         []( DVec& result, Variables& v){
             if( v.p.beta == 0)
@@ -1043,6 +1063,14 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// --------------------- Parallel momentum source terms ---------------------//
+    {"sparpar_tt", "Parallel Source for momentum source", true,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( v.f.velocity(1), v.f.velocity(1), v.tmp[1]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.tmp[1], v.f.divb(), 0., result);
+            dg::blas1::pointwiseDot( 0.5*v.p.mu[1], v.f.density(1),  v.f.velocity(1), v.f.dsU(1), 1., result);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[1], v.f.dsN(1), 1., result);
+        }
+    },
     {"sparsni_tt", "Parallel momentum source by density source", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.mu[1],
