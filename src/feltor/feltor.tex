@@ -743,23 +743,23 @@ where $a\in\{e,i\}$ is the species label and $z$ is the charge number.
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nc\left( N \left(
-    \vec u_E + \vec u_K + \vec u_{C} + U\left(\bhat + {\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
-\mu N \frac{\partial}{\partial t} U &+ \mu N \left(
-    \vec u_E + \vec u_K + \vec u_{C} + U\left(\bhat + {\vec b}_\perp\right)
-    \right)\cn U  \nonumber \\
-    &+ 2\mu \nc ( NU \vec u_{\vn\times\bhat})
-    -\mu NU\nc \vec u_{\vn\times\bhat}
-    + \mu NU\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
+    \vec u_E + \vec u_K + \vec u_{C} + U_\parallel\left(\bhat + {\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
+\mu N \frac{\partial}{\partial t} U_\parallel &+ \mu N \left(
+    \vec u_E + \vec u_K + \vec u_{C} + U_\parallel\left(\bhat + {\vec b}_\perp\right)
+    \right)\cn U_\parallel  \nonumber \\
+    &+ 2\mu \nc ( NU_\parallel \vec u_{\vn\times\bhat})
+    -\mu NU_\parallel\nc \vec u_{\vn\times\bhat}
+    + \mu NU_\parallel\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
     &= -\tau \left(\bhat + {\vec b}_\perp\right)\cn N
     -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right)
-    - \eta n_e^2(U_i-u_e) + \mu N\Lambda_U + \mu N S_U
+    - \eta n_e^2(U_{\parallel,i}-u_{\parallel,e}) + \mu N\Lambda_U + \mu N S_U
 \label{}
 \end{align}
 with
 \begin{align}
 \vec u_E := \frac{\bhat\times\vn\psi}{B},\quad
 \vec u_{K} := \tau \left(\vec{\mathcal K_{\vn B}} + \vec{\mathcal K_{\vn\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
-\vec u_C := \mu U^2\vec{\mathcal K_{\vn\times\bhat}},\quad
+\vec u_C := \mu U_\parallel^2\vec{\mathcal K_{\vn\times\bhat}},\quad
 \vec u_{\vn\times\bhat} := \tau\vec{\mathcal K_{\vn\times\bhat}},\quad
 {\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B}.
 \label{}
@@ -769,7 +769,7 @@ The electric potential \(\phi\) and parallel magnetic vector potential \(A_\para
 computed by the polarisation and induction equations (with $q_e=-e$ and $q_i=+e$)
 \begin{align}
  -\nc\left(\frac{\mu_iN_i}{B^2} \np \phi\right) &=  \Gamma_{1,i} N_i -n_e, \quad \Gamma_{1,i}^{-1} := 1-\frac{1}{2}\mu_i\tau_i\Delta_\perp , \\
-  -\frac{1}{\beta} \Delta_\perp A_\parallel &= \left(N_i U_i-n_e u_e \right)
+  -\frac{1}{\beta} \Delta_\perp A_\parallel &= \left(N_i U_{\parallel,i}-n_e u_{\parallel,e} \right)
   \label{eq:polarisation_dimensional}
 \end{align}
 Given $\phi$ we define the generalised electric potential
@@ -782,20 +782,20 @@ on in the electric potential $\phi$ and 0th order FLR effects in the parallel ma
 potential $A_\parallel$.
 We have the continuity equation for the electron density \(n_e\) and the ion gyro-centre
 density \(N_i\) and the momentum conservation equation for
-the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\)~\cite{WiesenbergerPhD, HeldPhD}.
+the parallel electron velocity \(u_{\parallel,e}\) and the parallel ion gyro-centre velocity \(U_{\parallel,i}\)~\cite{WiesenbergerPhD, HeldPhD}.
 \subsection{ Scale invariance}
 \subsubsection{Sign reversals of the magnetic field}\label{sec:field_reversal}
 If we change the direction of the magnetic field vector $\bhat$, we immediately see that all perpendicular
-drifts and $U\bhat$ change directions. On the other side, the diffusive and resistive terms remain unchanged.
+drifts and $U_\parallel\bhat$ change directions. On the other side, the diffusive and resistive terms remain unchanged.
 Without resistivity and diffusion a change in direction of the magnetic field thus corresponds to
 a time reversal $t\rightarrow t'=-t$.
 In the code $\bhat$ changes sign by using both $-\mathcal P_\psi$ and $-\mathcal P_I$.
 
 Also note that changing the sign of the magnetic field only in the parallel derivatives $\npar \rightarrow -\npar$ does not
-have any effect. This can be seen by simply renormalizing $U'=-U$. This reverts the equations back to the original equations.
+have any effect. This can be seen by simply renormalizing $U_\parallel'=-U_\parallel$. This reverts the equations back to the original equations.
 \subsubsection{Scaling of density}
-If $N, U, \phi, A_\parallel$ are a solution to the model equations
-then so are $N'=\alpha N$, $U'=U$, $\phi'=\phi$ and $A_\parallel'=A_\parallel$ with the changed parameters $S_N' = \alpha S_N$, $\eta' = \eta/\alpha$ and $ \beta' = \beta/\alpha$. If $N$
+If $N, U_\parallel, \phi, A_\parallel$ are a solution to the model equations
+then so are $N'=\alpha N$, $U_\parallel'=U_\parallel$, $\phi'=\phi$ and $A_\parallel'=A_\parallel$ with the changed parameters $S_N' = \alpha S_N$, $\eta' = \eta/\alpha$ and $ \beta' = \beta/\alpha$. If $N$
 has a Dirichlet boundary condition, then $N'$ satisfies a correspondingly scaled boundary condition.
 
 
@@ -807,7 +807,7 @@ $\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}$ and $\nu_{ei} = \sqrt{2} z
     \label{eq:resistivity}
 \end{align}
 with $\ln \lambda \approx 10$.
- The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_i - u_e\right)\)
+ The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_{\parallel,i} - u_{\parallel,e}\right)\)
  determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
 
 The dissipative terms can be decomposed into perpendicular and parallel components
@@ -821,15 +821,15 @@ For numerical stabilisation we choose:
 \begin{align}
 \Lambda_{n_e,\parallel} &= \nu_\parallel \Delta_\parallel n_e &
 \Lambda_{N_i,\parallel} &= \nu_\parallel \Delta_\parallel N_i \\
-\Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_e &
-\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_i
+\Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_{\parallel,e} &
+\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_{\parallel,i}
 \end{align}
 Similarly, for the perpendicular dissipation we apply viscous or hyperviscous terms.
 \begin{align}\label{eq:perpdiffNT}
  \Lambda_{n_e,\perp} &=  \nu_\perp \Delta_\perp n_e \text{ or } -\nu_\perp \Delta_\perp^2 n_e&
  \Lambda_{N_i,\perp} &=  \nu_\perp \Delta_\perp N_i \text{ or } -\nu_\perp \Delta_\perp^2 N_i & \\
- \Lambda_{u_e,\perp} &=  \nu_\perp \Delta_\perp u_e \text{ or } -\nu_\perp \Delta_\perp^2 u_e &
- \Lambda_{U_i,\perp} &=  \nu_\perp \Delta_\perp U_i \text{ or } -\nu_\perp \Delta_\perp^2 U_i
+ \Lambda_{u_e,\perp} &=  \nu_\perp \Delta_\perp u_{\parallel,e} \text{ or } -\nu_\perp \Delta_\perp^2 u_{\parallel,e} &
+ \Lambda_{U_i,\perp} &=  \nu_\perp \Delta_\perp U_{\parallel,i} \text{ or } -\nu_\perp \Delta_\perp^2 U_{\parallel,i}
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 The drift-fluid corresponding diffusion gives an order-of-magnitude estimate for $\nu_\perp$.
@@ -860,21 +860,21 @@ where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.
 
 We choose boundary conditions separately on input for the variables
-$n_e$, $u_e$ and $\phi$. The boundary condition for $N_i$, $U_i$ and
-$\psi$ are equal to $n_e$, $u_e$ and $\phi$ respectively.
-We choose $A_\parallel$ to have equal boundary conditions as $u_e$ and $U_i$.
-This will later enable us to treat the sum of $U$ and $A_\parallel$
-in the same way as $U$.
+$n_e$, $u_{\parallel,e}$ and $\phi$. The boundary condition for $N_i$, $U_{\parallel,i}$ and
+$\psi$ are equal to $n_e$, $u_{\parallel,e}$ and $\phi$ respectively.
+We choose $A_\parallel$ to have equal boundary conditions as $u_{\parallel,e}$ and $U_{\parallel,i}$.
+This will later enable us to treat the sum of $U_\parallel$ and $A_\parallel$
+in the same way as $U_\parallel$.
 Typically,
 \begin{align}
-n_e = n_0, \quad u_e = \phi = 0
-\text{ or } \hat n \cn n_e = \hat n \cn u_e = 0
+n_e = n_0, \quad u_{\parallel,e} = \phi = 0
+\text{ or } \hat n \cn n_e = \hat n \cn u_{\parallel,e} = 0
 \end{align}
 where $\hat n$ is the normal vector to the boundary.
 
 We initialize the parallel velocity to zero
 \begin{align}
-  u_e(R,Z,\varphi,0) = U_i(R,Z,\varphi,0) = 0
+  u_{\parallel,e}(R,Z,\varphi,0) = U_{\parallel,i}(R,Z,\varphi,0) = 0
   \label{}
 \end{align}
 which in turn initializes $A_\parallel = 0$
@@ -1005,7 +1005,7 @@ For both electrons and ions we choose
 \begin{align}
     S^d_{n_e}(R,Z,\varphi,t) &:= -\omega_d (n_e-1)\Theta_{\alpha_p/2}\left(\rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2}\right)\\
     S^d_{N_i}(R,Z,\varphi,t) &= \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S^d_{n_e} -\nc\left( \frac{\mu_i S^d_{n_e}}{B^2}\np \phi\right)\\
-S^d_U(R,Z,\varphi, t)& := -\omega_d U \Theta_{\alpha_p/2}\left(  \rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2} \right)
+S^d_U(R,Z,\varphi, t)& := -\omega_d U_\parallel \Theta_{\alpha_p/2}\left(  \rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2} \right)
 \end{align}
 \end{subequations}
 
@@ -1016,29 +1016,29 @@ two functions for which we have no boundary conditions
     \begin{align}
     \frac{\partial}{\partial t} N =&
         - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
-        - \bar \npar \left( NU\right)
-        - NU\left(\vec \nc\bhat+\vec \nc{\vec b}_\perp\right)
+        - \bar \npar \left( NU_\parallel\right)
+        - NU_\parallel\left(\vec \nc\bhat+\vec \nc{\vec b}_\perp\right)
         - \tau \mathcal K(N) \nonumber \\&
         - N \mathcal K(\psi)
-        -\mu \mathcal K_{\vn\times\bhat}(NU^2)
-        -\mu NU^2\nc \vec{ \mathcal K_{\vn\times\bhat}}
+        -\mu \mathcal K_{\vn\times\bhat}(NU_\parallel^2)
+        -\mu NU_\parallel^2\nc \vec{ \mathcal K_{\vn\times\bhat}}
         + \nu_\perp\Delta_\perp N + \nu_\parallel \Delta_\parallel N + S_N, \\
     \frac{\partial}{\partial t} W =&
-        - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
+        - \frac{1}{B}\left[\psi, U_\parallel\right]_{\perp}%& \nonumber\\
         - \frac{1}{\mu} \bar \npar \psi% \nonumber\\
-        - \frac{1}{2}\bar \npar U^2
+        - \frac{1}{2}\bar \npar U_\parallel^2
         -\frac{\tau}{\mu} \bar \npar \ln N
-        - U\mathcal K_{\vn\times\bhat}(\psi)
-        - \tau \mathcal K(U)
-        -\tau U\nc\vec{ \mathcal K_{\vn\times\bhat}}\nonumber\\&
-        - \left(2\tau + {\mu}U^2\right) \mathcal K_{\vn\times\bhat} (U)
-        -2\tau U\mathcal K_{\vn\times\bhat}(\ln N)
-        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e) \nonumber\\&
-        + \nu_\perp\Delta_\perp U
-        + \nu_\parallel \Delta_\parallel U
+        - U_\parallel\mathcal K_{\vn\times\bhat}(\psi)
+        - \tau \mathcal K(U_\parallel)
+        -\tau U_\parallel\nc\vec{ \mathcal K_{\vn\times\bhat}}\nonumber\\&
+        - \left(2\tau + {\mu}U_\parallel^2\right) \mathcal K_{\vn\times\bhat} (U_\parallel)
+        -2\tau U_\parallel\mathcal K_{\vn\times\bhat}(\ln N)
+        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_{\parallel,i} - u_{\parallel,e}) \nonumber\\&
+        + \nu_\perp\Delta_\perp U_\parallel
+        + \nu_\parallel \Delta_\parallel U_\parallel
         + S_U,
         \label{eq:EgyrofluidU} \\
-        W&:= \left( U + \frac{A_\parallel}{\mu}\right)
+        W_\parallel&:= \left( U_\parallel + \frac{A_\parallel}{\mu}\right)
     \end{align}
     \label{eq:Egyrofluid}
 \end{subequations}
@@ -1051,7 +1051,7 @@ and
     -\nc\left( \frac{N_i}{B^2}\np \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
     \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\np\phi)^2}{B^2} \\
-    \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
+    \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_{\parallel,e}}n_e-\Delta_\perp\right)
     A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
   \end{align}
 \end{subequations}
@@ -1064,8 +1064,8 @@ In the output file we have
 \midrule
     electrons &$n_e$ &
     ions &$N_i$ \\
-    Ue &$u_e$ &
-    Ui &$U_i$ \\
+    Ue &$u_{\parallel,e}$ &
+    Ui &$U_{\parallel,i}$ \\
     potential &$\phi$ &
     psi &$\psi$ \\
     induction &$A_\parallel$ & \\
@@ -1083,13 +1083,13 @@ The terms of the particle conservation thus read
 \begin{align}
   N= & N,\\
   \vec j_{N} =& N\left(
-  \vec u_\psi + \vec u_C + \vec u_{K} +U\left(\bhat+{\vec b}_\perp\right)  \right)
+  \vec u_\psi + \vec u_C + \vec u_{K} +U_\parallel\left(\bhat+{\vec b}_\perp\right)  \right)
 \label{eq:particle_flux}\\
   %\nonumber\\
   %=& N \left(\frac{\bhat\times \vn\phi}{B}
   %+ \tau_e \frac{\bhat\times\vn n_e}{n_eB}
-  %+ \mu_e u_e^2\vec K_{\vn\times\bhat}
-  %+ u_e(\bhat + {\vec b}_\perp) \right), \\
+  %+ \mu_e u_{\parallel,e}^2\vec K_{\vn\times\bhat}
+  %+ u_{\parallel,e}(\bhat + {\vec b}_\perp) \right), \\
   \Lambda_{N} =&
   \nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N
 \\
@@ -1106,11 +1106,11 @@ the rotation vanishes under the divergence.
 We here also derive the particle flux \eqref{eq:particle_flux} through a flux surface
 \begin{align} \label{eq:radial_particle_flux}
  \vec j_{N}\cn v %=& N\left( \vec u_E + \vec u_C + \vec u_{\vn
- %B} + U \left(\bhat + {\vec b}_\perp\right)\right) \cn \psi_p \nonumber\\
+ %B} + U_\parallel \left(\bhat + {\vec b}_\perp\right)\right) \cn \psi_p \nonumber\\
  =&
-  \frac{\d v}{\d \psi_p} N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U^2\right)
+  \frac{\d v}{\d \psi_p} N\left[\frac{1}{B}[\psi, \psi_p]_\perp + \left(\tau + \mu U_\parallel^2\right)
    \mathcal K_{\vn\times\bhat}(\psi_p) + \tau  \mathcal K_{\vn B}(\psi_p) \right] \nonumber\\
- &+ NU\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
+ &+ NU_\parallel\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
  K_{\vn\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right]
 \end{align}
 
@@ -1121,7 +1121,7 @@ The relevant terms in the output file are
 \midrule
     electrons & $n_e$ &
     jsneC\_tt &$ n_e ( \vec u_K + \vec u_C )\cn \psi_p$ \\
-    jsneA\_tt &$ n_e u_e \vec{ b}_\perp  \cn \psi_p$ &
+    jsneA\_tt &$ n_e u_{\parallel,e} \vec{ b}_\perp  \cn \psi_p$ &
     jsneE\_tt & $ n_e \vec u_E\cn\psi_p$ \\
     lneperp\_tt &$ \Lambda_{\perp,n_e} = \nu_\perp \Delta_\perp n_e$ or $-\nu_\perp \Delta^2_\perp n_e$ &
     lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
@@ -1129,7 +1129,7 @@ The relevant terms in the output file are
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
     ions & $N_i$ &
     jsniC\_tt &$ N_i ( \vec u_K + \vec u_C )\cn \psi_p$ \\
-    jsniA\_tt &$ N_i U_i \vec{ b}_\perp  \cn \psi_p$ &
+    jsniA\_tt &$ N_i U_{\parallel,i} \vec{ b}_\perp  \cn \psi_p$ &
     jsniE\_tt & $ N_i \vec u^i_E\cn\psi_p$ \\
     lniperp\_tt &$ \Lambda_{\perp,N_i} = \nu_\perp \Delta_\perp N_i$ or $-\nu_\perp \Delta^2_\perp N_i$ &
     lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_\parallel \Delta_\parallel N_i$ \\
@@ -1154,19 +1154,19 @@ with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \vn\phi}/{B}$
   \mathcal{E}= & z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}
   +\frac{1}{2\beta}\left(\np A_\parallel\right)^2
    +  \frac{1}{2} z_i \mu_i N_i u_E^2  \nonumber\\
-   & +\frac{1}{2} z_e\mu_e  n_e u_e^2
-  +\frac{1}{2} z_i\mu_i  N_i U_i^2,\\
+   & +\frac{1}{2} z_e\mu_e  n_e u_{\parallel,e}^2
+  +\frac{1}{2} z_i\mu_i  N_i U_{\parallel,i}^2,\\
   \vec j_{\mathcal E} =& \sum_s z\left[
-  \left(\tau \ln N + \frac{1}{2}\mu U^2 + \psi \right)N\left(
-  \vec u_E + \vec u_C + \vec u_{K} +U\left(\bhat+{\vec b}_\perp\right)  \right) \right]
+  \left(\tau \ln N + \frac{1}{2}\mu U_\parallel^2 + \psi \right)N\left(
+  \vec u_E + \vec u_C + \vec u_{K} +U_\parallel\left(\bhat+{\vec b}_\perp\right)  \right) \right]
   \nonumber\\
-  &+ \sum_z z\left[\mu \tau NU^2\vec K_{\vn\times\bhat} + \tau NU \left(\bhat + {\vec b}_\perp\right)\right], \\
-  \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U^2 \right)
-  \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU\left(\nu_\perp\Delta_\perp U + \nu_\parallel\Delta_\parallel U\right) \right]
+  &+ \sum_z z\left[\mu \tau NU_\parallel^2\vec K_{\vn\times\bhat} + \tau NU_\parallel \left(\bhat + {\vec b}_\perp\right)\right], \\
+  \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U_\parallel^2 \right)
+  \left(\nu_\perp\Delta_\perp N + \nu_\parallel\Delta_\parallel N\right)  +  \mu NU_\parallel\left(\nu_\perp\Delta_\perp U_\parallel + \nu_\parallel\Delta_\parallel U_\parallel\right) \right]
 \nonumber \\
-  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U^2 \right)S_{N}\right]
+  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U_\parallel^2 \right)S_{N}\right]
 \nonumber \\
-  R_{\mathcal E} =&  -\eta_\parallel  \left[ n_e(U_i-u_e)\right]^2.
+  R_{\mathcal E} =&  -\eta_\parallel  \left[ n_e(U_{\parallel,i}-u_{\parallel,e})\right]^2.
 \end{align}
 where in the energy flux $\vec j_{\mathcal E}$
 we neglect terms  containing time derivatives
@@ -1180,9 +1180,9 @@ for the diffusion terms in the above equations.
 We have the energy flux through a flux surface
 \begin{align}
  \vec j_{\mathcal E}\cn v =&%\frac{\d v}{\d \psi_p} \vec j_{\mathcal E}\cn \psi_p  =
-\frac{\d v}{\d \psi_p}\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U^2 + \psi\right) \vec j_N\cn\psi_p
-+ z \mu\tau NU^2 \mathcal K_{\vn\times\bhat}(\psi_p) \nonumber\\
-&+ z \tau NU
+\frac{\d v}{\d \psi_p}\sum_s z\left (\tau\ln N + \frac{1}{2}\mu U_\parallel^2 + \psi\right) \vec j_N\cn\psi_p
++ z \mu\tau NU_\parallel^2 \mathcal K_{\vn\times\bhat}(\psi_p) \nonumber\\
+&+ z \tau NU_\parallel
  \left( A_\parallel \mathcal
  K_{\vn\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right)
 \label{eq:energy_flux}
@@ -1196,34 +1196,34 @@ The relevant terms in the output file are
     nilnni &$ z_i\tau_i N_i \ln N_i$ \\
     aperp2 &$ (\np A_\parallel)^2/2/\beta$ \\
     ue2   &$z_i\mu_i N_i u_E^2 /2$ \\
-    neue2 &$ z_e\mu_e n_e u_e^2/2$ \\
-    niui2 &$ z_i\mu_i N_i U_i^2/2$ \\
-    see\_tt & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_e^2) S_{n_e} $ \\
-    sei\_tt & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_i^2) S_{N_i} $ \\
-    resistivity\_tt &-$\eta_\parallel n_e^2 (U_i-u_e)^2$ \\
-    jsee\_tt &$z_e(\tau_e \ln n_e + \mu_e u_e^2/2 + \phi)n_e(\vec u_E + \vec u_C + \vec u_K)\cn \psi_p
-        + z_e \tau_e n_e u_e^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
-    jsei\_tt &$z_i(\tau_i \ln N_i + \mu_i U_i^2/2 + \psi_i)N_i(\vec u_E^i + \vec u_C + \vec u_K)\cn \psi_p
-        + z_i \tau_i N_i U_i^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
-    jseea\_tt &$z_e(\tau_e \ln n_e + \mu_e u_e^2 + \phi)n_e \vec { b}_\perp\cn \psi_p
-        + z_e \tau_e n_e u_e \vec{ b}_\perp \cn \psi_p $ \\
-    jseia\_tt &$z_i(\tau_i \ln N_i + \mu_i U_i^2 + \psi_i)N_i \vec { b}_\perp\cn \psi_p
-        + z_i \tau_i N_i U_i \vec{ b}_\perp \cn \psi_p $ \\
-    leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\perp \Delta_\perp n_e + z_e\mu_e n_e u_e \nu_\perp \Delta_\perp u_e$ \\
-    leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_i \nu_\perp \Delta_\perp U_i$ \\
-    leeparallel\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_e^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_e \nu_\parallel \Delta_\parallel u_e$ \\
-    leiparallel\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_i^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_i \nu_\parallel \Delta_\parallel U_i$ \\
+    neue2 &$ z_e\mu_e n_e u_{\parallel,e}^2/2$ \\
+    niui2 &$ z_i\mu_i N_i U_{\parallel,i}^2/2$ \\
+    see\_tt & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_{\parallel,e}^2) S_{n_e} $ \\
+    sei\_tt & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_{\parallel,i}^2) S_{N_i} $ \\
+    resistivity\_tt &-$\eta_\parallel n_e^2 (U_{\parallel,i}-u_{\parallel,e})^2$ \\
+    jsee\_tt &$z_e(\tau_e \ln n_e + \mu_e u_{\parallel,e}^2/2 + \phi)n_e(\vec u_E + \vec u_C + \vec u_K)\cn \psi_p
+        + z_e \tau_e n_e u_{\parallel,e}^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
+    jsei\_tt &$z_i(\tau_i \ln N_i + \mu_i U_{\parallel,i}^2/2 + \psi_i)N_i(\vec u_E^i + \vec u_C + \vec u_K)\cn \psi_p
+        + z_i \tau_i N_i U_{\parallel,i}^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
+    jseea\_tt &$z_e(\tau_e \ln n_e + \mu_e u_{\parallel,e}^2 + \phi)n_e \vec { b}_\perp\cn \psi_p
+        + z_e \tau_e n_e u_{\parallel,e} \vec{ b}_\perp \cn \psi_p $ \\
+    jseia\_tt &$z_i(\tau_i \ln N_i + \mu_i U_{\parallel,i}^2 + \psi_i)N_i \vec { b}_\perp\cn \psi_p
+        + z_i \tau_i N_i U_{\parallel,i} \vec{ b}_\perp \cn \psi_p $ \\
+    leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_\perp \Delta_\perp n_e + z_e\mu_e n_e u_{\parallel,e} \nu_\perp \Delta_\perp u_{\parallel,e}$ \\
+    leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_\perp \Delta_\perp N_i + z_i\mu_i N_i U_{\parallel,i} \nu_\perp \Delta_\perp U_{\parallel,i}$ \\
+    leeparallel\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_\parallel \Delta_\parallel n_e + z_e\mu_e n_e u_{\parallel,e} \nu_\parallel \Delta_\parallel u_{\parallel,e}$ \\
+    leiparallel\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_\parallel \Delta_\parallel N_i + z_i\mu_i N_i U_{\parallel,i} \nu_\parallel \Delta_\parallel U_{\parallel,i}$ \\
 \bottomrule
 \end{longtable}
 
 \subsubsection{Toroidal ExB angular momentum equation} \label{sec:vorticity_eq}
-We integrate the polarisation equation over volume and derive by time. In the drift-ordering up to order $\mathcal O(\delta^3)$ we get
+We integrate the polarisation equation over volume, multiply by $\d \psi_p/\d v$ and derive by time. In the drift-ordering up to order $\mathcal O(\delta^3)$ we get
 \begin{align}
     &\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} + \RA{\mathcal S_\Omega} \label{eq:vorticity_average} \\
 \Omega &:= \mu_i N_i \left(\frac{\vn\psi_p\cn\phi}{B^2} + \tau_i \vn\ln N_i\cn\psi_p\right) \equiv \mu_i N_i(u_{E,\varphi} + u_{D,\varphi}) \\
 \vec j_{\Omega} &:= \Omega \vec u_E
-    - \left(\frac{1}{\beta} \vn\psi_p \cn A_\parallel +\frac{1}{2}\tau_i \vn\psi_p\cn  (N_iU_i)\right)\frac{\bhat\times\vn A_\parallel}{B} \\
-    F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_e^2 + z_i\mu_i N_iU_i^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
+    - \left(\frac{1}{\beta} \vn\psi_p \cn A_\parallel +\frac{1}{2}\tau_i \vn\psi_p\cn  (N_iU_{\parallel,i})\right)\frac{\bhat\times\vn A_\parallel}{B} \\
+    F_{L,\varphi} &:=  -(z_e \tau_e n_e + z_i\tau_i N_i)\mathcal K(\psi_p) - (z_e\mu_e n_eu_{\parallel,e}^2 + z_i\mu_i N_iU_{\parallel,i}^2)\mathcal K_{\vn\times\bhat}(\psi_p) \\
     \mathcal S_\Omega &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn \phi}{B^2} + \mu_i\tau_i\vn\psi_p\cn S_{n_e} \label{eq:em_source}
 \end{align}
 Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continuity equation to yield an equation only for the \ExB angular momentum. Again up to order $\mathcal O(\delta^3)$ in the drift ordering we obtain
@@ -1232,7 +1232,7 @@ Equation~\eqref{eq:vorticity_average} can be rewritten by inserting the continui
 &\partial_t \RA{\Omega_E} + \frac{\partial}{\partial v} \frac{\d v}{\d \psi_p}\RA{ \vec j_{\Omega_E}\cn\psi_p} = -\RA{F_{L,\varphi}}+ \RA{\mathcal S_{\Omega_E}} + \RA{\Lambda_{\Omega_E}} \label{eq:exb_average} \\
 \Omega_E &:= \mu_i N_i \frac{\vn\psi_p\cn\phi}{B^2} \equiv \mu_i N_i u_{E,\varphi} \\
 \vec j_{\Omega_E} &:= \Omega_E (\vec u_E + \vec u_D)
-    - \vn A_\parallel\cn\psi_p \left(\frac{1}{\beta} \frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \mu_i \tau_i N_iU_i\right) \\
+    - \vn A_\parallel\cn\psi_p \left(\frac{1}{\beta} \frac{\bhat\times\vn A_\parallel}{B} +\frac{1}{2} \bhat \times \vn \mu_i \tau_i N_iU_{\parallel,i}\right) \\
     \mathcal S_{\Omega_E} &:= \mu_i S_{n_e} \frac{\vn\psi_p\cn\phi}{B^2} \quad
     \Lambda_{\Omega_E} := \mu_i \Lambda_{n_e}\frac{\vn\psi_p\cn\phi}{B^2}
 \end{align}
@@ -1254,12 +1254,12 @@ In the output file we have
     jsoexbiUD\_tt &$\mu_i\tau_i \frac{\vn\psi_p\cn\phi}{B^2} \frac{\bhat\times\vn N_i\cn \psi_p}{B}$ &
     jsoexbeUD\_tt &$\mu_i\tau_i \frac{\vn\psi_p\cn\phi}{B^2} \frac{\bhat\times\vn n_e\cn \psi_p}{B}$ \\
     jsoapar\_tt &$ -\vn\psi_p\cn A_\parallel \frac{\bhat\times\vn A_\parallel\cn \psi_p}{B\beta}$ &
-    jsodiaApar\_tt & $ -\frac{1}{2}\tau_i \vn\psi_p\cn  (N_iU_i)\frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p$ \\
-    jsoexbApar\_tt & $ -\frac{1}{2}\tau_i \bhat\times\vn  (N_iU_i)\cn\psi_p \vn A_\parallel\cn\psi_p$ &
+    jsodiaApar\_tt & $ -\frac{1}{2}\tau_i \vn\psi_p\cn  (N_iU_{\parallel,i})\frac{\bhat\times\vn A_\parallel}{B}\cn\psi_p$ \\
+    jsoexbApar\_tt & $ -\frac{1}{2}\tau_i \bhat\times\vn  (N_iU_{\parallel,i})\cn\psi_p \vn A_\parallel\cn\psi_p$ &
     socurve\_tt &$z_e\tau_e n_e \mathcal K(\psi_p)$ \\
     socurvi\_tt &$z_i\tau_i N_i \mathcal K(\psi_p)$ &
-    socurvkappae\_tt &$z_e\mu_e n_eu_e^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
-    socurvkappai\_tt &$z_i\mu_i N_iU_i^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ & \\
+    socurvkappae\_tt &$z_e\mu_e n_eu_{\parallel,e}^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ \\
+    socurvkappai\_tt &$z_i\mu_i N_iU_{\parallel,i}^2 \mathcal K_{\vn\times\bhat}(\psi_p)$ & \\
     sosne\_tt & $\mu_i S_{n_e} \vn\psi_p\cn\phi/B^2$ &
     sospi\_tt & $\mu_i \tau_i \vn\psi_p \cn S_{n_e}$\\
     loexbe\_tt & $ \mu_i \Lambda_{n_e} \vn\psi_p\cn\phi/B^2$ & \\
@@ -1270,19 +1270,19 @@ In the output file we have
 \subsubsection{Parallel momentum balance}
 The flux surface average over the parallel momentum equation under species summation  yields up to order $\mathcal O(\delta^3)$ in the drift-ordering
 \begin{align}
-  \frac{\partial}{\partial t}\RA{\mu_iN_iU_{i} }
+  \frac{\partial}{\partial t}\RA{\mu_iN_iU_{\parallel,i} }
     % \nonumber\\
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + z_s\mu_s N_sU_s^2) b_{\perp}^{\;v}  }
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_{\parallel,i} \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + z_s\mu_s N_sU_{\parallel,s}^2) b_{\perp}^{\;v}  }
     \nonumber\\
-   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_i}
+   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_{\parallel,i}}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads up to order $\mathcal O(\delta^3)$
 \begin{align}\label{eq:parallel_momentum_direction}
-    \frac{\partial}{\partial t}  \RA{\mu_iN_iU_i b_\varphi}
-    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_i b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + z_s\mu_sN_sU_s^2) b_\varphi b_{\perp}^{\;v} }
+    \frac{\partial}{\partial t}  \RA{\mu_iN_iU_{\parallel,i} b_\varphi}
+    + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_{\parallel,i} b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + z_s\mu_sN_sU_{\parallel,s}^2) b_\varphi b_{\perp}^{\;v} }
     \nonumber\\
-   = \RA{F_{L,\varphi}} + \mu_i \RA{ S_{N_i} U_i b_\varphi}
+   = \RA{F_{L,\varphi}} + \mu_i \RA{ S_{N_i} U_{\parallel,i} b_\varphi}
 \end{align}
 
 The relevant terms in the output file are (the Lorentz force term is described in the previous subsection \ref{sec:vorticity_eq})
@@ -1291,18 +1291,18 @@ The relevant terms in the output file are (the Lorentz force term is described i
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} &
 \textbf{Name} &  \textbf{Equation}\\
 \midrule
-    neue &$n_e u_e$ &
-    niui &$\mu_i N_i U_i$ \\
-    neuebphi &$n_eu_eb_\varphi$ &
-    niuibphi &$\mu_i N_iU_ib_\varphi$ \\
-    jsparexbi\_tt       & $\mu_i N_iU_i(\bhat\times\vn\phi)\cn \psi_p/B$ &
-    jsparbphiexbi\_tt   & $\mu_i N_iU_ib_\varphi(\bhat\times\vn\phi)\cn \psi_p/B$ \\
-    jsparApar\_tt       & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_s^2)b_\perp^v$ &
-    jsparbphiApar\_tt   & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_s^2)b_\varphi b_\perp^v$ \\
+    neue &$n_e u_{\parallel,e}$ &
+    niui &$\mu_i N_i U_{\parallel,i}$ \\
+    neuebphi &$n_eu_{\parallel,e}b_\varphi$ &
+    niuibphi &$\mu_i N_iU_{\parallel,i}b_\varphi$ \\
+    jsparexbi\_tt       & $\mu_i N_iU_{\parallel,i}(\bhat\times\vn\phi)\cn \psi_p/B$ &
+    jsparbphiexbi\_tt   & $\mu_i N_iU_{\parallel,i}b_\varphi(\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jsparApar\_tt       & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\perp^v$ &
+    jsparbphiApar\_tt   & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\varphi b_\perp^v$ \\
     sparmirrore\_tt & $-z_e\tau_en_e\npar \ln B$ &
     sparmirrori\_tt & $-z_i\tau_iN_i\npar \ln B$ \\
-    sparsni\_tt & $\mu_i S_{N_i} U_i$ &
-    sparsnibphi\_tt & $\mu_i S_{N_i} U_ib_\varphi $ \\
+    sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i}$ &
+    sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi $ \\
 \bottomrule
 \end{longtable}
 
@@ -1346,8 +1346,8 @@ In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:
 \begin{align*}
 n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
 N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \gamma_{ N_i}  \\
-u_e(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
-U_i(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_e(R,Z,\varphi,t) \\
+u_{\parallel,e}(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
+U_{\parallel,i}(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_{\parallel,e}(R,Z,\varphi,t) \\
 \phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
 \psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \gamma_{\phi} \\
 A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
@@ -1376,7 +1376,7 @@ discontinuous Galerkin on structured grid
 Advection terms & direct DG & DG approximation with centered flux of derivatives \\
 Elliptic terms & local DG & The local DG approximation with centered flux \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\npar N$ and $\npar \phi$ in the velocity equation use a forward difference, while the term $\npar U$ in the
+Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\npar N$ and $\npar \phi$ in the velocity equation use a forward difference, while the term $\npar U_\parallel$ in the
 density equation uses backward difference. This is to avoid a too wide stencil for the diverence of the current and increases stability for low resistivity. \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
@@ -1457,7 +1457,7 @@ If you want to let the simulation run for a certain time instead just choose
 this parameter very large and let the simulation hit the time-limit.
 \\
 eps\_time   & float & 1e-7  & - & Tolerance for solver for implicit part in
-time-stepper (if too low, you'll see oscillations in $u_e$ and/or $\phi$)
+time-stepper (if too low, you'll see oscillations in $u_{\parallel,e}$ and/or $\phi$)
 \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep)
 \\
@@ -1515,13 +1515,13 @@ symmetric & bool & false & false & If true, initialize all quantities symmetric
 in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
 to construct the parallel derivatives and then overwritten to $N_z\equiv 1$.
 \\
-bc & dict & & & Boundary conditions (note that $A_\parallel$ has the same bc as $U$) \ldots\\
+bc & dict & & & Boundary conditions (note that $A_\parallel$ has the same bc as $U_\parallel$) \ldots\\
 \qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y
 for $n_e$ and $N_i$, DIR (density 1 on boundary) means both convective and
     diffusive outflow while NEU (gradient 0) means no outflow by diffusion
 \\
 \qquad velocity  & char[2] & [NEU,NEU] & - & boundary conditions in x and y for
-$u_e$ and $U_i$ and $A_\parallel$, DIR is in general not very stable, NEU works
+$u_{\parallel,e}$ and $U_{\parallel,i}$ and $A_\parallel$, DIR is in general not very stable, NEU works
 better\\
 \qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for
 $\phi$ and $\psi$, DIR means that the $v_{E,\perp}=0$ on the boundary (i.e. no
@@ -1627,8 +1627,8 @@ BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component 
 BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
 electrons        & Dataset & 4 (time, z, y, x) & electron density $n_e$ \\
 ions             & Dataset & 4 (time, z, y, x) & ion density $N_i$ \\
-Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_e$ \\
-Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_i$ \\
+Ue               & Dataset & 4 (time, z, y, x) & electron velocity $u_{\parallel,e}$ \\
+Ui               & Dataset & 4 (time, z, y, x) & ion velocity $U_{\parallel,i}$ \\
 potential        & Dataset & 4 (time, z, y, x) & electric potential $\phi$ \\
 induction        & Dataset & 4 (time, z, y, x) & parallel vector potential $A_\parallel$ \\
 X\_2d            & Dataset & 3 (time,y,x) & Selected plane $X(\varphi=0)$ \\
@@ -1650,9 +1650,9 @@ X and Y\_tt represent the quantities described in the tables in previous section
 \midrule
     vorticity &$-\Delta_\perp\phi$ &
     apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
-    dssue & $\npar^2 u_e$&
-    dppue & $\partial_\varphi^2 u_e$\\
-    dpue2 & $(\partial_\varphi u_e)^2$&
+    dssue & $\npar^2 u_{\parallel,e}$&
+    dppue & $\partial_\varphi^2 u_{\parallel,e}$\\
+    dpue2 & $(\partial_\varphi u_{\parallel,e})^2$&
     lperpinv &$L_\perp^{-1} := |\vec\np n_e|/n_e$ \\
     perpaligned &$(\vec\np n_e)^2/n_e$ &
     lparallelinv &$L_\parallel^{-1} := |\npar n_e|/n_e$ \\
@@ -1793,15 +1793,15 @@ The program terminates usually caused by a NaN exception raised. However,
 the cause for the instability has to be determined inspecting the
 last output in the output file.
     \\
-\qquad large fieldaligned oscillations in $u_e$ paired with instability in the edge of the box
+\qquad large fieldaligned oscillations in $u_{\parallel,e}$ paired with instability in the edge of the box
 &
 Apply damping region
     \\
-\qquad Perpendicular grid oscillations in $u_e$ and $\Delta_\perp \phi$ in the damping region, symmetric in $\varphi$
+\qquad Perpendicular grid oscillations in $u_{\parallel,e}$ and $\Delta_\perp \phi$ in the damping region, symmetric in $\varphi$
 &
 Increase damping $alpha$, increase damping boundary, make the box larger/smaller
     \\
-\qquad Spike in $u_e$ shortly after simulation start
+\qquad Spike in $u_{\parallel,e}$ shortly after simulation start
 &
 Increase $\nu_\perp$, increase $N_x$, $N_y$, decrease perturbation amplitude
     \\
