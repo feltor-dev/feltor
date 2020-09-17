@@ -985,10 +985,7 @@ std::vector<Record> diagnostics2d_list = {
             routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
 
             // parallel momentum mu_iN_iU_i
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( result, v.tmp[0], result);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
         }
     },
     {"jsparbphiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with ion density (Time average)", true,
@@ -1063,6 +1060,7 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// --------------------- Parallel momentum source terms ---------------------//
+    //Not important
     {"sparpar_tt", "Parallel Source for momentum source", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.f.velocity(1), v.f.velocity(1), v.tmp[1]);
@@ -1086,12 +1084,30 @@ std::vector<Record> diagnostics2d_list = {
     /// --------------------- Mirror force term ---------------------------//
     {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( -v.p.tau[0], v.f.divb(), v.f.density(0), 0., result);
+            //dg::blas1::pointwiseDot( -v.p.tau[0], v.f.divb(), v.f.density(0), 0., result);
+            dg::blas1::axpby( -v.p.tau[0], v.f.dsN(0), 0., result);
         }
     },
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
+            //dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
+            dg::blas1::axpby( v.p.tau[1], v.f.dsN(1), 0., result);
+        }
+    },
+    {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
+        []( DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( -1., v.f.dsP(0), v.f.density(0), 0., result);
+        }
+    },
+    {"sparphii_tt", "Electric force term in ion momentum density (Time average)", true,
+        []( DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( -1., v.f.dsP(1), v.f.density(1), 0., result);
+        }
+    },
+    {"friction_tt", "Friction force in momentum density (Time average)", true,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::axpby( 1., v.f.velocity(1), -1., v.f.velocity(0), result);
+            dg::blas1::pointwiseDot( -v.p.eta, result, v.f.density(0), v.f.density(0), 0, result);
         }
     },
     /// --------------------- Lorentz force terms ---------------------------//

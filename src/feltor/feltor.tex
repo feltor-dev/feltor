@@ -744,15 +744,17 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
 \begin{align}
 \frac{\partial}{\partial t} N &+ \vec\nc\left( N \left(
     \vec u_E + \vec u_K + \vec u_{C} + U_\parallel\left(\bhat + {\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
-\mu N \frac{\partial}{\partial t} U_\parallel &+ \mu N \left(
+    \mu \frac{\partial}{\partial t} \left(N U_\parallel\right) &+ \mu \nc \left( NU_\parallel \left(
     \vec u_E + \vec u_K + \vec u_{C} + U_\parallel\left(\bhat + {\vec b}_\perp\right)
-    \right)\cn U_\parallel  \nonumber \\
+    \right)\right)  \nonumber \\
     &+ 2\mu \nc ( NU_\parallel \vec u_{\vn\times\bhat})
     -\mu NU_\parallel\nc \vec u_{\vn\times\bhat}
     + \mu NU_\parallel\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
-    &= -\tau \left(\bhat + {\vec b}_\perp\right)\cn N
+    =& -\tau \left(\bhat + {\vec b}_\perp\right)\cn N
     -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right)
-    - \eta n_e^2(U_{\parallel,i}-u_{\parallel,e}) + \mu N\Lambda_U + \mu N S_U
+    - \eta n_e^2(U_{\parallel,i}-u_{\parallel,e})
+    \nonumber\\
+    &+ \mu N\left(\Lambda_U + S_U\right) + \mu U_\parallel \left(\Lambda_N + S_N\right)
 \label{}
 \end{align}
 with

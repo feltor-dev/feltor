@@ -131,13 +131,13 @@ struct ComputePsi{
         GammaPhi = GammaPhi - 0.5*HdxPhi;
     }
 };
-struct ComputeLogN{
-    DG_DEVICE
-    void operator()( double tilde_n, double& npe, double& logn) const{
-        npe =  tilde_n + 1.;
-        logn =  log(npe);
-    }
-};
+//struct ComputeLogN{
+//    DG_DEVICE
+//    void operator()( double tilde_n, double& npe, double& logn) const{
+//        npe =  tilde_n + 1.;
+//        logn =  log(npe);
+//    }
+//};
 struct ComputeSource{
     DG_DEVICE
     void operator()( double& result, double tilde_n, double profne,
@@ -234,6 +234,9 @@ struct Explicit
     }
     const Container & dsU (int i) const {
         return m_dsU[i];
+    }
+    const Container & dsP (int i) const {
+        return m_dsP[i];
     }
     const Container & dssN(int i) { //2nd fieldaligned derivative
         return m_dssN[i];
@@ -368,7 +371,7 @@ struct Explicit
     Container m_vol3d;
 
     Container m_apar;
-    std::array<Container,2> m_phi, m_logn, m_dsN, m_dsU, m_dssN, m_dssU;
+    std::array<Container,2> m_phi, m_dsN, m_dsU, m_dsP, m_dssN, m_dssU;
     std::array<Container,3> m_dA;
     std::array<std::array<Container,3>,2> m_dP, m_dN, m_dU;
     std::array<std::array<Container,2>,2> m_fields, m_s; //fields, sources
@@ -564,7 +567,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_apar = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
-    m_dssN = m_dssU = m_dsN = m_dsU =  m_logn = m_phi;
+    m_dssN = m_dssU = m_dsN = m_dsU = m_dsP = m_phi;
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
     m_dN = m_dU = m_dP;
@@ -835,12 +838,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         // Burgers term: -0.5 ds U^2
         //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
         //m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
-            dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //U^2
+        dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //U^2
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
         // (These two terms converge slowly and require high z resolution)
-        //m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
+        ////m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
         dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
-        m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
+        //m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
+        m_ds_P.centered( m_phi[i], m_dsP[i]);
+        dg::blas1::axpby(-1./m_p.mu[i], m_dsP[i], 1.0, yp[1][i]);
         // diffusion: + nu_par Delta_par U
         dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
                                 1., yp[1][i]);
@@ -881,7 +886,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     timer.tic();
 
     // Transform n-1 to n and n to logn
-    dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
+    //dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
+
+    // Transform n-1 to n
+    dg::blas1::axpby( 1., y[0], 1., 1.,  m_fields[0]);
 
     // Compute Apar and m_U if necessary --- reads and updates m_fields[1]
     dg::blas1::copy( y[1], m_fields[1]);
