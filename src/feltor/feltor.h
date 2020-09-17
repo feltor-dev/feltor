@@ -833,11 +833,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
-        dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
-        m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
+        //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
+        //m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
+            dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //U^2
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
         // (These two terms converge slowly and require high z resolution)
-        m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
+        //m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
+        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
         m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
         // diffusion: + nu_par Delta_par U
         dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
