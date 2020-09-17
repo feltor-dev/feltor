@@ -113,7 +113,7 @@ struct ImplicitVelocity
         //m_induction.construct(  g,
         //    p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
         //m_induction.elliptic().set_chi( hh);
-        //m_invert.construct( m_temp, g.size(), p.eps_pol,1 );
+        //m_invert.construct( m_temp, g.size(), p.eps_pol[0],1 );
         //Multigrid setup
         m_multi_induction.resize(p.stages);
         m_multigrid.construct( g, p.stages);
@@ -166,10 +166,10 @@ struct ImplicitVelocity
             m_old_apar.extrapolate( m_apar);
             //dg::blas1::scal( m_apar, 0.);
             std::vector<unsigned> number = m_multigrid.direct_solve(
-                m_multi_induction, m_apar, m_temp, {m_p.eps_pol,m_p.eps_pol,m_p.eps_pol});
+                m_multi_induction, m_apar, m_temp, m_p.eps_pol[0]); //eps_pol[0] on all grids
             //m_old_apar.update( m_apar); //don't update here: makes the solver potentially unstable
             if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_pol);
+                throw dg::Fail( m_p.eps_pol[0]);
 
             //compute u_e and U_i from w_e, W_i and apar
             dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],

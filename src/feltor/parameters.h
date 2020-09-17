@@ -18,7 +18,7 @@ struct Parameters
     unsigned itstp;
     unsigned maxout;
 
-    double eps_pol;
+    std::vector<double> eps_pol;
     double jfactor;
     double eps_gamma;
     double eps_time;
@@ -67,11 +67,16 @@ struct Parameters
         eps_time    = file::get( mode, js, "eps_time", 1e-10).asDouble();
         rtol        = file::get( mode, js, "rtol", 1e-5).asDouble();
 
-        eps_pol     = file::get( mode, js, "eps_pol", 1e-6).asDouble();
+        stages      = file::get( mode, js, "stages", 3).asUInt();
+        eps_pol.resize(stages);
+        for( unsigned i=0;i<stages; i++)
+        {
+            eps_pol[i] = file::get_idx( mode, js, "eps_pol", i, i==0 ? 1e-6 : 1).asDouble();
+            eps_pol[i]*=eps_pol[0];
+        }
         jfactor     = file::get( mode, js, "jumpfactor", 1).asDouble();
 
         eps_gamma   = file::get( mode, js, "eps_gamma", 1e-6).asDouble();
-        stages      = file::get( mode, js, "stages", 3).asUInt();
         mx          = file::get_idx( mode, js,"FCI","refine", 0u, 1).asUInt();
         my          = file::get_idx( mode, js,"FCI","refine", 1u, 1).asUInt();
         rk4eps      = file::get( mode, js,"FCI", "rk4eps", 1e-6).asDouble();
@@ -164,7 +169,7 @@ struct Parameters
             <<"     Ny = "<<Ny<<"\n"
             <<"     Nz = "<<Nz<<"\n"
             <<"     dt = "<<dt<<"\n"
-            <<"     Accuracy Polar CG:    "<<eps_pol<<"\n"
+            <<"     Accuracy Polar CG:    "<<eps_pol[0]<<"\n"
             <<"     Jump scale factor:    "<<jfactor<<"\n"
             <<"     Accuracy Gamma CG:    "<<eps_gamma<<"\n"
             <<"     Accuracy Time  CG:    "<<eps_time<<"\n"
@@ -172,6 +177,8 @@ struct Parameters
             <<"     Accuracy Fieldline    "<<rk4eps<<"\n"
             <<"     Periodify FCI         "<<std::boolalpha<< periodify<<"\n"
             <<"     Refined FCI           "<<mx<<" "<<my<<"\n";
+        for( unsigned i=1; i<stages; i++)
+            os <<"     Factors for Multigrid "<<i<<" "<<eps_pol[i]<<"\n";
         os << "Output parameters are: \n"
             <<"     n_out  =                 "<<n_out<<"\n"
             <<"     Nx_out =                 "<<Nx_out<<"\n"

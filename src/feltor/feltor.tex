@@ -1461,14 +1461,15 @@ time-stepper (if too low, you'll see oscillations in $u_{\parallel,e}$ and/or $\
 \\
 rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep)
 \\
-eps\_pol    & float & 1e-6  & - &  Tolerance for residual of the inversion of polarisation and induction Eq. (should not be more than a factor 10 from eps\_time for $\beta\neq  0$ )
+stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
+has to evenly divide both $N_x$ and $N_y$
+\\
+eps\_pol    & float[stages] & [1e-6,1,1]  & - &  The first number is the tolerance for residual of the inversion of polarisation and induction Eq.. The second number is a multiplicative factor for the accuracy on the second grid in a multigrid scheme, the third for the third grid and so on.  (i.e. $\eps_0\eps_i$ is the accuracy on the i-th grid)
+Tuning those factors is a major performance tuning oppourtunity!! For saturated turbulence the suggested values are [1e-6, 2000, 100].
 \\
 jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms. (Don't touch unless you know what you're doing.
 \\
 eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$
-\\
-stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
-has to evenly divide both $N_x$ and $N_y$
 \\
 FCI & dict & & & Parameters for Flux coordinate independent approach
 \\

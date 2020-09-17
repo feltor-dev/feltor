@@ -14,7 +14,7 @@
     "inner_loop" : 2,
     "itstp"  : 2,
     "maxout" : 5,
-    "eps_pol"    : 1e-7,
+    "eps_pol"    : [1e-7,1,1],
     "jumpfactor" : 1,
     "eps_gamma"  : 1e-5,
     "stages"     : 3,

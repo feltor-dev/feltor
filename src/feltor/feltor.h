@@ -670,10 +670,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, m_phi[0]);
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_pol, m_phi[0], m_temp0, {m_p.eps_pol, 2000*m_p.eps_pol, 100*m_p.eps_pol});
+        m_multi_pol, m_phi[0], m_temp0, m_p.eps_pol);
     m_old_phi.update( time, m_phi[0]);
     if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_pol);
+        throw dg::Fail( m_p.eps_pol[0]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -744,10 +744,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
         m_p.beta,m_p.nu_perp,m_p.nu_parallel},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_induction, m_apar, m_temp0, m_p.eps_pol);
+        m_multi_induction, m_apar, m_temp0, m_p.eps_pol[0]);
     m_old_apar.update( time, m_apar);
     if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_pol);
+        throw dg::Fail( m_p.eps_pol[0]);
     //----------Compute Derivatives----------------------------//
     dg::blas2::symv( m_dx_U, m_apar, m_dA[0]);
     dg::blas2::symv( m_dy_U, m_apar, m_dA[1]);
