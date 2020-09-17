@@ -69,9 +69,10 @@ struct Parameters
 
         stages      = file::get( mode, js, "stages", 3).asUInt();
         eps_pol.resize(stages);
-        for( unsigned i=0;i<stages; i++)
+        eps_pol[0] = file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
+        for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = file::get_idx( mode, js, "eps_pol", i, i==0 ? 1e-6 : 1).asDouble();
+            eps_pol[i] = file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
             eps_pol[i]*=eps_pol[0];
         }
         jfactor     = file::get( mode, js, "jumpfactor", 1).asDouble();
