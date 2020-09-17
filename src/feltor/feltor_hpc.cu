@@ -201,7 +201,7 @@ int main( int argc, char* argv[])
         double psipO = mag.psip()( RO, ZO);
         double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
         double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
+        MPI_OUT std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
         Json::Value jsmod;
         jsmod["modifier"] = "heaviside";
         jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
