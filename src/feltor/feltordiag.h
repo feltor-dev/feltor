@@ -979,10 +979,11 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// --------------------- Parallel momentum flux terms ---------------------//
-    {"jsparexbi_tt", "Parallel momentum radial flux by ExB velocity with ion density (Time average)", true,
+    // In equation the electron potential is used!
+    {"jsparexbi_tt", "Parallel momentum radial flux by ExB velocity with ion potential (Time average)", true,
         []( DVec& result, Variables& v){
             // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(1), v.gradPsip, result);
 
             // parallel momentum mu_iN_iU_i
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
@@ -991,7 +992,7 @@ std::vector<Record> diagnostics2d_list = {
     {"jsparbphiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with ion density (Time average)", true,
         []( DVec& result, Variables& v){
             // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(1), v.gradPsip, result);
 
             // parallel momentum mu_iN_iU_i
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
@@ -1009,6 +1010,14 @@ std::vector<Record> diagnostics2d_list = {
 
             // Multiply everything
             dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.tmp[0], v.f.velocity(1), v.p.mu[1]*v.p.tau[1], v.tmp[1], v.f.density(1), 0., result);
+        }
+    },
+    {"jsparkappai_tt", "Parallel momentum radial flux by curvature velocity (Time average)", true,
+        []( DVec& result, Variables& v){
+            routines::dot( v.f.curvKappa(), v.gradPsip, v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), v.tmp[0], 0., v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.tmp[0], 0., v.tmp[1]);
+            dg::blas1::axpbypgz( 2.*v.p.tau[1], v.tmp[0], +1., v.tmp[1], 0., result);
         }
     },
     {"jsparbphidiai_tt", "Parallel angular momentum radial flux by Diamagnetic velocity with ion density (Time average)", true,
@@ -1060,13 +1069,24 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// --------------------- Parallel momentum source terms ---------------------//
-    //Not important
-    {"sparpar_tt", "Parallel Source for momentum source", true,
+    //Not so important
+    {"sparpar_tt", "Parallel Source for parallel momentum", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.f.velocity(1), v.f.velocity(1), v.tmp[1]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.tmp[1], v.f.divb(), 0., result);
             dg::blas1::pointwiseDot( 0.5*v.p.mu[1], v.f.density(1),  v.f.velocity(1), v.f.dsU(1), 1., result);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[1], v.f.dsN(1), 1., result);
+        }
+    },
+    {"spardivKappa_tt", "Divergence Kappa Source for parallel momentum", true,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( -v.p.mu[1]*v.p.tau[1], v.f.density(1), v.f.velocity(1), v.f.divCurvKappa(), 0., result);
+        }
+    },
+    {"sparKappaphi_tt", "Kappa Phi Source for parallel momentum", true,
+        []( DVec& result, Variables& v ) {
+            routines::dot( v.f.curvKappa(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( -v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
         }
     },
     {"sparsni_tt", "Parallel momentum source by density source", true,
@@ -1079,6 +1099,25 @@ std::vector<Record> diagnostics2d_list = {
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.mu[1],
                 v.f.density_source(1), v.f.velocity(1), v.f.bphi(), 0., result);
+        }
+    },
+    {"lparpar_tt", "Parallel momentum dissipation by parallel diffusion", true,
+        []( DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsN(1),
+                                     0., v.tmp[0]);
+            dg::blas1::axpby( 1., v.f.dssN(1), 1., v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsU(1),
+                                     0., v.tmp[1]);
+            dg::blas1::axpby( 1., v.f.dssU(1), 1., v.tmp[1]);
+            dg::blas1::pointwiseDot( v.p.nu_parallel, v.tmp[0], v.f.velocity(1), v.p.nu_parallel, v.tmp[1], v.f.density(1), 0., result);
+        }
+    },
+    //remove if it does not contribute since it might be expensive
+    {"lparperp_tt", "Parallel momentum dissipation by perp diffusion", true,
+        []( DVec& result, Variables& v ) {
+            v.f.compute_diffusive_lapMperpN( v.f.density(1), result, v.tmp[0]);
+            v.f.compute_diffusive_lapMperpU( v.f.velocity(1), result, v.tmp[1]);
+            dg::blas1::pointwiseDot( -v.p.nu_perp, v.tmp[0], v.f.velocity(1), -v.p.nu_perp, v.tmp[1], v.f.density(1), 0., result);
         }
     },
     /// --------------------- Mirror force term ---------------------------//
@@ -1094,6 +1133,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( -v.p.tau[1], v.f.dsN(1), 0., result);
         }
     },
+    //electric force balance usually well-fulfilled
     {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
         []( DVec& result, Variables& v){
             dg::blas1::pointwiseDot( -1., v.f.dsP(0), v.f.density(0), 0., result);

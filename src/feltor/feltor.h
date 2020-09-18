@@ -888,8 +888,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     // Transform n-1 to n and n to logn
     //dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
 
-    // Transform n-1 to n
-    dg::blas1::axpby( 1., y[0], 1., 1.,  m_fields[0]);
+    // Transform n-1 to n (this computes both n_e and N_i)
+    dg::blas1::transform( y[0], m_fields[0], dg::PLUS<double>(+1));
 
     // Compute Apar and m_U if necessary --- reads and updates m_fields[1]
     dg::blas1::copy( y[1], m_fields[1]);
