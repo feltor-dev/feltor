@@ -938,6 +938,44 @@ struct PolynomialHeaviside {
     double x0, a;
     int m_s;
 };
+/**
+ * @brief An approximation to the Rectangle function using polynomials
+     \f[ \begin{cases}
+     0 \text{ if } x < x_l-a_l \\
+        ((16 a_l^3 - 29 a_l^2 (x - x_l) + 20 a_l (x - x_l)^2 - 5 (x - x_l)^3) (a_l + x -
+   x_l)^4)/(32 a_l^7) \text{ if } |x-x_l| < a_l \\
+        1  \text{ if } x_l + a_l < x < x_r-a_r \\
+        ((16 a_r^3 - 29 a_r^2 (x - x_r) + 20 a_r (x - x_r)^2 - 5 (x - x_r)^3) (a_r + x -
+   x_l)^4)/(32 a_r^7) \text{ if } |x-x_r| < a_r \\
+   0 \text{ if } x > x_r + a_r
+     \end{cases}\f]
+
+     Basically just the product of two PolynomialHeaviside functions
+
+     This function is 3 times continuously differentiable, takes the value 0.5 at xl and xr and
+     has a transition width a_l on both sides of xl and a width a_r on both sides of xr.
+ */
+struct PolynomialRectangle {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xl left boundary value
+     * @param al left transition width (must be != 0)
+     * @param xr right boundary value
+     * @param ar right transition width (must be != 0)
+     */
+    PolynomialRectangle(double xl, double al, double xr, double ar) :
+        m_hl( xl, al, +1), m_hr( xr, ar, -1) {
+        assert( xl < xr && "left boundary must be left of right boundary");
+    }
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        return m_hl(x)*m_hr(x);
+    }
+    private:
+    PolynomialHeaviside m_hl, m_hr;
+};
 
 /**
  * @brief The integral of PolynomialHeaviside approximates xH(x)
