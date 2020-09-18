@@ -1085,13 +1085,13 @@ std::vector<Record> diagnostics2d_list = {
     {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
             //dg::blas1::pointwiseDot( -v.p.tau[0], v.f.divb(), v.f.density(0), 0., result);
-            dg::blas1::axpby( -v.p.tau[0], v.f.dsN(0), 0., result);
+            dg::blas1::axpby( v.p.tau[0], v.f.dsN(0), 0., result);
         }
     },
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
             //dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
-            dg::blas1::axpby( v.p.tau[1], v.f.dsN(1), 0., result);
+            dg::blas1::axpby( -v.p.tau[1], v.f.dsN(1), 0., result);
         }
     },
     {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
