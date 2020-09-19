@@ -1101,10 +1101,12 @@ std::vector<Record> diagnostics2d_list = {
                 v.p.mu[1], v.f.velocity_source(1), v.f.density(1), 0., result);
         }
     },
-    {"sparsnibphi_tt", "Parallel angular momentum source by density source", true,
+    {"sparsnibphi_tt", "Parallel angular momentum source by density and velocity sources", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.mu[1],
                 v.f.density_source(1), v.f.velocity(1), v.f.bphi(), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1],
+                v.f.velocity_source(1), v.f.density(1), v.f.bphi(), 1., result);
         }
     },
     //should be zero
@@ -1141,6 +1143,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( -1., v.f.dsP(0), v.f.density(0), 0., result);
         }
     },
+    //These two should be almost the same
     {"sparphii_tt", "Electric force term in ion momentum density (Time average)", true,
         []( DVec& result, Variables& v){
             dg::blas1::pointwiseDot( -1., v.f.dsP(1), v.f.density(1), 0., result);

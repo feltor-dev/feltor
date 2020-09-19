@@ -373,6 +373,16 @@ struct Extrapolation
     }
 
     /**
+    * @brief Backard difference formula to get time derivative \f$ (x_0-x_1)/(t_0-t_1)\f$
+    * @param dot_x (write only) contains derived value on output
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
+    template<class ContainerType0>
+    void derive( ContainerType0& dot_x) const{
+        dg::blas1::axpbypgz( 1./(m_t[0]-m_t[1]), m_x[0], 1./(m_t[0]-m_t[1]), m_x[1], 0., dot_x);
+    }
+
+    /**
     * @brief Extrapolate value
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @note Assumes that extrapolation time equals last inserted time+1

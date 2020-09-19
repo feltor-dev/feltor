@@ -252,6 +252,10 @@ struct Explicit
         dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
         if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
+    const Container& compute_dot_induction( Container& tmp) const {
+        m_old_apar.derive( tmp);
+    }
+    //maybe better give these a temporary
     const Container & compute_dppN(int i) { //2nd varphi derivative
         dg::blas2::symv( m_dz, m_fields[0][i], m_temp0);
         dg::blas2::symv( m_dz, m_temp0, m_temp1);
@@ -835,7 +839,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         m_ds_N.dss( y[0][i], m_dssN[i]);
         dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., m_temp0);//nu_par Delta_par N
         //Add to rhs, we again need it further down
-        dg::blas1::apxby( 1., m_temp0, 1., yp[0][i]);
+        dg::blas1::axpby( 1., m_temp0, 1., yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
         //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
