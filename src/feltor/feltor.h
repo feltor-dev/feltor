@@ -831,26 +831,29 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
             1.,yp[0][i]);
         //density: + nu_par Delta_par N
         dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
-                                 1., yp[0][i]);
+                                 0., m_temp0);
         m_ds_N.dss( y[0][i], m_dssN[i]);
-        dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., yp[0][i]);
+        dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., m_temp0);//nu_par Delta_par N
+        //Add to rhs, we again need it further down
+        dg::blas1::apxby( 1., m_temp0, 1., yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
         //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
         //m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
-        dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //U^2
+        dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //-U ds U
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
-        // (These two terms converge slowly and require high z resolution)
         ////m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
         dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
         //m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
         m_ds_P.centered( m_phi[i], m_dsP[i]);
         dg::blas1::axpby(-1./m_p.mu[i], m_dsP[i], 1.0, yp[1][i]);
-        // diffusion: + nu_par Delta_par U
+        // diffusion: + nu_par Delta_par U/N - nu_par U Delta_par N/ N
         dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
-                                1., yp[1][i]);
+                                0., m_temp1);
         m_ds_U.dss( fields[1][i], m_dssU[i]);
-        dg::blas1::axpby( m_p.nu_parallel, m_dssU[i], 1., yp[1][i]);
+        dg::blas1::axpby( m_p.nu_parallel, m_dssU[i], 1., m_temp1); //nu_par Delta_par U
+        dg::blas1::pointwiseDot( -1., fields[1][i], m_temp0, 1., m_temp1); //
+        dg::blas1::pointwiseDivide( 1., m_temp1, fields[0][i], 1., yp[1][i]);
     }
 }
 
@@ -930,9 +933,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
         // -w_d ~n
         dg::blas1::pointwiseDot( -m_omega_damping, m_damping, y[0][0], 1.,  m_s[0][0]);
-        // - w_d U
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][0], 0.,  m_s[1][0]);
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][1], 0.,  m_s[1][1]);
         //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
         dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
@@ -940,6 +940,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
         m_lapperpP.multiply_sigma( 1., m_temp0, m_phi[0], 1., m_s[0][1]);
 
+        // S_U = - w_d U
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][0], 0.,  m_s[1][0]);
+        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][1], 0.,  m_s[1][1]);
+        // S_U += - U S_N/N
+        dg::blas1::pointwiseDot( -1.,  m_fields[1][0],  m_s[0][0], 0., m_temp0);
+        dg::blas1::pointwiseDot( -1.,  m_fields[1][1],  m_s[0][1], 0., m_temp1);
+        dg::blas1::pointwiseDivide( 1.,  m_temp0,  m_fields[0][0], 1., m_s[1][0]);
+        dg::blas1::pointwiseDivide( 1.,  m_temp1,  m_fields[0][1], 1., m_s[1][1]);
+
+        //Add all to the right hand side
         dg::blas1::axpby( 1., m_s, 1.0, yp);
     }
 

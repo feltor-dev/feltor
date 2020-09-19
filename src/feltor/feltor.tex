@@ -823,9 +823,12 @@ For numerical stabilisation we choose:
 \begin{align}
 \Lambda_{n_e,\parallel} &= \nu_\parallel \Delta_\parallel n_e &
 \Lambda_{N_i,\parallel} &= \nu_\parallel \Delta_\parallel N_i \\
-\Lambda_{u_e,\parallel} &= \nu_\parallel \Delta_\parallel u_{\parallel,e} &
-\Lambda_{U_i,\parallel} &= \nu_\parallel \Delta_\parallel U_{\parallel,i}
+\Lambda_{u_e,\parallel} &= \nu_\parallel \left( -u_{e,\parallel} \Delta_\parallel n_e + \Delta_\parallel u_{\parallel,e}\right)/n_e &
+\Lambda_{U_i,\parallel} &= \nu_\parallel \left( -U_{i,\parallel} \Delta_\parallel N_i + \Delta_\parallel U_{\parallel,i}\right)/N_i &
 \end{align}
+Note that the parallel velocity diffusion is designed such that the parallel momentum
+diffusion is $\Lambda_{NU} = \nu_\parallel \Delta_\parallel U_\parallel$, which
+is important in order to conserve parallel momentum inside the flux surfaces.
 Similarly, for the perpendicular dissipation we apply viscous or hyperviscous terms.
 \begin{align}\label{eq:perpdiffNT}
  \Lambda_{n_e,\perp} &=  \nu_\perp \Delta_\perp n_e \text{ or } -\nu_\perp \Delta_\perp^2 n_e&
@@ -1007,9 +1010,11 @@ For both electrons and ions we choose
 \begin{align}
     S^d_{n_e}(R,Z,\varphi,t) &:= -\omega_d (n_e-1)\Theta_{\alpha_p/2}\left(\rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2}\right)\\
     S^d_{N_i}(R,Z,\varphi,t) &= \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S^d_{n_e} -\nc\left( \frac{\mu_i S^d_{n_e}}{B^2}\np \phi\right)\\
-S^d_U(R,Z,\varphi, t)& := -\omega_d U_\parallel \Theta_{\alpha_p/2}\left(  \rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2} \right)
+    S^d_U(R,Z,\varphi, t)& := -\omega_d U_\parallel \Theta_{\alpha_p/2}\left(  \rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2} \right) - \frac{U_\parallel}{N} S_N
 \end{align}
 \end{subequations}
+The last term is there to avoid introducing an unintentional parallel momentum source through the
+density sources.
 
 \subsection{Implemented form}
 The form that we implement avoids derivatives on the product of
@@ -1378,8 +1383,14 @@ discontinuous Galerkin on structured grid
 Advection terms & direct DG & DG approximation with centered flux of derivatives \\
 Elliptic terms & local DG & The local DG approximation with centered flux \\
 Helmholtz and Elliptic matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}. The terms $\npar N$ and $\npar \phi$ in the velocity equation use a forward difference, while the term $\npar U_\parallel$ in the
-density equation uses backward difference. This is to avoid a too wide stencil for the diverence of the current and increases stability for low resistivity. \\
+Parallel derivatives & regular  FCI & cf.~\cite{Held2016,Stegmeir2017}.
+All terms use the direct centered difference, which turns out is best
+at keeping the numerical flux-surface leakage in $\RA{\nc ( \bhat NU_\parallel)}$ to a minimum, even
+though it is not exactly zero like in the adjoint discretizations, which in turn are unusable because they do not reliably converge.
+There seems to be no benefit in using the grid refinement technique except when field-aligning the initial condition.
+%The terms $\npar N$ and $\npar \phi$ in the velocity equation use a forward difference, while the term $\npar U_\parallel$ in the
+%density equation uses backward difference. This is to avoid a too wide stencil for the diverence of the current and increases stability for low resistivity.
+\\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
 \qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
@@ -1654,8 +1665,8 @@ X and Y\_tt represent the quantities described in the tables in previous section
     vorticity &$-\Delta_\perp\phi$ &
     apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
     dssue & $\npar^2 u_{\parallel,e}$&
-    dppue & $\partial_\varphi^2 u_{\parallel,e}$\\
-    dpue2 & $(\partial_\varphi u_{\parallel,e})^2$&
+    %dppue & $\partial_\varphi^2 u_{\parallel,e}$\\
+    %dpue2 & $(\partial_\varphi u_{\parallel,e})^2$&
     lperpinv &$L_\perp^{-1} := |\vec\np n_e|/n_e$ \\
     perpaligned &$(\vec\np n_e)^2/n_e$ &
     lparallelinv &$L_\parallel^{-1} := |\npar n_e|/n_e$ \\
