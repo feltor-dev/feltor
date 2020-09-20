@@ -24,7 +24,7 @@
     "elongation"         : 1.75,
     "triangularity"      : 0.47,
     "equilibrium" : "solovev",
-    "form" : "standardX"
+    "description" : "standardX"
 }
 //@ ----------------------------------------------------------
 

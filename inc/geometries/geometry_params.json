@@ -23,7 +23,7 @@
     "elongation"         : 1.00,
     "triangularity"      : 0.0,
     "equilibrium"        : "solovev",
-    "form"               : "standardO"
+    "description"               : "standardO"
 }
 //@ ----------------------------------------------------------------
 

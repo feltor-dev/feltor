@@ -108,7 +108,7 @@ static inline CylindricalFunctorsLvl1 createIpol( double I0 )
 static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 {
     MagneticFieldParameters params = { 1., 1., 0.,
-            equilibrium::circular, modifier::none, form::none};
+            equilibrium::circular, modifier::none, description::none};
     return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol(), params);
 }
 /**
@@ -123,7 +123,7 @@ static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 static inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
 {
     MagneticFieldParameters params = { 1., 1., 0.,
-            equilibrium::circular, modifier::none, form::standardO};
+            equilibrium::circular, modifier::none, description::standardO};
     return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol(I0), params);
 }
 

@@ -141,7 +141,7 @@ static inline dg::geo::TokamakMagneticField createModifiedField(
 {
     const MagneticFieldParameters inp = in.params();
     MagneticFieldParameters params = { inp.a(), inp.elongation(), inp.triangularity(),
-            inp.getEquilibrium(), modifier::heaviside, inp.getForm()};
+            inp.getEquilibrium(), modifier::heaviside, inp.getDescription()};
     return TokamakMagneticField( in.R0(), mod::createPsip(in.get_psip(), psi0,
         alpha, sign), in.get_ipol(), params);
 }

@@ -132,9 +132,9 @@ int main( int argc, char* argv[])
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
 
-    dg::geo::form mag_form = mag.params().getForm();
+    dg::geo::description mag_description = mag.params().getDescription();
     double psipO = -1.;
-    if( mag_form == dg::geo::form::standardX || mag_form == dg::geo::form::standardO )
+    if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO )
     {
         //Find O-point
         double RO = mag.R0(), ZO = 0.;
@@ -241,14 +241,14 @@ int main( int argc, char* argv[])
     /// -------  Elements for fsa on X-point grid ----------------
     double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
-    if( mag_form == dg::geo::form::standardX)
+    if( mag_description == dg::geo::description::standardX)
     {
         std::cout << "Generate X-point flux-aligned grid ... \n";
         double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
         double ZX = -1.1*mag.params().elongation()*mag.params().a();
         dg::geo::findXpoint( mag.get_psip(), RX, ZX);
         double psipX = mag.psip()(RX, ZX);
-        std::cout << "Found X-point at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
+        std::cout << "X-point found at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
         if( fabs(psipX ) > 1e-10)
         {
             std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
@@ -309,7 +309,7 @@ int main( int argc, char* argv[])
     /// --------- More flux labels --------------------------------
     dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
-    if( mag_form != dg::geo::form::none && mag_form != dg::geo::form::centeredX)
+    if( mag_description != dg::geo::description::none && mag_description != dg::geo::description::centeredX)
     {
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
         dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
@@ -318,7 +318,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
         map1d.emplace_back("rho_p", rho,
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
-        if( mag_form == dg::geo::form::standardX || mag_form == dg::geo::form::standardO)
+        if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO)
         {
             dg::geo::SafetyFactor qprof( mag);
             dg::HVec qprofile = dg::evaluate( qprof, grid1d);
@@ -369,7 +369,7 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    if( mag_form == dg::geo::form::standardX)
+    if( mag_description == dg::geo::description::standardX)
     {
         int dim_idsX[2] = {0,0};
         err = file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );

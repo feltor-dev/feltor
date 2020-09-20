@@ -4,7 +4,7 @@
 	"PI" : -1.0,
 	"PP" : -1.0,
 	"R_0" : 906.38,
-	"c" : 
+	"c" :
 	[
 		-1.1279927930530271,
 		-1.0842606353509106,
@@ -45,7 +45,7 @@
 	],
 	"elongation" : 1.5,
 	"equilibrium" : "polynomial",
-	"form" : "standardX",
+	"description" : "standardX",
 	"inverseaspectratio" : 0.27593818984547458,
 	"triangularity" : 0.40000000000000002
 }

@@ -38,7 +38,7 @@ enum class modifier
     heaviside //!< Psip is dampened to a constant outside a critical value
 };
 ///@brief How flux function looks like. Decider on whether and what flux aligned grid to construct
-enum class form
+enum class description
 {
     standardO, //!< closed flux surfaces centered around an O-point located near (R_0, 0); flux-aligned grids can be constructed
     standardX, //!< closed flux surfaces centered around an O-point located near (R_0, 0) and bordered by a separatrix with a single X-point; flux-aligned X-grids can be constructed
@@ -59,12 +59,12 @@ static const std::map<std::string, modifier> str2modifier{
     {"none", modifier::none},
     {"heaviside", modifier::heaviside}
 };
-static const std::map<std::string, form> str2form{
-    {"standardO", form::standardO},
-    {"standardX", form::standardX},
-    {"square", form::square},
-    {"none", form::none},
-    {"centeredX", form::centeredX}
+static const std::map<std::string, description> str2description{
+    {"standardO", description::standardO},
+    {"standardX", description::standardX},
+    {"square", description::square},
+    {"none", description::none},
+    {"centeredX", description::centeredX}
 };
 ///@endcond
 
@@ -78,7 +78,7 @@ static const std::map<std::string, form> str2form{
  *
  * For example it is very hard to automatically detect if the construction
  * of a flux aligned X-grid is possible, but for a human it is very easy.
- * Here we give the \c form specifier that can be used in an if-else statement.
+ * Here we give the \c description specifier that can be used in an if-else statement.
  */
 struct MagneticFieldParameters
 {
@@ -89,7 +89,7 @@ struct MagneticFieldParameters
         m_a = 1, m_elongation = 1, m_triangularity = 0;
         m_equilibrium = equilibrium::toroidal;
         m_modifier = modifier::none;
-        m_form = form::none;
+        m_description = description::none;
     }
     /**
      * @brief Constructor
@@ -99,14 +99,14 @@ struct MagneticFieldParameters
      * @param triangularity (R_0 - R_X) /a;  The purpose of this parameter is to find the approximate location of R_X (if an X-point is present, Z_X is given by elongation) the exact location can be computed by the \c findXpoint function
      * @param equ the way the flux function is computed
      * @param mod the way the flux function is modified
-     * @param frm human readable descriptor of how the flux function looks
+     * @param des human readable descriptor of how the flux function looks
      */
     MagneticFieldParameters( double a, double elongation, double triangularity,
-            equilibrium equ, modifier mod, form frm): m_a(a),
+            equilibrium equ, modifier mod, description des): m_a(a),
         m_elongation(elongation),
         m_triangularity( triangularity),
         m_equilibrium( equ),
-        m_modifier(mod), m_form( frm){}
+        m_modifier(mod), m_description( des){}
  //!< The minor radius; the purpose of this parameter is not to be exact but to serve as a refernce of how to setup the size of a simulation box
     double a() const{return m_a;}
  //!< (maximum Z - minimum Z of lcfs)/2a; 1 for a circle; the purpose of this parameter is not to be exact but more to be a reference of how to setup the aspect ratio of a simulation box
@@ -118,20 +118,20 @@ struct MagneticFieldParameters
  //!<  the way the flux function is modified
     modifier getModifier() const{return m_modifier;}
  //!< human readable descriptor of how the flux function looks
-    form getForm() const{return m_form;}
+    description getDescription() const{return m_description;}
     private:
     double m_a,
            m_elongation,
            m_triangularity;
     equilibrium m_equilibrium;
     modifier m_modifier;
-    form m_form;
+    description m_description;
 };
 
 /**
 * @brief A tokamak field as given by R0, Psi and Ipol plus Meta-data like shape and equilibrium
 
- This is the representation of toroidally axisymmetric magnetic fields that can be modeled in the form
+ This is the representation of toroidally axisymmetric magnetic fields that can be modeled in the description
  \f$
  \vec B(R,Z,\varphi) = \frac{R_0}{R} \left( I(\psi_p) \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
  \f$

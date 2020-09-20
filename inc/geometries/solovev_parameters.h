@@ -29,7 +29,7 @@ struct Parameters
            elongation, //!< elongation of the magnetic surfaces
            triangularity; //!< triangularity of the magnetic surfaces
     std::vector<double> c;  //!< 12 coefficients for the solovev equilibrium;
-    std::string form;
+    std::string description;
 #ifdef JSONCPP_VERSION_STRING
     /**
      * @brief Construct from Json dataset
@@ -53,15 +53,15 @@ struct Parameters
         elongation=file::get( mode, js, "elongation", 1.).asDouble();
         triangularity=file::get( mode, js, "triangularity", 0.).asDouble();
         try{
-            form = file::get( file::error::is_throw, js, "form", "standardX").asString();
+            description = file::get( file::error::is_throw, js, "description", "standardX").asString();
         } catch ( std::exception& err)
         {
             if( isToroidal())
-                form = "none";
+                description = "none";
             else if( !hasXpoint())
-                form = "standardO";
+                description = "standardO";
             else
-                form = "standardX";
+                description = "standardX";
         }
     }
     /**
@@ -82,7 +82,7 @@ struct Parameters
         js["elongation"] = elongation;
         js["triangularity"] = triangularity;
         js[ "equilibrium"] = "solovev";
-        js[ "form"] = form;
+        js[ "description"] = description;
         return js;
     }
 #endif // JSONCPP_VERSION_STRING
@@ -125,7 +125,7 @@ struct Parameters
         os  <<" R0            = "<<R_0<<"\n"
             <<" a             = "<<a<<"\n"
             <<" epsilon_a     = "<<a/R_0<<"\n"
-            <<" form          = "<<form<<"\n"
+            <<" description   = "<<description<<"\n"
             <<" elongation    = "<<elongation<<"\n"
             <<" triangularity = "<<triangularity<<"\n";
         os << std::flush;

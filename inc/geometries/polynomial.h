@@ -199,7 +199,7 @@ static inline dg::geo::TokamakMagneticField createPolynomialField(
     dg::geo::polynomial::Parameters gp)
 {
     MagneticFieldParameters params( gp.a, gp.elongation, gp.triangularity,
-            equilibrium::polynomial, modifier::none, str2form.at( gp.form));
+            equilibrium::polynomial, modifier::none, str2description.at( gp.description));
     return TokamakMagneticField( gp.R_0, polynomial::createPsip(gp),
         polynomial::createIpol(gp), params);
 }
@@ -224,7 +224,7 @@ static inline dg::geo::TokamakMagneticField createModifiedPolynomialField(
     dg::geo::polynomial::Parameters gp, double psi0, double alpha, double sign = -1)
 {
     MagneticFieldParameters params( gp.a, gp.elongation, gp.triangularity,
-            equilibrium::polynomial, modifier::heaviside, str2form.at( gp.form));
+            equilibrium::polynomial, modifier::heaviside, str2description.at( gp.description));
     return TokamakMagneticField( gp.R_0,
             mod::createPsip( polynomial::createPsip(gp), psi0, alpha, sign),
         polynomial::createIpol( gp), params);

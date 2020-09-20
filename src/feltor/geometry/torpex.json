@@ -13,7 +13,7 @@
     "PI": -1,
     "R_0": 500,
     "equilibrium" : "solovev", 
-    "form" : "centeredX",
+    "description" : "centeredX",
     "elongation": 1,
     "triangularity": 0,
     "inverseaspectratio": 0.2

@@ -54,7 +54,7 @@ HVec xpoint_damping(const Geometry& grid,
     const dg::geo::TokamakMagneticField& mag )
 {
     HVec xpoint_damping = dg::evaluate( dg::one, grid);
-    if( mag.params().getForm() == dg::geo::form::standardX)
+    if( mag.params().getDescription() == dg::geo::description::standardX)
     {
         double RX = mag.R0() - 1.1*mag.params().triangularity()*mag.params().a();
         double ZX = -1.1*mag.params().elongation()*mag.params().a();
