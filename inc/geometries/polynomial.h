@@ -8,6 +8,7 @@
 
 #include "dg/topology/functions.h"
 #include "dg/functors.h"
+#include "modified.h"
 #include "polynomial_parameters.h"
 #include "magnetic_field.h"
 
@@ -184,136 +185,6 @@ static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
 
 ///@}
 
-///@cond
-namespace mod
-{
-
-struct Psip: public aCylindricalFunctor<Psip>
-{
-    Psip( Parameters gp, double psi0, double alpha, double sign = -1) :
-        m_ipoly( psi0, alpha, sign), m_psip(gp)
-    { }
-    double do_compute(double R, double Z) const
-    {
-        double psip = m_psip(R,Z);
-        return m_ipoly( psip);
-    }
-    private:
-    dg::IPolynomialHeaviside m_ipoly;
-    polynomial::Psip m_psip;
-};
-struct PsipR: public aCylindricalFunctor<PsipR>
-{
-    PsipR( Parameters gp, double psi0, double alpha, double sign = -1) :
-        m_poly( psi0, alpha, sign), m_psip(gp), m_psipR(gp)
-    { }
-    double do_compute(double R, double Z) const
-    {
-        double psip = m_psip(R,Z);
-        double psipR = m_psipR(R,Z);
-        return psipR*m_poly( psip);
-    }
-    private:
-    dg::PolynomialHeaviside m_poly;
-    polynomial::Psip m_psip;
-    polynomial::PsipR m_psipR;
-};
-struct PsipZ: public aCylindricalFunctor<PsipZ>
-{
-    PsipZ( Parameters gp, double psi0, double alpha, double sign = -1) :
-        m_poly( psi0, alpha, sign), m_psip(gp), m_psipZ(gp)
-    { }
-    double do_compute(double R, double Z) const
-    {
-        double psip = m_psip(R,Z);
-        double psipZ = m_psipZ(R,Z);
-        return psipZ*m_poly( psip);
-    }
-    private:
-    dg::PolynomialHeaviside m_poly;
-    polynomial::Psip m_psip;
-    polynomial::PsipZ m_psipZ;
-};
-
-struct PsipZZ: public aCylindricalFunctor<PsipZZ>
-{
-    PsipZZ( Parameters gp, double psi0, double alpha, double sign = -1) :
-        m_poly( psi0, alpha, sign), m_dpoly( psi0, alpha, sign), m_psip(gp), m_psipZ(gp), m_psipZZ(gp)
-    { }
-    double do_compute(double R, double Z) const
-    {
-        double psip = m_psip(R,Z);
-        double psipZ = m_psipZ(R,Z);
-        double psipZZ = m_psipZZ(R,Z);
-        return psipZZ*m_poly( psip) + psipZ*psipZ*m_dpoly(psip);
-    }
-    private:
-    dg::PolynomialHeaviside m_poly;
-    dg::DPolynomialHeaviside m_dpoly;
-    polynomial::Psip m_psip;
-    polynomial::PsipZ m_psipZ;
-    polynomial::PsipZZ m_psipZZ;
-};
-struct PsipRR: public aCylindricalFunctor<PsipRR>
-{
-    PsipRR( Parameters gp, double psi0, double alpha, double sign = -1) :
-        m_poly( psi0, alpha, sign), m_dpoly( psi0, alpha, sign), m_psip(gp), m_psipR(gp), m_psipRR(gp)
-    { }
-    double do_compute(double R, double Z) const
-    {
-        double psip = m_psip(R,Z);
-        double psipR = m_psipR(R,Z);
-        double psipRR = m_psipRR(R,Z);
-        return psipRR*m_poly( psip) + psipR*psipR*m_dpoly(psip);
-    }
-    private:
-    dg::PolynomialHeaviside m_poly;
-    dg::DPolynomialHeaviside m_dpoly;
-    polynomial::Psip m_psip;
-    polynomial::PsipR m_psipR;
-    polynomial::PsipRR m_psipRR;
-};
-struct PsipRZ: public aCylindricalFunctor<PsipRZ>
-{
-    PsipRZ( Parameters gp, double psi0, double alpha, double sign = -1) :
-        m_poly( psi0, alpha, sign), m_dpoly( psi0, alpha, sign), m_psip(gp), m_psipR(gp), m_psipZ(gp), m_psipRZ(gp)
-    { }
-    double do_compute(double R, double Z) const
-    {
-        double psip = m_psip(R,Z);
-        double psipR = m_psipR(R,Z);
-        double psipZ = m_psipZ(R,Z);
-        double psipRZ = m_psipRZ(R,Z);
-        return psipRZ*m_poly( psip) + psipR*psipZ*m_dpoly(psip);
-    }
-    private:
-    dg::PolynomialHeaviside m_poly;
-    dg::DPolynomialHeaviside m_dpoly;
-    polynomial::Psip m_psip;
-    polynomial::PsipR m_psipR;
-    polynomial::PsipZ m_psipZ;
-    polynomial::PsipRZ m_psipRZ;
-};
-
-static inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp,
-    double psi0, double alpha, double sign = -1)
-{
-    return CylindricalFunctorsLvl2( Psip(gp, psi0, alpha, sign), PsipR(gp,
-    psi0, alpha, sign), PsipZ(gp, psi0, alpha, sign), PsipRR(gp, psi0, alpha,
-    sign), PsipRZ(gp, psi0, alpha, sign), PsipZZ(gp, psi0, alpha, sign));
-}
-static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp,
-    double psi0, double alpha, double sign = -1)
-{
-    return CylindricalFunctorsLvl1( Constant( gp.pi), Constant( 0), Constant( 0));
-}
-
-} //namespace mod
-///@endcond
-
-///////////////////////////////////////introduce fields into polynomial namespace
-
-
 } //namespace polynomial
 
 /**
@@ -354,8 +225,9 @@ static inline dg::geo::TokamakMagneticField createModifiedPolynomialField(
 {
     MagneticFieldParameters params( gp.a, gp.elongation, gp.triangularity,
             equilibrium::polynomial, modifier::heaviside, str2form.at( gp.form));
-    return TokamakMagneticField( gp.R_0, polynomial::mod::createPsip(gp, psi0,
-    alpha, sign), polynomial::mod::createIpol(gp, psi0, alpha, sign), params);
+    return TokamakMagneticField( gp.R_0,
+            mod::createPsip( polynomial::createPsip(gp), psi0, alpha, sign),
+        polynomial::createIpol( gp), params);
 }
 
 } //namespace geo
