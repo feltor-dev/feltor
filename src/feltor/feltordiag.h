@@ -346,7 +346,7 @@ std::vector<Record_static> diagnostics2d_static_list = {
         }
     }
 };
-// and here are all the 2d outputs we want to produce
+// and here are all the 2d outputs we want to produce (currently ~ 100)
 std::vector<Record> diagnostics2d_list = {
     {"electrons", "Electron density", false,
         []( DVec& result, Variables& v ) {
@@ -1131,6 +1131,11 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( v.p.tau[0], v.f.dsN(0), 0., result);
         }
     },
+    {"sparmirrorAe_tt", "Apar Mirror force term with electron density (Time average)", true,
+        []( DVec& result, Variables& v){
+            routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.f.gradN(0), result);
+        }
+    },
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
             //dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
@@ -1140,7 +1145,19 @@ std::vector<Record> diagnostics2d_list = {
     //electric force balance usually well-fulfilled
     {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( -1., v.f.dsP(0), v.f.density(0), 0., result);
+            dg::blas1::pointwiseDot( 1., v.f.dsP(0), v.f.density(0), 0., result);
+        }
+    },
+    {"sparphiAe_tt", "Apar Electric force in electron momentum density (Time average)", true,
+        []( DVec& result, Variables& v){
+            routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.f.gradP(0), result);
+            dg::blas1::pointwiseDot( v.f.density(0), result, result);
+        }
+    },
+    {"spardotAe_tt", "Apar Electric force in electron momentum density (Time average)", true,
+        []( DVec& result, Variables& v){
+            v.f.compute_dot_induction( result);
+            dg::blas1::pointwiseDot( v.f.density(0), result, result);
         }
     },
     //These two should be almost the same
@@ -1152,7 +1169,7 @@ std::vector<Record> diagnostics2d_list = {
     {"friction_tt", "Friction force in momentum density (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::axpby( 1., v.f.velocity(1), -1., v.f.velocity(0), result);
-            dg::blas1::pointwiseDot( -v.p.eta, result, v.f.density(0), v.f.density(0), 0, result);
+            dg::blas1::pointwiseDot( v.p.eta, result, v.f.density(0), v.f.density(0), 0, result);
         }
     },
     /// --------------------- Lorentz force terms ---------------------------//
@@ -1193,8 +1210,6 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( v.f.density_source(0), v.hoo, result);
         }
     },
-
-
 };
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

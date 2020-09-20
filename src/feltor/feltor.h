@@ -252,7 +252,7 @@ struct Explicit
         dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
         if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
-    const Container& compute_dot_induction( Container& tmp) const {
+    void compute_dot_induction( Container& tmp) const {
         m_old_apar.derive( tmp);
     }
     //maybe better give these a temporary

@@ -646,7 +646,7 @@ with $\alpha_j = \frac{j}{N_\varphi}$ and $w(\varphi)$ a linear weight function 
 
 
 Now, an interesting question is, what happens if we are trying to apply the above
-results to a function that is not field-aligned like $B(R,Z)$ of $\vec K\cdot \nabla\psi_p$ for instance? For those functions $\bar f_\mathrm{old}$ actually yields the exact
+results to a function that is not field-aligned like $B(R,Z)$ of $\vec K\cn\psi_p$ for instance? For those functions $\bar f_\mathrm{old}$ actually yields the exact
 result, while the convolution is an approximation.
 Here, we have to test.
 Typically, the functions that we use are slowly varying in $R$ and $Z$ and
@@ -1042,7 +1042,7 @@ two functions for which we have no boundary conditions
         -2\tau U_\parallel\mathcal K_{\vn\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_{\parallel,i} - u_{\parallel,e}) \nonumber\\&
         + \nu_\perp\Delta_\perp U_\parallel
-        + \nu_\parallel \Delta_\parallel U_\parallel
+        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \frac{\nu_\parallel}{N} U_\parallel \Delta_\parallel U_\parallel
         + S_U,
         \label{eq:EgyrofluidU} \\
         W_\parallel&:= \left( U_\parallel + \frac{A_\parallel}{\mu}\right)
@@ -1304,14 +1304,40 @@ The relevant terms in the output file are (the Lorentz force term is described i
     niuibphi &$\mu_i N_iU_{\parallel,i}b_\varphi$ \\
     jsparexbi\_tt       & $\mu_i N_iU_{\parallel,i}(\bhat\times\vn\phi)\cn \psi_p/B$ &
     jsparbphiexbi\_tt   & $\mu_i N_iU_{\parallel,i}b_\varphi(\bhat\times\vn\phi)\cn \psi_p/B$ \\
+    jspardiai\_tt       & $\mu_i \tau_i N_iU_{\parallel,i}\vec K\cn\psi_p$ &
+    jsparbphdiai\_tt   & $\mu_i \tau_i N_iU_{\parallel,i}b_\varphi\vec K\cn\psi_p$ \\
+    jsparkappai\_tt       & $\mu_i N_iU_{\parallel,i} ( \mu_i U_{\parallel,i}^2 + 2\tau_i)\vec K_{\vn\times \bhat}\cn\psi_p$ &
+    jsparbphikappai\_tt       & $\mu_i N_iU_{\parallel,i}b_\varphi ( \mu_i U_{\parallel,i}^2 + 2\tau_i)\vec K_{\vn\times \bhat}\cn\psi_p$ \\
     jsparApar\_tt       & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\perp^v$ &
     jsparbphiApar\_tt   & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\varphi b_\perp^v$ \\
     sparmirrore\_tt & $-z_e\tau_en_e\npar \ln B$ &
     sparmirrori\_tt & $-z_i\tau_iN_i\npar \ln B$ \\
-    sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i}$ &
-    sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi $ \\
+    sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i} + \mu_i S_{U_i} N_i $ &
+    sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi + \mu_i S_{U,i} N_i b_\varphi $ \\
+    lparpar\_tt   & $\nu_\parallel \Delta_\parallel U_{\parallel,i}$ &
+    lparperp\_tt & $-\nu_\perp U_{\parallel,i} \Delta_\perp^2 N_i - \nu_\perp N_i\Delta_\perp^2 U_{\parallel,i} $ \\
 \bottomrule
 \end{longtable}
+
+\subsubsection{Parallel electron force balance}
+We gather the dominant terms in the electron momentum equation (neglecting all terms as $\mu_e=0$). This leaves the parallel force balance
+\begin{align}
+    -(\bhat + \vec b_\perp) \cn n_e +n_e\left( \left( \bhat + \vec b_\perp \right) \cn \phi + \frac{\partial A_\parallel}{\partial t} \right) +\eta n_e^2 \left( U_{\parallel,i} - u_{\parallel,e}\right) = 0
+\end{align}
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} &
+\textbf{Name} &  \textbf{Equation}\\
+\midrule
+    sparphie\_tt & $n_e\npar \phi$ &
+    friction\_tt & $ \eta n_e^2(U_{\parallel,i}-u_{\parallel,e})$ \\
+    sparmirrore\_tt & $-\npar n_e$ &
+    sparmirrorAe\_tt & $\vn A_\parallel \times \bhat \cn n_e /B$ \\
+    sparphiAe\_tt & $n_e \vn A_\parallel \times \bhat \cn \phi /B$ &
+    spardotAe\_tt & $ n_e \partial A_\parallel /\partial t$ \\
+\bottomrule
+\end{longtable}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
