@@ -379,7 +379,7 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void derive( ContainerType0& dot_x) const{
-        dg::blas1::axpbypgz( 1./(m_t[0]-m_t[1]), m_x[0], 1./(m_t[0]-m_t[1]), m_x[1], 0., dot_x);
+        dg::blas1::axpbypgz( 1./(m_t[0]-m_t[1]), m_x[0], -1./(m_t[0]-m_t[1]), m_x[1], 0., dot_x);
     }
 
     /**
