@@ -135,6 +135,7 @@ With the help of the metric elements we get a well behaved volume element \(\sqr
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 
 \subsection{Solov'ev equilbrium}\label{sec:solovev}
+%Document polynomial field as well
 In cylindrical coordinates the general axisymmetric  magnetic field can be written as (dimensionless)
 \begin{align}
  \vec{B} &= \frac{R_0}{R}\left[I(\psi_p) \ehat_{\varphi} + \frac{\partial
@@ -1281,7 +1282,7 @@ The flux surface average over the parallel momentum equation under species summa
     % \nonumber\\
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_{\parallel,i} \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + z_s\mu_s N_sU_{\parallel,s}^2) b_{\perp}^{\;v}  }
     \nonumber\\
-   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_{\parallel,i}}
+   = \sum_s\RA{-z_s\tau_s N_s\npar \ln B} + \mu_i \RA{ S_{N_i} U_{\parallel,i} + N_i S_{U_\parallel}}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads up to order $\mathcal O(\delta^3)$
@@ -1289,7 +1290,7 @@ while the toroidal parallel angular momentum contribution reads up to order $\ma
     \frac{\partial}{\partial t}  \RA{\mu_iN_iU_{\parallel,i} b_\varphi}
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_{\parallel,i} b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + z_s\mu_sN_sU_{\parallel,s}^2) b_\varphi b_{\perp}^{\;v} }
     \nonumber\\
-   = \RA{F_{L,\varphi}} + \mu_i \RA{ S_{N_i} U_{\parallel,i} b_\varphi}
+    = \RA{F_{L,\varphi}} + \mu_i \RA{ (S_{N_i} U_{\parallel,i} + N_i S_{U_\parallel}) b_\varphi}
 \end{align}
 
 The relevant terms in the output file are (the Lorentz force term is described in the previous subsection \ref{sec:vorticity_eq})
@@ -1619,6 +1620,7 @@ magnetic field and damping is ignored.\\
 \bottomrule
 \end{longtable}
 \subsection{Geometry file structure} \label{sec:geometry_file}
+%Document description and equilibrium fields and polynomial field
 File format: json
 
 %%This is a booktabs table
