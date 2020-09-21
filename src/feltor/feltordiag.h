@@ -1134,6 +1134,7 @@ std::vector<Record> diagnostics2d_list = {
     {"sparmirrorAe_tt", "Apar Mirror force term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
             routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.f.gradN(0), result);
+            dg::blas1::scal( result, v.p.tau[0]);
         }
     },
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
