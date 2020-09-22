@@ -1610,10 +1610,11 @@ in the density Eq.~\eqref{eq:density_profile} (with $\rho_{p,b}=0$ and source pr
 small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes, must not be zero)
 \\
 damping & dict & & & magnetic and density damping region \\
+\qquad modifier & string & "sol\_pfr" & "sol\_pfr" & One of ``none'', ``heaviside'' or ``sol\_pfr'' \\
 \qquad rate & float & 0    & 0   & Friction coefficient $\omega_d$ in density and velocity damping Eq.~\eqref{eq:velocity_source} \\
-\qquad boundary & float & 0.2  & 1.2 & Modification region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.~\eqref{eq:modified_psip}.
+\qquad boundary & float[2] & [1.2,0.8]  & [1.2,0.8] & Modification region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.~\eqref{eq:modified_psip}.
 \\
-\qquad alpha   & float & 0.25 & 0 & Transition width $\alpha_p$: yields
+\qquad alpha   & float[2] & [0.25,0.25] & 0 & Transition width $\alpha_p$: yields
 $\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside in the modified
 $\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the
 magnetic field and damping is ignored.\\

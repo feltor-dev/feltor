@@ -344,6 +344,12 @@ std::vector<Record_static> diagnostics2d_static_list = {
         []( HVec& result, Variables& v, Geometry& grid){
             result = v.f.bphi();
         }
+    },
+    {"NormGradPsip", "Norm of gradient of Psip",
+        []( HVec& result, Variables& v, Geometry& grid){
+            result = dg::pullback(
+                dg::geo::SquareNorm( dg::geo::createGradPsip(v.mag), dg::geo::createGradPsip(v.mag)), grid);
+        }
     }
 };
 // and here are all the 2d outputs we want to produce (currently ~ 100)

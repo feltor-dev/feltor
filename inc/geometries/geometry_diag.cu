@@ -27,7 +27,7 @@ struct Parameters
     double boxscaleZm, boxscaleZp;
     double amp, k_psi, nprofileamp;
     double sigma, posX, posY;
-    double damping_boundary, source_alpha, damping_alpha, source_boundary;
+    double source_alpha, source_boundary;
     double profile_alpha;
     Parameters( const Json::Value& js){
         n = js.get("n",3).asUInt();
@@ -46,8 +46,6 @@ struct Parameters
         sigma = js.get("sigma", 10).asDouble();
         posX = js.get("posX", 0.5).asDouble();
         posY = js.get("posY", 0.5).asDouble();
-        damping_boundary = js["damping"].get("boundary", 1.2).asDouble();
-        damping_alpha = js["damping"].get("alpha", 0.1).asDouble();
         source_alpha = js["source"].get("alpha", 0.5).asDouble();
         source_boundary = js["source"].get("boundary", 0.5).asDouble();
     }
@@ -65,8 +63,6 @@ struct Parameters
             <<" boxscaleZp    = "<<boxscaleZp<<"\n"
             <<" source bound  = "<<source_boundary<<"\n"
             <<" source alpha  = "<<source_alpha<<"\n"
-            <<" damping bound = "<<damping_boundary<<"\n"
-            <<" damping alpha = "<<damping_alpha<<"\n"
             <<" amp           = "<<amp<<"\n"
             <<" k_psi         = "<<k_psi<<"\n"
             <<" nprofileamp   = "<<nprofileamp<<"\n"
@@ -121,8 +117,8 @@ int main( int argc, char* argv[])
     const Parameters p(input_js);
     p.display( std::cout);
     //Test coefficients
-    dg::geo::TokamakMagneticField mag_origin = dg::geo::createMagneticField(geom_js, file::error::is_throw);
-    dg::geo::TokamakMagneticField mag = mag_origin;
+    dg::geo::CylindricalFunctor damping, transition;
+    dg::geo::TokamakMagneticField mag = dg::geo::createModifiedField(geom_js, input_js, file::error::is_throw, damping, transition);
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
     unsigned n, Nx, Ny, Nz;
@@ -147,18 +143,6 @@ int main( int argc, char* argv[])
             std::cout << " (maximum)"<<std::endl;
         double psip0 = mag.psip()(mag.R0(), 0);
         std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
-        if( p.damping_alpha > 0.)
-        {
-            double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-            double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-            std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
-            Json::Value jsmod;
-            jsmod["modifier"] = "heaviside";
-            jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
-            jsmod["alpha"] = fabs( damping_alphap/2.);
-            jsmod["sign"] = ((psipO>0)-(psipO<0));
-            mag = dg::geo::createModifiedField(geom_js, jsmod, file::error::is_throw);
-        }
     }
 
 
@@ -223,11 +207,8 @@ int main( int argc, char* argv[])
         {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
                     p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
                 dg::geo::RhoP(mag))},
-        {"ProfileDamping", "Density profile damping", dg::compose(dg::PolynomialHeaviside(
-            1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)) },
-        {"MagneticTransition", "The region where the magnetic field is modified", dg::compose(dg::DPolynomialHeaviside(
-            p.damping_boundary+p.damping_alpha/2.,
-            p.damping_alpha/2., +1 ), dg::geo::RhoP(mag_origin))},
+        {"ProfileDamping", "Density profile damping", damping },
+        {"MagneticTransition", "The region where the magnetic field is modified", transition},
         {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
         {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
         {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},

@@ -40,8 +40,8 @@ struct Parameters
     double k_psi;
 
     double source_rate, damping_rate;
-    double damping_alpha, source_alpha, profile_alpha;
-    double source_boundary, damping_boundary;
+    double source_alpha, profile_alpha;
+    double source_boundary;
     double nprofamp;
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
@@ -110,8 +110,6 @@ struct Parameters
         source_boundary = file::get( mode, js, "source", "boundary", 0.5).asDouble();
         source_alpha    = file::get( mode, js, "source", "alpha", 0.2).asDouble();
         damping_rate = file::get( mode, js, "damping", "rate", 0.).asDouble();
-        damping_alpha= file::get( mode, js, "damping", "alpha", 0.).asDouble();
-        damping_boundary = file::get( mode, js, "damping", "boundary", 1.2).asDouble();
 
         bcxN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 0, "").asString());
         bcyN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 1, "").asString());
@@ -157,8 +155,6 @@ struct Parameters
             <<"     source_alpha:                 "<<source_alpha<<"\n"
             <<"     source_type:                  "<<source_type<<"\n"
             <<"     damping_rate:                 "<<damping_rate<<"\n"
-            <<"     damping_boundary:             "<<damping_boundary<<"\n"
-            <<"     damping_alpha:                "<<damping_alpha<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"

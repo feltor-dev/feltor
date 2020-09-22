@@ -126,19 +126,6 @@ void init_ni(
 };
 }//namespace detail
 
-//for wall shadow
-HVec wall_damping(const Geometry& grid,
-    const feltor::Parameters& p,
-    const dg::geo::TokamakMagneticField& mag )
-{
-    if( p.source_alpha == 0)
-        throw dg::Error(dg::Message()<< "Invalid parameter: damping alpha must not be 0\n");
-    HVec wall_damping = dg::pullback(dg::compose( dg::PolynomialHeaviside(
-        p.damping_boundary+p.damping_alpha/2., p.damping_alpha/2., +1),
-                dg::geo::RhoP(mag)), grid);
-    return wall_damping;
-}
-
 /* The purpose of this file is to provide an interface for custom initial conditions and
  * source profiles.  Just add your own to the relevant map below.
  */

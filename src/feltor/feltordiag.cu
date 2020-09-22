@@ -95,17 +95,9 @@ int main( int argc, char* argv[])
     Geometry g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    double RO=mag.R0(), ZO=0.;
-    dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-    const double psipO = mag.psip()( RO, ZO);
-    if( p.damping_alpha > 0.)
-    {
-        double damping_psi0 = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alpha = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0+damping_alpha/2.,
-                fabs(p.damping_alpha/2.), ((psipO>0)-(psipO<0)));
-    }
+    dg::geo::CylindricalFunctor damping, transition;
+    dg::geo::TokamakMagneticField mag =
+        dg::geo::createModifiedField(gs, js, file::error::is_warning, damping, transition);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     // Construct weights and temporaries
 

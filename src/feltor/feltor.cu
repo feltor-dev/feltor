@@ -60,8 +60,9 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     std::cout << gs.toStyledString() << std::endl;
     dg::geo::TokamakMagneticField mag;
+    dg::geo::CylindricalFunctor damping, transition;
     try{
-        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+        mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, damping, transition);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
@@ -76,24 +77,8 @@ int main( int argc, char* argv[])
     //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
-    //Wall damping has to be constructed before modification (!)
-    HVec damping_profile = dg::evaluate( dg::zero, grid);
-    if( p.damping_alpha > 0.)
-    {
-        damping_profile = feltor::wall_damping( grid, p, mag);
-        double RO=mag.R0(), ZO=0.;
-        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        double psipO = mag.psip()( RO, ZO);
-        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
-        Json::Value jsmod;
-        jsmod["modifier"] = "heaviside";
-        jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
-        jsmod["alpha"] = fabs( damping_alphap/2.);
-        jsmod["sign"] = ((psipO>0)-(psipO<0));
-        mag = dg::geo::createModifiedField(gs, jsmod, file::error::is_warning);
-    }
+
+    HVec damping_profile = dg::pullback( damping, grid);
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
@@ -116,9 +101,6 @@ int main( int argc, char* argv[])
     feltor::Variables var = {
         feltor, p,mag, gradPsip, gradPsip, hoo
     };
-
-
-
     /////////////////////The initial field///////////////////////////////////////////
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;

@@ -159,9 +159,59 @@ static inline dg::geo::CylindricalFunctorsLvl2 createPsip(
             mod::PsipRZ(predicate,psip.f(), psip.dfx(), psip.dfy(), psip.dfxy(), psi0, alpha, sign),
             mod::PsipZZ(predicate,psip.f(), psip.dfy(), psip.dfyy(), psi0, alpha, sign));
 }
+struct DampingRegion : public aCylindricalFunctor<DampingRegion>
+{
+    DampingRegion( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
+        m_poly( psi0, alpha, sign), m_psip(psip), m_pred(predicate)
+    { }
+    double do_compute(double R, double Z) const
+    {
+        double psip = m_psip(R,Z);
+        if( m_pred( R,Z))
+            return m_poly( psip);
+        else
+            return 0;
+    }
+    private:
+    dg::PolynomialHeaviside m_poly;
+    std::function<double(double,double)> m_psip;
+    std::function<bool(double,double)> m_pred;
+};
+struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
+{
+    MagneticTransition( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
+        m_dpoly( psi0, alpha, sign), m_psip(psip), m_pred(predicate)
+    { }
+    double do_compute(double R, double Z) const
+    {
+        double psip = m_psip(R,Z);
+        if( m_pred( R,Z))
+            return m_dpoly( psip);
+        else
+            return 0;
+    }
+    private:
+    dg::DPolynomialHeaviside m_dpoly;
+    std::function<double(double,double)> m_psip;
+    std::function<bool(double,double)> m_pred;
+};
+//combine damping and transition regions by adding them up
+struct Combine : public aCylindricalFunctor<Combine>
+{
+    Combine( std::function<double(double,double)> fct1, std::function<double(double,double)> fct2) :
+        m_fct1(fct1), m_fct2(fct2)
+    { }
+    double do_compute(double R, double Z) const
+    {
+        return m_fct1(R,Z)+m_fct2(R,Z);
+    }
+    private:
+    std::function<double(double,double)> m_fct1, m_fct2;
+};
 
 //some possible predicates
 
+static bool nowhere( double R, double Z){return false;}
 static bool everywhere( double R, double Z){return true;}
 struct HeavisideZ{
     HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}

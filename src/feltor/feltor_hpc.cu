@@ -147,8 +147,9 @@ int main( int argc, char* argv[])
     std::string input = js.toStyledString(), geom = gs.toStyledString();
     MPI_OUT std::cout << geom << std::endl;
     dg::geo::TokamakMagneticField mag;
+    dg::geo::CylindricalFunctor damping, transition;
     try{
-        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+        mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, damping, transition);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
@@ -191,24 +192,7 @@ int main( int argc, char* argv[])
     unsigned local_size2d = g2d_out_ptr->size();
 #endif
 
-    //Wall damping has to be constructed before modification (!)
-    HVec damping_profile = dg::evaluate( dg::zero, grid);
-    if( p.damping_alpha > 0.)
-    {
-        damping_profile = feltor::wall_damping( grid, p, mag);
-        double RO=mag.R0(), ZO=0.;
-        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        double psipO = mag.psip()( RO, ZO);
-        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        MPI_OUT std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
-        Json::Value jsmod;
-        jsmod["modifier"] = "heaviside";
-        jsmod["psi0"] = damping_psi0p + damping_alphap/2.;
-        jsmod["alpha"] = fabs( damping_alphap/2.);
-        jsmod["sign"] = ((psipO>0)-(psipO<0));
-        mag = dg::geo::createModifiedField(gs, jsmod, file::error::is_warning);
-    }
+    HVec damping_profile = dg::pullback( damping, grid);
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 

@@ -277,18 +277,21 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
     X[0] = RC, X[1] = ZC;
     double eps = 1e10, eps_old= 2e10;
     unsigned counter = 0; //safety measure to avoid deadlock
-    double Dinv = 0., psipRR  = 0., psipZZ = 0., psipRZ = 0.;
+    double psipRZ = psi.dfxy()(X[0], X[1]);
+    double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+    double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+    double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
     while( (eps < eps_old || eps > 1e-7) && eps > 1e-10 && counter < 100)
     {
-        X_OLD = X; eps= eps_old;
-        psipRZ = psi.dfxy()(X[0], X[1]);
-        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
-        double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
-        Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
         XN[0] = X[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
         XN[1] = X[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
         XN.swap(X);
         eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
+        X_OLD = X; eps_old= eps;
+        psipRZ = psi.dfxy()(X[0], X[1]);
+        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+        psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
         counter++;
     }
     if ( counter >= 100 || std::isnan( Dinv) )
@@ -296,7 +299,7 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
     RC = X[0], ZC = X[1];
     if( Dinv > 0 &&  psipRR > 0)
         return 1; //local minimum
-    if( Dinv < 0 &&  psipRR < 0)
+    if( Dinv > 0 &&  psipRR < 0)
         return 2; //local maximum
     //if( Dinv < 0)
     return 3; //saddle point
