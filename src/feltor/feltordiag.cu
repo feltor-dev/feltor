@@ -125,6 +125,10 @@ int main( int argc, char* argv[])
     double Z_X = -1.1*gp.elongation*gp.a;
     dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
     dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
+    double R_O = gp.R_0, Z_O = 0;
+    dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
+    double psipO = mag.psip()(R_O, Z_O);
+
     dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, R_X, Z_X, mag.R0(), 0, 0, false);
     double fx_0 = 1./8.;
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
