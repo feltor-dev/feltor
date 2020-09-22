@@ -62,6 +62,7 @@
     },
     "damping":
     {
+        "modifier": "heaviside",
         "rate": 1e-2,
         "boundary": 1.1,
         "alpha": 0.1
