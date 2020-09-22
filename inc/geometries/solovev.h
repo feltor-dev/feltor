@@ -393,8 +393,8 @@ static inline dg::geo::TokamakMagneticField createModifiedSolovevField(
     MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
             equilibrium::solovev, modifier::heaviside, str2description.at( gp.description)};
     return TokamakMagneticField( gp.R_0,
-            mod::createPsip( solovev::createPsip(gp), psi0, alpha, sign),
-        solovev::createIpol( gp, mod::createPsip( solovev::createPsip(gp), psi0, alpha, sign)),
+            mod::createPsip( mod::everywhere, solovev::createPsip(gp), psi0, alpha, sign),
+        solovev::createIpol( gp, mod::createPsip( mod::everywhere, solovev::createPsip(gp), psi0, alpha, sign)),
         params);
 }
 

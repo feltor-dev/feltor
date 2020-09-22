@@ -203,32 +203,6 @@ static inline dg::geo::TokamakMagneticField createPolynomialField(
     return TokamakMagneticField( gp.R_0, polynomial::createPsip(gp),
         polynomial::createIpol(gp), params);
 }
-/**
- * @brief Create a modified Polynomial Magnetic field
- *
- * Based on \c dg::geo::polynomial::mod::Psip(gp) and
- * \c dg::geo::polynomial::mod::Ipol(gp)
- * We modify psi above a certain value to a constant using the
- * \c dg::IPolynomialHeaviside function (an approximation to the integrated Heaviside
- * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
- * This subsequently modifies all derivatives of psi and the poloidal
- * current.
- * @param gp Polynomial parameters
- * @param psi0 boundary value where psi is modified to a constant psi0
- * @param alpha radius of the transition region where the modification acts (smaller is quicker)
- * @param sign determines which side of Psi to dampen (negative or positive, forwarded to \c dg::IPolynomialHeaviside)
- * @return A magnetic field object
- * @ingroup geom
- */
-static inline dg::geo::TokamakMagneticField createModifiedPolynomialField(
-    dg::geo::polynomial::Parameters gp, double psi0, double alpha, double sign = -1)
-{
-    MagneticFieldParameters params( gp.a, gp.elongation, gp.triangularity,
-            equilibrium::polynomial, modifier::heaviside, str2description.at( gp.description));
-    return TokamakMagneticField( gp.R_0,
-            mod::createPsip( polynomial::createPsip(gp), psi0, alpha, sign),
-        polynomial::createIpol( gp), params);
-}
 
 } //namespace geo
 } //namespace dg

@@ -35,7 +35,8 @@ enum class equilibrium
 enum class modifier
 {
     none, //!< no modification
-    heaviside //!< Psip is dampened to a constant outside a critical value
+    heaviside, //!< Psip is dampened to a constant outside a critical value
+    sol_pfr //!< Psip is dampened in the SOL and PFR regions but not in the closed field line region
 };
 ///@brief How flux function looks like. Decider on whether and what flux aligned grid to construct
 enum class description
@@ -57,7 +58,8 @@ static const std::map<std::string, equilibrium> str2equilibrium{
 };
 static const std::map<std::string, modifier> str2modifier{
     {"none", modifier::none},
-    {"heaviside", modifier::heaviside}
+    {"heaviside", modifier::heaviside},
+    {"sol_pfr", modifier::sol_pfr}
 };
 static const std::map<std::string, description> str2description{
     {"standardO", description::standardO},
