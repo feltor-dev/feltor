@@ -1514,7 +1514,7 @@ eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$
 FCI & dict & & & Parameters for Flux coordinate independent approach
 \\
 \qquad refine     & integer[2] & [1,1] & [1,1] & refinement factor in FCI approach in R- and Z-direction.
-We use [1,1], higher values take more time.
+We use [1,1], higher values take more time, but possibly stabilize the simulation.
 \\
 \qquad rk4eps     & float & 1e-6 & 1e-6 & Accuracy of fieldline integrator in FCI. The default is reasonable.
 \\
@@ -1842,7 +1842,7 @@ Apply damping region
     \\
 \qquad Perpendicular grid oscillations in $u_{\parallel,e}$ and $\Delta_\perp \phi$ in the damping region, symmetric in $\varphi$
 &
-Increase damping $alpha$, increase damping boundary, make the box larger/smaller
+Increase damping $alpha$, increase damping boundary, make the box larger/smaller, increasing DS refinement might help.
     \\
 \qquad Spike in $u_{\parallel,e}$ shortly after simulation start
 &
@@ -1850,11 +1850,12 @@ Increase $\nu_\perp$, increase $N_x$, $N_y$, decrease perturbation amplitude
     \\
 \qquad Grid oscillations far away from the edge
 &
-Probably caused by the perpendicular transport that goes unstable. Increase $\nu_\perp$ and/or $N_x$, $N_y$
+Probably caused by the perpendicular transport that goes unstable. Increase $\nu_\perp$ and/or $N_x$, $N_y$. Increasing DS refinement might also help.
 \\
 \qquad Oscillations where fieldlines intersect the wall
 &
-Caused by boundary conditions in FCI method and necessarily underresolved toroidal direction. Increase $N_z$, decrease $N_x$, $N_y$ or better decrease $q$ value by decreasing $\mathcal P_\psi$ in geometry input file
+Caused by boundary conditions in FCI method and necessarily underresolved toroidal direction.
+Increase $\nu_\parallel$, $N_z$, decrease $N_x$, $N_y$ or better decrease $q$ value by decreasing $\mathcal P_\psi$ in geometry input file
 \\
 \bottomrule
 \end{longtable}
