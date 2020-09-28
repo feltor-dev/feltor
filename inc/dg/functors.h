@@ -23,7 +23,7 @@ namespace dg
 
 /**
  * @brief Absolute maximum
- * \f[ f(x,y) = \max(|x|,|y|)\f]
+ * \f$ f(x,y) = \max(|x|,|y|)\f$
  *
  */
 template <class T = double>
@@ -47,7 +47,7 @@ DG_DEVICE
 };
 /**
  * @brief Absolute minimum
- * \f[ f(x,y) = \min(|x|,|y|)\f]
+ * \f$ f(x,y) = \min(|x|,|y|)\f$
  */
 template <class T = double>
 struct AbsMin
@@ -70,15 +70,15 @@ DG_DEVICE
 };
 
 /**
- * @brief Functor returning a 2d Gaussian
- * \f[
+ * @brief Functor returning a 2d %Gaussian
+ * \f$
    f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
-   \f]
+   \f$
  */
 struct Gaussian
 {
     /**
-     * @brief Functor returning a Gaussian
+     * @brief Functor returning a %Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
@@ -92,7 +92,7 @@ struct Gaussian
             assert( m_sigma_y != 0  &&  "sigma_y must not be 0 in Gaussian");
     }
     /**
-     * @brief Return the value of the Gaussian
+     * @brief Return the value of the %Gaussian
      *
      * \f[
        f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
@@ -110,7 +110,7 @@ struct Gaussian
                           (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
     /**
-     * @brief Return the value of the Gaussian
+     * @brief Return the value of the %Gaussian
      * \f[
        f(x,y,z) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
        \f]
@@ -132,12 +132,12 @@ struct Gaussian
 
 /**
  * @brief A bump that drops to zero and is infinitely continuously differentiable
- * \f[
+ * \f$
    f(x,y) = \begin{cases}
    Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}} \text{ if } \frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} < 1\\
    0 \text{ else}
    \end{cases}
-   \f]
+   \f$
  */
 struct Cauchy
 {
@@ -210,15 +210,15 @@ struct Cauchy
 };
 
 /**
-* @brief The 3d Gaussian
-* \f[
+* @brief The 3d %Gaussian
+* \f$
 f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)}
-\f]
+\f$
 */
 struct Gaussian3d
 {
     /**
-     * @brief Functor returning a Gaussian
+     * @brief Functor returning a %Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
@@ -235,7 +235,7 @@ struct Gaussian3d
             assert( m_sigma_z != 0  &&  "sigma_z must be !=0 in Gaussian3d");
     }
     /**
-     * @brief Return a 2d Gaussian
+     * @brief Return a 2d %Gaussian
      *
      * \f[
        f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
@@ -253,7 +253,7 @@ struct Gaussian3d
                           (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
     /**
-     * @brief Return the value of the Gaussian
+     * @brief Return the value of the %Gaussian
      *
      * \f[
        f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}+\frac{(z-z_0)^2}{2\sigma_z^2})}
@@ -277,15 +277,15 @@ struct Gaussian3d
 
 };
 /**
- * @brief A Gaussian in x-direction
- * \f[
+ * @brief A %Gaussian in x-direction
+ * \f$
    f(x,y) = Ae^{-\frac{(x-x_0)^2}{2\sigma_x^2} }
-   \f]
+   \f$
  */
 struct GaussianX
 {
     /**
-     * @brief A Gaussian in x
+     * @brief A %Gaussian in x
      *
      * @param x0 x-center-coordinate
      * @param sigma_x x - variance (must be !=0)
@@ -315,10 +315,10 @@ struct GaussianX
 
 };
 /**
- * @brief A Gaussian in y-direction
- * \f[
+ * @brief A %Gaussian in y-direction
+ * \f$
    f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}}
-   \f]
+   \f$
  */
 struct GaussianY
 {
@@ -354,10 +354,10 @@ struct GaussianY
 
 };
 /**
- * @brief A Gaussian in z-direction
- * \f[
+ * @brief A %Gaussian in z-direction
+ * \f$
    f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}}
-   \f]
+   \f$
  */
 struct GaussianZ
 {
@@ -410,7 +410,7 @@ struct GaussianZ
 };
 /**
  * @brief Island function
- * \f[ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f]
+ * \f$ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f$
  */
 struct IslandXY
 {
@@ -437,7 +437,7 @@ struct IslandXY
 };
 /**
  * @brief A sin prof in x and y-direction
- * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
+ * \f$ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f$
  */
 struct SinXSinY
 {
@@ -465,7 +465,7 @@ struct SinXSinY
 };
 /**
  * @brief A cos prof in x and y-direction
- * \f[ f(x,y) =B+ A \cos(k_x x) \cos(k_y y) \f]
+ * \f$ f(x,y) =B+ A \cos(k_x x) \cos(k_y y) \f$
  */
 struct CosXCosY
 {
@@ -493,7 +493,7 @@ struct CosXCosY
 };
 /**
  * @brief A sin prof in x- and cos prof in  y-direction
- * \f[ f(x,y) =B+ A \sin(k_x x) \cos(k_y y) \f]
+ * \f$ f(x,y) =B+ A \sin(k_x x) \cos(k_y y) \f$
  */
 struct SinXCosY
 {
@@ -521,7 +521,7 @@ struct SinXCosY
 };
 /**
  * @brief A sin prof in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) =B+ A \sin(k_x x) \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) =B+ A \sin(k_x x) \f$
  */
 struct SinX
 {
@@ -544,7 +544,7 @@ struct SinX
 };
 /**
  * @brief A sin prof in y-direction
- * \f[ f(x,y) =B+ A \sin(k_y y) \f]
+ * \f$ f(x,y) =B+ A \sin(k_y y) \f$
  */
 struct SinY
 {
@@ -563,7 +563,7 @@ struct SinY
 };
 /**
  * @brief A sin prof in x-direction
- * \f[ f(x,y) =B+ A \cos(k_y y) \f]
+ * \f$ f(x,y) =B+ A \cos(k_y y) \f$
  */
 struct CosY
 {
@@ -582,7 +582,7 @@ struct CosY
 };
 /**
  * @brief Inverse cosh profile
- * \f[ f(x,y) =A/\cosh^2(k_x x) \f]
+ * \f$ f(x,y) =A/\cosh^2(k_x x) \f$
  */
 struct InvCoshXsq
 {
@@ -604,7 +604,7 @@ struct InvCoshXsq
 };
 /**
  * @brief Sin prof in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) = B + A(1 - \sin(k_xx )) \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) = B + A(1 - \sin(k_xx )) \f$
  */
 struct SinProfX
 {
@@ -627,7 +627,7 @@ struct SinProfX
 };
 /**
  * @brief Exp prof in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) = B + A\exp(-x/L_n) \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) = B + A\exp(-x/L_n) \f$
  */
 struct ExpProfX
 {
@@ -653,7 +653,7 @@ struct ExpProfX
 
 /**
  * @brief The linear interpolation polynomial
- * \f[ f(x) = y_1\frac{x-x_0}{x_1-x_0} + y_0\frac{x-x_1}{x_0-x_1}\f]
+ * \f$ f(x) = y_1\frac{x-x_0}{x_1-x_0} + y_0\frac{x-x_1}{x_0-x_1}\f$
  */
 struct Line{
     Line(double x0, double y0, double x1, double y1) :
@@ -667,7 +667,7 @@ struct Line{
 
 /**
  * @brief A linear function in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) = ax+b \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) = ax+b \f$
  */
 struct LinearX
 {
@@ -689,7 +689,7 @@ struct LinearX
 };
 /**
  * @brief A linear polynomial in y-direction
- * \f[ f(x,y) = f(x,y,z) = ay+b \f]
+ * \f$ f(x,y) = f(x,y,z) = ay+b \f$
  */
 struct LinearY
 {
@@ -709,7 +709,7 @@ struct LinearY
 };
 /**
  * @brief A linear function in z-direction
- * \f[ f(x,y,z) = az+b \f]
+ * \f$ f(x,y,z) = az+b \f$
  */
 struct LinearZ
 {
@@ -727,11 +727,11 @@ struct LinearZ
 };
 
 /**
- * @brief Zero outside psimax and inside psimin, otherwise 1
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         1  \text{ if } \psi_{\min} < \psi < \psi_{\max}\\
         0  \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Zero outside psimax and inside psimin, otherwise 1
  */
 struct Iris
 {
@@ -748,11 +748,11 @@ struct Iris
     double m_psimin, m_psimax;
 };
 /**
- * @brief Zero outside psimax, otherwise 1
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         0  \text{ if } \psi > \psi_{\max} \\
         1  \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Zero outside psimax, otherwise 1
  */
 struct Pupil
 {
@@ -768,11 +768,11 @@ struct Pupil
     double psimax_;
 };
 /**
- * @brief Psi inside psimax and psimax outside psimax
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         \psi_{\max}  \text{ if } \psi > \psi_{\max} \\
         \psi \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Psi inside psimax and psimax outside psimax
  */
 struct PsiPupil
 {
@@ -788,11 +788,11 @@ struct PsiPupil
     double psimax_;
 };
 /**
- * @brief Zero up to xb, then one
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         0  \text{ if } x < x_b \\
         1  \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Zero up to xb, then one
   @note the 1 is inclusive i.e if x==x_b the functor always returns 1
  */
 struct Heaviside
@@ -822,7 +822,7 @@ struct Heaviside
 
 
 /**
- * @brief \f[ \sqrt{ (x-x_0)^2 + (y-y_0)^2} \f]
+ * @brief \f$ \sqrt{ (x-x_0)^2 + (y-y_0)^2} \f$
  */
 struct Distance
 {
@@ -836,13 +836,15 @@ struct Distance
 };
 
 /**
- * @brief One up to \c psimax, then a Gaussian down to zero
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
  1 \text{ if } \psi < \psi_{\max}\\
  0 \text{ if } \psi > (\psi_{\max} + 4\alpha) \\
  \exp\left( - \frac{(\psi - \psi_{\max})^2}{2\alpha^2}\right), \text{ else}
  \end{cases}
-   \f]
+   \f$
+
+   One up to \c psimax, then a %Gaussian down to zero
  */
 struct GaussianDamping
 {
@@ -862,7 +864,7 @@ struct GaussianDamping
 };
 /**
  * @brief An approximation to Heaviside using tanh
- * \f[ f(x) = B + 0.5 A(1+ \text{sign} \tanh((x-x_b)/\alpha ) ) \f]
+ * \f$ f(x) = B + 0.5 A(1+ \text{sign} \tanh((x-x_b)/\alpha ) ) \f$
  */
 struct TanhProfX {
     /**
@@ -898,14 +900,52 @@ struct TanhProfX {
 };
 
 /**
- * @brief An approximation to Heaviside using polynomials
-     \f[ \begin{cases}
+ * @brief \f$ \sum_{i=0}^{M-1} \sum_{j=0}^{N-1} c_{iN+j} x^i y^j  \f$
+ *
+ * Evaluated using [Horner's method](https://en.wikipedia.org/wiki/Horner%27s_method)
+ */
+struct Horner2d
+{
+    ///Initialize 1 coefficient to 1
+    Horner2d(): m_c( 1, 1), m_M(1), m_N(1){}
+
+    /**
+     * @brief Initialize coefficients and dimensions
+     *
+     * @param c vector of size MN containing coefficientc c (accessed as c[i*N+j] i.e. y-direction is contiguous)
+     * @param M number of polynomials in x
+     * @param N number of polynomials in y
+     */
+    Horner2d( std::vector<double> c, unsigned M, unsigned N): m_c(c), m_M(M), m_N(N){}
+    double operator()( double x, double y) const
+    {
+        std::vector<double> cx( m_M);
+        for( unsigned i=0; i<m_M; i++)
+            cx[i] = horner( &m_c[i*m_N], m_N, y);
+        return horner( &cx[0], m_M, x);
+    }
+    private:
+    double horner( const double * c, unsigned M, double x) const
+    {
+        double b = c[M-1];
+        for( unsigned i=0; i<M-1; i++)
+            b = c[M-2-i] + b*x;
+        return b;
+    }
+    std::vector<double> m_c;
+    unsigned m_M, m_N;
+};
+
+
+/**
+ * @brief \f$ \begin{cases}
      0 \text{ if } x < x_b-a \\
         ((16 a^3 - 29 a^2 (x - x_b) + 20 a (x - x_b)^2 - 5 (x - x_b)^3) (a + x -
    x_b)^4)/(32 a^7) \text{ if } |x-x_b| < a \\
         1  \text{ if } x > x_b + a
-     \end{cases}\f]
+     \end{cases}\f$
 
+ An approximation to Heaviside using polynomials.
      This function is 3 times continuously differentiable, takes the value 0.5 at xb and
      has a transition width a on both sides of xb.
  */
@@ -939,8 +979,8 @@ struct PolynomialHeaviside {
     int m_s;
 };
 /**
- * @brief An approximation to the Rectangle function using polynomials
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
      0 \text{ if } x < x_l-a_l \\
         ((16 a_l^3 - 29 a_l^2 (x - x_l) + 20 a_l (x - x_l)^2 - 5 (x - x_l)^3) (a_l + x -
    x_l)^4)/(32 a_l^7) \text{ if } |x-x_l| < a_l \\
@@ -948,8 +988,9 @@ struct PolynomialHeaviside {
         ((16 a_r^3 - 29 a_r^2 (x - x_r) + 20 a_r (x - x_r)^2 - 5 (x - x_r)^3) (a_r + x -
    x_l)^4)/(32 a_r^7) \text{ if } |x-x_r| < a_r \\
    0 \text{ if } x > x_r + a_r
-     \end{cases}\f]
+     \end{cases}\f$
 
+ An approximation to the Rectangle function using polynomials
      Basically just the product of two PolynomialHeaviside functions
 
      This function is 3 times continuously differentiable, takes the value 0.5 at xl and xr and
@@ -978,13 +1019,13 @@ struct PolynomialRectangle {
 };
 
 /**
- * @brief The integral of PolynomialHeaviside approximates xH(x)
-     \f[ \begin{cases}
+ * @brief \f$ \begin{cases}
      x_b \text{ if } x < x_b-a \\
      x_b + ((35 a^3 - 47 a^2 (x - x_b) + 25 a (x - x_b)^2 - 5 (x - x_b)^3) (a + x - x_b)^5)/(256 a^7)
         \text{ if } |x-x_b| < a \\
         x  \text{ if } x > x_b + a
-     \end{cases}\f]
+     \end{cases}\f$
+ The integral of PolynomialHeaviside approximates xH(x)
 
      This function is 4 times continuously differentiable,
      has a transition width \c a on both sides of \c xb, where it transitions from the
@@ -1024,12 +1065,12 @@ struct IPolynomialHeaviside {
 };
 
 /**
- * @brief The derivative of PolynomialHeaviside approximates delta(x)
-     \f[ \begin{cases}
+ * @brief \f$ \begin{cases}
      0 \text{ if } x < x_b-a || x > x_b+a \\
      (35 (a + x - x_b)^3 (a - x + x_b)^3)/(32 a^7)
         \text{ if } |x-x_b| < a
-     \end{cases}\f]
+     \end{cases}\f$
+     The derivative of PolynomialHeaviside approximates delta(x)
 
      This function is 2 times continuously differentiable, is symmetric around \c xb
      and has a width \c a on both sides of \c x0.
@@ -1062,7 +1103,7 @@ struct DPolynomialHeaviside {
 
 
 /**
- * @brief Exponential \f[ f(x) = A \exp(\lambda x)\f]
+ * @brief Exponential \f$ f(x) = A \exp(\lambda x)\f$
  *
  * @tparam T value-type
  */
@@ -1092,8 +1133,8 @@ struct EXP
     T m_amp, m_lambda;
 };
 /**
- * @brief natural logarithm
- * \f[ f(x) = \ln(x)\f]
+ * @brief
+ * \f$ f(x) = \ln(x)\f$ natural logarithm
  *
  * @tparam T value-type
  */
@@ -1115,7 +1156,7 @@ struct LN
 };
 /**
  * @brief Square root
- * \f[ f(x) = \sqrt{x}\f]
+ * \f$ f(x) = \sqrt{x}\f$
  *
  * @tparam T value-type
  */
@@ -1139,12 +1180,12 @@ struct SQRT
 
 /**
  * @brief Minmod function
- \f[ f(x_1, x_2, x_3) = \begin{cases}
+ \f$ f(x_1, x_2, x_3) = \begin{cases}
          \min(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 >0 \\
          \max(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 <0 \\
          0 \text{ else}
  \end{cases}
- \f]
+ \f$
  *
  * might be useful for flux limiter schemes
  * @tparam T value-type
@@ -1190,9 +1231,10 @@ struct MinMod
 };
 
 /**
- * @brief Add a constant value
- * \f[ f(x) = x + c\f]
+ * @brief
+ * \f$ f(x) = x + c\f$
  *
+ * Add a constant value
  * @tparam T value type
  */
 template <class T = double>
@@ -1218,9 +1260,10 @@ struct PLUS
 };
 
 /**
- * @brief %Invert the given value
- * \f[ f(x) = 1/x \f]
+ * @brief
+ * \f$ f(x) = 1/x \f$
  *
+ * %Invert the given value
  * @tparam T value type
  */
 template <class T = double>
@@ -1238,7 +1281,7 @@ struct INVERT
 
 /**
  * @brief returns (positive) modulo
- * \f[ f(x) = x\mod m\f]
+ * \f$ f(x) = x\mod m\f$
  *
  * @tparam T value type
  */
@@ -1269,7 +1312,7 @@ struct MOD
 };
 /**
  * @brief absolute value
- * \f[ f(x) = |x|\f]
+ * \f$ f(x) = |x|\f$
  *
  * @tparam T value type
  */
@@ -1288,11 +1331,11 @@ struct ABS
 };
 /**
  * @brief returns positive values
- \f[ f(x) = \begin{cases}
+ \f$ f(x) = \begin{cases}
          x \text{ for } x>0 \\
          0 \text{ else}
  \end{cases}
- \f]
+ \f$
  *
  * @tparam T value type
  */
@@ -1314,8 +1357,7 @@ struct POSVALUE
 };
 
 /**
- * @brief Return a constant
- * \f[ f(x) = c\f]
+ * @brief \f$ f(x) = c\f$
  */
 struct CONSTANT
 {
@@ -1337,8 +1379,7 @@ struct CONSTANT
 };
 
 /**
- * @brief Return one
- * \f[ f(x) = 1\f]
+ * @brief \f$ f(x) = 1\f$
  */
 struct ONE
 {
@@ -1350,8 +1391,7 @@ struct ONE
     double operator()(double x, double y, double z)const{return 1.;}
 };
 /**
- * @brief Return zero
- * \f[ f(x) = 0\f]
+ * @brief \f$ f(x) = 0\f$ Return 0
  */
 struct ZERO
 {
@@ -1365,10 +1405,10 @@ struct ZERO
 
 /**
  * @brief Functor returning a Lamb dipole
- \f[ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
+ \f$ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
          0 \text{ else}
          \end{cases}
- \f]
+ \f$
 
  with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$
  \theta = \arctan_2( (y-y_), (x-x_0))\f$,
@@ -1440,15 +1480,16 @@ struct Lamb
 };
 
 /**
- * @brief Return a 2d vortex function
-       \f[f(x,y) =\begin{cases}
+ * @brief
+       \f$f(x,y) =\begin{cases}
        \frac{u_d}{1.2965125} \left(
        r\left(1+\frac{\beta_i^2}{g_i^2}\right)
        - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
       \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
-      \f]
+      \f$
 
+      Return a 2d vortex function
      * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
  with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ \theta = \arctan_2( (y-y_), (x-x_0))\f$,
         \f$ g_0 = 3.831896621 \f$,
@@ -1482,15 +1523,15 @@ struct Vortex
         b_[2] = 0.07071067810 ;
     }
     /**
-     * @brief Evaluate the vortex
-     *
-       \f[f(x,y) =\begin{cases}
+     * @brief \f$f(x,y) =\begin{cases}
        \frac{u_d}{1.2965125} \left(
        r\left(1+\frac{\beta_i^2}{g_i^2}\right)
        - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
       \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
-      \f]
+      \f$
+
+      Evaluate the vortex
      * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
@@ -1517,15 +1558,15 @@ struct Vortex
         return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
     }
     /**
-     * @brief Evaluate the vortex modulated by a sine wave in z
-     *
-       \f[f(x,y,z) =\cos(k_z z)\begin{cases}
+     * @brief \f$f(x,y,z) =\cos(k_z z)\begin{cases}
        \frac{u_d}{1.2965125} \left(
        r\left(1+\frac{\beta_i^2}{g_i^2}\right)
        - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
       \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
-      \f]
+      \f$
+
+      Evaluate the vortex modulated by a sine wave in z
      * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
@@ -1591,10 +1632,10 @@ struct Vortex
 };
 
 /**
-* @brief A random bath in the RZ plane
-*
-\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
-\f]
+* @brief \f$f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
+\f$
+
+* A random bath in the R-Z plane
 * with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
         k:=\sqrt{k_R^2 + k_Z^2} \\
         k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
@@ -1879,8 +1920,7 @@ struct Histogram2D
 
 
 /**
- * @brief Check for NaN
- * \f[ f(x) = std::isnan(x) \f]
+ * @brief Check for NaN: \f$ f(x) = std::isnan(x) \f$
  */
 template <class T>
 struct ISNAN

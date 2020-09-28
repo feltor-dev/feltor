@@ -21,33 +21,6 @@ namespace dg
 {
 namespace geo
 {
-
-/**
- * @brief \f[ \sum_{i=0}^{M-1} \sum_{j=0}^{N-1} c_{i*N+j} x^i y^j  \f]
- */
-struct Horner2d
-{
-    Horner2d(): m_c( 1, 1), m_M(1), m_N(1){}
-    Horner2d( std::vector<double> c, unsigned M, unsigned N): m_c(c), m_M(M), m_N(N){}
-    double operator()( double x, double y) const
-    {
-        std::vector<double> cx( m_M);
-        for( unsigned i=0; i<m_M; i++)
-            cx[i] = horner( &m_c[i*m_N], m_N, y);
-        return horner( &cx[0], m_M, x);
-    }
-    private:
-    double horner( const double * c, unsigned M, double x) const
-    {
-        double b = c[M-1];
-        for( unsigned i=0; i<M-1; i++)
-            b = c[M-2-i] + b*x;
-        return b;
-    }
-    std::vector<double> m_c;
-    unsigned m_M, m_N;
-};
-
 /**
  * @brief Contains a polynomial approximation type flux function
  */
@@ -57,11 +30,10 @@ namespace polynomial
 ///@{
 
 /**
- * @brief \f[ \hat{\psi}_p  \f]
- *
- * \f[ \hat{\psi}_p(R,Z) =
-      \hat{R}_0P_{\psi}\Bigg\{ \sum_i \sum_j c_{i*N+j} x^i y^j \Bigg\}
-      \Bigg\} \f]
+ * @brief \f$ \psi_p(R,Z) =
+      R_0P_{\psi}\Bigg\{ \sum_i \sum_j c_{i*N+j} \bar R^i \bar Z^j \Bigg\}
+      \f$
+
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  *
  */
