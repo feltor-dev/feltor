@@ -1,15 +1,30 @@
+#ifdef JSONCPP_VERSION_STRING
 #include "magnetic_field.h"
 #include "solovev.h"
 #include "guenther.h"
 #include "polynomial.h"
 #include "toroidal.h"
-//#include "taylor.h" //only if boost is included
 #include <dg/file/json_utilities.h>
-
 
 namespace dg{
 namespace geo{
 
+/**
+ * @brief Create a Magnetic field based on the given parameters
+ *
+ * This function abstracts the Magnetic field generation. It reads an
+ * input Json file that tells this function via the "equilibrium" parameter which
+ * field to generate and which parameters to expect in the file, for example if
+ * "equilibrium" reads "toroidal", then only on additional parameter "R_0" is
+ * read from the file and a field is constructed
+ * @param js Has to contain "equilibrium" which is converted dg::geo::equilibrium,
+ * i.e. "solovev", "polynomial", .... After that the respective parameters are created,
+ * for example if "solovev", then the dg::geo::solovev::Parameters( js, mode) is called and forwarded to dg::geo::createSolovevField(gp); similar for the rest
+ * @param mode signifies what to do if an error occurs
+ * @return A magnetic field object
+ * @ingroup geom
+ * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
+ */
 static inline TokamakMagneticField createMagneticField( Json::Value js, file::error mode)
 {
     std::string e = file::get( mode, js, "equilibrium", "solovev" ).asString();
@@ -53,15 +68,19 @@ static inline TokamakMagneticField createMagneticField( Json::Value js, file::er
  * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
  * This subsequently modifies all derivatives of psi and the poloidal
  * current in this region.
- * @param in Magnetic field to change
- * @param psi0 boundary value where psi is modified to a constant psi0
- * @param alpha radius of the transition region where the modification acts (smaller is quicker)
- * @param sign determines which side of Psi to dampen (negative or positive, forwarded to \c dg::IPolynomialHeaviside)
- * @param ZX Here you can give a Z value (of the X-point).
- * @param side  The modification will only happen on either the upper (positive) or lower (negative) side of ZX in Z.
- * @note Per default the dampening happens everywhere
+ * @param js forwarded to dg::geo::createMagneticField
+ * @param jsmod must contain the field "damping": "modifier" which has one of the values "none", "heaviside" then
+ *  "damping": "boundary" value where psi is modified to a constant psi0
+ * "damping": "alpha" radius of the transition region where the modification acts (smaller is quicker) or "sol_pfr", then "
+ *  "damping": "boundary" and
+ * "damping": "alpha" must be arrays of size 2 to indicate values for the SOL and the PFR respectively
+ * @param mode Determines behaviour in case of an error
+ * @param damping On output contains the region where the damping is applied
+ * @param transition On output contains the region where the transition of Psip to a constant value occurs
+ * @note Per default the dampening happens nowhere
  * @return A magnetic field object
  * @ingroup geom
+ * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  */
 static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Value jsmod, file::error mode, CylindricalFunctor& damping, CylindricalFunctor& transition)
 {
@@ -184,3 +203,4 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
 
 } //namespace geo
 }//namespace dg
+#endif //JSONCPP_VERSION_STRING

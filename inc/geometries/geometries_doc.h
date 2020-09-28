@@ -13,6 +13,7 @@
       @defgroup geom 3.1 New flux functions and derivatives
       @{
         @defgroup solovev The solovev magnetic field
+        @defgroup polynomial The polynomial magnetic field
         @defgroup taylor The Taylor state magnetic field
         @defgroup guenther The Guenther magnetic field
         @defgroup toroidal The Purely Toroidal magnetic field

@@ -284,7 +284,12 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
  */
 struct Ipol: public aCylindricalFunctor<Ipol>
 {
-    ///@copydoc Psip::Psip()
+    /**
+     * @brief Construct from given geometric parameters
+     *
+     * @param gp geometric parameters (for R_0, A, PP and PI)
+     * @param psip the flux function to use
+     */
     Ipol( Parameters gp, std::function<double(double,double)> psip ):  m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip) {
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
@@ -302,7 +307,10 @@ struct Ipol: public aCylindricalFunctor<Ipol>
  */
 struct IpolR: public aCylindricalFunctor<IpolR>
 {
-    ///@copydoc Psip::Psip()
+    /**
+     * @copydoc Ipol::Ipol()
+     * @param psipR the R-derivative of the flux function to use
+     */
     IpolR(  Parameters gp, std::function<double(double,double)> psip, std::function<double(double,double)> psipR ):
         m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip), m_psipR(psipR) {
         if( gp.pp == 0.)
@@ -321,7 +329,10 @@ struct IpolR: public aCylindricalFunctor<IpolR>
  */
 struct IpolZ: public aCylindricalFunctor<IpolZ>
 {
-    ///@copydoc Psip::Psip()
+    /**
+     * @copydoc Ipol::Ipol()
+     * @param psipZ the Z-derivative of the flux function to use
+     */
     IpolZ(  Parameters gp, std::function<double(double,double)> psip, std::function<double(double,double)> psipZ ):
         m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip), m_psipZ(psipZ) {
         if( gp.pp == 0.)
