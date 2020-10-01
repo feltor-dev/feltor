@@ -1070,7 +1070,7 @@ and
     -\nc\left( \frac{N_i}{B^2}\np \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta_\perp \\
     \psi_e = \phi, \quad \psi_i &= \Gamma_{1,i}\phi -\frac{\mu_i}{2}\frac{(\np\phi)^2}{B^2} \\
-    \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_{\parallel,e}}n_e-\Delta_\perp\right)
+    \left(\frac{\beta}{\mu_i}N_i - \frac{\beta}{\mu_e}n_e-\Delta_\perp\right)
     A_\parallel &= \beta\left(N_iW_i-n_e w_e\right)
   \end{align}
 \end{subequations}
@@ -1146,6 +1146,8 @@ The relevant terms in the output file are
     lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
     sne\_tt & $S_{n_e}$ &
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
+    dnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
+      & \\
     ions & $N_i$ &
     jsniC\_tt &$ N_i ( \vec u_K + \vec u_C )\cn \psi_p$ \\
     jsniA\_tt &$ N_i U_{\parallel,i} \vec{ b}_\perp  \cn \psi_p$ &
@@ -1154,6 +1156,8 @@ The relevant terms in the output file are
     lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_\parallel \Delta_\parallel N_i$ \\
     sni\_tt & $S_{N_i}$ &
     jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
+    dnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
+      & \\
 \bottomrule
 \end{longtable}
 

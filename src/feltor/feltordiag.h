@@ -524,7 +524,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::copy( v.f.density_source(0), result);
         }
     },
-    {"spne_tt", "Parallel Source term for electron density (Time average)", true,
+    {"dnepar_tt", "Divergence of Parallel velocity term for electron density (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), v.f.divb(), 0., result);
             dg::blas1::pointwiseDot( 1., v.f.density(0),  v.f.dsU(0), 1., result);
@@ -586,7 +586,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::copy( v.f.density_source(1), result);
         }
     },
-    {"spni_tt", "Parallel Source term for ion density (Time average)", true,
+    {"dnipar_tt", "Divergence of Parallel velocity term in ion density (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.divb(), 0., result);
             dg::blas1::pointwiseDot( 1., v.f.density(1),  v.f.dsU(1), 1., result);
