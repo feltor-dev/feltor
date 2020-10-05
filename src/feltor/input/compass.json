@@ -11,9 +11,9 @@
         "rk4eps": 1e-6,
         "periodify": true
     },
-    "inner_loop": 5, 
-    "itstp": 500, 
-    "maxout": 50, 
+    "inner_loop": 5,
+    "itstp": 500,
+    "maxout": 50,
     "stages"     : 3,
     "eps_pol"    : [1e-6,1,1],
     "jumpfactor" : 1,
@@ -25,7 +25,6 @@
     "beta"        : 0e-4,
     "nu_perp"     : 2e-3,
     "perp_diff"   : "hyperviscous",
-    "nu_parallel" : 4e2,
     "resistivity" : 1e-4,
     "curvmode"   : "toroidal",
     "symmetric"  : false,
@@ -62,9 +61,9 @@
     },
     "damping":
     {
-        "modifier": "heaviside",
+        "modifier": "sol_pfr",
         "rate" : 1e-2,
-        "boundary": 1.1,
-        "alpha": 0.25
+        "boundary": [1.1,0.988],
+        "alpha": [0.25,0.15]
     }
 }

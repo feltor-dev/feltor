@@ -1,8 +1,8 @@
 //Compass geometry file T_e = 200eV, B = 0.8T, Deuterium plasma
 {
     "A": 0,
-   	"R_0": 2.191566859511476e2,
-   	"PP": 0.8,
+   	"R_0": 219.23,
+   	"PP": 1,
    	"PI": 1,
    	"c":[
    	    0.10587834884347505,
