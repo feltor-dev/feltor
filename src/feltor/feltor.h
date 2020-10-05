@@ -238,9 +238,9 @@ struct Explicit
     const Container & dsP (int i) const {
         return m_dsP[i];
     }
-    const Container & dssN(int i) { //2nd fieldaligned derivative
-        return m_dssN[i];
-    }
+    //const Container & dssN(int i) { //2nd fieldaligned derivative
+    //    return m_dssN[i];
+    //}
     const Container & dssU(int i) {
         return m_dssU[i];
     }
@@ -375,7 +375,7 @@ struct Explicit
     Container m_vol3d;
 
     Container m_apar;
-    std::array<Container,2> m_phi, m_dsN, m_dsU, m_dsP, m_dssN, m_dssU;
+    std::array<Container,2> m_phi, m_dsN, m_dsU, m_dsP, m_dssU;// m_dssN;
     std::array<Container,3> m_dA;
     std::array<std::array<Container,3>,2> m_dP, m_dN, m_dU;
     std::array<std::array<Container,2>,2> m_fields, m_s; //fields, sources
@@ -571,7 +571,8 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_apar = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
-    m_dssN = m_dssU = m_dsN = m_dsU = m_dsP = m_phi;
+    //m_dssN =
+    m_dssU = m_dsN = m_dsU = m_dsP = m_phi;
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
     m_dN = m_dU = m_dP;
@@ -833,13 +834,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
             -1., fields[0][i], m_dsU[i], 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
             1.,yp[0][i]);
-        //density: + nu_par Delta_par N
-        dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
-                                 0., m_temp0);
-        m_ds_N.dss( y[0][i], m_dssN[i]);
-        dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., m_temp0);//nu_par Delta_par N
-        //Add to rhs, we again need it further down
-        dg::blas1::axpby( 1., m_temp0, 1., yp[0][i]);
+        //////////density: + nu_par Delta_par N
+        ////////dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
+        ////////                         0., m_temp0);
+        ////////m_ds_N.dss( y[0][i], m_dssN[i]);
+        ////////dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., m_temp0);//nu_par Delta_par N
+        //////////Add to rhs, we again need it further down
+        ////////dg::blas1::axpby( 1., m_temp0, 1., yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
         //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
@@ -852,11 +853,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         m_ds_P.centered( m_phi[i], m_dsP[i]);
         dg::blas1::axpby(-1./m_p.mu[i], m_dsP[i], 1.0, yp[1][i]);
         // diffusion: + nu_par Delta_par U/N - nu_par U Delta_par N/ N
-        dg::blas1::pointwiseDot(m_p.nu_parallel, m_divb, m_dsU[i],
+        dg::blas1::pointwiseDot(m_p.nu_parallel[i], m_divb, m_dsU[i],
                                 0., m_temp1);
         m_ds_U.dss( fields[1][i], m_dssU[i]);
-        dg::blas1::axpby( m_p.nu_parallel, m_dssU[i], 1., m_temp1); //nu_par Delta_par U
-        dg::blas1::pointwiseDot( -1., fields[1][i], m_temp0, 1., m_temp1); //
+        dg::blas1::axpby( m_p.nu_parallel[i], m_dssU[i], 1., m_temp1); //nu_par Delta_par U
+        //////dg::blas1::pointwiseDot( -1., fields[1][i], m_temp0, 1., m_temp1);
         dg::blas1::pointwiseDivide( 1., m_temp1, fields[0][i], 1., yp[1][i]);
     }
 }

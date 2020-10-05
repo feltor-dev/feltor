@@ -29,8 +29,9 @@ struct Parameters
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
+    std::array<double,2> nu_parallel;
 
-    double nu_perp, nu_parallel;
+    double nu_perp;
     double eta, beta;
 
     double amp;
@@ -88,10 +89,13 @@ struct Parameters
         tau[0]      = -1.;
         tau[1]      = file::get( mode, js, "tau", 0.).asDouble();
         beta        = file::get( mode, js, "beta", 0.).asDouble();
+        eta         = file::get( mode, js, "resistivity", 0.).asDouble();
         nu_perp     = file::get( mode, js, "nu_perp", 0.).asDouble();
         perp_diff   = file::get( mode, js, "perp_diff", "viscous").asString();
-        nu_parallel = file::get( mode, js, "nu_parallel", 0.).asDouble();
-        eta         = file::get( mode, js, "resistivity", 0.).asDouble();
+        //nu_parallel = file::get( mode, js, "nu_parallel", 0.).asDouble();
+        //Init after reading in eta and mu[0]
+        nu_parallel[0] = 0.73/eta;
+        nu_parallel[1] = sqrt(fabs(mu[0]))*1.36/eta;
 
         initne      = file::get( mode, js, "initne", "blob").asString();
         initphi     = file::get( mode, js, "initphi", "zero").asString();
@@ -137,7 +141,8 @@ struct Parameters
             <<"     perp. Viscosity   = "<<perp_diff<<"\n"
             <<"     par. Resistivity  = "<<eta<<"\n"
             <<"     beta              = "<<beta<<"\n"
-            <<"     par. Viscosity    = "<<nu_parallel<<"\n"
+            <<"     par. Viscosity e  = "<<nu_parallel[0]<<"\n"
+            <<"     par. Viscosity i  = "<<nu_parallel[1]<<"\n"
             <<"     curvature mode    = "<<curvmode<<"\n"
             <<"     Symmetry in phi   = "<<std::boolalpha<<symmetric<<"\n";
         os  <<"Initial parameters are: \n"

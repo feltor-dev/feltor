@@ -223,7 +223,6 @@ int main( int argc, char* argv[])
             {
                 err = nc_get_vara_double( ncid_in, dataID,
                     start3d, count3d_in, transferH_in.data());
-                //2. Compute fsa and output fsa
                 transferH_out = fieldaligned.interpolate_from_coarse_grid(
                     g3d_in, transferH_in);
                 dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);

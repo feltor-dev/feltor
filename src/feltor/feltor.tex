@@ -815,7 +815,8 @@ $\mu_{\parallel,e}:=0.73\frac{n_eT_e}{\nu_{ei}}$ and $\mu_{\parallel,i} = 0.96\f
 \end{align}
     \label{eq:resistivity}
 \end{subequations}
-with $\ln \lambda \approx 10$ and $T_e=T_i$ for the purpose of computing the diffusive coefficients.
+with $\ln \lambda \approx 10$ and $T_e=T_i$ for the purpose of computing the diffusive coefficients. Note that $\nu_\parallel/N$ represents a kinematic viscosity and is a factor $\sqrt{|\mu_e|}$ smaller for ions than for electrons.
+The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_{\parallel,i} - u_{\parallel,e}\right)\)
  determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
 
@@ -1166,6 +1167,7 @@ The relevant terms in the output file are
 
 
 
+Note that the parallel divergences vanish exactly under a flux-surface average. This can serve as a numerical test of our implementation.
 \subsubsection{Energy theorem}
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
@@ -1340,6 +1342,7 @@ The relevant terms in the output file are (the Lorentz force term is described i
     lparperp\_tt & $-\nu_\perp U_{\parallel,i} \Delta_\perp^2 N_i - \nu_\perp N_i\Delta_\perp^2 U_{\parallel,i} $ \\
 \bottomrule
 \end{longtable}
+Note that the parallel viscosity term vanishes exactly under the flux-surface average. This can serve as a numerical test.
 
 \subsubsection{Parallel electron force balance}
 We gather the dominant terms in the electron momentum equation (neglecting all terms as $\mu_e=0$). This leaves the parallel force balance
