@@ -55,8 +55,7 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
-    //maybe we should issue a warning if file exists?
-    err = nc_create(argv[argc-1],NC_NETCDF4|NC_CLOBBER, &ncid_out);
+    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
 
     /// Set global attributes
     std::map<std::string, std::string> att;

@@ -1765,8 +1765,12 @@ are all taken from the regular input files. This means that the user must take c
 with the paramters in the existing \texttt{initial.nc} file. Also note that we try to discourage
 appending new results to an exisiting file directly,
 because if for some reason the cluster crashes and the file is corrupted
-the whole simulation is lost. It is safer to just merge files afterwards with for example\\
-\texttt{ncrcat output1.nc output2.nc output.nc}
+the whole simulation is lost.
+\begin{tcolorbox}[title=Note]
+It is safer to just merge files afterwards with\\
+\texttt{ncrcat output1.nc output2.nc output.nc}\\
+from the \texttt{nco} package
+\end{tcolorbox}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
 \texttt{feltor/src/feltor/feltordiag.cu}
@@ -1775,6 +1779,11 @@ Compilation\\
 \texttt{make feltordiag device=\{gpu,omp\}} \\
 Usage \\
 \texttt{./feltordiag input0.nc ... inputN.nc output.nc} \\
+
+\begin{tcolorbox}[title=Note]
+\texttt{feltordiag} refuses to overwrite existing files in order to protect against data loss in case of accidental spelling
+errors or other careless mistakes.
+\end{tcolorbox}
 
 Output file format: netcdf-4/hdf5, Conventions: CF-1.7; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
 
@@ -1807,9 +1816,11 @@ Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface av
 \bottomrule
 \end{longtable}
 where Z $\in$ \{X, Y\_tt\}
-Note that feltoridag converts all $jsX$ quantities into $jvX$
+\begin{tcolorbox}[title=Note]
+\texttt{feltoridag} converts all $jsX$ quantities into $jvX$
 by multiplying $\d v/\d \psi_p$
 in the sense that $\vec j\cn v  = \vec j \cn \psi_p \d v/\d\psi_p$.
+\end{tcolorbox}
 The parameters used for the X-point flux-aligned grid construction are $f_x = 1/8$, $f_y = 0$, $n_\psi = 3$, $N_\zeta = 64$ and $N_\eta = 640$ and the constant monitor metric.
 
 We also have a useful geometry diagnostic program:
