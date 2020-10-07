@@ -261,18 +261,21 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 /**
 * @brief Extrapolate based on up to three past solutions
 *
+* This class constructs an interpolating polynomial through up to three given points
+* and evaluates its value or its derivative at a new point.
+*
 * The intention of this class is to provide an initial guess for iterative solvers
 * based on past solutions:
  \f[ x_{init} = \alpha_0 x_0 + \alpha_{-1}x_{-1} + \alpha_{-2} x_{-2}\f]
  where the indices indicate the current (0) and past (negative) solutions.
- Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
- The user can choose to provide a time value \c t_i associated with the \c x_i, which
+ Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.  The user can choose to provide a time value \c t_i associated with the \c x_i, which
  are then used to compute the coefficients \c alpha_i (using Lagrange interpolation).
  Otherwise an equidistant distribution is assumed.
 *
 * @note Since extrapolation with higher order polynomials is so prone to oscillations
 * anything higher than linear rarely leads to anything useful. So best stick to
 * constant or linear extrapolation
+* @note The derivative of the interpolating polynomial at a new point reduces to familiar finite difference formulas
 * @copydoc hide_ContainerType
 * @ingroup invert
 * @sa https://en.wikipedia.org/wiki/Extrapolation
@@ -344,7 +347,9 @@ struct Extrapolation
 
     /**
     * @brief Extrapolate value to given time
-    * @param t time to which to extrapolate
+    *
+    * Construt and evaluate the interpolating polynomial at a given point
+    * @param t time to which to extrapolate (or at which interpolating polynomial is evaluated)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
@@ -358,7 +363,7 @@ struct Extrapolation
                      break;
             case(3): {
                 value_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
-                value_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
+                value_type f1 =-(t-m_t[0])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
                 value_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
                 dg::blas1::evaluate( new_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
@@ -373,17 +378,40 @@ struct Extrapolation
     }
 
     /**
-    * @brief Backard difference formula to get time derivative \f$ (x_0-x_1)/(t_0-t_1)\f$
+    * @brief Evaluate first derivative of interpolating polynomial
+    *
+    * @param t time at which derivative of interpolating polynomial is evaluated
     * @param dot_x (write only) contains derived value on output
+    * @note For equidistant values this is equivalent to computing the backward difference formula
+    * @attention If number==1, the result is 0 (derivative of a constant
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
-    void derive( ContainerType0& dot_x) const{
-        dg::blas1::axpbypgz( 1./(m_t[0]-m_t[1]), m_x[0], -1./(m_t[0]-m_t[1]), m_x[1], 0., dot_x);
+    void derive( value_type t, ContainerType0& dot_x) const{
+        switch(m_number)
+        {
+            case(0):
+                     break;
+            case(1): dg::blas1::copy( 0, dot_x);
+                     break;
+            case(3): {
+                value_type f0 =-(-2.*t+m_t[1]+m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
+                value_type f1 = (-2.*t+m_t[0]+m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
+                value_type f2 =-(2.*t+m_t[0]+m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                dg::blas1::evaluate( dot_x, dg::equals(), dg::PairSum(),
+                        f0, m_x[0], f1, m_x[1], f2, m_x[2]);
+                 break;
+            }
+            default: {
+                value_type f0 = 1./(m_t[0]-m_t[1]);
+                value_type f1 = 1./(m_t[1]-m_t[0]);
+                dg::blas1::axpby( f0, m_x[0], f1, m_x[1], dot_x);
+            }
+        }
     }
 
     /**
-    * @brief Extrapolate value
+    * @brief Extrapolate value (equidistant version)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @note Assumes that extrapolation time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
@@ -392,6 +420,24 @@ struct Extrapolation
     void extrapolate( ContainerType0& new_x) const{
         value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
+    }
+    /**
+    * @brief Derive value (equidistant version)
+    * @param dot_x (write only) contains derived value on output
+    * @note Assumes that extrapolation time equals t0 + (t0 - t1)
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
+    template<class ContainerType0>
+    void derive( ContainerType0& dot_x) const{
+        if ( 0 == m_number)
+            return;
+        if ( 1 == m_number)
+        {
+            dg::blas1::copy( 0, dot_x);
+            return;
+        }
+        value_type t = 2*m_t[0] - m_t[1];
+        derive( t, dot_x);
     }
 
 
