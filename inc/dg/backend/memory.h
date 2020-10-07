@@ -69,10 +69,14 @@ struct ClonePtr
     *
     * This follows the discussion in
     * https://stackoverflow.com/questions/5695548/public-friend-swap-member-function
-    * Use like
+    * @note the std library does call this function via unqualified calls in
+    * many algorithms, for example in std::iter_swap, it is just std::swap that
+    * will not call it directly. Most of the time this is not an issue because
+    * we have move assignments now, but if you do want to enable free swap
+    * functions like these use:
     * @code
     * using std::swap;
-    * swap( cloneptr1, cloneptr2);
+    * swap(a,b);
     * @endcode
     * @param first first instance
     * @param second second instance

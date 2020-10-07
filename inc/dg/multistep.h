@@ -146,8 +146,7 @@ void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& 
     for( unsigned i=0; i<m_k; i++)
         blas1::axpby( m_dt*m_ab[i], m_f[i], 1., m_u);
     //permute m_f[k-1]  to be the new m_f[0]
-    for( unsigned i=m_k-1; i>0; i--)
-        m_f[i-1].swap( m_f[i]);
+    std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
     blas1::copy( m_u, u);
     t = m_tu = m_tu + m_dt;
     f( m_tu, m_u, m_f[0]); //evaluate f at new point
@@ -326,11 +325,8 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, valu
     blas1::axpbypgz( m_dt*b[0], m_f[0], m_dt*b[1], m_f[1], m_dt*b[2], m_f[2]);
     blas1::axpbypgz( a[0], m_u[0], a[1], m_u[1], a[2], m_u[2]);
     //permute m_f[2], m_u[2]  to be the new m_f[0], m_u[0]
-    for( unsigned i=2; i>0; i--)
-    {
-        m_f[i-1].swap( m_f[i]);
-        m_u[i-1].swap( m_u[i]);
-    }
+    std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
+    std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
     blas1::axpby( 1., m_f[0], 1., m_u[0]);
     //compute implicit part
     value_type alpha[2] = {2., -1.};
@@ -465,7 +461,7 @@ void BDF<ContainerType, SolverType>::step(RHS& rhs, value_type& t, container_typ
         dg::blas1::axpby( alpha[0], m_u[0], alpha[1],  m_u[1], u);
     else
         dg::blas1::copy( m_u[0], u);
-    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend()); //Rotate 1 to the right
+    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend()); //Rotate 1 to the right (note the reverse iterator here!)
     m_solver.solve( -m_dt*m_beta, rhs, t, u, m_f);
     dg::blas1::copy( u, m_u[0]);
 }

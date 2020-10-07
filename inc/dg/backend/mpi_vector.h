@@ -106,6 +106,15 @@ struct MPI_Vector
     MPI_Comm m_comm, m_comm128, m_comm128Reduce;
 
 };
+///@cond
+//free function as required by the std to be swappable
+//https://en.cppreference.com/w/cpp/named_req/Swappable
+//even though with move assignments std::swap also works as fast
+template<class container>
+void swap( MPI_Vector<container>& a, MPI_Vector<container>& b){
+    a.swap(b);
+}
+///@endcond
 
 ///@addtogroup dispatch
 ///@{

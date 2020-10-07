@@ -226,6 +226,22 @@ int main( int argc, char* argv[])
         norm += dg::blas2::dot( x, w2d, y);
     t.toc();
     if(rank==0)std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
+    if(rank==0)std::cout << "\nUse of std::rotate and swap calls ( should not take any time)\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::rotate( x.rbegin(), x.rbegin()+1, x.rend()); //calls free swap functions
+    t.toc();
+    if(rank==0)std::cout<<"Rotation        took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::swap( x[0], y[0]); //does not call free swap functions but uses move assignments which is just as fast
+    t.toc();
+    if(rank==0)std::cout<<"std::swap       took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::iter_swap( x.begin(), x.end()); //calls free swap functions
+    t.toc();
+    if(rank==0)std::cout<<"Swap            took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
 
     MPI_Finalize();
     return 0;

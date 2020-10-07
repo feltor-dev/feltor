@@ -253,5 +253,21 @@ int main()
         dg::blas1::axpby( 1., test_serial, 2., test_serial);//warm up
     t.toc();
     std::cout<<"serial axpby took                " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout << "\nUse of std::rotate and swap calls ( should not take any time)\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::rotate( x.rbegin(), x.rbegin()+1, x.rend()); //calls free swap functions
+    t.toc();
+    std::cout<<"Rotation        took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::swap( x[0], y[0]); //does not call free swap functions but uses move assignments which is just as fast
+    t.toc();
+    std::cout<<"std::sawp       took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::iter_swap( x.begin(), x.end()); //calls free swap functions
+    t.toc();
+    std::cout<<"Swap            took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     return 0;
 }

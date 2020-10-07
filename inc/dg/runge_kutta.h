@@ -229,7 +229,10 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
     if(!m_rk.isFsal() )
         f(t1,u1,m_k[0]);
     else
-        m_k[s-1].swap(m_k[0]);
+    {
+        using std::swap;
+        swap( m_k[0], m_k[s-1]); //enable free swap functions
+    }
 }
 
 

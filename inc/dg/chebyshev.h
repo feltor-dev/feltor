@@ -127,7 +127,8 @@ class ChebyshevIteration
                              2.*rhok/delta,  b,
                             -2.*rhok/delta,  m_ax
                             );
-            x.swap(m_xm1);
+            using std::swap;
+            swap( x, m_xm1);
             rhokm1 = rhok;
         }
     }
@@ -190,7 +191,8 @@ class ChebyshevIteration
                              2.*rhok/delta,  m_z,
                             -rhok*rhokm1,    m_xm1
                             );
-            x.swap(m_xm1);
+            using std::swap;
+            swap( x, m_xm1);
             rhokm1 = rhok;
         }
     }
@@ -306,7 +308,8 @@ struct ModifiedChebyshevPreconditioner
             dg::blas1::axpby( 2., m_ax, -1., m_z2, m_z2); //T_k
             c_k *= (sqrt( m_ev_min/m_ev_max) - 1.)/(sqrt(m_ev_min/m_ev_max)+1);
             dg::blas1::axpby( c_k, m_z2, 1., y);
-            m_z1.swap(m_z2);
+            using std::swap;
+            swap(m_z1,m_z2);
         }
     }
     private:
