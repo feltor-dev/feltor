@@ -259,10 +259,10 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 ///@endcond
 
 /**
-* @brief Extrapolate based on up to three past solutions
+* @brief Extrapolate a polynomial passing through up to three points
 *
 * This class constructs an interpolating polynomial through up to three given points
-* and evaluates its value or its derivative at a new point.
+* and evaluates its value or its derivative at a new point. The points can be updated to get a new polynomial.
 *
 * The intention of this class is to provide an initial guess for iterative solvers
 * based on past solutions:
@@ -380,10 +380,13 @@ struct Extrapolation
     /**
     * @brief Evaluate first derivative of interpolating polynomial
     *
+    * Equivalent to constructing the interpolating polynomial, deriving it once
+    * and then evaluating it at the required point
     * @param t time at which derivative of interpolating polynomial is evaluated
     * @param dot_x (write only) contains derived value on output
-    * @note For equidistant values this is equivalent to computing the backward difference formula
-    * @attention If number==1, the result is 0 (derivative of a constant
+    * @note If t is chosen as the latest time of update t0, then the result coincides
+    * with the backward difference formula of order  \c number
+    * @attention If number==1, the result is 0 (derivative of a constant)
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
@@ -397,10 +400,10 @@ struct Extrapolation
             case(3): {
                 value_type f0 =-(-2.*t+m_t[1]+m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
                 value_type f1 = (-2.*t+m_t[0]+m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
-                value_type f2 =-(2.*t+m_t[0]+m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                value_type f2 =-(-2.*t+m_t[0]+m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
                 dg::blas1::evaluate( dot_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
-                 break;
+                break;
             }
             default: {
                 value_type f0 = 1./(m_t[0]-m_t[1]);
@@ -418,26 +421,22 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void extrapolate( ContainerType0& new_x) const{
+        if ( 0 == m_number)
+            return;
         value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
     }
     /**
     * @brief Derive value (equidistant version)
     * @param dot_x (write only) contains derived value on output
-    * @note Assumes that extrapolation time equals t0 + (t0 - t1)
+    * @note Assumes that time equals t0 such that a backward difference formula will be evaluated
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
     void derive( ContainerType0& dot_x) const{
         if ( 0 == m_number)
             return;
-        if ( 1 == m_number)
-        {
-            dg::blas1::copy( 0, dot_x);
-            return;
-        }
-        value_type t = 2*m_t[0] - m_t[1];
-        derive( t, dot_x);
+        derive( m_t[0], dot_x);
     }
 
 
@@ -458,11 +457,8 @@ struct Extrapolation
                 return;
             }
         //push out last value (keep track of what is oldest value
-        for (unsigned u=m_number-1; u>0; u--)
-        {
-            std::swap( m_t[u], m_t[u-1]);
-            m_x[u].swap( m_x[u-1]);
-        }
+        std::rotate( m_x.rbegin(), m_x.rbegin()+1, m_x.rend());
+        std::rotate( m_t.rbegin(), m_t.rbegin()+1, m_t.rend());
         m_t[0] = t_new;
         blas1::copy( new_entry, m_x[0]);
     }
