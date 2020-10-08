@@ -285,64 +285,30 @@ struct Extrapolation
 {
     using value_type = get_value_type<ContainerType>;
     using container_type = ContainerType;
-    /*! @brief Set extrapolation order without initializing values
-     * @param number number of vectors to use for extrapolation.
-         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-     * @attention the update function must be used at least \c number times before the extrapolate function can be called
+    /*! @brief Leave values uninitialized
      */
-    Extrapolation( unsigned number = 2){
-        set_number(number);
-    }
-    /*! @brief Set extrapolation order and initialize values
-     * @param number number of vectors to use for extrapolation.
-         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-     * @param t_init the times are initialized with the values <tt> t_init, t_init-1 , t_init-2 </tt>
-     * @param init the vectors are initialized with this value
+    Extrapolation( ){ m_counter = 0; }
+    /*! @brief Set maximum extrapolation order and allocate memory
+     * @param max maximum of vectors to use for extrapolation.
+         Choose between 0 (no extrapolation) 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+         Higher values currently default back to a linear extrapolation
+     * @param copyable the memory is allocated based on this vector
      */
-    Extrapolation( unsigned number, value_type t_init, const ContainerType& init) {
-        set_number(number, t_init, init);
-    }
-    /*! @brief Set extrapolation order and initialize values (equidistant)
-     * @param number number of vectors to use for extrapolation.
-         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-     * @param init the vectors are initialized with this value
-     * @note the times are initialized with the values <tt> 0, -1 , -2 </tt>
-     */
-    Extrapolation( unsigned number, const ContainerType& init) {
-        set_number(number, 0, init);
-    }
-    ///@copydoc Extrapolation(unsigned)
-    void set_number( unsigned number)
-    {
-        assert( number <= 3 );
-        m_number = number;
-        m_t.resize( number);
-        m_x.resize( number);
-        for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = -(value_type)i;
-    }
-    ///@copydoc Extrapolation(unsigned,value_type,const ContainerType&)
-    void set_number( unsigned number, value_type t_init, const ContainerType& init)
-    {
-        //init times 0, -1, -2
-        assert( number <= 3 );
-        m_x.assign( number, init);
-        m_t.assign( number, t_init);
-        m_number = number;
-        for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = t_init - (value_type)i;
+    Extrapolation( unsigned max, const ContainerType& copyable) {
+        set_max(max, copyable);
     }
     ///@copydoc Extrapolation(unsigned,const ContainerType&)
-    void set_number( unsigned number, const ContainerType& init)
+    void set_max( unsigned max, const ContainerType& copyable)
     {
-        //init times 0, -1, -2
-        set_number( number, 1, init);
-        for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = -(value_type)i;
+        m_counter = 0;
+        m_x.assign( max, copyable);
+        m_t.assign( max, 0);
+        m_max = max;
     }
-    ///return the current extrapolation number
-    unsigned get_number( ) const{
-        return m_number;
+    ///return the current extrapolation max
+    ///This may not coincide with the max set in the constructor if values have not been updated yet
+    unsigned get_max( ) const{
+        return m_counter;
     }
 
     /**
@@ -352,12 +318,13 @@ struct Extrapolation
     * @param t time to which to extrapolate (or at which interpolating polynomial is evaluated)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => new_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
     */
     template<class ContainerType0>
     void extrapolate( value_type t, ContainerType0& new_x) const{
-        switch(m_number)
+        switch(m_counter)
         {
-            case(0):
+            case(0): dg::blas1::copy( 0, new_x);
                      break;
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
@@ -385,19 +352,23 @@ struct Extrapolation
     * @param t time at which derivative of interpolating polynomial is evaluated
     * @param dot_x (write only) contains derived value on output
     * @note If t is chosen as the latest time of update t0, then the result coincides
-    * with the backward difference formula of order  \c number
-    * @attention If number==1, the result is 0 (derivative of a constant)
+    * with the backward difference formula of order  \c max
+    * @attention If max==1, the result is 0 (derivative of a constant)
+    * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => dot_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
     void derive( value_type t, ContainerType0& dot_x) const{
-        switch(m_number)
+        switch(m_counter)
         {
-            case(0):
+            case(0): dg::blas1::copy( 0, dot_x);
+            std::cout << "NO EXTRA\n";
                      break;
             case(1): dg::blas1::copy( 0, dot_x);
+            std::cout << "LINEAR EXTRA\n";
                      break;
             case(3): {
+            std::cout << "POLY EXTRA\n";
                 value_type f0 =-(-2.*t+m_t[1]+m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
                 value_type f1 = (-2.*t+m_t[0]+m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
                 value_type f2 =-(-2.*t+m_t[0]+m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
@@ -406,6 +377,7 @@ struct Extrapolation
                 break;
             }
             default: {
+            std::cout << "SECOND EXTRA\n";
                 value_type f0 = 1./(m_t[0]-m_t[1]);
                 value_type f1 = 1./(m_t[1]-m_t[0]);
                 dg::blas1::axpby( f0, m_x[0], f1, m_x[1], dot_x);
@@ -421,7 +393,7 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void extrapolate( ContainerType0& new_x) const{
-        if ( 0 == m_number)
+        if ( 0 == m_max)
             return;
         value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
@@ -434,11 +406,10 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void derive( ContainerType0& dot_x) const{
-        if ( 0 == m_number)
+        if ( 0 == m_max)
             return;
         derive( m_t[0], dot_x);
     }
-
 
     /**
     * @brief insert a new entry, deleting the oldest entry or update existing entry
@@ -448,9 +419,11 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void update( value_type t_new, const ContainerType0& new_entry){
-        if( m_number == 0) return;
+        if( m_max == 0) return;
+        if( m_counter < m_max)
+            m_counter++;
         //check if entry is already there to avoid division by zero errors
-        for( unsigned i=0; i<m_number; i++)
+        for( unsigned i=0; i<m_max; i++)
             if( fabs(t_new - m_t[i]) <1e-14)
             {
                 blas1::copy( new_entry, m_x[i]);
@@ -476,22 +449,22 @@ struct Extrapolation
 
     /**
      * @brief return the current head (the one most recently inserted)
-     * @return current head (undefined if number==0)
+     * @return current head (undefined if max==0)
      */
     const ContainerType& head()const{
         return m_x[0];
     }
     ///write access to tail value ( the one that will be deleted in the next update
     ContainerType& tail(){
-        return m_x[m_number-1];
+        return m_x[m_max-1];
     }
     ///read access to tail value ( the one that will be deleted in the next update
     const ContainerType& tail()const{
-        return m_x[m_number-1];
+        return m_x[m_max-1];
     }
 
     private:
-    unsigned m_number;
+    unsigned m_max, m_counter;
     std::vector<value_type> m_t;
     std::vector<ContainerType> m_x;
 };
@@ -549,7 +522,7 @@ struct Invert
      */
     void construct( const ContainerType& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.)
     {
-        m_ex.set_number( extrapolationType);
+        m_ex.set_max( extrapolationType, copyable);
         set_size( copyable, max_iter);
         set_accuracy( eps, nrmb_correction);
         multiplyWeights_=multiplyWeights;
@@ -564,7 +537,7 @@ struct Invert
      */
     void set_size( const ContainerType& assignable, unsigned max_iterations) {
         cg.construct( assignable, max_iterations);
-        m_ex.set_number( m_ex.get_number(), assignable);
+        m_ex.set_max( m_ex.get_max(), assignable);
     }
 
     /**
@@ -578,14 +551,6 @@ struct Invert
         nrmb_correction_ = nrmb_correction;
     }
 
-    /**
-     * @brief Set the extrapolation Type for following inversions
-     *
-     * @param extrapolationType number of last values to use for next extrapolation of initial guess
-     */
-    void set_extrapolationType( int extrapolationType) {
-        m_ex.set_number( extrapolationType);
-    }
     /**
      * @brief Set the maximum number of iterations
      * @param new_max New maximum number
