@@ -46,19 +46,19 @@ int main( int argc, char* argv[])
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 
     feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                 p.beta,p.nu_perp,p.nu_parallel};
+                                 p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                 p.beta,p.nu_perp,p.nu_parallel};
+                                 p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                p.beta,p.nu_perp,p.nu_parallel};
+                                p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                 p.beta,p.nu_perp,p.nu_parallel};
+                                 p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                     p.beta,p.nu_perp,p.nu_parallel};
+                                     p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                     p.beta,p.nu_perp,p.nu_parallel};
+                                     p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                p.beta,p.nu_perp,p.nu_parallel};
+                                p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
 
     dg::DVec R = dg::pullback( dg::cooX3d, grid);
     dg::DVec Z = dg::pullback( dg::cooY3d, grid);

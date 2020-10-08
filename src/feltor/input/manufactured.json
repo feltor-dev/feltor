@@ -2,7 +2,7 @@
     "n"  : 3,
     "Nx" : 64,
     "Ny" : 64,
-    "Nz" : 32,
+    "Nz" : 7,
     "dt" : 1e-4,
     "compression" : [2,2],
     "FCI":
@@ -22,12 +22,11 @@
     "rtol"       : 1e-4,
     "mu"          : -0.000272121,
     "tau"         : 0,
-    "beta"        : 10,
+    "beta"        : 0,
     "nu_perp"     : 0.1,
     "perp_diff"   : "viscous",
-    "nu_parallel" : 0,
-    "resistivity" : 0,
-    "curvmode"   : "true",
+    "resistivity" : 0.1,
+    "curvmode"   : "toroidal",
     "symmetric"  : false,
     "bc" :
     {

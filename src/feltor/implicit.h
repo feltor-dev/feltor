@@ -90,6 +90,11 @@ struct ImplicitVelocity
     void construct( const Geometry& g, feltor::Parameters p,
             dg::geo::TokamakMagneticField mag)
     {
+#ifdef DG_MANUFACTURED
+        m_R= dg::pullback( dg::cooX3d, g);
+        m_Z= dg::pullback( dg::cooY3d, g);
+        m_P= dg::pullback( dg::cooZ3d, g);
+#endif //DG_MANUFACTURED
         m_p=p;
         m_lapM_perpU.construct( g, p.bcxU,p.bcyU,dg::PER,
             dg::normed, dg::centered);
@@ -158,6 +163,12 @@ struct ImplicitVelocity
         dg::blas1::copy( w, m_fields[1]);
         if( m_p.beta != 0){
             //let us solve for apar
+#ifdef DG_MANUFACTURED
+            //here we cheat (a bit)
+            dg::blas1::evaluate( m_apar, dg::equals(), manufactured::A{
+                m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
+                m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+#else
             dg::blas1::pointwiseDot(  m_p.beta, m_fields[0][1], m_fields[1][1],
                                      -m_p.beta, m_fields[0][0], m_fields[1][0],
                                       0., m_temp);
@@ -170,6 +181,7 @@ struct ImplicitVelocity
             //m_old_apar.update( m_apar); //don't update here: makes the solver potentially unstable
             if(  number[0] == m_multigrid.max_iter())
                 throw dg::Fail( m_p.eps_pol[0]);
+#endif //DG_MANUFACTURED
 
             //compute u_e and U_i from w_e, W_i and apar
             dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],
@@ -191,13 +203,13 @@ struct ImplicitVelocity
                 dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU,
                     m_fields[1][i],  0., wp[i]);
         }
-#else
-        dg::blas1::copy( 0, wp);
-#endif
         //------------------Add Resistivity--------------------------//
         dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
             m_fields[0][0], m_fields[0][1],
             m_fields[1][0], m_fields[1][1], wp[0], wp[1]);
+#else
+        dg::blas1::copy( 0, wp);
+#endif
     }
 
     const Container& weights() const{
@@ -221,6 +233,9 @@ struct ImplicitVelocity
     std::vector<Container> m_multi_chi;
     std::array<std::array<Container,2>,2> m_fields;
     dg::Elliptic3d<Geometry, Matrix, Container> m_lapM_perpU;
+#ifdef DG_MANUFACTURED
+    Container m_R, m_Z, m_P; //coordinates
+#endif //DG_MANUFACTURED
 };
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
