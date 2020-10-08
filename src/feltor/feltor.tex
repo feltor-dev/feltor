@@ -1444,10 +1444,42 @@ There seems to be no benefit in using the grid refinement technique except when 
 \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
-\qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion and Resistive terms. In every iteration of the implicit inversion we need to solve for $A_\parallel$\\
+\qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion terms. \\
 \bottomrule
 \end{longtable}
+Note that the explicit resistive and damping terms lead to absolute restriction
+on the timestep according to $\partial_t f = -\lambda f \Rightarrow \Delta t < \lambda^{-1}$. This is a quite weak restriction unless the resistivity exceeds $\eta > 10^{-4}$ or the damping coefficient excceeds $1$.
+The explicit parallel electron viscosity term leads to a restriction of the
+form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 
+In every iteration of the implicit inversion we need to solve an equation of the form
+\begin{align}
+    n_e + a \hat L n_e = \hat n_e \\
+    N_i + a \hat L N_i = \hat N_i \\
+    w_e + a \hat L u_e = \hat w_e \\
+    W_i + a \hat L U_i = \hat W_i
+\end{align}
+with $W=U+A_\parallel/\mu$ and $-\Delta_\perp A_\parallel = \beta (N_i U_i -n_e u_e)$
+    and $\hat L = -\nu_\perp \Delta_\perp^2$.
+This makes 7 equations for 7 unkown quantities.
+We solve the system by first isolating and solving the two density equations for $n_e$ and $N_i$. These can then be inserted into the velocity equations as
+fixed solutions, which makes these equations linear. As a next step we insert  the definition of $W$ into the velocity equations to get
+\begin{align}
+    u_e + \frac{A_\parallel}{\mu_e} + a \hat L u_e = \hat w_e \\
+    U_i + \frac{A_\parallel}{\mu_i} + a \hat L U_i = \hat W_i
+\end{align}
+We now introduce the two helper variables $-\Delta_\perp A_{\parallel,i} = \beta N_i U_i$ and $-\Delta_\perp A_{\parallel,e} = -\beta n_e u_e$ to get
+\begin{align}
+A_{\parallel,e} + \frac{\mu_e \Delta_\perp A_{\parallel,e}}{\beta n_e}
++ a \mu_e \hat L \frac{\Delta_\perp
+        A_{\parallel,e}}{ \beta n_e} + A_{\parallel,i} = \mu_e \hat w_e \\
+        A_{\parallel,e} -\frac{\mu_i \Delta_\perp A_{\parallel,i}}{\beta N_i}
+         - a \mu_i \hat L \frac{\Delta_\perp
+        A_{\parallel,i}}{\beta N_i}+ A_{\parallel,i} = \mu_i \hat W_i
+\end{align}
+which is a symmetric equation for $A_{\parallel,e}$, $A_{\parallel,i}$.
+Its solution yields $A_\parallel = A_{\parallel,i}+A_{\parallel,e}$ and thus a solution for $U_\parallel$ and $W_\parallel$ through backward substitutions.
+The resistive term cannot fit into this scheme as it is linear but not symmetric.
 \section{Usage}
 
 Compilation:\\
