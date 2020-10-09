@@ -362,13 +362,10 @@ struct Extrapolation
         switch(m_counter)
         {
             case(0): dg::blas1::copy( 0, dot_x);
-            std::cout << "NO EXTRA\n";
                      break;
             case(1): dg::blas1::copy( 0, dot_x);
-            std::cout << "LINEAR EXTRA\n";
                      break;
             case(3): {
-            std::cout << "POLY EXTRA\n";
                 value_type f0 =-(-2.*t+m_t[1]+m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
                 value_type f1 = (-2.*t+m_t[0]+m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
                 value_type f2 =-(-2.*t+m_t[0]+m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
@@ -377,7 +374,6 @@ struct Extrapolation
                 break;
             }
             default: {
-            std::cout << "SECOND EXTRA\n";
                 value_type f0 = 1./(m_t[0]-m_t[1]);
                 value_type f1 = 1./(m_t[1]-m_t[0]);
                 dg::blas1::axpby( f0, m_x[0], f1, m_x[1], dot_x);
@@ -420,15 +416,15 @@ struct Extrapolation
     template<class ContainerType0>
     void update( value_type t_new, const ContainerType0& new_entry){
         if( m_max == 0) return;
-        if( m_counter < m_max)
-            m_counter++;
         //check if entry is already there to avoid division by zero errors
-        for( unsigned i=0; i<m_max; i++)
+        for( unsigned i=0; i<m_counter; i++)
             if( fabs(t_new - m_t[i]) <1e-14)
             {
                 blas1::copy( new_entry, m_x[i]);
                 return;
             }
+        if( m_counter < m_max) //don't update counter if Time entry was rejected
+            m_counter++;
         //push out last value (keep track of what is oldest value
         std::rotate( m_x.rbegin(), m_x.rbegin()+1, m_x.rend());
         std::rotate( m_t.rbegin(), m_t.rbegin()+1, m_t.rend());

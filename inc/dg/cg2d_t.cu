@@ -165,6 +165,7 @@ int main()
     extra.update( 1, 1);
     extra.extrapolate( 5, value);
     std::cout << "Linear Extrapolated value is "<<value<< " (5)\n";
+    extra.update( 1, 1); //should not change anything
     extra.derive( 4, value);
     std::cout << "Linear Derived value is "<<value<< " (1)\n";
     extra.update( 3, 9);
@@ -190,6 +191,7 @@ int main()
     extra.update( 0, 0);
     extra.update( 1, 1);
     extra.update( 3, 9);
+    extra.update( 2, 4);
     extra.update( 2, 4);
     extra.extrapolate( 5, value);
     std::cout << "Monomial Extrapolated value is "<<value<< " (4)\n";
