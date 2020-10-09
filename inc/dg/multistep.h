@@ -1,6 +1,7 @@
 #pragma once
 
 #include "implicit.h"
+#include "runge_kutta.h"
 
 
 /*! @file
@@ -215,6 +216,7 @@ struct Karniadakis
     Karniadakis( SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...){
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
         set_order(3);
+        m_counter = 0;
     }
     /**
      * @brief Reserve memory for the integration
@@ -227,6 +229,7 @@ struct Karniadakis
         m_solver = Solver( std::forward<SolverParams>(ps)...);
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
         set_order(3);
+        m_counter = 0;
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -238,9 +241,9 @@ struct Karniadakis
     const SolverType& solver() const { return m_solver;}
 
     /**
-     * @brief Initialize by integrating two timesteps backward in time
+     * @brief Initialize timestepper
      *
-     * The backward integration uses the Lie operator splitting method, with explicit Euler substeps for both explicit and implicit part
+     * This initializes the timestepper and sets the timestep for later use
      * @copydoc hide_explicit_implicit
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
@@ -256,7 +259,8 @@ struct Karniadakis
     * @copydoc hide_explicit_implicit
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
-     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
+    * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
+    * @attention The first two steps after the call to the init function are performed with a semi-implicit Runge-Kutta method
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
@@ -296,6 +300,7 @@ struct Karniadakis
     value_type m_t, m_dt;
     value_type a[3];
     value_type b[3], g0 = 6./11.;
+    unsigned m_counter; //counts how often step has been called after init
 };
 
 ///@cond
@@ -303,25 +308,49 @@ template< class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
 void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
 {
-    //operator splitting using explicit Euler for both explicit and implicit part
     m_t = t0, m_dt = dt;
-    blas1::copy(  u0, m_u[0]);
-    f( t0, u0, m_f[0]); //f may not destroy u0
-    blas1::axpby( 1., m_u[0], -dt, m_f[0], m_f[1]); //Euler step
-    detail::Implicit<Diffusion, ContainerType> implicit( -dt, t0, diff);
-    implicit( m_f[1], m_u[1]); //explicit Euler step backwards
-    f( t0-dt, m_u[1], m_f[1]);
-    blas1::axpby( 1.,m_u[1], -dt, m_f[1], m_f[2]);
-    implicit.time() = t0 - dt;
-    implicit( m_f[2], m_u[2]);
-    f( t0-2*dt, m_u[2], m_f[2]); //evaluate f at the latest step
-    f( t0, u0, m_f[0]); // and set state in f to (t0,u0)
+    blas1::copy(  u0, m_u[2]);
+    f( t0, u0, m_f[2]); //f may not destroy u0
+    m_counter = 0;
+    //m_t = t0, m_dt = dt;
+    //blas1::copy(  u0, m_u[0]);
+    //f( t0, u0, m_f[0]); //f may not destroy u0
+    //blas1::axpby( 1., m_u[0], -dt, m_f[0], m_f[1]); //Euler step
+    //detail::Implicit<Diffusion, ContainerType> implicit( -dt, t0, diff);
+    //implicit( m_f[1], m_u[1]); //explicit Euler step backwards
+    //f( t0-dt, m_u[1], m_f[1]);
+    //blas1::axpby( 1.,m_u[1], -dt, m_f[1], m_f[2]);
+    //implicit.time() = t0 - dt;
+    //implicit( m_f[2], m_u[2]);
+    //f( t0-2*dt, m_u[2], m_f[2]); //evaluate f at the latest step
+    //f( t0, u0, m_f[0]); // and set state in f to (t0,u0)
 }
 
 template<class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
 void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, value_type& t, ContainerType& u)
 {
+    if( m_counter < 2)
+    {
+        ARKStep<ContainerType, SolverType> ark( "ARK-4-2-3", m_solver);
+        ContainerType tmp ( u);
+        ark.step( f, diff, t, u, t, u, m_dt, tmp);
+        m_counter++;
+        m_t = t;
+        if( m_counter == 1)
+        {
+            blas1::copy(  u, m_u[1]);
+            f( m_t, m_u[1], m_f[1]);
+        }
+        else
+        {
+            blas1::copy(  u, m_u[0]);
+            f( m_t, m_u[0], m_f[0]);
+        }
+        m_solver = ark.solver();
+        return;
+    }
+
     blas1::axpbypgz( m_dt*b[0], m_f[0], m_dt*b[1], m_f[1], m_dt*b[2], m_f[2]);
     blas1::axpbypgz( a[0], m_u[0], a[1], m_u[1], a[2], m_u[2]);
     //permute m_f[2], m_u[2]  to be the new m_f[0], m_u[0]
