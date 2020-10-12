@@ -818,6 +818,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
             );
         }
     }
+    //------------------Add Resistivity--------------------------//
+    dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+        m_fields[0][0], m_fields[0][1],
+        m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -993,10 +997,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 dg::blas2::symv( -m_p.nu_perp, m_lapperpU,
                     m_fields[1][i],  1., yp[1][i]);
         }
-        //------------------Add Resistivity--------------------------//
-        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
-            m_fields[0][0], m_fields[0][1],
-            m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
 #endif
     }
 #ifdef DG_MANUFACTURED

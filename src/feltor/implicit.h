@@ -203,10 +203,10 @@ struct ImplicitVelocity
                 dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU,
                     m_fields[1][i],  0., wp[i]);
         }
-        //------------------Add Resistivity--------------------------//
-        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
-            m_fields[0][0], m_fields[0][1],
-            m_fields[1][0], m_fields[1][1], wp[0], wp[1]);
+        ////------------------Add Resistivity--------------------------//
+        //dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+        //    m_fields[0][0], m_fields[0][1],
+        //    m_fields[1][0], m_fields[1][1], wp[0], wp[1]);
 #else
         dg::blas1::copy( 0, wp);
 #endif
