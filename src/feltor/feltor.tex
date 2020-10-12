@@ -1468,17 +1468,18 @@ fixed solutions, which makes these equations linear. As a next step we insert  t
     u_e + \frac{A_\parallel}{\mu_e} + a \hat L u_e = \hat w_e \\
     U_i + \frac{A_\parallel}{\mu_i} + a \hat L U_i = \hat W_i
 \end{align}
-We now introduce the two helper variables $-\Delta_\perp A_{\parallel,i} = \beta N_i U_i$ and $-\Delta_\perp A_{\parallel,e} = -\beta n_e u_e$ to get
+We now introduce the two auxiliary variables $-\Delta_\perp A_{\parallel,i} = N_i U_i$ and $-\Delta_\perp A_{\parallel,e} =  -n_e u_e$ to get
 \begin{align}
-A_{\parallel,e} + \frac{\mu_e \Delta_\perp A_{\parallel,e}}{\beta n_e}
+\beta A_{\parallel,e} + \frac{\mu_e \Delta_\perp A_{\parallel,e}}{n_e}
 + a \mu_e \hat L \frac{\Delta_\perp
-        A_{\parallel,e}}{ \beta n_e} + A_{\parallel,i} = \mu_e \hat w_e \\
-        A_{\parallel,e} -\frac{\mu_i \Delta_\perp A_{\parallel,i}}{\beta N_i}
+        A_{\parallel,e}}{ n_e} + \beta A_{\parallel,i} =  \mu_e \hat w_e \\
+        \beta A_{\parallel,e} -\frac{\mu_i \Delta_\perp A_{\parallel,i}}{N_i}
          - a \mu_i \hat L \frac{\Delta_\perp
-        A_{\parallel,i}}{\beta N_i}+ A_{\parallel,i} = \mu_i \hat W_i
+        A_{\parallel,i}}{ N_i}+ \beta A_{\parallel,i} = \mu_i \hat W_i
 \end{align}
+%Update in Mathematica
 which is a symmetric equation for $A_{\parallel,e}$, $A_{\parallel,i}$.
-Its solution yields $A_\parallel = A_{\parallel,i}+A_{\parallel,e}$ and thus a solution for $U_\parallel$ and $W_\parallel$ through backward substitutions.
+Its solution yields $A_\parallel = \beta(A_{\parallel,i}+A_{\parallel,e})$ and thus a solution for $U_\parallel$ and $W_\parallel$ through backward substitutions.
 The resistive term cannot fit into this scheme as it is linear but not symmetric.
 \section{Usage}
 

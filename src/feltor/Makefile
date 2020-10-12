@@ -13,6 +13,9 @@ all: feltor_hpc feltor feltor_mpi manufactured feltordiag
 manufactured: manufactured.cu manufactured.h feltor.h implicit.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
 
+implicit_t: implicit_t.cu implicit.h  feltor.h implicit.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
+
 feltordiag: feltordiag.cu feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 interpolate_in_3d: interpolate_in_3d.cu feltordiag.h
