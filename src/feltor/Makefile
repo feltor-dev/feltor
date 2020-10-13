@@ -14,7 +14,7 @@ manufactured: manufactured.cu manufactured.h feltor.h implicit.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
 
 implicit_t: implicit_t.cu implicit.h  feltor.h implicit.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -g -DDG_BENCHMARK
 
 feltordiag: feltordiag.cu feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g

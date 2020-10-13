@@ -1006,10 +1006,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::blas1::evaluate( yp[0][1], dg::plus_equals(), manufactured::SNi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
-    dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SUe{
+    dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SWe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
-    dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SUi{
+    dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SWi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
