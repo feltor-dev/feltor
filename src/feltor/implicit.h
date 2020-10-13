@@ -90,11 +90,6 @@ struct ImplicitVelocity
     void construct( const Geometry& g, feltor::Parameters p,
             dg::geo::TokamakMagneticField mag)
     {
-#ifdef DG_MANUFACTURED
-        m_R= dg::pullback( dg::cooX3d, g);
-        m_Z= dg::pullback( dg::cooY3d, g);
-        m_P= dg::pullback( dg::cooZ3d, g);
-#endif //DG_MANUFACTURED
         m_p=p;
         m_lapM_perpU.construct( g, p.bcxU,p.bcyU,dg::PER,
             dg::normed, dg::centered);
@@ -118,7 +113,9 @@ struct ImplicitVelocity
         //m_induction.construct(  g,
         //    p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
         //m_induction.elliptic().set_chi( hh);
-        //m_invert.construct( m_temp, g.size(), p.eps_pol[0],1 );
+#ifdef DG_MANUFACTURED
+        m_invert.construct( m_temp, g.size(), p.eps_pol[0],1 );
+#endif // DG_MANUFACTURED
         //Multigrid setup
         m_multi_induction.resize(p.stages);
         m_multigrid.construct( g, p.stages);
@@ -163,12 +160,6 @@ struct ImplicitVelocity
         dg::blas1::copy( w, m_fields[1]);
         if( m_p.beta != 0){
             //let us solve for apar
-#ifdef DG_MANUFACTURED
-            //here we cheat (a bit)
-            dg::blas1::evaluate( m_apar, dg::equals(), manufactured::A{
-                m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-                m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
-#else
             dg::blas1::pointwiseDot(  m_p.beta, m_fields[0][1], m_fields[1][1],
                                      -m_p.beta, m_fields[0][0], m_fields[1][0],
                                       0., m_temp);
@@ -181,7 +172,6 @@ struct ImplicitVelocity
             //m_old_apar.update( m_apar); //don't update here: makes the solver potentially unstable
             if(  number[0] == m_multigrid.max_iter())
                 throw dg::Fail( m_p.eps_pol[0]);
-#endif //DG_MANUFACTURED
 
             //compute u_e and U_i from w_e, W_i and apar
             dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],
@@ -222,10 +212,37 @@ struct ImplicitVelocity
         return m_lapM_perpU.precond();
     }
 
+
+#ifdef DG_MANUFACTURED
+    // -Delta_perp inv_SA = SA
+    void invert_SA( const  Container& SA, Container& inv_SA)
+    {
+        //m_lapM_perpU.set_norm( dg::not_normed);
+        //m_invert( m_lapM_perpU, inv_SA, SA);
+        //m_lapM_perpU.set_norm( dg::normed);
+        std::vector<unsigned> number = m_multigrid.direct_solve(
+            m_multi_induction, inv_SA, SA, m_p.eps_pol[0]); //eps_pol[0] on all grids
+        if(  number[0] == m_multigrid.max_iter())
+            throw dg::Fail( m_p.eps_pol[0]);
+        if( m_p.perp_diff == "hyperviscous")
+        {
+            dg::blas2::symv( m_lapM_perpU, inv_SA,      m_temp);
+            dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., inv_SA);
+        }
+        else // m_p.perp_diff == "viscous"
+        {
+            dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU,
+                inv_SA,  0., m_temp);
+            dg::blas1::copy( m_temp, inv_SA);
+        }
+    }
+#endif //DG_MANUFACTURED
   private:
     feltor::Parameters m_p;
     Container m_temp, m_apar;
-    //dg::Invert<Container> m_invert;
+#ifdef DG_MANUFACTURED
+    dg::Invert<Container> m_invert;
+#endif //DG_MANUFACTURED
     //dg::Helmholtz3d<Geometry, Matrix, Container> m_induction;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container>> m_multi_induction;
@@ -233,9 +250,6 @@ struct ImplicitVelocity
     std::vector<Container> m_multi_chi;
     std::array<std::array<Container,2>,2> m_fields;
     dg::Elliptic3d<Geometry, Matrix, Container> m_lapM_perpU;
-#ifdef DG_MANUFACTURED
-    Container m_R, m_Z, m_P; //coordinates
-#endif //DG_MANUFACTURED
 };
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -272,6 +286,14 @@ struct FeltorSpecialSolver
     FeltorSpecialSolver( const Geometry& grid, Parameters p,
         dg::geo::TokamakMagneticField mag)
     {
+#ifdef DG_MANUFACTURED
+        m_p = p;
+        m_R= dg::pullback( dg::cooX3d, grid);
+        m_Z= dg::pullback( dg::cooY3d, grid);
+        m_P= dg::pullback( dg::cooZ3d, grid);
+        m_inv_sa = m_sa = m_R;
+        m_rhs = std::array<Container,2>{m_R,m_R};
+#endif //DG_MANUFACTURED
         std::array<Container,2> temp = dg::construct<std::array<Container,2>>( dg::evaluate( dg::zero, grid));
         m_eps = p.eps_time;
         m_solver = dg::DefaultSolver<std::array<Container,2>>(
@@ -296,7 +318,17 @@ struct FeltorSpecialSolver
 
         m_solver.solve( alpha, m_imdens, t, y[0], rhs[0]);
         m_imvelo.set_density( y[0]);
+#ifdef DG_MANUFACTURED
+        dg::blas1::evaluate( m_sa, dg::equals(), manufactured::SA{
+            m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
+            m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_imvelo.invert_SA( m_sa, m_inv_sa);
+        dg::blas1::axpby( +alpha/m_p.mu[0], m_inv_sa, 1., rhs[1][0], m_rhs[0]);
+        dg::blas1::axpby( +alpha/m_p.mu[1], m_inv_sa, 1., rhs[1][1], m_rhs[1]);
+        m_solver.solve( alpha, m_imvelo, t, y[1], m_rhs);
+#else
         m_solver.solve( alpha, m_imvelo, t, y[1], rhs[1]);
+#endif //DG_MANUFACTURED
         m_imvelo.update();
     }
     private:
@@ -304,6 +336,12 @@ struct FeltorSpecialSolver
     ImplicitDensity<Geometry,IMatrix, Matrix,Container> m_imdens;
     ImplicitVelocity<Geometry,IMatrix, Matrix,Container> m_imvelo;
     value_type m_eps;
+#ifdef DG_MANUFACTURED
+    feltor::Parameters m_p;
+    std::array<Container, 2> m_rhs;
+    Container m_sa, m_inv_sa;
+    Container m_R, m_Z, m_P; //coordinates
+#endif // DG_MANUFACTURED
 };
 
 }//namespace feltor

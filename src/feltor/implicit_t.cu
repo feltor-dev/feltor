@@ -1,7 +1,15 @@
 #include <iostream>
 
-#include "implicit.h"
+#include "dg/algorithm.h"
+#include "dg/geometries/geometries.h"
+#include "dg/file/json_utilities.h"
+#include "parameters.h"
+
+#define DG_MANUFACTURED
+#define FELTORPARALLEL 1
+#define FELTORPERP 1
 #include "manufactured.h"
+#include "implicit.h"
 
 
 int main( int argc, char* argv[])
@@ -31,7 +39,7 @@ int main( int argc, char* argv[])
     std::cout << "Initialize implicit" << std::endl;
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
     feltor::FeltorSpecialSolver<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> solver( grid, p, mag);
-    double alpha = -p.dt, time = 1;
+    double alpha = -p.dt, time = 0.237; //Sin(3*Pi*t)
     feltor::manufactured::Snehat snehat{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1], alpha};
     feltor::manufactured::SNihat snihat{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
@@ -46,9 +54,13 @@ int main( int argc, char* argv[])
                                  p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
-    feltor::manufactured::we we{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
+    feltor::manufactured::We we{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                 p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Wi wi{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
+                                 p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
+    feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
+                                p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
+    feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
     dg::DVec R = dg::pullback( dg::cooX3d, grid);
     dg::DVec Z = dg::pullback( dg::cooY3d, grid);
@@ -61,15 +73,18 @@ int main( int argc, char* argv[])
 
     dg::blas1::evaluate( rhs[0][0], dg::equals(), snehat, R,Z,P,time);
     dg::blas1::evaluate( rhs[0][1], dg::equals(), snihat, R,Z,P,time);
+    dg::blas1::plus( rhs[0], -1);
     dg::blas1::evaluate( rhs[1][0], dg::equals(), swehat, R,Z,P,time);
     dg::blas1::evaluate( rhs[1][1], dg::equals(), swihat, R,Z,P,time);
+    dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,P,time);
+
+    solver.solve( alpha, im, time, y, rhs);
+
+    dg::blas1::plus( y[0], +1); //we solve for n-1
     dg::blas1::evaluate( sol[0][0], dg::equals(), ne, R,Z,P,time);
     dg::blas1::evaluate( sol[0][1], dg::equals(), ni, R,Z,P,time);
     dg::blas1::evaluate( sol[1][0], dg::equals(), we, R,Z,P,time);
     dg::blas1::evaluate( sol[1][1], dg::equals(), wi, R,Z,P,time);
-    dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,P,time);
-
-    solver.solve( -p.dt, im, time, y, rhs);
     double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
     double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
     double normwe = sqrt(dg::blas2::dot( w3d, sol[1][0]));
