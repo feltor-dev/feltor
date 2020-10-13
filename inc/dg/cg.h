@@ -383,14 +383,12 @@ struct Extrapolation
 
     /**
     * @brief Extrapolate value (equidistant version)
-    * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @param new_x (write only) contains extrapolated value on output ( may alias the tail if it exists)
     * @note Assumes that extrapolation time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
     void extrapolate( ContainerType0& new_x) const{
-        if ( 0 == m_max)
-            return;
         value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
     }
@@ -402,15 +400,13 @@ struct Extrapolation
     */
     template<class ContainerType0>
     void derive( ContainerType0& dot_x) const{
-        if ( 0 == m_max)
-            return;
         derive( m_t[0], dot_x);
     }
 
     /**
     * @brief insert a new entry, deleting the oldest entry or update existing entry
     * @param t_new the time for the new entry
-    * @param new_entry the new entry ( may alias the tail), replaces value of existing entry if \c t_new already exists
+    * @param new_entry the new entry ( replaces value of existing entry if \c t_new already exists
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
@@ -433,7 +429,7 @@ struct Extrapolation
     }
     /**
     * @brief insert a new entry
-    * @param new_entry the new entry ( may alias the tail)
+    * @param new_entry the new entry ( may alias the tail if it exists)
     * @note Assumes new time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
@@ -450,11 +446,11 @@ struct Extrapolation
     const ContainerType& head()const{
         return m_x[0];
     }
-    ///write access to tail value ( the one that will be deleted in the next update
+    ///write access to tail value ( the one that will be deleted in the next update, undefined if max==0)
     ContainerType& tail(){
         return m_x[m_max-1];
     }
-    ///read access to tail value ( the one that will be deleted in the next update
+    ///read access to tail value ( the one that will be deleted in the next update, undefined if max==0)
     const ContainerType& tail()const{
         return m_x[m_max-1];
     }
@@ -519,6 +515,7 @@ struct Invert
     void construct( const ContainerType& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.)
     {
         m_ex.set_max( extrapolationType, copyable);
+        m_rhs = copyable;
         set_size( copyable, max_iter);
         set_accuracy( eps, nrmb_correction);
         multiplyWeights_=multiplyWeights;
@@ -557,9 +554,6 @@ struct Invert
      * @return the current maximum
      */
     unsigned get_max() const {return cg.get_max();}
-
-    /// @brief Return last solution
-    const ContainerType& get_last() const { return m_ex.head();}
 
     /**
      * @brief Solve linear problem
@@ -617,8 +611,8 @@ struct Invert
         unsigned number;
         if( multiplyWeights_ )
         {
-            dg::blas2::symv( weights, rho, m_ex.tail());
-            number = cg( op, phi, m_ex.tail(), p, inv_weights, eps_, nrmb_correction_);
+            dg::blas2::symv( weights, rho, m_rhs);
+            number = cg( op, phi, m_rhs, p, inv_weights, eps_, nrmb_correction_);
         }
         else
             number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
@@ -643,6 +637,7 @@ struct Invert
     value_type eps_, nrmb_correction_;
     dg::CG< ContainerType > cg;
     Extrapolation<ContainerType> m_ex;
+    ContainerType m_rhs;
     bool multiplyWeights_;
 };
 

@@ -293,6 +293,14 @@ class Elliptic
         if( m_no == not_normed)//multiply weights without volume
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
     }
+    /**
+     * @brief Determine if weights are multiplied to make operator symmetric or not
+     *
+     * @param new_norm new setting
+     */
+    void set_norm( dg::norm new_norm) {
+        m_no = new_norm;
+    }
     private:
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
@@ -560,6 +568,15 @@ class Elliptic3d
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+    }
+
+    /**
+     * @brief Determine if weights are multiplied to make operator symmetric or not
+     *
+     * @param new_norm new setting
+     */
+    void set_norm( dg::norm new_norm) {
+        m_no = new_norm;
     }
 
     private:
