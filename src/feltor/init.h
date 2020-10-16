@@ -84,7 +84,7 @@ HVec profile(const Geometry& grid,
     double psipO = mag.psip()( RO, ZO);
     //First the profile and the source (on the host since we want to output those)
     HVec profile = dg::pullback( dg::compose(dg::LinearX(
-        p.nprofamp/psipO, 0.), mag.psip()), grid);
+        1./psipO, 0.), mag.psip()), grid);
     dg::blas1::pointwiseDot( profile_damping(grid,p,mag), profile, profile);
     return profile;
 }
@@ -143,6 +143,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
         {
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
+            dg::blas1::scal( y0, p.nprofamp );
             HVec ntilde = dg::evaluate(dg::zero,grid);
             if( p.sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in straight blob initial condition\n");
@@ -175,6 +176,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
         {
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
+            dg::blas1::scal( y0, p.nprofamp );
             HVec ntilde = dg::evaluate(dg::zero,grid);
             if( p.sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in straight blob initial condition\n");
@@ -207,6 +209,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
         {
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
+            dg::blas1::scal( y0, p.nprofamp );
             HVec ntilde = dg::evaluate(dg::zero,grid);
             if( p.sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
@@ -238,6 +241,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
         {
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
+            dg::blas1::scal( y0, p.nprofamp );
             HVec ntilde = dg::evaluate(dg::zero,grid);
             dg::SinX sinX( p.amp, 0., p.k_psi);
             ntilde = dg::pullback( dg::compose( sinX, mag.psip()), grid);
@@ -304,7 +308,20 @@ std::map<std::string, std::function< HVec(
         {
             fixed_profile = true;
             ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            dg::blas1::scal( ne_profile, p.nprofamp );
             HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,mag));
+            return source_profile;
+        }
+    },
+    {"profile_influx",
+        []( bool& fixed_profile, HVec& ne_profile,
+        Geometry& grid, const feltor::Parameters& p,
+        dg::geo::TokamakMagneticField& mag )
+        {
+            fixed_profile = false;
+            ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            dg::blas1::scal( ne_profile, p.nprofamp );
+            HVec source_profile = dg::construct<HVec> ( detail::profile( grid, p,mag));
             return source_profile;
         }
     },
@@ -315,6 +332,7 @@ std::map<std::string, std::function< HVec(
         {
             fixed_profile = false;
             ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            dg::blas1::scal( ne_profile, p.nprofamp );
             HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,mag));
             return source_profile;
         }
@@ -348,6 +366,7 @@ std::map<std::string, std::function< HVec(
 
             fixed_profile = false;
             ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            dg::blas1::scal( ne_profile, p.nprofamp );
             HVec source_profile = dg::pullback(
                 dg::compose( dg::GaussianX( psip0, sigma, 1.),  mag.psip() ), grid);
             dg::blas1::pointwiseDot( detail::xpoint_damping(grid,p,mag),

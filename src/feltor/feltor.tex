@@ -1089,8 +1089,9 @@ has a Dirichlet boundary condition, then $N'$ satisfies a correspondingly scaled
 The standard helicity of the magnetic field would be a right handed screw,
 where the magnetic field and the toroidal plasma current point in the clockwise
 direction if the tokamak is seen from above.
-The helicity should however not have any influence on the plasma dynamics as
-the tokamak viewed in the mirror has the reversed helicity.
+The helicity should however not have any influence on the plasma dynamics. With
+a mirror transformation (view the tokamak in a mirror) we should be able
+to transform the solution to one with reversed helicity.
 
 \subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
@@ -1447,9 +1448,9 @@ time & Multistep "Karniadakis" & \\
 \qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion terms. \\
 \bottomrule
 \end{longtable}
-Note that the explicit resistive and damping terms lead to absolute restriction
-on the timestep according to $\partial_t f = -\lambda f \Rightarrow \Delta t < \lambda^{-1}$. This is a quite weak restriction unless the resistivity exceeds $\eta > 10^{-4}$ or the damping coefficient excceeds $1$.
-The explicit parallel electron viscosity term leads to a restriction of the
+Note that the explicit resistive and damping terms lead to absolute (CFL) restriction
+on the timestep according to $\partial_t u_e \propto \frac{\eta}{\mu_e} u_e \Rightarrow \Delta t < \frac{-\mu_e}{\eta}$. This is a quite weak restriction unless the resistivity exceeds $\eta > 10^{-4}$ or the damping coefficient excceeds $1$.
+The explicit parallel electron viscosity term leads to a CFL condition of the
 form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 
 In every iteration of the implicit inversion we need to solve an equation of the form
@@ -1463,23 +1464,8 @@ with $W=U+A_\parallel/\mu$ and $-\Delta_\perp A_\parallel = \beta (N_i U_i -n_e 
     and $\hat L = -\nu_\perp \Delta_\perp^2$.
 This makes 7 equations for 7 unkown quantities.
 We solve the system by first isolating and solving the two density equations for $n_e$ and $N_i$. These can then be inserted into the velocity equations as
-fixed solutions, which makes these equations linear. As a next step we insert  the definition of $W$ into the velocity equations to get
-\begin{align}
-    u_e + \frac{A_\parallel}{\mu_e} + a \hat L u_e = \hat w_e \\
-    U_i + \frac{A_\parallel}{\mu_i} + a \hat L U_i = \hat W_i
-\end{align}
-We now introduce the two auxiliary variables $-\Delta_\perp A_{\parallel,i} = N_i U_i$ and $-\Delta_\perp A_{\parallel,e} =  -n_e u_e$ to get
-\begin{align}
-\beta A_{\parallel,e} + \frac{\mu_e \Delta_\perp A_{\parallel,e}}{n_e}
-+ a \mu_e \hat L \frac{\Delta_\perp
-        A_{\parallel,e}}{ n_e} + \beta A_{\parallel,i} =  \mu_e \hat w_e \\
-        \beta A_{\parallel,e} -\frac{\mu_i \Delta_\perp A_{\parallel,i}}{N_i}
-         - a \mu_i \hat L \frac{\Delta_\perp
-        A_{\parallel,i}}{ N_i}+ \beta A_{\parallel,i} = \mu_i \hat W_i
-\end{align}
-%Update in Mathematica
-which is a symmetric equation for $A_{\parallel,e}$, $A_{\parallel,i}$.
-Its solution yields $A_\parallel = \beta(A_{\parallel,i}+A_{\parallel,e})$ and thus a solution for $U_\parallel$ and $W_\parallel$ through backward substitutions.
+fixed solutions, which makes these equations linear.
+
 The resistive term cannot fit into this scheme as it is linear but not symmetric.
 \section{Usage}
 
