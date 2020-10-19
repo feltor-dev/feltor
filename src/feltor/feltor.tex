@@ -820,6 +820,10 @@ The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_{\parallel,i} - u_{\parallel,e}\right)\)
  determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
 
+ Note also that since $A_\parallel/\mu_e$ is (potentially) much larger than $u_e$
+ it is important that the diffusive operators act on $u_e$ rather than $w_e$.
+ The latter essentially would entail that electron diffusion acts on $A_\parallel$.
+
  For the perpendicular terms we use ad-hoc numerical diffusion terms for numerical
  stabilisation.
 \begin{align}
