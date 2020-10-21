@@ -605,16 +605,9 @@ increase the refinement.
 \begin{centering}
 \footnotesize
 \hspace*{-2cm}
-%  &     &     & \multicolumn{2}{l}{$\nabla_\parallel f$
-%  Eq.~\eqref{eq:paralleldis}} & \multicolumn{2}{l}{$(\nabla\cdot\bhat) f +
-%  \nabla_\parallel f$} &
-%  \multicolumn{2}{l}{$\nabla_\parallel^2 f$ Eq.~\eqref{eq:second_order}} &
-%  \multicolumn{2}{l}{$(\nabla\cdot\bhat)\nabla_\parallel f + \nabla_\parallel^2
-%  f$} & \multicolumn{2}{l}{$\nabla\cdot(\bhat f)$} &
-%  \multicolumn{2}{l}{$\Delta_\parallel^{-1}f $} \\
 \input{ds_cylindrical_dirichlet1.tex}
 \caption{Convergence Table for Dirichlet boundary conditions and $m=1$,
-$N_R=N_Z=N$. The table for Neumann conditions exhibits equivalent features.}
+$N_R=N_Z=N$. Centered discretization with boundary conditions along the fieldline. The table for Neumann conditions exhibits similar numbers.}
 \label{tab:ds_cylindrical_dirichlet1}
 \end{centering}
 \end{table*}
@@ -625,7 +618,7 @@ $N_R=N_Z=N$. The table for Neumann conditions exhibits equivalent features.}
 \hspace*{-2cm}
 \input{ds_cylindrical_dirichlet10.tex}
 \caption{Convergence Table for Dirichlet boundary conditions and $m=10$,
-$N_R=N_Z=N$. The table for Neumann conditions exhibits equivalent features.}
+$N_R=N_Z=N$. Centered discretization with boundary conditions along the fieldline. The table for Neumann conditions exhibits similar numbers.}
 \label{tab:ds_cylindrical_dirichlet10}
 \end{centering}
 \end{table*}
@@ -651,7 +644,7 @@ $\varphi \in [0,2\pi]$ and choose
 \footnotesize
 \hspace*{-2cm}
 \input{ds_guenther10.tex}
-\caption{Convergence Table for $m=10$ and $N_R=N_Z=N$. Centered discretizations.
+\caption{Convergence Table for $m=10$ and $N_R=N_Z=N$ and the G\"unther field. Centered discretizations, no boundary condition.
 }
 \label{tab:ds_guenther10}
 \end{centering}
@@ -666,7 +659,7 @@ grids on the ring bounded by $\psi_p=-20$ and $\psi_p=-4$.
 \footnotesize
 \hspace*{-2cm}
 \input{ds_curv1000.tex}
-\caption{Convergence Table for $m=1000$, $N_R = 2$, $N_Z=N$. Centered discretizations.
+\caption{Convergence Table for $m=1000$, $N_R = 2$, $N_Z=N$ on a curvilinear grid. Centered discretizations, no boundary condition.
 }
 \label{tab:ds_curv1000}
 \end{centering}

@@ -34,7 +34,7 @@ int main( )
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
-        dg::centered, 1e-8, mx, my);
+        dg::centered, dg::geo::boundary::along_field, 1e-8, mx, my);
 
     ///##########################################################///
     const dg::DVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
