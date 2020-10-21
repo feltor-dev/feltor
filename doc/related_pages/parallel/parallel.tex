@@ -233,11 +233,15 @@ boundary in these cases to avoid boundary conditions altogether.
 
 The downside of this approach is that the mirrored point of a field-line
 can lie very far away from the wall if the resolution in $\varphi$ is low (which
-is the motivation to implement FCI in the first place).
+is the motivation to implement FCI in the first place) and
+in addition also on a different flux surface.
 In principle we need to increase the $\varphi$ resolution until we resolve
 the perpendicular direction, in order to reliably converge with this method.
-In practice we can often run a simulation stably nevertheless, however for
-large parallel flows or strong poloidal fields there may be numerical instabilities.
+In practice we can often run a simulation stably with low resolution nevertheless.
+
+In order to avoid coupling different flux surfaces through the boundary condition, we have the possibility to
+mirror also the flux surfaces at the boundary.
+This approach converges well and works stably if the flux surface is (or is close to) perpendicular to the wall.
 
 \subsubsection{ Boundary conditions parallel to the fieldline}
 The natural way to implement boundary conditions is to work them into the
@@ -273,7 +277,7 @@ while if the fieldline intersects the wall on both ends we have
 \begin{align} \label{eq:paralleldis_neupm}
     \frac{df}{ds}
     \underset{\textsc{NEU}}{\rightarrow}
-    \frac{ 1}{s_b^+ - s_b^-}\left[({ s_k - s_b^-})f_{b+}' + ({s_{b+}'-s_k}) f_{b-}'\right]    \\
+    \frac{ 1}{s_b^+ - s_b^-}\left[({ s_k - s_b^-})f_{b+}' + ({s_{b}^+-s_k}) f_{b-}'\right]    \\
 \label{eq:second_order_neupm}
     \frac{\d^2 f}{\d s^2}
     \underset{\textsc{NEU}}{\rightarrow}
@@ -281,20 +285,6 @@ while if the fieldline intersects the wall on both ends we have
 \end{align}
 The formulas for Dirichlet boundary conditions are the same as the original
 formulas, with $s_{k+1}$, $f_{k+1}$ replaced by $s_b^+$, $f_b^+$ and/or $s_{k-1}$, $f_{k-1}$ replaced by $s_b^-$, $f_b^-$.
-%\begin{align} \label{eq:paralleldis_dir}
-%    \frac{df}{ds}
-%    \underset{\textsc{DIR}}{\rightarrow}
-%    \left(\frac{ 1}{s_{b}-s_k + s_k-s_{k-1}} - \frac{1}{s_k - s_{k-1}}\right) &f_{k-1}  \nonumber\\
-%    +\left(\frac{ 1}{s_{k}-s_{k-1}} - \frac{1}{s_{b} - s_{k}}\right) &f_k\nonumber\\
-%    +\left(\frac{ s_k - s_{k-1}}{(s_b -s_k + s_k - s_{k-1})(s_b-s_{k})} \right) &f_b
-%\end{align}
-%\begin{align}\label{eq:second_order_dir}
-%    \frac{\d^2 f}{\d s^2}
-%    \underset{\textsc{DIR}}{\rightarrow}
-%     \frac{2f_b}{(s_{b}-s_k)(s_{b}-s_k + s_k - s_{k-1})}
-%    -\frac{2f_{k}}{(s_{b}-s_k)(s_{k}-s_{k-1})} \nonumber\\
-%    +\frac{2f_{k-1}}{(s_{k}-s_{k-1})(s_{b}-s_k + s_k-s_{k-1})}
-%\end{align}
 
 There is no difference between those formulas and actually evaluating the
 interpolating polynomial at a ghost point and then using that point in the
@@ -314,6 +304,9 @@ makes the ODE integrator stop once it crosses the domain boundary.
 This works fairly well with the adaptive embedded Runge Kutta method that we use
 and in particular also works in transformed coordinates.
 
+The advantage of this method is that the parallel derivative
+does not couple different field lines through the boundary conditions. Thus
+the dynamics on each field-line can be completely independent.
 %However, the problem with this procedure in practice is the small
 %distance between the starting point and the point where the corresponding
 %fieldline intersects the boundary. This seriously deteriorates the
@@ -585,7 +578,7 @@ where we used $\psi_R \equiv \partial \psi_p /\partial R$ and
 $I_R \equiv \partial I(\psi_p) /\partial R$.
 
 \subsection{Cylindrical grid and boundary conditions}
-A very simple non-trivial choice for the poloidal flux is
+A simple but non-trivial choice for the poloidal flux is
 \begin{align}
   \psi_p = \frac{1}{2} \left( (R-R_0)^2 + Z^2 \right) \equiv \frac{1}{2} r^2
   \label{eq:circular}
@@ -596,11 +589,11 @@ $R\in[R_0-1, R_0+1]$,
 $Z\in[-1,1]$ and
 $\varphi \in [0,2\pi]$ and choose
 \begin{align}
-  f_N(R,Z,\varphi) = \sin(\pi (R-R_0)/2) \sin(\pi Z /2)\sin(\varphi)\\
-  f_D(R,Z,\varphi) = \cos(\pi (R-R_0)/2) \cos(\pi Z /2)\sin(\varphi)
+    f(R,Z,\varphi) = (\cos(\pi (R-R_0))+1)( \cos(\pi Z /2)+1)\sin(\varphi)
   \label{}
 \end{align}
-On the chosen domain these functions have Neumann respectively Dirichlet boundary conditions.
+On the chosen domain $f$ respects both Neumann and Dirichlet boundary conditions
+both along the field and perpendicular to the wall.
 In Tables~\ref{tab:ds_cylindrical_dirichlet1} and
 \ref{tab:ds_cylindrical_dirichlet10} we show the convergence of the solution
 for various operators and Dirichlet boundary conditions. Note that the same
