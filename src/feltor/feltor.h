@@ -460,19 +460,19 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     //in DS we take the true bhat
     auto bhat = dg::geo::createBHat( mag);
     m_ds_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-        dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+        dg::forward, dg::geo::boundary::perp, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
     if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
         m_ds_U.construct( m_ds_N);
     else
         m_ds_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-            dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+            dg::forward, dg::geo::boundary::perp, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
     if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
         m_ds_P.construct( m_ds_N);
     else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
         m_ds_P.construct( m_ds_U);
     else
         m_ds_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-            dg::forward, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+            dg::forward, dg::geo::boundary::perp, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
 
     // in Poisson we take EPhi except for the true curvmode
     bhat = dg::geo::createEPhi(+1);

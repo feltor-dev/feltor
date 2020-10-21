@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
     std::cout << "# Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU);
     std::cout << "# Constructing Fieldlines..."<<std::endl;
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::centered, 1e-8, mx, my);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::centered, dg::geo::boundary::along_field, 1e-8, mx, my);
 
     t.toc();
     std::cout << "# Construction took "<<t.diff()<<"s\n";

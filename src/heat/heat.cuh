@@ -13,7 +13,7 @@ struct Implicit
     Implicit( const Geometry& g, Parameters p,
         dg::geo::TokamakMagneticField mag):
         m_p(p),
-        m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
+        m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward, dg::geo::boundary::perp,
               p.rk4eps, p.mx, p.my),
         m_ellipticForward( g, dg::normed, dg::forward),
         m_ellipticBackward( g, dg::normed, dg::backward),
@@ -107,7 +107,7 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g,
     m_Z( dg::pullback( dg::cooY3d, g)),
     m_P( dg::pullback( dg::cooZ3d, g)),
 #endif //DG_MANUFACTURED
-    m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
+    m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward, dg::geo::boundary::perp,
           p.rk4eps, p.mx, p.my),
     m_p(p),
     m_ellipticForward( g, dg::normed, dg::forward),

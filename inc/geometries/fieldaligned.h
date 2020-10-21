@@ -46,25 +46,32 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v):v_(v){ }
+    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v,
+            const dg::aGeometry2d& g, bool stay_in_box):
+        m_v(v), m_g(g), m_in_box( stay_in_box){}
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
-        double vz = v_.z()(R, Z);
-        yp[0] = v_.x()(R, Z)/vz;
-        yp[1] = v_.y()(R, Z)/vz;
+        if( m_in_box && !m_g->contains( R,Z) )
+        {
+            yp[0] = yp[1] = yp[2] = 0.;
+            return;
+        }
+        double vz = m_v.z()(R, Z);
+        yp[0] = m_v.x()(R, Z)/vz;
+        yp[1] = m_v.y()(R, Z)/vz;
         yp[2] = 1./vz;
     }
 
     private:
-    dg::geo::CylindricalVectorLvl0 v_;
+    dg::geo::CylindricalVectorLvl0 m_v;
+    dg::ClonePtr<dg::aGeometry2d> m_g;
+    bool m_in_box;
 };
 
 struct DSField
 {
     //z component of v may not vanish
-    //Fields outside g are extended according to bc in g
-    //this extension is not(!) the same as extending the flux function with these bc
-    DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g): g_(g)
+    DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g, bool stay_in_box ): m_g(g), m_in_box( stay_in_box)
     {
         thrust::host_vector<double> v_zeta, v_eta;
         dg::pushForwardPerp( v.x(), v.y(), v_zeta, v_eta, g);
@@ -79,13 +86,20 @@ struct DSField
     //interpolate the vectors given in the constructor on the given point
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
-        yp[0] = interpolate(dg::lspace, dzetadphi_, y[0], y[1], *g_);
-        yp[1] = interpolate(dg::lspace, detadphi_,  y[0], y[1], *g_);
-        yp[2] = interpolate(dg::lspace, dsdphi_,    y[0], y[1], *g_);
+        if( m_in_box && !m_g->contains( y[0],y[1]) )
+        {
+            yp[0] = yp[1] = yp[2] = 0.;
+            return;
+        }
+        // else shift point into domain
+        yp[0] = interpolate(dg::lspace, dzetadphi_, y[0], y[1], *m_g);
+        yp[1] = interpolate(dg::lspace, detadphi_,  y[0], y[1], *m_g);
+        yp[2] = interpolate(dg::lspace, dsdphi_,    y[0], y[1], *m_g);
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
-    dg::ClonePtr<dg::aGeometry2d> g_;
+    dg::ClonePtr<dg::aGeometry2d> m_g;
+    bool m_in_box;
 };
 
 template<class real_type>
@@ -100,6 +114,10 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp,
     std::array<thrust::host_vector<real_type>,3>& ym,
+    thrust::host_vector<real_type>& yp2b,
+    thrust::host_vector<real_type>& ym2b,
+    thrust::host_vector<bool>& in_boxp,
+    thrust::host_vector<bool>& in_boxm,
     real_type deltaPhi, real_type eps)
 {
     //grid_field contains the global geometry for the field and the boundaries
@@ -108,12 +126,13 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     std::array<thrust::host_vector<real_type>,3> y{tmp,tmp,tmp};; //x
     y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
     y[2] = dg::evaluate( dg::zero, grid_evaluate); //s
-    yp.fill(tmp); ym.fill(tmp); //allocate memory for output
+    yp.fill(tmp); ym.fill(tmp); yp2b = ym2b = tmp; //allocate memory for output
+    in_boxp.resize( tmp.size()), in_boxm.resize( tmp.size() );
     //construct field on high polynomial grid, then integrate it
-    dg::geo::detail::DSField field( vec, grid_field);
+    dg::geo::detail::DSField field( vec, grid_field, false);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
-    unsigned size = grid_evaluate.size();
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec, grid_field, false);
+    const unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
         std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP, coordsM;
@@ -130,6 +149,35 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
             dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+        in_boxp[i] = grid_field.contains( yp[0][i], yp[1][i]) ? true : false;
+        in_boxm[i] = grid_field.contains( ym[0][i], ym[1][i]) ? true : false;
+    }
+    yp2b = yp[2], ym2b = ym[2];
+    //Now integrate again but this time find the boundary distance
+    field = dg::geo::detail::DSField( vec, grid_field,true);
+    cyl_field = dg::geo::detail::DSFieldCylindrical(vec, grid_field, true);
+    for( unsigned i=0; i<size; i++)
+    {
+        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP, coordsM;
+        if( false == in_boxp[i])
+        {
+            //x,y,s
+            real_type phi1 = deltaPhi;
+            if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
+                dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+            else
+                dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+            yp2b[i] = coordsP[2];
+        }
+        if( false == in_boxm[i])
+        {
+            real_type phi1 =  - deltaPhi;
+            if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
+                dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+            else
+                dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+            ym2b[i] = coordsM[2];
+        }
     }
 }
 
@@ -331,20 +379,40 @@ struct Fieldaligned
     */
     void operator()(enum whichMatrix which, const container& in, container& out);
 
-    ///@brief Inverse distance between the planes \f$ (s^{k}-s^{k-1})^{-1} \f$
+    ///@brief Distance between the planes \f$ (s_{k}-s_{k-1}) \f$
     ///@return three-dimensional vector
-    const container& hm_inv()const {
-        return m_hm_inv;
+    const container& hm()const {
+        return m_hm;
     }
-    ///@brief Inverse distance between the planes \f$ (s^{k+1}-s^{k})^{-1} \f$
+    ///@brief Distance between the planes \f$ (s_{k+1}-s_{k}) \f$
     ///@return three-dimensional vector
-    const container& hp_inv()const {
-        return m_hp_inv;
+    const container& hp()const {
+        return m_hp;
     }
-    ///@brief Inverse distance between the planes \f$ (s^{k+1}-s^{k-1})^{-1} \f$
+    ///@brief Distance between the planes and the boundary \f$ (s_{k}-s_{b}^-) \f$
     ///@return three-dimensional vector
-    const container& h0_inv()const {
-        return m_h0_inv;
+    const container& hbm()const {
+        return m_hbm;
+    }
+    ///@brief Distance between the planes \f$ (s_b^+-s_{k}) \f$
+    ///@return three-dimensional vector
+    const container& hbp()const {
+        return m_hbp;
+    }
+    ///@brief Mask minus, 1 if fieldline intersects wall in minus direction but not in plus direction, 0 else
+    ///@return three-dimensional vector
+    const container& bbm()const {
+        return m_bbm;
+    }
+    ///@brief Mask both, 1 if fieldline intersects wall in plus direction and in minus direction, 0 else
+    ///@return three-dimensional vector
+    const container& bbo()const {
+        return m_bbo;
+    }
+    ///@brief Mask plus, 1 if fieldline intersects wall in plus direction but not in minus direction, 0 else
+    ///@return three-dimensional vector
+    const container& bbp()const {
+        return m_bbp;
     }
     ///Grid used for construction
     const ProductGeometry& grid()const{return *m_g;}
@@ -375,8 +443,9 @@ struct Fieldaligned
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
-    container m_h0_inv, m_hm_inv, m_hp_inv; //3d size
-    container m_hm, m_hp; //2d size
+    container m_hm, m_hp, m_hbm, m_hbp;         //3d size
+    container m_bbm, m_bbp, m_bbo;  //3d size masks
+    container m_hm2d, m_hp2d;       //2d size
     container m_left, m_right;      //perp_size
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
@@ -385,13 +454,20 @@ struct Fieldaligned
     std::vector<dg::View<const container>> m_f;
     std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
+    template<class Geometry>
+    void assign3dfrom2d( const thrust::host_vector<double>& in2d, container& out, const Geometry& grid)
+    {
+        dg::split( out, m_temp, grid); //3d vector
+        container tmp2d;
+        dg::assign( in2d, tmp2d);
+        for( unsigned i=0; i<m_Nz; i++)
+            dg::blas1::copy( tmp2d, m_temp[i]);
+    }
 };
 
 ///@cond
-////////////////////////////////////DEFINITIONS////////////////////////////////////////
-//
 
-
+////////////////////////////////////DEFINITIONS///////////////////////////////////////
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
 Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
@@ -430,7 +506,10 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
     t.tic();
 #endif //DG_BENCHMARK
-    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse, yp_coarse, ym_coarse, deltaPhi, eps);
+    thrust::host_vector<bool> in_boxp, in_boxm;
+    thrust::host_vector<double> hbp, hbm;
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
+            yp_coarse, ym_coarse, hbp, hbm, in_boxp, in_boxm, deltaPhi, eps);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, *grid_coarse);  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;
@@ -469,21 +548,36 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
-    dg::assign( dg::evaluate( dg::zero, grid), m_h0_inv);
-    m_hp_inv = m_hm_inv = m_h0_inv;
-    dg::assign( yp_coarse[2], m_hp); //2d vector
-    m_temp = dg::split( m_hp_inv, grid); //3d vector
-    m_f = dg::split( (const container&)m_hp_inv, grid);
-    for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::copy( m_hp, m_temp[i]);
-    dg::assign( ym_coarse[2], m_hm); //2d vector
-    dg::split( m_hm_inv, m_temp, grid); //3d vector
-    for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::copy( m_hm, m_temp[i]);
-    dg::blas1::axpby( 1., m_hp_inv, -1., m_hm_inv, m_h0_inv); //hp-hm
-    dg::blas1::pointwiseDivide( -1., m_hm_inv, m_hm_inv); //0-hm
-    dg::blas1::pointwiseDivide(  1., m_hp_inv, m_hp_inv); //hp-0
-    dg::blas1::pointwiseDivide(  1., m_h0_inv, m_h0_inv);
+    dg::assign( dg::evaluate( dg::zero, grid), m_hm);
+    m_temp  = dg::split( m_hm, grid); //3d vector
+    m_f     = dg::split( (const container&)m_hm, grid);
+    m_hbp = m_hbm = m_hp = m_hm;
+    dg::assign( yp_coarse[2], m_hp2d); //2d vector
+    dg::assign( ym_coarse[2], m_hm2d); //2d vector
+    assign3dfrom2d( hbp, m_hbp, grid);
+    assign3dfrom2d( hbm, m_hbm, grid);
+    assign3dfrom2d( yp_coarse[2], m_hp, grid);
+    assign3dfrom2d( ym_coarse[2], m_hm, grid);
+    dg::blas1::scal( m_hm2d, -1.);
+    dg::blas1::scal( m_hbm, -1.);
+    dg::blas1::scal( m_hm, -1.);
+
+    ///%%%%%%%%%%%%%%%%%%%%create mask vectors %%%%%%%%%%%%%%%%%%%//
+    thrust::host_vector<double> bbm( in_boxp.size(),0.), bbo(bbm), bbp(bbm);
+    for( unsigned i=0; i<in_boxp.size(); i++)
+    {
+        if( !in_boxp[i] && !in_boxm[i])
+            bbo[i] = 1.;
+        else if( !in_boxp[i] && in_boxm[i])
+            bbp[i] = 1.;
+        else if( in_boxp[i] && !in_boxm[i])
+            bbm[i] = 1.;
+        // else all are 0
+    }
+    m_bbm = m_bbo = m_bbp = m_hm;
+    assign3dfrom2d( bbm, m_bbm, grid);
+    assign3dfrom2d( bbo, m_bbo, grid);
+    assign3dfrom2d( bbp, m_bbp, grid);
 }
 
 template<class G, class I, class container>
@@ -649,7 +743,7 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
             dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
         if( m_bcz == dg::NEU || m_bcz == dg::DIR_NEU)
         {
-            dg::blas1::pointwiseDot( m_right, m_hp, m_ghostP);
+            dg::blas1::pointwiseDot( m_right, m_hp2d, m_ghostP);
             dg::blas1::axpby( 1., m_ghostP, 1., m_f[i0], m_ghostP);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
@@ -678,7 +772,7 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const contai
             dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
         if( m_bcz == dg::NEU || m_bcz == dg::NEU_DIR)
         {
-            dg::blas1::pointwiseDot( m_left, m_hm, m_ghostM);
+            dg::blas1::pointwiseDot( m_left, m_hm2d, m_ghostM);
             dg::blas1::axpby( -1., m_ghostM, 1., m_f[i0], m_ghostM);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fme

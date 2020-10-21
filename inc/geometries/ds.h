@@ -17,19 +17,174 @@
 
 namespace dg{
 namespace geo{
+///@cond
+namespace detail{
 
-    /*!@class hide_ds_parameters2
-    * @param f The vector to derive
-    * @param g contains result on output (write only)
-    * @note the vector sizes need to equal the grid size in the constructor
-    */
-    /*!@class hide_ds_parameters4
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    * @note the vector sizes need to equal the grid size in the constructor
-    */
+struct ComputeSymv{
+    DG_DEVICE
+    void operator()( double& fp, double fm, double hp, double hm,  double vol3d) const{
+        fp = ( fp-fm)/(hp+hm);
+        fp = vol3d*fp/(hp+hm);
+    }
+    DG_DEVICE
+    void operator()( double& fp, double& fm, double f0, double hp, double hm, double vol3d) const{
+        fp = ( fp-f0)/hp;
+        fp = 0.5*vol3d*fp/hp;
+        fm = ( f0-fm)/hm;
+        fm = 0.5*vol3d*fm/hm;
+    }
+};
+struct ComputeSymvEnd{
+    DG_DEVICE
+    void operator()( double& fm, double fp, double weights) const{
+        fm = ( fp-fm)/weights;
+    }
+    DG_DEVICE
+    void operator()( double& efm, double fm, double fp, double efp, double weights) const{
+        efm = ( efm- fm + fp -efp)/weights;
+    }
+};
+
+struct ComputeDSCentered{
+
+    ComputeDSCentered( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dsf, double fm, double fo, double fp,
+            double hm, double hp)
+    {
+        dsf = m_alpha*( fm*( 1./(hp+hm) - 1/hm)
+            + fo*( 1./hm - 1./hp)
+            + fp*( 1./hp - 1/(hp+hm))
+            ) + m_beta*dsf;
+    }
+    private:
+    double m_alpha, m_beta;
+};
+struct ComputeDSCenteredNEU{
+    ComputeDSCenteredNEU( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_ds(1.,0.){}
+    DG_DEVICE
+    void operator()( double& dsf, double fm, double fo, double fp,
+            double hm, double hp, double hbm, double hbp,
+            double bpm, double bpo, double bpp)
+    {
+        double inner=0, plus=0, minus=0, both=0;
+        m_ds( inner, fm, fo, fp, hm, hp);
+        plus  = ( 1./hm - 1./( 2.*hbp + hm))*(fo-fm);
+        minus = ( 1./hp - 1./( 2.*hbm + hp))*(fp-fm);
+        both = 0.;
+        dsf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
+            + m_beta*dsf;
+    }
+    private:
+    double m_alpha, m_beta;
+    ComputeDSCentered m_ds;
+};
+struct ComputeDSCenteredDIR{
+    ComputeDSCenteredDIR( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_ds(1.,0.){}
+    DG_DEVICE
+    void operator()( double& dsf, double fm, double fo, double fp,
+            double hm, double hp, double hbm, double hbp,
+            double bpm, double bpo, double bpp)
+    {
+        double inner=0, plus=0, minus=0, both=0;
+        m_ds( inner, fm, fo, fp, hm, hp);
+        m_ds( plus, fm, fo, 0., hm, hbp);
+        m_ds( minus, 0., fo, fp, hbm, hp);
+        m_ds( both, 0., fo, 0., hbm, hbp);
+        dsf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
+            + m_beta*dsf;
+    }
+    private:
+    double m_alpha, m_beta;
+    ComputeDSCentered m_ds;
+};
+struct ComputeDSS{
+    ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dssf, double fm, double fo, double fp,
+            double hm, double hp)
+    {
+        dssf = m_alpha*(
+               2.*fm/(hp+hm)/hm
+             - 2.*fo/hp/hm
+             + 2.*fp/(hp+hm)/hp) + m_beta*dssf;
+    }
+    private:
+    double m_alpha, m_beta;
+};
+struct ComputeDSSNEU{
+    ComputeDSSNEU( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_dss(1.,0.){}
+    DG_DEVICE
+    void operator()( double& dssf, double fm, double fo, double fp,
+            double hm, double hp, double hbm, double hbp,
+            double bpm, double bpo, double bpp)
+    {
+        double inner=0, plus=0, minus=0, both=0;
+        m_dss( inner, fm, fo, fp, hm, hp);
+        plus  = -2.*(fo-fm)/( 2.*hbp + hm)/hm;
+        minus =  2.*(fp-fo)/( 2.*hbm + hp)/hp;
+        both = 0.;
+        dssf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
+            + m_beta*dssf;
+    }
+    private:
+    double m_alpha, m_beta;
+    ComputeDSS m_dss;
+};
+struct ComputeDSSDIR{
+    ComputeDSSDIR( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_dss(1.,0.){}
+    DG_DEVICE
+    void operator()( double& dssf, double fm, double fo, double fp,
+            double hm, double hp, double hbm, double hbp,
+            double bpm, double bpo, double bpp)
+    {
+        double inner=0, plus=0, minus=0, both=0;
+        m_dss( inner, fm, fo, fp, hm, hp);
+        m_dss( plus, fm, fo, 0., hm, hbp);
+        m_dss( minus, 0., fo, fp, hbm, hp);
+        m_dss( both, 0., fo, 0., hbm, hbp);
+        dssf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
+            +m_beta*dssf;
+    }
+    private:
+    double m_alpha, m_beta;
+    ComputeDSS m_dss;
+};
+
+}//namespace detail
+///@endcond
+
+///@brief How boundary conditions are implemented in DS
+enum class boundary
+{
+    perp, //!< boundary condition is implemented perpendicular to boundary
+    along_field //!< boundary condition is implemented along the fieldline
+};
+
+static const std::map < std::string, boundary> str2boundary {
+    { "perp", boundary::perp},
+    { "along_field", boundary::perp}
+};
+
+/*!@class hide_ds_parameters2
+* @param f The vector to derive
+* @param g contains result on output (write only)
+* @note the vector sizes need to equal the grid size in the constructor
+*/
+/*!@class hide_ds_parameters4
+* @param alpha Scalar
+* @param f The vector to derive
+* @param beta Scalar
+* @param g contains result on output (write only)
+* @note the vector sizes need to equal the grid size in the constructor
+*/
+/*!@class hide_ds_dir_and_mode
+ * @param dir indicate the direction in the bracket operator and in symv
+ * @param mode indicate how boundary conditions should be treated: if \c dg::geo::boundary::perp then the boundary conditions are implemented by mirroring points perpendicular to the boundary, which has some drawbacks as to the numerical stability and toroidal resolution. if \c dg::geo::boundary::along_field then the boundary condition is implemented along the field-line which is numerically more desirable because it decouples the parallel direction.
+ * @attention The \c along_field boundary modes only works for \c centered and \c dss members and only if both \c bcx and \c bcy are the same (either \c dg::NEU or \c dg::DIR but not \c dg::NEU_DIR or \c dg::DIR_NEU) In all other cases \c perp mode is used by default
+ *
+*/
+
 /*!@class hide_ds_attention
 @attention The \c div and \c symv member functions reliably converge only if fieldlines
 do not(!) intersect the boundary and then only if the \c mx and \c my
@@ -71,7 +226,7 @@ struct DS
      * @brief Create the magnetic unit vector field and construct
 
      * @copydoc hide_fieldaligned_physics_parameters
-     * @param dir indicate the direction in the bracket operator and in symv
+     * @copydoc hide_ds_dir_and_mode
      * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
      */
@@ -81,17 +236,18 @@ struct DS
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         dg::direction dir = dg::centered,
+        boundary mode = boundary::perp,
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
         double deltaPhi=-1):
-        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir)
+        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir, mode )
     {
     }
     /**
      * @brief Use the given vector field to construct
      *
      * @copydoc hide_fieldaligned_physics_parameters
-     * @param dir indicate the direction in the bracket operator and in symv
+     * @copydoc hide_ds_dir_and_mode
      * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
      */
@@ -101,19 +257,20 @@ struct DS
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         dg::direction dir = dg::centered,
+        boundary mode = boundary::perp,
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
         double deltaPhi=-1):
-        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir)
+        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir, mode)
     {
     }
     /**
      * @brief Re-construct from a given \c Fieldaligned object
      *
      * @param fieldaligned this object will be used in all further member calls
-     * @param dir indicate the direction in the bracket operator and in symv
+     * @copydoc hide_ds_dir_and_mode
      */
-    DS( FA fieldaligned, dg::direction dir = dg::centered);
+    DS( FA fieldaligned, dg::direction dir = dg::centered, boundary mode = boundary::perp);
     /**
     * @brief Perfect forward parameters to one of the constructors
     * @tparam Params deduced by the compiler
@@ -149,7 +306,7 @@ struct DS
     /**
     * @brief forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * forward derivative \f$ g_i = \alpha \frac{1}{h_z}(f_{i+1} - f_{i}) + \beta g_i\f$
+    * forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
     * @copydoc hide_ds_parameters4
     */
     void forward( double alpha, const container& f, double beta, container& g){
@@ -158,7 +315,7 @@ struct DS
     /**
     * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * backward derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i} - f_{i-1}) + \beta g_i \f$
+    * backward derivative \f$ g_i = \alpha \frac{1}{h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
     * @copydoc hide_ds_parameters4
     */
     void backward( double alpha, const container& f, double beta, container& g){
@@ -167,7 +324,7 @@ struct DS
     /**
     * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
+    * The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
     * @copydoc hide_ds_parameters4
     */
     void centered( double alpha, const container& f, double beta, container& g){
@@ -176,7 +333,7 @@ struct DS
     /**
     * @brief backward derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * backward derivative \f$ g_i = \frac{1}{2h_z}(f_{i} - f_{i-1}) \f$
+    * backward derivative \f$ g_i = \frac{1}{h_z^-}(f_{i} - f_{i-1}) \f$
     * @copydoc hide_ds_parameters2
     */
     void backward( const container& f, container& g){
@@ -185,7 +342,7 @@ struct DS
     /**
     * @brief forward derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * forward derivative \f$ g_i = \frac{1}{h_z}(f_{i+1} - f_{i})\f$
+    * forward derivative \f$ g_i = \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
     * @copydoc hide_ds_parameters2
     */
     void forward( const container& f, container& g){
@@ -194,7 +351,7 @@ struct DS
     /**
     * @brief centered derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * centered derivative \f$ g_i = \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
     * @copydoc hide_ds_parameters2
     */
     void centered( const container& f, container& g){
@@ -319,6 +476,7 @@ struct DS
      * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
      * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+     * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
      * @copydoc hide_ds_parameters2
      */
     void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
@@ -326,6 +484,7 @@ struct DS
      * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
      *
      * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+     * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
      * @copydoc hide_ds_parameters4
      */
     void dss( double alpha, const container& f, double beta, container& g){ do_dss( alpha, f, beta, g);}
@@ -341,9 +500,9 @@ struct DS
     }
 
     /**
-    * @brief access the underlying Fieldaligned object for evaluate
+    * @brief access the underlying Fieldaligned object
     *
-    * @return acces to fieldaligned object
+    * @return acces to Fieldaligned object
     */
     const FA& fieldaligned() const{return m_fa;}
     private:
@@ -363,13 +522,14 @@ struct DS
     container m_vol3d, m_inv3d, m_weights_wo_vol;
     dg::direction m_dir;
     Matrix m_jumpX, m_jumpY;
+    dg::geo::boundary m_bound_mode;
 };
 
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::direction dir): m_fa(fa)
+DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::direction dir, boundary mode): m_fa(fa)
 {
     dg::assign( dg::create::volume(     fa.grid()), m_vol3d);
     dg::assign( dg::create::weights(    fa.grid()), m_weights_wo_vol);
@@ -377,6 +537,7 @@ DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::d
     dg::blas2::transfer( dg::create::jumpX( fa.grid(), fa.bcx()), m_jumpX);
     dg::blas2::transfer( dg::create::jumpY( fa.grid(), fa.bcy()), m_jumpY);
     m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;
+    m_bound_mode = mode;
 }
 
 template<class G, class I, class M, class container>
@@ -407,14 +568,18 @@ void DS<G,I,M,container>::do_forward( double alpha, const container& f, double b
 {
     //direct
     m_fa(einsPlus, f, m_tempP);
-    dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.hp_inv(), -alpha, f, m_fa.hp_inv(), beta, dsf);
+    dg::blas1::pointwiseDivide( m_tempP, m_fa.hp(), m_tempP);
+    dg::blas1::pointwiseDivide(       f, m_fa.hp(), m_tempM);
+    dg::blas1::axpbypgz( alpha, m_tempP, -alpha, m_tempM, beta, dsf);
 }
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_backward( double alpha, const container& f, double beta, container& dsf)
 {
     //direct
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::pointwiseDot( alpha, f, m_fa.hm_inv(), -alpha, m_tempM, m_fa.hm_inv(), beta, dsf);
+    dg::blas1::pointwiseDivide( m_tempM, m_fa.hm(), m_tempM);
+    dg::blas1::pointwiseDivide(       f, m_fa.hm(), m_tempP);
+    dg::blas1::axpbypgz( alpha, m_tempP, -alpha, m_tempM, beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centered( double alpha, const container& f, double beta, container& dsf)
@@ -422,13 +587,33 @@ void DS<G, I,M,container>::do_centered( double alpha, const container& f, double
     //direct discretisation
     m_fa(einsPlus, f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.h0_inv(), -alpha, m_tempM, m_fa.h0_inv(), beta, dsf);
+    if( boundary::along_field == m_bound_mode
+            && m_fa.bcx() == dg::NEU && m_fa.bcy() == dg::NEU)
+    {
+        dg::blas1::subroutine( detail::ComputeDSCenteredNEU( alpha, beta),
+                dsf, m_tempM, f, m_tempP, m_fa.hm(), m_fa.hp(), m_fa.hbm(),
+                m_fa.hbp(), m_fa.bbm(), m_fa.bbo(), m_fa.bbp());
+    }
+    else if( boundary::along_field == m_bound_mode
+            && m_fa.bcx() == dg::DIR && m_fa.bcy() == dg::DIR)
+    {
+        dg::blas1::subroutine( detail::ComputeDSCenteredDIR( alpha, beta),
+                dsf, m_tempM, f, m_tempP, m_fa.hm(), m_fa.hp(), m_fa.hbm(),
+                m_fa.hbp(), m_fa.bbm(), m_fa.bbo(), m_fa.bbp());
+    }
+    else
+    {
+        dg::blas1::subroutine( detail::ComputeDSCentered( alpha, beta),
+                dsf, m_tempM, f, m_tempP, m_fa.hm(), m_fa.hp());
+    }
 }
+
 template<class G, class I, class M, class container>
 void DS<G,I,M,container>::do_divBackward( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hp_inv(), 0., m_temp0);
+    dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
+    dg::blas1::pointwiseDivide( m_temp0, m_fa.hp(), m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
     dg::blas1::pointwiseDot( alpha, m_temp0, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
 }
@@ -436,7 +621,8 @@ template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_divForward( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hm_inv(),0., m_temp0);
+    dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
+    dg::blas1::pointwiseDivide( m_temp0, m_fa.hm(), m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
     dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_temp0, m_inv3d, beta, dsf);
 }
@@ -444,50 +630,14 @@ template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_divCentered( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.h0_inv(), 0.,m_temp0);
+    dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
+    dg::blas1::axpby( 1., m_fa.hp(), 1., m_fa.hm(), m_tempP);
+    dg::blas1::pointwiseDivide( m_temp0, m_tempP, m_temp0);
     m_fa(einsPlusT,  m_temp0, m_tempP);
     m_fa(einsMinusT, m_temp0, m_tempM);
     dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
 
 }
-
-namespace detail{
-struct ComputeDSS{
-    ComputeDSS( double alpha, double beta):m_alpha(alpha), m_beta(beta){}
-    DG_DEVICE
-    void operator()( double& dssf, double fp, double f, double fm, double hp_inv, double h0_inv, double hm_inv) const{
-        dssf = m_alpha*( 2.*fp*hp_inv*h0_inv - 2.*f*hp_inv*hm_inv + 2*fm*hm_inv*h0_inv) + m_beta*dssf;
-        //dssf = m_alpha*(fp - 2.*f + fm)*h_inv*h_inv + m_beta*dssf;
-    }
-    private:
-    double m_alpha, m_beta;
-};
-struct ComputeSymv{
-    DG_DEVICE
-    void operator()( double& fp, double fm, double h_inv, double vol3d) const{
-        fp = ( fp-fm)*h_inv;
-        fp = vol3d*fp*h_inv;
-    }
-    DG_DEVICE
-    void operator()( double& fp, double& fm, double f0, double hp_inv, double hm_inv, double vol3d) const{
-        fp = ( fp-f0)*hp_inv;
-        fp = 0.5*vol3d*fp*hp_inv;
-        fm = ( f0-fm)*hm_inv;
-        fm = 0.5*vol3d*fm*hm_inv;
-    }
-};
-struct ComputeSymvEnd{
-    DG_DEVICE
-    void operator()( double& fm, double fp, double weights) const{
-        fm = ( fp-fm)/weights;
-    }
-    DG_DEVICE
-    void operator()( double& efm, double fm, double fp, double efp, double weights) const{
-        efm = ( efm- fm + fp -efp)/weights;
-    }
-};
-
-}//namespace detail
 
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
@@ -497,7 +647,8 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     {
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, m_fa.h0_inv(), m_vol3d);
+        dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM,
+                m_fa.hp(), m_fa.hm(), m_vol3d);
         m_fa(einsPlusT,  m_tempP, m_temp);
         m_fa(einsMinusT, m_tempP, m_tempM);
         dg::blas1::subroutine( detail::ComputeSymvEnd(), m_temp,
@@ -508,7 +659,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         dg::blas1::subroutine( detail::ComputeSymv(), m_tempP, m_tempM, f,
-            m_fa.hp_inv(), m_fa.hm_inv(), m_vol3d);
+            m_fa.hp(), m_fa.hm(), m_vol3d);
         m_fa(einsPlusT, m_tempP, m_temp0);
         m_fa(einsMinusT, m_tempM, m_temp);
         dg::blas1::subroutine( detail::ComputeSymvEnd(), m_temp,
@@ -528,8 +679,25 @@ void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta,
 {
     m_fa(einsPlus,  f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::subroutine( detail::ComputeDSS( alpha, beta),
-            dssf, m_tempP, f, m_tempM, m_fa.hp_inv(), m_fa.h0_inv(), m_fa.hm_inv());
+    if( boundary::along_field == m_bound_mode
+            && m_fa.bcx() == dg::NEU && m_fa.bcy() == dg::NEU)
+    {
+        dg::blas1::subroutine( detail::ComputeDSSNEU( alpha, beta),
+                dssf, m_tempM, f, m_tempP, m_fa.hm(), m_fa.hp(), m_fa.hbm(),
+                m_fa.hbp(), m_fa.bbm(), m_fa.bbo(), m_fa.bbp());
+    }
+    else if( boundary::along_field == m_bound_mode
+            && m_fa.bcx() == dg::DIR && m_fa.bcy() == dg::DIR)
+    {
+        dg::blas1::subroutine( detail::ComputeDSSDIR( alpha, beta),
+                dssf, m_tempM, f, m_tempP, m_fa.hm(), m_fa.hp(), m_fa.hbm(),
+                m_fa.hbp(), m_fa.bbm(), m_fa.bbo(), m_fa.bbp());
+    }
+    else
+    {
+        dg::blas1::subroutine( detail::ComputeDSS( alpha, beta),
+                dssf, m_tempM, f, m_tempP, m_fa.hm(), m_fa.hp());
+    }
 }
 ///@endcond
 
