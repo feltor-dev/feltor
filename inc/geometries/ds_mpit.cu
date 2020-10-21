@@ -47,14 +47,14 @@ int main(int argc, char* argv[])
     dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::centered);
     ///##########################################################///
-    dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionSin(mag), g3d);
+    dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionDirNeu(mag), g3d);
     dg::MDVec derivative(fun);
     dg::MDVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
-    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
-    dg::MDVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionSin>(mag), g3d);
+    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    dg::MDVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
     std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
@@ -85,14 +85,8 @@ int main(int argc, char* argv[])
     }
     ///##########################################################///
     if(rank==0)std::cout << "# Reconstruct parallel derivative!\n";
-    fun = dg::evaluate( dg::geo::TestFunctionCos(mag), g3d);
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
     ds.construct( dsFA, dg::centered);
-    sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionCos>(mag), g3d);
-    sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionCos>(mag), g3d);
-    sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionCos>(mag), g3d);
-    sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionCos>(mag), g3d);
-    sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionCos>(mag), g3d);
     if(rank==0)std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
     if(rank==0)std::cout << "Dirichlet: \n";

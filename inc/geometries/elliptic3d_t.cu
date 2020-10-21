@@ -37,8 +37,8 @@ int main()
     dg::geo::TestInvertDS<dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec>, dg::DVec> test( elliptic, 1.);
     dg::Invert< dg::DVec > invert( w3d, n*n*Nx*Ny, eps);
 
-    const dg::DVec sol = dg::evaluate( dg::geo::TestFunctionCos(mag), g3d);
-    dg::DVec b = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionCos>(mag), g3d);
+    const dg::DVec sol = dg::evaluate( dg::geo::TestFunctionDirNeu(mag), g3d);
+    dg::DVec b = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
     dg::DVec x = b;
 
     std::cout << "# --------- Alignment Tensor:\n";
@@ -62,7 +62,7 @@ int main()
     dg::blas1::copy( 1., one);
     ellipticP.set_chi( one);
 
-    b = dg::evaluate( dg::geo::DPerpFunction<dg::geo::TestFunctionCos>(mag), g3d);
+    b = dg::evaluate( dg::geo::DPerpFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
 
     std::cout << "# --------- Projection Tensor:\n";
     t.tic();
