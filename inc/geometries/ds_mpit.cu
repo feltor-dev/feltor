@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     const dg::geo::CylindricalVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     //create Fieldaligned object and construct DS from it
     dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
-    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::centered, dg::geo::boundary::along_field);
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::centered);
     ///##########################################################///
     dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionDirNeu(mag), g3d);
     dg::MDVec derivative(fun);
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     ///##########################################################///
     if(rank==0)std::cout << "# Reconstruct parallel derivative!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
-    ds.construct( dsFA, dg::centered, dg::geo::boundary::along_field);
+    ds.construct( dsFA, dg::centered);
     if(rank==0)std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
     if(rank==0)std::cout << "Dirichlet: \n";

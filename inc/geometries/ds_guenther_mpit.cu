@@ -43,7 +43,7 @@ int main(int argc, char * argv[])
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
-        dg::centered, dg::geo::boundary::along_field, 1e-8, mx[0], mx[1]);
+        dg::centered, 1e-8, mx[0], mx[1]);
 
     ///##########################################################///
     const dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
