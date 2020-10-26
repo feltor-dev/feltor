@@ -9,8 +9,8 @@
 #include "parameters.h"
 #define DG_MANUFACTURED
 //Change here to selectively test parallel and perp parts
-#define FELTORPARALLEL 0
-#define FELTORPERP 1
+#define FELTORPARALLEL 1
+#define FELTORPERP 0
 
 #include "manufactured.h"
 #include "feltor.h"

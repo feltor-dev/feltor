@@ -333,7 +333,7 @@ struct Explicit
     }
 
     //source strength, profile - 1
-    void set_source( bool fixed_profile, Container profile, double omega_source, Container source, double omega_damping, Container damping )
+    void set_source( bool fixed_profile, Container profile, double omega_source, Container source, double omega_damping, Container damping, Container interior )
     {
         m_fixed_profile = fixed_profile;
         m_profne = profile;
@@ -341,6 +341,7 @@ struct Explicit
         m_source = source;
         m_omega_damping = omega_damping;
         m_damping = damping;
+        m_interior = interior;
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
@@ -371,7 +372,7 @@ struct Explicit
     std::array<Container,3> m_curv, m_curvKappa, m_b;
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
-    Container m_source, m_profne, m_damping;
+    Container m_source, m_profne, m_damping, m_interior;
     Container m_vol3d;
 
     Container m_apar;
@@ -384,7 +385,8 @@ struct Explicit
 
     //matrices and solvers
     Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
-    dg::geo::DS<Geometry, IMatrix, Matrix, Container> m_ds_P, m_ds_N, m_ds_U;
+    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa_P, m_fa_N, m_fa_U;
+    std::array<Container,2> m_faP, m_faM;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
@@ -459,20 +461,20 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
 {
     //in DS we take the true bhat
     auto bhat = dg::geo::createBHat( mag);
-    m_ds_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-        dg::forward, dg::geo::boundary::perp, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+    m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+        p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
     if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
-        m_ds_U.construct( m_ds_N);
+        m_fa_U.construct( m_fa_N);
     else
-        m_ds_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-            dg::forward, dg::geo::boundary::perp, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+        m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
+            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
     if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
-        m_ds_P.construct( m_ds_N);
+        m_fa_P.construct( m_fa_N);
     else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
-        m_ds_P.construct( m_ds_U);
+        m_fa_P.construct( m_fa_U);
     else
-        m_ds_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-            dg::forward, dg::geo::boundary::perp, p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+        m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
+             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
 
     // in Poisson we take EPhi except for the true curvmode
     bhat = dg::geo::createEPhi(+1);
@@ -569,10 +571,12 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_apar = m_temp0;
+    dg::assign( dg::evaluate( dg::one, g), m_interior );
 
     m_phi[0] = m_phi[1] = m_temp0;
     //m_dssN =
     m_dssU = m_dsN = m_dsU = m_dsP = m_phi;
+    m_faP = m_faM = m_phi;
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
     m_dN = m_dU = m_dP;
@@ -834,10 +838,18 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
     {
+        m_fa_N( dg::geo::einsMinus, y[0][i], m_faM[0]);
+        m_fa_N( dg::geo::einsPlus,  y[0][i], m_faP[0]);
+        m_fa_U( dg::geo::einsMinus, fields[1][i], m_faM[1]);
+        m_fa_U( dg::geo::einsPlus,  fields[1][i], m_faP[1]);
         //---------------------density--------------------------//
         //density: -Div ( NUb)
-        m_ds_N.centered( y[0][i], m_dsN[i]);
-        m_ds_U.centered( fields[1][i], m_dsU[i]);
+        dg::geo::ds_centered( m_fa_N, 1., m_faM[0], y[0][i], m_faP[0], 0., m_dsN[i]);
+        //centered in the interior, but backward outside
+        dg::geo::ds_backward( m_fa_U, 1., m_faM[1], fields[1][i], 0., m_dsU[i]);
+        dg::geo::ds_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_temp1);
+        dg::blas1::pointwiseDot( 1., m_interior, m_temp1, -1., m_interior, m_dsU[i], +1., m_dsU[i]);
+
         dg::blas1::pointwiseDot(-1., m_dsN[i], fields[1][i],
             -1., fields[0][i], m_dsU[i], 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
@@ -845,25 +857,33 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         //////////density: + nu_par Delta_par N
         ////////dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
         ////////                         0., m_temp0);
-        ////////m_ds_N.dss( y[0][i], m_dssN[i]);
+        ////////dg::geo::dss_centered( m_fa_N, 1., m_faM[0],  y[0][i], m_faP[0], 0., m_dssN[i]);
         ////////dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., m_temp0);//nu_par Delta_par N
         //////////Add to rhs, we again need it further down
         ////////dg::blas1::axpby( 1., m_temp0, 1., yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -0.5 ds U^2
         //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
-        //m_ds_U.centered(-0.5, m_temp1, 1., yp[1][i]);
+        //m_fa_U.centered(-0.5, m_temp1, 1., yp[1][i]);
+        dg::geo::ds_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dsU[i]);
         dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //-U ds U
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
-        ////m_ds_N.centered(-m_p.tau[i]/m_p.mu[i], m_logn[i], 1.0, yp[1][i]);
-        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
-        //m_ds_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
-        m_ds_P.centered( m_phi[i], m_dsP[i]);
+        dg::geo::ds_forward( m_fa_N, 1., y[0][i], m_faP[0], 0., m_temp1);
+        dg::blas1::pointwiseDot( 1., m_interior, m_dsN[i], -1., m_interior, m_temp1, +1., m_temp1);
+
+        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp1, fields[0][i], 1.0, yp[1][i]);
+        //dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
+        //m_fa_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
+        m_fa_P( dg::geo::einsMinus, m_phi[i], m_faM[0]); //overwrite
+        m_fa_P( dg::geo::einsPlus,  m_phi[i], m_faP[0]);
+        dg::geo::ds_forward( m_fa_P, 1., m_phi[i], m_faP[0], 0., m_dsP[i]);
+        dg::geo::ds_centered( m_fa_P, 1., m_faM[0], m_phi[i], m_faP[0], 0., m_temp1);
+        dg::blas1::pointwiseDot( 1., m_interior, m_temp1, -1., m_interior, m_dsP[i], +1., m_dsP[i]);
         dg::blas1::axpby(-1./m_p.mu[i], m_dsP[i], 1.0, yp[1][i]);
         // diffusion: + nu_par Delta_par U/N - nu_par U Delta_par N/ N
         dg::blas1::pointwiseDot(m_p.nu_parallel[i], m_divb, m_dsU[i],
                                 0., m_temp1);
-        m_ds_U.dss( fields[1][i], m_dssU[i]);
+        dg::geo::dss_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dssU[i]);
         dg::blas1::axpby( m_p.nu_parallel[i], m_dssU[i], 1., m_temp1); //nu_par Delta_par U
         //////dg::blas1::pointwiseDot( -1., fields[1][i], m_temp0, 1., m_temp1);
         dg::blas1::pointwiseDivide( 1., m_temp1, fields[0][i], 1., yp[1][i]);
@@ -885,11 +905,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::Timer timer;
     double accu = 0.;//accumulated time
     timer.tic();
+
+#if FELTORPERP == 1
+
     // set m_phi[0]
     compute_phi( t, y[0]);
-
     // set m_phi[1], m_dP[0], m_dP[1] and m_UE2 --- needs m_phi[0]
     compute_psi( t);
+
+#else
+
+    dg::blas1::evaluate( m_phi[0], dg::equals(), manufactured::Phie{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+    dg::blas1::evaluate( m_phi[1], dg::equals(), manufactured::Phii{
+        m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
+        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+
+#endif
 
     timer.toc();
     accu += timer.diff();
@@ -933,7 +966,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     // Add parallel dynamics --- needs m_logn
 #if FELTORPARALLEL == 1
+
     compute_parallel( t, y, m_fields, yp);
+
 #endif
 
     //Add source terms
