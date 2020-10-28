@@ -93,7 +93,8 @@ HVec interior(const Geometry& grid,
 }
 HVec profile(const Geometry& grid,
     const feltor::Parameters& p,
-    const dg::geo::TokamakMagneticField& mag ){
+    const dg::geo::TokamakMagneticField& mag )
+{
     double RO=mag.R0(), ZO=0.;
     dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     double psipO = mag.psip()( RO, ZO);
@@ -116,6 +117,27 @@ HVec source_damping(const Geometry& grid,
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,mag),
            source_damping, source_damping);
     return source_damping;
+}
+HVec turbulent_bath(const Geometry& grid,
+    const feltor::Parameters& p,
+    const dg::geo::TokamakMagneticField& mag )
+{
+    HVec ntilde = dg::evaluate(dg::zero,grid);
+    if( p.sigma_z == 0)
+        throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
+    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
+    dg::BathRZ init0(16,16,grid.x0(),grid.y0(), 30.,2.,p.amp);
+    if( p.symmetric)
+        ntilde = dg::pullback( init0, grid);
+    else
+    {
+        dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
+            fieldaligned( mag, grid, p.bcxN, p.bcyN,
+            dg::geo::NoLimiter(), p.rk4eps, 2, 2);
+        //evaluate should always be used with mx,my > 1 (but this takes more memory)
+        ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
+    }
+    return ntilde;
 }
 
 
@@ -151,6 +173,16 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
     dg::geo::TokamakMagneticField& mag )
 > > initial_conditions =
 {
+    { "zero",
+        []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
+            const Geometry& grid, const feltor::Parameters& p,
+            dg::geo::TokamakMagneticField& mag )
+        {
+            std::array<std::array<DVec,2>,2> y0;
+            y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(dg::evaluate( dg::zero, grid));
+            return y0;
+        }
+    },
     { "blob",
         []( Explicit<Geometry, IDMatrix, DMatrix, DVec>& f,
             const Geometry& grid, const feltor::Parameters& p,
@@ -225,21 +257,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             std::array<std::array<DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(detail::profile(grid,p,mag));
             dg::blas1::scal( y0, p.nprofamp );
-            HVec ntilde = dg::evaluate(dg::zero,grid);
-            if( p.sigma_z == 0)
-                throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
-            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-            dg::BathRZ init0(16,16,grid.x0(),grid.y0(), 30.,2.,p.amp);
-            if( p.symmetric)
-                ntilde = dg::pullback( init0, grid);
-            else
-            {
-                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 1, 1);
-                //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
-            }
+            HVec ntilde = detail::turbulent_bath(grid,p,mag);
             dg::blas1::pointwiseDot( detail::profile_damping(grid,p,mag), ntilde, ntilde);
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0]);
             detail::init_ni( y0, f,grid,p,mag);
@@ -282,21 +300,7 @@ std::map<std::string, std::function< std::array<std::array<DVec,2>,2>(
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<DVec>(
                 dg::pullback( prof, grid) );
 
-            HVec ntilde = dg::evaluate(dg::zero,grid);
-            if( p.sigma_z == 0)
-                throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence on gaussian\n");
-            dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-            dg::BathRZ init0(16,16,grid.x0(),grid.y0(), 30.,2.,p.amp);
-            if( p.symmetric)
-                ntilde = dg::pullback( init0, grid);
-            else
-            {
-                dg::geo::Fieldaligned<Geometry, IHMatrix, HVec>
-                    fieldaligned( mag, grid, p.bcxN, p.bcyN,
-                    dg::geo::NoLimiter(), p.rk4eps, 1, 1);
-                //For turbulence the exact evaluate is maybe not so important (thus takes less memory)
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
-            }
+            HVec ntilde = detail::turbulent_bath(grid,p,mag);
             dg::blas1::axpby( 1., dg::construct<DVec>(ntilde), 1., y0[0][0] );
             dg::blas1::pointwiseDot( dg::construct<DVec>(detail::circular_damping(grid,p,mag)),
                 y0[0][0], y0[0][0] );
@@ -334,9 +338,12 @@ std::map<std::string, std::function< HVec(
         dg::geo::TokamakMagneticField& mag )
         {
             fixed_profile = false;
-            ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
+            HVec source_profile = detail::profile( grid, p,mag);
+            ne_profile = source_profile;
             dg::blas1::scal( ne_profile, p.nprofamp );
-            HVec source_profile = dg::construct<HVec> ( detail::profile( grid, p,mag));
+            HVec ntilde = detail::turbulent_bath(grid,p,mag);
+            dg::blas1::pointwiseDot( detail::profile_damping(grid,p,mag), ntilde, ntilde);
+            dg::blas1::axpby( 1., ntilde, 1., source_profile);
             return source_profile;
         }
     },
