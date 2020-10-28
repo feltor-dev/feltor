@@ -13,16 +13,19 @@
  *         time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
+ *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
+ *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
+ *
  *              Although a tensor needs a topology to be well-defined mathematically,
  *              we do not need a grid to perform basic operations computationally.
  *              This is why the tensor operations can appear already in Level 1
