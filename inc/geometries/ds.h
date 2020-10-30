@@ -100,7 +100,7 @@ struct ComputeDSCentered{
     double m_alpha, m_beta;
 };
 struct ComputeDSCenteredNEU{
-    ComputeDSCenteredNEU( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_ds(1.,0.){}
+    ComputeDSCenteredNEU( double alpha, double beta, std::array<double,2> b_value):m_alpha(alpha), m_beta(beta), m_bm(b_value[0]), m_bp( b_value[1]),  m_ds(1.,0.){}
     DG_DEVICE
     void operator()( double& dsf, double fm, double fo, double fp,
             double hm, double hp, double hbm, double hbp,
@@ -108,33 +108,35 @@ struct ComputeDSCenteredNEU{
     {
         double inner=0, plus=0, minus=0, both=0;
         m_ds( inner, fm, fo, fp, hm, hp);
-        plus  = ( 1./hm - 1./( 2.*hbp + hm))*(fo-fm);
-        minus = ( 1./hp - 1./( 2.*hbm + hp))*(fp-fm);
-        both = 0.;
+        plus  = ( 1./hm - 1./( 2.*hbp + hm))*(fo-fm) + m_bp * hm /(2.*hbp + hm);
+        minus = ( 1./hp - 1./( 2.*hbm + hp))*(fp-fm) + m_bm * hp /(2.*hbm + hp);
+        both = (m_bp*hbm+hbp*m_bm)/(hbp+hbm);
         dsf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
             + m_beta*dsf;
     }
     private:
     double m_alpha, m_beta;
+    double m_bm, m_bp;
     ComputeDSCentered m_ds;
 };
 struct ComputeDSCenteredDIR{
-    ComputeDSCenteredDIR( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_ds(1.,0.){}
+    ComputeDSCenteredDIR( double alpha, double beta, std::array<double,2> b_value):m_alpha(alpha), m_beta(beta), m_bm(b_value[0]), m_bp( b_value[1]),  m_ds(1.,0.){}
     DG_DEVICE
     void operator()( double& dsf, double fm, double fo, double fp,
             double hm, double hp, double hbm, double hbp,
             double bpm, double bpo, double bpp)
     {
         double inner=0, plus=0, minus=0, both=0;
-        m_ds( inner, fm, fo, fp, hm, hp);
-        m_ds( plus, fm, fo, 0., hm, hbp);
-        m_ds( minus, 0., fo, fp, hbm, hp);
-        m_ds( both, 0., fo, 0., hbm, hbp);
+        m_ds( inner, fm,   fo, fp,   hm,  hp);
+        m_ds( plus,  fm,   fo, m_bp, hm,  hbp);
+        m_ds( minus, m_bm, fo, fp,   hbm, hp);
+        m_ds( both,  m_bm, fo, m_bp, hbm, hbp);
         dsf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
             + m_beta*dsf;
     }
     private:
     double m_alpha, m_beta;
+    double m_bm, m_bp;
     ComputeDSCentered m_ds;
 };
 struct ComputeDSS{
@@ -152,7 +154,7 @@ struct ComputeDSS{
     double m_alpha, m_beta;
 };
 struct ComputeDSSNEU{
-    ComputeDSSNEU( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_dss(1.,0.){}
+    ComputeDSSNEU( double alpha, double beta, std::array<double,2> b_value):m_alpha(alpha), m_beta(beta), m_bm(b_value[0]), m_bp( b_value[1]),  m_dss(1.,0.){}
     DG_DEVICE
     void operator()( double& dssf, double fm, double fo, double fp,
             double hm, double hp, double hbm, double hbp,
@@ -160,18 +162,20 @@ struct ComputeDSSNEU{
     {
         double inner=0, plus=0, minus=0, both=0;
         m_dss( inner, fm, fo, fp, hm, hp);
-        plus  = -2.*(fo-fm)/( 2.*hbp + hm)/hm;
-        minus =  2.*(fp-fo)/( 2.*hbm + hp)/hp;
-        both = 0.;
+        plus  =  2./( 2.*hbp + hm)*( m_bp - (fo-fm)/hm );
+        minus =  2./( 2.*hbm + hp)*( (fp-fo)/hp - m_bm );
+        both = (m_bp-m_bm)/(hbp+hbm);
         dssf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
             + m_beta*dssf;
     }
     private:
     double m_alpha, m_beta;
+    double m_bm, m_bp;
     ComputeDSS m_dss;
 };
+
 struct ComputeDSSDIR{
-    ComputeDSSDIR( double alpha, double beta):m_alpha(alpha), m_beta(beta), m_dss(1.,0.){}
+    ComputeDSSDIR( double alpha, double beta, std::array<double,2> b_value):m_alpha(alpha), m_beta(beta), m_bm(b_value[0]), m_bp( b_value[1]),  m_dss(1.,0.){}
     DG_DEVICE
     void operator()( double& dssf, double fm, double fo, double fp,
             double hm, double hp, double hbm, double hbp,
@@ -179,14 +183,15 @@ struct ComputeDSSDIR{
     {
         double inner=0, plus=0, minus=0, both=0;
         m_dss( inner, fm, fo, fp, hm, hp);
-        m_dss( plus, fm, fo, 0., hm, hbp);
-        m_dss( minus, 0., fo, fp, hbm, hp);
-        m_dss( both, 0., fo, 0., hbm, hbp);
+        m_dss( plus, fm, fo, m_bp, hm, hbp);
+        m_dss( minus, m_bm, fo, fp, hbm, hp);
+        m_dss( both, m_bm, fo, m_bp, hbm, hbp);
         dssf = m_alpha*((1.-bpm-bpo-bpp)*inner + bpp*plus + bpm*minus + bpo*both)
             +m_beta*dssf;
     }
     private:
     double m_alpha, m_beta;
+    double m_bm, m_bp;
     ComputeDSS m_dss;
 };
 
@@ -728,20 +733,20 @@ void ds_backward( const FieldAligned& fa, double alpha, const container& fm, con
 template<class FieldAligned, class container>
 void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
         const container& f, const container& fp, double beta, container& g,
-        dg::geo::boundary bound_mode = dg::geo::boundary::perp)
+        dg::geo::boundary bound_mode = dg::geo::boundary::perp, std::array<double,2> boundary_value = {0,0})
 {
     //direct discretisation
     if( boundary::along_field == bound_mode
             && fa.bcx() == dg::NEU && fa.bcy() == dg::NEU)
     {
-        dg::blas1::subroutine( detail::ComputeDSCenteredNEU( alpha, beta),
+        dg::blas1::subroutine( detail::ComputeDSCenteredNEU( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
     else if( boundary::along_field == bound_mode
             && fa.bcx() == dg::DIR && fa.bcy() == dg::DIR)
     {
-        dg::blas1::subroutine( detail::ComputeDSCenteredDIR( alpha, beta),
+        dg::blas1::subroutine( detail::ComputeDSCenteredDIR( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
@@ -766,19 +771,20 @@ void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
 template<class FieldAligned, class container>
 void dss_centered( const FieldAligned& fa, double alpha, const container&
         fm,const container& f, const container& fp, double beta, container&
-        g, dg::geo::boundary bound_mode = dg::geo::boundary::perp)
+        g, dg::geo::boundary bound_mode = dg::geo::boundary::perp,
+        std::array<double,2> boundary_value = {0,0})
 {
     if( boundary::along_field == bound_mode
             && fa.bcx() == dg::NEU && fa.bcy() == dg::NEU)
     {
-        dg::blas1::subroutine( detail::ComputeDSSNEU( alpha, beta),
+        dg::blas1::subroutine( detail::ComputeDSSNEU( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
     else if( boundary::along_field == bound_mode
             && fa.bcx() == dg::DIR && fa.bcy() == dg::DIR)
     {
-        dg::blas1::subroutine( detail::ComputeDSSDIR( alpha, beta),
+        dg::blas1::subroutine( detail::ComputeDSSDIR( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
