@@ -1932,6 +1932,39 @@ struct ISNAN
 #endif
 };
 
+
+/**
+ * @brief Shortest Distance to a collection of vertical and horizontal lines
+ *
+ * First determine which line is closest to given point and then determine
+ * the exact distance to it
+ */
+struct WallDistance
+{
+    /**
+     * @brief Allocate lines
+     *
+     * @param vertical walls R_0, R_1 ...  ( can be arbitrary size)
+     * @param horizonal walls Z_0, Z_1 ... ( can be arbitrary size)
+     */
+    WallDistance( std::vector<double> vertical, std::vector<double> horizontal) :
+        m_vertical(vertical), m_horizontal( horizontal) {}
+    /**
+     * @brief Distance to closest wall in a box
+     */
+    double operator() (double R, double Z) const
+    {
+        std::vector<double> dist( 1, 1e100); //fill in at least one (large) number in case vectors are empty)
+        for( auto v : m_vertical)
+            dist.push_back(fabs( R-v));
+        for( auto h : m_horizontal)
+            dist.push_back(fabs( Z-h));
+        return *std::min_element( dist.begin(), dist.end());
+    }
+    private:
+    std::vector<double> m_vertical;
+    std::vector<double> m_horizontal;
+};
 ///@cond
 namespace detail
 {

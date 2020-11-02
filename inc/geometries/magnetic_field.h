@@ -865,6 +865,47 @@ struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
     private:
     dg::geo::TokamakMagneticField m_mag;
 };
+
+///@brief Determine if field points towards or away from the nearest wall
+struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
+{
+    /**
+     * @brief Allocate lines
+     *
+     * @param mag Use to construct magnetic field
+     * @param vertical walls R_0, R_1 ...  ( can be arbitrary size)
+     * @param horizonal walls Z_0, Z_1 ... ( can be arbitrary size)
+     */
+    WallDirection( dg::geo::TokamakMagneticField mag, std::vector<double>
+            vertical, std::vector<double> horizontal) : m_vertical(vertical),
+        m_horizontal(horizontal), m_BR( mag), m_BZ(mag){}
+    double do_compute ( double R, double Z) const
+    {
+        std::vector<double> v_dist(1,1e100), h_dist(1,1e100);
+        for( auto v : m_vertical)
+            v_dist.push_back( R-v );
+        for( auto h : m_horizontal)
+            h_dist.push_back( Z-h );
+        double v_min = *std::min_element( v_dist.begin(), v_dist.end(),
+                [](double a, double b){ return fabs(a) < fabs(b);} );
+        double h_min = *std::min_element( h_dist.begin(), h_dist.end(),
+                [](double a, double b){ return fabs(a) < fabs(b);} );
+        if( fabs(v_min) < fabs(h_min) ) // if vertical R wall is closer
+        {
+            double br = m_BR( R,Z);
+            return v_min*br < 0 ? +1 : -1;
+        }
+        else //horizontal Z wall is closer
+        {
+            double bz = m_BZ( R,Z);
+            return h_min*bz < 0 ? +1 : -1;
+        }
+    }
+    private:
+    std::vector<double> m_vertical, m_horizontal;
+    dg::geo::BFieldR m_BR;
+    dg::geo::BFieldZ m_BZ;
+};
 ///@}
 
 } //namespace geo

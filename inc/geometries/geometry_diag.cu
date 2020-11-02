@@ -198,6 +198,9 @@ int main( int argc, char* argv[])
         {"CurvatureKappaGradPsip", "(Toroidal) Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureKappa(mag, +1), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
+        /////////////////////////////////////
+        {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()})) },
+        {"WallDirection", "Direction of magnetic field to closest wall", dg::geo::WallDirection(mag, {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()}) },
         //////////////////////////////////
         {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
         {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
