@@ -32,10 +32,10 @@
  *              of this library.
  *     @}
  *     @defgroup typedefs Useful Typedefs
- *          Useful type definitions for easy programming
  *     @defgroup sparsematrix Sparse matrix formats
  *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
+ *
  *             In this section the blas functions are implemented for the MPI+X
  *             hardware architectures, where X is e.g. CPU, GPU, accelerator
  *             cards...
@@ -45,10 +45,10 @@
  *             the chapter \ref mpi_backend in the introduction for more
  *             details.
  *     @defgroup dispatch The tag dispatch system
- *           Please read the chapter \ref dispatch in the introduction.
+ *           Read the chapter \ref dispatch in the introduction.
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
- * These algorithms make use only of blas level 1 and 2 functions
+ *      Algorithms that make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
  *     @defgroup invert Linear and nonlinear solvers
@@ -58,8 +58,8 @@
  * @{
  *     @defgroup grid Topological grids and operations
  *
- *     Objects that store topological information (which point is neighbour of
- *     which other point) about the grid.
+ *          Objects that store topological information (which point is neighbour of
+ *          which other point) about the grid.
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
@@ -73,6 +73,7 @@
  *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *             in (x1, y1).
  *         @defgroup highlevel create weights
+ *
  *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives
@@ -91,13 +92,13 @@
  *         @defgroup pullback pullback and pushforward
  *         @defgroup metric create volume
  *         @defgroup generators Grid Generator classes
- *            The classes to perform field line integration for DS and averaging classes
  *     @}
  *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
- * These routines make use of both the basic operations as well as the interfaces defined in the Geometry section.
+ *      These routines make use of both the basic operations as well as the
+ *      interfaces defined in the Geometry section.
  * @{
  *     @defgroup arakawa Discretization of Poisson bracket
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
@@ -112,6 +113,7 @@
  *         The functors are useful for either vector transformations or
  *         as init functions in the evaluate routines.
  *     @defgroup lowlevel Lowlevel helper functions and classes
+ *
  *         Low level helper routines.
  * @}
  *

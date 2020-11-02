@@ -3,12 +3,13 @@
  *
  * @defgroup generators_geo 1. Grid generators
  *
-      All the grids introduced by this extension can be constructed with
-      generator classes.
+ *      All the grids introduced by this extension can be constructed with
+ *      generator classes.
  * @defgroup grids 2. New geometric grids
  * @defgroup fluxfunctions 3. New functors based on the magnetic field geometry
 
- All functors in this section model two or three-dimensional functions, i.e. they all overload the operator() like \c aCylindricalFunctor
+        All functors in this section model two or three-dimensional functions, i.e.
+        they all overload the operator() like \c aCylindricalFunctor
  * @{
       @defgroup geom 3.1 New flux functions and derivatives
       @{
@@ -24,10 +25,6 @@
  * @}
  * @defgroup fieldaligned 4. Fieldaligned derivatives
  * @defgroup misc_geo 5. Miscellaneous additions
- *
- * Objects that are used to define and integrate the magnetic field lines.
- * All objects can be used in the \c evaluation and \c pullback functions.
- *
  */
 /*! @mainpage
  * This extension adds new features to the FELTOR core dg library.
