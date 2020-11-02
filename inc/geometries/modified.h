@@ -166,9 +166,8 @@ struct DampingRegion : public aCylindricalFunctor<DampingRegion>
     { }
     double do_compute(double R, double Z) const
     {
-        double psip = m_psip(R,Z);
         if( m_pred( R,Z))
-            return m_poly( psip);
+            return m_poly( m_psip(R,Z));
         else
             return 0;
     }
@@ -195,15 +194,22 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
     std::function<double(double,double)> m_psip;
     std::function<bool(double,double)> m_pred;
 };
-//combine damping and transition regions by adding them up
-struct Combine : public aCylindricalFunctor<Combine>
+
+/**
+ * @brief \f$ f_1 + f_2 - f_1 f_2 \f$
+ *
+ * If f_1 and f_2 are functions between 0 and 1 this operation
+ * represents the union of two masking regions
+ */
+struct SetUnion : public aCylindricalFunctor<SetUnion>
 {
-    Combine( std::function<double(double,double)> fct1, std::function<double(double,double)> fct2) :
+    SetUnion( std::function<double(double,double)> fct1, std::function<double(double,double)> fct2) :
         m_fct1(fct1), m_fct2(fct2)
     { }
     double do_compute(double R, double Z) const
     {
-        return m_fct1(R,Z)+m_fct2(R,Z);
+        double f1 = m_fct1(R,Z), f2 = m_fct2( R,Z);
+        return f1 + f2 - f1*f2;
     }
     private:
     std::function<double(double,double)> m_fct1, m_fct2;

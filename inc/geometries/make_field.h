@@ -60,6 +60,19 @@ static inline TokamakMagneticField createMagneticField( Json::Value js, file::er
     }
 }
 
+
+void transform_psi( TokamakMagneticField mag, double psipO, double& psi0, double& alpha0, double& sign0)
+{
+    double RO=mag.R0(), ZO=0.;
+    dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    double psipO = mag.psip()( RO, ZO);
+    double damping_psi0p = (1.-psi0*psi0)*psipO;
+    double damping_alpha0p = -(2.*psi0+alpha0)*alpha0*psipO;
+    psi0 = damping_psi0p + sign0*damping_alpha0p/2.;
+    alpha0 = fabs( damping_alpha0p/2.);
+    sign0 = sign0*((psipO>0)-(psipO<0));
+}
+
 /**
  * @brief Modify Magnetic Field above or below certain Psi values according to given parameters
  *
@@ -106,19 +119,9 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
         {
             double psi0 = file::get( mode, jsmod, "damping", "boundary", 1.1 ).asDouble();
             double alpha = file::get( mode, jsmod, "damping", "alpha", 0.2 ).asDouble();
-            double sign = -1;
+            double sign = +1;
             if( desc == description::standardX)
-            {
-                double RO=mag.R0(), ZO=0.;
-                dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-                double psipO = mag.psip()( RO, ZO);
-                double damping_psi0p = (1.-psi0*psi0)*psipO;
-                double damping_alphap = -(2.*psi0+alpha)*alpha*psipO;
-                //std::cout<< " damping "<< damping_psi0p << " "<<damping_alphap<<"\n";
-                psi0 = damping_psi0p + damping_alphap/2.;
-                alpha = fabs( damping_alphap/2.);
-                sign = ((psipO>0)-(psipO<0));
-            }
+                transform_psi( psipO, psi0, alpha, sign);
             else
                 sign = file::get( mode, jsmod, "damping", "sign", -1. ).asDouble();
 
@@ -141,20 +144,9 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
                     double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
                     double ZX = -1.1*mag.params().elongation()*mag.params().a();
                     dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-                    //and the X-point
-                    double RO=mag.R0(), ZO=0.;
-                    dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-                    double psipO = mag.psip()( RO, ZO);
-                    double damping_psi0p = (1.-psi0*psi0)*psipO;
-                    double damping_alpha0p = -(2.*psi0+alpha0)*alpha0*psipO;
-                    double damping_psi1p = (1.-psi1*psi1)*psipO;
-                    double damping_alpha1p = -(2.*psi1+alpha1)*alpha1*psipO;
-                    psi0 = damping_psi0p + damping_alpha0p/2.;
-                    psi1 = damping_psi1p - damping_alpha1p/2.;
-                    alpha0 = fabs( damping_alpha0p/2.);
-                    alpha1 = fabs( damping_alpha1p/2.);
-                    double sign0 = ((psipO>0)-(psipO<0));
-                    double sign1 = -sign0;
+                    double sign0 = +1., sign1 = -1.;
+                    transform_psi( psipO, psi0, alpha0, sign0);
+                    transform_psi( psipO, psi1, alpha1, sign1);
                     mod0_psip = mod::createPsip(
                             mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
                     mod_psip = mod::createPsip(
@@ -163,8 +155,8 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
                     CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
                     CylindricalFunctor damping1 = mod::DampingRegion( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, -sign1);
                     CylindricalFunctor transition1 = mod::MagneticTransition( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, sign1);
-                    damping = mod::Combine( damping0, damping1);
-                    transition = mod::Combine( transition0, transition1);
+                    damping = mod::SetUnion( damping0, damping1);
+                    transition = mod::SetUnion( transition0, transition1);
                     break;
                 }
                 default:
@@ -179,8 +171,8 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
                     CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
                     CylindricalFunctor damping1 = mod::DampingRegion( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
                     CylindricalFunctor transition1 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
-                    damping = mod::Combine( damping0, damping1);
-                    transition = mod::Combine( transition0, transition1);
+                    damping = mod::SetUnion( damping0, damping1);
+                    transition = mod::SetUnion( transition0, transition1);
                     break;
                 }
             }
