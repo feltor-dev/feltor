@@ -196,7 +196,7 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
 };
 
 /**
- * @brief \f$ f_1 + f_2 - f_1 f_2 \f$
+ * @brief \f$ f_1 + f_2 - f_1 f_2 \equiv f_1 \cup f_2\f$
  *
  * If f_1 and f_2 are functions between 0 and 1 this operation
  * represents the union of two masking regions
@@ -213,6 +213,43 @@ struct SetUnion : public aCylindricalFunctor<SetUnion>
     }
     private:
     std::function<double(double,double)> m_fct1, m_fct2;
+};
+/**
+ * @brief \f$ f_1 f_2 \equiv f_1 \cap f_2\f$
+ *
+ * If f_1 and f_2 are functions between 0 and 1 this operation
+ * represents the intersection of two masking regions
+ */
+struct SetIntersection : public aCylindricalFunctor<SetIntersection>
+{
+    SetIntersection( std::function<double(double,double)> fct1, std::function<double(double,double)> fct2) :
+        m_fct1(fct1), m_fct2(fct2)
+    { }
+    double do_compute(double R, double Z) const
+    {
+        double f1 = m_fct1(R,Z), f2 = m_fct2( R,Z);
+        return f1*f2;
+    }
+    private:
+    std::function<double(double,double)> m_fct1, m_fct2;
+};
+/**
+ * @brief \f$ 1-f \equiv \bar f\f$
+ *
+ * If f is a function between 0 and 1 this operation
+ * represents the negation of the masking region
+ */
+struct SetNot : public aCylindricalFunctor<SetNot>
+{
+    SetNot( std::function<double(double,double)> fct) :
+        m_fct(fct)
+    { }
+    double do_compute(double R, double Z) const
+    {
+        return 1-m_fct(R,Z);
+    }
+    private:
+    std::function<double(double,double)> m_fct;
 };
 
 //some possible predicates
