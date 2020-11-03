@@ -61,7 +61,9 @@ static inline TokamakMagneticField createMagneticField( Json::Value js, file::er
 }
 
 
-void transform_psi( TokamakMagneticField mag, double psipO, double& psi0, double& alpha0, double& sign0)
+///@cond
+namespace detail{
+void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, double& sign0)
 {
     double RO=mag.R0(), ZO=0.;
     dg::geo::findOpoint( mag.get_psip(), RO, ZO);
@@ -72,6 +74,8 @@ void transform_psi( TokamakMagneticField mag, double psipO, double& psi0, double
     alpha0 = fabs( damping_alpha0p/2.);
     sign0 = sign0*((psipO>0)-(psipO<0));
 }
+}//namespace detail
+///@endcond
 
 /**
  * @brief Modify Magnetic Field above or below certain Psi values according to given parameters
@@ -120,8 +124,9 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
             double psi0 = file::get( mode, jsmod, "damping", "boundary", 1.1 ).asDouble();
             double alpha = file::get( mode, jsmod, "damping", "alpha", 0.2 ).asDouble();
             double sign = +1;
-            if( desc == description::standardX)
-                transform_psi( psipO, psi0, alpha, sign);
+            if( desc == description::standardX || desc == description::standardO ||
+                    desc == description::doubleX)
+                detail::transform_psi( mag, psi0, alpha, sign);
             else
                 sign = file::get( mode, jsmod, "damping", "sign", -1. ).asDouble();
 
@@ -132,7 +137,6 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
         }
         case modifier::sol_pfr:
         {
-            CylindricalFunctorsLvl2 mod0_psip;
             double psi0 = file::get_idx( mode, jsmod, "damping", "boundary",0, 1.1 ).asDouble();
             double alpha0 = file::get_idx( mode, jsmod, "damping", "alpha",0, 0.2 ).asDouble();
             double psi1 = file::get_idx( mode, jsmod, "damping", "boundary",1, 0.97 ).asDouble();
@@ -140,13 +144,14 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
             switch( desc){
                 case description::standardX:
                 {
+                    double sign0 = +1., sign1 = -1.;
+                    detail::transform_psi( mag, psi0, alpha0, sign0);
+                    detail::transform_psi( mag, psi1, alpha1, sign1);
                     //we can find the X-point
                     double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
                     double ZX = -1.1*mag.params().elongation()*mag.params().a();
                     dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-                    double sign0 = +1., sign1 = -1.;
-                    transform_psi( psipO, psi0, alpha0, sign0);
-                    transform_psi( psipO, psi1, alpha1, sign1);
+                    CylindricalFunctorsLvl2 mod0_psip;
                     mod0_psip = mod::createPsip(
                             mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
                     mod_psip = mod::createPsip(
@@ -159,10 +164,40 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
                     transition = mod::SetUnion( transition0, transition1);
                     break;
                 }
+                case description::doubleX:
+                {
+                    double sign0 = +1., sign1 = -1.;
+                    detail::transform_psi( mag, psi0, alpha0, sign0);
+                    detail::transform_psi( mag, psi1, alpha1, sign1);
+                    //we can find the X-point
+                    double RX1 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+                    double ZX1 = -1.1*mag.params().elongation()*mag.params().a();
+                    dg::geo::findXpoint( mag.get_psip(), RX1, ZX1);
+                    double RX2 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+                    double ZX2 = +1.1*mag.params().elongation()*mag.params().a();
+                    dg::geo::findXpoint( mag.get_psip(), RX2, ZX2);
+                    CylindricalFunctorsLvl2 mod0_psip, mod1_psip;
+                    mod0_psip = mod::createPsip(
+                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
+                    mod1_psip = mod::createPsip(
+                            mod::HeavisideZ( ZX1, -1), mod0_psip, psi1, alpha1, sign1);
+                    mod_psip = mod::createPsip(
+                            mod::HeavisideZ( ZX2, +1), mod1_psip, psi1, alpha1, sign1);
+                    CylindricalFunctor damping0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
+                    CylindricalFunctor damping1 = mod::DampingRegion( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor damping2 = mod::DampingRegion( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
+                    CylindricalFunctor transition1 = mod::MagneticTransition( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, sign1);
+                    CylindricalFunctor transition2 = mod::MagneticTransition( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, sign1);
+                    transition = mod::SetUnion( mod::SetUnion( transition0, transition1), transition2);
+                    damping = mod::SetUnion( mod::SetUnion( damping0, damping1), damping2);
+                    break;
+                }
                 default:
                 {
                     double sign0 = file::get_idx( mode, jsmod, "damping", "sign",0, -1. ).asDouble();
                     double sign1 = file::get_idx( mode, jsmod, "damping", "sign", 1, +1. ).asDouble();
+                    CylindricalFunctorsLvl2 mod0_psip;
                     mod0_psip = mod::createPsip(
                             mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
                     mod_psip = mod::createPsip(
@@ -191,6 +226,74 @@ static inline TokamakMagneticField createModifiedField( Json::Value js, Json::Va
                     mag.get_ipol(), mod_params);
         }
     }
+}
+
+static inline CylindricalFunctor createWallRegion( Json::Value js, Json::Value jsmod, file::error mode)
+{
+    CylindricalFunctor wall, transition;
+    TokamakMagneticField mag = createModifiedField( js, jsmod, mode, wall, transition);
+    return wall;
+}
+
+/**
+ * @brief Create the sheath region where fieldlines intersect the boundary
+ *
+ * Check if any fieldlines that are not in the wall region intersect the boundary
+ * @param jsmod must contain the field
+ * "sheath": "boundary" value where sheath region begins in units of minor radius a
+ * "sheath": "alpha" radius of the transition region where the modification acts in units of minor radius a
+ * @param mode Determines behaviour in case of an error
+ * @param mag (in) the magnetic field to find the direction of the field
+ * towards or away from the sheath
+ * @param wall (in) the penalization region that represents the actual
+ * (perpendicular) wall without the divertor
+ * @param R0 left boundary
+ * @param R1 right boundary
+ * @param Z0 bottom boundary
+ * @param Z1 top boundary
+ * @param direction (out) contains (+/-) indicating direction of magnetic field
+ * to closest sheath boundary (defined on entire box)
+ *
+ * @return sheath region
+ */
+static inline void createSheathRegion(
+        Json::Value jsmod, file::error mode, TokamakMagneticField mag,
+        CylindricalFunctor wall, double R0, double R1, double Z0, double Z1,
+        CylindricalFunctor& sheath, CylindricalFunctor& direction )
+{
+    Grid1d gR1d ( R0, R1, 1, 100);
+    Grid1d gZ1d ( Z0, Z1, 1, 100);
+    std::array<bool,2> sheathR = {false,false}, sheathZ = {false,false};
+    for ( unsigned i=0; i<100; i++)
+    {
+        if( wall( R0+i*gR1d.h(), Z0) == 0)
+            sheathR[0] = true;
+        if( wall( R0+i*gR1d.h(), Z1) == 0)
+            sheathR[1] = true;
+        if( wall( R0, Z0 + i*gZ1d.h()) == 0)
+            sheathZ[0] = true;
+        if( wall( R1, Z0 + i*gZ1d.h()) == 0)
+            sheathZ[1] = true;
+    }
+    std::vector<double> horizontal_sheath, vertical_sheath;
+    if( true == sheathR[0])
+        horizontal_sheath.push_back( Z0);
+    if( true == sheathR[1])
+        horizontal_sheath.push_back( Z1);
+    if( true == sheathZ[0])
+        vertical_sheath.push_back( R0);
+    if( true == sheathZ[1])
+        vertical_sheath.push_back( R1);
+    //direction
+    direction = dg::geo::WallDirection( mag, vertical_sheath, horizontal_sheath);
+    //sheath
+    CylindricalFunctor dist = dg::WallDistance( vertical_sheath, horizontal_sheath);
+    double boundary = file::get( mode, jsmod, "sheath", "boundary", 0.1 ).asDouble();
+    double alpha = file::get( mode, jsmod, "sheath", "alpha", 0.01 ).asDouble();
+    double a = mag.params().a();
+    dg::PolynomialHeaviside poly( boundary*a - alpha*a/2., alpha*a/2., -1);
+    sheath = dg::compose( poly, dist);
+    sheath = mod::SetIntersection( mod::SetNot( wall), sheath);
 }
 
 } //namespace geo

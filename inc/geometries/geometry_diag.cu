@@ -117,8 +117,12 @@ int main( int argc, char* argv[])
     const Parameters p(input_js);
     p.display( std::cout);
     //Test coefficients
-    dg::geo::CylindricalFunctor damping, transition;
-    dg::geo::TokamakMagneticField mag = dg::geo::createModifiedField(geom_js, input_js, file::error::is_throw, damping, transition);
+    dg::geo::CylindricalFunctor damping, transition, sheath, direction;
+    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(geom_js,
+            file::error::is_throw);
+    dg::geo::TokamakMagneticField mod_mag =
+        dg::geo::createModifiedField(geom_js, input_js, file::error::is_throw,
+                damping, transition);
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
     unsigned n, Nx, Ny, Nz;
@@ -127,6 +131,8 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
+    dg::geo::createSheathRegion( input_js, file::error::is_warning,
+            mag, damping, Rmin, Rmax, Zmin, Zmax, sheath, direction);
 
     dg::geo::description mag_description = mag.params().getDescription();
     double psipO = -1.;
@@ -201,6 +207,8 @@ int main( int argc, char* argv[])
         /////////////////////////////////////
         {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()})) },
         {"WallDirection", "Direction of magnetic field to closest wall", dg::geo::WallDirection(mag, {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()}) },
+        {"Sheath", "Sheath region", sheath},
+        {"SheathDirection", "Direction of magnetic field relative to sheath", direction},
         //////////////////////////////////
         {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
         {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
@@ -304,7 +312,7 @@ int main( int argc, char* argv[])
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
         if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO)
         {
-            dg::geo::SafetyFactor qprof( mag);
+            dg::geo::SafetyFactor qprof( mod_mag); //mag can lead to dead-lock!?
             dg::HVec qprofile = dg::evaluate( qprof, grid1d);
             map1d.emplace_back("q-profile", qprofile,
                 "q-profile (Safety factor) using direct integration");
