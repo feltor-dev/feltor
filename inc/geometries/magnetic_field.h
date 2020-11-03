@@ -43,6 +43,7 @@ enum class description
 {
     standardO, //!< closed flux surfaces centered around an O-point located near (R_0, 0); flux-aligned grids can be constructed
     standardX, //!< closed flux surfaces centered around an O-point located near (R_0, 0) and bordered by a separatrix with a single X-point; flux-aligned X-grids can be constructed
+    doubleX, //!< closed flux surfaces centered around an O-point located near (R_0, 0) and bordered by a separatrix with two X-points; flux-aligned X-grids cannnot be constructed
     none, //!< no shaping: Purely toroidal magnetic field
     square, //!< closed flux surfaces centered around an O-point and bordered by a square  with four X-points in the corners (mainly the Guenther field)
     centeredX //!< one X-point in the middle, no O-point, only open flux surfaces, X-grids cannot be constructed
@@ -64,6 +65,7 @@ static const std::map<std::string, modifier> str2modifier{
 static const std::map<std::string, description> str2description{
     {"standardO", description::standardO},
     {"standardX", description::standardX},
+    {"doubleX", description::doubleX},
     {"square", description::square},
     {"none", description::none},
     {"centeredX", description::centeredX}
