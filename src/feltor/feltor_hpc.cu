@@ -267,8 +267,7 @@ int main( int argc, char* argv[])
             fixed_profile, profile, grid, p, mag);
         feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
             p.source_rate, dg::construct<DVec>(source_profile),
-            p.damping_rate, dg::construct<DVec>(damping_profile),
-            dg::construct<DVec>( feltor::detail::interior( grid, p, mag))
+            p.damping_rate, dg::construct<DVec>(damping_profile)
         );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;

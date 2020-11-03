@@ -333,7 +333,7 @@ struct Explicit
     }
 
     //source strength, profile - 1
-    void set_source( bool fixed_profile, Container profile, double omega_source, Container source, double omega_damping, Container damping, Container interior )
+    void set_source( bool fixed_profile, Container profile, double omega_source, Container source, double omega_damping, Container damping)
     {
         m_fixed_profile = fixed_profile;
         m_profne = profile;
@@ -341,7 +341,6 @@ struct Explicit
         m_source = source;
         m_omega_damping = omega_damping;
         m_damping = damping;
-        m_interior = interior;
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
@@ -372,7 +371,7 @@ struct Explicit
     std::array<Container,3> m_curv, m_curvKappa, m_b;
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
-    Container m_source, m_profne, m_damping, m_interior;
+    Container m_source, m_profne, m_damping;
     Container m_vol3d;
 
     Container m_apar;
@@ -571,7 +570,6 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_UE2 = m_temp2 = m_temp1 = m_temp0;
     m_apar = m_temp0;
-    dg::assign( dg::evaluate( dg::one, g), m_interior );
 
     m_phi[0] = m_phi[1] = m_temp0;
     //m_dssN =
@@ -845,48 +843,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         //---------------------density--------------------------//
         //density: -Div ( NUb)
         dg::geo::ds_centered( m_fa_N, 1., m_faM[0], y[0][i], m_faP[0], 0., m_dsN[i]);
-        //centered in the interior, but backward outside
-        dg::geo::ds_backward( m_fa_U, 1., m_faM[1], fields[1][i], 0., m_dsU[i]);
-        dg::geo::ds_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_temp1);
-        dg::blas1::pointwiseDot( 1., m_interior, m_temp1, -1., m_interior, m_dsU[i], +1., m_dsU[i]);
-
+        dg::geo::ds_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dsU[i]);
         dg::blas1::pointwiseDot(-1., m_dsN[i], fields[1][i],
             -1., fields[0][i], m_dsU[i], 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
             1.,yp[0][i]);
-        //////////density: + nu_par Delta_par N
-        ////////dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, m_dsN[i],
-        ////////                         0., m_temp0);
-        ////////dg::geo::dss_centered( m_fa_N, 1., m_faM[0],  y[0][i], m_faP[0], 0., m_dssN[i]);
-        ////////dg::blas1::axpby( m_p.nu_parallel, m_dssN[i], 1., m_temp0);//nu_par Delta_par N
-        //////////Add to rhs, we again need it further down
-        ////////dg::blas1::axpby( 1., m_temp0, 1., yp[0][i]);
         //---------------------velocity-------------------------//
-        // Burgers term: -0.5 ds U^2
-        //dg::blas1::pointwiseDot(fields[1][i], fields[1][i], m_temp1); //U^2
-        //m_fa_U.centered(-0.5, m_temp1, 1., yp[1][i]);
-        dg::geo::ds_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dsU[i]);
-        dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]); //-U ds U
+        // Burgers term: -U ds U
+        dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]);
         // force terms: -tau/mu * ds lnN -1/mu * ds Phi
-        dg::geo::ds_forward( m_fa_N, 1., y[0][i], m_faP[0], 0., m_temp1);
-        dg::blas1::pointwiseDot( 1., m_interior, m_dsN[i], -1., m_interior, m_temp1, +1., m_temp1);
-
-        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp1, fields[0][i], 1.0, yp[1][i]);
-        //dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
-        //m_fa_P.centered(-1./m_p.mu[i], m_phi[i], 1.0, yp[1][i]);
+        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
         m_fa_P( dg::geo::einsMinus, m_phi[i], m_faM[0]); //overwrite
         m_fa_P( dg::geo::einsPlus,  m_phi[i], m_faP[0]);
-        dg::geo::ds_forward( m_fa_P, 1., m_phi[i], m_faP[0], 0., m_dsP[i]);
-        dg::geo::ds_centered( m_fa_P, 1., m_faM[0], m_phi[i], m_faP[0], 0., m_temp1);
-        dg::blas1::pointwiseDot( 1., m_interior, m_temp1, -1., m_interior, m_dsP[i], +1., m_dsP[i]);
-        dg::blas1::axpby(-1./m_p.mu[i], m_dsP[i], 1.0, yp[1][i]);
-        // diffusion: + nu_par Delta_par U/N - nu_par U Delta_par N/ N
-        dg::blas1::pointwiseDot(m_p.nu_parallel[i], m_divb, m_dsU[i],
-                                0., m_temp1);
+        dg::geo::ds_centered( m_fa_P, -1./m_p.mu[i], m_faM[0], m_phi[i], m_faP[0], 1.0, yp[1][i]);
+        // viscosity: + nu_par Delta_par U/N = nu_par ( Div b dsU + dssU)/N
+        dg::blas1::pointwiseDot(1., m_divb, m_dsU[i], 0., m_temp1);
         dg::geo::dss_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dssU[i]);
-        dg::blas1::axpby( m_p.nu_parallel[i], m_dssU[i], 1., m_temp1); //nu_par Delta_par U
-        //////dg::blas1::pointwiseDot( -1., fields[1][i], m_temp0, 1., m_temp1);
-        dg::blas1::pointwiseDivide( 1., m_temp1, fields[0][i], 1., yp[1][i]);
+        dg::blas1::axpby( 1., m_dssU[i], 1., m_temp1);
+        dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i], 1., yp[1][i]);
     }
 }
 

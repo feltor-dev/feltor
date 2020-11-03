@@ -76,21 +76,6 @@ HVec profile_damping(const Geometry& grid,
         profile_damping, profile_damping);
     return profile_damping;
 }
-HVec interior(const Geometry& grid,
-    const feltor::Parameters& p,
-    const dg::geo::TokamakMagneticField& mag )
-{
-    if( p.profile_alpha == 0)
-        throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
-    HVec interior = dg::pullback( dg::compose(dg::PolynomialHeaviside(
-        1.+p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)), grid);
-    //HVec interior = dg::pullback( dg::compose(dg::Heaviside(
-    //    1., -1), dg::geo::RhoP(mag)), grid);
-    //HVec interior = dg::evaluate( dg::one, grid);
-    dg::blas1::pointwiseDot( xpoint_damping(grid,p,mag),
-        interior, interior);
-    return interior;
-}
 HVec profile(const Geometry& grid,
     const feltor::Parameters& p,
     const dg::geo::TokamakMagneticField& mag )
