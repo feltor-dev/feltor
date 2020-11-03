@@ -96,8 +96,6 @@ struct Parameters
         //Init after reading in eta and mu[0]
         nu_parallel[0] = 0.73/eta;
         nu_parallel[1] = sqrt(fabs(mu[0]))*1.36/eta;
-        //Make electron diffusion smaller to avoid numerical difficulties
-        nu_parallel[0] = nu_parallel[1];
 
         initne      = file::get( mode, js, "initne", "blob").asString();
         initphi     = file::get( mode, js, "initphi", "zero").asString();
