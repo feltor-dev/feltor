@@ -88,6 +88,7 @@ int main()
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, jfactor);
         multi_pol[u].set_chi( multi_chi[u]);
+        multi_pol[u].set_jump_weighting(true);
     }
 
     t.toc();

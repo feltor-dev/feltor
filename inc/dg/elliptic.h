@@ -79,8 +79,8 @@ class Elliptic
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, norm no = not_normed,
-        direction dir = forward, value_type jfactor=1.):
-        Elliptic( g, g.bcx(), g.bcy(), no, dir, jfactor)
+        direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
+        Elliptic( g, g.bcx(), g.bcy(), no, dir, jfactor, chi_weight_jump)
     {
     }
 
@@ -98,9 +98,10 @@ class Elliptic
      */
     Elliptic( const Geometry& g, bc bcx, bc bcy,
         norm no = not_normed, direction dir = forward,
-        value_type jfactor=1.)
+        value_type jfactor=1., bool chi_weight_jump = false)
     {
         m_no=no, m_jfactor=jfactor;
+        m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
@@ -193,6 +194,16 @@ class Elliptic
      */
     value_type get_jfactor() const {return m_jfactor;}
     /**
+     * @brief Set the chi weighting of jump terms
+     * @param jump_weighting Switch for weighting the jump factor with chi. Either true or false.
+     */
+    void set_jump_weighting( bool jump_weighting) {m_chi_weight_jump = jump_weighting;}
+    /**
+     * @brief Get the current state of chi weighted jump terms.
+     * @return Whether the weighting of jump terms with chi is enabled. Either true or false.
+     */
+    bool get_jump_weighting() const {return m_chi_weight_jump;}
+    /**
      * @brief Compute elliptic term and store in output
      *
      * i.e. \c y=M*x
@@ -242,8 +253,19 @@ class Elliptic
         dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if(m_chi_weight_jump)
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+        } 
+        else
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
+        
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
@@ -285,8 +307,18 @@ class Elliptic
         //add jump terms
         if( 0 != m_jfactor )
         {
-            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+            if(m_chi_weight_jump)
+            {
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+                dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+            } 
+            else
+            {   
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+            }
         }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
@@ -309,6 +341,7 @@ class Elliptic
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
+    bool m_chi_weight_jump;
 };
 
 ///@copydoc Elliptic
@@ -375,8 +408,8 @@ class Elliptic3d
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.):
-        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor)
+    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
+        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor, chi_weight_jump)
     {
     }
 
@@ -394,9 +427,10 @@ class Elliptic3d
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is the metric tensor multiplied by the volume element per default
      */
-    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
+    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1., bool chi_weight_jump = false)
     {
         m_no=no, m_jfactor=jfactor;
+        m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
         dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
@@ -479,6 +513,10 @@ class Elliptic3d
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     ///@copydoc Elliptic::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
+    ///@copydoc Elliptic::set_jump_weighting()
+    void set_jump_weighting( bool jump_weighting) {m_chi_weight_jump = jump_weighting;}
+    ///@copydoc Elliptic::get_jump_weighting()
+    bool get_jump_weighting() const {return m_chi_weight_jump;}
 
     /**
      * @brief Restrict the problem to the first 2 dimensions
@@ -521,8 +559,18 @@ class Elliptic3d
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if(m_chi_weight_jump)
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+        } 
+        else
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
@@ -561,8 +609,18 @@ class Elliptic3d
         //add jump terms
         if( 0 != m_jfactor )
         {
-            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+            if(m_chi_weight_jump)
+            {
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+                dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+            } 
+            else
+            {   
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+            }
         }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
@@ -578,7 +636,7 @@ class Elliptic3d
     void set_norm( dg::norm new_norm) {
         m_no = new_norm;
     }
-
+    
     private:
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
@@ -588,6 +646,7 @@ class Elliptic3d
     Container m_sigma, m_vol;
     value_type m_jfactor;
     bool m_multiplyZ = true;
+    bool m_chi_weight_jump;
 };
 ///@cond
 template< class G, class M, class V>

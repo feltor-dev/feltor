@@ -47,6 +47,8 @@ int main()
 
     dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
 
+    laplace.set_jump_weighting(true);
+    
     dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
 
     const dg::DVec solution = dg::evaluate ( fct, grid);
