@@ -231,10 +231,6 @@ static const std::map < std::string, boundary> str2boundary {
 /*!@class hide_ds_dir
  * @param dir indicate the direction in the bracket operator and in symv
  */
-/*!@class hide_ds_mode
- * @param mode indicate how boundary conditions should be treated: if \c dg::geo::boundary::perp then the boundary conditions are implemented by mirroring points perpendicular to the boundary, which has some drawbacks as to the numerical stability and toroidal resolution. if \c dg::geo::boundary::along_field then the boundary condition is implemented along the field-line which is numerically more desirable because it decouples the parallel direction.
- * @attention The \c along_field boundary modes only works for \c centered and \c dss members and only if both \c bcx and \c bcy are the same (either \c dg::NEU or \c dg::DIR but not \c dg::NEU_DIR or \c dg::DIR_NEU) In all other cases \c perp mode is used by default
-*/
 
 /*!@class hide_ds_attention
 @attention The \c div and \c symv member functions reliably converge only if fieldlines
@@ -727,33 +723,69 @@ void ds_backward( const FieldAligned& fa, double alpha, const container& fm, con
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
 * @copydoc hide_ds_fp
-* @copydoc hide_ds_mode
 * @ingroup fieldaligned
 */
 template<class FieldAligned, class container>
 void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
-        const container& f, const container& fp, double beta, container& g,
-        dg::geo::boundary bound_mode = dg::geo::boundary::perp, std::array<double,2> boundary_value = {0,0})
+        const container& f, const container& fp, double beta, container& g)
 {
     //direct discretisation
-    if( boundary::along_field == bound_mode
-            && fa.bcx() == dg::NEU && fa.bcy() == dg::NEU)
+    dg::blas1::subroutine( detail::ComputeDSCentered( alpha, beta),
+            g, fm, f, fp, fa.hm(), fa.hp());
+}
+/**
+ * @brief Centered derivative \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
+ *
+ * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+ * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
+ * the boundary conditions are implemented by
+ * mirroring points perpendicular to the boundary, which has some drawbacks as
+ * to the numerical stability and toroidal resolution.
+ * @param fa this object will be used to get grid distances
+ * @copydoc hide_ds_parameters4
+* @copydoc hide_ds_fm
+* @copydoc hide_ds_fp
+* @ingroup fieldaligned
+ */
+template<class FieldAligned, class container>
+void dss_centered( const FieldAligned& fa, double alpha, const container&
+        fm,const container& f, const container& fp, double beta, container& g)
+{
+    dg::blas1::subroutine( detail::ComputeDSS( alpha, beta),
+            g, fm, f, fp, fa.hm(), fa.hp());
+}
+
+/**
+* @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+*
+* The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
+ * the boundary condition is implemented
+ * along the field-line
+ * @param fa this object will be used to get grid distances
+* @copydoc hide_ds_parameters4
+* @copydoc hide_ds_fm
+* @copydoc hide_ds_fp
+* @param bound either dg::NEU or dg::DIR (rest not implemented yet)
+* @param boundary_value first value is for incoming fieldlines, second one for outgoing
+* @ingroup fieldaligned
+*/
+template<class FieldAligned, class container>
+void ds_centered_bc_along_field( const FieldAligned& fa, double alpha, const container& fm,
+        const container& f, const container& fp, double beta, container& g,
+        dg::bc bound, std::array<double,2> boundary_value = {0,0})
+{
+    //direct discretisation
+    if( bound == dg::NEU)
     {
         dg::blas1::subroutine( detail::ComputeDSCenteredNEU( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
-    else if( boundary::along_field == bound_mode
-            && fa.bcx() == dg::DIR && fa.bcy() == dg::DIR)
+    else// if( bound == dg::DIR)
     {
         dg::blas1::subroutine( detail::ComputeDSCenteredDIR( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
-    }
-    else
-    {
-        dg::blas1::subroutine( detail::ComputeDSCentered( alpha, beta),
-                g, fm, f, fp, fa.hm(), fa.hp());
     }
 }
 /**
@@ -761,40 +793,35 @@ void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
  *
  * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
  * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
+ * the boundary condition is implemented
+ * along the field-line
  * @param fa this object will be used to get grid distances
  * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
 * @copydoc hide_ds_fp
-* @copydoc hide_ds_mode
+* @param bound either dg::NEU or dg::DIR (rest not implemented yet)
+* @param boundary_value first value is for incoming fieldlines, second one for outgoing
 * @ingroup fieldaligned
  */
 template<class FieldAligned, class container>
-void dss_centered( const FieldAligned& fa, double alpha, const container&
-        fm,const container& f, const container& fp, double beta, container&
-        g, dg::geo::boundary bound_mode = dg::geo::boundary::perp,
-        std::array<double,2> boundary_value = {0,0})
+void dss_centered_bc_along_field( const FieldAligned& fa, double alpha, const
+        container& fm,const container& f, const container& fp, double beta,
+        container& g, dg::bc bound, std::array<double,2> boundary_value =
+        {0,0})
 {
-    if( boundary::along_field == bound_mode
-            && fa.bcx() == dg::NEU && fa.bcy() == dg::NEU)
+    if( bound == dg::NEU)
     {
         dg::blas1::subroutine( detail::ComputeDSSNEU( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
-    else if( boundary::along_field == bound_mode
-            && fa.bcx() == dg::DIR && fa.bcy() == dg::DIR)
+    else// if( bound == dg:DIR)
     {
         dg::blas1::subroutine( detail::ComputeDSSDIR( alpha, beta, boundary_value),
                 g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(),
                 fa.hbp(), fa.bbm(), fa.bbo(), fa.bbp());
     }
-    else
-    {
-        dg::blas1::subroutine( detail::ComputeDSS( alpha, beta),
-                g, fm, f, fp, fa.hm(), fa.hp());
-    }
 }
-
 
 }//namespace geo
 
