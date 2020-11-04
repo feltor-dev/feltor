@@ -37,6 +37,9 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
+    bool jump_weight;
+    std::cout << "Jump weighting on or off? Type 1 for true or 0 for false: \n";
+    std::cin >> jump_weight;
     std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
     //std::cout << "Create Laplacian\n";
     //! [invert]
@@ -47,6 +50,8 @@ int main()
 
     dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
 
+    laplace.set_jump_weighting(jump_weight);
+    
     dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
 
     const dg::DVec solution = dg::evaluate ( fct, grid);
