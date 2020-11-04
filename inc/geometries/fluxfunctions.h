@@ -261,11 +261,14 @@ struct CylindricalFunctorsLvl2
 /**
  * @brief This function finds critical points of psi (any point with vanishing gradient, including the X-point or O-point) via Newton iteration applied to the gradient of psi
  *
+ * Newton iteration applied to \f$ \nabla \psi (\vec x) = 0 \f$ reads
+ * \f[ \vec x_{i+1} = \vec x_i - H^{-1} \nabla \psi (\vec x_i)\f]
+ * where H is the Hessian matrix.
  * The inverse of the Hessian matrix is computed analytically
  * @param psi \f$ \psi(R,Z)\f$
  * @param RC start value on input, critical point on output
  * @param ZC start value on input, critical point on output
- * @return 0 if no critical point or Hessian is 0,
+ * @return 0 if no critical point or Hessian (determinant) is zero,
  * 1 if local minimum,
  * 2 if local maximum,
  * 3 if saddle point
