@@ -44,6 +44,9 @@ int main()
 	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
     std::cin >> eps >> jfactor;*/
+    bool jump_weight;
+    std::cout << "Jump weighting on or off? Type 1 for true or 0 for false: \n";
+    std::cin >> jump_weight;
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
@@ -88,7 +91,7 @@ int main()
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, jfactor);
         multi_pol[u].set_chi( multi_chi[u]);
-        multi_pol[u].set_jump_weighting(true);
+        multi_pol[u].set_jump_weighting(jump_weight);
     }
 
     t.toc();

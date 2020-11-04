@@ -35,14 +35,15 @@ namespace dg
  you like (in order for the operator to be invertible \f$\chi\f$ should be
  symmetric and positive definite though).
  Note that the local discontinuous Galerkin discretization adds so-called jump terms
- \f[ D^\dagger \chi D + \alpha J \f]
+ \f[ D^\dagger \chi D + \alpha \chi_{on/off} J \f]
  where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
  (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
  Usually, the default \f$ \alpha=1 \f$ is a good choice.
  However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
- \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
+ \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values. 
  In a time dependent problem the value of \f$\alpha\f$ determines the
- numerical diffusion, i.e. for too low values numerical oscillations may appear.
+ numerical diffusion, i.e. for too low values numerical oscillations may appear. 
+ The \f$ \chi_{on/off} \f$ in the jump term serves to weight the jump term with \f$ \chi \f$. This can be switched either on or off with off being the default.
  Also note that a forward discretization has more diffusion than a centered discretization.
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
@@ -373,6 +374,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
  In a time dependent problem the value of \f$\alpha\f$ determines the
  numerical diffusion, i.e. for too low values numerical oscillations may appear.
+ The \f$ \chi_{on/off} \f$ in the jump term serves to weight the jump term with \f$ \chi \f$. This can be switched either on or off with off being the default.
  Also note that a forward discretization has more diffusion than a centered discretization.
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
