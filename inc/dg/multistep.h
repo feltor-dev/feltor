@@ -87,11 +87,9 @@ struct AdamsBashforth
     const ContainerType& copyable()const{ return m_u;}
 
     /**
-     * @brief Initialize first step. Call before using the step function.
+     * @brief Initialize timestepper. Call before using the step function.
      *
-     * This routine initiates the first steps in the multistep method by integrating
-     * backwards in time with Euler's method. This routine has to be called
-     * before the first timestep is made.
+     * This routine has to be called before the first timestep is made.
      * @copydoc hide_rhs
      * @param rhs The rhs functor
      * @param t0 The intital time corresponding to u0
@@ -117,7 +115,7 @@ struct AdamsBashforth
     std::vector<ContainerType> m_f;
     ContainerType m_u;
     std::vector<value_type> m_ab;
-    unsigned m_k;
+    unsigned m_k, m_counter;
 };
 
 template< class ContainerType>
@@ -125,25 +123,26 @@ template< class RHS>
 void AdamsBashforth<ContainerType>::init( RHS& f, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
-    f( t0, u0, m_f[0]);
-    //now do k Euler steps
-    ContainerType u1(u0);
-    for( unsigned i=1; i<m_k; i++)
-    {
-        blas1::axpby( 1., u1, -dt, m_f[i-1], u1);
-        m_tu -= dt;
-        f( m_tu, u1, m_f[i]);
-    }
-    m_tu = t0;
+    f( t0, u0, m_f[0]); //f may not destroy u0
     blas1::copy(  u0, m_u);
-    //finally evaluate f at u0 once more to set state in f
-    f( m_tu, m_u, m_f[0]);
+    m_counter = 0;
 }
 
 template<class ContainerType>
 template< class RHS>
 void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& u)
 {
+    if( m_counter < m_k-1)
+    {
+        ERKStep<ContainerType> erk( "ARK-4-2-3 (explicit)", u);
+        ContainerType tmp ( u);
+        erk.step( f, t, u, t, u, m_dt, tmp);
+        m_counter++;
+        m_tu = t;
+        blas1::copy(  u, m_u);
+        f( m_tu, m_u, m_f[m_counter]);
+        return;
+    }
     for( unsigned i=0; i<m_k; i++)
         blas1::axpby( m_dt*m_ab[i], m_f[i], 1., m_u);
     //permute m_f[k-1]  to be the new m_f[0]
@@ -241,9 +240,9 @@ struct Karniadakis
     const SolverType& solver() const { return m_solver;}
 
     /**
-     * @brief Initialize timestepper
+     * @brief Initialize timestepper. Call before using the step function.
      *
-     * This initializes the timestepper and sets the timestep for later use
+     * This routine has to be called before the first timestep is made.
      * @copydoc hide_explicit_implicit
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
@@ -312,18 +311,6 @@ void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, valu
     blas1::copy(  u0, m_u[2]);
     f( t0, u0, m_f[2]); //f may not destroy u0
     m_counter = 0;
-    //m_t = t0, m_dt = dt;
-    //blas1::copy(  u0, m_u[0]);
-    //f( t0, u0, m_f[0]); //f may not destroy u0
-    //blas1::axpby( 1., m_u[0], -dt, m_f[0], m_f[1]); //Euler step
-    //detail::Implicit<Diffusion, ContainerType> implicit( -dt, t0, diff);
-    //implicit( m_f[1], m_u[1]); //explicit Euler step backwards
-    //f( t0-dt, m_u[1], m_f[1]);
-    //blas1::axpby( 1.,m_u[1], -dt, m_f[1], m_f[2]);
-    //implicit.time() = t0 - dt;
-    //implicit( m_f[2], m_u[2]);
-    //f( t0-2*dt, m_u[2], m_f[2]); //evaluate f at the latest step
-    //f( t0, u0, m_f[0]); // and set state in f to (t0,u0)
 }
 
 template<class ContainerType, class SolverType>
