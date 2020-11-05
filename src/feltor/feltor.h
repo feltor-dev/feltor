@@ -170,7 +170,7 @@ struct Explicit
     using vector = std::array<std::array<Container,2>,2>;
     using container = Container;
     Explicit( const Geometry& g, feltor::Parameters p,
-        dg::geo::TokamakMagneticField mag, bool full_system ); //full system means explicit AND implicit
+        dg::geo::TokamakMagneticField mag ); //full system means explicit AND implicit
 
     //Given N_i-1 initialize n_e-1 such that phi=0
     void initializene( const Container& ni, Container& ne);
@@ -333,14 +333,21 @@ struct Explicit
     }
 
     //source strength, profile - 1
-    void set_source( bool fixed_profile, Container profile, double omega_source, Container source, double omega_damping, Container damping)
+    void set_source( bool fixed_profile, Container profile, double omega_source, Container source)
     {
         m_fixed_profile = fixed_profile;
         m_profne = profile;
         m_omega_source = omega_source;
         m_source = source;
-        m_omega_damping = omega_damping;
-        m_damping = damping;
+    }
+    void set_wall_and_sheath(double wall_forcing, Container wall, double sheath_forcing, Container sheath, Container velocity_sheath)
+    {
+        m_sheath_forcing = sheath_forcing; //1/eta
+        dg::blas1::pointwiseDot( sheath, velocity_sheath, m_U_sheath);
+
+        dg::blas1::axpby( -1., wall, -1., sheath, m_masked);
+        dg::blas1::plus( m_masked, +1);
+        m_wall_forcing = wall_forcing;
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
@@ -371,7 +378,7 @@ struct Explicit
     std::array<Container,3> m_curv, m_curvKappa, m_b;
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
-    Container m_source, m_profne, m_damping;
+    Container m_source, m_profne, m_U_sheath, m_masked;
     Container m_vol3d;
 
     Container m_apar;
@@ -397,9 +404,8 @@ struct Explicit
     dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
-    double m_omega_source = 0., m_omega_damping = 0.;
+    double m_omega_source = 0., m_sheath_forcing = 0., m_wall_forcing = 0.;
     bool m_fixed_profile = true;
-    bool m_full_system = false;
 
 };
 
@@ -548,7 +554,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
-    feltor::Parameters p, dg::geo::TokamakMagneticField mag, bool full_system):
+    feltor::Parameters p, dg::geo::TokamakMagneticField mag):
 #ifdef DG_MANUFACTURED
     m_R( dg::pullback( dg::cooX3d, g)),
     m_Z( dg::pullback( dg::cooY3d, g)),
@@ -564,11 +570,12 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
-    m_p(p), m_full_system(full_system)
+    m_p(p)
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_UE2 = m_temp2 = m_temp1 = m_temp0;
+    m_source = m_U_sheath = m_UE2 = m_temp2 = m_temp1 = m_temp0;
+    dg::assign( dg::evaluate( dg::one, g), m_masked );
     m_apar = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
@@ -820,10 +827,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
             );
         }
     }
-    //------------------Add Resistivity--------------------------//
-    //dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
-    //    m_fields[0][0], m_fields[0][1],
-    //    m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -944,39 +947,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 
 #endif
-
-    //Add source terms
-    if( m_omega_source != 0 || m_omega_damping != 0)
-    {
-        if( m_fixed_profile )
-            dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
-                m_profne, m_source, m_omega_source);
-        else
-            dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
-        // -w_d ~n
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, y[0][0], 1.,  m_s[0][0]);
-        //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
-        dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
-        dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
-        // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
-        dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
-        m_lapperpP.multiply_sigma( 1., m_temp0, m_phi[0], 1., m_s[0][1]);
-
-        // S_U = - w_d U
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][0], 0.,  m_s[1][0]);
-        dg::blas1::pointwiseDot( -m_omega_damping, m_damping, m_fields[1][1], 0.,  m_s[1][1]);
-        // S_U += - U S_N/N
-        dg::blas1::pointwiseDot( -1.,  m_fields[1][0],  m_s[0][0], 0., m_temp0);
-        dg::blas1::pointwiseDot( -1.,  m_fields[1][1],  m_s[0][1], 0., m_temp1);
-        dg::blas1::pointwiseDivide( 1.,  m_temp0,  m_fields[0][0], 1., m_s[1][0]);
-        dg::blas1::pointwiseDivide( 1.,  m_temp1,  m_fields[0][1], 1., m_s[1][1]);
-
-        //Add all to the right hand side
-        dg::blas1::axpby( 1., m_s, 1.0, yp);
-    }
-
-
-    if( m_full_system)
+    if( m_p.explicit_diffusion)
     {
 #if FELTORPERP == 1
         /* y[0] := n_e - 1
@@ -1006,8 +977,52 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 dg::blas2::symv( -m_p.nu_perp, m_lapperpU,
                     m_fields[1][i],  1., yp[1][i]);
         }
+        //------------------Add Resistivity--------------------------//
+        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+            m_fields[0][0], m_fields[0][1],
+            m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
 #endif
     }
+
+    //Add source terms
+    if( m_omega_source != 0 )
+    {
+        if( m_fixed_profile )
+            dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
+                m_profne, m_source, m_omega_source);
+        else
+            dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
+        //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
+        dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
+        dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
+        // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
+        dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
+        m_lapperpP.multiply_sigma( 1., m_temp0, m_phi[0], 1., m_s[0][1]);
+
+        // S_U += - U S_N/N
+        dg::blas1::pointwiseDot( -1.,  m_fields[1][0],  m_s[0][0], 0., m_temp0);
+        dg::blas1::pointwiseDot( -1.,  m_fields[1][1],  m_s[0][1], 0., m_temp1);
+        dg::blas1::pointwiseDivide( 1.,  m_temp0,  m_fields[0][0], 1., m_s[1][0]);
+        dg::blas1::pointwiseDivide( 1.,  m_temp1,  m_fields[0][1], 1., m_s[1][1]);
+
+        //Add all to the right hand side
+        dg::blas1::axpby( 1., m_s, 1.0, yp);
+    }
+    //mask right hand side in forcing region
+    dg::blas1::pointwiseDot( m_masked, yp[0][0], yp[0][0]);
+    dg::blas1::pointwiseDot( m_masked, yp[0][1], yp[0][1]);
+    dg::blas1::pointwiseDot( m_masked, yp[1][0], yp[1][0]);
+    dg::blas1::pointwiseDot( m_masked, yp[1][1], yp[1][1]);
+    if( m_sheath_forcing != 0)
+    {
+        // explicit part of the sheath terms
+        //dg::blas1::transform( m_phi[0], m_temp0, dg::EXP<double>(1., -1.));
+        //dg::blas1::pointwiseDot( m_sheath_forcing, m_U_sheath, m_temp0, 1.,  yp[1][0]);
+        dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][0]);
+        dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][1]);
+    }
+
+
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,

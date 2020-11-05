@@ -40,7 +40,7 @@ struct Parameters
     double sigma_z;
     double k_psi;
 
-    double source_rate, damping_rate;
+    double source_rate, damping_rate, sheath_rate;
     double source_alpha, profile_alpha;
     double source_boundary;
     double nprofamp;
@@ -50,7 +50,7 @@ struct Parameters
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
     std::string source_type;
-    bool symmetric, periodify;
+    bool symmetric, periodify, explicit_diffusion ;
     Parameters() = default;
     Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
         //We need to check if a member is present
@@ -105,6 +105,7 @@ struct Parameters
         posY        = file::get( mode, js, "posY", 0.).asDouble();
         sigma_z     = file::get( mode, js, "sigma_z", 0.).asDouble();
         k_psi       = file::get( mode, js, "k_psi", 0.).asDouble();
+        explicit_diffusion = file::get( mode, js, "explicit_diff", false).asBool();
 
         nprofamp   = file::get( mode, js, "profile", "amp", 0.).asDouble();
         profile_alpha = file::get( mode, js, "profile", "alpha", 0.2).asDouble();
@@ -114,6 +115,7 @@ struct Parameters
         source_boundary = file::get( mode, js, "source", "boundary", 0.5).asDouble();
         source_alpha    = file::get( mode, js, "source", "alpha", 0.2).asDouble();
         damping_rate = file::get( mode, js, "damping", "rate", 0.).asDouble();
+        sheath_rate  = file::get( mode, js, "sheath", "rate", 0.).asDouble();
 
         bcxN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 0, "").asString());
         bcyN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 1, "").asString());
@@ -158,8 +160,10 @@ struct Parameters
             <<"     source_rate:                  "<<source_rate<<"\n"
             <<"     source_boundary:              "<<source_boundary<<"\n"
             <<"     source_alpha:                 "<<source_alpha<<"\n"
+            <<"     profile_alpha:                "<<profile_alpha<<"\n"
             <<"     source_type:                  "<<source_type<<"\n"
             <<"     damping_rate:                 "<<damping_rate<<"\n"
+            <<"     sheath_rate:                  "<<sheath_rate<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
@@ -178,7 +182,8 @@ struct Parameters
             <<"     Accuracy Time Stepper "<<rtol<<"\n"
             <<"     Accuracy Fieldline    "<<rk4eps<<"\n"
             <<"     Periodify FCI         "<<std::boolalpha<< periodify<<"\n"
-            <<"     Refined FCI           "<<mx<<" "<<my<<"\n";
+            <<"     Refined FCI           "<<mx<<" "<<my<<"\n"
+            <<"     explicit diffusion    "<<std::boolalpha<<explicit_diffusion<<"\n";
         for( unsigned i=1; i<stages; i++)
             os <<"     Factors for Multigrid "<<i<<" "<<eps_pol[i]<<"\n";
         os << "Output parameters are: \n"

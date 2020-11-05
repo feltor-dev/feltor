@@ -38,8 +38,19 @@ struct ImplicitDensity
         m_lapM_perpN.set_chi( hh);
         if( p.curvmode != "true")
             m_lapM_perpN.set_compute_in_2d( true);
+
+        dg::assign( dg::evaluate( dg::zero, g), m_forcing );
+        dg::assign( dg::evaluate( dg::one, g), m_masked );
+    }
+    void set_wall_and_sheath( double wall_forcing, Container wall, double sheath_forcing, Container sheath)
+    {
+        dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_forcing); //1/eta_w
+
+        dg::blas1::axpby( -1., wall, -1., sheath, m_masked);
+        dg::blas1::plus( m_masked, +1);
     }
 
+    const Container& get_forcing() const { return m_forcing;}
     void operator()( double t, const std::array<Container,2>& y,
         std::array<Container,2>& yp)
     {
@@ -47,17 +58,26 @@ struct ImplicitDensity
         /* y[0] := n_e - 1
            y[1] := N_i - 1
         */
-        for( unsigned i=0; i<2; i++)
+        if( !m_p.explicit_diffusion)
         {
-            //dissipation acts on w!
-            if( m_p.perp_diff == "hyperviscous")
+            for( unsigned i=0; i<2; i++)
             {
-                dg::blas2::symv( m_lapM_perpN, y[i],      m_temp);
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[i]);
+                //dissipation acts on w!
+                if( m_p.perp_diff == "hyperviscous")
+                {
+                    dg::blas2::symv( m_lapM_perpN, y[i],      m_temp);
+                    dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, m_temp, 0., yp[i]);
+                }
+                else // m_p.perp_diff == "viscous"
+                    dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, y[i],  0., yp[i]);
             }
-            else // m_p.perp_diff == "viscous"
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpN, y[i],  0., yp[i]);
+            dg::blas1::pointwiseDot( m_masked, yp[0], yp[0]);
+            dg::blas1::pointwiseDot( m_masked, yp[1], yp[1]);
         }
+        else
+            dg::blas1::copy( 0, yp);
+        dg::blas1::pointwiseDot( -1., m_forcing, y[0], 1., yp[0]);
+        dg::blas1::pointwiseDot( -1., m_forcing, y[1], 1., yp[1]);
 #else
         dg::blas1::copy( 0, yp);
 #endif
@@ -75,7 +95,7 @@ struct ImplicitDensity
 
   private:
     feltor::Parameters m_p;
-    Container m_temp;
+    Container m_temp, m_forcing, m_masked;
     dg::Elliptic3d<Geometry, Matrix, Container> m_lapM_perpN;
 };
 
@@ -131,6 +151,15 @@ struct ImplicitVelocity
         }
         m_multi_chi = m_multigrid.project( m_temp);
         m_old_apar = dg::Extrapolation<Container>( 2, dg::evaluate( dg::zero, g));
+
+        dg::assign( dg::evaluate( dg::zero, g), m_forcing );
+        dg::assign( dg::evaluate( dg::one, g), m_masked );
+    }
+    void set_wall_and_sheath( double wall_forcing, Container wall, double sheath_forcing, Container sheath)
+    {
+        dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_temp); //1/eta_w
+        m_forcing = m_temp;
+
     }
     void set_density( const std::array<Container, 2>& dens){
         dg::blas1::transform( dens, m_fields[0], dg::PLUS<double>(+1));
@@ -157,46 +186,56 @@ struct ImplicitVelocity
         /* w[0] := w_e
            w[1] := W_i
         */
-        dg::blas1::copy( w, m_fields[1]);
-        if( m_p.beta != 0){
-            //let us solve for apar
-            dg::blas1::pointwiseDot(  m_p.beta, m_fields[0][1], m_fields[1][1],
-                                     -m_p.beta, m_fields[0][0], m_fields[1][0],
-                                      0., m_temp);
-            //m_invert( m_induction, m_apar, m_temp, weights(),
-            //    inv_weights(), precond());
-            m_old_apar.extrapolate( m_apar);
-            //dg::blas1::scal( m_apar, 0.);
-            std::vector<unsigned> number = m_multigrid.direct_solve(
-                m_multi_induction, m_apar, m_temp, m_p.eps_pol[0]); //eps_pol[0] on all grids
-            //m_old_apar.update( m_apar); //don't update here: makes the solver potentially unstable
-            if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_pol[0]);
-
-            //compute u_e and U_i from w_e, W_i and apar
-            dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],
-                m_apar, m_fields[1][0]);
-            dg::blas1::axpby( 1., m_fields[1][1], -1./m_p.mu[1],
-                m_apar, m_fields[1][1]);
-        }
-        /* fields[1][0] := u_e
-           fields[1][1] := U_i
-        */
-        for( unsigned i=0; i<2; i++)
+        if( !m_p.explicit_diffusion)
         {
-            if( m_p.perp_diff == "hyperviscous")
-            {
-                dg::blas2::symv( m_lapM_perpU, m_fields[1][i],      m_temp);
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., wp[i]);
+            dg::blas1::copy( w, m_fields[1]);
+            if( m_p.beta != 0){
+                //let us solve for apar
+                dg::blas1::pointwiseDot(  m_p.beta, m_fields[0][1], m_fields[1][1],
+                                         -m_p.beta, m_fields[0][0], m_fields[1][0],
+                                          0., m_temp);
+                //m_invert( m_induction, m_apar, m_temp, weights(),
+                //    inv_weights(), precond());
+                m_old_apar.extrapolate( m_apar);
+                //dg::blas1::scal( m_apar, 0.);
+                std::vector<unsigned> number = m_multigrid.direct_solve(
+                    m_multi_induction, m_apar, m_temp, m_p.eps_pol[0]); //eps_pol[0] on all grids
+                //m_old_apar.update( m_apar); //don't update here: makes the solver potentially unstable
+                if(  number[0] == m_multigrid.max_iter())
+                    throw dg::Fail( m_p.eps_pol[0]);
+
+                //compute u_e and U_i from w_e, W_i and apar
+                dg::blas1::axpby( 1., m_fields[1][0], -1./m_p.mu[0],
+                    m_apar, m_fields[1][0]);
+                dg::blas1::axpby( 1., m_fields[1][1], -1./m_p.mu[1],
+                    m_apar, m_fields[1][1]);
             }
-            else // m_p.perp_diff == "viscous"
-                dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU,
-                    m_fields[1][i],  0., wp[i]);
+            /* fields[1][0] := u_e
+               fields[1][1] := U_i
+            */
+            for( unsigned i=0; i<2; i++)
+            {
+                if( m_p.perp_diff == "hyperviscous")
+                {
+                    dg::blas2::symv( m_lapM_perpU, m_fields[1][i],      m_temp);
+                    dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU, m_temp, 0., wp[i]);
+                }
+                else // m_p.perp_diff == "viscous"
+                    dg::blas2::symv( -m_p.nu_perp, m_lapM_perpU,
+                        m_fields[1][i],  0., wp[i]);
+            }
+            //------------------Add Resistivity--------------------------//
+            dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+                m_fields[0][0], m_fields[0][1],
+                m_fields[1][0], m_fields[1][1], wp[0], wp[1]);
+            dg::blas1::pointwiseDot( m_masked, wp[0], wp[0]);
+            dg::blas1::pointwiseDot( m_masked, wp[1], wp[1]);
         }
-        //------------------Add Resistivity--------------------------//
-        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
-            m_fields[0][0], m_fields[0][1],
-            m_fields[1][0], m_fields[1][1], wp[0], wp[1]);
+        else
+            dg::blas1::copy( 0, wp);
+        //we force w_parallel not u
+        dg::blas1::pointwiseDot( -1., m_forcing, w[0], 1., wp[0]);
+        dg::blas1::pointwiseDot( -1., m_forcing, w[1], 1., wp[1]);
 #else
         dg::blas1::copy( 0, wp);
 #endif
@@ -239,7 +278,7 @@ struct ImplicitVelocity
 #endif //DG_MANUFACTURED
   private:
     feltor::Parameters m_p;
-    Container m_temp, m_apar;
+    Container m_temp, m_apar, m_forcing, m_masked;
 #ifdef DG_MANUFACTURED
     dg::Invert<Container> m_invert;
 #endif //DG_MANUFACTURED
@@ -259,6 +298,11 @@ struct Implicit
     Implicit( const Geometry& g, feltor::Parameters p,
             dg::geo::TokamakMagneticField mag):
             m_dens( g,p,mag), m_velo( g,p,mag){}
+    void set_wall_and_sheath( double wall_forcing, Container wall, double sheath_forcing, Container sheath)
+    {
+        m_dens.set_wall_and_sheath( wall_forcing, wall, sheath_forcing, sheath);
+        m_velo.set_wall_and_sheath( wall_forcing, wall, sheath_forcing, sheath);
+    }
 
     void operator()( double t, const std::array<std::array<Container,2>,2>& y,
         std::array<std::array<Container,2>,2>& yp)
@@ -266,6 +310,7 @@ struct Implicit
         m_dens( t,y[0], yp[0]);
         m_velo.set_density( y[0]);
         m_velo( t,y[1], yp[1]);
+        m_velo.update();
     }
     private:
     ImplicitDensity <Geometry, IMatrix, Matrix, Container> m_dens;
@@ -286,8 +331,8 @@ struct FeltorSpecialSolver
     FeltorSpecialSolver( const Geometry& grid, Parameters p,
         dg::geo::TokamakMagneticField mag)
     {
-#ifdef DG_MANUFACTURED
         m_p = p;
+#ifdef DG_MANUFACTURED
         m_R= dg::pullback( dg::cooX3d, grid);
         m_Z= dg::pullback( dg::cooY3d, grid);
         m_P= dg::pullback( dg::cooZ3d, grid);
@@ -307,6 +352,11 @@ struct FeltorSpecialSolver
 
         return std::array<std::array<Container,2>,2>{ m_solver.copyable(), m_solver.copyable()};
     }
+    void set_wall_and_sheath( double wall_forcing, Container wall, double sheath_forcing, Container sheath)
+    {
+        m_imdens.set_wall_and_sheath( wall_forcing, wall, sheath_forcing, sheath);
+        m_imvelo.set_wall_and_sheath( wall_forcing, wall, sheath_forcing, sheath);
+    }
 
     //Solve y + a I(t,y) = rho
     void solve( value_type alpha,
@@ -316,6 +366,16 @@ struct FeltorSpecialSolver
         const std::array<std::array<Container,2>,2>& rhs)
     {
 
+        if( m_p.explicit_diffusion)
+        {
+            //I(y) = -Chi y
+            dg::blas1::axpby( 1., 1., -alpha, m_imdens.get_forcing(), y[1][1]);
+            dg::blas1::pointwiseDivide( rhs[0][0], y[1][1], y[0][0]);
+            dg::blas1::pointwiseDivide( rhs[0][1], y[1][1], y[0][1]);
+            dg::blas1::pointwiseDivide( rhs[1][0], y[1][1], y[1][0]);
+            dg::blas1::pointwiseDivide( rhs[1][1], y[1][1], y[1][1]);
+            return;
+        }
         m_solver.solve( alpha, m_imdens, t, y[0], rhs[0]);
         m_imvelo.set_density( y[0]);
 #ifdef DG_MANUFACTURED
@@ -336,8 +396,8 @@ struct FeltorSpecialSolver
     ImplicitDensity<Geometry,IMatrix, Matrix,Container> m_imdens;
     ImplicitVelocity<Geometry,IMatrix, Matrix,Container> m_imvelo;
     value_type m_eps;
-#ifdef DG_MANUFACTURED
     feltor::Parameters m_p;
+#ifdef DG_MANUFACTURED
     std::array<Container, 2> m_rhs;
     Container m_sa, m_inv_sa;
     Container m_R, m_Z, m_P; //coordinates

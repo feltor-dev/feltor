@@ -59,10 +59,11 @@ int main( int argc, char* argv[])
     const feltor::Parameters p(js);
     p.display( std::cout);
     std::cout << gs.toStyledString() << std::endl;
-    dg::geo::TokamakMagneticField mag;
-    dg::geo::CylindricalFunctor damping, transition;
+    dg::geo::TokamakMagneticField mag, mod_mag;
+    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
     try{
-        mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, damping, transition);
+        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+        mod_mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, wall, transition);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
@@ -70,25 +71,33 @@ int main( int argc, char* argv[])
         return -1;
     }
     /////////////////////////////////////////////////////////////////////////
+    //Make grid
     double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
     double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
-    //Make grid
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
+    try{
+        dg::geo::createSheathRegion( js, file::error::is_throw, mag, wall,
+                Rmin, Rmax, Zmin, Zmax, sheath, direction);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
 
-    HVec damping_profile = dg::pullback( damping, grid);
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
     //create RHS
     //std::cout << "Constructing RHS...\n";
-    //feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
+    //feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
     std::cout << "Constructing Implicit...\n";
-    feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
+    feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
     std::cout << "Done!\n";
 
     DVec result = dg::evaluate( dg::zero, grid);
@@ -105,27 +114,27 @@ int main( int argc, char* argv[])
     double time = 0.;
     std::array<std::array<DVec,2>,2> y0;
     try{
-        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,mag );
+        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,mod_mag );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
         return -1;
     }
+    { //make the HVecs temporaries
 
     bool fixed_profile;
     HVec profile = dg::evaluate( dg::zero, grid);
     HVec source_profile;
     try{
         source_profile = feltor::source_profiles.at(p.source_type)(
-            fixed_profile, profile, grid, p,  mag);
+            fixed_profile, profile, grid, p,  mod_mag);
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
         return -1;
     }
     feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
-        p.source_rate, dg::construct<DVec>(source_profile),
-        p.damping_rate, dg::construct<DVec>(damping_profile)
+        p.source_rate, dg::construct<DVec>(source_profile)
     );
-
+    }
 
     ////////////////////////create timer and timestepper
     //
@@ -135,23 +144,23 @@ int main( int argc, char* argv[])
         feltor::FeltorSpecialSolver<
             Geometry, IDMatrix, DMatrix, DVec>
         > karniadakis( grid, p, mag);
-    //unsigned mMax = 3, restart = 3, max_iter = 100;
-    //double damping = 1e-3;
-    //dg::BDF< std::array<std::array<dg::DVec,2>,2 >,
-    //    dg::AndersonSolver< std::array<std::array<dg::DVec,2>,2> >
-    //    > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
-    //dg::AdamsBashforth< std::array<std::array<dg::DVec,2>,2 >
-    //    > bdf( 3, y0);
+    {
+    HVec h_wall = dg::pullback( wall, grid);
+    HVec h_sheath = dg::pullback( sheath, grid);
+    HVec h_velocity = dg::pullback( direction, grid);
+    feltor.set_wall_and_sheath( p.damping_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
+    implicit.set_wall_and_sheath( p.damping_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    karniadakis.solver().set_wall_and_sheath( p.damping_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    }
 
     std::cout << "Initialize Timestepper" << std::endl;
-    karniadakis.init( feltor, im, time, y0, p.dt);
-    //bdf.init( feltor, time, y0, p.dt);
+    karniadakis.init( feltor, implicit, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
 
     std::map<std::string, const dg::DVec* > v4d;
     v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
     v4d["Ue / "]   = &feltor.velocity(0), v4d["Ui / "]   = &feltor.velocity(1);
-    v4d["Ome / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.induction();
+    v4d["Phi / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.induction();
     double dEdt = 0, accuracy = 0;
     double E0 = 0.;
     /////////////////////////set up transfer for glfw
@@ -181,9 +190,9 @@ int main( int argc, char* argv[])
         title << "t = "<<time<<"   ";
         for( auto pair : v4d)
         {
-            if(pair.first == "Ome / ")
+            if(pair.first == "Phi / ")
             {
-                dg::assign( feltor.lapMperpP(0), hvisual);
+                //dg::assign( feltor.lapMperpP(0), hvisual);
                 dg::assign( *pair.second, hvisual);
             }
             else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
@@ -230,8 +239,7 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    karniadakis.step( feltor, im, time, y0);
-                    //bdf.step( feltor, time, y0);
+                    karniadakis.step( feltor, implicit, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

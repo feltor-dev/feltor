@@ -70,6 +70,7 @@ HVec profile_damping(const Geometry& grid,
 {
     if( p.profile_alpha == 0)
         throw dg::Error(dg::Message()<< "Invalid parameter: profile alpha must not be 0\n");
+    //we also need to avoid being too far in the PFR where psi can become very negative
     HVec profile_damping = dg::pullback( dg::compose(dg::PolynomialHeaviside(
         1.-p.profile_alpha/2., p.profile_alpha/2., -1), dg::geo::RhoP(mag)), grid);
     dg::blas1::pointwiseDot( xpoint_damping(grid,p,mag),
