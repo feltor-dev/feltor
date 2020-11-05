@@ -252,6 +252,18 @@ struct Explicit
         dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
         if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
+    void divergence( const std::array<Container,3>& in, Container& out) const{
+        dg::blas1::pointwiseDot( m_detg, in[0], m_temp0);
+        dg::blas1::pointwiseDot( m_detg, in[1], m_temp1);
+        dg::blas1::pointwiseDot( m_detg, in[2], m_temp2);
+        dg::blas2::symv( m_dx_U, m_temp0, m_temp0);
+        dg::blas2::symv( m_dy_U, m_temp1, m_temp1);
+        dg::blas2::symv( m_dz, m_temp2, m_temp2);
+        dg::blas1::pointwiseDivide( m_temp0, m_detg, out);
+        dg::blas1::pointwiseDivide( 1., m_temp1, m_detg, 1., out);
+        dg::blas1::pointwiseDivide( 1., m_temp2, m_detg, 1., out);
+
+    }
     void compute_dot_induction( Container& tmp) const {
         m_old_apar.derive( tmp);
     }
@@ -286,7 +298,9 @@ struct Explicit
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }
-    const Container& vol3d() const { return m_vol3d;}
+    const Container& detg() const { return m_detg;}
+    //volume with dG weights
+    const Container& vol3d() const { return m_lapperpN.weights();}
     const Container& weights() const { return m_lapperpN.weights();}
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
@@ -379,7 +393,7 @@ struct Explicit
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
     Container m_source, m_profne, m_U_sheath, m_masked;
-    Container m_vol3d;
+    Container m_detg;
 
     Container m_apar;
     std::array<Container,2> m_phi, m_dsN, m_dsU, m_dsP, m_dssU;// m_dssN;
@@ -491,11 +505,11 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     dg::SparseTensor<Container> metric = g.metric();
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
-    Container vol = dg::tensor::volume( metric);
-    dg::blas1::pointwiseDivide( m_binv, vol, vol); //1/vol/B
+    m_detg = dg::tensor::volume( metric);
+    dg::blas1::pointwiseDivide( m_binv, m_detg, m_detg); //1/m_detg/B
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
     for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( vol, m_b[i], m_b[i]); //b_i/vol/B
+        dg::blas1::pointwiseDot( m_detg, m_b[i], m_b[i]); //b_i/m_detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
     m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
     m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
@@ -592,8 +606,6 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
-    //---------------------------Volume------------------------------//
-    dg::assign( dg::create::volume(g), m_vol3d);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
