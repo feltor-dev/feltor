@@ -1013,12 +1013,19 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::blas1::pointwiseDot( m_masked, yp[0][1], yp[0][1]);
     dg::blas1::pointwiseDot( m_masked, yp[1][0], yp[1][0]);
     dg::blas1::pointwiseDot( m_masked, yp[1][1], yp[1][1]);
+    // explicit part of the sheath terms
     if( m_sheath_forcing != 0)
     {
-        // explicit part of the sheath terms
-        //dg::blas1::transform( m_phi[0], m_temp0, dg::EXP<double>(1., -1.));
-        //dg::blas1::pointwiseDot( m_sheath_forcing, m_U_sheath, m_temp0, 1.,  yp[1][0]);
-        dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][0]);
+        if( "insulating" == m_p.sheath_type)
+        {
+            dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][0]);
+        }
+        else // "bohm" == m_p.sheath_type
+        {
+            //exp(-phi)
+            dg::blas1::transform( m_phi[0], m_temp0, dg::EXP<double>(1., -1.));
+            dg::blas1::pointwiseDot( m_sheath_forcing, m_U_sheath, m_temp0, 1.,  yp[1][0]);
+        }
         dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][1]);
     }
 

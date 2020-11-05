@@ -49,7 +49,7 @@ struct Parameters
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
-    std::string source_type;
+    std::string source_type, sheath_type;
     bool symmetric, periodify, explicit_diffusion ;
     Parameters() = default;
     Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
@@ -112,6 +112,7 @@ struct Parameters
 
         source_rate     = file::get( mode, js, "source", "rate", 0.).asDouble();
         source_type     = file::get( mode, js, "source", "type", "profile").asString();
+        sheath_type     = file::get( mode, js, "sheath", "type", "bohm").asString();
         source_boundary = file::get( mode, js, "source", "boundary", 0.5).asDouble();
         source_alpha    = file::get( mode, js, "source", "alpha", 0.2).asDouble();
         damping_rate = file::get( mode, js, "damping", "rate", 0.).asDouble();
@@ -164,6 +165,7 @@ struct Parameters
             <<"     source_type:                  "<<source_type<<"\n"
             <<"     damping_rate:                 "<<damping_rate<<"\n"
             <<"     sheath_rate:                  "<<sheath_rate<<"\n"
+            <<"     sheath_type:                  "<<sheath_type<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
