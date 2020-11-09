@@ -25,27 +25,32 @@ struct RadialParticleFlux{
         m_tau(tau), m_mu(mu){
     }
     //jsNC
-    DG_DEVICE void operator()(
-        double& j0, double& j1, double& j2, //out
-        double ne, double ue,
+    DG_DEVICE double operator()( double ne, double ue,
+        double d0S, double d1S, double d2S, //Psip
         double curv0,       double curv1,       double curv2,
         double curvKappa0,  double curvKappa1,  double curvKappa2
         ){
-        j0 = ne*(m_tau * curv0 + m_mu * ue*ue*curvKappa0);
-        j1 = ne*(m_tau * curv1 + m_mu * ue*ue*curvKappa1);
-        j2 = ne*(m_tau * curv2 + m_mu * ue*ue*curvKappa2);
+        double curvKappaS = curvKappa0*d0S+curvKappa1*d1S+curvKappa2*d2S;
+        double curvS = curv0*d0S+curv1*d1S+curv2*d2S;
+        double JPsi =
+            + ne * m_mu*ue*ue*curvKappaS
+            + ne * m_tau*curvS;
+        return JPsi;
     }
     //jsNA
-    DG_DEVICE double operator()(
-        double& j0, double& j1, double& j2, //out
-        double ne, double ue, double A,
+    DG_DEVICE double operator()( double ne, double ue, double A,
         double d0A, double d1A, double d2A,
+        double d0S, double d1S, double d2S, //Psip
         double b_0,         double b_1,         double b_2,
         double curvKappa0,  double curvKappa1,  double curvKappa2
         ){
-        j0 = ne*ue*(A*curvKappa0 + d1A*b_2-d2A*b_1);
-        j1 = ne*ue*(A*curvKappa1 + d2A*b_0-d0A*b_2);
-        j2 = ne*ue*(A*curvKappa2 + d0A*b_1-d1A*b_0);
+        double curvKappaS = curvKappa0*d0S+curvKappa1*d1S+curvKappa2*d2S;
+        double SA = b_0*( d1S*d2A-d2S*d1A)+
+                    b_1*( d2S*d0A-d0S*d2A)+
+                    b_2*( d0S*d1A-d1S*d0A);
+        double JPsi =
+            ne*ue* (A*curvKappaS + SA );
+        return JPsi;
     }
     private:
     double m_tau, m_mu;
@@ -495,44 +500,41 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// ------------------ Density terms ------------------------//
-    {"divneE_tt", "Radial electron particle flux: ExB contribution (Time average)", true,
+    {"jsneE_tt", "Radial electron particle flux: ExB contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            // ExB
-            routines::times( v.f.density(0),v.f.bhatgB(), v.f.gradP(0), v.tmp);
-            v.f.divergence( v.tmp, result);
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( result, v.f.density(0), result);
         }
     },
-    {"divneC_tt", "Radial electron particle flux: curvature contribution (Time average)", true,
+    {"jsneC_tt", "Radial electron particle flux: curvature contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            dg::blas1::subroutine(
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
-                v.tmp[0], v.tmp[1], v.tmp[2],
                 v.f.density(0), v.f.velocity(0),
+                v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.curv()[0], v.f.curv()[1], v.f.curv()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             );
-            v.f.divergence( v.tmp, result);
         }
     },
-    {"divdiae_tt", "Radial electron particle flux: diamagnetic contribution (Time average)", true,
+    {"jsdiae_tt", "Radial electron particle flux: diamagnetic contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            // u_D
-            routines::times( v.f.bhatgB(), v.f.gradN(0), v.tmp);
-            v.f.divergence( v.tmp, result);
+            // u_D Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradN(0), v.gradPsip, result);
             dg::blas1::scal( result, v.p.tau[0]);
         }
     },
-    {"divneA_tt", "Radial electron particle flux: magnetic contribution (Time average)", true,
+    {"jsneA_tt", "Radial electron particle flux: magnetic contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            dg::blas1::subroutine(
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
-                v.tmp[0], v.tmp[1], v.tmp[2],
                 v.f.density(0), v.f.velocity(0), v.f.induction(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
+                v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             );
-            v.f.divergence( v.tmp, result);
         }
     },
     {"lneperp_tt", "Perpendicular electron diffusion (Time average)", true,
@@ -560,44 +562,41 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., v.f.velocity(0), v.f.dsN(0), 1., result);
         }
     },
-    {"divniE_tt", "Radial ion particle flux: ExB contribution (Time average)", true,
+    {"jsniE_tt", "Radial ion particle flux: ExB contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            // ExB
-            routines::times( v.f.density(1),v.f.bhatgB(), v.f.gradP(1), v.tmp);
-            v.f.divergence( v.tmp, result);
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(1), v.gradPsip, result);
+            dg::blas1::pointwiseDot( result, v.f.density(1), result);
         }
     },
-    {"divniC_tt", "Radial ion particle flux: curvature contribution (Time average)", true,
+    {"jsniC_tt", "Radial ion particle flux: curvature contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            dg::blas1::subroutine(
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[1], v.p.mu[1]),
-                v.tmp[0], v.tmp[1], v.tmp[2],
                 v.f.density(1), v.f.velocity(1),
+                v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.curv()[0], v.f.curv()[1], v.f.curv()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             );
-            v.f.divergence( v.tmp, result);
         }
     },
-    {"divdiai_tt", "Radial ion particle flux: diamagnetic contribution (Time average)", true,
+    {"jsdiai_tt", "Radial ion particle flux: diamagnetic contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            // u_D
-            routines::times( v.f.bhatgB(), v.f.gradN(1), v.tmp);
-            v.f.divergence( v.tmp, result);
+            // u_D Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradN(1), v.gradPsip, result);
             dg::blas1::scal( result, v.p.tau[1]);
         }
     },
-    {"divniA_tt", "Radial ion particle flux: induction contribution (Time average)", true,
+    {"jsniA_tt", "Radial ion particle flux: magnetic contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
-            dg::blas1::subroutine(
+            dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[1], v.p.mu[1]),
-                v.tmp[0], v.tmp[1], v.tmp[2],
                 v.f.density(1), v.f.velocity(1), v.f.induction(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
+                v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             );
-            v.f.divergence( v.tmp, result);
         }
     },
     {"lniperp_tt", "Perpendicular ion diffusion (Time average)", true,
@@ -728,7 +727,7 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"jsei_tt", "Radial ion energy flux without induction contribution (Time average)", true,
+    {"jsei_tt", "Radial ion energy flux without magnetic contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
@@ -741,7 +740,7 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     },
-    {"jseia_tt", "Radial ion energy flux: induction contribution (Time average)", true,
+    {"jseia_tt", "Radial ion energy flux: magnetic contribution (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
