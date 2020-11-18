@@ -13,7 +13,7 @@
 /*
    - reads parameters from input.json or any other given file,
    - integrates the ToeflR - functor and
-   - directly visualizes results on the screen using parameters in window_params.txt
+   - directly visualizes results on the screen using parameters in window_params.json
 */
 
 
@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0;
     stepper.init( ex, im, time, y0, p.dt);
-    double dt = 1e-5;
+//     double dt = 1e-5;
     const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -125,7 +125,7 @@ int main( int argc, char* argv[])
                 std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
                 E0 = E1;
                 E1 = ex.energy();
-                diff = (E1 - E0)/dt;
+                diff = (E1 - E0)/p.dt;
                 double diss = ex.energy_diffusion( );
                 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";

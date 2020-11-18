@@ -124,9 +124,7 @@ struct Explicit
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, container> pol, laplaceM; //contains normalized laplacian
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
-  
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
-
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
@@ -175,47 +173,66 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
 template< class G, class M, class container>
 const container& Explicit<G, M, container>::compute_psi( double t, const container& potential)
 {
-    if(equations == "gravity_local") return potential;
-    //in gyrofluid invert Gamma operator
-    if( equations == "local" || equations == "global")
-    {
-        if (tau == 0.) {
-            dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
-        }
-        else {
-            old_psi.extrapolate( t, phi[1]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
-            old_psi.update( t, phi[1]);
-            if(  number[0] == multigrid.max_iter())
-                throw dg::Fail( eps_gamma);
-        }
-    }
-    //compute (nabla phi)^2
-    arakawa.variation(potential, omega);
-    //compute psi
-    if(equations == "global")
-    {
-
-        dg::blas1::pointwiseDot( -0.5, binv, binv, omega, 1., phi[1]);
-    }
-    else if ( equations == "drift_global")
-    {
-        dg::blas1::pointwiseDot( 0.5, binv, binv, omega, 0., phi[1]);
-    }
-    else if( equations == "gravity_global" )
-        dg::blas1::axpby( 0.5, omega, 0., phi[1]);
-    
     if( equations == "arbpol" )
-    {
-        dg::blas1::transfer( gamma_phi, phi[1]);
-        arakawa.variation(phi[1], omega);
-        dg::blas2::symv(laplaceM,phi[1],chi);
+    {        
+        //tensor part
+        dg::blas2::gemv( arakawa.dx(), gamma_phi, phi[1]); //R_x Gamma phi          
+        dg::blas2::gemv( arakawa.dy(), phi[1],chi); //R_y R_y Gamma phi   
+        dg::blas1::pointwiseDot(chi,binv,chi); // 1/B R_y R_x Gamma phi
+        dg::blas1::pointwiseDot(tau, chi,chi, 0.0, omega); //omega = tau/B^2 (R_y R_x)^2 Gamma phi)^2
+        
+        dg::blas2::gemv( arakawa.dx(), phi[1], chi); //R_x R_x Gamma phi
+        dg::blas1::pointwiseDot(chi,binv,chi); //1/B R_x R_x Gamma phi   
+        dg::blas1::pointwiseDot(tau/2., chi,chi, 1.0, omega); //omega+= tau/2/B^2 (R_x R_x Gamma phi)^2
+        
+        dg::blas2::gemv( arakawa.dy(), gamma_phi, phi[1]); //R_y Gamma phi                
+        dg::blas2::gemv( arakawa.dy(), phi[1], chi); //R_y R_y Gamma phi  
+        dg::blas1::pointwiseDot(chi,binv,chi); //1/B R_y R_y Gamma phi
+        dg::blas1::pointwiseDot(tau/2., chi,chi, 1.0, omega); //omega+= tau/2/B^2 (R_y R_y Gamma phi)^2
+        
+        //laplacian part
+        dg::blas2::symv(laplaceM,gamma_phi,chi); 
         dg::blas1::pointwiseDot(chi,binv,chi);
-        dg::blas1::pointwiseDot(-tau/8., chi,chi, -0.5, omega);
-        dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0,  omega);
-        dg::blas1::axpby(1.0,  omega, 1.,  phi[1]);
+        dg::blas1::pointwiseDot(tau/4., chi,chi, -1., omega); //omega-= tau/4/B^2 (lap Gamma phi)^2
+        
+        //elliptic part
+        arakawa.variation(gamma_phi, phi[1]);   // (grad gamma phi)^2
+        dg::blas1::pointwiseDot(1.0, binv, binv, phi[1], 1.0, omega); //omega +=  1/B^2 (grad gamma phi)^2 <=> - 2\psi_2
+        dg::blas1::axpby( 1.,  gamma_phi, -0.5, omega,  phi[1]);
 
     }
+    else {
+        if(equations == "gravity_local") return potential;
+        //in gyrofluid invert Gamma operator
+        if( equations == "local" || equations == "global")
+        {
+            if (tau == 0.) {
+                dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
+            }
+            else {
+                old_psi.extrapolate( t, phi[1]);
+                std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
+                old_psi.update( t, phi[1]);
+                if(  number[0] == multigrid.max_iter())
+                    throw dg::Fail( eps_gamma);
+            }
+        }
+        //compute (nabla phi)^2
+        arakawa.variation(potential, omega);
+        //compute psi
+        if(equations == "global")
+        {
+
+            dg::blas1::pointwiseDot( -0.5, binv, binv, omega, 1., phi[1]);
+        }
+        else if ( equations == "drift_global")
+        {
+            dg::blas1::pointwiseDot( 0.5, binv, binv, omega, 0., phi[1]);
+        }
+        else if( equations == "gravity_global" )
+            dg::blas1::axpby( 0.5, omega, 0., phi[1]);
+    }
+
     return phi[1];
 }
 
@@ -255,74 +272,74 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         dg::blas2::symv( v2d, chi, phi[0]);
     }
     else {
-    //compute chi
-    if(equations == "global" )
-    {
-        dg::blas1::transfer( y[1], chi);
-        dg::blas1::plus( chi, 1.);
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        if( !boussinesq)
+        //compute chi
+        if(equations == "global" )
         {
-            multigrid.project( chi, multi_chi);
-            for( unsigned u=0; u<3; u++)
-                multi_pol[u].set_chi( multi_chi[u]);
-            //pol.set_chi( chi);
+            dg::blas1::transfer( y[1], chi);
+            dg::blas1::plus( chi, 1.);
+            dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
+            dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+            if( !boussinesq)
+            {
+                multigrid.project( chi, multi_chi);
+                for( unsigned u=0; u<3; u++)
+                    multi_pol[u].set_chi( multi_chi[u]);
+                //pol.set_chi( chi);
+            }
         }
-    }
-    else if(equations == "gravity_global" )
-    {
-        dg::blas1::transfer( y[0], chi);
-        dg::blas1::plus( chi, 1.);
-        if( !boussinesq)
+        else if(equations == "gravity_global" )
         {
-            multigrid.project( chi, multi_chi);
-            for( unsigned u=0; u<3; u++)
-                multi_pol[u].set_chi( multi_chi[u]);
-            //pol.set_chi( chi);
+            dg::blas1::transfer( y[0], chi);
+            dg::blas1::plus( chi, 1.);
+            if( !boussinesq)
+            {
+                multigrid.project( chi, multi_chi);
+                for( unsigned u=0; u<3; u++)
+                    multi_pol[u].set_chi( multi_chi[u]);
+                //pol.set_chi( chi);
+            }
         }
-    }
-    else if( equations == "drift_global" )
-    {
-        dg::blas1::transfer( y[0], chi);
-        dg::blas1::plus( chi, 1.);
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        if( !boussinesq)
+        else if( equations == "drift_global" )
         {
-            multigrid.project( chi, multi_chi);
-            for( unsigned u=0; u<3; u++)
-                multi_pol[u].set_chi( multi_chi[u]);
-            //pol.set_chi( chi);
+            dg::blas1::transfer( y[0], chi);
+            dg::blas1::plus( chi, 1.);
+            dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
+            dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+            if( !boussinesq)
+            {
+                multigrid.project( chi, multi_chi);
+                for( unsigned u=0; u<3; u++)
+                    multi_pol[u].set_chi( multi_chi[u]);
+                //pol.set_chi( chi);
+            }
         }
-    }
-    //compute polarisation
-    if( equations == "local" || equations == "global")
-    {
-        if (tau == 0.) {
-            dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
+        //compute polarisation
+        if( equations == "local" || equations == "global")
+        {
+            if (tau == 0.) {
+                dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
+            }
+            else {
+                old_gammaN.extrapolate(t, gamma_n);
+                std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
+                old_gammaN.update(t, gamma_n);
+                if(  number[0] == multigrid.max_iter())
+                    throw dg::Fail( eps_gamma);
+            }
+            dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
         }
-        else {
-            old_gammaN.extrapolate(t, gamma_n);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
-            old_gammaN.update(t, gamma_n);
-            if(  number[0] == multigrid.max_iter())
-                throw dg::Fail( eps_gamma);
-        }
-        dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
-    }
-    else
-        dg::blas1::axpby( -1. ,y[1], 0., omega);
-    if( equations == "global" || equations == "gravity_global" || equations == "drift_global")
-        if( boussinesq)
-            dg::blas1::pointwiseDivide( omega, chi, omega);
-    //invert
+        else
+            dg::blas1::axpby( -1. ,y[1], 0., omega);
+        if( equations == "global" || equations == "gravity_global" || equations == "drift_global")
+            if( boussinesq)
+                dg::blas1::pointwiseDivide( omega, chi, omega);
+        //invert
 
-    old_phi.extrapolate(t, phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
-    old_phi.update( t, phi[0]);
-    if(  number[0] == multigrid.max_iter())
-        throw dg::Fail( eps_pol);
+        old_phi.extrapolate(t, phi[0]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
+        old_phi.update( t, phi[0]);
+        if(  number[0] == multigrid.max_iter())
+            throw dg::Fail( eps_pol);
     }
     return phi[0];
 }
