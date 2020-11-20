@@ -8,7 +8,7 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
-all: feltor_hpc feltor feltor_mpi manufactured feltordiag
+all: feltor_hpc feltor feltor_mpi manufactured feltordiag interpolate_in_3d
 
 manufactured: manufactured.cu manufactured.h feltor.h implicit.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB)

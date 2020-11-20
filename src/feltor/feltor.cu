@@ -92,10 +92,8 @@ int main( int argc, char* argv[])
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
     //create RHS
-    //std::cout << "Constructing RHS...\n";
-    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     std::cout << "Constructing Explicit...\n";
-    //feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     std::cout << "Constructing Implicit...\n";
     feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
     std::cout << "Done!\n";
@@ -119,21 +117,19 @@ int main( int argc, char* argv[])
         std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
         return -1;
     }
-    { //make the HVecs temporaries
 
-    bool fixed_profile;
-    HVec profile = dg::evaluate( dg::zero, grid);
-    HVec source_profile;
     try{
+        bool fixed_profile;
+        HVec profile = dg::evaluate( dg::zero, grid);
+        HVec source_profile;
         source_profile = feltor::source_profiles.at(p.source_type)(
             fixed_profile, profile, grid, p,  mod_mag);
+        feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
+            p.source_rate, dg::construct<DVec>(source_profile)
+        );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
         return -1;
-    }
-    feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
-        p.source_rate, dg::construct<DVec>(source_profile)
-    );
     }
 
     ////////////////////////create timer and timestepper
@@ -148,9 +144,9 @@ int main( int argc, char* argv[])
     HVec h_wall = dg::pullback( wall, grid);
     HVec h_sheath = dg::pullback( sheath, grid);
     HVec h_velocity = dg::pullback( direction, grid);
-    feltor.set_wall_and_sheath( p.damping_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
-    implicit.set_wall_and_sheath( p.damping_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
-    karniadakis.solver().set_wall_and_sheath( p.damping_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    feltor.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
+    implicit.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
     }
 
     std::cout << "Initialize Timestepper" << std::endl;

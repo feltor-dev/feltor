@@ -40,7 +40,7 @@ int main( int argc, char* argv[])
     //create RHS
     std::cout << "Initialize explicit" << std::endl;
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag, false);
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
     std::cout << "Initialize implicit" << std::endl;
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 

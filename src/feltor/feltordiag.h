@@ -433,19 +433,9 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"dssue", "2nd parallel derivative of electron velocity", false,
         []( DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.dssU(0), result);
+            v.f.compute_dssU( 0, result);
         }
     },
-    //{"dppue", "2nd varphi derivative of electron velocity", false,
-    //    []( DVec& result, Variables& v ) {
-    //         dg::blas1::copy(v.f.compute_dppU(0), result);
-    //    }
-    //},
-    //{"dpue2", "1st varphi derivative squared of electron velocity", false,
-    //    []( DVec& result, Variables& v ) {
-    //         dg::blas1::pointwiseDot(v.f.gradU(0)[2], v.f.gradU(0)[2], result);
-    //    }
-    //},
     {"lperpinv", "Perpendicular density gradient length scale", false,
         []( DVec& result, Variables& v ) {
             const std::array<DVec, 3>& dN = v.f.gradN(0);
@@ -468,7 +458,8 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"lparallelinv", "Parallel density gradient length scale", false,
         []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot ( v.f.dsN(0), v.f.dsN(0), result);
+            v.f.compute_dsN(0, result);
+            dg::blas1::pointwiseDot ( result, result, result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
             dg::blas1::transform( result, result, dg::SQRT<double>());
@@ -476,7 +467,8 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"aligned", "Parallel density alignement", false,
         []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot ( v.f.dsN(0), v.f.dsN(0), result);
+            v.f.compute_dsN(0, result);
+            dg::blas1::pointwiseDot ( result, result, result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
     },
@@ -558,8 +550,10 @@ std::vector<Record> diagnostics2d_list = {
     {"divnepar_tt", "Divergence of Parallel velocity term for electron density (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), v.f.divb(), 0., result);
-            dg::blas1::pointwiseDot( 1., v.f.density(0),  v.f.dsU(0), 1., result);
-            dg::blas1::pointwiseDot( 1., v.f.velocity(0), v.f.dsN(0), 1., result);
+            v.f.compute_dsU(0, v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.f.density(0),  v.tmp[0], 1., result);
+            v.f.compute_dsN(0, v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.f.velocity(0), v.tmp[0], 1., result);
         }
     },
     {"jsniE_tt", "Radial ion particle flux: ExB contribution (Time average)", true,
@@ -620,8 +614,10 @@ std::vector<Record> diagnostics2d_list = {
     {"divnipar_tt", "Divergence of Parallel velocity term in ion density (Time average)", true,
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.divb(), 0., result);
-            dg::blas1::pointwiseDot( 1., v.f.density(1),  v.f.dsU(1), 1., result);
-            dg::blas1::pointwiseDot( 1., v.f.velocity(1), v.f.dsN(1), 1., result);
+            v.f.compute_dsU(1, v.tmp[1]);
+            dg::blas1::pointwiseDot( 1., v.f.density(1),  v.tmp[1], 1., result);
+            v.f.compute_dsN(1, v.tmp[1]);
+            dg::blas1::pointwiseDot( 1., v.f.velocity(1), v.tmp[1], 1., result);
         }
     },
     /// ------------------- Energy terms ------------------------//
@@ -779,13 +775,9 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"leeparallel_tt", "Parallel electron energy dissipation (Time average)", true,
         []( DVec& result, Variables& v ) {
-            //dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsN(0),
-            //                         0., v.tmp[0]);
-            //dg::blas1::axpby( 1., v.f.dssN(0), 1., v.tmp[0]);
+            //v.f.compute_lapParN( 0, v.tmp[0]);
             dg::blas1::copy(0., v.tmp[0]);
-            dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsU(0),
-                                     0., v.tmp[1]);
-            dg::blas1::axpby( 1., v.f.dssU(0), 1., v.tmp[1]);
+            v.f.compute_lapParU( 0, v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
@@ -796,13 +788,9 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"leiparallel_tt", "Parallel ion energy dissipation (Time average)", true,
         []( DVec& result, Variables& v ) {
-            //dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsN(1),
-            //                         0., v.tmp[0]);
-            //dg::blas1::axpby( 1., v.f.dssN(1), 1., v.tmp[0]);
+            //v.f.compute_lapParN( 1, v.tmp[0]);
             dg::blas1::copy(0., v.tmp[0]);
-            dg::blas1::pointwiseDot( 1., v.f.divb(), v.f.dsU(1),
-                                     0., v.tmp[1]);
-            dg::blas1::axpby( 1., v.f.dssU(1), 1., v.tmp[1]);
+            v.f.compute_lapParU( 1, v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
@@ -983,9 +971,8 @@ std::vector<Record> diagnostics2d_list = {
 
             v.f.compute_diffusive_lapMperpN( v.f.density(0), v.tmp[0], v.tmp[1]);
             dg::blas1::scal( v.tmp[1], -v.p.nu_perp);
-            //dg::blas1::pointwiseDot( v.p.nu_parallel, v.f.divb(), v.f.dsN(0),
-            //                         0., v.tmp[2]);
-            //dg::blas1::axpby( v.p.nu_parallel, v.f.dssN(0), 1., v.tmp[2]);
+            //v.f.compute_lapParN( 0, v.tmp[2]);
+            //dg::blas1::scal( v.tmp[2], v.p.nu_parallel);
             dg::blas1::copy( 0., v.tmp[2]);
             dg::blas1::axpby( 1., v.tmp[1], 1., v.tmp[2]); //Lambda_ne
             dg::blas1::pointwiseDot( v.tmp[2], result, result);
@@ -1116,8 +1103,10 @@ std::vector<Record> diagnostics2d_list = {
         []( DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.f.velocity(1), v.f.velocity(1), v.tmp[1]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.tmp[1], v.f.divb(), 0., result);
-            dg::blas1::pointwiseDot( 0.5*v.p.mu[1], v.f.density(1),  v.f.velocity(1), v.f.dsU(1), 1., result);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[1], v.f.dsN(1), 1., result);
+            v.f.compute_dsU( 1, v.tmp[2]);
+            dg::blas1::pointwiseDot( 0.5*v.p.mu[1], v.f.density(1),  v.f.velocity(1), v.tmp[2], 1., result);
+            v.f.compute_dsN( 1, v.tmp[2]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[1], v.tmp[2], 1., result);
         }
     },
     //not so important
@@ -1152,9 +1141,8 @@ std::vector<Record> diagnostics2d_list = {
     //should be zero
     {"lparpar_tt", "Parallel momentum dissipation by parallel diffusion", true,
         []( DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.p.nu_parallel[1], v.f.divb(), v.f.dsU(1),
-                                     0., result);
-            dg::blas1::axpby( v.p.nu_parallel[1], v.f.dssU(1), 1., result);
+            v.f.compute_lapParU( 1, result);
+            dg::blas1::scal( result, v.p.nu_parallel[1]);
         }
     },
     {"lparperp_tt", "Parallel momentum dissipation by perp diffusion", true,
@@ -1168,7 +1156,8 @@ std::vector<Record> diagnostics2d_list = {
     {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
         []( DVec& result, Variables& v){
             //dg::blas1::pointwiseDot( -v.p.tau[0], v.f.divb(), v.f.density(0), 0., result);
-            dg::blas1::axpby( v.p.tau[0], v.f.dsN(0), 0., result);
+            v.f.compute_dsN(0, result);
+            dg::blas1::scal( result, v.p.tau[0]);
         }
     },
     {"sparmirrorAe_tt", "Apar Mirror force term with electron density (Time average)", true,
@@ -1180,13 +1169,15 @@ std::vector<Record> diagnostics2d_list = {
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
         []( DVec& result, Variables& v){
             //dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
-            dg::blas1::axpby( -v.p.tau[1], v.f.dsN(1), 0., result);
+            v.f.compute_dsN(1, result);
+            dg::blas1::scal( result, -v.p.tau[1]);
         }
     },
     //electric force balance usually well-fulfilled
     {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( 1., v.f.dsP(0), v.f.density(0), 0., result);
+            v.f.compute_dsP(0, result);
+            dg::blas1::pointwiseDot( 1., result, v.f.density(0), 0., result);
         }
     },
     {"sparphiAe_tt", "Apar Electric force in electron momentum density (Time average)", true,
@@ -1204,7 +1195,8 @@ std::vector<Record> diagnostics2d_list = {
     //These two should be almost the same
     {"sparphii_tt", "Electric force term in ion momentum density (Time average)", true,
         []( DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( -1., v.f.dsP(1), v.f.density(1), 0., result);
+            v.f.compute_dsP(1, result);
+            dg::blas1::pointwiseDot( -1., result, v.f.density(1), 0., result);
         }
     },
     {"friction_tt", "Friction force in momentum density (Time average)", true,

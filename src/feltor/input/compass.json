@@ -19,12 +19,11 @@
     "jumpfactor" : 1,
     "eps_gamma"  : 1e-6,
     "eps_time"   : 1e-10,
-    "rtol"       : 1e-5,
     "mu"          : -0.000272121,
     "tau"         : 1.0,
     "beta"        : 0e-4,
     "nu_perp"     : 2e-3,
-    "perp_diff"   : "hyperviscous",
+    "perp_diff"   : ["hyperviscous", "explicit"],
     "resistivity" : 1e-4,
     "curvmode"   : "toroidal",
     "symmetric"  : false,
@@ -59,11 +58,18 @@
         "boundary": 0.55,
         "alpha" : 0.2
     },
-    "damping":
+    "wall":
     {
-        "modifier": "sol_pfr",
-        "rate" : 1e-2,
-        "boundary": [1.1,0.988],
-        "alpha": [0.25,0.15]
+        "type": "sol_pfr",
+        "penalization" : 1e+0,
+        "boundary": [1.1,0.998],
+        "alpha": [0.10,0.10]
+    },
+    "sheath":
+    {
+        "bc": "bohm",
+        "penalization" : 1e+0,
+        "boundary": 0.30,
+        "alpha": 0.2
     }
 }

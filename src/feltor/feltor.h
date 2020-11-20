@@ -145,6 +145,16 @@ struct ComputeSource{
         result = omega_source*source*(profne - tilde_n);
     }
 };
+struct ComputeDensityBC{
+    DG_DEVICE
+        double operator()( double nminus, double nplus, double sheathDotDirection)
+    {
+        if ( sheathDotDirection > 0 )
+            return nminus*sheathDotDirection;
+        else
+            return -nplus*sheathDotDirection;
+    }
+};
 //Resistivity (consistent density dependency,
 //parallel momentum conserving, quadratic current energy conservation dependency)
 struct AddResistivity{
@@ -229,20 +239,25 @@ struct Explicit
     const std::array<Container, 3> & gradA () const {
         return m_dA;
     }
-    const Container & dsN (int i) const {
-        return m_dsN[i];
+    void compute_dsN (int i, Container& dsN) const {
+        dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusN[i], m_fields[0][i],
+                m_plusN[i], 0., dsN, dg::NEU, {0,0});
     }
-    const Container & dsU (int i) const {
-        return m_dsU[i];
+    void compute_dsU (int i, Container& dsU) const {
+        dg::geo::ds_centered( m_fa_U, 1., m_minusU[i], m_fields[1][i],
+                m_plusU[i], 0., dsU);
     }
-    const Container & dsP (int i) const {
-        return m_dsP[i];
+    void compute_dsP (int i, Container& dsP) const {
+        dg::geo::ds_centered_bc_along_field( m_fa_P, 1., m_minusP[i], m_phi[i],
+                m_plusP[i], 0.0, dsP, dg::DIR, {0,0});
     }
-    //const Container & dssN(int i) { //2nd fieldaligned derivative
-    //    return m_dssN[i];
-    //}
-    const Container & dssU(int i) {
-        return m_dssU[i];
+    void compute_dssU(int i, Container& dssU) {
+        dg::geo::dss_centered( m_fa_U, 1., m_minusU[i], m_fields[1][i], m_plusU[i], 0., dssU);
+    }
+    void compute_lapParU(int i, Container& lapU) {
+        compute_dsU(i, m_temp0);
+        compute_dssU(i, lapU);
+        dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., lapU);
     }
     void compute_gradSN( int i, std::array<Container,3>& gradS) const{
         // MW: don't like this function, if we need more gradients we might
@@ -266,22 +281,6 @@ struct Explicit
     }
     void compute_dot_induction( Container& tmp) const {
         m_old_apar.derive( tmp);
-    }
-    //maybe better give these a temporary
-    const Container & compute_dppN(int i) { //2nd varphi derivative
-        dg::blas2::symv( m_dz, m_fields[0][i], m_temp0);
-        dg::blas2::symv( m_dz, m_temp0, m_temp1);
-        return m_temp1;
-    }
-    const Container & compute_dppP(int i) {
-        dg::blas2::symv( m_dz, m_phi[i], m_temp0);
-        dg::blas2::symv( m_dz, m_temp0, m_temp1);
-        return m_temp1;
-    }
-    const Container & compute_dppU(int i) {
-        dg::blas2::symv( m_dz, m_fields[1][i], m_temp0);
-        dg::blas2::symv( m_dz, m_temp0, m_temp1);
-        return m_temp1;
     }
     const dg::SparseTensor<Container>& projection() const{
         return m_hh;
@@ -361,7 +360,6 @@ struct Explicit
 
         dg::blas1::axpby( -1., wall, -1., sheath, m_masked);
         dg::blas1::plus( m_masked, +1);
-        m_wall_forcing = wall_forcing;
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
   private:
@@ -396,7 +394,8 @@ struct Explicit
     Container m_detg;
 
     Container m_apar;
-    std::array<Container,2> m_phi, m_dsN, m_dsU, m_dsP, m_dssU;// m_dssN;
+    std::array<Container,2> m_phi;
+    std::array<Container,2> m_plusN, m_minusN, m_plusU, m_minusU, m_plusP, m_minusP;
     std::array<Container,3> m_dA;
     std::array<std::array<Container,3>,2> m_dP, m_dN, m_dU;
     std::array<std::array<Container,2>,2> m_fields, m_s; //fields, sources
@@ -406,7 +405,6 @@ struct Explicit
     //matrices and solvers
     Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa_P, m_fa_N, m_fa_U;
-    std::array<Container,2> m_faP, m_faM;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
@@ -418,7 +416,7 @@ struct Explicit
     dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
-    double m_omega_source = 0., m_sheath_forcing = 0., m_wall_forcing = 0.;
+    double m_omega_source = 0., m_sheath_forcing = 0.;
     bool m_fixed_profile = true;
 
 };
@@ -593,9 +591,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_apar = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
-    //m_dssN =
-    m_dssU = m_dsN = m_dsU = m_dsP = m_phi;
-    m_faP = m_faM = m_phi;
+    m_plusN = m_minusN = m_minusU = m_plusU = m_minusP = m_plusP = m_phi;
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
     m_dN = m_dU = m_dP;
@@ -851,30 +847,30 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
     {
-        m_fa_N( dg::geo::einsMinus, y[0][i], m_faM[0]);
-        m_fa_N( dg::geo::einsPlus,  y[0][i], m_faP[0]);
-        m_fa_U( dg::geo::einsMinus, fields[1][i], m_faM[1]);
-        m_fa_U( dg::geo::einsPlus,  fields[1][i], m_faP[1]);
+
+        m_fa_N( dg::geo::einsMinus, y[0][i], m_minusN[i]);
+        m_fa_N( dg::geo::einsPlus,  y[0][i], m_plusN[i]);
+        m_fa_U( dg::geo::einsMinus, fields[1][i], m_minusU[i]);
+        m_fa_U( dg::geo::einsPlus,  fields[1][i], m_plusU[i]);
+        m_fa_P( dg::geo::einsMinus, m_phi[i], m_minusP[i]);
+        m_fa_P( dg::geo::einsPlus,  m_phi[i], m_plusP[i]);
+        dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusN[i], y[0][i], m_plusN[i], 0., m_temp0, dg::NEU, {0,0});
+        dg::geo::ds_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i], 0., m_temp1);
         //---------------------density--------------------------//
         //density: -Div ( NUb)
-        dg::geo::ds_centered( m_fa_N, 1., m_faM[0], y[0][i], m_faP[0], 0., m_dsN[i]);
-        dg::geo::ds_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dsU[i]);
-        dg::blas1::pointwiseDot(-1., m_dsN[i], fields[1][i],
-            -1., fields[0][i], m_dsU[i], 1., yp[0][i] );
+        dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i],
+            -1., fields[0][i], m_temp1, 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
             1.,yp[0][i]);
         //---------------------velocity-------------------------//
         // Burgers term: -U ds U
-        dg::blas1::pointwiseDot(-1., fields[1][i], m_dsU[i], 1., yp[1][i]);
-        // force terms: -tau/mu * ds lnN -1/mu * ds Phi
-        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_dsN[i], fields[0][i], 1., yp[1][i]);
-        m_fa_P( dg::geo::einsMinus, m_phi[i], m_faM[0]); //overwrite
-        m_fa_P( dg::geo::einsPlus,  m_phi[i], m_faP[0]);
-        dg::geo::ds_centered( m_fa_P, -1./m_p.mu[i], m_faM[0], m_phi[i], m_faP[0], 1.0, yp[1][i]);
+        dg::blas1::pointwiseDot(-1., fields[1][i], m_temp1, 1., yp[1][i]);
+        // force terms: -tau/mu * ds N/N -1/mu * ds Phi
+        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp0, fields[0][i], 1., yp[1][i]);
+        dg::geo::ds_centered_bc_along_field( m_fa_P, -1./m_p.mu[i], m_minusP[i], m_phi[i], m_plusP[i], 1.0, yp[1][i], dg::DIR, {0,0});
         // viscosity: + nu_par Delta_par U/N = nu_par ( Div b dsU + dssU)/N
-        dg::blas1::pointwiseDot(1., m_divb, m_dsU[i], 0., m_temp1);
-        dg::geo::dss_centered( m_fa_U, 1., m_faM[1], fields[1][i], m_faP[1], 0., m_dssU[i]);
-        dg::blas1::axpby( 1., m_dssU[i], 1., m_temp1);
+        dg::blas1::pointwiseDot(1., m_divb, m_temp1, 0., m_temp1);
+        dg::geo::dss_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i], 1., m_temp1);
         dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i], 1., yp[1][i]);
     }
 }
@@ -1025,20 +1021,30 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::blas1::pointwiseDot( m_masked, yp[0][1], yp[0][1]);
     dg::blas1::pointwiseDot( m_masked, yp[1][0], yp[1][0]);
     dg::blas1::pointwiseDot( m_masked, yp[1][1], yp[1][1]);
-    // explicit part of the sheath terms
+    // sheath boundary conditions
     if( m_sheath_forcing != 0)
     {
-        if( "insulating" == m_p.sheath_type)
+        //density
+        for( unsigned i=0; i<2; i++)
         {
-            dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][0]);
+            dg::blas1::evaluate( m_temp0, dg::equals(), routines::ComputeDensityBC(),
+                m_minusN[i], m_plusN[i], m_U_sheath);
+            dg::blas1::axpby( m_sheath_forcing, m_temp0, 1.,  yp[0][i]);
         }
-        else // "bohm" == m_p.sheath_type
+        //velocity
+        if( "insulating" == m_p.sheath_bc)
+        {
+            // u_e = +- sqrt(1+tau)
+            dg::blas1::axpby( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, 1.,  yp[1][0]);
+        }
+        else // "bohm" == m_p.sheath_bc
         {
             //exp(-phi)
             dg::blas1::transform( m_phi[0], m_temp0, dg::EXP<double>(1., -1.));
-            dg::blas1::pointwiseDot( m_sheath_forcing, m_U_sheath, m_temp0, 1.,  yp[1][0]);
+            dg::blas1::pointwiseDot( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, m_temp0, 1.,  yp[1][0]);
         }
-        dg::blas1::axpby( m_sheath_forcing, m_U_sheath, 1.,  yp[1][1]);
+        // u_i = +- sqrt(1+tau)
+        dg::blas1::axpby( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, 1.,  yp[1][1]);
     }
 
 

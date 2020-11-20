@@ -144,12 +144,13 @@ int main( int argc, char* argv[])
     }
     const feltor::Parameters p( js);
     MPI_OUT p.display( std::cout);
-    std::string input = js.toStyledString(), geom = gs.toStyledString();
-    MPI_OUT std::cout << geom << std::endl;
-    dg::geo::TokamakMagneticField mag;
-    dg::geo::CylindricalFunctor damping, transition;
+    std::string inputfile = js.toStyledString(), geomfile = gs.toStyledString();
+    MPI_OUT std::cout << geomfile << std::endl;
+    dg::geo::TokamakMagneticField mag, mod_mag;
+    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
     try{
-        mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, damping, transition);
+        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+        mod_mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, wall, transition);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
@@ -168,11 +169,11 @@ int main( int argc, char* argv[])
     }
 #endif //FELTOR_MPI
     ////////////////////////////////set up computations///////////////////////////
+    //Make grids
     double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
     double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
-    //Make grids
     Geometry grid( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER
         #ifdef FELTOR_MPI
@@ -192,17 +193,23 @@ int main( int argc, char* argv[])
     unsigned local_size2d = g2d_out_ptr->size();
 #endif
 
-    HVec damping_profile = dg::pullback( damping, grid);
+    try{
+        dg::geo::createSheathRegion( js, file::error::is_throw, mag, wall,
+                Rmin, Rmax, Zmin, Zmax, sheath, direction);
+    }catch(std::runtime_error& e)
+    {
+        MPI_OUT std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        MPI_OUT std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
     //create RHS
-    //MPI_OUT std::cout << "Constructing RHS...\n";
-    //feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, true);
     MPI_OUT std::cout << "Constructing Explicit...\n";
-    feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag, false);
+    feltor::Explicit< Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
     MPI_OUT std::cout << "Constructing Implicit...\n";
-    feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> im( grid, p, mag);
+    feltor::Implicit< Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
     MPI_OUT std::cout << "Done!\n";
 
     // helper variables for output computations
@@ -266,8 +273,7 @@ int main( int argc, char* argv[])
         source_profile = feltor::source_profiles.at(p.source_type)(
             fixed_profile, profile, grid, p, mag);
         feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
-            p.source_rate, dg::construct<DVec>(source_profile),
-            p.damping_rate, dg::construct<DVec>(damping_profile)
+            p.source_rate, dg::construct<DVec>(source_profile)
         );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
@@ -308,8 +314,8 @@ int main( int argc, char* argv[])
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = input;
-    att["geomfile"] = geom;
+    att["inputfile"] = inputfile;
+    att["geomfile"] = geomfile;
     for( auto pair : att)
         MPI_OUT err = nc_put_att_text( ncid, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
@@ -468,13 +474,17 @@ int main( int argc, char* argv[])
         feltor::FeltorSpecialSolver<
             Geometry, IDMatrix, DMatrix, DVec>
         > karniadakis( grid, p, mag);
-    karniadakis.init( feltor, im, time, y0, p.dt);
-    //unsigned mMax = 3, restart = 3, max_iter = 100;
-    //double damping = 1e-3;
-    //dg::BDF< std::array<std::array<DVec,2>,2 >,
-    //    dg::AndersonSolver< std::array<std::array<DVec,2>,2> >
-    //    > bdf( 3, y0, mMax, p.rtol, max_iter, damping, restart);
-    //bdf.init( feltor, time, y0, p.dt);
+    {
+    HVec h_wall = dg::pullback( wall, grid);
+    HVec h_sheath = dg::pullback( sheath, grid);
+    HVec h_velocity = dg::pullback( direction, grid);
+    feltor.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
+    implicit.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    }
+
+    std::cout << "Initialize Timestepper" << std::endl;
+    karniadakis.init( feltor, implicit, time, y0, p.dt);
     dg::Timer t;
     t.tic();
     unsigned step = 0;
@@ -489,7 +499,7 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    karniadakis.step( feltor, im, time, y0);
+                    karniadakis.step( feltor, implicit, time, y0);
                     //bdf.step( feltor, time, y0);
                 }
                 catch( dg::Fail& fail){

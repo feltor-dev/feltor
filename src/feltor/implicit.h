@@ -44,8 +44,7 @@ struct ImplicitDensity
     }
     void set_wall_and_sheath( double wall_forcing, Container wall, double sheath_forcing, Container sheath)
     {
-        dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_forcing); //1/eta_w
-
+        dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_forcing);
         dg::blas1::axpby( -1., wall, -1., sheath, m_masked);
         dg::blas1::plus( m_masked, +1);
     }
@@ -155,6 +154,7 @@ struct ImplicitVelocity
         dg::assign( dg::evaluate( dg::zero, g), m_forcing );
         dg::assign( dg::evaluate( dg::one, g), m_masked );
     }
+    const Container& get_forcing() const { return m_forcing;}
     void set_wall_and_sheath( double wall_forcing, Container wall, double sheath_forcing, Container sheath)
     {
         dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_temp); //1/eta_w
@@ -369,9 +369,10 @@ struct FeltorSpecialSolver
         if( m_p.explicit_diffusion)
         {
             //I(y) = -Chi y
-            dg::blas1::axpby( 1., 1., -alpha, m_imdens.get_forcing(), y[1][1]);
-            dg::blas1::pointwiseDivide( rhs[0][0], y[1][1], y[0][0]);
-            dg::blas1::pointwiseDivide( rhs[0][1], y[1][1], y[0][1]);
+            dg::blas1::axpby( 1., 1., -alpha, m_imdens.get_forcing(), y[0][1]);
+            dg::blas1::pointwiseDivide( rhs[0][0], y[0][1], y[0][0]);
+            dg::blas1::pointwiseDivide( rhs[0][1], y[0][1], y[0][1]);
+            dg::blas1::axpby( 1., 1., -alpha, m_imvelo.get_forcing(), y[1][1]);
             dg::blas1::pointwiseDivide( rhs[1][0], y[1][1], y[1][0]);
             dg::blas1::pointwiseDivide( rhs[1][1], y[1][1], y[1][1]);
             return;

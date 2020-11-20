@@ -14,18 +14,16 @@
     "inner_loop": 4,
     "itstp": 2,
     "maxout": 10,
+    "stages"     : 3,
     "eps_pol"    : [1e-6,1,1],
     "jumpfactor" : 1,
     "eps_gamma"  : 1e-6,
-    "stages"     : 3,
     "eps_time"   : 1e-10,
-    "rtol"       : 1e-5,
     "mu"          : -0.000272121,
     "tau"         : 0.0,
     "beta"        : 1e-4,
     "nu_perp"     : 1e-2,
-    "perp_diff"   : "hyperviscous",
-    "nu_parallel" : 1e3,
+    "perp_diff"   : ["hyperviscous","explicit"],
     "resistivity" : 3.43e-6,
     "curvmode"   : "toroidal",
     "symmetric"  : false,
@@ -60,11 +58,18 @@
         "boundary": 0.55,
         "alpha" : 0.2
     },
-    "damping":
+    "wall":
     {
-        "modifier": "sol_pfr",
-        "rate" : 1e-2,
-        "boundary": [1.03,0.99],
-        "alpha": [0.20, 0.1]
+        "type": "sol_pfr",
+        "penalization" : 1e+0,
+        "boundary": [1.1,0.998],
+        "alpha": [0.10,0.10]
+    },
+    "sheath":
+    {
+        "bc": "bohm",
+        "penalization" : 1e+0,
+        "boundary": 0.30,
+        "alpha": 0.2
     }
 }

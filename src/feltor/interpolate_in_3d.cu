@@ -56,9 +56,17 @@ int main( int argc, char* argv[])
     file::string2Json(inputfile, js, file::comments::are_forbidden);
     file::string2Json(geomfile, gs, file::comments::are_forbidden);
     const feltor::Parameters p(js, file::error::is_warning);
-    const dg::geo::solovev::Parameters gp(gs);
     p.display();
-    gp.display();
+    std::cout << gs.toStyledString() << std::endl;
+    dg::geo::TokamakMagneticField mag;
+    try{
+        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
@@ -87,10 +95,10 @@ int main( int argc, char* argv[])
 
     //-------------------Construct grids-------------------------------------//
 
-    const double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    const double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    const double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    const double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    const double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
+    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    const double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
     const unsigned FACTOR = 6;
 
     dg::RealCylindricalGrid3d<double> g3d_in( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
@@ -116,17 +124,6 @@ int main( int argc, char* argv[])
     std::map<std::string, int> id4d;
 
     /////////////////////////////////////////////////////////////////////////
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
-    if( p.damping_alpha > 0.)
-    {
-        double RO=mag.R0(), ZO=0.;
-        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        double psipO = mag.psip()( RO, ZO);
-        double damping_psi0p = (1.-p.damping_boundary*p.damping_boundary)*psipO;
-        double damping_alphap = -(2.*p.damping_boundary+p.damping_alpha)*p.damping_alpha*psipO;
-        mag = dg::geo::createModifiedSolovevField(gp, damping_psi0p+damping_alphap/2.,
-                fabs(damping_alphap/2.), ((psipO>0)-(psipO<0)));
-    }
     auto bhat = dg::geo::createBHat( mag);
     dg::geo::Fieldaligned<Geometry, IHMatrix, HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous

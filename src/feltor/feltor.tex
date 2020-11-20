@@ -35,9 +35,12 @@ system $\vec x :=\{x_0, x_1, x_2\}$, metric
 tensor $g_{ij}$ and volume element $\sqrt{g} := \sqrt{\det g}$.
 Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B/B)({\vec x})$
 we can define various differential operations.
-%We further assume that $\bhat$ is perturbed by the parallel
-%vector potential $A_\parallel$ via
-%${ \vec b }_\perp := ({\vn \times A_\parallel \bhat)}/{B}$
+\begin{table*}[htbp]
+\caption{Definitions of geometric operators with $b^i$ the contra-variant components of $\bhat$ and $g^{ij}$ the contra-variant elements of the metric tensor. We assume $(\vn\times\bhat)_\parallel = 0$. Note that $\vec K = \vec K_\kappa + \vec{ K_{\vn B}}$.
+% Explicit expressions of these quantities
+% depend on the choice of the magnetic field and the underlying coordinate system.
+}\label{tab:operators}
+\centering
 \rowcolors{2}{gray!25}{white}
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 %\toprule
@@ -45,54 +48,55 @@ we can define various differential operations.
 \midrule
     Perpendicular Poisson bracket&
     $\left[.,.\right]_\perp$ &
-    $\left[f,g\right]_\perp := \bhat \cdot \left(\vn f \times \vn g\right) =
+    $\left[f,g\right]_\perp := \bhat \cdot \left(\vec{\vn} f \times\vn g\right) =
     b_i \varepsilon^{ijk}\partial_j f\partial_k g/\sqrt{g}$  \\
     Projection Tensor&
-    $h $ & $h^{ij} := g^{ij} - b^ib^j $\\
+    $h $ & $h^{ij} := g^{ij} - b^ib^j $   \quad \text{ Note }$ h^2=h$\\
     %Alignment Tensor&
     %$t $ & $ t^{ij} := b^ib^j$\\
     Perpendicular Gradient&
     $\np $&
     $ \np f := \bhat\times(\vn f\times \bhat ) \equiv
-    h \cn f$ \\
-    Perpendicular Laplacian&
-    $\Delta_\perp $&
-    $ \Delta_\perp f:= \vec \nc (\np f)
-    = \nc( h\cn f)$  \\
-    Curl-b Curvature &
+    h \cdot \vn f$ \\
+    Perpendicular Divergence&
+    $\np^\dagger $&
+    $ \np^\dagger \cdot \vec v := -\nc( h \cdot \vec v) = -\nc\vec v_\perp$ \\
+    Perpendicular Laplacian &
+    $\Delta_\perp $ &
+    $ \Delta_\perp f:= \nc (\np f)
+    = \nc( h\cdot\vn f) \equiv -\np^\dagger\cdot\np$  \\
+    Curl-b Curvature Operator&
     $\mathcal K_{\vn\times\bhat}$ &
-    $\mathcal K_{\vn\times\bhat}(f) := \vec{ \mathcal K_{\vn\times\bhat} }\cn f = \frac{1}{B}(\vn \times \bhat)\cn f$ \\[4pt]
-    Grad-B Curvature &
+    $\mathcal K_{\vn\times\bhat}(f) := \vec{ K_{\vn\times\bhat} }\cn f = \frac{1}{B}(\vn \times \bhat)\cn f$ \\[4pt]
+    Grad-B Curvature Operator &
     $\mathcal K_{\vn B} $ &
-    $\mathcal K_{\vn B}(f) := \vec{\mathcal K_{\vn B}} \cn f = \frac{1}{B}(\bhat \times \vn \ln B)\cn f$ \\[4pt]
-    Curvature &
+    $\mathcal K_{\vn B}(f) := \vec{ K_{\vn B}} \cn f = \frac{1}{B}(\bhat \times\vn \ln B)\cn f$ \\[4pt]
+    Curvature Operator&
     $\mathcal K$ &
-    $\mathcal{K}(f):=\vec{\mathcal K} \cn f =
-     \nc\left(\frac{\bhat\times\vn f}{B}\right)$,\\[4pt]
+    $\mathcal{K}(f):=\vec{ K} \cn f =
+     \vec{\vn}\cdot\left(\frac{\bhat\times\vec{\vn} f}{B}\right) =\vn \times \frac{\bhat}{B} \cn f$,\\[4pt]
     Parallel derivative&
     $\npar $&
-    $ \npar f := \bhat\cn f$ \\
-    %Perturbed parallel Derivative&
-    %$\bar\npar$ &
-    %$\bar\npar f := (\bhat + {\vec b }_\perp)\cn f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$ \\
-    Parallel Laplacian&
-    $\Delta_\parallel $&
-    $\Delta_\parallel f:= \nc ( \bhat\bhat\cn f )$\\
+    $ \npar f := \bhat\cdot\vn f$ \quad  Notice $\nc\bhat = -\npar\ln B$ \\
+     Parallel Laplacian&
+     $\Delta_\parallel $&
+     $\Delta_\parallel f:= \vec{\vn} \cdot ( \bhat\bhat\cdot\vec{\vn} f )$\\
 \bottomrule
 \end{longtable}
+\end{table*}
 with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$, and
 $\eps^{ijk}$ the Levi-Civita symbols.
 Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
 Note that we have
 \begin{align}
-    \nc \vec{\mathcal K_{\vn\times\bhat}}
-    &= -\nc \vec{\mathcal K_{\vn B}} = -\vec{ \mathcal K_{\vn\times\bhat}}\cn\ln B, \\
-    \vec\nc\vec{ \mathcal K} &= 0, \\
-    \vec{\mathcal K} &=
+    \nc \vec{ K_{\vn\times\bhat}}
+&= -\nc \vec{ K_{\vn B}} = -\vec{K_{\vn\times\bhat}}\cn\ln B, \\
+    \vec\nc\vec{ K} &= 0, \\
+    \mathcal K(f) &=
      \vn\times\frac{\bhat}{B}\cn f
     = \mathcal K_{\vn\times\bhat}(f) + \mathcal K_{\vn B}(f),\\
-    \vec{ \mathcal K_{\vn\times\bhat}} - \vec{ \mathcal K_{\vn B}} &= \frac{1}{B^2} (\vn \times \vec B), \\
+    \vec{ K_{\vn\times\bhat}} - \vec{ K_{\vn B}} &= \frac{1}{B^2} (\vn \times \vec B), \\
     \npar \ln B &= -\vec\nc\bhat.
     \label{eq:curl_curvature}
 \end{align}
@@ -134,8 +138,7 @@ basis vectors and (covariant) metric tensor are:
 With the help of the metric elements we get a well behaved volume element \(\sqrt{g} = R\). However, we have a coordinate singularity at \(R=0\).
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 
-\subsection{Solov'ev equilbrium}\label{sec:solovev}
-%Document polynomial field as well
+\subsection{The flux function}
 In cylindrical coordinates the general axisymmetric  magnetic field can be written as (dimensionless)
 \begin{align}
  \vec{B} &= \frac{R_0}{R}\left[I(\psi_p) \ehat_{\varphi} + \frac{\partial
@@ -145,18 +148,22 @@ which can obviously not be manipulated to be in Clebsch form.
 Hence we are dealing with a non-flux aligned coordinate system.
 For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{R_0}{R}\left( \frac{\partial \psi_p}{\partial Z}\ehat_R - \frac{\partial \psi_p}{\partial R}\ehat_Z\right)
 \) and the toroidal magnetic field \(\vec{B}_t =\frac{R_0I}{R} \ehat_{\varphi}\).
-Note that with a typically convex function $\psi_p$ (second derivative is
+\begin{tcolorbox}[title=Note]
+With a typically convex function $\psi_p$ (second derivative is
 positive), $I(\psi_p)>0$ and the previously defined coordinate system the field
 line winding is a {\bf left handed screw} in the positive $\ehat_\varphi$-direction.
 Also note that then $\vec B\times\vn\vec B$ points {\bf down}, towards the magnetic X-point,
-and we have the {\bf favourable} drift direction (since in experiments H-mode
+and we have the {\bf favourable} drift direction (in experiments H-mode
 is reached easier in this configuration).
+\end{tcolorbox}
 
 
 We scaled $R$, $Z$ and $R_0$ with $\rho_s = \sqrt{T_e m_i}/(eB_0)$, the
 magnetic field with $B_0$, the poloidal flux with $\psi_{p0} = B_0\rho_s \hat
 R_0$ and the poloidal equilibrium current streamfunction with $I_0 = B_0 \hat R_0$ (with $\hat R_0 =
 \rho_s R_0$ the dimensional major radius).
+\subsubsection{Solov'ev equilbrium}\label{sec:solovev}
+
 We have the equilibrium equations in toroidally symmetric, ideal MHD
 $\vn p = \vec j\times \vec B$ and $\vn\times\vec B = \beta \vec j$ normalized with $p_0 = n_0 T_0$, and $j_0 = e n_0 c_S$, where we introduce $\beta = n_0 T_0 \mu_0 /B_0^2$.
 Note that this normalization is in line with the one later chosen for the gyrofluid
@@ -236,6 +243,7 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
 \bottomrule
 \end{longtable}
 
+\subsubsection{Polynomial expansion}
 As an alternative and in order to better fit experimental equilibria we offer
 a polynomial expansion of the magnetic flux function
 \begin{subequations}
@@ -246,6 +254,7 @@ a polynomial expansion of the magnetic flux function
 \end{align}
 \end{subequations}
 where the number of polynomial coefficients $N_R$ and $N_Z$ can be freely chosen.
+\subsubsection{Discussion}
 Since Eqs.~\eqref{eq:solovev} and \eqref{eq:polynomial} are given analytically we can numerically evaluate $\psi_p$ and $I$
 and all their derivatives
 at arbitrary points to machine precision, which is simple to implement and fast to execute.
@@ -265,6 +274,7 @@ The scaling factors $\mathcal P_\psi$ and $\mathcal P_I$ are mainly introduced t
 If an X-point is present, we choose $c_1$ such that
 $\psi_p(R_X, Z_X) = 0$ that is the separatrix is given by $\psi_p(R,Z) = 0$.
 
+\subsection{Curvature operators and perpendicular Poisson bracket}
 Note that
 \begin{align}
     B^R&=B_R = R_0\psi_Z/R \\
@@ -291,7 +301,9 @@ The toroidal/negative toroidal field line approximation applies \(\bhat\approx \
 (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
 but retains the full expression for the magnetic field unit vector \(\bhat\)
 for parallel operators (\(\npar\) and \(\Delta_\parallel\)).
-(Note that we allow the negative sign $-\ehat_\varphi$ to enable a sign reversal of the magnetic field, see Section~\ref{sec:field_reversal}).
+\begin{tcolorbox}[title=Note]
+We allow the negative sign $-\ehat_\varphi$ to enable a sign reversal of the magnetic field, see Section~\ref{sec:field_reversal}.
+\end{tcolorbox}
 In cylindrical coordinates that is
 \begin{align}
 [f,g]_\perp \equiv [f,g]_{RZ} &= \pm\frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
@@ -305,10 +317,10 @@ The curl of $\bhat$ reduces to
 %end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}}_{{\vn\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
-\vec{ \mathcal{K} }_{\vn  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+\vec{{K}}_{{\vn\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
+\vec{ {K} }_{\vn  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 %\ehat_\varphi \times \vn B, &
-\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vn  B}  +\vec{ \mathcal{K} }_{{\vn\times\bhat}} ,
+\vec{ {K} } &\approx \vec{ {K} }_{\vn  B}  +\vec{ {K} }_{{\vn\times\bhat}} ,
 %\\
 %\mathcal{K}_{{\vn\times\bhat}}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
 %\mathcal{K}_{\vn  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},&
@@ -316,9 +328,9 @@ This simplifies the curvature operators to:
 \end{align}
 and
 \begin{align}
- \nc \vec{\mathcal{K}}_{{\vn\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
+ \nc \vec{{K}}_{{\vn\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
 \end{align}
-which results in a vanishing divergence of the curvature operators \( \nc \vec{ \mathcal{K} } = 0\).
+which results in a vanishing divergence of the curvature operators \( \nc \vec{ {K} } = 0\).
 
 Note that in an actual toroidal field we have
 \begin{align}
@@ -328,9 +340,9 @@ Note that in an actual toroidal field we have
 We then have $\bhat = \pm\ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
-  \vec{ \mathcal K_{\vn\times\bhat}} = \vec{ \mathcal K_{\vn B}} = -\frac{\pm 1}{R_0} \ehat_Z =
-\vec{ \mathcal K}/2\\
-  \nc\vec{\mathcal K_{{\vn\times\bhat}}}=
+  \vec{  K_{\vn\times\bhat}} = \vec{  K_{\vn B}} = -\frac{\pm 1}{R_0} \ehat_Z =
+\vec{  K}/2\\
+  \nc\vec{ K_{{\vn\times\bhat}}}=
     \npar \ln B = 0
     \label{}
 \end{align}
@@ -340,7 +352,7 @@ Note: the negative sign is automatically chosen in code if $I(R_0, 0)<0$.
 In this approximation we apply the toroidal field line approximation
 as in Section
 \ref{sec:torfieldlineapprox}
-but approximate the curvature operator $\mathcal K_{\vn\times\bhat} \approx \bhat\times\vec \kappa$
+but approximate the curvature operator $ \vec K_{\vn\times\bhat} \approx \bhat\times\vec \kappa$
   with
   $\vec \kappa := \bhat \cn\bhat = -\bhat \times( \vn\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
@@ -355,13 +367,13 @@ In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{\mathcal{K}_{{\vn\times\bhat}}}(f) \approx
-\vec{ \mathcal{K} }_{\vn  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
-\mathcal{K} (f) &\approx 2\mathcal{K}_{\vn  B} (f) , &
-    \vn\times\bhat \cdot \vec{\mathcal{K}}_{\vn  B} &= 0.
+\vec{{K}_{{\vn\times\bhat}}} \approx
+\vec{ {K} }_{\vn  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+{K} (f) &\approx 2{K}_{\vn  B} (f) , &
+    \vn\times\bhat \cdot \vec{{K}}_{\vn  B} &= 0.
 \end{align}
-The divergence over the curvature vanishes \( \nc \vec{ \mathcal{K} } = 0\) only if \( \nc \vec{ \mathcal{K}}_{\vn  B}   = 0\).
-In general, the divergence \( \nc \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
+The divergence over the curvature vanishes \( \nc \vec{ {K} } = 0\) only if \( \nc \vec{ {K}}_{\vn  B}   = 0\).
+In general, the divergence \( \nc \vec{ {K} } \approx 0\) is only approximately vanishing.
 \subsubsection{True perpendicular terms}
 
 Without any approximations we have
@@ -684,59 +696,6 @@ The labels $\rho_t$ and $\rho_p$ are useful because
 equidistant $\rho_p$ and $\rho_t$ values tend to translate to equidistant flux-surfaces
 in configuration space.
 
-\subsection{ Modified $\psi_p$}
-Our computational domain is a box and in particular not aligned with the
-magnetic flux surfaces. This means that particularly in the corners of
-the domain the field lines inside the domain are very short (in the
-sense that the distance between the entry point and leave point is short).
-It turns out that this behaviour is numerically disadvantageous (may
-blow up the simulation in the worst case) in the
-computation of parallel derivatives. In order to remedy this situation
-we propose to modify the flux surfaces $\psi_p$ to a constant value
-if $\psi_p$ exceeds a certain critical value. In this way the poloidal
-field component vanishes in the corners of the domain at the cost
-of introducing a strong shear layer limiting the scrape-off layer width.
-
-We define an approximation to the step function with a transition layer of radius $a$
-around the origin
-\begin{align}
-\Theta_a(x) := \begin{cases}
-    0 & \text{ for } x \leq -a  \\
-    \frac{1}{32 a^7}  \left(16 a^3-29 a^2 x+20 a x^2-5 x^3\right) (a+x)^4
-    &\text{ for } -a<x\leq a \\
-    1 & \text{ for } x > a
-\end{cases}
-    \approx H(x)
-\label{eq:approx_heaviside}
-\end{align}
-where $H(x)$ is the Heaviside step function.
-An integral of this function is
-\begin{align}
-\theta_a(x) := \begin{cases}
-    0 &\text{ for } x \leq -a \\
-    \frac{1}{256 a^7} \left(35 a^3-47 a^2 x+25 a x^2-5 x^3\right) (a+x)^5
-     &\text{ for } -a<x\leq a \\
-x &\text{ for } x > a
-\end{cases}
-    \approx x H(x)
-\end{align}
-Note that $\Theta_a(0) = 0.5$ and $\theta_a(0) = 35a/256$.
-
-We now use
-\begin{align}
-    -\theta_{\alpha/2}\left(\psi_{p,b} + \frac{\alpha}{2} - \psi \right)+\psi_{p,b}+\frac{\alpha}{2} \approx (\psi- \psi_{p,b})H(\psi_{p,b}-\psi) + \psi_{p,b}
-\label{eq:modified_psip}
-\end{align}
-instead of $\psi_p$ for the computation of the
-magnetic field, which introduces a shear layer between $\psi_{p,b}$ and $\psi_{p,b}+\alpha$ where the
-fieldlines are straightened to match $\ehat_\varphi$.
-In order to simplify the setup of this region we give $\psi_{p,b}$ and $\alpha$ in terms of
-$\rho_p$ and $\alpha_p$ via $\psi_{p,b} = (1-\rho_{p,b}^2)\psi_{p,O}$ and $\alpha = -(2\rho_{p,b} \alpha_p + \alpha_p^2)\psi_{p,O}$. In case we change the sign
-of $\psi_p$ via $\mathcal P_\psi$ (to make it concave) note that $\alpha$ becomes
-negative and $\psi_{p,O}$ is positive).
-We then need to point mirror Eq.~\eqref{eq:modified_psip} at $\psi_{p,b}+\frac{\alpha}{2}$.
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The model} \label{sec:model}
 \subsection{Conservative form}
@@ -771,9 +730,9 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
 with
 \begin{align}
 \vec u_E := \frac{\bhat\times\vn\psi}{B},\quad
-\vec u_{K} := \tau \left(\vec{\mathcal K_{\vn B}} + \vec{\mathcal K_{\vn\times\bhat}}\right)=\tau\vec{\mathcal K}  ,\nonumber\\
-\vec u_C := \mu U_\parallel^2\vec{\mathcal K_{\vn\times\bhat}},\quad
-\vec u_{\vn\times\bhat} := \tau\vec{\mathcal K_{\vn\times\bhat}},\quad
+\vec u_{K} := \tau \left(\vec{ K_{\vn B}} + \vec{ K_{\vn\times\bhat}}\right)=\tau\vec{ K}  ,\nonumber\\
+\vec u_C := \mu U_\parallel^2\vec{ K_{\vn\times\bhat}},\quad
+\vec u_{\vn\times\bhat} := \tau\vec{ K_{\vn\times\bhat}},\quad
 {\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B}.
 \label{}
 \end{align}
@@ -848,7 +807,7 @@ By dividing by $\rho_s^2 \Omega_{ci}$ we arrive at $\nu_\perp = \nu_{ii0}/\Omega
 \left(\frac{m_i}{m_H}\right)^{1/2},
 \end{align}
 
-\subsection{Boundary and initial conditions}
+\subsection{Boundary conditions: the penalization method}
 We define the simulation box as
 $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
@@ -861,19 +820,102 @@ where we define
 where $a$ is the minor radius, $e$ is the elongation of the flux surfaces and
 the $\varepsilon$ are free parameters to be specified by the user.
 
-We choose boundary conditions separately on input for the variables
-$n_e$, $u_{\parallel,e}$ and $\phi$. The boundary condition for $N_i$, $U_{\parallel,i}$ and
-$\psi$ are equal to $n_e$, $u_{\parallel,e}$ and $\phi$ respectively.
-We choose $A_\parallel$ to have equal boundary conditions as $u_{\parallel,e}$ and $U_{\parallel,i}$.
-This will later enable us to treat the sum of $U_\parallel$ and $A_\parallel$
-in the same way as $U_\parallel$.
-Typically,
+The boundary conditions for the potential and the magnetic potential are not
+penalized and thus hold on the bounding box. Typically we choose
 \begin{align}
-n_e = n_0, \quad u_{\parallel,e} = \phi = 0
-\text{ or } \hat n \cn n_e = \hat n \cn u_{\parallel,e} = 0
+\phi = 0
+\text{ and }  \hat n \cn A_{\parallel} = 0
 \end{align}
 where $\hat n$ is the normal vector to the boundary.
 
+\subsubsection{The wall region}
+Being a box, our computational domain is in particular not aligned with the
+magnetic flux surfaces. This means that particularly in the corners of
+the domain the field lines inside the domain are very short (in the
+sense that the distance between the entry point and leave point is short).
+It turns out that this behaviour is numerically disadvantageous (may
+blow up the simulation in the worst case) in the
+computation of parallel derivatives.
+In order to remedy this situation
+we propose a penalization method to model the actual physical wall.
+We define an approximation to the step function with a transition layer of radius $a$
+around the origin
+\begin{align}
+\Theta_a(x) := \begin{cases}
+    0 & \text{ for } x \leq -a  \\
+    \frac{1}{32 a^7}  \left(16 a^3-29 a^2 x+20 a x^2-5 x^3\right) (a+x)^4
+    &\text{ for } -a<x\leq a \\
+    1 & \text{ for } x > a
+\end{cases}
+    \approx H(x)
+\label{eq:approx_heaviside}
+\end{align}
+where $H(x)$ is the Heaviside step function.
+%An integral of this function is
+%\begin{align}
+%\theta_a(x) := \begin{cases}
+%    0 &\text{ for } x \leq -a \\
+%    \frac{1}{256 a^7} \left(35 a^3-47 a^2 x+25 a x^2-5 x^3\right) (a+x)^5
+%     &\text{ for } -a<x\leq a \\
+%x &\text{ for } x > a
+%\end{cases}
+%    \approx x H(x)
+%\end{align}
+%Note that $\Theta_a(0) = 0.5$ and $\theta_a(0) = 35a/256$.
+%
+We now use the region defined by
+\begin{align}\label{eq:wall}
+    \chi_w(R,Z,\varphi):=\Theta_{\alpha/2}\left(\psi_{p,b} + \frac{\alpha}{2} - \psi \right) \approx H(\psi_{p,b}-\psi)
+\end{align}
+to define the wall region.
+In order to simplify the setup of this region we give $\psi_{p,b}$ and $\alpha$ in terms of
+$\rho_p$ and $\alpha_p$ via $\psi_{p,b} = (1-\rho_{p,b}^2)\psi_{p,O}$ and $\alpha = -(2\rho_{p,b} \alpha_p + \alpha_p^2)\psi_{p,O}$. In case we change the sign
+of $\psi_p$ via $\mathcal P_\psi$ (to make it concave) note that $\alpha$ becomes
+negative and $\psi_{p,O}$ is positive).
+We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}$.
+
+Now, our idea is to dampen the density and velocity in the region defined by the
+wall to 1 or 0 respectively.
+For both electrons and ions we choose
+\begin{subequations} \label{eq:wall_penalization}
+\begin{align}
+    S^w_N(R,Z,\varphi, t) &:= -\omega_w\chi_w (N-1)\\
+    S^w_U(R,Z,\varphi, t) &:= -\omega_w\chi_w U_\parallel
+\end{align}
+\end{subequations}
+where $\omega_w \gg 1$ is the penalization parameter.
+\subsubsection{The sheath region}
+In order to define sheath boundary conditions we first define a sheath region
+and then determine whether the field lines point toward the wall or away from it.
+We define as sheath any part on the bounding box that is not included in the wall
+penalization. Then we check for each point in the box the poloidal distance to
+the sheath wall and if the poloidal field points toward or away from the wall closest
+to it.
+We then take $\theta_{\alpha/2}\left( (\eps_s + \frac{\alpha}{2})a - d(R,Z)\right)$
+and take the set intersection between that region and the ``not wall'' region to
+determine the sheath penalization region:
+\begin{align}\label{eq:sheath}
+    \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( (\eps_s + \frac{\alpha}{2})a - d(R,Z)\right)
+\end{align}
+Within the sheath region we penalize
+\begin{subequations} \label{eq:sheath_penalization}
+\begin{align}
+    S^s_N(R,Z,\varphi, t) &:= \omega_s \chi_s \left(N_{sh}-N\right)\\
+    S^s_{u_e}(R,Z,\varphi, t) &:= \omega_s \chi_s \left(\sqrt{1+\tau}\exp(-\phi) - u_{\parallel,e} \right)\\
+    S^s_{U_i}(R,Z,\varphi, t) &:= \omega_s \chi_s \left(\sqrt{1+\tau} - U_{\parallel,i} \right)\\
+\end{align}
+\end{subequations}
+where $\omega_s$ is the sheath penalization parameter and $N_{sh}$ is obtained by extrapolating $N$ along the magnetic field line with
+the help of the parallel derivative operators
+\begin{align}
+    N_{sh} = \Tpm N
+\end{align}
+where the sign depends again on the direction of the magnetic field line (we always extrapolate ``downstream'').
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Initial conditions}
 We initialize the parallel velocity to zero
 \begin{align}
   u_{\parallel,e}(R,Z,\varphi,0) = U_{\parallel,i}(R,Z,\varphi,0) = 0
@@ -997,21 +1039,6 @@ Also note that with our definition of $\Lambda_{n_e}$ and $\Lambda_{N_i}$ and
 the polarisation equation we have $\Lambda_{n_e} = \Gamma_{1,i}\Lambda_{N_i} + \nc\left( \frac{\mu_i \Lambda_{N_i}}{B^2}\np \phi\right)$ in the long wavelength limit (swap the operators).
 This means that diffusion does not generate potential either.
 
-Now, our idea is to dampen the density and velocity in the region defined by the
-magnetic field straightening.
-The idea for the terms $S_U$ is mainly to provide more numerical stability
-in the corner regions of the domain, where the parallel derivative may lead
-to unwelcome numerical instabilities.
-For both electrons and ions we choose
-\begin{subequations} \label{eq:velocity_source}
-\begin{align}
-    S^d_{n_e}(R,Z,\varphi,t) &:= -\omega_d (n_e-1)\Theta_{\alpha_p/2}\left(\rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2}\right)\\
-    S^d_{N_i}(R,Z,\varphi,t) &= \left(1-\frac{1}{2}\mu_i \tau_i \Delta_\perp\right) S^d_{n_e} -\nc\left( \frac{\mu_i S^d_{n_e}}{B^2}\np \phi\right)\\
-    S^d_U(R,Z,\varphi, t)& := -\omega_d U_\parallel \Theta_{\alpha_p/2}\left(  \rho_p(R,Z) - \rho_{p,b} - \frac{\alpha_p}{2} \right) - \frac{U_\parallel}{N} S_N
-\end{align}
-\end{subequations}
-The last term is there to avoid introducing an unintentional parallel momentum source through the
-density sources.
 
 \subsection{Implemented form}
 The form that we implement avoids derivatives on the product of
@@ -1019,28 +1046,34 @@ two functions for which we have no boundary conditions
 \begin{subequations}
     \begin{align}
     \frac{\partial}{\partial t} N =&
-        - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
+    \left[ - \frac{1}{B}[\psi, N]_{\perp} %\nonumber\\
         - \bar \npar \left( NU_\parallel\right)
         - NU_\parallel\left(\vec \nc\bhat+\vec \nc{\vec b}_\perp\right)
-        - \tau \mathcal K(N) \nonumber \\&
+        - \tau \mathcal K(N)\right. \nonumber \\&
+        \left.
         - N \mathcal K(\psi)
         -\mu \mathcal K_{\vn\times\bhat}(NU_\parallel^2)
-        -\mu NU_\parallel^2\nc \vec{ \mathcal K_{\vn\times\bhat}}
-        - \nu_\perp\Delta_\perp^2 N + S_N, \\
+        -\mu NU_\parallel^2\nc \vec{ K_{\vn\times\bhat}}
+    - \nu_\perp\Delta_\perp^2 N + S_N\right]
+    (1-\chi_s - \chi_w) \nonumber\\& + \omega_s\chi_s( N_{sh} - N) - \omega_w \chi_w N_w, \\
     \frac{\partial}{\partial t} W_\parallel =&
-        - \frac{1}{B}\left[\psi, U_\parallel\right]_{\perp}%& \nonumber\\
+  \left[- \frac{1}{B}\left[\psi, U_\parallel\right]_{\perp}%& \nonumber\\
         - \frac{1}{\mu} \bar \npar \psi% \nonumber\\
         - \frac{1}{2}\bar \npar U_\parallel^2
         -\frac{\tau}{\mu} \bar \npar \ln N
         - U_\parallel\mathcal K_{\vn\times\bhat}(\psi)
         - \tau \mathcal K(U_\parallel)
-        -\tau U_\parallel\nc\vec{ \mathcal K_{\vn\times\bhat}}\nonumber\\&
-        - \left(2\tau + {\mu}U_\parallel^2\right) \mathcal K_{\vn\times\bhat} (U_\parallel)
+        -\tau U_\parallel\nc\vec{ K_{\vn\times\bhat}}
+    \right.
+        \nonumber\\&
+    \left.- \left(2\tau + {\mu}U_\parallel^2\right) \mathcal K_{\vn\times\bhat} (U_\parallel)
         -2\tau U_\parallel\mathcal K_{\vn\times\bhat}(\ln N)
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_{\parallel,i} - u_{\parallel,e})
- \nonumber\\&
-        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \nu_\perp\Delta_\perp^2 U_\parallel
-                + S_U,
+    \right.\nonumber\\&
+    \left.+ \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \nu_\perp\Delta_\perp^2 U_\parallel
+    + S_U\right]
+    (1-\chi_s - \chi_w) + \omega_s\chi_s ( U_{\parallel}^{sh} - U_\parallel) -\omega_w \chi_wU_\parallel
+    ,
         \label{eq:EgyrofluidU} \\
         W_\parallel&:= \left( U_\parallel + \frac{A_\parallel}{\mu}\right)
     \end{align}
@@ -1048,7 +1081,7 @@ two functions for which we have no boundary conditions
 \end{subequations}
 together with
 $\bar\npar f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
-and $\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ \mathcal{ K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
+and $\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ { K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -1059,7 +1092,9 @@ and
     A_\parallel &= \beta\left(N_iW_{\parallel,i}-n_e w_{\parallel,e}\right)
   \end{align}
 \end{subequations}
-Note that the negative signs make the operators in Eqs.~\eqref{eq:elliptic} positive definite.
+\begin{tcolorbox}[title=Note]
+The negative signs make the operators in Eqs.~\eqref{eq:elliptic} positive definite.
+\end{tcolorbox}
 
 In the output file we have
 \begin{longtable}{llll}
@@ -1449,11 +1484,11 @@ There seems to be no benefit in using the grid refinement technique except when 
 \\
 time & Multistep "Karniadakis" & \\
 \qquad explicit & Multistep "Karniadakis" & $3$rd order explicit\\
-\qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains perp. Diffusion terms. \\
+\qquad implicit & Multistep "Karniadakis" & $2$nd order implicit, contains the penalization term and optionally the perp. Diffusion terms. \\
 \bottomrule
 \end{longtable}
-Note that the explicit resistive and damping terms lead to absolute (CFL) restriction
-on the timestep according to $\partial_t u_e \propto \frac{\eta}{\mu_e} u_e \Rightarrow \Delta t < \frac{-\mu_e}{\eta}$. This is a quite weak restriction unless the resistivity exceeds $\eta > 10^{-4}$ or the damping coefficient excceeds $1$.
+Note that the explicit resistive term leads to an absolute (CFL) restriction
+on the timestep according to $\partial_t u_e \propto \frac{\eta}{\mu_e} u_e \Rightarrow \Delta t < \frac{-\mu_e}{\eta}$. This is a quite weak restriction unless the resistivity exceeds $\eta > 10^{-4}$.
 The explicit parallel electron viscosity term leads to a CFL condition of the
 form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 
@@ -1495,9 +1530,12 @@ the output file \texttt{output.nc}.
  Both programs write unstructured human readable performance information of the running simulation
  to \texttt{std::cout}.
 
-Note that when compiled for mpi, the program \texttt{feltor\_hpc.cu} expects the
+\begin{tcolorbox}[title=Note]
+When compiled for mpi, the program \texttt{feltor\_hpc.cu} expects the
 partition of the total number of processes np into the three directions x, y and z
-as an input from the command line. Make sure that \texttt{npx*npy*npz==np} and that
+as an input from the command line.
+\end{tcolorbox}
+Make sure that \texttt{npx*npy*npz==np} and that
 they evenly divide the number of grid points in the respective direction! The
 number of stages in the multigrid algorithm and the compression parameters further
 restrict this choice. Also note that the number of processes in a direction must
@@ -1505,93 +1543,86 @@ not equal the number of grid points in that direction!
 
 
 \subsection{Input file structure} \label{sec:input_file}
-Input file format: json
+Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json}
 
 %%This is a booktabs table
-\begin{longtable}{llllp{6cm}}
+\begin{longtable}{llp{2.5cm}p{7cm}}
 \toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &Number of Gaussian nodes in R and Z (we practically always take 3)
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example}  & \textbf{Description}  \\ \midrule
+n      & integer & 3 &Number of Gaussian nodes in R and Z (we practically always take 3)
 \\
-Nx     & integer &52& - &Number of grid points in R (increase if your simulations crash)
+Nx     & integer &52&Number of grid points in R (increase if your simulations crash)
 \\
-Ny     & integer &52& - &Number of grid points in Z (increase if your simulations crash)
+Ny     & integer &52&Number of grid points in Z (increase if your simulations crash)
 \\
-Nz     & integer &16& - &Number of grid points in $\varphi$ (determines dt
+Nz     & integer &16&Number of grid points in $\varphi$ (determines dt
 since parallel velocity dominates timestep)
 \\
-dt     & integer &1e-2& - & time stepsize in units of $c_s/\rho_s$ \\
-compression & integer[2] & [2,2] & [1,1] & Compress output file by reducing
+dt     & integer &1e-2& time stepsize in units of $c_s/\rho_s$ \\
+compression & integer[2] & [2,2] & Compress output file by reducing
 points in x and y (pojecting the polynomials onto a coarser grid): output
 contains n*Nx/c[0] points in x, (has to divde Nx evenly), and n*Ny/c[1] points
 in y, (has to divde Ny evenly). 2 or 3 are reasonable values.
 \\
-inner\_loop & integer & 2  & 1 & Number of time steps between updates to the
+inner\_loop & integer & 2  & Number of time steps between updates to the
 time integrated quantities. (Although the diagnostics is quite fast sometimes
 you need to amortize the time spent on it). Note that integrating selected
 quantities in time during the simulation is how we maintain the time-resolution
 in the file output (cf. \ref{sec:output_file}). Choose as low as you can get
 away with (between 1 and 10).
 \\
-itstp       & integer & 2  & - &{ \tt inner\_loop*itstp} is the number of
+itstp       & integer & 2  &{ \tt inner\_loop*itstp} is the number of
 timesteps between file outputs (2d and 3d quantities); Note that 1d and 0d
 quantities can only be computed post-simulation since we can't compute
 flux-integrals in parallel in MPI.
 \\
-maxout      & integer & 10 & - & Total Number of fields outputs excluding first
+maxout      & integer & 10 & Total Number of fields outputs excluding first
 (The total number of time steps is {\tt maxout$\cdot$itstp$\cdot$inner\_loop})
 If you want to let the simulation run for a certain time instead just choose
 this parameter very large and let the simulation hit the time-limit.
 \\
-eps\_time   & float & 1e-7  & - & Tolerance for solver for implicit part in
-time-stepper (if too low, you'll see oscillations in $u_{\parallel,e}$ and/or $\phi$)
+eps\_time   & float & 1e-7  & Tolerance for solver for implicit part in
+time-stepper (if too low, you'll see oscillations in $u_{\parallel,e}$ and/or $\phi$) Relevant only if diffusion is treated implicitly.
 \\
-rtol  & float &1e-6   & - &Tolerance of adaptive time-stepper. (Ignored in Multistep)
-\\
-stages      & integer & 3 & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
+stages      & integer & 3 & number of stages in multigrid, $2^{\text{stages-1}}$
 has to evenly divide both $N_x$ and $N_y$
 \\
-eps\_pol    & float[stages] & [1e-6,1,1]  & - &  The first number is the tolerance for residual of the inversion of polarisation and induction Eq.. The second number is a multiplicative factor for the accuracy on the second grid in a multigrid scheme, the third for the third grid and so on.  (i.e. $\eps_0\eps_i$ is the accuracy on the i-th grid)
+eps\_pol    & float[stages] & [1e-6,1,1]  &  The first number is the tolerance for residual of the inversion of polarisation and induction Eq.. The second number is a multiplicative factor for the accuracy on the second grid in a multigrid scheme, the third for the third grid and so on.  (i.e. $\eps_0\eps_i$ is the accuracy on the i-th grid)
 Tuning those factors is a major performance tuning oppourtunity!! For saturated turbulence the suggested values are [1e-6, 2000, 100].
 \\
-jumpfactor  & float & 1 & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms. (Don't touch unless you know what you're doing.
+jumpfactor  & float & 1 & Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the elliptic terms. (Don't touch unless you know what you're doing.
 \\
-eps\_gamma  & float & 1e-6  & - & Tolerance for $\Gamma_1$
+eps\_gamma  & float & 1e-6  & Tolerance for $\Gamma_1$
 \\
-FCI & dict & & & Parameters for Flux coordinate independent approach
+FCI & dict & & Parameters for Flux coordinate independent approach
 \\
-\qquad refine     & integer[2] & [1,1] & [1,1] & refinement factor in FCI approach in R- and Z-direction.
-We use [1,1], higher values take more time, but possibly stabilize the simulation.
+\qquad refine     & integer[2] & [2,2] & refinement factor in FCI approach in R- and Z-direction.
+We use [2,2], higher values take more time, but possibly stabilize the simulation.
 \\
-\qquad rk4eps     & float & 1e-6 & 1e-6 & Accuracy of fieldline integrator in FCI. The default is reasonable.
+\qquad rk4eps     & float & 1e-6 & Accuracy of fieldline integrator in FCI. The default is reasonable.
 \\
-\qquad periodify & bool & true & true & Indicate if flux function is periodified beyond grid boundaries such that the contours are perpendicular to the boundaries. This is not entirely consistent but works better for small toroidal resolution
+\qquad periodify & bool & true & Indicate if flux function is periodified beyond grid boundaries such that the contours are perpendicular to the boundaries. This is not entirely consistent but works better for small toroidal resolution
 \\
-mu         & float & -0.000272121& - & $\mu_e =-m_e/m_i$.
+mu         & float & -0.000272121& $\mu_e =-m_e/m_i$.
     One of $\left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$
 \\
-tau        & float &1      & - & $\tau = T_i/T_e$
+tau        & float &1      & $\tau = T_i/T_e$
 \\
-beta       & float & 5e-6  & 0 & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot
+beta       & float & 5e-6  & Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot
 10^{-3}$ (Compass), If $0$, then the model is electrostatic
 \\
-nu\_perp   & float &1e-3   & - & perpendicular viscosity $\nu_\perp$, increase
+nu\_perp   & float &1e-3   & perpendicular viscosity $\nu_\perp$, increase
 this or the resolution if you see vertical or horizontal oscillations (likely
 from the advection terms) in your simulation box, decrease if it dampens all
 instabilities
 \\
-perp\_diff & string & "viscous" & "viscous" & "viscous": $\Lambda_\perp\propto
+perp\_diff & string[2] & ["viscous","explicit"] & "viscous": $\Lambda_\perp\propto
 \nu_\perp\Delta_\perp$ , "hyperviscous": $\Lambda_\perp \propto
--\nu_\perp\Delta_\perp^2$
+-\nu_\perp\Delta_\perp^2$, the second entry indicates whether the perpendicular diffusion is to be treated explicit or implicit (we recommend explicit since in 3d the parallel dynamics restricts the timestep)
 \\
-%nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$
-%(dimensional analysis reveals there can be a factor $(R_0/\rho_s)^2$ between
-%$\nu_\perp $n and $\nu_\parallel$ for $\nu_\parallel$ to become relevant for
-%the dynamics)
-%\\
-resistivity & float &1e-4  & - & parallel resistivity parameter Eq.~\eqref{eq:resistivity}
+resistivity & float &1e-4  & parallel resistivity parameter Eq.~\eqref{eq:resistivity}
 \\
-curvmode  & string & "low beta"  & "toroidal" &
+curvmode  & string & "toroidal" &
 curvature mode (
 "low beta",
 "true": no approximation - requires significantly more resolution in Nz,
@@ -1599,118 +1630,131 @@ curvature mode (
 communication in z
 )
 \\
-symmetric & bool & false & false & If true, initialize all quantities symmetric
+symmetric & bool & false & If true, initialize all quantities symmetric
 in $\varphi$ (effectively reducing the problem to 2d). The input $N_z$ is used
 to construct the parallel derivatives and then overwritten to $N_z\equiv 1$.
 \\
-bc & dict & & & Boundary conditions (note that $A_\parallel$ has the same bc as $U_\parallel$) \ldots\\
-\qquad density   & char[2] & [DIR,DIR] & -  & boundary conditions in x and y
+bc & dict & & Boundary conditions (note that $A_\parallel$ has the same bc as $U_\parallel$) \ldots\\
+\qquad density   & char[2] & [DIR,DIR] & boundary conditions in x and y
 for $n_e$ and $N_i$, DIR (density 1 on boundary) means both convective and
     diffusive outflow while NEU (gradient 0) means no outflow by diffusion
 \\
-\qquad velocity  & char[2] & [NEU,NEU] & - & boundary conditions in x and y for
+\qquad velocity  & char[2] & [NEU,NEU] & boundary conditions in x and y for
 $u_{\parallel,e}$ and $U_{\parallel,i}$ and $A_\parallel$, DIR is in general not very stable, NEU works
 better\\
-\qquad potential & char[2] & [DIR,DIR] & - & boundary conditions in x and y for
+\qquad potential & char[2] & [DIR,DIR] & boundary conditions in x and y for
 $\phi$ and $\psi$, DIR means that the $v_{E,\perp}=0$ on the boundary (i.e. no
-outflow by \ExB drift), NEU can can have a detrimental effect on timestep \\
-box & dict & & & Bounding box \\
-    \qquad scaleR  & float[2] & [1.1,1.1]     & [1.05,1.05] & $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
-    \qquad scaleZ  & float[2] & [1.2,1.1]     & [1.05,1.05] & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box}
+outflow by \ExB drift), NEU can have a detrimental effect on timestep \\
+box & dict & & Bounding box \\
+    \qquad scaleR  & float[2] & [1.1,1.1]     & $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in units of $a$ Eq.~\eqref{eq:box}\\
+    \qquad scaleZ  & float[2] & [1.2,1.1]     & $\varepsilon_{Z-}, \varepsilon_{Z+}$ scale lower and upper boundary in units of $ae$ Eq.~\eqref{eq:box}
 \\
-initne    & string & "turbulence"     & "blob"  & initial condition for the
+initne    & string & "turbulence"     & initial condition for the
 perturbation $\tilde n$ in \eqref{eq:initial_ne}. "zonal" (Eq.~\eqref{eq:initial_zonal_flow}),
+    "zero" = no perturbation,
     "blob" = blob simulations (several rounds fieldaligned),
     "straight blob" = straight blob simulation( 1 round fieldaligned),
     "turbulence" = turbulence simulations ( 1 round fieldaligned, Eq.~\eqref{eq:initial_turbulent})
     "turbulence on gaussian" = Gaussian bg. profile with turbulence perturbation Eq.~\eqref{eq:turbulence_on_gaussian}
     See the file {\tt init.h} to add your own custom condition.
 \\
-initphi   & string & "zero"  & "balance" & (ignored if $\tau_i = 0$, then $\phi=0$) initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
+initphi   & string & "zero"  & (ignored if $\tau_i = 0$, then $\phi=0$) initial condition for $\phi$ and thus $N_i$ (Eq.~\eqref{eq:initphi}: "zero" : $\phi = 0$, vanishing
 electric potential, "balance": ExB vorticity equals ion diamagnetic vorticity
 \\
-amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
-sigma      & float &2      & - & Gaussian variance in units of $\rho_s$ \\
-posX       & float &0.3    & - & Gaussian R-position in units of $a$\\
-posY       & float &0.0    & - & Gaussian Z-position in units of $a$ \\
-sigma\_z    & float &0.25   & - & toroidal variance in units of $\pi$ of the fieldline-following initialization \\
-k\_psi     & float &0    & - & zonal mode wave number (only for "zonal" initial condition)  \\
-profile & Dict & & & Density profile \\
-\qquad amp& float &4   & 0 & Profile amplitude $\triangle n_{peak}$ in
+amplitude  & float &0.01   & amplitude $A$ of initial perturbation (blob, turbulent bath or zonal flow)  \\
+sigma      & float &2      & Gaussian variance in units of $\rho_s$ \\
+posX       & float &0.3    & Gaussian R-position in units of $a$\\
+posY       & float &0.0    & Gaussian Z-position in units of $a$ \\
+sigma\_z    & float &0.25  & toroidal variance in units of $\pi$ of the fieldline-following initialization \\
+k\_psi     & float &0    & zonal mode wave number (only for "zonal" initial condition)  \\
+profile & Dict & & Density profile \\
+\qquad amp& float &4   & Profile amplitude $\triangle n_{peak}$ in
 Eq.~\eqref{eq:density_profile} and Eq.~\eqref{eq:turbulence_on_gaussian}
 \\
-\qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
+\qquad alpha  & float & 0.2 & Transition width $\alpha_p$ in the Heaviside
 at the separatrix (must not be zero - even if amp is zero - it is also used for the perturbation)
 \\
-source & dict & & & Density source, cf. the output \texttt{sne\_tt\_ifs} in \texttt{feltordiag} (or \texttt{SourceProfile\_ifs} in \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates and compare to \texttt{jsne\_tt\_fsa} to see how much mass is lost.  \\
-\qquad rate & float & 0    & 0 & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}.
+source & dict & & Density source, cf. the output \texttt{sne\_tt\_ifs} in \texttt{feltordiag} (or \texttt{SourceProfile\_ifs} in \texttt{geometry\_diag}) to see how much mass the source with the parameters below generates and compare to \texttt{jsne\_tt\_fsa} to see how much mass is lost.  \\
+\qquad rate & float & 0    & profile source rate $\omega_s$ in Eq.~\eqref{eq:electron_source}.
 \\
-\qquad type & string & "profile" & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
+\qquad type & string & "profile" & The type of source to use: "profile" the source is multiplied by $(n_{prof} - n)$ to relax to the initial profile Eq.~\eqref{eq:electron_source};
 "influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx},
 "torpex": Torpex inspired source profile Eq.~\eqref{eq:electron_source_torpex},
 "gaussian": Gaussian shaped source profile - uses \texttt{posX}, \texttt{posY} and \texttt{sigma},
     See the file {\tt init.h} to add your own custom source.
 \\
-\qquad boundary & float & 0.2  & 0.5 & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
-\qquad alpha  & float & 0.2 & 0.2 & Transition width $\alpha_p$ in the Heaviside
+\qquad boundary & float & 0.2  & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\
+\qquad alpha  & float & 0.2 & Transition width $\alpha_p$ in the Heaviside
 in the density Eq.~\eqref{eq:density_profile} (with $\rho_{p,b}=0$ and source profiles Eq.~\eqref{eq:electron_source} (should be
 small but cannot be too small if $\tau_i > 0$ else $\Delta_\perp n_e$ explodes, must not be zero)
 \\
-damping & dict & & & magnetic and density damping region \\
-\qquad modifier & string & "sol\_pfr" & "sol\_pfr" & One of ``none'', ``heaviside'' or ``sol\_pfr'' \\
-\qquad rate & float & 0    & 0   & Friction coefficient $\omega_d$ in density and velocity damping Eq.~\eqref{eq:velocity_source} \\
-\qquad boundary & float[2] & [1.2,0.8]  & [1.2,0.8] & Modification region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.~\eqref{eq:modified_psip}.
+wall & dict & & magnetic and density damping region \\
+\qquad type & string & "sol\_pfr" & One of ``none'', ``heaviside'' or ``sol\_pfr'' \\
+\qquad penalization & float & 1    & penalization coefficient $\omega_w$ in density and velocity damping Eq.~\eqref{eq:wall_penalization} \\
+\qquad boundary & float[2] & [1.2,0.8]  & Wall region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.~\eqref{eq:wall}.
 \\
-\qquad alpha   & float[2] & [0.25,0.25] & 0 & Transition width $\alpha_p$: yields
-$\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside in the modified
-$\psi_p$ function \eqref{eq:modified_psip}. If zero, then we do not modify the
-magnetic field and damping is ignored.\\
+\qquad alpha   & float[2] & [0.25,0.25] & Transition width $\alpha_p$: yields
+$\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside in the wall function \eqref{eq:wall}. If zero, we do not have a wall.
+\\
+sheath & dict & & Sheath region and boundary condition \\
+\qquad bc & string & "bohm" & One of ``bohm'',  or ``insulation'' \\
+\qquad penalization & float & 1    & penalization coefficient $\omega_s$ in density and velocity damping Eq.~\eqref{eq:sheath_penalization} \\
+\qquad boundary & float & 0.3  & Wall region boundary $\rho_{p,b}$: yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.~\eqref{eq:sheath}.
+\\
+\qquad alpha   & float & 0.2 & Transition width $\alpha_p$: yields
+$\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside in the wall function \eqref{eq:sheath}.
+\\
 \bottomrule
 \end{longtable}
 \subsection{Geometry file structure} \label{sec:geometry_file}
-File format: json
+File format: \href{https://en.wikipedia.org/wiki/JSON}{json}
 
 The file structure of the geometry file depends on which expansion for $\psi_p$ is chosen Eq.~\eqref{eq:solovev} or Eq.~\eqref{eq:polynomial}.
 %%This is a booktabs table
 A solovev magnetic field equilibrium
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-    A      & float & 0 &  0 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
-    c      & float[12] &  - & - & Solovev coefficients in Eq.~\eqref{eq:solovev} \\
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Description}  \\ \midrule
+    A      & float & 0 & Solovev parameter in Eq.~\eqref{eq:solovev} \\
+    c      & float[12] &  - & Solovev coefficients in Eq.~\eqref{eq:solovev} \\
 \bottomrule
 \end{longtable}
 A polynomial magnetic field equilibrium
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-    M      & float & 1 &  1 & Number of polynomial coefficients in $R$ in Eq.~\eqref{eq:polynomial} \\
-    N      & float & 1 &  1 & Number of polynomial coefficients in $Z$ in Eq.~\eqref{eq:polynomial} \\
-    c      & float[MN] &  - & - & Polynomial coefficients in Eq.~\eqref{eq:polynomial} \\
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Description}  \\ \midrule
+    M      & float & 1 & Number of polynomial coefficients in $R$ in Eq.~\eqref{eq:polynomial} \\
+    N      & float & 1 & Number of polynomial coefficients in $Z$ in Eq.~\eqref{eq:polynomial} \\
+    c      & float[MN] &  - & Polynomial coefficients in Eq.~\eqref{eq:polynomial} \\
 \bottomrule
 \end{longtable}
 In addition both files must contain
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-    PP     & float & 1 &  1 & Prefactor $\mathcal P_\psi$ for $\psi_p$ \\
-    PI     & float & 1 &  1 & Prefactor $\mathcal P_I$ for $I$ \\
-    R\_0   & float & - & -  & Major radius $R_0$ in units of $\rho_s$ (This is the only geometry quantity to change if $\rho_s$ changes)\\
-    elongation    & float & 1 & - & Elongation $e$, used in determining the box size Eq.~\eqref{eq:box} and the initial guess for the location of the X-point $Z_X = -1.1 ea$ \\
-    triangularity & float & 0 & - & Triangularity $\delta$, used in the initial guess for the location of the X-point $R_X = R_0-1.1\delta a$ \\
-    inverseaspectratio & float & 0.16667 & - & minor to major radius $a/R_0$ (used to compute $a$ from $R_0$) \\
-    equilibrium & string & polynomial & solovev & Tells the magnetic field generation which type of expansion to use for the flux function \\
-    description & string & standardX & standardX & Tells the magnetic field modifier
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Description}  \\ \midrule
+    PP     & float & 1 & Prefactor $\mathcal P_\psi$ for $\psi_p$ \\
+    PI     & float & 1 & Prefactor $\mathcal P_I$ for $I$ \\
+    R\_0   & float & - & Major radius $R_0$ in units of $\rho_s$ (This is the only geometry quantity to change if $\rho_s$ changes)\\
+    elongation    & float & 1 & Elongation $e$, used in determining the box size Eq.~\eqref{eq:box} and the initial guess for the location of the X-point $Z_X = -1.1 ea$ \\
+    triangularity & float & 0 & Triangularity $\delta$, used in the initial guess for the location of the X-point $R_X = R_0-1.1\delta a$ \\
+    inverseaspectratio & float & 0.16667& minor to major radius $a/R_0$ (used to compute $a$ from $R_0$) \\
+    equilibrium & string & solovev & Tells the magnetic field generation which type of expansion to use for the flux function \\
+    description & string & standardX & Tells the magnetic field modifier
     where to look for the SOL and PFR regions \\
 \bottomrule
 \end{longtable}
 
 \subsection{Output} \label{sec:output_file}
-Output file format: netcdf-4/hdf5; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
-We follow \textbf{CF Conventions CF-1.7}
-\url{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}
+Output file format: \href{https://www.unidata.ucar.edu/software/netcdf/docs/}{netcdf-4/hdf5};
+
+A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
+We follow
+\href{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}{CF Conventions CF-1.7}
 and write according attributes into the file.
+
+\begin{tcolorbox}[title=Note]
 The command \texttt{ncdump -h output.nc} gives a full list of what a file contains.
+\end{tcolorbox}
 Here, we list the content without attributes
 since the internal netcdf information does not display equations.
 %
@@ -1808,7 +1852,10 @@ Usage \\
 errors or other careless mistakes.
 \end{tcolorbox}
 
-Output file format: netcdf-4/hdf5, Conventions: CF-1.7; A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
+Output file format: \href{https://www.unidata.ucar.edu/software/netcdf/docs/}{netcdf-4/hdf5};
+\href{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}{CF Conventions CF-1.7}
+
+A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
 
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
@@ -1856,7 +1903,7 @@ Usage \\
 \texttt{./geometry\_diag input.json geometry.json diag\_geometry.nc} \\
 The program outputs a host of static 1d, 2d and 3d geometric quantities.
 The output file is for example useful in connection with the ``Group Datasets'' filter in paraview, which merges Datasets from different files into one using shallow copy only.
-\section{Error conditions}
+\section{Troubleshooting}
 All previously mentioned codes can crash for various reasons. Here,
 we list and describe situations, which generally may lead to program
 termination

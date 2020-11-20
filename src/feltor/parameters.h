@@ -22,7 +22,6 @@ struct Parameters
     double jfactor;
     double eps_gamma;
     double eps_time;
-    double rtol;
     unsigned stages;
     unsigned mx, my;
     double rk4eps;
@@ -40,7 +39,7 @@ struct Parameters
     double sigma_z;
     double k_psi;
 
-    double source_rate, damping_rate, sheath_rate;
+    double source_rate, wall_rate, sheath_rate;
     double source_alpha, profile_alpha;
     double source_boundary;
     double nprofamp;
@@ -49,7 +48,7 @@ struct Parameters
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP;
     std::string initne, initphi, curvmode, perp_diff;
-    std::string source_type, sheath_type;
+    std::string source_type, sheath_bc;
     bool symmetric, periodify, explicit_diffusion ;
     Parameters() = default;
     Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
@@ -66,7 +65,6 @@ struct Parameters
         itstp   = file::get( mode, js, "itstp", 0).asUInt();
         maxout  = file::get( mode, js, "maxout", 0).asUInt();
         eps_time    = file::get( mode, js, "eps_time", 1e-10).asDouble();
-        rtol        = file::get( mode, js, "rtol", 1e-5).asDouble();
 
         stages      = file::get( mode, js, "stages", 3).asUInt();
         eps_pol.resize(stages);
@@ -91,7 +89,25 @@ struct Parameters
         beta        = file::get( mode, js, "beta", 0.).asDouble();
         eta         = file::get( mode, js, "resistivity", 0.).asDouble();
         nu_perp     = file::get( mode, js, "nu_perp", 0.).asDouble();
-        perp_diff   = file::get( mode, js, "perp_diff", "viscous").asString();
+        perp_diff   = file::get_idx( mode, js, "perp_diff", 0, "viscous").asString();
+        std::string temp = file::get_idx( mode, js, "perp_diff", 1, "").asString();
+        explicit_diffusion = true;
+        if(temp == "implicit")
+            explicit_diffusion = false;
+        else if(temp == "explicit")
+            explicit_diffusion = true;
+        else
+        {
+            if( file::error::is_throw == mode)
+                throw std::runtime_error( "Value "+temp+" for perp_diff[1] is invalid! Must be either explicit or implicit\n");
+            else if ( file::error::is_warning == mode)
+                std::cerr << "Value "+temp+" for perp_diff[1] is invalid!\n";
+            else
+                ;
+        }
+
+        explicit_diffusion = file::get( mode, js, "explicit_diff", false).asBool();
+
         //nu_parallel = file::get( mode, js, "nu_parallel", 0.).asDouble();
         //Init after reading in eta and mu[0]
         nu_parallel[0] = 0.73/eta;
@@ -105,18 +121,17 @@ struct Parameters
         posY        = file::get( mode, js, "posY", 0.).asDouble();
         sigma_z     = file::get( mode, js, "sigma_z", 0.).asDouble();
         k_psi       = file::get( mode, js, "k_psi", 0.).asDouble();
-        explicit_diffusion = file::get( mode, js, "explicit_diff", false).asBool();
 
         nprofamp   = file::get( mode, js, "profile", "amp", 0.).asDouble();
         profile_alpha = file::get( mode, js, "profile", "alpha", 0.2).asDouble();
 
         source_rate     = file::get( mode, js, "source", "rate", 0.).asDouble();
         source_type     = file::get( mode, js, "source", "type", "profile").asString();
-        sheath_type     = file::get( mode, js, "sheath", "type", "bohm").asString();
+        sheath_bc       = file::get( mode, js, "sheath", "bc", "bohm").asString();
         source_boundary = file::get( mode, js, "source", "boundary", 0.5).asDouble();
         source_alpha    = file::get( mode, js, "source", "alpha", 0.2).asDouble();
-        damping_rate = file::get( mode, js, "damping", "rate", 0.).asDouble();
-        sheath_rate  = file::get( mode, js, "sheath", "rate", 0.).asDouble();
+        wall_rate = file::get( mode, js, "wall", "penalization", 0.).asDouble();
+        sheath_rate  = file::get( mode, js, "sheath", "penalization", 0.).asDouble();
 
         bcxN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 0, "").asString());
         bcyN = dg::str2bc(file::get_idx( mode, js, "bc", "density", 1, "").asString());
@@ -163,9 +178,9 @@ struct Parameters
             <<"     source_alpha:                 "<<source_alpha<<"\n"
             <<"     profile_alpha:                "<<profile_alpha<<"\n"
             <<"     source_type:                  "<<source_type<<"\n"
-            <<"     damping_rate:                 "<<damping_rate<<"\n"
-            <<"     sheath_rate:                  "<<sheath_rate<<"\n"
-            <<"     sheath_type:                  "<<sheath_type<<"\n"
+            <<"     wall_penalization:            "<<wall_rate<<"\n"
+            <<"     sheath_penalization:          "<<sheath_rate<<"\n"
+            <<"     sheath_bc:                    "<<sheath_bc<<"\n"
             <<"     density profile amplitude:    "<<nprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
@@ -181,7 +196,6 @@ struct Parameters
             <<"     Jump scale factor:    "<<jfactor<<"\n"
             <<"     Accuracy Gamma CG:    "<<eps_gamma<<"\n"
             <<"     Accuracy Time  CG:    "<<eps_time<<"\n"
-            <<"     Accuracy Time Stepper "<<rtol<<"\n"
             <<"     Accuracy Fieldline    "<<rk4eps<<"\n"
             <<"     Periodify FCI         "<<std::boolalpha<< periodify<<"\n"
             <<"     Refined FCI           "<<mx<<" "<<my<<"\n"

@@ -6,6 +6,10 @@
 #include "toroidal.h"
 #include <dg/file/json_utilities.h>
 
+/*!@file
+ *
+ * Making of penalization regions
+ */
 namespace dg{
 namespace geo{
 ///@addtogroup geom
@@ -69,10 +73,10 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
     double RO=mag.R0(), ZO=0.;
     dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     double psipO = mag.psip()( RO, ZO);
-    double damping_psi0p = (1.-psi0*psi0)*psipO;
-    double damping_alpha0p = -(2.*psi0+alpha0)*alpha0*psipO;
-    psi0 = damping_psi0p + sign0*damping_alpha0p/2.;
-    alpha0 = fabs( damping_alpha0p/2.);
+    double wall_psi0p = (1.-psi0*psi0)*psipO;
+    double wall_alpha0p = -(2.*psi0+alpha0)*alpha0*psipO;
+    psi0 = wall_psi0p + sign0*wall_alpha0p/2.;
+    alpha0 = fabs( wall_alpha0p/2.);
     sign0 = sign0*((psipO>0)-(psipO<0));
 }
 }//namespace detail
@@ -87,23 +91,24 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
  * This subsequently modifies all derivatives of psi and the poloidal
  * current in this region.
  * @param gs forwarded to dg::geo::createMagneticField
- * @param jsmod must contain the field "damping": "modifier" which has one of the values "none", "heaviside" then
- *  "damping": "boundary" value where psi is modified to a constant psi0
- * "damping": "alpha" radius of the transition region where the modification acts (smaller is quicker) or "sol_pfr", then "
- *  "damping": "boundary" and
- * "damping": "alpha" must be arrays of size 2 to indicate values for the SOL and the PFR respectively
+ * @param jsmod must contain the field "wall": "type" which has one of the values "none", then no other values are required; "heaviside" then requires
+ *  "wall": "boundary" value where psi is modified to a constant psi0
+ * "wall": "alpha" radius of the transition region where the modification acts (smaller is quicker);
+ * or "sol_pfr", then requires
+ *  "wall": "boundary" and
+ * "wall": "alpha" must be arrays of size 2 to indicate values for the SOL and the PFR respectively
  * @param mode Determines behaviour in case of an error
- * @param damping (out) On output contains the region where the damping is applied
+ * @param wall (out) On output contains the region where the wall is applied
  * @param transition (out) On output contains the region where the transition of Psip to a constant value occurs
  * @note Per default the dampening happens nowhere
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  */
-static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Value jsmod, file::error mode, CylindricalFunctor& damping, CylindricalFunctor& transition)
+static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Value jsmod, file::error mode, CylindricalFunctor& wall, CylindricalFunctor& transition)
 {
     std::string e = file::get( mode, gs, "equilibrium", "solovev" ).asString();
     equilibrium equi = str2equilibrium.at( e);
-    std::string m = file::get( mode, jsmod, "damping", "modifier", "heaviside" ).asString();
+    std::string m = file::get( mode, jsmod, "wall", "type", "heaviside" ).asString();
     modifier mod = str2modifier.at( m);
     std::string d = file::get( mode, gs, "description", "standardX" ).asString();
     description desc = str2description.at( d);
@@ -115,32 +120,32 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
     switch (mod) {
         default: //none
         {
-            damping = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 0, 0);
+            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 0, 0);
             transition = mod::MagneticTransition( mod::nowhere, mag.psip(), 0, 0, 0);
             return mag;
         }
         case modifier::heaviside:
         {
-            double psi0 = file::get( mode, jsmod, "damping", "boundary", 1.1 ).asDouble();
-            double alpha = file::get( mode, jsmod, "damping", "alpha", 0.2 ).asDouble();
+            double psi0 = file::get( mode, jsmod, "wall", "boundary", 1.1 ).asDouble();
+            double alpha = file::get( mode, jsmod, "wall", "alpha", 0.2 ).asDouble();
             double sign = +1;
             if( desc == description::standardX || desc == description::standardO ||
                     desc == description::doubleX)
                 detail::transform_psi( mag, psi0, alpha, sign);
             else
-                sign = file::get( mode, jsmod, "damping", "sign", -1. ).asDouble();
+                sign = file::get( mode, jsmod, "wall", "sign", -1. ).asDouble();
 
             mod_psip = mod::createPsip( mod::everywhere, mag.get_psip(), psi0, alpha, sign);
-            damping = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha, -sign);
+            wall = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha, -sign);
             transition = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha, sign);
             break;
         }
         case modifier::sol_pfr:
         {
-            double psi0 = file::get_idx( mode, jsmod, "damping", "boundary",0, 1.1 ).asDouble();
-            double alpha0 = file::get_idx( mode, jsmod, "damping", "alpha",0, 0.2 ).asDouble();
-            double psi1 = file::get_idx( mode, jsmod, "damping", "boundary",1, 0.97 ).asDouble();
-            double alpha1 = file::get_idx( mode, jsmod, "damping", "alpha",1, 0.2 ).asDouble();
+            double psi0 = file::get_idx( mode, jsmod, "wall", "boundary",0, 1.1 ).asDouble();
+            double alpha0 = file::get_idx( mode, jsmod, "wall", "alpha",0, 0.2 ).asDouble();
+            double psi1 = file::get_idx( mode, jsmod, "wall", "boundary",1, 0.97 ).asDouble();
+            double alpha1 = file::get_idx( mode, jsmod, "wall", "alpha",1, 0.2 ).asDouble();
             switch( desc){
                 case description::standardX:
                 {
@@ -156,11 +161,11 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
                             mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
                     mod_psip = mod::createPsip(
                             mod::HeavisideZ( ZX, -1), mod0_psip, psi1, alpha1, sign1);
-                    CylindricalFunctor damping0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
+                    CylindricalFunctor wall0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
                     CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
-                    CylindricalFunctor damping1 = mod::DampingRegion( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor wall1 = mod::DampingRegion( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, -sign1);
                     CylindricalFunctor transition1 = mod::MagneticTransition( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, sign1);
-                    damping = mod::SetUnion( damping0, damping1);
+                    wall = mod::SetUnion( wall0, wall1);
                     transition = mod::SetUnion( transition0, transition1);
                     break;
                 }
@@ -183,30 +188,30 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
                             mod::HeavisideZ( ZX1, -1), mod0_psip, psi1, alpha1, sign1);
                     mod_psip = mod::createPsip(
                             mod::HeavisideZ( ZX2, +1), mod1_psip, psi1, alpha1, sign1);
-                    CylindricalFunctor damping0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
-                    CylindricalFunctor damping1 = mod::DampingRegion( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, -sign1);
-                    CylindricalFunctor damping2 = mod::DampingRegion( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor wall0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
+                    CylindricalFunctor wall1 = mod::DampingRegion( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor wall2 = mod::DampingRegion( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, -sign1);
                     CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
                     CylindricalFunctor transition1 = mod::MagneticTransition( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, sign1);
                     CylindricalFunctor transition2 = mod::MagneticTransition( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, sign1);
                     transition = mod::SetUnion( mod::SetUnion( transition0, transition1), transition2);
-                    damping = mod::SetUnion( mod::SetUnion( damping0, damping1), damping2);
+                    wall = mod::SetUnion( mod::SetUnion( wall0, wall1), wall2);
                     break;
                 }
                 default:
                 {
-                    double sign0 = file::get_idx( mode, jsmod, "damping", "sign",0, -1. ).asDouble();
-                    double sign1 = file::get_idx( mode, jsmod, "damping", "sign", 1, +1. ).asDouble();
+                    double sign0 = file::get_idx( mode, jsmod, "wall", "sign",0, -1. ).asDouble();
+                    double sign1 = file::get_idx( mode, jsmod, "wall", "sign", 1, +1. ).asDouble();
                     CylindricalFunctorsLvl2 mod0_psip;
                     mod0_psip = mod::createPsip(
                             mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
                     mod_psip = mod::createPsip(
                             mod::everywhere, mod0_psip, psi1, alpha1, sign1);
-                    CylindricalFunctor damping0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
+                    CylindricalFunctor wall0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
                     CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
-                    CylindricalFunctor damping1 = mod::DampingRegion( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
+                    CylindricalFunctor wall1 = mod::DampingRegion( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
                     CylindricalFunctor transition1 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
-                    damping = mod::SetUnion( damping0, damping1);
+                    wall = mod::SetUnion( wall0, wall1);
                     transition = mod::SetUnion( transition0, transition1);
                     break;
                 }
@@ -227,6 +232,10 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
         }
     }
 }
+///@}
+
+///@addtogroup profiles
+///@{
 
 static inline CylindricalFunctor createWallRegion( Json::Value gs, Json::Value jsmod, file::error mode)
 {
@@ -239,6 +248,7 @@ static inline CylindricalFunctor createWallRegion( Json::Value gs, Json::Value j
  * @brief Create the sheath region where fieldlines intersect the boundary
  *
  * Check if any fieldlines that are not in the wall region intersect the boundary
+ * and determine whether the poloidal field points towards or away from the wall
  * @param jsmod must contain the field
  * "sheath": "boundary" value where sheath region begins in units of minor radius a
  * "sheath": "alpha" radius of the transition region where the modification acts in units of minor radius a
@@ -251,6 +261,7 @@ static inline CylindricalFunctor createWallRegion( Json::Value gs, Json::Value j
  * @param R1 right boundary
  * @param Z0 bottom boundary
  * @param Z1 top boundary
+ * @param sheath (out) contains the region recognized as sheath
  * @param direction (out) contains (+/-) indicating direction of magnetic field
  * to closest sheath boundary (defined on entire box)
  *
@@ -295,8 +306,8 @@ static inline void createSheathRegion(
     sheath = dg::compose( poly, dist);
     sheath = mod::SetIntersection( mod::SetNot( wall), sheath);
 }
-
 ///@}
+
 } //namespace geo
 }//namespace dg
 #endif //JSONCPP_VERSION_STRING
