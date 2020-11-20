@@ -22,7 +22,7 @@ namespace dg
 namespace geo
 {
 /**
- * @brief Contains a polynomial approximation type flux function
+ * @brief A polynomial approximation type flux function
  */
 namespace polynomial
 {

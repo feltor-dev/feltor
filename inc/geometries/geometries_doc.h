@@ -6,22 +6,22 @@
  *      All the grids introduced by this extension can be constructed with
  *      generator classes.
  * @defgroup grids 2. New geometric grids
- * @defgroup fluxfunctions 3. New functors based on the magnetic field geometry
+ * @defgroup fluxfunctions 3. New functors surrounding the magnetic field geometry
 
         All functors in this section model two or three-dimensional functions, i.e.
         they all overload the operator() like \c aCylindricalFunctor
  * @{
-      @defgroup geom 3.1 New flux functions and derivatives
+      @defgroup geom 3.1 Creating a flux function
       @{
-        @defgroup solovev The solovev magnetic field
-        @defgroup polynomial The polynomial magnetic field
-        @defgroup taylor The Taylor state magnetic field
-        @defgroup guenther The Guenther magnetic field
-        @defgroup toroidal The Purely Toroidal magnetic field
-        @defgroup circular The Circular magnetic field
+        @defgroup solovev The solovev expansion
+        @defgroup polynomial The polynomial expansion
+        @defgroup taylor The Taylor state expansion
+        @defgroup guenther The Guenther expansion
+        @defgroup toroidal The Purely Toroidal expansion
+        @defgroup circular The Circular expansion
       @}
-      @defgroup magnetic 3.2 Magnetic field and associated functors
-      @defgroup profiles 3.3 Profile functors based on flux functions
+      @defgroup magnetic 3.2 Magnetic field, curvatures and associated functors
+      @defgroup profiles 3.3 Penalization, weight and monitor metric functors
  * @}
  * @defgroup fieldaligned 4. Fieldaligned derivatives
  * @defgroup misc_geo 5. Miscellaneous additions

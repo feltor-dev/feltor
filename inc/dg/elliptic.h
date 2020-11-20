@@ -77,6 +77,7 @@ class Elliptic
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, norm no = not_normed,
@@ -95,6 +96,7 @@ class Elliptic
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, bc bcx, bc bcy,
@@ -366,7 +368,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  \right)\f]
  is discretized. Note that the local discontinuous Galerkin discretization adds so-called
  jump terms
- \f[ D^\dagger \chi D + \alpha J \f]
+ \f[ D^\dagger \chi D + \alpha\chi_{on/off} J \f]
  where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
  (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
  Usually the default \f$ \alpha=1 \f$ is a good choice.
@@ -408,6 +410,7 @@ class Elliptic3d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed 1 per default
      */
     Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
@@ -427,6 +430,7 @@ class Elliptic3d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is the metric tensor multiplied by the volume element per default
      */
     Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1., bool chi_weight_jump = false)

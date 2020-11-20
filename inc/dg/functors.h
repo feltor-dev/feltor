@@ -1945,7 +1945,7 @@ struct WallDistance
      * @brief Allocate lines
      *
      * @param vertical walls R_0, R_1 ...  ( can be arbitrary size)
-     * @param horizonal walls Z_0, Z_1 ... ( can be arbitrary size)
+     * @param horizontal walls Z_0, Z_1 ... ( can be arbitrary size)
      */
     WallDistance( std::vector<double> vertical, std::vector<double> horizontal) :
         m_vertical(vertical), m_horizontal( horizontal) {}

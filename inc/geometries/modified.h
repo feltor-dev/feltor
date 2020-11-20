@@ -19,9 +19,14 @@ namespace dg
 {
 namespace geo
 {
+/**
+ * @brief A modification flux function
+ */
 namespace mod
 {
     //modify with a polynomial Heaviside function
+///@addtogroup mod
+///@{
 
 struct Psip: public aCylindricalFunctor<Psip>
 {
@@ -159,6 +164,9 @@ static inline dg::geo::CylindricalFunctorsLvl2 createPsip(
             mod::PsipRZ(predicate,psip.f(), psip.dfx(), psip.dfy(), psip.dfxy(), psi0, alpha, sign),
             mod::PsipZZ(predicate,psip.f(), psip.dfy(), psip.dfyy(), psi0, alpha, sign));
 }
+
+///@}
+///@cond
 struct DampingRegion : public aCylindricalFunctor<DampingRegion>
 {
     DampingRegion( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
@@ -194,7 +202,24 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
     std::function<double(double,double)> m_psip;
     std::function<bool(double,double)> m_pred;
 };
+//some possible predicates
+static bool nowhere( double R, double Z){return false;}
+static bool everywhere( double R, double Z){return true;}
+struct HeavisideZ{
+    HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}
+    bool operator()(double R, double Z){
+        if( Z < m_ZX && m_side <= 0) return true;
+        if( Z >= m_ZX && m_side > 0) return true;
+        return false;
+    }
+    private:
+    double m_ZX;
+    int m_side;
+};
+///@endcond
 
+///@addtogroup profiles
+///@{
 /**
  * @brief \f$ f_1 + f_2 - f_1 f_2 \equiv f_1 \cup f_2\f$
  *
@@ -252,21 +277,7 @@ struct SetNot : public aCylindricalFunctor<SetNot>
     std::function<double(double,double)> m_fct;
 };
 
-//some possible predicates
-
-static bool nowhere( double R, double Z){return false;}
-static bool everywhere( double R, double Z){return true;}
-struct HeavisideZ{
-    HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}
-    bool operator()(double R, double Z){
-        if( Z < m_ZX && m_side <= 0) return true;
-        if( Z >= m_ZX && m_side > 0) return true;
-        return false;
-    }
-    private:
-    double m_ZX;
-    int m_side;
-};
+///@}
 
 } //namespace mod
 

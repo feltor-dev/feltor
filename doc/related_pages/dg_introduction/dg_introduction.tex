@@ -9,7 +9,8 @@
 \author{M.~Wiesenberger}
 
 \section{ Introduction to discontinuous Galerkin methods} \label{sec:discretization}
-This writeup is based on Reference~\cite{WiesenbergerPhD}. 
+This writeup is based on Reference~\cite{WiesenbergerPhD}. A useful book to consult
+is Reference~\cite{NodalDG}.
 
 In recent years, discontinuous Galerkin (dG) methods have been investigated 
 as an excellent alternative to finite difference and finite volume schemes 
@@ -30,10 +31,10 @@ In contrast, dG methods allow discontinuities across cell boundaries, which adds
 For the discretization of second derivatives we discuss the so-called local discontinuous Galerkin (LDG) method~\cite{Cockburn1998}.
 The LDG method and its advantages can also be used for the discretization of 
 elliptic equations (including Poisson's equation). 
-Reference~\cite{Arnold2001} highlights the relation 
+Reference~\cite{Arnold2002} highlights the relation 
 of the method to interior penalty and other alternative methods. 
 A superconvergence result for the 
-LDG approach was proven on Cartesian grids~\cite{Cockburn2001},
+LDG approach was proven on Cartesian grids~\cite{Cockburn2002},
 where the order of convergence is $1/2$ better than on arbitrary meshes.
 Reference~\cite{Yadav2013} later showed a similar result for general, nonlinear elliptic equations.
 
@@ -54,7 +55,7 @@ First, let us consider the one-dimensional case.
 For simplicity and ease of implementation we choose an equidistant grid with $N$ cells $C_n = [x_{n-1/2},x_{n+1/2}]$ of size $h$;
 with this choice we are able to construct basis functions of $P(C_n)$, the space of 
 polynomials of degree at most $P-1$ on $C_n$, by using orthogonal Legendre polynomials\footnote{ Often, in the literature the order of the polynomials is denoted by $k$.
-Pay attention, that we use the number of polynomial coefficients $P$ instead. We have $P=k+1$}. 
+Pay attention, that we use the number of polynomial coefficients $P$ instead. We have $P=k+1$}.
 The Legendre polynomials can be recursively defined on $[-1,1]$ by setting
 $p_0(x) = 1$, $p_1(x) = x$ and (see e.g.~\cite{AS})
 \begin{align}
@@ -62,8 +63,8 @@ $p_0(x) = 1$, $p_1(x) = x$ and (see e.g.~\cite{AS})
     \label{eq:recursion}
 \end{align}
 The so constructed Legendre polynomials are orthogonal on $[-1,1]$.
-We write 
-$x^a_j$ and $w_j$, $j=0,\dots,P-1$ denoting the abscissas and weights of 
+We write
+$x^a_j$ and $w_j$, $j=0,\dots,P-1$ denoting the abscissas and weights of
 the Gauss--Legendre quadrature on the interval $[-1,1]$. Then we note that for $k,l=0, \dots, P-1$
 \begin{align}
     \int_{-1}^1 p_k(x)p_l(x) \dx = \sum_{j=0}^{P-1} w_jp_k (x^a_j)p_l(x^a_j) = \frac{2}{2k+1}\delta_{kl}, 
@@ -71,18 +72,22 @@ the Gauss--Legendre quadrature on the interval $[-1,1]$. Then we note that for $
 \end{align}
  since Gauss--Legendre quadrature is exact for polynomials of degree at most $2P-1$.
 
-The discrete completeness relation can then be written as 
+The discrete completeness relation can then be written as
 \begin{align}
     \sum_{k=0}^{P-1} \frac{2k+1}{2}w_j p_k(x^a_i)p_k(x^a_j) = \delta_{ij}.
     \label{eq:completeness}
 \end{align}
 Given a real function $f:[-1,1]\rightarrow \mathbb{R}$ we define $f_j:=f(x^a_j)$ and
 \begin{align} \label{eq:ex2}
-    \bar f^k := \frac{2k+1}{2}\sum_{j=0}^{P-1}w_j p_k(x^a_j) f_j 
+    \bar f^k := \frac{2k+1}{2}\sum_{j=0}^{P-1}w_j p_k(x^a_j) f_j
 \end{align}
-Now let us define the forward transformation matrix by $F^{kj}:=\frac{2k+1}{2}w_jp_k(x^a_j)$ and 
-the backward transformation matrix by $B_{kj}:= p_j(x^a_k)$. Then, 
-using Eq.~\eqref{eq:ex2}, we get
+Now let us define the forward transformation matrix by $F^{kj}:=\frac{2k+1}{2}w_jp_k(x^a_j)$ and
+the backward transformation matrix by $B_{kj}:= p_j(x^a_k)$.
+\begin{tcolorbox}[title=Note]
+Reference~\cite{NodalDG} identifies $B$ as the Vandermonde matrix and further denotes $f_i$ as the \textbf{nodal} representation and $\bar f^k$ as the \textbf{modal} representation of $f(x)$.
+\end{tcolorbox}
+
+Then, using Eq.~\eqref{eq:ex2}, we get
 \begin{subequations}
 \begin{align}
     \bar f^k = \sum_{j=0}^{P-1}F^{kj}f_j \\
@@ -449,11 +454,11 @@ The function product in Eq.~\eqref{eq:polarisationb} is computed pointwisely on 
     \label{eq:naive}
 \end{align}
 where $D_x$ is either $D_x^+$, $D_x^-$, or $D_x^0$ with the correct boundary terms.
-Note, that~\cite{Cockburn2001} originally only proposed to use the forward or backward discretization for $D_x$. 
+Note, that~\cite{Cockburn2002} originally only proposed to use the forward or backward discretization for $D_x$. 
 Equation~\eqref{eq:naive} is indeed a self-adjoint
 discretization for the second derivative. However, it turns out that 
 Eq.~\eqref{eq:naive} is inconsistent for given $\rho(x)$. The solution does not converge. 
-This problem is solved according to~\cite{Cockburn2001} by adding a jump term
+This problem is solved according to~\cite{Cockburn2002} by adding a jump term
 to the flux of $j$: 
 \begin{align}
     \hat j(x_{n+1/2}) \rightarrow \hat j(x_{n+1/2}) + [\phi(x_{n+1/2})],
@@ -478,7 +483,7 @@ for periodic boundaries. Again we give the correct boundary terms for Dirichlet
 and Neumann boundary conditions in Table~\ref{tab:jump_terms}.
 \input{jump_terms.tex}
 Note that $J$ is symmetric, thus the overall discretization remains self-adjoint. Indeed, with $D_x = D_x^+$ Eq.~\eqref{eq:discreteelliptic} recovers
-the discretization proposed by~\cite{Cockburn2001}. 
+the discretization proposed by~\cite{Cockburn2002}. 
 In addition, we remark that the centered discretization in Eq.~\eqref{eq:discreteelliptic} is symmetric with respect to an inversion of the coordinate system $x\rightarrow -x$ even for double Dirichlet or Neumann boundaries, while the forward and backward discretization is not. 
 
 We note again that the generalization to two or more dimensions is straightforward

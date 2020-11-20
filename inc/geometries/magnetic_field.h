@@ -876,7 +876,7 @@ struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
      *
      * @param mag Use to construct magnetic field
      * @param vertical walls R_0, R_1 ...  ( can be arbitrary size)
-     * @param horizonal walls Z_0, Z_1 ... ( can be arbitrary size)
+     * @param horizontal walls Z_0, Z_1 ... ( can be arbitrary size)
      */
     WallDirection( dg::geo::TokamakMagneticField mag, std::vector<double>
             vertical, std::vector<double> horizontal) : m_vertical(vertical),

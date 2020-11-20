@@ -198,18 +198,6 @@ struct ComputeDSSDIR{
 }//namespace detail
 ///@endcond
 
-///@brief How boundary conditions are implemented in DS
-enum class boundary
-{
-    perp, //!< boundary condition is implemented perpendicular to boundary
-    along_field //!< boundary condition is implemented along the fieldline
-};
-
-static const std::map < std::string, boundary> str2boundary {
-    { "perp", boundary::perp},
-    { "along_field", boundary::perp}
-};
-
 /*!@class hide_ds_parameters2
 * @param f The vector to derive
 * @param g contains result on output (write only)
@@ -682,6 +670,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
 * @brief forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
 * forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
+* @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fp
 * @ingroup fieldaligned
@@ -700,7 +689,7 @@ void ds_forward(const FieldAligned& fa, double alpha, const container& f, const 
 * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
 * backward derivative \f$ g_i = \alpha \frac{1}{h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
- * @param fa this object will be used to get grid distances
+* @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
 * @ingroup fieldaligned
@@ -719,7 +708,7 @@ void ds_backward( const FieldAligned& fa, double alpha, const container& fm, con
 * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
 * The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
- * @param fa this object will be used to get grid distances
+* @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
 * @copydoc hide_ds_fp
@@ -760,7 +749,7 @@ void dss_centered( const FieldAligned& fa, double alpha, const container&
 *
 * The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
  * the boundary condition is implemented
- * along the field-line
+ * along the field-line, that is the boundary condition is used as part of the polynomial interpolation.
  * @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
@@ -794,7 +783,7 @@ void ds_centered_bc_along_field( const FieldAligned& fa, double alpha, const con
  * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
  * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
  * the boundary condition is implemented
- * along the field-line
+ * along the field-line, that is the boundary condition is used as part of the polynomial interpolation.
  * @param fa this object will be used to get grid distances
  * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
