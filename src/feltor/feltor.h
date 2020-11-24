@@ -794,6 +794,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
     const std::array<std::array<Container,2>,2>& fields,
     std::array<std::array<Container,2>,2>& yp)
 {
+    //MW: in theory we have the possibility to
+    // make the implementation conservative since the perp boundaries are
+    // penalized away
     //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
     for( unsigned i=0; i<2; i++)
     {

@@ -106,8 +106,6 @@ struct Parameters
                 ;
         }
 
-        explicit_diffusion = file::get( mode, js, "explicit_diff", false).asBool();
-
         //nu_parallel = file::get( mode, js, "nu_parallel", 0.).asDouble();
         //Init after reading in eta and mu[0]
         nu_parallel[0] = 0.73/eta;

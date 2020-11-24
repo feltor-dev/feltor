@@ -117,12 +117,12 @@ int main( int argc, char* argv[])
     const Parameters p(input_js);
     p.display( std::cout);
     //Test coefficients
-    dg::geo::CylindricalFunctor damping, transition, sheath, direction;
+    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(geom_js,
             file::error::is_throw);
     dg::geo::TokamakMagneticField mod_mag =
         dg::geo::createModifiedField(geom_js, input_js, file::error::is_throw,
-                damping, transition);
+                wall, transition);
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
     unsigned n, Nx, Ny, Nz;
@@ -132,7 +132,7 @@ int main( int argc, char* argv[])
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
     dg::geo::createSheathRegion( input_js, file::error::is_warning,
-            mag, damping, Rmin, Rmax, Zmin, Zmax, sheath, direction);
+            mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
 
     dg::geo::description mag_description = mag.params().getDescription();
     double psipO = -1.;
@@ -218,7 +218,7 @@ int main( int argc, char* argv[])
         {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
                     p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
                 dg::geo::RhoP(mag))},
-        {"ProfileDamping", "Density profile damping", damping },
+        {"Wall", "Penalization region that acts as the wall", wall },
         {"MagneticTransition", "The region where the magnetic field is modified", transition},
         {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
         {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},

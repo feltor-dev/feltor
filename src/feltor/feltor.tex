@@ -826,7 +826,9 @@ penalized and thus hold on the bounding box. Typically we choose
 \phi = 0
 \text{ and }  \hat n \cn A_{\parallel} = 0
 \end{align}
-where $\hat n$ is the normal vector to the boundary.
+where $\hat n$ is the normal vector to the boundary. The perpendicular boundary
+conditions for the remaining fields become obsolete with the following
+penalization scheme.
 
 \subsubsection{The wall region}
 Being a box, our computational domain is in particular not aligned with the
@@ -895,22 +897,26 @@ We then take $\theta_{\alpha/2}\left( (\eps_s + \frac{\alpha}{2})a - d(R,Z)\righ
 and take the set intersection between that region and the ``not wall'' region to
 determine the sheath penalization region:
 \begin{align}\label{eq:sheath}
-    \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( (\eps_s + \frac{\alpha}{2})a - d(R,Z)\right)
+    \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( \left(\eps_s + \frac{\alpha}{2}\right)a - d(R,Z)\right)
 \end{align}
 Within the sheath region we penalize
 \begin{subequations} \label{eq:sheath_penalization}
 \begin{align}
     S^s_N(R,Z,\varphi, t) &:= \omega_s \chi_s \left(N_{sh}-N\right)\\
-    S^s_{u_e}(R,Z,\varphi, t) &:= \omega_s \chi_s \left(\sqrt{1+\tau}\exp(-\phi) - u_{\parallel,e} \right)\\
-    S^s_{U_i}(R,Z,\varphi, t) &:= \omega_s \chi_s \left(\sqrt{1+\tau} - U_{\parallel,i} \right)\\
+    S^s_{U_i}(R,Z,\varphi, t) &:= \omega_s \chi_s \left(\sqrt{1+\tau} - U_{\parallel,i} \right) \\
+    S^s_{u_e}(R,Z,\varphi, t) &:= \omega_s \chi_s \left(\sqrt{1+\tau}\exp(-\phi) - u_{\parallel,e} \right) \text{ or }
+    S^s_{u_e}(R,Z,\varphi, t) := \omega_s \chi_s \left(\sqrt{1+\tau} - u_{\parallel,e} \right)
 \end{align}
 \end{subequations}
 where $\omega_s$ is the sheath penalization parameter and $N_{sh}$ is obtained by extrapolating $N$ along the magnetic field line with
 the help of the parallel derivative operators
 \begin{align}
-    N_{sh} = \Tpm N
+    N_{sh} = \Tpm N \text{ such that } \nabla_\parallel N|_{sh} = 0
 \end{align}
 where the sign depends again on the direction of the magnetic field line (we always extrapolate ``downstream'').
+The extrapolation models a parallel Neumann boundary condition for the density.
+The boundary condition for the parallel electron velocity can be either the Bohm condition containing the contribution from the electric potential or
+an insulating condition where the total current $j_s = n_e ( U_{\parallel,i} - u_{\parallel,e})$ vanishes.
 
 
 

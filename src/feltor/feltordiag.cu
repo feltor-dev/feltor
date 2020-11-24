@@ -94,9 +94,9 @@ int main( int argc, char* argv[])
     Geometry g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
-    dg::geo::CylindricalFunctor damping, transition;
+    dg::geo::CylindricalFunctor wall, transition;
     dg::geo::TokamakMagneticField mag =
-        dg::geo::createModifiedField(gs, js, file::error::is_warning, damping, transition);
+        dg::geo::createModifiedField(gs, js, file::error::is_warning, wall, transition);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     // Construct weights and temporaries
 
