@@ -830,6 +830,14 @@ where $\hat n$ is the normal vector to the boundary. The perpendicular boundary
 conditions for the remaining fields become obsolete with the following
 penalization scheme.
 
+\begin{tcolorbox}[title=Note]
+    Computing on a box and cutting away the parts that are the wall,
+    for typical tokamak shapes incur a (loosely) estimated 50\% overhead in vector size:
+    \begin{align*}
+        \text{ number of points in box } = 1.5 \times \text{ number of points in area with plasma}
+    \end{align*}
+\end{tcolorbox}
+
 \subsubsection{The wall region}
 Being a box, our computational domain is in particular not aligned with the
 magnetic flux surfaces. This means that particularly in the corners of
@@ -1687,6 +1695,7 @@ source & dict & & Density source, cf. the output \texttt{sne\_tt\_ifs} in \textt
 "influx" the source has a constant source rate Eq.~\eqref{eq:electron_source_influx},
 "torpex": Torpex inspired source profile Eq.~\eqref{eq:electron_source_torpex},
 "gaussian": Gaussian shaped source profile - uses \texttt{posX}, \texttt{posY} and \texttt{sigma},
+"profile\_influx": Copy a profile into the source function and use a constant source rate. The idea is that you can start with zero density and evolve the profile purely with the source.
     See the file {\tt init.h} to add your own custom source.
 \\
 \qquad boundary & float & 0.2  & Source region boundary $\rho_{p,b}$: yields in Eq.~\eqref{eq:electron_source} and Eq.~\eqref{eq:electron_source_influx}  \\

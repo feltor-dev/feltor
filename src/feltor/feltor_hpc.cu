@@ -483,7 +483,7 @@ int main( int argc, char* argv[])
     karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
     }
 
-    std::cout << "Initialize Timestepper" << std::endl;
+    MPI_OUT std::cout << "Initialize Timestepper" << std::endl;
     karniadakis.init( feltor, implicit, time, y0, p.dt);
     dg::Timer t;
     t.tic();

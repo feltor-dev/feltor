@@ -417,7 +417,7 @@ struct Explicit
 
     const feltor::Parameters m_p;
     double m_omega_source = 0., m_sheath_forcing = 0.;
-    bool m_fixed_profile = true;
+    bool m_fixed_profile = true, m_reversed_field = false;
 
 };
 
@@ -429,6 +429,9 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
         throw dg::Error(dg::Message(_ping_)<<"Warning! perp_diff value '"<<p.perp_diff<<"' not recognized!! I do not know how to proceed! Exit now!");
     //due to the various approximations bhat and mag not always correspond
     dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
+    m_reversed_field = false;
+    if( mag.ipol()( g.x0(), g.y0()) < 0)
+        m_reversed_field = true;
     if( p.curvmode == "true" )
     {
         curvNabla = dg::geo::createTrueCurvatureNablaB(mag);
@@ -438,7 +441,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     }
     else if( p.curvmode == "low beta")
     {
-        if( mag.ipol()( g.x0(), g.y0()) < 0)
+        if( m_reversed_field)
             curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, -1);
         else
             curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, +1);
@@ -446,7 +449,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     }
     else if( p.curvmode == "toroidal")
     {
-        if( mag.ipol()( g.x0(), g.y0()) < 0)
+        if( m_reversed_field)
         {
             curvNabla = dg::geo::createCurvatureNablaB(mag, -1);
             curvKappa = dg::geo::createCurvatureKappa(mag, -1);
@@ -497,7 +500,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     bhat = dg::geo::createEPhi(+1);
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
-    else if( mag.ipol()( g.x0(), g.y0()) < 0)
+    else if( m_reversed_field)
         bhat = dg::geo::createEPhi(-1);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
     dg::SparseTensor<Container> metric = g.metric();
@@ -531,7 +534,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat( mag);
-    else if( mag.ipol()( g.x0(), g.y0()) < 0)
+    else if( m_reversed_field)
         bhat = dg::geo::createEPhi(-1);
     m_multi_chi = m_multigrid.project( m_temp0);
     m_multi_pol.resize(p.stages);
@@ -1028,10 +1031,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     if( m_sheath_forcing != 0)
     {
         //density
+        //Here, we need to find out where "downstream" is
         for( unsigned i=0; i<2; i++)
         {
-            dg::blas1::evaluate( m_temp0, dg::equals(), routines::ComputeDensityBC(),
-                m_minusN[i], m_plusN[i], m_U_sheath);
+            if( m_reversed_field) //bphi negative (exchange + and -)
+                dg::blas1::evaluate( m_temp0, dg::equals(), routines::ComputeDensityBC(),
+                    m_plusN[i], m_minusN[i], m_U_sheath);
+            else
+                dg::blas1::evaluate( m_temp0, dg::equals(), routines::ComputeDensityBC(),
+                    m_minusN[i], m_plusN[i], m_U_sheath);
             dg::blas1::axpby( m_sheath_forcing, m_temp0, 1.,  yp[0][i]);
         }
         //velocity
