@@ -271,20 +271,31 @@ struct ARKStep
      * @tparam SolverParams Type of parameters (deduced by the compiler)
      */
     template<class ...SolverParams>
-    ARKStep( std::string name,
-             SolverParams&& ...ps
-             )
+    ARKStep( std::string name, SolverParams&& ...ps) :
+         m_solver( std::forward<SolverParams>(ps)...),
+         m_rhs( m_solver.copyable())
     {
         if( name == "ARK-4-2-3" )
-            construct( "ARK-4-2-3 (explicit)", "ARK-4-2-3 (implicit)", std::forward<SolverParams>(ps)...);
+        {
+            m_rkE = ConvertsToButcherTableau<value_type>( "ARK-4-2-3 (explicit)");
+            m_rkI = ConvertsToButcherTableau<value_type>( "ARK-4-2-3 (implicit)");
+        }
         else if( name == "ARK-6-3-4" )
-            construct( "ARK-6-3-4 (explicit)", "ARK-6-3-4 (implicit)", std::forward<SolverParams>(ps)...);
+        {
+            m_rkE = ConvertsToButcherTableau<value_type>( "ARK-6-3-4 (explicit)");
+            m_rkI = ConvertsToButcherTableau<value_type>( "ARK-6-3-4 (implicit)");
+        }
         else if( name == "ARK-8-4-5" )
-            construct( "ARK-8-4-5 (explicit)", "ARK-8-4-5 (implicit)", std::forward<SolverParams>(ps)...);
+        {
+            m_rkE = ConvertsToButcherTableau<value_type>( "ARK-8-4-5 (explicit)");
+            m_rkI = ConvertsToButcherTableau<value_type>( "ARK-8-4-5 (implicit)");
+        }
         else
             throw dg::Error( dg::Message()<<"Unknown name");
+        assert( m_rkE.num_stages() == m_rkI.num_stages());
+        m_kE.assign(m_rkE.num_stages(), m_rhs);
+        m_kI.assign(m_rkI.num_stages(), m_rhs);
     }
-
     ///@copydoc construct()
     template<class ...SolverParams>
     ARKStep( ConvertsToButcherTableau<value_type> ex_tableau,
@@ -300,10 +311,6 @@ struct ARKStep
     {
         assert( m_rkE.num_stages() == m_rkI.num_stages());
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_kE[0];}
-
     /*!@brief Construct with two Butcher Tableaus
      *
      * The two Butcher Tableaus represent the parameters for the explicit
@@ -325,14 +332,12 @@ struct ARKStep
              SolverParams&& ...ps
              )
     {
-        m_rkE = ex_tableau;
-        m_rkI = im_tableau;
-        assert( m_rkE.num_stages() == m_rkI.num_stages());
-        m_solver = SolverType( std::forward<SolverParams>(ps)...);
-        m_rhs = m_solver.copyable();
-        m_kE.assign(m_rkE.num_stages(), m_rhs);
-        m_kI.assign(m_rkI.num_stages(), m_rhs);
+        *this = ARKStep( ex_tableau, im_tableau, std::forward<SolverParams>(ps)...);
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_kE[0];}
+
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_solver;}
     ///Read access to the internal solver for the implicit part
