@@ -711,7 +711,11 @@ We introduce the dimensionless parameters
 \end{align}
 where $a\in\{e,i\}$ is the species label and $z$ is the charge number.
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
-\begin{align}
+\begin{tcolorbox}[ams align,
+colback=yellow!10!white, colframe=red!50!black,
+        highlight math style= {enhanced, %<-- needed for the ’remember’ options
+        colframe=red,colback=red!10!white,boxsep=0pt}, title=Model equations
+        ]
 \frac{\partial}{\partial t} N &+ \vec\nc\left( N \left(
     \vec u_E + \vec u_K + \vec u_{C} + U_\parallel\left(\bhat + {\vec b}_\perp\right)\right)\right) = \Lambda_N + S_N \\
     \mu \frac{\partial}{\partial t} \left(N U_\parallel\right) &+ \mu \nc \left( NU_\parallel \left(
@@ -722,18 +726,18 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
     + \mu NU_\parallel\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
     =& -\tau \left(\bhat + {\vec b}_\perp\right)\cn N
     -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right)
-    - \eta n_e^2(U_{\parallel,i}-u_{\parallel,e}) 
+    - \eta n_e^2(U_{\parallel,i}-u_{\parallel,e})
     \nonumber\\
     &+ \mu \nu_\parallel \Delta_\parallel U+ \mu N\left(\Lambda_U + S_U\right) + \mu U_\parallel \left(\Lambda_N + S_N\right)
 \label{}
-\end{align}
+\end{tcolorbox}
 with
 \begin{align}
 \vec u_E := \frac{\bhat\times\vn\psi}{B},\quad
-\vec u_{K} := \tau \left(\vec{ K_{\vn B}} + \vec{ K_{\vn\times\bhat}}\right)=\tau\vec{ K}  ,\nonumber\\
-\vec u_C := \mu U_\parallel^2\vec{ K_{\vn\times\bhat}},\quad
+\vec u_{K} := \tau \left(\vec{ K_{\vn B}} + \vec{ K_{\vn\times\bhat}}\right)=\tau\vec{ K}  ,\quad  %\nonumber\\
+\vec u_C := \mu U_\parallel^2\vec{ K_{\vn\times\bhat}},\nonumber\\
 \vec u_{\vn\times\bhat} := \tau\vec{ K_{\vn\times\bhat}},\quad
-{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B}.
+{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B} = A_\parallel \vec{ K_{\vn\times\bhat}} + \frac{\vn A_\parallel \times \bhat}{B}.
 \label{}
 \end{align}
 
