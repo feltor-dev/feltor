@@ -105,6 +105,84 @@ struct ComputePerpDrifts{
     private:
     double m_mu, m_tau;
 };
+struct ComputePerpVelocity{
+    ComputePerpVelocity( double mu, double tau):
+        m_mu(mu), m_tau(tau){}
+    DG_DEVICE
+    void operator()(
+            double N, double d0N, double d1N, double d2N,
+            double U, double d0U, double d1U, double d2U,
+            double d0P, double d1P, double d2P,
+            double b_0,         double b_1,         double b_2,
+            double curv0,       double curv1,       double curv2,
+            double curvKappa0,  double curvKappa1,  double curvKappa2,
+            double divCurvKappa, double detg,
+            double& dtNx, double& dtNy, double& dtNz, double& dtU
+        )
+    {
+        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
+        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
+        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
+        double KU = curv0*d0U+curv1*d1U+curv2*d2U;
+        double PU = b_0*( d1P*d2U-d2P*d1U)+
+                    b_1*( d2P*d0U-d0P*d2U)+
+                    b_2*( d0P*d1U-d1P*d0U);//ExB drift
+        dtNx =  -detg*N*( b_1*d2P - b_2*d1P + m_tau * curv0 + m_mu * U * U * curvKappa0);
+        dtNy =  -detg*N*( b_2*d0P - b_0*d2P + m_tau * curv1 + m_mu * U * U * curvKappa2);
+        dtNz =  -detg*N*( b_0*d1P - b_1*d0P + m_tau * curv2 + m_mu * U * U * curvKappa2);
+        dtU =   -PU
+                -U*KappaP
+                -m_tau * KU
+                -m_tau * U * divCurvKappa
+                -(2. * m_tau + m_mu * U * U)*KappaU
+                - 2. * m_tau * U * KappaN / N;
+    }
+    DG_DEVICE
+    void operator()(
+            double N, double d0N, double d1N, double d2N,
+            double U, double d0U, double d1U, double d2U,
+            double d0P, double d1P, double d2P,
+            double A,       double d0A, double d1A, double d2A,
+            double b_0,         double b_1,         double b_2,
+            double curv0,       double curv1,       double curv2,
+            double curvKappa0,  double curvKappa1,  double curvKappa2,
+            double divCurvKappa, double detg,
+            double& dtNx, double& dtNy, double& dtNz, double& dtU
+        )
+    {
+        //first compute the regular dynamics
+        this->operator()( N,  d0N,  d1N,  d2N,
+             U,        d0U,  d1U,  d2U,
+             d0P,  d1P,  d2P,
+             b_0,          b_1,          b_2,
+             curv0,        curv1,        curv2,
+             curvKappa0,   curvKappa1,   curvKappa2,
+             divCurvKappa, detg,
+             dtNx, dtNy, dtNz, dtU);
+        //now add the additional terms from modified parallel derivative
+        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
+        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
+        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
+
+        double UA = b_0*( d1U*d2A-d2U*d1A)+
+                    b_1*( d2U*d0A-d0U*d2A)+
+                    b_2*( d0U*d1A-d1U*d0A);
+        double NA = b_0*( d1N*d2A-d2N*d1A)+
+                    b_1*( d2N*d0A-d0N*d2A)+
+                    b_2*( d0N*d1A-d1N*d0A);
+        double PA = b_0*( d1P*d2A-d2P*d1A)+
+                    b_1*( d2P*d0A-d0P*d2A)+
+                    b_2*( d0P*d1A-d1P*d0A);
+        dtNx +=  -detg*N*U*( -b_1*d2A + b_2*d1A + A * curvKappa0);
+        dtNy +=  -detg*N*U*( -b_2*d0A + b_0*d2A + A * curvKappa2);
+        dtNz +=  -detg*N*U*( -b_0*d1A + b_1*d0A + A * curvKappa2);
+        dtU +=  -1./m_mu*( A*KappaP + PA)
+                -1.*U*( A*KappaU + UA)
+                -1.*m_tau/m_mu/N*(A*KappaN + NA);
+    }
+    private:
+    double m_mu, m_tau;
+};
 struct ComputeChi{
     DG_DEVICE
     void operator() ( double& chi, double tilde_Ni, double binv,
@@ -267,18 +345,6 @@ struct Explicit
         dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
         if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
-    void divergence( const std::array<Container,3>& in, Container& out) const{
-        dg::blas1::pointwiseDot( m_detg, in[0], m_temp0);
-        dg::blas1::pointwiseDot( m_detg, in[1], m_temp1);
-        dg::blas1::pointwiseDot( m_detg, in[2], m_temp2);
-        dg::blas2::symv( m_dx_U, m_temp0, m_temp0);
-        dg::blas2::symv( m_dy_U, m_temp1, m_temp1);
-        dg::blas2::symv( m_dz, m_temp2, m_temp2);
-        dg::blas1::pointwiseDivide( m_temp0, m_detg, out);
-        dg::blas1::pointwiseDivide( 1., m_temp1, m_detg, 1., out);
-        dg::blas1::pointwiseDivide( 1., m_temp2, m_detg, 1., out);
-
-    }
     void compute_dot_induction( Container& tmp) const {
         m_old_apar.derive( tmp);
     }
@@ -389,7 +455,7 @@ struct Explicit
 #endif //DG_MANUFACTURED
 
     //these should be considered const // m_curv is full curvature
-    std::array<Container,3> m_curv, m_curvKappa, m_b;
+    std::array<Container,3> m_curv, m_curvKappa, m_b; //m_b is bhat/ sqrt(g) / B
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
     Container m_source, m_profne, m_forcing, m_U_sheath, m_masked;
@@ -508,11 +574,11 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     dg::SparseTensor<Container> metric = g.metric();
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
-    m_detg = dg::tensor::volume( metric);
-    dg::blas1::pointwiseDivide( m_binv, m_detg, m_detg); //1/m_detg/B
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
+    m_detg = dg::tensor::volume( metric);
+    dg::blas1::pointwiseDivide( m_binv, m_detg, m_temp0); //1/B/m_detg
     for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( m_detg, m_b[i], m_b[i]); //b_i/m_detg/B
+        dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/m_detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
     m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
     m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
@@ -813,7 +879,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
         dg::blas2::symv( m_dy_U, fields[1][i], m_dU[i][1]);
         if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dU[i][2]);
         if( m_p.beta == 0){
-            dg::blas1::subroutine( routines::ComputePerpDrifts(
+            dg::blas1::subroutine( routines::ComputePerpVelocity(
                 m_p.mu[i], m_p.tau[i]),
                 //species depdendent
                 fields[0][i], m_dN[i][0], m_dN[i][1], m_dN[i][2],
@@ -823,11 +889,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
                 m_b[0], m_b[1], m_b[2],
                 m_curv[0], m_curv[1], m_curv[2],
                 m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-                m_divCurvKappa, yp[0][i], yp[1][i]
+                m_divCurvKappa, m_detg, m_temp0, m_temp1, m_temp2, yp[1][i]
             );
         }
         if( m_p.beta != 0){
-            dg::blas1::subroutine( routines::ComputePerpDrifts(
+            dg::blas1::subroutine( routines::ComputePerpVelocity(
                 m_p.mu[i], m_p.tau[i]),
                 //species depdendent
                 fields[0][i], m_dN[i][0], m_dN[i][1], m_dN[i][2],
@@ -839,9 +905,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
                 m_b[0], m_b[1], m_b[2],
                 m_curv[0], m_curv[1], m_curv[2],
                 m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-                m_divCurvKappa, yp[0][i], yp[1][i]
+                m_divCurvKappa, m_detg, m_temp0, m_temp1, m_temp2, yp[1][i]
             );
         }
+        //compute divergence
+        dg::blas2::symv( 1., m_dx_N, m_temp0, 0., yp[0][i]);
+        dg::blas2::symv( 1., m_dy_N, m_temp1, 1., yp[0][i]);
+        if(!m_p.symmetric)dg::blas2::symv( 1., m_dz, m_temp2, 1., yp[0][i]);
+        dg::blas1::pointwiseDivide( yp[0][i], m_detg, yp[0][i]);
     }
 }
 
@@ -964,7 +1035,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 
 #endif
-    if( m_p.explicit_diffusion)
+    if( m_p.explicit_diffusion )
     {
 #if FELTORPERP == 1
         /* y[0] := n_e - 1
