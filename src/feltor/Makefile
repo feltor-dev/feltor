@@ -33,4 +33,4 @@ feltor_mpi: feltor_hpc.cu feltordiag.h feltor.h implicit.h init.h parameters.h i
 .PHONY: clean
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi manufactured feltordiag
+	rm -f feltor feltor_hpc feltor_mpi manufactured feltordiag interpolate_in_3d

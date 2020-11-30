@@ -356,6 +356,8 @@ struct Explicit
     void set_wall_and_sheath(double wall_forcing, Container wall, double sheath_forcing, Container sheath, Container velocity_sheath)
     {
         m_sheath_forcing = sheath_forcing; //1/eta
+        m_wall_forcing = wall_forcing;
+        dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_forcing);
         dg::blas1::pointwiseDot( sheath, velocity_sheath, m_U_sheath);
 
         dg::blas1::axpby( -1., wall, -1., sheath, m_masked);
@@ -390,7 +392,7 @@ struct Explicit
     std::array<Container,3> m_curv, m_curvKappa, m_b;
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
-    Container m_source, m_profne, m_U_sheath, m_masked;
+    Container m_source, m_profne, m_forcing, m_U_sheath, m_masked;
     Container m_detg;
 
     Container m_apar;
@@ -416,7 +418,7 @@ struct Explicit
     dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
-    double m_omega_source = 0., m_sheath_forcing = 0.;
+    double m_omega_source = 0., m_sheath_forcing = 0., m_wall_forcing = 0.;
     bool m_fixed_profile = true, m_reversed_field = false;
 
 };
@@ -589,7 +591,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_source = m_U_sheath = m_UE2 = m_temp2 = m_temp1 = m_temp0;
+    m_forcing = m_source = m_U_sheath = m_UE2 = m_temp2 = m_temp1 = m_temp0;
     dg::assign( dg::evaluate( dg::one, g), m_masked );
     m_apar = m_temp0;
 
@@ -875,6 +877,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp0, fields[0][i], 1., yp[1][i]);
         dg::geo::ds_centered_bc_along_field( m_fa_P, -1./m_p.mu[i], m_minusP[i], m_phi[i], m_plusP[i], 1.0, yp[1][i], dg::DIR, {0,0});
         // viscosity: + nu_par Delta_par U/N = nu_par ( Div b dsU + dssU)/N
+        // Maybe factor this out in an operator splitting method? To get larger timestep
         dg::blas1::pointwiseDot(1., m_divb, m_temp1, 0., m_temp1);
         dg::geo::dss_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i], 1., m_temp1);
         dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i], 1., yp[1][i]);
@@ -1042,7 +1045,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                     m_minusN[i], m_plusN[i], m_U_sheath);
             dg::blas1::axpby( m_sheath_forcing, m_temp0, 1.,  yp[0][i]);
         }
-        //velocity
+        //compute sheath velocity
+        //velocity c_s
         if( "insulating" == m_p.sheath_bc)
         {
             // u_e = +- sqrt(1+tau)
@@ -1057,7 +1061,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // u_i = +- sqrt(1+tau)
         dg::blas1::axpby( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, 1.,  yp[1][1]);
     }
-
+    dg::blas1::pointwiseDot( -1., m_forcing, y[0][0], 1., yp[0][0]);
+    dg::blas1::pointwiseDot( -1., m_forcing, y[0][1], 1., yp[0][1]);
+    dg::blas1::pointwiseDot( -1., m_forcing, m_fields[1][0], 1., yp[1][0]);
+    dg::blas1::pointwiseDot( -1., m_forcing, m_fields[1][1], 1., yp[1][1]);
 
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{

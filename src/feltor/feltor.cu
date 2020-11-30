@@ -94,8 +94,8 @@ int main( int argc, char* argv[])
     //create RHS
     std::cout << "Constructing Explicit...\n";
     feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
-    std::cout << "Constructing Implicit...\n";
-    feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
+    //std::cout << "Constructing Implicit...\n";
+    //feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
     std::cout << "Done!\n";
 
     DVec result = dg::evaluate( dg::zero, grid);
@@ -136,21 +136,23 @@ int main( int argc, char* argv[])
     //
     dg::Timer t;
     unsigned step = 0;
-    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
-        feltor::FeltorSpecialSolver<
-            Geometry, IDMatrix, DMatrix, DVec>
-        > karniadakis( grid, p, mag);
+    //dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
+    //    feltor::FeltorSpecialSolver<
+    //        Geometry, IDMatrix, DMatrix, DVec>
+    //    > karniadakis( grid, p, mag);
+    dg::MinimalProjecting< std::array<std::array<dg::DVec,2>,2 > > mp( 3, y0);
     {
     HVec h_wall = dg::pullback( wall, grid);
     HVec h_sheath = dg::pullback( sheath, grid);
     HVec h_velocity = dg::pullback( direction, grid);
     feltor.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
-    implicit.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
-    karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    //implicit.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    //karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
     }
 
     std::cout << "Initialize Timestepper" << std::endl;
-    karniadakis.init( feltor, implicit, time, y0, p.dt);
+    //karniadakis.init( feltor, implicit, time, y0, p.dt);
+    mp.init( feltor, time, y0, p.dt);
     std::cout << "Done!" << std::endl;
 
     std::map<std::string, const dg::DVec* > v4d;
@@ -235,7 +237,8 @@ int main( int argc, char* argv[])
             for( unsigned k=0; k<p.inner_loop; k++)
             {
                 try{
-                    karniadakis.step( feltor, implicit, time, y0);
+                    //karniadakis.step( feltor, implicit, time, y0);
+                    mp.step( feltor, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

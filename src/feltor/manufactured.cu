@@ -41,8 +41,8 @@ int main( int argc, char* argv[])
     std::cout << "Initialize explicit" << std::endl;
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
-    std::cout << "Initialize implicit" << std::endl;
-    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
+    //std::cout << "Initialize implicit" << std::endl;
+    //feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 
     feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
@@ -79,16 +79,17 @@ int main( int argc, char* argv[])
     //dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
     //    "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
     //Multistep solver
-    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
-        feltor::FeltorSpecialSolver<
-            dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
-        > karniadakis( grid, p, mag);
+    //dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
+    //    feltor::FeltorSpecialSolver<
+    //        dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+    //    > karniadakis( grid, p, mag);
+    dg::MinimalProjecting< std::array<std::array<dg::DVec,2>,2 > > mp( 3, y0);
     double time = 0, TMAX = 0.1;
-    karniadakis.init( feltor, im, time, y0, p.dt);
+    mp.init( feltor, time, y0, p.dt);
     while( time < TMAX)
     {
         try{
-            karniadakis.step( feltor, im, time, y0);
+            mp.step( feltor, time, y0);
         }
         catch( dg::Fail& fail) {
             std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
