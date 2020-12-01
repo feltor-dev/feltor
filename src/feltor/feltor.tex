@@ -1059,21 +1059,27 @@ This means that diffusion does not generate potential either.
 
 
 \subsection{Implemented form}
-The form that we implement avoids derivatives on the product of
-two functions for which we have no boundary conditions
+We use a conservative form of the continuity equation
+in the perpendicular terms and else avoids derivatives on the product of two
+functions for which we have no boundary condition.
 \begin{subequations}
     \begin{align}
     \frac{\partial}{\partial t} N =&
-    \left[ - \frac{1}{B}[\psi, N]_{\perp} %\nonumber\\
-        - \bar \npar \left( NU_\parallel\right)
-        - NU_\parallel\left(\vec \nc\bhat+\vec \nc{\vec b}_\perp\right)
-        - \tau \mathcal K(N)\right. \nonumber \\&
-        \left.
-        - N \mathcal K(\psi)
-        -\mu \mathcal K_{\vn\times\bhat}(NU_\parallel^2)
-        -\mu NU_\parallel^2\nc \vec{ K_{\vn\times\bhat}}
+    \left[ - \frac{1}{\sqrt{g}} \partial_i \left( \sqrt{g} N \left( \frac{\epsilon^{ijk} b_j \partial_k \psi}{\sqrt{g}B}
+    + \tau K^i
+    + \mu U_\parallel^2 K_{\vn\times\bhat}^i
+    + U_\parallel\left( A_\parallel K_{\vn\times\bhat}^i +\frac{\epsilon^{ijk} \partial_j A_\parallel b_k}{\sqrt{g}B}   \right)
+    \right)\right)\right. \nonumber\\
+    &\left.- \npar \left( NU_\parallel\right)
+        - NU_\parallel\vec \nc\bhat
+        %\frac{1}{B}[\psi, N]_{\perp} %\nonumber\\
+        %- \tau \mathcal K(N)\right. \nonumber \\&
+        %\left.
+        %- N \mathcal K(\psi)
+        %-\mu \mathcal K_{\vn\times\bhat}(NU_\parallel^2)
+        %-\mu NU_\parallel^2\nc \vec{ K_{\vn\times\bhat}}
     - \nu_\perp\Delta_\perp^2 N + S_N\right]
-    (1-\chi_s - \chi_w) \nonumber\\& + \omega_s\chi_s( N_{sh} - N) - \omega_w \chi_w N_w, \\
+    (1-\chi_s - \chi_w) \nonumber\\& + \omega_s\chi_s( N_{sh} - N) + \omega_w \chi_w (1-N), \\
     \frac{\partial}{\partial t} W_\parallel =&
   \left[- \frac{1}{B}\left[\psi, U_\parallel\right]_{\perp}%& \nonumber\\
         - \frac{1}{\mu} \bar \npar \psi% \nonumber\\
@@ -1099,7 +1105,7 @@ two functions for which we have no boundary conditions
 \end{subequations}
 together with
 $\bar\npar f = \npar f + A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
-and $\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ { K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
+%and $\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ { K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
