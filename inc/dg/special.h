@@ -79,7 +79,7 @@ namespace dg{
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
-dg::assign( dg::evaluate(dg::one, g), m_sigma);
+        dg::assign( dg::evaluate(dg::one, g), m_sigma);
      }
      ///@copydoc ArbPol::ArbPo(const Geometry&,value_type,direction,value_type)
      void construct( const Geometry& g,  direction dir = dg::centered, value_type jfactor = 1.)

@@ -14,7 +14,7 @@
 
 
 
-const double eps = 1e-2;
+const double eps = 1e-5;
 const double alpha = -0.5;
 double lhs( double x, double y){ return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
@@ -47,8 +47,6 @@ int main()
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "error " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
     std::cout << "took  " << t.diff()<<"s"<<std::endl;
-
-
     return 0;
 }
 

@@ -211,6 +211,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     std::cout << "# Residual errors: \n";
     }
 #endif //DG_DEBUG
+
+
     if( nrmb == 0)
     {
         blas1::copy( b, x);
@@ -612,10 +614,10 @@ struct Invert
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
 #endif //MPI
-        {
-            std::cout << "# of cg iterations \t"<< number << "\t";
-            std::cout << "# took \t"<<t.diff()<<"s\n";
-        }
+//         {
+//             std::cout << "# of cg iterations \t"<< number << "\t";
+//             std::cout << "# took \t"<<t.diff()<<"s\n";
+//         }
 #endif //DG_BENCHMARK
         return number;
     }
