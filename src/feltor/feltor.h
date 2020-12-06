@@ -105,8 +105,8 @@ struct ComputePerpDrifts{
     private:
     double m_mu, m_tau;
 };
-struct ComputePerpVelocity{
-    ComputePerpVelocity( double mu, double tau):
+struct ComputePerpConservative{
+    ComputePerpConservative( double mu, double tau):
         m_mu(mu), m_tau(tau){}
     DG_DEVICE
     void operator()(
@@ -127,6 +127,7 @@ struct ComputePerpVelocity{
         double PU = b_0*( d1P*d2U-d2P*d1U)+
                     b_1*( d2P*d0U-d0P*d2U)+
                     b_2*( d0P*d1U-d1P*d0U);//ExB drift
+        //sqrt(g) times the flux
         dtNx =  -detg*N*( b_1*d2P - b_2*d1P + m_tau * curv0 + m_mu * U * U * curvKappa0);
         dtNy =  -detg*N*( b_2*d0P - b_0*d2P + m_tau * curv1 + m_mu * U * U * curvKappa2);
         dtNz =  -detg*N*( b_0*d1P - b_1*d0P + m_tau * curv2 + m_mu * U * U * curvKappa2);
@@ -318,19 +319,19 @@ struct Explicit
         return m_dA;
     }
     void compute_dsN (int i, Container& dsN) const {
-        dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusN[i], m_fields[0][i],
+        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusN[i], m_fields[0][i],
                 m_plusN[i], 0., dsN, dg::NEU, {0,0});
     }
     void compute_dsU (int i, Container& dsU) const {
-        dg::geo::ds_centered( m_fa_U, 1., m_minusU[i], m_fields[1][i],
-                m_plusU[i], 0., dsU);
+        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusU[i], m_fields[1][i],
+                m_plusU[i], 0., dsU, dg::NEU, {0,0});
     }
     void compute_dsP (int i, Container& dsP) const {
-        dg::geo::ds_centered_bc_along_field( m_fa_P, 1., m_minusP[i], m_phi[i],
+        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusP[i], m_phi[i],
                 m_plusP[i], 0.0, dsP, dg::DIR, {0,0});
     }
     void compute_dssU(int i, Container& dssU) {
-        dg::geo::dss_centered( m_fa_U, 1., m_minusU[i], m_fields[1][i], m_plusU[i], 0., dssU);
+        dg::geo::dss_centered_bc_along_field( m_fa, 1., m_minusU[i], m_fields[1][i], m_plusU[i], 0., dssU, dg::NEU, {0,0});
     }
     void compute_lapParU(int i, Container& lapU) {
         compute_dsU(i, m_temp0);
@@ -472,7 +473,7 @@ struct Explicit
 
     //matrices and solvers
     Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
-    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa_P, m_fa_N, m_fa_U;
+    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa;//_P, m_fa_N, m_fa_U;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
@@ -549,20 +550,22 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
 {
     //in DS we take the true bhat
     auto bhat = dg::geo::createBHat( mag);
-    m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+    m_fa.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
         p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
-    if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
-        m_fa_U.construct( m_fa_N);
-    else
-        m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
-    if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
-        m_fa_P.construct( m_fa_N);
-    else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
-        m_fa_P.construct( m_fa_U);
-    else
-        m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+    //m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+    //    p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+    //if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
+    //    m_fa_U.construct( m_fa_N);
+    //else
+    //    m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
+    //        p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+    //if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
+    //    m_fa_P.construct( m_fa_N);
+    //else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
+    //    m_fa_P.construct( m_fa_U);
+    //else
+    //    m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
+    //         p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
 
     // in Poisson we take EPhi except for the true curvmode
     bhat = dg::geo::createEPhi(+1);
@@ -865,7 +868,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
     const std::array<std::array<Container,2>,2>& fields,
     std::array<std::array<Container,2>,2>& yp)
 {
-    //MW: in theory we have the possibility to
+    //MW: we have the possibility to
     // make the implementation conservative since the perp boundaries are
     // penalized away
     //y[0] = N-1, y[1] = W; fields[0] = N, fields[1] = U
@@ -879,7 +882,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
         dg::blas2::symv( m_dy_U, fields[1][i], m_dU[i][1]);
         if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dU[i][2]);
         if( m_p.beta == 0){
-            dg::blas1::subroutine( routines::ComputePerpVelocity(
+            dg::blas1::subroutine( routines::ComputePerpConservative(
                 m_p.mu[i], m_p.tau[i]),
                 //species depdendent
                 fields[0][i], m_dN[i][0], m_dN[i][1], m_dN[i][2],
@@ -893,7 +896,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
             );
         }
         if( m_p.beta != 0){
-            dg::blas1::subroutine( routines::ComputePerpVelocity(
+            dg::blas1::subroutine( routines::ComputePerpConservative(
                 m_p.mu[i], m_p.tau[i]),
                 //species depdendent
                 fields[0][i], m_dN[i][0], m_dN[i][1], m_dN[i][2],
@@ -908,7 +911,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
                 m_divCurvKappa, m_detg, m_temp0, m_temp1, m_temp2, yp[1][i]
             );
         }
-        //compute divergence
+        //compute divergence of density flux
         dg::blas2::symv( 1., m_dx_N, m_temp0, 0., yp[0][i]);
         dg::blas2::symv( 1., m_dy_N, m_temp1, 1., yp[0][i]);
         if(!m_p.symmetric)dg::blas2::symv( 1., m_dz, m_temp2, 1., yp[0][i]);
@@ -927,14 +930,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     for( unsigned i=0; i<2; i++)
     {
 
-        m_fa_N( dg::geo::einsMinus, y[0][i], m_minusN[i]);
-        m_fa_N( dg::geo::einsPlus,  y[0][i], m_plusN[i]);
-        m_fa_U( dg::geo::einsMinus, fields[1][i], m_minusU[i]);
-        m_fa_U( dg::geo::einsPlus,  fields[1][i], m_plusU[i]);
-        m_fa_P( dg::geo::einsMinus, m_phi[i], m_minusP[i]);
-        m_fa_P( dg::geo::einsPlus,  m_phi[i], m_plusP[i]);
-        dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusN[i], y[0][i], m_plusN[i], 0., m_temp0, dg::NEU, {0,0});
-        dg::geo::ds_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i], 0., m_temp1);
+        m_fa( dg::geo::einsMinus, y[0][i], m_minusN[i]);
+        m_fa( dg::geo::einsPlus,  y[0][i], m_plusN[i]);
+        m_fa( dg::geo::einsMinus, fields[1][i], m_minusU[i]);
+        m_fa( dg::geo::einsPlus,  fields[1][i], m_plusU[i]);
+        m_fa( dg::geo::einsMinus, m_phi[i], m_minusP[i]);
+        m_fa( dg::geo::einsPlus,  m_phi[i], m_plusP[i]);
+        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusN[i], y[0][i], m_plusN[i], 0., m_temp0, dg::NEU, {0,0});
+        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusU[i], fields[1][i], m_plusU[i], 0., m_temp1, dg::NEU, {0,0});
         //---------------------density--------------------------//
         //density: -Div ( NUb)
         dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i],
@@ -946,11 +949,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::blas1::pointwiseDot(-1., fields[1][i], m_temp1, 1., yp[1][i]);
         // force terms: -tau/mu * ds N/N -1/mu * ds Phi
         dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp0, fields[0][i], 1., yp[1][i]);
-        dg::geo::ds_centered_bc_along_field( m_fa_P, -1./m_p.mu[i], m_minusP[i], m_phi[i], m_plusP[i], 1.0, yp[1][i], dg::DIR, {0,0});
+        dg::geo::ds_centered_bc_along_field( m_fa, -1./m_p.mu[i], m_minusP[i], m_phi[i], m_plusP[i], 1.0, yp[1][i], dg::DIR, {0,0});
         // viscosity: + nu_par Delta_par U/N = nu_par ( Div b dsU + dssU)/N
         // Maybe factor this out in an operator splitting method? To get larger timestep
         dg::blas1::pointwiseDot(1., m_divb, m_temp1, 0., m_temp1);
-        dg::geo::dss_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i], 1., m_temp1);
+        dg::geo::dss_centered_bc_along_field( m_fa, 1., m_minusU[i], fields[1][i], m_plusU[i], 1., m_temp1, dg::NEU, {0,0});
         dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i], 1., yp[1][i]);
     }
 }
