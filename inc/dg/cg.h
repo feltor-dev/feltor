@@ -614,10 +614,12 @@ struct Invert
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
 #endif //MPI
-//         {
-//             std::cout << "# of cg iterations \t"<< number << "\t";
-//             std::cout << "# took \t"<<t.diff()<<"s\n";
-//         }
+#ifndef SILENT
+        {
+            std::cout << "# of cg iterations \t"<< number << "\t";
+            std::cout << "# took \t"<<t.diff()<<"s\n";
+        }
+#endif //SILENT
 #endif //DG_BENCHMARK
         return number;
     }

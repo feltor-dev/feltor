@@ -15,7 +15,7 @@ namespace dg{
 * for b. A is a symmetric 
 *
 * 
-* @note The common lanczos method (and M-Lanczos) method are prone to loss of orthogonality for finite precision. Here, only the basic Paige fix is used. Thus the iterations should be kept as small as possible. Could be fixed via reorthogonalization strategies, but so far the necessary iteration numbers are low enough. 
+* @note The common lanczos method (and M-Lanczos) method are prone to loss of orthogonality for finite precision. Here, only the basic Paige fix is used. Thus the iterations should be kept as small as possible. Could be fixed via reorthogonalization strategies, but so far the required iteration numbers are low enough. 
 */
 template< class ContainerType>
 class Lanczos
@@ -61,7 +61,6 @@ class Lanczos
         T.diagonal_offsets[1] =  0;
         T.diagonal_offsets[2] =  1;
         V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-//         TVpair(T,V);
     }
     /**
      * @brief Solve the system A*x = b for b using Lanczos method

@@ -1,3 +1,7 @@
+#define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
+#define SILENT
+#include <boost/math/special_functions/jacobi_elliptic.hpp>
+
 #include <iostream>
 #include <iomanip>
 
@@ -9,7 +13,7 @@
 #include "backend/timer.h"
 
 #include "lanczos.h"
-
+#include "sqrt_cauchy.h"
 #include "matrixsqrt.h"
 
 const double lx = 2.*M_PI;
@@ -52,6 +56,16 @@ int main()
     int counter =0;
     double erel=0;
     
+    CauchySqrtInt<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> cauchysqrtint(A, grid, epsCG);
+    unsigned iter;
+    std::cout << "# of Cauchy terms?\n";
+    std::cin >> iter;
+    t.tic();
+    cauchysqrtint(x,b,1.,50. ,iter);
+    t.toc();
+    dg::blas1::axpby(1.0, b, -1.0, b_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, b_exac));   
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    
     //////////////////////////Direct sqrt ODE solve
     std::cout << "Solving  via Direct sqrt ODE\n";
     DirectSqrtSolve<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> directsqrtsolve(A, grid, epsCG, epsTimerel, epsTimeabs);
@@ -65,7 +79,7 @@ int main()
 
     ////////////////////////Krylov solve via Lanczos method and ODE sqrt solve
     std::cout << "Solving  via Krylov method and sqrt ODE\n";
-    unsigned iter;
+//     unsigned iter;
     std::cout << "# of Lanczos iterations?\n";
     std::cin >> iter;
   
