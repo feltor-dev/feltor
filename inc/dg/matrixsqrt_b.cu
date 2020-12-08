@@ -69,13 +69,20 @@ int main()
     double lambda_min = 1; //Exact estimate missing, However as long as chi in helmholtz is 1 it is correct
     double lambda_max;
     t.tic();
-    eve(A, b, b, A.precond(),lambda_max);
-    std::cout << "Maximum EV is: "<< lambda_max << "\n";
-    cauchysqrtint(x, b, lambda_min, lambda_max , iter);
+    eve(A, b, b, A.inv_weights(),lambda_max);
+    std::cout << "Maximum EV from EVE is: "<< lambda_max << "\n";
+    
+    //analyitcal estimate
+    double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+    double hxhy = lx*ly/(n*n*Nx*Ny);
+    lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
+    std::cout << "Min and Maximum EV is: "<< -lmin*alpha+1 << "  "<<-lmax*alpha+1<< "\n";
+   
+    cauchysqrtint(x, b,-lmin*alpha+1 ,-lmax*alpha+1, iter);
     t.toc();
     dg::blas1::axpby(1.0, b, -1.0, b_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, b_exac));   
-    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much smaller after a few iterations with correct EVs (does it converge properly?)
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much smaller after a few iterations with correct EVs, reason is most likely that the EVs are not exactly estimated, error is also very sensible to min and max EVs
     
     
     //////////////////////////Direct sqrt ODE solve

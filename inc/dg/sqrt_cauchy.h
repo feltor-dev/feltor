@@ -121,7 +121,7 @@ struct CauchySqrtInt
         const value_type sqrt1mk2 = sqrt(1.-k2);
         const value_type Ks=std::comp_ellint_1(sqrt1mk2 );
         const value_type fac = -2.* Ks*sqrt(minEV)/(M_PI*iter);
-        for (unsigned j=1; j<iter; j++)
+        for (unsigned j=1; j<iter+1; j++)
         {
             t  = (j-0.5)*Ks/iter; //imaginary part .. 1i missing
             cn = 1./boost::math::jacobi_cn(sqrt1mk2, t); 
