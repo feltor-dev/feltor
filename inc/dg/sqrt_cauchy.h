@@ -1,15 +1,12 @@
 #pragma once
 
 #include "blas.h"
-// #include "backend/typedefs.h"
 #include "helmholtz.h"
 #include <cmath>
 //! M_PI is non-standard ... so MSVC complains
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-#include <iostream>
-#include <complex>       
 template< class Geometry, class Matrix, class Container>
 struct SqrtCauchyIntOp
 {
@@ -114,10 +111,6 @@ struct CauchySqrtInt
      */
     void operator()(const Container& x, Container& b, const value_type& minEV, const value_type& maxEV, const unsigned& iter)
     {
-//         std::cout << "K(0.5) = Kc++(sqrt(0.5)) " << std::comp_ellint_1(sqrt(0.5))  << " == 1.85407" <<  "\n";
-//         std::cout << "sn(0.5,0.13) = sn++(sqrt(0.13), 0.5) = " << boost::math::jacobi_sn(sqrt(0.13),0.5) << " == 0.4777166" <<  "\n";
-//         std::cout << "cn(0.5,0.13) =cn++(sqrt(0.13), 0.5) =" << boost::math::jacobi_cn(sqrt(0.13),0.5) << " == 0.878813" <<  "\n";
-//         std::cout << "dn(0.5,0.13) = dn++(sqrt(0.25), 0.5) =" << boost::math::jacobi_dn(sqrt(0.13),0.5)  << " == 0.985089" <<  "\n";
         dg::blas1::scal(b,0.0);
         value_type sn=0.;
         value_type cn=0.;
@@ -137,10 +130,10 @@ struct CauchySqrtInt
             w = sqrt(minEV)*sn;
             dg::blas1::axpby(cn*dn, x, 0.0 , m_helper); //m_helper = cn dn x
             m_op.set_w(w);
-            m_invert( m_op, m_helper2, m_helper);      // m_helper2 = (w^2 +A)^(-1) cn dn x
-            dg::blas1::axpby(-fac, m_helper2, 1.0, b); // b += -fac A (w^2 +A)^(-1) cn dn x
+            m_invert( m_op, m_helper2, m_helper);      // m_helper2 = (w^2 +V A)^(-1) cn dn x
+            dg::blas1::axpby(-fac, m_helper2, 1.0, b); // b += -fac A (w^2 +V A)^(-1) cn dn x
         }
-        dg::blas2::symv(m_A, b, m_helper); // A (w^2 +A)^(-1) cn dn x
+        dg::blas2::symv(m_A, b, m_helper); // A (w^2 +V A)^(-1) cn dn x
         dg::blas1::pointwiseDot(m_op.inv_weights(),  m_helper, b);  // fac V A (-w^2 I -V A)^(-1) cn dn x
 
     }
