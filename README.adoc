@@ -29,6 +29,10 @@ installation. Please read it before you proceed to the https://feltor-dev.github
 We also present how to use the FELTOR software package,
 which requires additional external libraries to be installed on the system.
 ____
+If you run into trouble during the setup, there is a chance that we already know of the problem and have an entry in our https://feltor-dev.github.io/troubleshooting/[troubleshooting] page.
+If you cannot find a solution there, please inform us of the issue.
+____
+____
 The first part assumes a Linux operating system. If you want to work
 on Windows, jump to <<sec_windows,Using Feltor on Windows>>.
 ____
@@ -195,11 +199,11 @@ int main()
 }
 ----
 
-To compile and run this code for a GPU use
+To compile and run this code for a GPU use (assuming the external libraries are linked in the `include` folder as described above)
 
 [source,sh]
 ----
-nvcc -x cu -std=c++11 -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+nvcc -x cu -std=c++11 -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -208,7 +212,7 @@ functions you can also use
 
 [source,sh]
 ----
-g++ -std=c++11 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+g++ -std=c++11 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 export OMP_NUM_THREADS=4
 ./test
 ----
@@ -251,7 +255,7 @@ Compile e.g. for a hybrid MPI {plus} OpenMP hardware platform with
 
 [source,sh]
 ----
-mpic++ -std=c++11 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test_mpi.cpp -o test_mpi
+mpic++ -std=c++11 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test_mpi.cpp -o test_mpi
 export OMP_NUM_THREADS=2
 mpirun -n 4 ./test_mpi
 ----
@@ -436,7 +440,7 @@ compile the tex file(s) of the documentation.
 
 The
 http://feltor-dev.github.io/doc/dg/html/modules.html[documentation]
-of the dG library was generated with
+of the dg library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
 version including informative pdf writeups on implemented numerical
 methods directly from source code. This depends on the `doxygen`,
@@ -455,8 +459,8 @@ For details on how FELTOR's internal Makefiles are configured please see the lin
 
 == 3. Authors, Acknowledgements, Contributions
 
-FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please see the list of https://feltor-dev.github.io/about[contributors]
-and funding.
+FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please see the https://feltor-dev.github.io/about/[Acknowledgements] section on our homepage
+for a list of contributors and funding.
 Also check out our https://feltor-dev.github.io[homepage]
 for general information, wiki pages,
 troubleshooting and guides on how to contribute.

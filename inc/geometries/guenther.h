@@ -6,7 +6,6 @@
 
 #include "dg/blas.h"
 
-#include "guenther_parameters.h"
 #include "magnetic_field.h"
 
 //TODO somebody document the functions as in solovev/geometry.h
@@ -146,10 +145,6 @@ static inline CylindricalFunctorsLvl1 createIpol( double I_0)
 {
     return CylindricalFunctorsLvl1( Ipol(I_0), IpolR(), IpolZ());
 }
-static inline TokamakMagneticField createMagField( double R_0, double I_0)
-{
-    return TokamakMagneticField( R_0, createPsip(R_0), createIpol(I_0));
-}
 ///@}
 } //namespace guenther
 
@@ -164,7 +159,9 @@ static inline TokamakMagneticField createMagField( double R_0, double I_0)
  */
 static inline dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
 {
-    return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0));
+    MagneticFieldParameters params = { 1., 1., 0.,
+            equilibrium::guenther, modifier::none, description::square};
+    return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0), params);
 }
 } //namespace geo
 }//namespace dg

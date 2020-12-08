@@ -47,6 +47,15 @@ DG_DEVICE static inline double cooY2d( double x, double y) {return y;}
 DG_DEVICE static inline double cooY3d( double x, double y, double z) {return y;}
 ///@brief \f[ f(x,y,z) = z\f]
 DG_DEVICE static inline double cooZ3d( double x, double y, double z) {return z;}
+
+
+///@brief \f[ R\sin(\varphi)\f]
+DG_DEVICE static inline double cooRZP2X( double R, double Z, double P){ return R*sin(P);}
+///@brief \f[ R\cos(\varphi)\f]
+DG_DEVICE static inline double cooRZP2Y( double R, double Z, double P){ return R*cos(P);}
+///@brief \f[ Z\f]
+DG_DEVICE static inline double cooRZP2Z( double R, double Z, double P){ return Z;}
+
 ///@brief \f[ f(x) = 1\f]
 DG_DEVICE static inline float one( float x) {return 1;}
 

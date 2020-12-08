@@ -21,7 +21,12 @@ namespace dg
  * @note the paramateres given in the constructor are global parameters
  */
 
-
+///@cond
+template<class real_type>
+struct RealMPIGrid2d;
+template<class real_type>
+struct RealMPIGrid3d;
+///@endcond
 
 
 /**
@@ -30,7 +35,7 @@ namespace dg
  * Represents the global grid coordinates and the process topology.
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
  * @note a single cell is never divided across processes.
- * @note although it is abstract objects, are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @attention
  * The access functions \c n() \c Nx() ,... all return the global parameters. If you want to have the local ones call the \c local() function.
  * @ingroup basictopology
@@ -38,9 +43,10 @@ namespace dg
 template<class real_type>
 struct aRealMPITopology2d
 {
-    typedef MPITag memory_category;
-    typedef TwoDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid2d<real_type>;
 
     /**
      * @brief Return global x0
@@ -325,9 +331,10 @@ struct aRealMPITopology2d
 template<class real_type>
 struct aRealMPITopology3d
 {
-    typedef MPITag memory_category;
-    typedef ThreeDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid3d<real_type>;
 
     /**
      * @brief Return global x0
@@ -614,7 +621,7 @@ struct aRealMPITopology3d
         unsigned Ny = g.Ny()/dims[1];
         unsigned Nz = g.Nz()/dims[2];
 
-        l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
+        l = RealGrid3d<real_type>(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
     RealGrid3d<real_type> g, l; //global grid
     MPI_Comm comm, planeComm; //just an integer...
@@ -728,18 +735,6 @@ struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
     }
 };
 
-///@cond
-template<class real_type>
-struct MemoryTraits< MPITag, TwoDimensionalTag, real_type> {
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = RealMPIGrid2d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< MPITag, ThreeDimensionalTag, real_type> {
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = RealMPIGrid3d<real_type>;
-};
-///@endcond
 ///@addtogroup gridtypes
 ///@{
 using MPIGrid2d         = dg::RealMPIGrid2d<double>;

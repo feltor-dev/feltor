@@ -9,17 +9,9 @@
 #include "dg/algorithm.h"
 
 #include "netcdf_par.h" //exclude if par netcdf=OFF
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "reconnection.cuh"
-
-/*
-    - the only difference to the asela_hpc.cu file is that this program 
-        uses the MPI backend and
-        the parallel netcdf output 
-    - pay attention that both the grid dimensions as well as the 
-        output dimensions must be divisible by the mpi process numbers
-*/
 
 int main( int argc, char* argv[])
 {
@@ -53,7 +45,6 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js, gs;
     if( argc != 4)
     {
@@ -61,10 +52,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
-    }
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     const asela::Parameters p( js);
     if(rank==0)p.display( std::cout);
     std::string input = js.toStyledString();

@@ -5,13 +5,7 @@
 #include "toeflI.cuh"
 #include "parameters.h"
 
-#include "file/nc_utilities.h"
-
-/*
-   - reads parameters from input.txt or any other given file,
-   - integrates the ToeflR - functor and
-   - writes outputs to a given outputfile using netcdf4.
-*/
+#include "dg/file/file.h"
 
 int main( int argc, char* argv[])
 {
@@ -26,10 +20,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     std::cout << js<<std::endl;
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);

@@ -9,9 +9,10 @@
 
 const double lx = M_PI/2.;
 const double ly = M_PI;
-double function( double x, double y) {return cos(x)*sin(y);}
-double pol_average( double x, double y) {return cos(x)*2./M_PI;}
-double tor_average( double x, double y) {return sin(y)*2./M_PI;}
+const double lz = M_PI/2.;
+double function( double x, double y, double z) {return cos(x)*sin(z);}
+double z_average( double x, double y) {return cos(x)*2./M_PI;}
+double x_average( double x, double y, double z) {return sin(z)*2./M_PI;}
 
 int main(int argc, char* argv[])
 {
@@ -19,33 +20,37 @@ int main(int argc, char* argv[])
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    if(rank==0)std::cout << "Program to test the average in x and y direction\n";
+    if(rank==0)std::cout << "Program to test the average in x and z direction\n";
     MPI_Comm comm;
-    mpi_init2d( dg::PER, dg::PER, comm);
-    unsigned n = 3, Nx = 32, Ny = 48;
+    mpi_init3d( dg::PER, dg::PER, dg::PER, comm);
+    unsigned n = 3, Nx = 32, Ny = 48, Nz = 48;
     //![doxygen]
-    dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, comm);
+    dg::MPIGrid3d g( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, comm);
 
-    dg::Average<dg::MDVec > pol(g, dg::coo2d::y);
+    dg::Average<dg::MDVec > avg(g, dg::coo3d::z, "exact");
 
     const dg::MDVec vector = dg::evaluate( function ,g);
-    dg::MDVec average_y( vector);
-    if(rank==0)std::cout << "Averaging y ... \n";
-    pol( vector, average_y);
+    dg::MDVec average_z;
+    if(rank==0)std::cout << "Averaging z ... \n";
+    avg( vector, average_z, false);
     //![doxygen]
-    const dg::MDVec w2d = dg::create::weights( g);
-    dg::MDVec solution = dg::evaluate( pol_average, g);
-    dg::blas1::axpby( 1., solution, -1., average_y);
+    dg::MPIGrid2d gxy( 0, lx, 0, ly, n, Nx, Ny, average_z.communicator());
+    const dg::MDVec w2d = dg::create::weights( gxy);
+    dg::MDVec solution = dg::evaluate( z_average, gxy);
+    dg::blas1::axpby( 1., solution, -1., average_z);
     int64_t binary[] = {4406193765905047925,4395311848786989976};
     exblas::udouble res;
-    res.d = sqrt( dg::blas2::dot( average_y, w2d, average_y));
-    if(rank==0)std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i-binary[0]<<std::endl;
+    res.d = sqrt( dg::blas2::dot( average_z, w2d, average_z));
+    if(rank==0)std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
+    if(rank==0)std::cout << "(Converges with 2nd order).\n";
     if(rank==0)std::cout << "Averaging x ... \n";
-    dg::Average< dg::MDVec> tor( g, dg::coo2d::x);
-    tor( vector, average_y);
-    solution = dg::evaluate( tor_average, g);
-    dg::blas1::axpby( 1., solution, -1., average_y);
-    res.d = sqrt( dg::blas2::dot( average_y, w2d, average_y));
+    dg::Average< dg::MDVec> tor( g, dg::coo3d::x, "exact");
+    average_z = vector;
+    tor( vector, average_z);
+    solution = dg::evaluate( x_average, g);
+    dg::blas1::axpby( 1., solution, -1., average_z);
+    const dg::MDVec w3d = dg::create::weights( g);
+    res.d = sqrt( dg::blas2::dot( average_z, w3d, average_z));
     if(rank==0)std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i-binary[1]<<std::endl;
     //if(rank==0)std::cout << "\n Continue with \n\n";
 

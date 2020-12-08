@@ -16,17 +16,16 @@ namespace dg
 template<class real_type>
 struct aRealMPIGeometry2d : public aRealMPITopology2d<real_type>
 {
-    typedef MPI_Vector<thrust::host_vector<real_type> > host_vector;
     ///@copydoc aRealGeometry2d::jacobian()
-    SparseTensor<host_vector > jacobian()const {
+    SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > jacobian()const {
         return do_compute_jacobian();
     }
     ///@copydoc aRealGeometry2d::metric()
-    SparseTensor<host_vector > metric()const {
+    SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > metric()const {
         return do_compute_metric();
     }
     ///@copydoc aRealGeometry2d::map()
-    std::vector<host_vector > map()const{
+    std::vector<MPI_Vector<thrust::host_vector<real_type>> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
@@ -42,14 +41,14 @@ struct aRealMPIGeometry2d : public aRealMPITopology2d<real_type>
     ///@copydoc aRealMPITopology2d::operator=(const aRealMPITopology2d&)
     aRealMPIGeometry2d& operator=( const aRealMPIGeometry2d& src) = default;
     private:
-    virtual SparseTensor<host_vector > do_compute_metric()const {
-        return SparseTensor<host_vector >(*this);
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_metric()const {
+        return SparseTensor<MPI_Vector<thrust::host_vector<real_type>> >(*this);
     }
-    virtual SparseTensor<host_vector > do_compute_jacobian()const {
-        return SparseTensor<host_vector >(*this);
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_jacobian()const {
+        return SparseTensor<MPI_Vector<thrust::host_vector<real_type>> >(*this);
     }
-    virtual std::vector<host_vector > do_compute_map()const{
-        std::vector<host_vector> map(2);
+    virtual std::vector<MPI_Vector<thrust::host_vector<real_type>> > do_compute_map()const{
+        std::vector<MPI_Vector<thrust::host_vector<real_type>>> map(2);
         map[0] = dg::evaluate(dg::cooX2d, *this);
         map[1] = dg::evaluate(dg::cooY2d, *this);
         return map;
@@ -62,17 +61,16 @@ struct aRealMPIGeometry2d : public aRealMPITopology2d<real_type>
 template<class real_type>
 struct aRealMPIGeometry3d : public aRealMPITopology3d<real_type>
 {
-    typedef MPI_Vector<thrust::host_vector<real_type> > host_vector;
     ///@copydoc aRealGeometry3d::jacobian()
-    SparseTensor<host_vector > jacobian()const{
+    SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > jacobian()const{
         return do_compute_jacobian();
     }
     ///@copydoc aRealGeometry3d::metric()
-    SparseTensor<host_vector > metric()const {
+    SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > metric()const {
         return do_compute_metric();
     }
     ///@copydoc aRealGeometry3d::map()
-    std::vector<host_vector > map()const{
+    std::vector<MPI_Vector<thrust::host_vector<real_type>> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
@@ -88,14 +86,14 @@ struct aRealMPIGeometry3d : public aRealMPITopology3d<real_type>
     ///@copydoc aRealMPITopology3d::operator=(const aRealMPITopology3d&)
     aRealMPIGeometry3d& operator=( const aRealMPIGeometry3d& src) = default;
     private:
-    virtual SparseTensor<host_vector > do_compute_metric()const {
-        return SparseTensor<host_vector >(*this);
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_metric()const {
+        return SparseTensor<MPI_Vector<thrust::host_vector<real_type>> >(*this);
     }
-    virtual SparseTensor<host_vector > do_compute_jacobian()const {
-        return SparseTensor<host_vector >(*this);
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_jacobian()const {
+        return SparseTensor<MPI_Vector<thrust::host_vector<real_type>> >(*this);
     }
-    virtual std::vector<host_vector > do_compute_map()const{
-        std::vector<host_vector> map(3);
+    virtual std::vector<MPI_Vector<thrust::host_vector<real_type>> > do_compute_map()const{
+        std::vector<MPI_Vector<thrust::host_vector<real_type>>> map(3);
         map[0] = dg::evaluate(dg::cooX3d, *this);
         map[1] = dg::evaluate(dg::cooY3d, *this);
         map[2] = dg::evaluate(dg::cooZ3d, *this);
@@ -173,7 +171,7 @@ struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
 template<class real_type>
 struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
 {
-    typedef RealCartesianMPIGrid2d<real_type> perpendicular_grid;
+    using perpendicular_grid = RealCartesianMPIGrid2d<real_type>;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
     RealCartesianMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): aRealProductMPIGeometry3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER,dg::PER,dg::PER, comm){}
@@ -213,7 +211,7 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
 template<class real_type>
 struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
 {
-    typedef RealCartesianMPIGrid2d<real_type> perpendicular_grid;
+    using perpendicular_grid = RealCartesianMPIGrid2d<real_type>;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@copydoc hide_comm_parameters3d
@@ -238,13 +236,12 @@ struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
                 this->global().bcx(), this->global().bcy(), this->global().bcz());
     }
     private:
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
     virtual RealCartesianMPIGrid2d<real_type>* do_perp_grid()const override final{
         return new RealCartesianMPIGrid2d<real_type>( this->global().x0(), this->global().x1(), this->global().y0(), this->global().y1(), this->global().n(), this->global().Nx(), this->global().Ny(), this->global().bcx(), this->global().bcy(), this->get_perp_comm( ));
     }
-    virtual SparseTensor<host_vector > do_compute_metric()const override final{
-        SparseTensor<host_vector> metric(*this);
-        host_vector R = dg::evaluate(dg::cooX3d, *this);
+    virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_metric()const override final{
+        SparseTensor<MPI_Vector<thrust::host_vector<real_type>>> metric(*this);
+        MPI_Vector<thrust::host_vector<real_type>> R = dg::evaluate(dg::cooX3d, *this);
         for( unsigned i = 0; i<this->local().size(); i++)
             R.data()[i] = 1./R.data()[i]/R.data()[i];
         metric.idx(2,2)=2;

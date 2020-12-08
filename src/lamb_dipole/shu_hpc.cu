@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "shu.cuh"
 #include "parameters.h"
 
@@ -18,19 +18,13 @@ int main( int argc, char * argv[])
     dg::Timer t;
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs);
-    }
+        file::file2Json( argv[1], js);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     p.display( std::cout);
@@ -39,7 +33,7 @@ int main( int argc, char * argv[])
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::DVec w2d( dg::create::weights(grid));
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    dg::HVec omega; 
+    dg::HVec omega;
     if( p.initial == "lamb")
         omega = dg::evaluate ( lamb, grid);
     else if ( p.initial == "shear")

@@ -23,8 +23,8 @@ namespace dg
  *
  * @ingroup matrixoperators
  *
- * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
- * where \f$ \nabla_\perp \f$ is the two-dimensional gradient and \f$\chi\f$ is a
+ * The term discretized is \f[ -\nabla \cdot ( \chi \nabla ) \f]
+ * where \f$ \nabla \f$ is the two-dimensional nabla and \f$\chi\f$ is a
  * (possibly spatially dependent) tensor.
  * In general coordinates that means
  * \f[ -\frac{1}{\sqrt{g}}\left(
@@ -35,14 +35,15 @@ namespace dg
  you like (in order for the operator to be invertible \f$\chi\f$ should be
  symmetric and positive definite though).
  Note that the local discontinuous Galerkin discretization adds so-called jump terms
- \f[ D^\dagger \chi D + \alpha J \f]
+ \f[ D^\dagger \chi D + \alpha \chi_{on/off} J \f]
  where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
  (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
  Usually, the default \f$ \alpha=1 \f$ is a good choice.
  However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
- \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
+ \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values. 
  In a time dependent problem the value of \f$\alpha\f$ determines the
- numerical diffusion, i.e. for too low values numerical oscillations may appear.
+ numerical diffusion, i.e. for too low values numerical oscillations may appear. 
+ The \f$ \chi_{on/off} \f$ in the jump term serves to weight the jump term with \f$ \chi \f$. This can be switched either on or off with off being the default.
  Also note that a forward discretization has more diffusion than a centered discretization.
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
@@ -76,11 +77,12 @@ class Elliptic
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, norm no = not_normed,
-        direction dir = forward, value_type jfactor=1.):
-        Elliptic( g, g.bcx(), g.bcy(), no, dir, jfactor)
+        direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
+        Elliptic( g, g.bcx(), g.bcy(), no, dir, jfactor, chi_weight_jump)
     {
     }
 
@@ -94,13 +96,15 @@ class Elliptic
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, bc bcx, bc bcy,
         norm no = not_normed, direction dir = forward,
-        value_type jfactor=1.)
+        value_type jfactor=1., bool chi_weight_jump = false)
     {
         m_no=no, m_jfactor=jfactor;
+        m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
@@ -192,6 +196,28 @@ class Elliptic
      * @return  The current scale factor for jump terms
      */
     value_type get_jfactor() const {return m_jfactor;}
+    /**
+     * @brief Set the chi weighting of jump terms
+     * @param jump_weighting Switch for weighting the jump factor with chi. Either true or false.
+     */
+    void set_jump_weighting( bool jump_weighting) {m_chi_weight_jump = jump_weighting;}
+    /**
+     * @brief Get the current state of chi weighted jump terms.
+     * @return Whether the weighting of jump terms with chi is enabled. Either true or false.
+     */
+    bool get_jump_weighting() const {return m_chi_weight_jump;}
+    /**
+     * @brief Compute elliptic term and store in output
+     *
+     * i.e. \c y=M*x
+     * @param x left-hand-side
+     * @param y result
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void operator()( const ContainerType0& x, ContainerType1& y){
+        symv( 1, x, 0, y);
+    }
 
     /**
      * @brief Compute elliptic term and store in output
@@ -230,29 +256,87 @@ class Elliptic
         dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if(m_chi_weight_jump)
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+        } 
+        else
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
+        
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
     }
 
+    /**
+     * @brief Compute elliptic term with a possibly zero prefactor and add to output
+     *
+     * i.e this function computes \f[ y = -\alpha\nabla \cdot ( \sigma\chi \nabla x )  + \beta y\f]
+     * This is in principle possible also with the \c set_chi() and \c symv() functions
+     * however sometimes you have a \c sigma with explicit zeros or negative values.
+     * Then you need to use this function because \c set_chi() won't allow a \c sigma with zeros
+     * @note This function does not change the internal \c chi tensor
+     * @param alpha a scalar
+     * @param sigma The prefactor for the \c chi tensor
+     * @param x left-hand-side
+     * @param beta a scalar
+     * @param y result
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void multiply_sigma( value_type alpha, const ContainerType2& sigma, const ContainerType0& x, value_type beta, ContainerType1& y)
+    {
+        //compute gradient
+        dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
+        dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
+
+        //multiply with tensor (note the alias)
+        dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+        //sigma is possibly zero so we don't multiply it to m_chi
+        dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx); ///////
+        dg::blas1::pointwiseDot( m_tempy, sigma, m_tempy); ///////
+
+        //now take divergence
+        dg::blas2::symv( m_lefty, m_tempy, m_temp);
+        dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
+
+        //add jump terms
+        if( 0 != m_jfactor )
+        {
+            if(m_chi_weight_jump)
+            {
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+                dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+            } 
+            else
+            {   
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+            }
+        }
+        if( m_no == normed)
+            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
+        if( m_no == not_normed)//multiply weights without volume
+            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+    }
+    /**
+     * @brief Determine if weights are multiplied to make operator symmetric or not
+     *
+     * @param new_norm new setting
+     */
+    void set_norm( dg::norm new_norm) {
+        m_no = new_norm;
+    }
     private:
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_temp;
@@ -260,6 +344,7 @@ class Elliptic
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
+    bool m_chi_weight_jump;
 };
 
 ///@copydoc Elliptic
@@ -283,7 +368,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  \right)\f]
  is discretized. Note that the local discontinuous Galerkin discretization adds so-called
  jump terms
- \f[ D^\dagger \chi D + \alpha J \f]
+ \f[ D^\dagger \chi D + \alpha\chi_{on/off} J \f]
  where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
  (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
  Usually the default \f$ \alpha=1 \f$ is a good choice.
@@ -291,6 +376,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
  In a time dependent problem the value of \f$\alpha\f$ determines the
  numerical diffusion, i.e. for too low values numerical oscillations may appear.
+ The \f$ \chi_{on/off} \f$ in the jump term serves to weight the jump term with \f$ \chi \f$. This can be switched either on or off with off being the default.
  Also note that a forward discretization has more diffusion than a centered discretization.
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
@@ -324,10 +410,11 @@ class Elliptic3d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed 1 per default
      */
-    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.):
-        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor)
+    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
+        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor, chi_weight_jump)
     {
     }
 
@@ -343,11 +430,13 @@ class Elliptic3d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is the metric tensor multiplied by the volume element per default
      */
-    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
+    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1., bool chi_weight_jump = false)
     {
         m_no=no, m_jfactor=jfactor;
+        m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
         dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
@@ -401,6 +490,8 @@ class Elliptic3d
      * a scalar part \f$ \sigma\f$ and a tensor part \f$ \tau\f$ and you can
      * set each part seperately. This functions sets the tensor part.
      *
+     * @note The class will take care of the volume element in the divergence so do not multiply it to \c tau yourself
+     *
      * @param tau The new tensor part in \f$\chi\f$ (must be positive definite)
      * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
      */
@@ -428,6 +519,21 @@ class Elliptic3d
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     ///@copydoc Elliptic::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
+    ///@copydoc Elliptic::set_jump_weighting()
+    void set_jump_weighting( bool jump_weighting) {m_chi_weight_jump = jump_weighting;}
+    ///@copydoc Elliptic::get_jump_weighting()
+    bool get_jump_weighting() const {return m_chi_weight_jump;}
+
+    /**
+     * @brief Restrict the problem to the first 2 dimensions
+     *
+     * This effectively makes the behaviour of dg::Elliptic3d
+     * identical to the dg::Elliptic class.
+     * @param compute_in_2d if true, the symv function avoids the derivative in z, false reverts to the original behaviour.
+     */
+    void set_compute_in_2d( bool compute_in_2d ) {
+        m_multiplyZ = !compute_in_2d;
+    }
 
     ///@copydoc Elliptic::symv(const ContainerType0&,ContainerType1&)
     template<class ContainerType0, class ContainerType1>
@@ -441,40 +547,103 @@ class Elliptic3d
         //compute gradient
         dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
-        dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
+        if( m_multiplyZ )
+        {
+            dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
 
-        //multiply with tensor (note the alias)
-        dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
-
-        //now take divergence
-        dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
-        dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+            //multiply with tensor (note the alias)
+            dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
+            //now take divergence
+            dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
+            dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+        }
+        else
+        {
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas2::symv( -1.,m_lefty, m_tempy, 0., m_temp);
+        }
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
 
         //add jump terms
-        dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-        dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        if(m_chi_weight_jump)
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+        } 
+        else
+        {
+            dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+            dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+        }
+        if( m_no == normed)
+            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
+        if( m_no == not_normed)//multiply weights without volume
+            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+    }
+    ///@copydoc Elliptic::multiply_sigma(value_type,const ContainerType2&,const ContainerType0&,value_type,ContainerType1&)
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void multiply_sigma( value_type alpha, const ContainerType2& sigma, const ContainerType0& x, value_type beta, ContainerType1& y)
+    {
+        //compute gradient
+        dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
+        dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
+        if( m_multiplyZ )
+        {
+            dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
+
+            //multiply with tensor (note the alias)
+            dg::tensor::multiply3d(m_chi, m_tempx, m_tempy, m_tempz, m_tempx, m_tempy, m_tempz);
+            //sigma is possibly zero so we don't multiply it to m_chi
+            dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx); ///////
+            dg::blas1::pointwiseDot( m_tempy, sigma, m_tempy); ///////
+            dg::blas1::pointwiseDot( m_tempz, sigma, m_tempz); ///////
+            //now take divergence
+            dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
+            dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
+        }
+        else
+        {
+            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+            dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx); ///////
+            dg::blas1::pointwiseDot( m_tempy, sigma, m_tempy); ///////
+            dg::blas2::symv( -1.,m_lefty, m_tempy, 0., m_temp);
+        }
+        dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
+
+        //add jump terms
+        if( 0 != m_jfactor )
+        {
+            if(m_chi_weight_jump)
+            {
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+                dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+            } 
+            else
+            {   
+                dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
+                dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+            }
+        }
         if( m_no == normed)
             dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
         if( m_no == not_normed)//multiply weights without volume
             dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
     }
 
+    /**
+     * @brief Determine if weights are multiplied to make operator symmetric or not
+     *
+     * @param new_norm new setting
+     */
+    void set_norm( dg::norm new_norm) {
+        m_no = new_norm;
+    }
+    
     private:
-    bc inverse( bc bound)
-    {
-        if( bound == DIR) return NEU;
-        if( bound == NEU) return DIR;
-        if( bound == DIR_NEU) return NEU_DIR;
-        if( bound == NEU_DIR) return DIR_NEU;
-        return PER;
-    }
-    direction inverse( direction dir)
-    {
-        if( dir == forward) return backward;
-        if( dir == backward) return forward;
-        return centered;
-    }
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_tempz, m_temp;
@@ -482,6 +651,8 @@ class Elliptic3d
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
+    bool m_multiplyZ = true;
+    bool m_chi_weight_jump;
 };
 ///@cond
 template< class G, class M, class V>

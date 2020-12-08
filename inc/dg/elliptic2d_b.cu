@@ -44,13 +44,15 @@ int main()
 	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
     std::cin >> eps >> jfactor;*/
+    bool jump_weight;
+    std::cout << "Jump weighting on or off? Type 1 for true or 0 for false: \n";
+    std::cin >> jump_weight;
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
 	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec v2d = dg::create::inv_weights( grid);
-    dg::DVec one = dg::evaluate( dg::one, grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
@@ -68,6 +70,7 @@ int main()
 
     //std::cout << "Create Polarisation object and set chi!\n";
     {
+    std::cout << "Centered Elliptic Multigrid\n";
     //! [multigrid]
     dg::Timer t;
     t.tic();
@@ -88,6 +91,7 @@ int main()
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, jfactor);
         multi_pol[u].set_chi( multi_chi[u]);
+        multi_pol[u].set_jump_weighting(jump_weight);
     }
 
     t.toc();
@@ -108,8 +112,16 @@ int main()
     std::cout << " "<<err << "\t"<<res.i<<"\n";
     }
 
+    dg::DMatrix DX = dg::create::dx( grid);
+    dg::blas2::gemv( DX, x, error);
+    dg::blas1::axpby( 1.,derivati,-1., error);
+    double err = dg::blas2::dot( w2d, error);
+    const double norm_der = dg::blas2::dot( w2d, derivati);
+    std::cout << "L2 Norm of relative error in derivative is "<<std::setprecision(16)<< sqrt( err/norm_der)<<std::endl;
+    //derivative converges with p-1, for p = 1 with 1/2
 
     {
+        std::cout << "Forward Elliptic\n";
     x = temp;
     //![invert]
     //create an Elliptic object without volume form (not normed)
@@ -122,7 +134,7 @@ int main()
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
 
     //invert the elliptic equation
-    std::cout << " "<< invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
+    invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
 
     //compute the error (solution contains analytic solution
     dg::blas1::axpby( 1.,x,-1., solution, error);
@@ -136,25 +148,37 @@ int main()
     }
 
     {
-		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+        std::cout << "Compute 2d handle of Elliptic3d\n";
+	    dg::CartesianGrid3d grid( 0, lx, 0, ly, 0,1,n, Nx, Ny, 1, bcx, bcy, dg::PER);
+		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+        pol_backward.set_compute_in_2d(true);
 		pol_backward.set_chi( chi);
 		x = temp;
 		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-		std::cout << " "<< invert_bw( pol_backward, x, b, w2d, v2d, chi_inv);
+		invert_bw( pol_backward, x, b, w2d, v2d, chi_inv);
 		dg::blas1::axpby( 1.,x,-1., solution, error);
+		double err = dg::blas2::dot( w2d, error);
+        err = sqrt( err/norm); res.d = err;
+        std::cout << " "<<err << "\t"<<res.i<<std::endl;
+    }
+    {
+        //try the Hyperelliptic operator
+        std::cout << "HyperElliptic operator\n";
+	    dg::CartesianGrid2d grid( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
+		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+		x = temp;
+		dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
+        chi = temp;
+		x = temp;
+		invert( pol_backward, chi, solution);
+		invert( pol_backward, x, chi);
+		dg::blas1::axpby( 1.,x,-0.25, solution, error);
 		double err = dg::blas2::dot( w2d, error);
         err = sqrt( err/norm); res.d = err;
         std::cout << " "<<err << "\t"<<res.i<<std::endl;
     }
 
 
-    dg::DMatrix DX = dg::create::dx( grid);
-    dg::blas2::gemv( DX, x, error);
-    dg::blas1::axpby( 1.,derivati,-1., error);
-    double err = dg::blas2::dot( w2d, error);
-    const double norm_der = dg::blas2::dot( w2d, derivati);
-    std::cout << "L2 Norm of relative error in derivative is "<<std::setprecision(16)<< sqrt( err/norm_der)<<std::endl;
-    //derivative converges with p-1, for p = 1 with 1/2
 
     return 0;
 }

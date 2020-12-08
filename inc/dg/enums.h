@@ -75,7 +75,22 @@ static inline bc str2bc( std::string s)
         return NEU_DIR;
     if( s=="DIR_NEU"||s=="dir_neu" )
         return DIR_NEU;
-    throw std::runtime_error( "No matching boundary condition!");
+    throw std::runtime_error( "Boundary condition '"+s+"' not recognized!");
+}
+
+/**
+ * @brief invert boundary condition
+ *
+ * @param bound boundary condition to invert
+ * @return NEU for DIR, DIR for NEU, NEU_DIR for DIR_NEU, DIR_NEU for NEU_DIR and PER for PER
+ */
+bc inverse( bc bound)
+{
+    if( bound == DIR) return NEU;
+    if( bound == NEU) return DIR;
+    if( bound == DIR_NEU) return NEU_DIR;
+    if( bound == NEU_DIR) return DIR_NEU;
+    return PER;
 }
 
 ///@brief Switch between normalisations
@@ -86,9 +101,29 @@ enum norm{
 //
 ///@brief Direction of a discrete derivative
 enum direction{
-    forward, //!< forward derivative
-    backward, //!< backward derivative
-    centered //!< centered derivative
+    forward, //!< forward derivative (cell to the right and current cell)
+    backward, //!< backward derivative (cell to the left and current cell)
+    centered //!< centered derivative (cell to the left and right and current cell)
+};
+
+
+/**
+ * @brief invert direction
+ *
+ * @param dir direction to invert
+ * @return backward for forward, forward for backward, centered for centered
+ */
+direction inverse( direction dir)
+{
+    if( dir == forward) return backward;
+    if( dir == backward) return forward;
+    return centered;
+}
+
+///@brief Space of DG coefficients
+enum space{
+    lspace, //!< DG Polynomial space
+    xspace //!< Configuration space
 };
 
 ///@brief 2d coordinates

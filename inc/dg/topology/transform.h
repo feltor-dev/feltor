@@ -12,12 +12,14 @@ namespace dg
  *
  * Pullback is equivalent to the following:
  *
- * -# generate the list of physical space coordinates (e.g. in 2d \f$ x_i = x(\zeta_i, \eta_i),\ y_i = y(\zeta_i, \eta_i)\f$ for all \c i)
+ * -# generate the list of physical space coordinates (e.g. in 2d \f$ x_i = x(\zeta_i, \eta_i),\ y_i = y(\zeta_i, \eta_i)\f$ for all \c i) using the map member of the grid e.g. aRealGeometry2d::map()
  * -#  evaluate the given function or functor at these coordinates and store the result in the output vector (e.g. in 2d  \f$ v_i = f(x_i,y_i)\f$ for all \c i)
  *.
+
+ @note the grid defines what its physical coordinates are, i.e. it could be either Cartesian or Cylindrical coordinates
  * @tparam Functor The binary (for 2d grids) or ternary (for 3d grids) function or functor with signature: <tt>real_type ( real_type x, real_type y) ; real_type ( real_type x, real_type y, real_type z) </tt>
  * @param f The function defined in physical coordinates
- * @param g a two- or three dimensional Geometry
+ * @param g a two- or three dimensional Geometry (\c g.map() is used to evaluate \c f)
  * @note Template deduction for the Functor will fail if you overload functions with different
  dimensionality (e.g. real_type sine( real_type x) and real_type sine(real_type x, real_type y) )
  * You will want to rename those uniquely

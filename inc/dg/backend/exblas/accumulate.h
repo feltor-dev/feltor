@@ -43,18 +43,15 @@ static inline vcl::Vec8d make_vcl_vec8d( float x, int i){
     return vcl::Vec8d((double)x);
 }
 static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
-    double tmp[8];
-    for(int i=0; i<8; i++)
-        tmp[i] = (double)x[i];
-    return vcl::Vec8d().load( tmp);
+    return vcl::Vec8d( x[i], x[i+1], x[i+2], x[i+3], x[i+4], x[i+5], x[i+6], x[i+7]);
 }
 static inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
     return vcl::Vec8d((double)x);
 }
 static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
     double tmp[8];
-    for(int i=0; i<num; i++)
-        tmp[i] = (double)x[i];
+    for(int j=0; j<num; j++)
+        tmp[j] = (double)x[i+j];
     return vcl::Vec8d().load_partial( num, tmp);
 }
 #endif//_WITHOUT_VCL
@@ -63,7 +60,7 @@ inline double get_element( T x, int i){
 	return (double)x;
 }
 template<class T>
-inline double get_element( const T* x, int i){
+inline double get_element( T* x, int i){
 	return (double)(*(x+i));
 }
 
@@ -121,6 +118,7 @@ static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 static inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
+    //assert( !std::isnan(x) && "Detected NaN in dot product!!");
 
 
     int e = cpu::exponent(x);
@@ -130,7 +128,7 @@ static inline void Accumulate( int64_t* accumulator, double x) {
     double xscaled = cpu::myldexp(x, -DIGITS * exp_word);
 
     int i;
-    for (i = iup; xscaled != 0; --i) {
+    for (i = iup; xscaled != 0 && i>=0; --i) { //MW: i>=0 protects against NaN
         double xrounded = cpu::myrint(xscaled);
         int64_t xint = cpu::myllrint(xscaled);
         AccumulateWord(accumulator, i, xint);

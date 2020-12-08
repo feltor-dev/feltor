@@ -13,7 +13,6 @@
 #include "solovev.h"
 #include "ribeiro.h"
 //#include "ds.h"
-#include "init.h"
 
 #include "dg/file/nc_utilities.h"
 
@@ -80,9 +79,9 @@ int main( int argc, char* argv[])
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d_periodic);
     int coordsID[2], onesID, defID, confID, volID,divBID;
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
-    //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim3d, &coordsID[1]);
+    //err = nc_def_var( ncid, "zc", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
     err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &confID);
@@ -92,18 +91,12 @@ int main( int argc, char* argv[])
     thrust::host_vector<double> psi_p = dg::pullback( psip.f(), *g2d);
     //g.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
-    dg::HVec X( g2d->size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d->size(); i++)
-    {
-        X[i] = g2d->map()[0][i];
-        Y[i] = g2d->map()[1][i];
-    }
+    dg::HVec X( g2d->map()[0]), Y(g2d->map()[1]);
+    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
     dg::HVec temp0( g2d->size()), temp1(temp0);
     dg::HVec w2d = dg::create::weights( *g2d);
-
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
     dg::SparseTensor<dg::HVec> metric = g2d->metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
@@ -155,9 +148,10 @@ int main( int argc, char* argv[])
     double volume = dg::blas1::dot( vol, ones3d);
 
     std::cout << "TEST VOLUME IS:\n";
-    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
-    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::geo::Iris iris(psip.f(), gp.psipmin, gp.psipmax);
+    double psipmin, psipmax;
+    if( psi_0 < psi_1) psipmax = psi_1, psipmin = psi_0;
+    else               psipmax = psi_0, psipmin = psi_1;
+    auto iris = dg::compose( dg::Iris(psipmin, psipmax), psip.f());
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
 //     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);

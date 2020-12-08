@@ -13,23 +13,29 @@
 //
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
+using value_type = float;
+using Vector = dg::fMDVec;
+using Matrix = dg::fMDMatrix;
+//using value_type = double;
+//using Vector = dg::MDVec;
+//using Matrix = dg::MDMatrix;
 
-const double lx = M_PI;
-const double ly = 2.*M_PI;
+const value_type lx = M_PI;
+const value_type ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
-double initial( double x, double y) {return 0.;}
-double amp = 0.9999;
-double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
-//double pol( double x, double y) {return 1.; }
-//double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
+value_type initial( value_type x, value_type y) {return 0.;}
+value_type amp = 0.9999;
+value_type pol( value_type x, value_type y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
+//value_type pol( value_type x, value_type y) {return 1.; }
+//value_type pol( value_type x, value_type y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
-//double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
-double sol(double x, double y)  { return sin( x)*sin(y);}
-double der(double x, double y)  { return cos( x)*sin(y);}
+value_type rhs( value_type x, value_type y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+//value_type rhs( value_type x, value_type y) { return 2.*sin( x)*sin(y);}
+//value_type rhs( value_type x, value_type y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
+value_type sol(value_type x, value_type y)  { return sin( x)*sin(y);}
+value_type der(value_type x, value_type y)  { return cos( x)*sin(y);}
 
 
 int main(int argc, char* argv[] )
@@ -42,31 +48,32 @@ int main(int argc, char* argv[] )
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
-    double eps = 1e-6;
+    value_type eps = 1e-4;
+
     //if(rank==0)std::cout << "Type epsilon! \n";
     //if(rank==0)std::cin >> eps;
-    MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
+    MPI_Bcast(  &eps,1 , dg::getMPIDataType<value_type>(), 0, comm);
     //////////////////////begin program///////////////////////
     //create functions A(chi) x = b
-    dg::CartesianMPIGrid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
-    const dg::MDVec w2d = dg::create::weights( grid);
-    const dg::MDVec v2d = dg::create::inv_weights( grid);
-    dg::MDVec x =    dg::evaluate( initial, grid);
-    dg::MDVec b =    dg::evaluate( rhs, grid);
-    dg::MDVec chi =  dg::evaluate( pol, grid);
+    dg::RealCartesianMPIGrid2d<value_type> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
+    const Vector w2d = dg::create::weights( grid);
+    const Vector v2d = dg::create::inv_weights( grid);
+    Vector x =    dg::evaluate( initial, grid);
+    Vector b =    dg::evaluate( rhs, grid);
+    Vector chi =  dg::evaluate( pol, grid);
 
 
 
-    if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
+    if(rank==0)std::cout <<rank<< "Create Polarisation object and set chi!\n";
     t.tic();
-    //dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
+    //dg::Elliptic<dg::RealCartesianMPIGrid2d<value_type>, Matrix, Vector> pol( grid, dg::not_normed, dg::centered);
     //pol.set_chi( chi);
     unsigned stages = 3;
 
-    dg::MultigridCG2d<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec > multigrid( grid, stages, 0);
+    dg::MultigridCG2d<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector > multigrid( grid, stages, 0);
 
-    std::vector<dg::MDVec> chi_ = multigrid.project( chi);
-    std::vector<dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > multi_pol( stages);
+    std::vector<Vector> chi_ = multigrid.project( chi);
+    std::vector<dg::Elliptic<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector> > multi_pol( stages);
 
     for(unsigned u=0; u<stages; u++)
     {
@@ -76,7 +83,7 @@ int main(int argc, char* argv[] )
     t.toc();
     if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
-    //dg::Invert<dg::MDVec > invert( x, n*n*Nx*Ny, eps);
+    //dg::Invert<Vector > invert( x, n*n*Nx*Ny, eps);
     t.tic();
     //unsigned number = invert( pol, x, b);
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, x, b, eps);
@@ -87,15 +94,15 @@ int main(int argc, char* argv[] )
     if(rank==0)std::cout << " took "<<t.diff()<<"s\n";
 
     //compute error
-    const dg::MDVec solution = dg::evaluate( sol, grid);
-    const dg::MDVec derivati = dg::evaluate( der, grid);
-    dg::MDVec error( solution);
+    const Vector solution = dg::evaluate( sol, grid);
+    const Vector derivati = dg::evaluate( der, grid);
+    Vector error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
-    double err = dg::blas2::dot( w2d, error);
-    double norm = dg::blas2::dot( w2d, solution);
+    value_type err = dg::blas2::dot( w2d, error);
+    value_type norm = dg::blas2::dot( w2d, solution);
     if(rank==0)std::cout << "L2 Norm of relative error is               "<<sqrt( err/norm)<<std::endl;
-    dg::MDMatrix DX = dg::create::dx( grid);
+    Matrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);

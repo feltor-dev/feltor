@@ -113,12 +113,12 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const override final{
+    virtual SparseTensor<thrust::host_vector<real_type>> do_compute_metric( ) const override final{
         return metric_;
     }
-    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
-    dg::SparseTensor<thrust::host_vector<real_type> > jac_, metric_;
-    std::vector<thrust::host_vector<real_type> > map_;
+    virtual std::vector<thrust::host_vector<real_type>> do_compute_map()const override final{return map_;}
+    dg::SparseTensor<thrust::host_vector<real_type>> jac_, metric_;
+    std::vector<thrust::host_vector<real_type>> map_;
     dg::ClonePtr<aRealGenerator2d<real_type>> handle_;
 };
 
@@ -132,7 +132,7 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
 template<class real_type>
 struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_type>
 {
-    typedef RealCurvilinearGrid2d<real_type> perpendicular_grid;
+    using perpendicular_grid = RealCurvilinearGrid2d<real_type>;
 
     ///@copydoc hide_grid_parameters3d
     RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
@@ -145,7 +145,7 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
     }
 
 
-    ///@copydoc CurvilinearGrid2d::generator()const
+    ///@copydoc RealCurvilinearGrid2d::generator()const
     const aRealGenerator2d<real_type> & generator() const{return *handle_;}
     virtual RealCurvilinearProductGrid3d* clone()const override final{return new RealCurvilinearProductGrid3d(*this);}
     private:

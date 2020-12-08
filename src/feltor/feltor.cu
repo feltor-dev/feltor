@@ -5,184 +5,178 @@
 #include <cmath>
 
 #include "draw/host_window.h"
+#include "dg/file/json_utilities.h"
 
-#include "feltor.cuh"
+#include "feltor.h"
+#include "implicit.h"
+
+using HVec = dg::HVec;
+using DVec = dg::DVec;
+using DMatrix = dg::DMatrix;
+using IDMatrix = dg::IDMatrix;
+using IHMatrix = dg::IHMatrix;
+using Geometry = dg::CylindricalGrid3d;
+#define MPI_OUT
+
+#include "init.h"
+#include "feltordiag.h"
 
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js, gs;
+    std::string inputfile, geomfile;
     if( argc == 1)
-    {
-        std::ifstream is("input.json");
-        std::ifstream ks("geometry_params.json");
-        is >> js;
-        ks >> gs;
-    }
+        inputfile = "input.json", geomfile= "geometry_params.json";
     else if( argc == 3)
-    {
-        std::ifstream is(argv[1]);
-        std::ifstream ks(argv[2]);
-        is >> js;
-        ks >> gs;
-    }
+        inputfile = argv[1], geomfile= argv[2];
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
                   << argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const feltor::Parameters p( js);
-    const dg::geo::solovev::Parameters gp(gs);
+    try{
+        file::file2Json( inputfile, js, file::comments::are_forbidden, file::error::is_throw);
+        feltor::Parameters(js, file::error::is_throw);
+    }catch(std::runtime_error& e)
+    {
+
+        std::cerr << "ERROR in input file "<<inputfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
+    try{
+        file::file2Json( geomfile, gs, file::comments::are_discarded, file::error::is_throw);
+    }catch(std::runtime_error& e)
+    {
+
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
+
+    const feltor::Parameters p(js);
     p.display( std::cout);
-    gp.display( std::cout);
+    std::cout << gs.toStyledString() << std::endl;
+    dg::geo::TokamakMagneticField mag, mod_mag;
+    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
+    try{
+        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+        mod_mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, wall, transition);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
     /////////////////////////////////////////////////////////////////////////
-    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
+    double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
+    double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
-        p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+        p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
+    try{
+        dg::geo::createSheathRegion( js, file::error::is_throw, mag, wall,
+                Rmin, Rmax, Zmin, Zmax, sheath, direction);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
+
+    if( p.periodify)
+        mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
-    std::cout << "Constructing Implicit...\n";
-    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> im( grid, p, mag);
+    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
+    //std::cout << "Constructing Implicit...\n";
+    //feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
     std::cout << "Done!\n";
 
+    DVec result = dg::evaluate( dg::zero, grid);
+    /// Construct feltor::Variables object for diagnostics
+    std::array<DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  result; //zero
+    DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
+    feltor::Variables var = {
+        feltor, p,mag, gradPsip, gradPsip, hoo
+    };
     /////////////////////The initial field///////////////////////////////////////////
-    //First the profile and the source (on the host since we want to output those)
-    dg::HVec profile = dg::pullback( dg::geo::Compose<dg::LinearX>( mag.psip(),
-        p.nprofamp/mag.psip()(mag.R0(), 0.), 0.), grid);
-    dg::HVec xpoint_damping = dg::evaluate( dg::one, grid);
-    if( gp.hasXpoint() )
-        xpoint_damping = dg::pullback(
-            dg::geo::ZCutter(-1.1*gp.elongation*gp.a), grid);
-    dg::HVec source_damping = dg::pullback(dg::geo::TanhDamping(
-        //first change coordinate from psi to (psi_0 - psip)/psi_0
-        dg::geo::Compose<dg::LinearX>( mag.psip(), -1./mag.psip()(mag.R0(), 0.),1.),
-        //then shift tanh
-        p.rho_source-3.*p.alpha, p.alpha, -1.), grid);
-    dg::blas1::pointwiseDot( xpoint_damping, source_damping, source_damping);
-    if( p.omega_source != 0)
-        feltor.set_source( p.omega_source, profile, source_damping);
-
-    dg::HVec profile_damping = dg::pullback( dg::geo::TanhDamping(
-        mag.psip(), -3.*p.alpha, p.alpha, -1), grid);
-    dg::blas1::pointwiseDot( xpoint_damping, profile_damping, profile_damping);
-    dg::blas1::pointwiseDot( profile_damping, profile, profile);
-
-    //Now perturbation
-    dg::HVec ntilde = dg::evaluate(dg::zero,grid);
-    if( p.initne == "blob" || p.initne == "straight blob")
-    {
-        dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-        dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-        if( p.symmetric)
-            ntilde = dg::pullback( init0, grid);
-        else if( p.initne == "blob")//rounds =3 ->2*3-1
-            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 3);
-        else if( p.initne == "straight blob")//rounds =1 ->2*1-1
-            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+    double time = 0.;
+    std::array<std::array<DVec,2>,2> y0;
+    try{
+        y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,mod_mag );
+    }catch ( std::out_of_range& error){
+        std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)\n";
+        return -1;
     }
-    else if( p.initne == "turbulence")
-    {
-        dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-        dg::BathRZ init0(16,16,Rmin,Zmin, 30.,5.,p.amp);
-        if( p.symmetric)
-            ntilde = dg::pullback( init0, grid);
-        else
-            ntilde = feltor.fieldalignedn( init0, gaussianZ, (unsigned)p.Nz/2, 1);
-        dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
-    }
-    else if( p.initne == "zonal")
-    {
-        dg::geo::ZonalFlow init0(mag.psip(), p.amp, 0., p.k_psi);
-        ntilde = dg::pullback( init0, grid);
-        dg::blas1::pointwiseDot( profile_damping, ntilde, ntilde);
-    }
-    else
-        std::cerr <<"WARNING: Unknown initial condition!\n";
-    std::array<std::array<dg::DVec,2>,2> y0;
-    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::construct<dg::DVec>(profile);
-    dg::blas1::axpby( 1., dg::construct<dg::DVec>(ntilde), 1., y0[0][0]);
-    std::cout << "initialize ni" << std::endl;
-    if( p.initphi == "zero")
-        feltor.initializeni( y0[0][0], y0[0][1]);
-    else if( p.initphi == "balance")
-        dg::blas1::copy( y0[0][0], y0[0][1]); //set N_i = n_e
-    else
-        std::cerr <<"WARNING: Unknown initial condition for phi!\n";
 
-    dg::blas1::copy( 0., y0[1][0]); //set we = 0
-    dg::blas1::copy( 0., y0[1][1]); //set Wi = 0
+    try{
+        bool fixed_profile;
+        HVec profile = dg::evaluate( dg::zero, grid);
+        HVec source_profile;
+        source_profile = feltor::source_profiles.at(p.source_type)(
+            fixed_profile, profile, grid, p,  mod_mag);
+        feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
+            p.source_rate, dg::construct<DVec>(source_profile)
+        );
+    }catch ( std::out_of_range& error){
+        std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
+        return -1;
+    }
 
     ////////////////////////create timer and timestepper
     //
     dg::Timer t;
-    double time = 0, dt_new = p.dt, dt =0;
     unsigned step = 0;
-    dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
-        "ARK-4-2-3", y0, grid.size(), p.eps_time);
+    //dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
+    //    feltor::FeltorSpecialSolver<
+    //        Geometry, IDMatrix, DMatrix, DVec>
+    //    > karniadakis( grid, p, mag);
+    dg::MinimalProjecting< std::array<std::array<dg::DVec,2>,2 > > mp( 3, y0);
+    {
+    HVec h_wall = dg::pullback( wall, grid);
+    HVec h_sheath = dg::pullback( sheath, grid);
+    HVec h_velocity = dg::pullback( direction, grid);
+    feltor.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
+    //implicit.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    //karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+    }
 
-    //since we map pointers we don't need to update those later
+    std::cout << "Initialize Timestepper" << std::endl;
+    //karniadakis.init( feltor, implicit, time, y0, p.dt);
+    mp.init( feltor, time, y0, p.dt);
+    std::cout << "Done!" << std::endl;
 
     std::map<std::string, const dg::DVec* > v4d;
-    v4d["ne-1 / "] = &y0[0][0],               v4d["ni-1 / "] = &y0[0][1];
-    v4d["Ue / "]   = &feltor.fields()[1][0],  v4d["Ui / "]   = &feltor.fields()[1][1];
-    v4d["Omega / "] = &feltor.potential()[0]; v4d["Apar / "] = &feltor.induction();
-    const feltor::Quantities& q = feltor.quantities();
-    double dEdt = 0, accuracy = 0, dMdt = 0, accuracyM  = 0;
-    std::map<std::string, const double*> v0d{
-        {"energy", &q.energy}, {"ediff", &q.ediff},
-        {"mass", &q.mass}, {"diff", &q.diff}, {"Apar", &q.Apar},
-        {"Se", &q.S[0]}, {"Si", &q.S[1]}, {"Uperp", &q.Tperp},
-        {"Upare", &q.Tpar[0]}, {"Upari", &q.Tpar[1]},
-        {"dEdt", &dEdt}, {"accuracy", &accuracy},
-        {"aligned", &q.aligned}
-    };
-
-    //first, update quantities in feltor
-
-    {
-        std::array<std::array<dg::DVec,2>,2> y1(y0);
-        try{
-            feltor( time, y0, y1);
-        } catch( dg::Fail& fail) {
-            std::cerr << "CG failed to converge in first step to "
-                      << fail.epsilon()<<"\n";
-            return -1;
-        }
-        feltor.update_quantities();
-    }
-    double energy0 = q.energy, mass0 = q.mass, E0 = energy0, M0 = mass0;
+    v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
+    v4d["Ue / "]   = &feltor.velocity(0), v4d["Ui / "]   = &feltor.velocity(1);
+    v4d["Phi / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.induction();
+    double dEdt = 0, accuracy = 0;
+    double E0 = 0.;
     /////////////////////////set up transfer for glfw
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual), avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-    //perp laplacian for computation of vorticity
-
-    dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec>
-        laplacianM(grid, p.bcxP, p.bcyP, dg::PER, dg::normed, dg::centered);
-    auto bhatF = dg::geo::createEPhi();
-    if( p.curvmode == "true")
-        bhatF = dg::geo::createBHat( mag);
-    dg::SparseTensor<dg::DVec> hh = dg::geo::createProjectionTensor( bhatF, grid);
-    laplacianM.set_chi( hh);
 
     /////////glfw initialisation ////////////////////////////////////////////
     //
     std::stringstream title;
-    std::ifstream is( "window_params.js");
-    is >> js;
-    is.close();
+    file::file2Json( "window_params.json", js, file::comments::are_discarded);
     unsigned red = js.get("reduction", 1).asUInt();
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/red+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
-    draw::RenderHostData render(js["rows"].asDouble(), p.Nz/red + 1);
+    double rows = js["rows"].asDouble(), cols = p.Nz/red+1,
+           width = js["width"].asDouble(), height = js["height"].asDouble();
+    if ( p.symmetric ) cols = rows, rows = 1;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( cols*width, rows*height, "");
+    draw::RenderHostData render(rows, cols);
 
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
@@ -190,35 +184,46 @@ int main( int argc, char* argv[])
     title << std::setprecision(2) << std::scientific;
     while ( !glfwWindowShouldClose( w ))
     {
+        title << std::fixed;
+        title << "t = "<<time<<"   ";
         for( auto pair : v4d)
         {
-            if(pair.first == "Omega / ")
+            if(pair.first == "Phi / ")
             {
-                dg::blas2::gemv( laplacianM, *pair.second, dvisual);
-                dg::assign( dvisual, hvisual);
+                //dg::assign( feltor.lapMperpP(0), hvisual);
+                dg::assign( *pair.second, hvisual);
+            }
+            else if(pair.first == "ne-1 / " || pair.first == "ni-1 / ")
+            {
+                dg::assign( *pair.second, hvisual);
+                //dg::blas1::axpby( 1., hvisual, -1., profile, hvisual);
             }
             else
                 dg::assign( *pair.second, hvisual);
             dg::blas2::gemv( equi, hvisual, visual);
-            colors.scalemax() = (double)thrust::reduce(
-                visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+            colors.scalemax() = dg::blas1::reduce(
+                visual, 0., dg::AbsMax<double>() );
             colors.scalemin() = -colors.scalemax();
-            title <<pair.first << colors.scalemax()<<"\t";
-            for( unsigned k=0; k<p.Nz/red;k++)
+            title <<pair.first << colors.scalemax()<<"   ";
+            if ( p.symmetric )
+                render.renderQuad( hvisual, grid.n()*grid.Nx(),
+                                            grid.n()*grid.Ny(), colors);
+            else
             {
-                unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-                dg::HVec part( visual.begin() +  k*red   *size,
-                               visual.begin() + (k*red+1)*size);
-                render.renderQuad( part, grid.n()*grid.Nx(),
-                                         grid.n()*grid.Ny(), colors);
+                for( unsigned k=0; k<p.Nz/red;k++)
+                {
+                    unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+                    dg::HVec part( visual.begin() +  k*red   *size,
+                                   visual.begin() + (k*red+1)*size);
+                    render.renderQuad( part, grid.n()*grid.Nx(),
+                                             grid.n()*grid.Ny(), colors);
+                }
+                dg::blas1::scal(avisual,0.);
+                toroidal_average(visual,avisual);
+                render.renderQuad( avisual, grid.n()*grid.Nx(),
+                                            grid.n()*grid.Ny(), colors);
             }
-            dg::blas1::scal(avisual,0.);
-            toroidal_average(visual,avisual);
-            render.renderQuad( avisual, grid.n()*grid.Nx(),
-                                        grid.n()*grid.Ny(), colors);
         }
-        title << std::fixed;
-        title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwPollEvents();
@@ -228,44 +233,72 @@ int main( int argc, char* argv[])
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{
-                do
+            double previous_time = time;
+            for( unsigned k=0; k<p.inner_loop; k++)
+            {
+                try{
+                    //karniadakis.step( feltor, implicit, time, y0);
+                    mp.step( feltor, time, y0);
+                }
+                catch( dg::Fail& fail) {
+                    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    std::cerr << "Does Simulation respect CFL condition?\n";
+                    glfwSetWindowShouldClose( w, GL_TRUE);
+                    break;
+                }
+                step++;
+            }
+            double deltat = time - previous_time;
+            double energy = 0, ediff = 0.;
+            for( auto& record : feltor::diagnostics2d_list)
+            {
+                if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                 {
-                    dt = dt_new;
-                    adaptive.step( feltor, im, time, y0, time, y0, dt_new,
-                        dg::pid_control, dg::l2norm, p.rtol, 1e-10);
-                    if( adaptive.failed())
-                        std::cout << "FAILED STEP! REPEAT!\n";
-                }while ( adaptive.failed());
-            }
-            catch( dg::Fail& fail) {
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
-            step++;
-            feltor.update_quantities();
-            std::cout << "Timestep "<<dt<<"\n";
-            dEdt = (*v0d["energy"] - E0)/dt, dMdt = (*v0d["mass"] - M0)/dt;
-            E0 = *v0d["energy"], M0 = *v0d["mass"];
-            accuracy  = 2.*fabs( (dEdt - *v0d["ediff"])/( dEdt + *v0d["ediff"]));
-            accuracyM = 2.*fabs( (dMdt - *v0d["diff"])/( dMdt + *v0d["diff"]));
+                    std::cout << record.name<<" : ";
+                    record.function( result, var);
+                    double norm = dg::blas1::dot( result, feltor.vol3d());
+                    energy += norm;
+                    std::cout << norm<<std::endl;
 
-            q.display(std::cout);
-            std::cout << "(m_tot-m_0)/m_0: "<< (*v0d["mass"]-mass0)/mass0<<"\t";
-            std::cout << "(E_tot-E_0)/E_0: "<< (*v0d["energy"]-energy0)/energy0<<"\t";
-            std::cout <<" d E/dt = " << dEdt
-              <<" Lambda = " << *v0d["ediff"]
+                }
+                if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
+                {
+                    std::cout << record.name<<" : ";
+                    record.function( result, var);
+                    double norm = dg::blas1::dot( result, feltor.vol3d());
+                    ediff += norm;
+                    std::cout << norm<<std::endl;
+                }
+
+            }
+            dEdt = (energy - E0)/deltat;
+            E0 = energy;
+            accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
+
+            std::cout << "\tTime "<<time<<"\n";
+            std::cout <<"\td E/dt = " << dEdt
+              <<" Lambda = " << ediff
               <<" -> Accuracy: " << accuracy << "\n";
-            std::cout <<" d M/dt = " << dMdt
-                      <<" Lambda = " << *v0d["diff"]
-                      <<" -> Accuracy: " << accuracyM << "\n";
+            double max_ue = dg::blas1::reduce(
+                feltor.velocity(0), 0., dg::AbsMax<double>() );
+            MPI_OUT std::cout << "\tMaximum ue "<<max_ue<<"\n";
+            //----------------Test if induction equation holds
+            if( p.beta != 0)
+            {
+                dg::blas1::pointwiseDot(
+                    feltor.density(0), feltor.velocity(0), dvisual);
+                dg::blas1::pointwiseDot( p.beta,
+                    feltor.density(1), feltor.velocity(1), -p.beta, dvisual);
+                double norm  = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
+                dg::blas1::axpby( -1., feltor.lapMperpA(), 1., dvisual);
+                double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
+                std::cout << "\tRel. Error Induction "<<sqrt(error/norm) <<"\n";
+            }
 
         }
         t.toc();
-        std::cout << "\n\t Step "<<step;
-        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
+        std::cout << "\n\t Step "<<step << " at time  "<<time;
+        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop<<"\n\n";
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////

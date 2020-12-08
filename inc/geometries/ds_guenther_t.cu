@@ -59,7 +59,7 @@ int main( )
 
     ///##########################################################///
     std::cout << "# TEST Guenther (No Boundary conditions)!\n";
-    std::cout <<"Guenther:\n";
+    std::cout <<"Guenther rel_Error rel_Volume_integral(should be zero for div and Lap):\n";
     const dg::DVec vol3d = dg::create::volume( g3d);
     for( const auto& tuple :  names)
     {
@@ -68,10 +68,11 @@ int main( )
         const dg::DVec& solution = *std::get<1>(tuple)[1];
         callDS( ds, name, function, derivative, divb, max_iter,1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
+        double vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, derivative));
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
         std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
-                  <<" "<<sqrt(norm/sol)<<"\n";
+                  <<" "<<sqrt(norm/sol)<<"  \t"<<vol<<"\n";
     }
     ///##########################################################///
     return 0;

@@ -40,7 +40,7 @@ int main()
             y[i*g.Nx()*g.n() + j] =
                     g.y0() + 2*g.ly() + (i+0.5)*g.hy()/(double)(g.n());
         }
-    //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
+    //use DIR because the coo.2d is zero on the right boundary
     Matrix B = dg::create::interpolation( x, y, g, dg::DIR, dg::DIR);
     //values outside the grid are mirrored back in
 
@@ -59,34 +59,17 @@ int main()
         std::cout<< "2D TEST FAILED!\n";
     else
         std::cout << "2D TEST PASSED!\n";
-    //cusp::print(A);
-    //cusp::print(B);
-    //ATTENTION: backscatter might delete zeroes in matrices
-    //for( unsigned i=0; i<A.values.size(); i++)
-    //{
-    //    if( (A.values[i] - B.values[i]) > 1e-14)
-    //    {
-    //        std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
-    //        passed = false;
-    //    }
-    //}
-    //if( A.num_entries != B.num_entries)
-    //{
-    //    std::cerr << "Number of entries not equal!\n";
-    //    passed = false;
-    //}
 
 
     bool passed = true;
     thrust::host_vector<double> xs = dg::evaluate( dg::cooX2d, g);
     thrust::host_vector<double> ys = dg::evaluate( dg::cooY2d, g);
-    thrust::host_vector<double> xF = dg::create::forward_transform( xs, g);
-    thrust::host_vector<double> yF = dg::create::forward_transform( ys, g);
+    thrust::host_vector<double> xF = dg::forward_transform( xs, g);
     for( unsigned i=0; i<x.size(); i++)
     {
-        x[i] -= g.lx(), y[i] -= 2*g.ly();
-        double xi = dg::interpolate(x[i],y[i], xF, g);
-        double yi = dg::interpolate(x[i],y[i], yF, g);
+        //use DIR because the coo.2d is zero on the right boundary
+        double xi = dg::interpolate(dg::lspace, xF, x[i],y[i], g, dg::DIR, dg::DIR);
+        double yi = dg::interpolate(dg::xspace, ys, x[i],y[i], g, dg::DIR, dg::DIR);
         if( x[i] - xi > 1e-14)
         {
             std::cerr << "X NOT EQUAL "<<i<<"\t"<<x[i]<<"  \t"<<xi<<"\n";
@@ -100,6 +83,26 @@ int main()
     }
     if( passed)
         std::cout << "2D INTERPOLATE TEST PASSED!\n";
+    }
+    {
+    bool passed = true;
+    dg::Grid1d g1d( -M_PI, 0, n, Nx);
+    thrust::host_vector<double> xs = dg::evaluate( dg::cooX1d, g1d);
+    thrust::host_vector<double> x( g1d.size());
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        //create equidistant values
+        x[i] = g1d.x0() + g1d.lx() + (i+0.5)*g1d.h()/(double)(g1d.n());
+        //use DIR because the cooX1d is zero on the right boundary
+        double xi = dg::interpolate( dg::xspace,xs, x[i], g1d, dg::DIR);
+        if( x[i] - xi > 1e-14)
+        {
+            std::cerr << "X NOT EQUAL "<<i<<"\t"<<x[i]<<"  \t"<<xi<<"\n";
+            passed = false;
+        }
+    }
+    if( passed)
+        std::cout << "1D INTERPOLATE TEST PASSED!\n";
     }
     ////////////////////////////////////////////////////////////////////////////
     {
@@ -123,7 +126,6 @@ int main()
                 z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.z0() + (k+0.5)*g.hz();
             }
-    //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     Matrix B = dg::create::interpolation( x, y, z, g);
     const thrust::host_vector<double> vec = dg::evaluate( function, g);
     thrust::host_vector<double> inter(vec);
@@ -138,18 +140,6 @@ int main()
         std::cout<< "3D TEST FAILED!\n";
     else
         std::cout << "3D TEST PASSED!\n";
-
-    //bool passed = true;
-    //for( unsigned i=0; i<A.values.size(); i++)
-    //{
-    //    if( (A.values[i] - B.values[i]) > 1e-14)
-    //    {
-    //        std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
-    //        passed = false;
-    //    }
-    //}
-    //if( passed)
-    //    std::cout << "3D TEST PASSED!\n";
     }
 
     return 0;

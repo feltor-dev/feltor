@@ -5,36 +5,23 @@
 #include <cmath>
 // #define DG_DEBUG
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
 
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-*/
-
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const eule::Parameters p( js);
     p.display( std::cout);

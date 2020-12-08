@@ -6,9 +6,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <vector>
-#include <thrust/random/linear_congruential_engine.h>
-#include <thrust/random/uniform_real_distribution.h>
-#include <thrust/random/normal_distribution.h>
+#include <random>
+#include <functional>
 #include "blas1.h"
 #include "topology/grid.h"
 #include "topology/evaluation.h"
@@ -24,7 +23,7 @@ namespace dg
 
 /**
  * @brief Absolute maximum
- * \f[ f(x,y) = \max(|x|,|y|)\f]
+ * \f$ f(x,y) = \max(|x|,|y|)\f$
  *
  */
 template <class T = double>
@@ -48,7 +47,7 @@ DG_DEVICE
 };
 /**
  * @brief Absolute minimum
- * \f[ f(x,y) = \min(|x|,|y|)\f]
+ * \f$ f(x,y) = \min(|x|,|y|)\f$
  */
 template <class T = double>
 struct AbsMin
@@ -71,30 +70,32 @@ DG_DEVICE
 };
 
 /**
- * @brief Functor returning a gaussian
- * \f[
+ * @brief Functor returning a 2d %Gaussian
+ * \f$
    f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
-   \f]
+   \f$
  */
 struct Gaussian
 {
     /**
-     * @brief Functor returning a gaussian
+     * @brief Functor returning a %Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
-     * @param sigma_x x - variance
-     * @param sigma_y y - variance
+     * @param sigma_x x - variance (must be !=0)
+     * @param sigma_y y - variance (must be !=0)
      * @param amp Amplitude
-     * @param kz wavenumber in z direction
      */
-    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp, double kz = 1.)
-        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp), kz_(kz){}
+    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
+        : m_x0(x0), m_y0(y0), m_sigma_x(sigma_x), m_sigma_y(sigma_y), m_amp(amp){
+            assert( m_sigma_x != 0  &&  "sigma_x must not be 0 in Gaussian");
+            assert( m_sigma_y != 0  &&  "sigma_y must not be 0 in Gaussian");
+    }
     /**
-     * @brief Return the value of the gaussian
+     * @brief Return the value of the %Gaussian
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
+       f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
@@ -104,14 +105,14 @@ struct Gaussian
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*
+                   exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x +
+                          (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian modulated by a cosine
+     * @brief Return the value of the %Gaussian
      * \f[
-       f(x,y,z) = A\cos(kz)e^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
+       f(x,y,z) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
@@ -122,20 +123,21 @@ struct Gaussian
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-        return  amplitude*cos(kz_*z)*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  this->operator()(x,y);
     }
   private:
-    double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
+    double  m_x0, m_y0, m_sigma_x, m_sigma_y, m_amp;
 
 };
 
 /**
- * @brief A blob that drops to zero
- * \f[
-   f(x,y) = Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}}
-   \f]
+ * @brief A bump that drops to zero and is infinitely continuously differentiable
+ * \f$
+   f(x,y) = \begin{cases}
+   Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}} \text{ if } \frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} < 1\\
+   0 \text{ else}
+   \end{cases}
+   \f$
  */
 struct Cauchy
 {
@@ -144,11 +146,14 @@ struct Cauchy
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
-     * @param sigma_x radius in x
-     * @param sigma_y radius in y
+     * @param sigma_x radius in x (must be !=0)
+     * @param sigma_y radius in y (must be !=0)
      * @param amp Amplitude
      */
-    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){}
+    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){
+        assert( sigma_x != 0  &&  "sigma_x must be !=0 in Cauchy");
+        assert( sigma_y != 0  &&  "sigma_y must be !=0 in Cauchy");
+    }
     DG_DEVICE
     double operator()(double x, double y )const{
         double xbar = (x-x0_)/sigmaX_;
@@ -205,28 +210,32 @@ struct Cauchy
 };
 
 /**
-* @brief The 3d gaussian
-* \f[
+* @brief The 3d %Gaussian
+* \f$
 f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)}
-\f]
+\f$
 */
 struct Gaussian3d
 {
     /**
-     * @brief Functor returning a gaussian
+     * @brief Functor returning a %Gaussian
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
      * @param z0 z-center-coordinate
-     * @param sigma_x x - variance
-     * @param sigma_y y - variance
-     * @param sigma_z z - variance
+     * @param sigma_x x - variance (must be !=0)
+     * @param sigma_y y - variance (must be !=0)
+     * @param sigma_z z - variance (must be !=0)
      * @param amp Amplitude
      */
     Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
-        : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+        : m_x0(x0), m_y0(y0), m_z0(z0), m_sigma_x(sigma_x), m_sigma_y(sigma_y), m_sigma_z(sigma_z), m_amp(amp){
+            assert( m_sigma_x != 0  &&  "sigma_x must be !=0 in Gaussian3d");
+            assert( m_sigma_y != 0  &&  "sigma_y must be !=0 in Gaussian3d");
+            assert( m_sigma_z != 0  &&  "sigma_z must be !=0 in Gaussian3d");
+    }
     /**
-     * @brief Return a 2d gaussian
+     * @brief Return a 2d %Gaussian
      *
      * \f[
        f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
@@ -239,12 +248,12 @@ struct Gaussian3d
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*
+                   exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x +
+                          (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian
+     * @brief Return the value of the %Gaussian
      *
      * \f[
        f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}+\frac{(z-z_0)^2}{2\sigma_z^2})}
@@ -258,42 +267,38 @@ struct Gaussian3d
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-//         if (z== z00)
-//         {
-            return  amplitude*
-                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                           (z-z00)*(z-z00)/2./sigma_z/sigma_z +
-                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
-//         }
-//         else {
-//         return 0.;
-//         }
+        return  m_amp*
+                exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x +
+                       (z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z +
+                       (y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
   private:
-    double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
+    double  m_x0, m_y0, m_z0, m_sigma_x, m_sigma_y, m_sigma_z, m_amp;
 
 };
 /**
- * @brief A Gaussian in x-direction
- * \f[
+ * @brief A %Gaussian in x-direction
+ * \f$
    f(x,y) = Ae^{-\frac{(x-x_0)^2}{2\sigma_x^2} }
-   \f]
+   \f$
  */
 struct GaussianX
 {
     /**
-     * @brief A Gaussian in x
+     * @brief A %Gaussian in x
      *
      * @param x0 x-center-coordinate
-     * @param sigma_x x - variance
+     * @param sigma_x x - variance (must be !=0)
      * @param amp Amplitude
      */
     GaussianX( double x0, double sigma_x, double amp)
-        :x00(x0), sigma_x(sigma_x), amplitude(amp){}
+        :m_x0(x0), m_sigma_x(sigma_x), m_amp(amp){
+            assert( m_sigma_x != 0  &&  "sigma_x must be !=0 in GaussianX");
+    }
     DG_DEVICE
     double operator()(double x) const
     {
-        return  amplitude* exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x ));
+        return  m_amp* exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x ));
     }
     DG_DEVICE
     double operator()(double x, double y) const
@@ -306,14 +311,14 @@ struct GaussianX
         return this->operator()(x);
     }
   private:
-    double  x00, sigma_x, amplitude;
+    double  m_x0, m_sigma_x, m_amp;
 
 };
 /**
- * @brief A Gaussian in y-direction
- * \f[
+ * @brief A %Gaussian in y-direction
+ * \f$
    f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}}
-   \f]
+   \f$
  */
 struct GaussianY
 {
@@ -321,11 +326,13 @@ struct GaussianY
      * @brief Functor returning a gaussian
      *
      * @param y0 y-center-coordinate
-     * @param sigma_y y - variance
+     * @param sigma_y y - variance (must be !=0)
      * @param amp Amplitude
      */
     GaussianY( double y0, double sigma_y, double amp)
-        : y00(y0), sigma_y(sigma_y), amplitude(amp){}
+        : m_y0(y0), m_sigma_y(sigma_y), m_amp(amp){
+            assert( m_sigma_y != 0  &&  "sigma_x must be !=0 in GaussianY");
+    }
     /**
      * @brief Return the value of the gaussian
      *
@@ -340,17 +347,17 @@ struct GaussianY
     DG_DEVICE
     double operator()(double x, double y) const
     {
-        return  amplitude*exp( -((y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        return  m_amp*exp( -((y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
   private:
-    double  y00, sigma_y, amplitude;
+    double  m_y0, m_sigma_y, m_amp;
 
 };
 /**
- * @brief A Gaussian in z-direction
- * \f[
+ * @brief A %Gaussian in z-direction
+ * \f$
    f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}}
-   \f]
+   \f$
  */
 struct GaussianZ
 {
@@ -358,11 +365,13 @@ struct GaussianZ
      * @brief Functor returning a gaussian
      *
      * @param z0 z-center-coordinate
-     * @param sigma_z z - variance
+     * @param sigma_z z - variance (must be !=0)
      * @param amp Amplitude
      */
     GaussianZ( double z0, double sigma_z, double amp)
-        : z00(z0), sigma_z(sigma_z), amplitude(amp){}
+        : m_z0(z0), m_sigma_z(sigma_z), m_amp(amp){
+            assert( m_sigma_z != 0  &&  "sigma_z must be !=0 in GaussianZ");
+    }
     /**
      * @brief Return the value of the gaussian
      *
@@ -376,7 +385,7 @@ struct GaussianZ
     DG_DEVICE
     double operator()( double z) const
     {
-        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+        return  m_amp*exp( -((z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z) );
     }
     /**
      * @brief Return the value of the gaussian
@@ -393,25 +402,27 @@ struct GaussianZ
     DG_DEVICE
     double operator()(double x, double y, double z) const
     {
-        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+        return  m_amp*exp( -((z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z) );
     }
   private:
-    double  z00, sigma_z, amplitude;
+    double  m_z0, m_sigma_z, m_amp;
 
 };
 /**
  * @brief Island function
- * \f[ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f]
+ * \f$ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f$
  */
 struct IslandXY
 {
     /**
      * @brief Construct Island
      *
-     * @param lambda amplitude
+     * @param lambda amplitude (must be != 0)
      * @param eps y-amplitude
      */
-     IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){}
+     IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){
+         assert( lambda != 0 && "Lambda parameter in IslandXY must not be zero!");
+     }
     /**
      * @brief Return profile
      *
@@ -426,7 +437,7 @@ struct IslandXY
 };
 /**
  * @brief A sin prof in x and y-direction
- * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
+ * \f$ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f$
  */
 struct SinXSinY
 {
@@ -454,7 +465,7 @@ struct SinXSinY
 };
 /**
  * @brief A cos prof in x and y-direction
- * \f[ f(x,y) =B+ A \cos(k_x x) \cos(k_y y) \f]
+ * \f$ f(x,y) =B+ A \cos(k_x x) \cos(k_y y) \f$
  */
 struct CosXCosY
 {
@@ -482,7 +493,7 @@ struct CosXCosY
 };
 /**
  * @brief A sin prof in x- and cos prof in  y-direction
- * \f[ f(x,y) =B+ A \sin(k_x x) \cos(k_y y) \f]
+ * \f$ f(x,y) =B+ A \sin(k_x x) \cos(k_y y) \f$
  */
 struct SinXCosY
 {
@@ -510,7 +521,7 @@ struct SinXCosY
 };
 /**
  * @brief A sin prof in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) =B+ A \sin(k_x x) \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) =B+ A \sin(k_x x) \f$
  */
 struct SinX
 {
@@ -533,7 +544,7 @@ struct SinX
 };
 /**
  * @brief A sin prof in y-direction
- * \f[ f(x,y) =B+ A \sin(k_y y) \f]
+ * \f$ f(x,y) =B+ A \sin(k_y y) \f$
  */
 struct SinY
 {
@@ -552,7 +563,7 @@ struct SinY
 };
 /**
  * @brief A sin prof in x-direction
- * \f[ f(x,y) =B+ A \cos(k_y y) \f]
+ * \f$ f(x,y) =B+ A \cos(k_y y) \f$
  */
 struct CosY
 {
@@ -571,7 +582,7 @@ struct CosY
 };
 /**
  * @brief Inverse cosh profile
- * \f[ f(x,y) =A/\cosh^2(k_x x) \f]
+ * \f$ f(x,y) =A/\cosh^2(k_x x) \f$
  */
 struct InvCoshXsq
 {
@@ -581,19 +592,19 @@ struct InvCoshXsq
      * @param amp amplitude
      * @param kx  kx
      */
-    InvCoshXsq( double amp, double kx):amp_(amp), kx_(kx){}
+    InvCoshXsq( double amp, double kx):m_amp(amp), m_kx(kx){}
     DG_DEVICE
-    double operator()( double x)const{ return amp_/cosh(x*kx_)/cosh(x*kx_);}
+    double operator()( double x)const{ return m_amp/cosh(x*m_kx)/cosh(x*m_kx);}
     DG_DEVICE
     double operator()( double x, double y)const{ return this->operator()(x);}
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
-    double amp_,kx_;
+    double m_amp, m_kx;
 };
 /**
  * @brief Sin prof in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) = B + A(1 - \sin(k_xx )) \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) = B + A(1 - \sin(k_xx )) \f$
  */
 struct SinProfX
 {
@@ -604,19 +615,19 @@ struct SinProfX
      * @param bamp backgroundamp B
      * @param kx  kx
      */
-    SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    SinProfX( double amp, double bamp, double kx):m_amp(amp), m_bamp(bamp),m_kx(kx){}
     DG_DEVICE
-    double operator()( double x)const{ return bamp_+amp_*(1.-sin(x*kx_));}
+    double operator()( double x)const{ return m_bamp+m_amp*(1.-sin(x*m_kx));}
     DG_DEVICE
     double operator()( double x, double y)const{ return this->operator()(x);}
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
-    double amp_,bamp_,kx_;
+    double m_amp, m_bamp, m_kx;
 };
 /**
  * @brief Exp prof in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) = B + A\exp(-x/L_n) \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) = B + A\exp(-x/L_n) \f$
  */
 struct ExpProfX
 {
@@ -625,21 +636,38 @@ struct ExpProfX
      *
      * @param amp amplitude B
      * @param bamp backgroundamp A (choose zero for constant gradient length
-     * @param ln  ln
+     * @param ln  ln (must be !=0)
      */
-    ExpProfX( double amp, double bamp, double ln):amp_(amp), bamp_(bamp),ln_(ln){}
+    ExpProfX( double amp, double bamp, double ln):m_amp(amp),m_bamp(bamp),m_ln(ln){
+        assert( ln!=0 && "ln parameter must be != 0 in ExpProfX!");
+    }
     DG_DEVICE
-    double operator()( double x)const{ return bamp_+amp_*exp(-x/ln_);}
+    double operator()( double x)const{ return m_bamp+m_amp*exp(-x/m_ln);}
     DG_DEVICE
     double operator()( double x, double y)const{ return this->operator()(x);}
     DG_DEVICE
     double operator()( double x, double y, double z)const{ return this->operator()(x);}
   private:
-    double amp_,bamp_,ln_;
+    double m_amp, m_bamp, m_ln;
 };
+
+/**
+ * @brief The linear interpolation polynomial
+ * \f$ f(x) = y_1\frac{x-x_0}{x_1-x_0} + y_0\frac{x-x_1}{x_0-x_1}\f$
+ */
+struct Line{
+    Line(double x0, double y0, double x1, double y1) :
+        m_x0(x0), m_y0(y0), m_x1(x1), m_y1(y1){}
+    double operator()(double x){
+        return m_y1*(x-m_x0)/(m_x1-m_x0) + m_y0*(x-m_x1)/(m_x0-m_x1);
+    }
+    private:
+    double m_x0, m_y0, m_x1, m_y1;
+};
+
 /**
  * @brief A linear function in x-direction
- * \f[ f(x) = f(x,y) = f(x,y,z) = ax+b \f]
+ * \f$ f(x) = f(x,y) = f(x,y,z) = ax+b \f$
  */
 struct LinearX
 {
@@ -661,7 +689,7 @@ struct LinearX
 };
 /**
  * @brief A linear polynomial in y-direction
- * \f[ f(x,y) = f(x,y,z) = ay+b \f]
+ * \f$ f(x,y) = f(x,y,z) = ay+b \f$
  */
 struct LinearY
 {
@@ -681,7 +709,7 @@ struct LinearY
 };
 /**
  * @brief A linear function in z-direction
- * \f[ f(x,y,z) = az+b \f]
+ * \f$ f(x,y,z) = az+b \f$
  */
 struct LinearZ
 {
@@ -699,16 +727,17 @@ struct LinearZ
 };
 
 /**
- * @brief Zero outside psimax and inside psimin, otherwise 1
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         1  \text{ if } \psi_{\min} < \psi < \psi_{\max}\\
         0  \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Zero outside psimax and inside psimin, otherwise 1
  */
 struct Iris
 {
     Iris( double psi_min, double psi_max ):
         m_psimin(psi_min), m_psimax(psi_max) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > m_psimax) return 0.;
@@ -719,16 +748,17 @@ struct Iris
     double m_psimin, m_psimax;
 };
 /**
- * @brief Zero outside psimax, otherwise 1
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         0  \text{ if } \psi > \psi_{\max} \\
         1  \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Zero outside psimax, otherwise 1
  */
 struct Pupil
 {
     Pupil( double psimax):
         psimax_(psimax) { }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > psimax_) return 0.;
@@ -738,16 +768,17 @@ struct Pupil
     double psimax_;
 };
 /**
- * @brief Psi inside psimax and psimax outside psimax
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
         \psi_{\max}  \text{ if } \psi > \psi_{\max} \\
         \psi \text{ else}
-     \end{cases}\f]
+     \end{cases}\f$ Psi inside psimax and psimax outside psimax
  */
 struct PsiPupil
 {
     PsiPupil(double psimax):
         psimax_(psimax){ }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > psimax_) return psimax_;
@@ -757,39 +788,71 @@ struct PsiPupil
     double psimax_;
 };
 /**
- * @brief Zero up to psimax, then one
-     \f[ \begin{cases}
-        1  \text{ if } \psi > \psi_{\max} \\
-        0  \text{ else}
-     \end{cases}\f]
+ * @brief
+     \f$ \begin{cases}
+        0  \text{ if } x < x_b \\
+        1  \text{ else}
+     \end{cases}\f$ Zero up to xb, then one
+  @note the 1 is inclusive i.e if x==x_b the functor always returns 1
  */
 struct Heaviside
 {
-    Heaviside( double psimax):
-        psimax_(psimax){ }
 
-    double operator()(double psi)const
+    /**
+     * @brief Construct with xb and sign
+     *
+     * @param xb boundary value
+     * @param sign either +1 or -1, If -1, we mirror the Heaviside at
+     *  the \c x=x_b axis, i.e. we swap the < sign in the definition to >
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
+     */
+    Heaviside( double xb, int sign = +1):
+        m_xb(xb), m_s(sign){ }
+
+    DG_DEVICE
+    double operator()(double x)const
     {
-        if( psi > psimax_) return 1.;
-        return 0.;
+        if( (x < m_xb && m_s == 1) || (x > m_xb && m_s == -1)) return 0.;
+        return 1.;
     }
     private:
-    double psimax_;
+    double m_xb;
+    int m_s;
+};
+
+
+/**
+ * @brief \f$ \sqrt{ (x-x_0)^2 + (y-y_0)^2} \f$
+ */
+struct Distance
+{
+    Distance( double x0, double y0): m_x0(x0), m_y0(y0){}
+    DG_DEVICE
+    double operator()(double x, double y){
+        return sqrt( (x-m_x0)*(x-m_x0) + (y-m_y0)*(y-m_y0));
+    }
+    private:
+    double m_x0, m_y0;
 };
 
 /**
- * @brief One up to \c psimax, then a Gaussian down to zero
-     \f[ \begin{cases}
+ * @brief
+     \f$ \begin{cases}
  1 \text{ if } \psi < \psi_{\max}\\
  0 \text{ if } \psi > (\psi_{\max} + 4\alpha) \\
  \exp\left( - \frac{(\psi - \psi_{\max})^2}{2\alpha^2}\right), \text{ else}
  \end{cases}
-   \f]
+   \f$
+
+   One up to \c psimax, then a %Gaussian down to zero
  */
 struct GaussianDamping
 {
     GaussianDamping( double psimax, double alpha):
-        m_psimax(psimax), m_alpha(alpha) { }
+        m_psimax(psimax), m_alpha(alpha) {
+            assert( alpha!= 0 && "Damping width in GaussianDamping must not be zero");
+        }
+    DG_DEVICE
     double operator()(double psi)const
     {
         if( psi > m_psimax + 4.*m_alpha) return 0.;
@@ -800,22 +863,25 @@ struct GaussianDamping
     double m_psimax, m_alpha;
 };
 /**
- * @brief Step function using tanh
- * \f[ f(x) = B + 0.5 A(1+ \text{sign} \tanh((x-x_b)/\alpha ) ) \f]
+ * @brief An approximation to Heaviside using tanh
+ * \f$ f(x) = B + 0.5 A(1+ \text{sign} \tanh((x-x_b)/\alpha ) ) \f$
  */
 struct TanhProfX {
     /**
      * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
-     * @param width damping width \c alpha
+     * @param width damping width \c alpha (must be !=0)
      * @param sign sign of the Tanh, defines the damping direction
      * @param bgamp background amplitude \c B
      * @param profamp profile amplitude \c A
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
      */
     TanhProfX(double xb, double width, int sign =1,double bgamp = 0.,
         double profamp = 1.) :
-        xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
+        xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {
+            assert( width != 0&& "Width in TanhProfX must not be zero!");
+    }
     DG_DEVICE
     double operator() (double x)const
     {
@@ -834,7 +900,210 @@ struct TanhProfX {
 };
 
 /**
- * @brief Exponential \f[ f(x) = A \exp(\lambda x)\f]
+ * @brief \f$ \sum_{i=0}^{M-1} \sum_{j=0}^{N-1} c_{iN+j} x^i y^j  \f$
+ *
+ * Evaluated using [Horner's method](https://en.wikipedia.org/wiki/Horner%27s_method)
+ */
+struct Horner2d
+{
+    ///Initialize 1 coefficient to 1
+    Horner2d(): m_c( 1, 1), m_M(1), m_N(1){}
+
+    /**
+     * @brief Initialize coefficients and dimensions
+     *
+     * @param c vector of size MN containing coefficientc c (accessed as c[i*N+j] i.e. y-direction is contiguous)
+     * @param M number of polynomials in x
+     * @param N number of polynomials in y
+     */
+    Horner2d( std::vector<double> c, unsigned M, unsigned N): m_c(c), m_M(M), m_N(N){}
+    double operator()( double x, double y) const
+    {
+        std::vector<double> cx( m_M);
+        for( unsigned i=0; i<m_M; i++)
+            cx[i] = horner( &m_c[i*m_N], m_N, y);
+        return horner( &cx[0], m_M, x);
+    }
+    private:
+    double horner( const double * c, unsigned M, double x) const
+    {
+        double b = c[M-1];
+        for( unsigned i=0; i<M-1; i++)
+            b = c[M-2-i] + b*x;
+        return b;
+    }
+    std::vector<double> m_c;
+    unsigned m_M, m_N;
+};
+
+
+/**
+ * @brief \f$ \begin{cases}
+     0 \text{ if } x < x_b-a \\
+        ((16 a^3 - 29 a^2 (x - x_b) + 20 a (x - x_b)^2 - 5 (x - x_b)^3) (a + x -
+   x_b)^4)/(32 a^7) \text{ if } |x-x_b| < a \\
+        1  \text{ if } x > x_b + a
+     \end{cases}\f$
+
+ An approximation to Heaviside using polynomials.
+     This function is 3 times continuously differentiable, takes the value 0.5 at xb and
+     has a transition width a on both sides of xb.
+ */
+struct PolynomialHeaviside {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param a transition width (must be != 0)
+     * @param sign either +1 (original Heaviside) or -1 (the function is mirrored at the \c x=xb axis: f(2xb-x))
+     * @note When sign is positive the function leaves the positive and damps the negative and vice versa when sign is negative the function leaves the negative and damps the positive.
+     */
+    PolynomialHeaviside(double xb, double a, int sign = +1) :
+        x0(xb), a(a), m_s(sign){
+            assert( a!=0 && "PolynomialHeaviside width must not be zero");
+    }
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        if( m_s == -1) x = 2*x0-x; //mirror
+        if ( x < x0-a) return 0;
+        if ( x > x0+a) return 1;
+        return ((16.*a*a*a - 29.*a*a*(x - x0)
+               + 20.*a*(x - x0)*(x - x0)
+               - 5.*(x - x0)*(x-x0)*(x-x0))
+               *(a + x - x0)*(a + x - x0)
+               *(a + x - x0)*(a + x - x0))/(32.*a*a*a * a*a*a*a);
+    }
+    private:
+    double x0, a;
+    int m_s;
+};
+/**
+ * @brief
+     \f$ \begin{cases}
+     0 \text{ if } x < x_l-a_l \\
+        ((16 a_l^3 - 29 a_l^2 (x - x_l) + 20 a_l (x - x_l)^2 - 5 (x - x_l)^3) (a_l + x -
+   x_l)^4)/(32 a_l^7) \text{ if } |x-x_l| < a_l \\
+        1  \text{ if } x_l + a_l < x < x_r-a_r \\
+        ((16 a_r^3 - 29 a_r^2 (x - x_r) + 20 a_r (x - x_r)^2 - 5 (x - x_r)^3) (a_r + x -
+   x_l)^4)/(32 a_r^7) \text{ if } |x-x_r| < a_r \\
+   0 \text{ if } x > x_r + a_r
+     \end{cases}\f$
+
+ An approximation to the Rectangle function using polynomials
+     Basically just the product of two PolynomialHeaviside functions
+
+     This function is 3 times continuously differentiable, takes the value 0.5 at xl and xr and
+     has a transition width a_l on both sides of xl and a width a_r on both sides of xr.
+ */
+struct PolynomialRectangle {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xl left boundary value
+     * @param al left transition width (must be != 0)
+     * @param xr right boundary value
+     * @param ar right transition width (must be != 0)
+     */
+    PolynomialRectangle(double xl, double al, double xr, double ar) :
+        m_hl( xl, al, +1), m_hr( xr, ar, -1) {
+        assert( xl < xr && "left boundary must be left of right boundary");
+    }
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        return m_hl(x)*m_hr(x);
+    }
+    private:
+    PolynomialHeaviside m_hl, m_hr;
+};
+
+/**
+ * @brief \f$ \begin{cases}
+     x_b \text{ if } x < x_b-a \\
+     x_b + ((35 a^3 - 47 a^2 (x - x_b) + 25 a (x - x_b)^2 - 5 (x - x_b)^3) (a + x - x_b)^5)/(256 a^7)
+        \text{ if } |x-x_b| < a \\
+        x  \text{ if } x > x_b + a
+     \end{cases}\f$
+ The integral of PolynomialHeaviside approximates xH(x)
+
+     This function is 4 times continuously differentiable,
+     has a transition width \c a on both sides of \c xb, where it transitions from the
+     constant \c xb to the linear function \c x.
+ */
+struct IPolynomialHeaviside {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param a transition width (must be != 0)
+     * @param sign either +1 (original) or -1 (the function is point mirrored at \c x=xb: 2*xb-f(2xb-x))
+     */
+    IPolynomialHeaviside(double xb, double a, int sign = +1) :
+        x0(xb), a(a), m_s(sign){
+            assert( a!=0 && "IPolynomialHeaviside width must not be zero");
+        }
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        if( m_s == -1) x = 2*x0-x; //mirror
+        double result;
+        if ( x < x0-a) result =  x0;
+        else if ( x > x0+a) result =  x;
+        else
+            result =  x0 + ((35.* a*a*a - 47.* a*a*(x - x0) + 25.*a*(x - x0)*(x-x0)
+                - 5.*(x - x0)*(x-x0)*(x-x0))
+                *(a+x-x0)*(a+x-x0)*(a+x-x0)*(a+x-x0)*(a+x-x0))
+            /(256.*a*a*a * a*a*a*a);
+        if ( m_s == +1) return result;
+        return 2*x0 - result;
+
+    }
+    private:
+    double x0, a;
+    int m_s;
+};
+
+/**
+ * @brief \f$ \begin{cases}
+     0 \text{ if } x < x_b-a || x > x_b+a \\
+     (35 (a + x - x_b)^3 (a - x + x_b)^3)/(32 a^7)
+        \text{ if } |x-x_b| < a
+     \end{cases}\f$
+     The derivative of PolynomialHeaviside approximates delta(x)
+
+     This function is 2 times continuously differentiable, is symmetric around \c xb
+     and has a width \c a on both sides of \c x0.
+     The integral over this function yields 1.
+ */
+struct DPolynomialHeaviside {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param a transition width ( must be !=0)
+     * @param sign either +1 (original) or -1 (the function is mirrored at \c x=x0)
+     * (since this function is symmetric this parameter is ignored, it's there to be
+     * consistent with PolynomialHeaviside)
+     */
+    DPolynomialHeaviside(double xb, double a, int sign = +1) :
+        x0(xb), a(a){
+            assert( a!=0 && "DPolynomialHeaviside width must not be zero");
+    }
+    DG_DEVICE
+    double operator() (double x)const
+    {
+        if ( (x < x0-a) || (x > x0+a)) return 0;
+        return (35.*(a+x-x0)*(a+x-x0)*(a+x-x0)*(a-x+x0)*(a-x+x0)*(a-x+x0))
+            /(32.*a*a*a * a*a*a*a);
+    }
+    private:
+    double x0, a;
+};
+
+
+/**
+ * @brief Exponential \f$ f(x) = A \exp(\lambda x)\f$
  *
  * @tparam T value-type
  */
@@ -847,7 +1116,7 @@ struct EXP
      * @param amp Amplitude
      * @param lambda coefficient
      */
-    EXP( T amp = 1., T lambda = 1.): amp_(amp), lambda_(lambda){}
+    EXP( T amp = 1., T lambda = 1.): m_amp(amp), m_lambda(lambda){}
     /**
      * @brief return exponential
      *
@@ -858,14 +1127,14 @@ struct EXP
     DG_DEVICE
     T operator() ( T x) const
     {
-        return amp_*exp(lambda_*x);
+        return m_amp*exp(m_lambda*x);
     }
   private:
-    T amp_, lambda_;
+    T m_amp, m_lambda;
 };
 /**
- * @brief natural logarithm
- * \f[ f(x) = \ln(x)\f]
+ * @brief
+ * \f$ f(x) = \ln(x)\f$ natural logarithm
  *
  * @tparam T value-type
  */
@@ -887,7 +1156,7 @@ struct LN
 };
 /**
  * @brief Square root
- * \f[ f(x) = \sqrt{x}\f]
+ * \f$ f(x) = \sqrt{x}\f$
  *
  * @tparam T value-type
  */
@@ -911,12 +1180,12 @@ struct SQRT
 
 /**
  * @brief Minmod function
- \f[ f(x_1, x_2, x_3) = \begin{cases}
+ \f$ f(x_1, x_2, x_3) = \begin{cases}
          \min(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 >0 \\
          \max(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 <0 \\
          0 \text{ else}
  \end{cases}
- \f]
+ \f$
  *
  * might be useful for flux limiter schemes
  * @tparam T value-type
@@ -962,9 +1231,10 @@ struct MinMod
 };
 
 /**
- * @brief Add a constant value
- * \f[ f(x) = x + c\f]
+ * @brief
+ * \f$ f(x) = x + c\f$
  *
+ * Add a constant value
  * @tparam T value type
  */
 template <class T = double>
@@ -990,9 +1260,10 @@ struct PLUS
 };
 
 /**
- * @brief %Invert the given value
- * \f[ f(x) = 1/x \f]
+ * @brief
+ * \f$ f(x) = 1/x \f$
  *
+ * %Invert the given value
  * @tparam T value type
  */
 template <class T = double>
@@ -1010,7 +1281,7 @@ struct INVERT
 
 /**
  * @brief returns (positive) modulo
- * \f[ f(x) = x\mod m\f]
+ * \f$ f(x) = x\mod m\f$
  *
  * @tparam T value type
  */
@@ -1041,7 +1312,7 @@ struct MOD
 };
 /**
  * @brief absolute value
- * \f[ f(x) = |x|\f]
+ * \f$ f(x) = |x|\f$
  *
  * @tparam T value type
  */
@@ -1060,11 +1331,11 @@ struct ABS
 };
 /**
  * @brief returns positive values
- \f[ f(x) = \begin{cases}
+ \f$ f(x) = \begin{cases}
          x \text{ for } x>0 \\
          0 \text{ else}
  \end{cases}
- \f]
+ \f$
  *
  * @tparam T value type
  */
@@ -1086,9 +1357,7 @@ struct POSVALUE
 };
 
 /**
- * @brief Return a constant
- * \f[ f(x) = c\f]
- *
+ * @brief \f$ f(x) = c\f$
  */
 struct CONSTANT
 {
@@ -1096,48 +1365,21 @@ struct CONSTANT
      * @brief Construct with a value
      *
      * @param cte the constant value
-     *
      */
-    CONSTANT( double cte): value_(cte){}
+    CONSTANT( double cte): m_value(cte){}
 
-    /**
-     * @brief constant
-     *
-     * @param x
-     *
-     * @return
-     */
     DG_DEVICE
-    double operator()(double x)const{return value_;}
-    /**
-     * @brief constant
-     *
-     * @param x
-     * @param y
-     *
-     * @return
-     */
+    double operator()(double x)const{return m_value;}
     DG_DEVICE
-    double operator()(double x, double y)const{return value_;}
-    /**
-     * @brief constant
-     *
-     * @param x
-     * @param y
-     * @param z
-     *
-     * @return
-     */
+    double operator()(double x, double y)const{return m_value;}
     DG_DEVICE
-    double operator()(double x, double y, double z)const{return value_;}
+    double operator()(double x, double y, double z)const{return m_value;}
     private:
-    double value_;
+    double m_value;
 };
 
 /**
- * @brief Return one
- * \f[ f(x) = 1\f]
- *
+ * @brief \f$ f(x) = 1\f$
  */
 struct ONE
 {
@@ -1149,9 +1391,7 @@ struct ONE
     double operator()(double x, double y, double z)const{return 1.;}
 };
 /**
- * @brief Return zero
- * \f[ f(x) = 0\f]
- *
+ * @brief \f$ f(x) = 0\f$ Return 0
  */
 struct ZERO
 {
@@ -1165,10 +1405,10 @@ struct ZERO
 
 /**
  * @brief Functor returning a Lamb dipole
- \f[ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
+ \f$ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
          0 \text{ else}
          \end{cases}
- \f]
+ \f$
 
  with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$
  \theta = \arctan_2( (y-y_), (x-x_0))\f$,
@@ -1240,15 +1480,16 @@ struct Lamb
 };
 
 /**
- * @brief Return a 2d vortex function
-       \f[f(x,y) =\begin{cases}
+ * @brief
+       \f$f(x,y) =\begin{cases}
        \frac{u_d}{1.2965125} \left(
        r\left(1+\frac{\beta_i^2}{g_i^2}\right)
        - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
       \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
-      \f]
+      \f$
 
+      Return a 2d vortex function
      * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
  with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ \theta = \arctan_2( (y-y_), (x-x_0))\f$,
         \f$ g_0 = 3.831896621 \f$,
@@ -1282,15 +1523,15 @@ struct Vortex
         b_[2] = 0.07071067810 ;
     }
     /**
-     * @brief Evaluate the vortex
-     *
-       \f[f(x,y) =\begin{cases}
+     * @brief \f$f(x,y) =\begin{cases}
        \frac{u_d}{1.2965125} \left(
        r\left(1+\frac{\beta_i^2}{g_i^2}\right)
        - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
       \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
-      \f]
+      \f$
+
+      Evaluate the vortex
      * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
@@ -1317,15 +1558,15 @@ struct Vortex
         return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
     }
     /**
-     * @brief Evaluate the vortex modulated by a sine wave in z
-     *
-       \f[f(x,y,z) =\cos(k_z z)\begin{cases}
+     * @brief \f$f(x,y,z) =\cos(k_z z)\begin{cases}
        \frac{u_d}{1.2965125} \left(
        r\left(1+\frac{\beta_i^2}{g_i^2}\right)
        - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
       \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
-      \f]
+      \f$
+
+      Evaluate the vortex modulated by a sine wave in z
      * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
@@ -1391,10 +1632,10 @@ struct Vortex
 };
 
 /**
-* @brief Makes a random bath in the RZ plane
-*
-\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
-\f]
+* @brief \f$f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)}
+\f$
+
+* A random bath in the R-Z plane
 * with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\
         k:=\sqrt{k_R^2 + k_Z^2} \\
         k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
@@ -1437,9 +1678,9 @@ struct BathRZ{
         double N_kRh = N_kR_/2.;
         double N_kZh = N_kZ_/2.;
 
-        thrust::random::minstd_rand generator;
-        thrust::random::normal_distribution<double> ndistribution;
-        thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
+        std::minstd_rand generator;
+        std::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
+        std::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
         for (unsigned j=1;j<=N_kZ_;j++)
         {
             double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);
@@ -1676,6 +1917,108 @@ struct Histogram2D
     double binwidthx_,binwidthy_;
     container count_;
 };
+
+
+/**
+ * @brief Check for NaN: \f$ f(x) = std::isnan(x) \f$
+ */
+template <class T>
+struct ISNAN
+{
+#ifdef __CUDACC__
+    DG_DEVICE bool operator()(T x){return isnan(x);}
+#else
+    bool operator()( T x){ return std::isnan(x);}
+#endif
+};
+
+
+/**
+ * @brief Shortest Distance to a collection of vertical and horizontal lines
+ *
+ * First determine which line is closest to given point and then determine
+ * the exact distance to it
+ */
+struct WallDistance
+{
+    /**
+     * @brief Allocate lines
+     *
+     * @param vertical walls R_0, R_1 ...  ( can be arbitrary size)
+     * @param horizontal walls Z_0, Z_1 ... ( can be arbitrary size)
+     */
+    WallDistance( std::vector<double> vertical, std::vector<double> horizontal) :
+        m_vertical(vertical), m_horizontal( horizontal) {}
+    /**
+     * @brief Distance to closest wall in a box
+     */
+    double operator() (double R, double Z) const
+    {
+        std::vector<double> dist( 1, 1e100); //fill in at least one (large) number in case vectors are empty)
+        for( auto v : m_vertical)
+            dist.push_back(fabs( R-v));
+        for( auto h : m_horizontal)
+            dist.push_back(fabs( Z-h));
+        return *std::min_element( dist.begin(), dist.end());
+    }
+    private:
+    std::vector<double> m_vertical;
+    std::vector<double> m_horizontal;
+};
+///@cond
+namespace detail
+{
+template<class F, class G>
+struct Compose
+{
+    Compose( F f, G g):m_f(f), m_g(g){}
+    template<class ...Xs>
+    auto operator() ( Xs&& ... xs){
+        return m_f(m_g(std::forward<Xs>(xs)...));
+    }
+    template<class ...Xs>
+    auto operator() ( Xs&& ... xs) const {
+        return m_f(m_g(std::forward<Xs>(xs)...));
+    }
+    private:
+    F m_f;
+    G m_g;
+};
+}//namespace detail
+///@endcond
+
+/**
+ * @brief Function composition \f$ f(g(x_0,x_1,...)) \f$
+ *
+ * @code{.cpp}
+ * dg::Grid2d grid2d( -1., 1., -1., 1., 3, 40, 40);
+ * //Mark everything above 2 with 1s and below with 0s
+ * dg::HVec fg = dg::evaluate( dg::compose( dg::Heaviside( 2.), dg::Gaussian( 0., 0., 2., 2., 4.)), grid2d);
+ * @endcode
+ * @tparam F Outer functor
+ * @tparam G Inner functor
+ * @param f outer functor
+ * @param g inner functor
+ * @note only works for host functions. The rationale is that this function is
+ * intended to work with lambda functions and is to be used in the \c dg::evaluate function.
+ * If a version for device functions is ever needed
+ * it can be easily provided but the lambda support for CUDA is rather poor.
+ *
+ * @return a function object that forwards all parameters to g and returns the
+ * return value of f, which is \f$ f(g(x_0,x_1,...)) \f$
+ */
+template <class F, class G>
+auto compose( F f, G g) {
+    return detail::Compose<F,G>( f, g);
+    //a C++-14 way of generating a generic lambda with a parameter pack. Taken from:
+    //https://stackoverflow.com/questions/19071268/function-composition-in-c-c11
+    //return [f,g](auto&&... xs){ return f(g(std::forward<decltype(xs)>(xs)...));};
+}
+///Composition of an arbitrary number of functions \f$ f_0(f_1(f_2( ... (x_0, x_1, ...)))\f$
+template <class F, typename... Fs>
+auto compose(F f, Fs... fs) {
+    return compose( f , compose(fs...));
+}
 ///@}
 } //namespace dg
 

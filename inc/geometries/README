@@ -26,13 +26,11 @@
     solovev_parameters.h
     taylor.h
     guenther.h
-    guenther_parameters.h
     toroidal.h
 
     #utilities
         testfunctors.h
         fluxfunctions.h
-    init.h
     magnetic_field.h
     adaption.h
 

@@ -43,13 +43,19 @@ static inline double KnuthTwoSum(double a, double b, double *s) {
     return r;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Main Kernels
+////////////////////////////////////////////////////////////////////////////////
+//In the first kernel each block produces exactly one superacc (because threads within a block can be synchronized and shared memory lives for a block )
+//the second kernel reduces all superaccs from the first kernel (because we need a global synchronization, which is induced by separate kernel launches)
 
 template<uint NBFPE, uint WARP_COUNT, class PointerOrValue1, class PointerOrValue2>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
     PointerOrValue1 d_a,
     PointerOrValue2 d_b,
-    const uint NbElements
+    const uint NbElements,
+    volatile bool* error
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
     int64_t *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
@@ -61,9 +67,13 @@ __global__ void ExDOT(
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
-        double r = 0.0;
-        double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
-        //double x = d_a[pos]*d_b[pos];//ATTENTION: if we write it like this, cpu compiler might generate an fma from this while nvcc does not...
+        //double r = 0.0;
+        //double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
+        double x = get_element(d_a,pos)*get_element(d_b,pos);
+        //we do not accumulate the rest of this multiplication
+
+        //Check if the input is sane
+        if( !isfinite(x) ) *error = true;
 
         #pragma unroll
         for(uint i = 0; i != NBFPE; ++i) {
@@ -81,23 +91,23 @@ __global__ void ExDOT(
             }
         }
 
-        if (r != 0.0) {//add the rest r in the same manner
-            #pragma unroll
-            for(uint i = 0; i != NBFPE; ++i) {
-                double s;
-                a[i] = KnuthTwoSum(a[i], r, &s);
-                r = s;
-            }
-            if (r != 0.0) {
-                Accumulate(l_workingBase, r, WARP_COUNT);
-                // Flush FPEs to superaccs
-                #pragma unroll
-                for(uint i = 0; i != NBFPE; ++i) {
-                    Accumulate(l_workingBase, a[i], WARP_COUNT);
-                    a[i] = 0.0;
-                }
-            }
-        }
+        //if (r != 0.0) {//add the rest r in the same manner
+        //    #pragma unroll
+        //    for(uint i = 0; i != NBFPE; ++i) {
+        //        double s;
+        //        a[i] = KnuthTwoSum(a[i], r, &s);
+        //        r = s;
+        //    }
+        //    if (r != 0.0) {
+        //        Accumulate(l_workingBase, r, WARP_COUNT);
+        //        // Flush FPEs to superaccs
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            Accumulate(l_workingBase, a[i], WARP_COUNT);
+        //            a[i] = 0.0;
+        //        }
+        //    }
+        //}
     }
     //Flush FPEs to superaccs
     #pragma unroll
@@ -135,7 +145,8 @@ __global__ void ExDOT(
     PointerOrValue1 d_a,
     PointerOrValue2 d_b,
     PointerOrValue3 d_c,
-    const uint NbElements
+    const uint NbElements,
+    volatile bool *error
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
     int64_t *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
@@ -151,10 +162,13 @@ __global__ void ExDOT(
         //double r  = 0.0, r2 = 0.0;
         //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
         //double x2 = TwoProductFMA(x , d_c[pos], &r2);
-        double x1 = __fma_rn( get_element(d_a,pos), get_element(d_b,pos), 0);
-        double x2 = __fma_rn( x1                  , get_element(d_c,pos), 0);
+        double x1 = get_element(d_a,pos)*get_element(d_b,pos);
+        double x2 = x1                  *get_element(d_c,pos);
 
-        if( x2 != 0.0) {//accumulate x2
+        //Check if the input is sane
+        if( !isfinite(x2) ) *error = true;
+
+        if( x2 != 0.0 ) {//accumulate x2
             #pragma unroll
             for(uint i = 0; i != NBFPE; ++i) {
                 double s;
@@ -293,6 +307,7 @@ void ExDOTComplete(
         Normalize(&d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE], imin, imax);
     }
 
+    //MW: don't we need a global synchronization here??
     __syncthreads();
     if ((lid < BIN_COUNT) && (gid == 0)) {
         int64_t sum = 0;
@@ -317,18 +332,23 @@ void ExDOTComplete(
  * @param x1_ptr first array
  * @param x2_ptr second array
  * @param d_superacc pointer to an array of 64 bit integers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
 */
 template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* d_superacc, int* status)
 {
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
+    thrust::device_vector<bool> d_errorV(1, false);
+    bool *d_error = thrust::raw_pointer_cast( d_errorV.data());
+    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size, d_error);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    *status = 0;
+    if( d_errorV[0] ) *status = 1;
 }
 
 /*!@brief gpu version of exact triple dot product
@@ -342,19 +362,24 @@ void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, in
  * @param x2_ptr second array
  * @param x3_ptr third array
  * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
  */
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* d_superacc, int* status)
 {
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue3>::value, "PointerOrValue3 needs to be T or T* with T one of (const) float or (const) double");
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
+    thrust::device_vector<bool> d_errorV(1, false);
+    bool *d_error = thrust::raw_pointer_cast( d_errorV.data());
+    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size,d_error);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    *status = 0;
+    if( d_errorV[0] ) *status = 1;
 }
 
 }//namespace exblas

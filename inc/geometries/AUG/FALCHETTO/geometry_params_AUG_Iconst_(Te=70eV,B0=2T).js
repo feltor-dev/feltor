@@ -21,7 +21,7 @@
 		-0.13835177447024941,
 		0.016216674967513847
 	],
-	"elongation" : 1.77,
+	"elongation" : 1.7,
 	"equilibrium" : "solovev",
 	"inverseaspectratio" : 0.303030303,
 	"psip_max" : 0,

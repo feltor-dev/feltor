@@ -49,8 +49,28 @@
  * @param bcy boundary condition in y
  * @param bcz boundary condition in z
  */
+/*!@class hide_shift_doc
+ * @brief Shift any point coordinate to a corresponding grid coordinate according to the boundary condition
+ *
+ * If the given point is already inside the grid, the function does nothing, else along each dimension the following happens: check the boundary condition.
+ *If \c dg::PER, the point will be shifted topologically back onto the domain (modulo operation). Else the
+ * point will be mirrored at the closest boundary. If the boundary is a Dirichlet boundary (happens for \c dg::DIR, \c dg::DIR_NEU and \c dg::NEU_DIR; the latter two apply \c dg::DIR to the respective left or right boundary )
+ * an additional sign flag is swapped. This process is repeated until the result lies inside the grid. This function forms the basis for extending/periodifying a
+ * function discretized on the grid beyond the grid boundaries.
+ * @sa interpolate
+ * @note For periodic boundaries the right boundary point is considered outside the grid and is shifted to the left boundary point.
+ * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
+ * @param x point to shift (inout) the result is guaranteed to lie inside the grid
+ */
 
 namespace dg{
+
+///@cond
+template<class real_type>
+struct RealGrid2d;
+template<class real_type>
+struct RealGrid3d;
+///@endcond
 
 /**
 * @brief 1D grid
@@ -60,9 +80,10 @@ namespace dg{
 template<class real_type>
 struct RealGrid1d
 {
-    typedef SharedTag memory_category;
-    typedef OneDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid1d<real_type>;
     /**
      * @brief construct an empty grid
      * this leaves the access functions undefined
@@ -193,49 +214,51 @@ struct RealGrid1d
     }
 
     /**
-     * @brief Shifts a point coordinate if periodic
-     *
-     * This function shifts a point coordinate to its value between x0() and x1() if bcx() returns dg::PER
-     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
-     * @param x1 end point (inout)
+     * @copydoc hide_shift_doc
      */
-    void shift_topologic( real_type x0, real_type& x1)const
+    void shift( bool& negative, real_type& x)const
     {
-        real_type deltaX;
-        if( x1 > x0_) deltaX = x1 -x0_;
-        else deltaX = x1_ - x1;
-        unsigned N = floor(deltaX/lx());
-        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx();
-        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx();
+        shift( negative, x, bcx_);
     }
     /**
-     * @brief Shifts a point coordinate if periodic
-     *
-     * This function shifts a point coordinate to its value between x0() and x1() if \c bcx==dg::PER
-     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
-     * @param x1 end point (inout)
-     * @param bcx overrule grid internal boundary condition
+     * @copydoc hide_shift_doc
+     * @param bcx overrule grid internal boundary condition with this value
      */
-    void shift_topologic( real_type x0, real_type& x1, bc bcx)const
+    void shift( bool& negative, real_type &x, bc bcx)const
     {
-        real_type deltaX;
-        if( x1 > x0_) deltaX = x1 -x0_;
-        else deltaX = x1_ - x1;
-        unsigned N = floor(deltaX/lx());
-        if( x1  > x1_ && bcx == dg::PER) x1 -= N*lx();
-        if( x1  < x0_ && bcx == dg::PER) x1 += N*lx();
+        if( bcx == dg::PER)
+        {
+            real_type N = floor((x-x0_)/(x1_-x0_)); // ... -2[ -1[ 0[ 1[ 2[ ...
+            x = x - N*(x1_-x0_); //shift
+        }
+        //mirror along boundary as often as necessary
+        while( (x<x0_) || (x>x1_) )
+        {
+            if( x < x0_){
+                x = 2.*x0_ - x;
+                //every mirror swaps the sign if Dirichlet
+                if( bcx == dg::DIR || bcx == dg::DIR_NEU)
+                    negative = !negative;//swap sign
+            }
+            if( x > x1_){
+                x = 2.*x1_ - x;
+                if( bcx == dg::DIR || bcx == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
+                    negative = !negative; //swap sign
+            }
+        }
     }
 
     /**
      * @brief Check if the grid contains a point
      *
-     * @note Doesn't check periodicity!!
+     * @note Does not consider periodicity!!
      * @param x point to check
      *
      * @return true if x0()<=x<=x1(), false else
      */
     bool contains( real_type x)const
     {
+        //should we catch the case x1_==x && dg::PER?
         if( (x>=x0_ && x <= x1_)) return true;
         return false;
     }
@@ -249,15 +272,16 @@ struct RealGrid1d
 
 /**
  * @brief An abstract base class for two-dimensional grids
- * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
  */
 template<class real_type>
 struct aRealTopology2d
 {
-    typedef SharedTag memory_category; //!< tag for choosing default host vector type
-    typedef TwoDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid2d<real_type>;
 
     /**
      * @brief Left boundary in x
@@ -399,29 +423,23 @@ struct aRealTopology2d
             <<"    "<<bc2str(bcy())<<"\n";
     }
     /**
-     * @brief Shifts point coordinates if periodic
-     *
-     * This function shifts point coordinates to its values inside
-     the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX2d)
-     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX2d)
-     * @param x1 x-coordinate to shift (inout)
-     * @param y1 y-coordinate to shift (inout)
+     * @copydoc hide_shift_doc
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void shift_topologic( real_type x0, real_type y0, real_type& x1, real_type& y1)const
+    void shift( bool& negative, real_type& x, real_type& y)const
     {
-        gx_.shift_topologic( x0,x1);
-        gy_.shift_topologic( y0,y1);
+        shift( negative, x, y, bcx(), bcy());
     }
     /**
-     * @copydoc shift_topologic(real_type,real_type,real_type&,real_type&)const
+     * @copydoc hide_shift_doc
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
      * @param bcx overrule grid internal boundary condition with this value
      * @param bcy overrule grid internal boundary condition with this value
      */
-    void shift_topologic( real_type x0, real_type y0, real_type& x1, real_type& y1, bc bcx, bc bcy)const
+    void shift( bool& negative, real_type& x, real_type& y, bc bcx, bc bcy)const
     {
-        gx_.shift_topologic( x0,x1,bcx);
-        gy_.shift_topologic( y0,y1,bcy);
+        gx_.shift( negative, x,bcx);
+        gy_.shift( negative, y,bcy);
     }
     /**
      * @brief Check if the grid contains a point
@@ -473,15 +491,16 @@ struct aRealTopology2d
 
 /**
  * @brief An abstract base class for three-dimensional grids
- * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
  */
 template<class real_type>
 struct aRealTopology3d
 {
-    typedef SharedTag memory_category;
-    typedef ThreeDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid3d<real_type>;
 
     /**
      * @brief left boundary in x
@@ -646,34 +665,27 @@ struct aRealTopology3d
     }
 
     /**
-     * @brief Shifts point coordinates if periodic
-     *
-     * This function shifts point coordinates to its values inside
-     the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
-     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
-     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
-     * @param x1 x-coordinate to shift (inout)
-     * @param y1 y-coordinate to shift (inout)
-     * @param z1 z-coordinate to shift (inout)
+     * @copydoc hide_shift_doc
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
+     * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
      */
-    void shift_topologic( real_type x0, real_type y0, real_type z0, real_type& x1, real_type& y1, real_type& z1)const
+    void shift( bool& negative, real_type& x, real_type& y, real_type& z)const
     {
-        gx_.shift_topologic( x0,x1);
-        gy_.shift_topologic( y0,y1);
-        gz_.shift_topologic( z0,z1);
+        shift( negative, x,y,z, bcx(), bcy(), bcz());
     }
     /**
-     * @copydoc shift_topologic(real_type,real_type,real_type,real_type&,real_type&,real_type&)const
+     * @copydoc hide_shift_doc
+     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
+     * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
      * @param bcx overrule grid internal boundary condition with this value
      * @param bcy overrule grid internal boundary condition with this value
      * @param bcz overrule grid internal boundary condition with this value
      */
-    void shift_topologic( real_type x0, real_type y0, real_type z0, real_type& x1, real_type& y1, real_type& z1, bc bcx, bc bcy, bc bcz)const
+    void shift( bool& negative, real_type& x, real_type& y, real_type& z, bc bcx, bc bcy, bc bcz)const
     {
-        gx_.shift_topologic( x0,x1,bcx);
-        gy_.shift_topologic( y0,y1,bcy);
-        gz_.shift_topologic( z0,z1,bcz);
+        gx_.shift( negative, x,bcx);
+        gy_.shift( negative, y,bcy);
+        gz_.shift( negative, z,bcz);
     }
 
     /**
@@ -805,29 +817,12 @@ void aRealTopology3d<real_type>::do_set(unsigned new_n, unsigned new_Nx,unsigned
     gy_.set(new_n, new_Ny);
     gz_.set(1,new_Nz);
 }
-template<class MemoryTag, class DimensionalityTag, class real_type>
-struct MemoryTraits { };
-
-template<class real_type>
-struct MemoryTraits< SharedTag, OneDimensionalTag, real_type> {
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid   = RealGrid1d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< SharedTag, TwoDimensionalTag, real_type> {
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid   = RealGrid2d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< SharedTag, ThreeDimensionalTag,real_type> {
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid   = RealGrid3d<real_type>;
-};
 
 template<class Topology>
-using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_vector;
+using get_host_vector = typename Topology::host_vector;
+
 template<class Topology>
-using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_grid;
+using get_host_grid = typename Topology::host_grid;
 
 ///@endcond
 

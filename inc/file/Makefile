@@ -4,6 +4,7 @@ include ../../config/default.mk
 include ../../config/*.mk
 include ../../config/devices/devices.mk
 
+INCLUDE+= -I../../ # other project libraries
 INCLUDE+= -I../    # other project libraries
 
 all: netcdf_t netcdf_mpit

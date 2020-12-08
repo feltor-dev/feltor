@@ -615,6 +615,29 @@ Operator<real_type> lilj( unsigned n)
     return op;
 }
 
+/**
+ * @brief Create the N-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
+template<class real_type>
+Operator<real_type> ninj( unsigned n)
+{
+    Operator<real_type> op( n, 0.);
+    for( int i=0; i<(int)n; i++)
+        for( int j=0; j<(int)n; j++)
+        {
+            if( i == j+1)
+                op( i,j) = 2./(2*i+1)/(2*j+1);
+            if( i == j-1)
+                op( i,j) = -2./(2*i+1)/(2*j+1);
+        }
+    op(0,0) = 2;
+    return op;
+}
+
 
 /**
  * @brief Construct a diagonal operator with weights

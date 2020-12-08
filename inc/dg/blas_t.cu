@@ -29,10 +29,12 @@ int main()
     std::cout << "Test trivial parallel functions:\n"<<std::boolalpha;
     dg::blas1::axpby( 2., x1, 3., x2);
     std::cout << "Scalar addition                   "<< (x2 == 8.)<<std::endl;
+    std::cout << "Reduction                         " << (dg::blas1::reduce( arr1, 0, thrust::maximum<float>()) == 4) <<std::endl;
     dg::blas1::axpby( 2., arr1, 3., vec2);
     std::cout << "Recursive Vec Scalar addition     "<< (vec2[0] == 34.)<<std::endl;
     dg::blas1::axpby( 2., vec1, 3., arr2);
     std::cout << "Recursive Arr Scalar addition     "<< (arr2[0] == 26.)<<std::endl;
+    std::cout << "Recursive DVec reduction          " << (dg::blas1::reduce( dvec1, 0, thrust::maximum<double>()) == 30) <<std::endl;
     dg::blas1::copy( 2., arrdvec1);
     std::cout << "Recursive DVec Copy Scalar to     "<< (arrdvec1[0][0] == 2 && arrdvec1[1][0]==2)<<std::endl;
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
@@ -42,9 +44,9 @@ int main()
     std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
     dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
-    std::cout << "Example in documentation          "<< (dvec1[0] ==310)<<std::endl;
+    std::cout << "Example in documentation          "<< (dvec1[0] ==374)<<std::endl;
     dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
-    std::cout << "Example in documentation          "<< (array_v[0][0] == 110 && array_v[1][1] == 820)<<std::endl;
+    std::cout << "Example in documentation          "<< (array_v[0][0] == 132 && array_v[1][1] == 903)<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
     std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";

@@ -6,6 +6,7 @@
 #include <thrust/host_vector.h>
 
 #include "dg/algorithm.h"
+#include "dg/file/json_utilities.h"
 
 #include "draw/host_window.h"
 
@@ -28,15 +29,9 @@ int main( int argc, char* argv[])
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
     if( argc == 1)
-    {
-        std::ifstream is("input/default.json");
-        is >> js;
-    }
+        file::file2Json( "input/default.json", js, file::comments::are_discarded);
     else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        file::file2Json( argv[1], js);
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";

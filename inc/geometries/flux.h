@@ -25,13 +25,19 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as
 //good as it can, i.e. until machine precision is reached
+//Note that f(psi) = 1/q(psi) (The safety factor)
 struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
+    Fpsi( const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
         psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip),m_verbose(verbose)
     {
+        //Find O-point
+        double R_O = x0, Z_O = y0;
+        dg::geo::findOpoint( psip, R_O, Z_O);
+        //define angle with respect to O-point
+        fieldRZYT_ = dg::geo::flux::FieldRZYT(psip, ipol, R_O, Z_O);
         X_init = x0, Y_init = y0;
         while( fabs( psip.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psip.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.;
@@ -63,15 +69,18 @@ struct Fpsi
         begin[0] = R_0, begin[1] = Z_0;
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
+        unsigned nan_counter = 0;
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps, end_old = end; N*=2;
             dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+            if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
+            if( std::isnan( eps) && nan_counter < 4) eps = 1e10, end = end_old, nan_counter++;
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
         if(m_verbose)std::cout <<end_old[2] << " "<<end[2] <<"\n";
-        double f_psi = 2.*M_PI/end_old[2];
+        double f_psi = 2.*M_PI/end[2]; //this actually is 1/q the safety factor
         return f_psi;
     }
 
@@ -125,6 +134,9 @@ struct Fpsi
 /**
  * @brief A symmetry flux generator
  *
+ * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$
+ * The symmetry refers to the symmetry in the toroidal angle while flux coordinates allow the representation
+ * of the magnetic field in Clebsch form
  * @ingroup generators_geo
  * @snippet flux_t.cu doxygen
  */

@@ -15,9 +15,16 @@ namespace dg{
  * https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
  * for an introduction.
  * The coefficients of the tableau
- * should be easily constructible and accessible afterwards.
- * Furthermore, it provides utilities like the number of stages, whether the
+ * are easily constructible and accessible.
+ * Furthermore, we provide utilities like the number of stages, whether the
  * tableau is embedded or not and the order of the method.
+ *
+ * Currently available are
+ *
+ * Explicit methods
+ * @copydoc hide_explicit_butcher_tableaus
+ * Implicit methods
+ * @copydoc hide_implicit_butcher_tableaus
  * @tparam real_type type of the coefficients
  * @sa RungeKutta, ERKStep, ARKStep
  * @ingroup time
@@ -171,24 +178,12 @@ ButcherTableau<real_type> explicit_euler_1_1()
     return ButcherTableau<real_type>( 1,1, a,b,c);
 }
 template<class real_type>
-ButcherTableau<real_type> implicit_euler_1_1()
-{
-    real_type a[1] = {1};
-    real_type b[1] = {1};
-    real_type c[1] = {1};
-    return ButcherTableau<real_type>( 1,1, a,b,c);
-}
-template<class real_type>
 ButcherTableau<real_type> midpoint_2_2()
 {
-    real_type a[4] = {   0, 0, 
+    real_type a[4] = {   0, 0,
                        0.5, 0 };
     real_type b[2] = {0., 1.};
     real_type c[2] = {0, 0.5};
-    //real_type a[4] = {   0, 0, 
-    //                    1, 0 };
-    //real_type b[2] = {0.5,0.5};
-    //real_type c[2] = {0, 1};
     return ButcherTableau<real_type>( 2,2, a,b,c);
 }
 template<class real_type>
@@ -215,7 +210,7 @@ ButcherTableau<real_type> classic_4_4()
     return ButcherTableau<real_type>( 4,4, a,b,c);
 }
 //From Yoh and Zhong (AIAA 42, 2004)
-//!Attention! assumes another form of implementation 
+//!Attention! assumes another form of implementation
 //than ARK tableaus
 template<class real_type>
 ButcherTableau<real_type> sirk3a_ex_3_3()
@@ -630,14 +625,39 @@ ButcherTableau<real_type> feagin_17_8_10()
     return ButcherTableau<real_type>( 17, 8, 10, a, b,bt, c);
 }
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Implicit Butcher tables%%%%%%%%%%%%%%%%%%
+template<class real_type>
+ButcherTableau<real_type> implicit_euler_1_1()
+{
+    real_type a[1] = {1};
+    real_type b[1] = {1};
+    real_type c[1] = {1};
+    return ButcherTableau<real_type>( 1,1, a,b,c);
+}
+template<class real_type>
+ButcherTableau<real_type> implicit_midpoint_1_2()
+{
+    real_type a[1] = { 0.5};
+    real_type b[1] = { 1.};
+    real_type c[1] = { 0.5};
+    return ButcherTableau<real_type>( 1,2, a,b,c);
+}
+template<class real_type>
+ButcherTableau<real_type> trapezoidal_2_2()
+{
+    real_type a[4] = { 0, 0, 0.5, 0.5};
+    real_type b[2] = { 0.5, 0.5};
+    real_type c[2] = { 0, 1.};
+    return ButcherTableau<real_type>( 2,2, a,b,c);
+}
 
 template<class real_type>
 ButcherTableau<real_type> sdirk_2_1_2()
 {
+    real_type x = (2.-sqrt(2.))/2.;
     real_type data[] = {
-        1 , 1 , 0 ,
-  0 , -1 , 1 ,
-  2 , 1./2. , 1./2. ,
+  x , x , 0 ,
+  1.-x , 1.-2.*x , x,
+  2 , 0.5 , 0.5,
   1 , 1 , 0
     };
     return ButcherTableau<real_type>( 2, data);
@@ -822,7 +842,7 @@ enum tableau_identifier{
     HEUN_EULER_2_1_2,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
     BOGACKI_SHAMPINE_4_2_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine-4-2-3</a>
     ARK324L2SA_ERK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
-    ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+    ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
     ARK436L2SA_ERK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
     SAYFY_ABURUB_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy-Aburub-6-3-4</a>
     CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
@@ -835,7 +855,9 @@ enum tableau_identifier{
     FEAGIN_17_8_10,//!< <a href="http://sce.uhcl.edu/rungekutta/">Feagin-17-8-10</a>
     //implicit ARKode tableaus
     IMPLICIT_EULER_1_1,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler (implicit)</a>
-    SDIRK_2_1_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-2-1-2</a>
+    IMPLICIT_MIDPOINT_1_2, //!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">implicit Midpoint</a>
+    TRAPEZOIDAL_2_2,//!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a>
+    SDIRK_2_1_2, //!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a>
     BILLINGTON_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
     TRBDF2_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
     KVAERNO_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
@@ -858,8 +880,6 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
     switch(id){
         case EXPLICIT_EULER_1_1:
             return dg::tableau::explicit_euler_1_1<real_type>();
-        case IMPLICIT_EULER_1_1:
-            return dg::tableau::implicit_euler_1_1<real_type>();
         case MIDPOINT_2_2:
             return dg::tableau::midpoint_2_2<real_type>();
         case KUTTA_3_3:
@@ -892,6 +912,12 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::fehlberg_13_7_8<real_type>();
         case FEAGIN_17_8_10:
             return dg::tableau::feagin_17_8_10<real_type>();
+        case IMPLICIT_EULER_1_1:
+            return dg::tableau::implicit_euler_1_1<real_type>();
+        case IMPLICIT_MIDPOINT_1_2:
+            return dg::tableau::implicit_midpoint_1_2<real_type>();
+        case TRAPEZOIDAL_2_2:
+            return dg::tableau::trapezoidal_2_2<real_type>();
         case SDIRK_2_1_2:
             return dg::tableau::sdirk_2_1_2<real_type>();
         case BILLINGTON_3_3_2:
@@ -945,6 +971,8 @@ ButcherTableau<real_type> tableau( std::string name)
         {"Feagin-17-8-10", FEAGIN_17_8_10},
         //Implicit methods
         {"Euler (implicit)", IMPLICIT_EULER_1_1},
+        {"Midpoint (implicit)", IMPLICIT_MIDPOINT_1_2},
+        {"Trapezoidal-2-2", TRAPEZOIDAL_2_2},
         {"SDIRK-2-1-2", SDIRK_2_1_2},
         {"Billington-3-3-2", BILLINGTON_3_3_2},
         {"TRBDF2-3-3-2", TRBDF2_3_3_2},
@@ -975,14 +1003,14 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Kutta-3-3              | dg::KUTTA_3_3              | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
  *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods"> "The" Runge-Kutta method</a>
  *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
- *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a>
+ *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
  *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
- *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonnveld-5-3-4</a>
+ *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
  *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
  *   Sayfy_Aburub-6-3-4     | dg::SAYFY_ABURUB_6_3_4     | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy_Aburub_6_3_4</a>
  *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
  *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
- *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a>
+ *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a> (fsal)
  *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
  *   Verner-8-5-6           | dg::VERNER_8_5_6           | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
  *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
@@ -995,7 +1023,9 @@ ButcherTableau<real_type> tableau( std::string name)
  *    Name  | Identifier | Description
  *   -------|------------| -----------
  *   Euler (implicit)     | dg::IMPLICIT_EULER_1_1     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">backward Euler</a>
- *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-2-1-2</a>
+ *   Midpoint (implicit)     | dg::IMPLICIT_MIDPOINT_1_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">implicit Midpoint</a>
+ *   Trapezoidal-2-2     | dg::TRAPEZOIDAL_2_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a>
+ *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a>
  *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
  *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
  *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>

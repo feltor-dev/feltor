@@ -8,13 +8,7 @@
 #include "toeflI.cuh"
 #include "parameters.h"
 
-#include "file/nc_utilities.h"
-
-/*
-   - reads parameters from input.txt or any other given file,
-   - integrates the ToeflR - functor and
-   - writes outputs to a given outputfile using netcdf4.
-*/
+#include "dg/file/file.h"
 
 int main( int argc, char* argv[])
 {   ////////////////////////////////setup MPI///////////////////////////////
@@ -49,18 +43,12 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {   if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else
-    {   
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        file::file2Json(argv[1], js, file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
     if(rank==0)p.display( std::cout);

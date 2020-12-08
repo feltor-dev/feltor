@@ -23,8 +23,9 @@
 #include "solovev.h"
 #include "guenther.h"
 #include "toroidal.h"
+#include "polynomial.h"
+#include "make_field.h"
 
-#include "init.h"
 #include "fluxfunctions.h"
 #include "magnetic_field.h"
 #include "adaption.h"

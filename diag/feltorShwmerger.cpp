@@ -7,9 +7,10 @@
 
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 
+//MW: the command line argument ncrcat should do the same doesn't it?
 //merge inputfiles together to a new output file
 //be aware of grids!!! Should be equal for all input files
 int main( int argc, char* argv[])
@@ -43,12 +44,8 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        Json::CharReaderBuilder parser;
-        parser["collectComments"] = false;
-        std::string errs;
-        std::stringstream ss(input);
-        parseFromStream( parser, ss, &js, &errs); //read input without comments
-        const eule::Parameters p(js);   
+        file::string2Json( input, js, file::comments::are_forbidden);
+        const eule::Parameters p(js);
         
         dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
         size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};

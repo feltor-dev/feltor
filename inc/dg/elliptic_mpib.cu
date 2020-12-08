@@ -10,19 +10,27 @@
 #include "backend/mpi_init.h"
 #include "topology/split_and_join.h"
 
+//using value_type = float;
+//using Matrix = dg::fMDMatrix;
+//using Vector = dg::fMDVec;
+//using LVector = dg::fDVec;
+using value_type = double;
+using Matrix = dg::MDMatrix;
+using Vector = dg::MDVec;
+using LVector = dg::DVec;
 
-const double R_0 = 10;
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
-const double lz = 2.*M_PI;
-double fct(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
-double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
-double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
+const value_type R_0 = 10;
+const value_type lx = 2.*M_PI;
+const value_type ly = 2.*M_PI;
+const value_type lz = 2.*M_PI;
+value_type fct(value_type x, value_type y, value_type z){ return sin(x-R_0)*sin(y)*sin(z);}
+value_type derivative( value_type x, value_type y, value_type z){return cos(x-R_0)*sin(y)*sin(z);}
+value_type laplace2d_fct( value_type x, value_type y, value_type z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
+value_type laplace3d_fct( value_type x, value_type y, value_type z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::PER;
-double initial( double x, double y, double z) {return sin(0);}
+value_type initial( value_type x, value_type y, value_type z) {return sin(0);}
 
 
 int main( int argc, char* argv[])
@@ -32,33 +40,33 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     dg::mpi_init3d( bcx, bcy, dg::PER, n, Nx, Ny, Nz, comm);
 
-    dg::CylindricalMPIGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER, comm);
-    const dg::MDVec w3d = dg::create::volume( grid);
-    const dg::MDVec v3d = dg::create::inv_volume( grid);
+    dg::RealCylindricalMPIGrid3d<value_type> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER, comm);
+    const Vector w3d = dg::create::volume( grid);
+    const Vector v3d = dg::create::inv_volume( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    double eps=1e-6;
+    value_type eps=1e-6;
     if(rank==0)std::cout << "Type epsilon! \n";
     if(rank==0)std::cin >> eps;
-    MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
+    MPI_Bcast(  &eps,1 , dg::getMPIDataType<value_type>(), 0, comm);
     /////////////////////////////////////////////////////////////////
     if(rank==0)std::cout<<"TEST CYLINDRIAL LAPLACIAN!\n";
     dg::Timer t;
-    dg::MDVec x = dg::evaluate( initial, grid);
+    Vector x = dg::evaluate( initial, grid);
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic3d<dg::aMPIGeometry3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
-    dg::MDMatrix DX = dg::create::dx( grid);
+    dg::Elliptic3d<dg::aRealMPIGeometry3d<value_type>, Matrix, Vector> laplace(grid, dg::not_normed, dg::centered);
+    Matrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
+    dg::CG< Vector > pcg( x, n*n*Nx*Ny);
 
     if(rank==0)std::cout<<"Expand right hand side\n";
-    const dg::MDVec solution = dg::evaluate ( fct, grid);
-    const dg::MDVec deriv = dg::evaluate( derivative, grid);
-    dg::MDVec b = dg::evaluate ( laplace3d_fct, grid);
+    const Vector solution = dg::evaluate ( fct, grid);
+    const Vector deriv = dg::evaluate( derivative, grid);
+    Vector b = dg::evaluate ( laplace3d_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
 
@@ -68,11 +76,11 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout << "Number of pcg iterations "<< num<<std::endl;
     if(rank==0)std::cout << "... took                 "<< t.diff()<<"s\n";
-    dg::MDVec  error(  solution);
+    Vector  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
-    double normerr = dg::blas2::dot( w3d, error);
-    double norm = dg::blas2::dot( w3d, solution);
+    value_type normerr = dg::blas2::dot( w3d, error);
+    value_type norm = dg::blas2::dot( w3d, solution);
     exblas::udouble res;
     norm = sqrt(normerr/norm); res.d = norm;
     if(rank==0)std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
@@ -86,18 +94,18 @@ int main( int argc, char* argv[])
     x = dg::evaluate( initial, grid);
     b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
-    dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
-    dg::MDVec v2d = dg::create::inv_volume( *grid_perp);
-    dg::MDVec w2d = dg::create::volume( *grid_perp);
-    dg::MDVec g_parallel = grid.metric().value(2,2);
+    dg::ClonePtr<dg::aRealMPIGeometry2d<value_type>> grid_perp = grid.perp_grid();
+    Vector v2d = dg::create::inv_volume( *grid_perp);
+    Vector w2d = dg::create::volume( *grid_perp);
+    Vector g_parallel = grid.metric().value(2,2);
     dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
-    dg::MDVec chi = dg::evaluate( dg::one, grid);
+    Vector chi = dg::evaluate( dg::one, grid);
     dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
-    std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split(
-            grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(*grid_perp, dg::not_normed, dg::centered));
+    std::vector< dg::Elliptic<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector> > laplace_split(
+            grid.local().Nz(), dg::Elliptic<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector>(*grid_perp, dg::not_normed, dg::centered));
     // create split  vectors and solve
-    std::vector<dg::MPI_Vector<dg::View<dg::DVec>>> b_split, x_split, chi_split;
+    std::vector<dg::MPI_Vector<dg::View<LVector>>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
     std::vector<unsigned>  number(grid.local().Nz());
     t.tic();

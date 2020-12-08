@@ -19,11 +19,14 @@ namespace dg{
 //// TO DO: check for better stopping criteria using condition number estimates?
 
 /**
-* @brief Functor class for the preconditioned conjugate gradient method to solve
-* \f[ Ax=b\f]
+* @brief Preconditioned conjugate gradient method to solve
+* \f[ M^{-1}Ax=M^{-1}b\f]
 *
 * @ingroup invert
 *
+* @sa This implements the PCG algorithm as given in https://en.wikipedia.org/wiki/Conjugate_gradient_method
+or the book
+* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note Conjugate gradients might become unstable for positive semidefinite
 * matrices arising e.g. in the discretization of the periodic laplacian
 * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
@@ -65,13 +68,13 @@ class CG
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is
-     * a correction factor to the absolute error
+     * the absolute error in units of \f$ \epsilon\f$
      * @param A A symmetric, positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
      * @param eps The relative error to be respected
-     * @param nrmb_correction Correction factor C for norm of b
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * @attention This version uses the Preconditioner to compute the norm for the error condition (this safes one scalar product)
      *
      * @return Number of iterations used to achieve desired precision
@@ -90,14 +93,15 @@ class CG
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
-     * a correction factor to the absolute error and \f$ S \f$ defines a square norm
+     * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
      * @param A A symmetric positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
-     * @param S Weights used to compute the norm for the error condition
+     * @param S (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
-     * @param nrmb_correction Correction factor C for norm of b
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
+     * @param test_frequency if set to 1 then the norm of the error is computed in every iteration to test if the loop can be terminated. Sometimes, especially for small sizes the dot product is expensive to compute, then it is beneficial to set this parameter to e.g. 10, which means that the errror condition is only evaluated every 10th iteration.
      *
      * @return Number of iterations used to achieve desired precision
      * @note Required memops per iteration (\c P and \c S are assumed vectors):
@@ -109,7 +113,7 @@ class CG
      * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
@@ -178,13 +182,13 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
         nrm2r_new = blas2::dot( P, r);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
-    if(rank==0)
+        if(rank==0)
 #endif //MPI
-    {
-        std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
-    }
+        {
+            std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
+            std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+            std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+        }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction))
             return i;
@@ -197,7 +201,7 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 
 template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, int save_on_dots )
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -232,18 +236,21 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
         alpha =  nrmzr_old/blas1::dot( p, ap);
         blas1::axpby( alpha, p, 1.,x);
         blas1::axpby( -alpha, ap, 1., r);
+        if( 0 == i%save_on_dots )
+        {
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
-    if(rank==0)
+            if(rank==0)
 #endif //MPI
-    {
-        std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-        std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-        std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
-    }
+            {
+                std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+                std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+                std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+            }
 #endif //DG_DEBUG
-        if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
-            return i;
+                if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
+                    return i;
+        }
         blas2::symv(P,r,ap);
         nrmzr_new = blas1::dot( ap, r);
         blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
@@ -253,22 +260,24 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 }
 ///@endcond
 
-
 /**
-* @brief Extrapolate based on up to three past solutions
+* @brief Extrapolate a polynomial passing through up to three points
+*
+* This class constructs an interpolating polynomial through up to three given points
+* and evaluates its value or its derivative at a new point. The points can be updated to get a new polynomial.
 *
 * The intention of this class is to provide an initial guess for iterative solvers
 * based on past solutions:
  \f[ x_{init} = \alpha_0 x_0 + \alpha_{-1}x_{-1} + \alpha_{-2} x_{-2}\f]
  where the indices indicate the current (0) and past (negative) solutions.
- Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
- The user can choose to provide a time value \c t_i associated with the \c x_i, which
+ Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.  The user can choose to provide a time value \c t_i associated with the \c x_i, which
  are then used to compute the coefficients \c alpha_i (using Lagrange interpolation).
  Otherwise an equidistant distribution is assumed.
 *
 * @note Since extrapolation with higher order polynomials is so prone to oscillations
 * anything higher than linear rarely leads to anything useful. So best stick to
 * constant or linear extrapolation
+* @note The derivative of the interpolating polynomial at a new point reduces to familiar finite difference formulas
 * @copydoc hide_ContainerType
 * @ingroup invert
 * @sa https://en.wikipedia.org/wiki/Extrapolation
@@ -278,83 +287,52 @@ struct Extrapolation
 {
     using value_type = get_value_type<ContainerType>;
     using container_type = ContainerType;
-    /*! @brief Set extrapolation order without initializing values
-     * @param number number of vectors to use for extrapolation.
-         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-     * @attention the update function must be used at least \c number times before the extrapolate function can be called
+    /*! @brief Leave values uninitialized
      */
-    Extrapolation( unsigned number = 2){
-        set_number(number);
-    }
-    /*! @brief Set extrapolation order and initialize values
-     * @param number number of vectors to use for extrapolation.
-         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-     * @param t_init the times are initialized with the values <tt> t_init, t_init-1 , t_init-2 </tt>
-     * @param init the vectors are initialized with this value
+    Extrapolation( ){ m_counter = 0; }
+    /*! @brief Set maximum extrapolation order and allocate memory
+     * @param max maximum of vectors to use for extrapolation.
+         Choose between 0 (no extrapolation) 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
+         Higher values currently default back to a linear extrapolation
+     * @param copyable the memory is allocated based on this vector
      */
-    Extrapolation( unsigned number, value_type t_init, const ContainerType& init) {
-        set_number(number, t_init, init);
-    }
-    /*! @brief Set extrapolation order and initialize values (equidistant)
-     * @param number number of vectors to use for extrapolation.
-         Choose between 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-     * @param init the vectors are initialized with this value
-     * @note the times are initialized with the values <tt> 0, -1 , -2 </tt>
-     */
-    Extrapolation( unsigned number, const ContainerType& init) {
-        set_number(number, 0, init);
-    }
-    ///@copydoc Extrapolation(unsigned)
-    void set_number( unsigned number)
-    {
-        assert( number <= 3 );
-        m_number = number;
-        m_t.resize( number);
-        m_x.resize( number);
-        for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = -(value_type)i;
-    }
-    ///@copydoc Extrapolation(unsigned,value_type,const ContainerType&)
-    void set_number( unsigned number, value_type t_init, const ContainerType& init)
-    {
-        //init times 0, -1, -2
-        assert( number <= 3 );
-        m_x.assign( number, init);
-        m_t.assign( number, t_init);
-        m_number = number;
-        for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = t_init - (value_type)i;
+    Extrapolation( unsigned max, const ContainerType& copyable) {
+        set_max(max, copyable);
     }
     ///@copydoc Extrapolation(unsigned,const ContainerType&)
-    void set_number( unsigned number, const ContainerType& init)
+    void set_max( unsigned max, const ContainerType& copyable)
     {
-        //init times 0, -1, -2
-        set_number( number, 1, init);
-        for(unsigned i=0; i<m_t.size(); i++)
-            m_t[i] = -(value_type)i;
+        m_counter = 0;
+        m_x.assign( max, copyable);
+        m_t.assign( max, 0);
+        m_max = max;
     }
-    ///return the current extrapolation number
-    unsigned get_number( ) const{
-        return m_number;
+    ///return the current extrapolation max
+    ///This may not coincide with the max set in the constructor if values have not been updated yet
+    unsigned get_max( ) const{
+        return m_counter;
     }
 
     /**
     * @brief Extrapolate value to given time
-    * @param t time to which to extrapolate (must be different from the times used in the update function, else division by zero occurs)
+    *
+    * Construt and evaluate the interpolating polynomial at a given point
+    * @param t time to which to extrapolate (or at which interpolating polynomial is evaluated)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => new_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
     */
     template<class ContainerType0>
     void extrapolate( value_type t, ContainerType0& new_x) const{
-        switch(m_number)
+        switch(m_counter)
         {
-            case(0):
+            case(0): dg::blas1::copy( 0, new_x);
                      break;
             case(1): dg::blas1::copy( m_x[0], new_x);
                      break;
             case(3): {
                 value_type f0 = (t-m_t[1])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
-                value_type f1 = (t-m_t[0])*(t-m_t[2])/(m_t[1]-m_t[0])/(m_t[1]-m_t[2]);
+                value_type f1 =-(t-m_t[0])*(t-m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
                 value_type f2 = (t-m_t[0])*(t-m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
                 dg::blas1::evaluate( new_x, dg::equals(), dg::PairSum(),
                         f0, m_x[0], f1, m_x[1], f2, m_x[2]);
@@ -369,8 +347,45 @@ struct Extrapolation
     }
 
     /**
-    * @brief Extrapolate value
-    * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @brief Evaluate first derivative of interpolating polynomial
+    *
+    * Equivalent to constructing the interpolating polynomial, deriving it once
+    * and then evaluating it at the required point
+    * @param t time at which derivative of interpolating polynomial is evaluated
+    * @param dot_x (write only) contains derived value on output
+    * @note If t is chosen as the latest time of update t0, then the result coincides
+    * with the backward difference formula of order  \c max
+    * @attention If max==1, the result is 0 (derivative of a constant)
+    * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => dot_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
+    template<class ContainerType0>
+    void derive( value_type t, ContainerType0& dot_x) const{
+        switch(m_counter)
+        {
+            case(0): dg::blas1::copy( 0, dot_x);
+                     break;
+            case(1): dg::blas1::copy( 0, dot_x);
+                     break;
+            case(3): {
+                value_type f0 =-(-2.*t+m_t[1]+m_t[2])/(m_t[0]-m_t[1])/(m_t[0]-m_t[2]);
+                value_type f1 = (-2.*t+m_t[0]+m_t[2])/(m_t[0]-m_t[1])/(m_t[1]-m_t[2]);
+                value_type f2 =-(-2.*t+m_t[0]+m_t[1])/(m_t[2]-m_t[0])/(m_t[2]-m_t[1]);
+                dg::blas1::evaluate( dot_x, dg::equals(), dg::PairSum(),
+                        f0, m_x[0], f1, m_x[1], f2, m_x[2]);
+                break;
+            }
+            default: {
+                value_type f0 = 1./(m_t[0]-m_t[1]);
+                value_type f1 = 1./(m_t[1]-m_t[0]);
+                dg::blas1::axpby( f0, m_x[0], f1, m_x[1], dot_x);
+            }
+        }
+    }
+
+    /**
+    * @brief Extrapolate value (equidistant version)
+    * @param new_x (write only) contains extrapolated value on output ( may alias the tail if it exists)
     * @note Assumes that extrapolation time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
@@ -379,36 +394,44 @@ struct Extrapolation
         value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
     }
-
+    /**
+    * @brief Derive value (equidistant version)
+    * @param dot_x (write only) contains derived value on output
+    * @note Assumes that time equals t0 such that a backward difference formula will be evaluated
+    * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
+    */
+    template<class ContainerType0>
+    void derive( ContainerType0& dot_x) const{
+        derive( m_t[0], dot_x);
+    }
 
     /**
     * @brief insert a new entry, deleting the oldest entry or update existing entry
     * @param t_new the time for the new entry
-    * @param new_entry the new entry ( may alias the tail), replaces value of existing entry if \c t_new already exists
+    * @param new_entry the new entry ( replaces value of existing entry if \c t_new already exists
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
     void update( value_type t_new, const ContainerType0& new_entry){
-        if( m_number == 0) return;
+        if( m_max == 0) return;
         //check if entry is already there to avoid division by zero errors
-        for( unsigned i=0; i<m_number; i++)
+        for( unsigned i=0; i<m_counter; i++)
             if( fabs(t_new - m_t[i]) <1e-14)
             {
                 blas1::copy( new_entry, m_x[i]);
                 return;
             }
+        if( m_counter < m_max) //don't update counter if Time entry was rejected
+            m_counter++;
         //push out last value (keep track of what is oldest value
-        for (unsigned u=m_number-1; u>0; u--)
-        {
-            std::swap( m_t[u], m_t[u-1]);
-            m_x[u].swap( m_x[u-1]);
-        }
+        std::rotate( m_x.rbegin(), m_x.rbegin()+1, m_x.rend());
+        std::rotate( m_t.rbegin(), m_t.rbegin()+1, m_t.rend());
         m_t[0] = t_new;
         blas1::copy( new_entry, m_x[0]);
     }
     /**
     * @brief insert a new entry
-    * @param new_entry the new entry ( may alias the tail)
+    * @param new_entry the new entry ( may alias the tail if it exists)
     * @note Assumes new time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
@@ -420,22 +443,22 @@ struct Extrapolation
 
     /**
      * @brief return the current head (the one most recently inserted)
-     * @return current head (undefined if number==0)
+     * @return current head (undefined if max==0)
      */
     const ContainerType& head()const{
         return m_x[0];
     }
-    ///write access to tail value ( the one that will be deleted in the next update
+    ///write access to tail value ( the one that will be deleted in the next update, undefined if max==0)
     ContainerType& tail(){
-        return m_x[m_number-1];
+        return m_x[m_max-1];
     }
-    ///read access to tail value ( the one that will be deleted in the next update
+    ///read access to tail value ( the one that will be deleted in the next update, undefined if max==0)
     const ContainerType& tail()const{
-        return m_x[m_number-1];
+        return m_x[m_max-1];
     }
 
     private:
-    unsigned m_number;
+    unsigned m_max, m_counter;
     std::vector<value_type> m_t;
     std::vector<ContainerType> m_x;
 };
@@ -489,11 +512,12 @@ struct Invert
      * @param eps relative error in conjugate gradient
      * @param extrapolationType number of last values to use for extrapolation of the current guess
      * @param multiplyWeights if true the rhs shall be multiplied by the weights before cg is applied
-     * @param nrmb_correction Correction factor for norm of b (cf. CG)
+     * @param nrmb_correction the absolute error \c C in units of \c eps in conjugate gradient
      */
     void construct( const ContainerType& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.)
     {
-        m_ex.set_number( extrapolationType);
+        m_ex.set_max( extrapolationType, copyable);
+        m_rhs = copyable;
         set_size( copyable, max_iter);
         set_accuracy( eps, nrmb_correction);
         multiplyWeights_=multiplyWeights;
@@ -508,28 +532,20 @@ struct Invert
      */
     void set_size( const ContainerType& assignable, unsigned max_iterations) {
         cg.construct( assignable, max_iterations);
-        m_ex.set_number( m_ex.get_number(), assignable);
+        m_ex.set_max( m_ex.get_max(), assignable);
     }
 
     /**
      * @brief Set accuracy parameters for following inversions
      *
-     * @param eps
-     * @param nrmb_correction
+     * @param eps the relative error in conjugate gradient
+     * @param nrmb_correction the absolute error \c C in units of \c eps in conjugate gradient
      */
     void set_accuracy( value_type eps, value_type nrmb_correction = 1.) {
         eps_ = eps;
         nrmb_correction_ = nrmb_correction;
     }
 
-    /**
-     * @brief Set the extrapolation Type for following inversions
-     *
-     * @param extrapolationType number of last values to use for next extrapolation of initial guess
-     */
-    void set_extrapolationType( int extrapolationType) {
-        m_ex.set_number( extrapolationType);
-    }
     /**
      * @brief Set the maximum number of iterations
      * @param new_max New maximum number
@@ -540,9 +556,6 @@ struct Invert
      * @return the current maximum
      */
     unsigned get_max() const {return cg.get_max();}
-
-    /// @brief Return last solution
-    const ContainerType& get_last() const { return m_ex.head();}
 
     /**
      * @brief Solve linear problem
@@ -600,8 +613,8 @@ struct Invert
         unsigned number;
         if( multiplyWeights_ )
         {
-            dg::blas2::symv( weights, rho, m_ex.tail());
-            number = cg( op, phi, m_ex.tail(), p, inv_weights, eps_, nrmb_correction_);
+            dg::blas2::symv( weights, rho, m_rhs);
+            number = cg( op, phi, m_rhs, p, inv_weights, eps_, nrmb_correction_);
         }
         else
             number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
@@ -628,6 +641,7 @@ struct Invert
     value_type eps_, nrmb_correction_;
     dg::CG< ContainerType > cg;
     Extrapolation<ContainerType> m_ex;
+    ContainerType m_rhs;
     bool multiplyWeights_;
 };
 

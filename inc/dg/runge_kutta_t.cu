@@ -58,6 +58,7 @@ int main()
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u);
     std::cout << "Norm of error is "<<sqrt(dg::blas1::dot( u, u))<<"\n";
     //![doxygen]
+    std::cout << "Explicit Methods with "<<N<<" steps:\n";
     std::vector<std::string> names{
         "Euler",
         "Midpoint-2-2",
@@ -82,6 +83,37 @@ int main()
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
         dg::stepperRK(name, functor, t_start, u, t_end, u1, N);
+        dg::blas1::axpby( 1., sol , -1., u1);
+        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
+    }
+    ///-------------------------------Implicit Methods----------------------//
+    const unsigned N_im = 10; //we can take fewer steps
+    const double dt_im = (t_end - t_start)/(double)N_im;
+    std::cout << "Implicit Methods with "<<N_im<<" steps:\n";
+    std::vector<std::string> implicit_names{
+        "Euler (implicit)",
+        "Midpoint (implicit)",
+        "Trapezoidal-2-2",
+        "SDIRK-2-1-2",
+        "Billington-3-3-2",
+        "TRBDF2-3-3-2",
+        "Kvaerno-4-2-3",
+        "ARK-4-2-3 (implicit)",
+        "Cash-5-2-4",
+        "Cash-5-3-4",
+        "SDIRK-5-3-4",
+        "ARK-6-3-4 (implicit)",
+        "Kvaerno-7-4-5",
+        "ARK-8-4-5 (implicit)",
+    };
+    for( auto name : implicit_names)
+    {
+        u = solution(t_start, damping, omega_0, omega_drive);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
+        dg::ImplicitRungeKutta<std::array<double,2>, dg::FixedPointSolver<std::array<double,2>> > irk( name, u, 100, 1e-14);
+        double t=t_start;
+        for( unsigned i=0; i<N_im; i++)
+            irk.step( functor, t, u1, t, u1, dt_im); //step inplace
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }

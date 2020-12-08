@@ -112,17 +112,16 @@ void computeX_rzy( const CylindricalFunctorsLvl1& psi,
 
 } //namespace detail
 }//namespace orthogonal
-///@endcond
 
 /**
  * @brief Choose points on inside or outside line
  *
+ * @attention Not consistent, do not use unless you know what you are doing
  * @ingroup generators_geo
  */
 struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
-    ///psi_0 must be the closed surface, 0 the separatrix
     SimpleOrthogonalX( const CylindricalFunctorsLvl2& psi, double psi_0,
             double xX, double yX, double x0, double y0, int firstline =0): psi_(psi)
     {
@@ -178,10 +177,17 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     double zeta0_, f0_;
     int firstline_;
 };
+///@endcond
 
 /**
  * @brief Choose points on separatrix and construct grid from there
  *
+ * This is the algorithm described in:
+ * "M. Wiesenberger, M. Held, L. Einkemmer, A. Kendl Streamline integration as a method for structured grid generation in X-point geometry Journal of Computational Physics 373, 370-384 (2018)"
+ * @note The resulting coordinate transformation for \f$ \zeta\f$ will by linear in \f$ \psi\f$
+ * @attention Assumes that the separatrix is given by \f$ \psi = 0\f$. If this
+ * is not the case, then use the \c normalize_solovev_t program to change the parameters.
+ * Further, it is assumed that closed flux surfaces inside of the separatrix exist.
  * @ingroup generators_geo
  */
 struct SeparatrixOrthogonal : public aGeneratorX2d
@@ -189,13 +195,13 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     /**
      * @brief Construct
      *
-     * @param psi the flux function
-     * @param chi the monitor tensor
-     * @param psi_0 must be the closed flux surface inside domain boundary
-     * @param xX the X-point x - coordinate
+     * @param psi the flux function, the separatrix must be at \f$ \psi = 0\f$
+     * @param chi the monitor tensor, see \c dg::geo::make_Xconst_monitor or \c dg::geo::make_Xbump_monitor
+     * @param psi_0 The left boundary of the grid this generator will generate. Must be a closed flux surface.
+       @param xX the X-point x - coordinate
      * @param yX the X-point y - coordinate
-     * @param x0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
+     * @param x0 a point in the inside of the separatrix (can be the O-point, defines the angle for initial separatrix integration)
+     * @param y0 a point in the inside of the separatrix (can be the O-point, defines the angle for initial separatrix integration)
      * @param firstline =0 means conformal, =1 means equalarc discretization of the separatrix
      * @param verbose if true the integrators will write additional information to \c std::cout
      */

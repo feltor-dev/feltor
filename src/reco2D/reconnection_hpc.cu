@@ -5,22 +5,13 @@
 #include <cmath>
 
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "reconnection.cuh"
-
-/*
-   - reads parameters from input.txt or any other given file, 
-   - Initializes and integrates Asela and 
-   - writes outputs to a given outputfile using netcdf 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-
-*/
 
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc != 3)
     {
@@ -28,10 +19,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
-    }
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     const asela::Parameters p( js);
     p.display( std::cout);
     std::string input = js.toStyledString();

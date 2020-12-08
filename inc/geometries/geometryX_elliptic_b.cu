@@ -77,8 +77,8 @@ int main(int argc, char**argv)
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
     int coordsID[2], psiID, functionID, function2ID, divBID;
-    ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
+    ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
+    ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
     ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
     ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
     ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
@@ -141,8 +141,8 @@ int main(int argc, char**argv)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0., 0., (dg::HVec)gxx, g2d);
-    double hyX = dg::interpolate( 0., 0., (dg::HVec)gyy, g2d);
+    double hxX = dg::interpolate( dg::xspace, (dg::HVec)gxx, 0., 0., g2d);
+    double hyX = dg::interpolate( dg::xspace, (dg::HVec)gyy, 0., 0., g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";

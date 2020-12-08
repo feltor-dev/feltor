@@ -36,10 +36,13 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Test trivial parallel functions:\n"<<std::boolalpha;
     dg::blas1::axpby( 2., x1, 3., x2);
     if(rank==0)std::cout << "Scalar addition                   "<< (x2 == 8.)<<std::endl;
+    if(rank==0)std::cout << "Reduction                         " << (dg::blas1::reduce( arr1, 0, thrust::maximum<float>()) == 4) <<std::endl;
     dg::blas1::axpby( 2., arr1, 3., vec2);
     if(rank==0)std::cout << "Recursive Vec Scalar addition     "<< (vec2[0] == 34.)<<std::endl;
     dg::blas1::axpby( 2., vec1, 3., arr2);
     if(rank==0)std::cout << "Recursive Arr Scalar addition     "<< (arr2[0] == 26.)<<std::endl;
+    double max = dg::blas1::reduce( dvec1, 0, thrust::maximum<double>());
+    if(rank==0)std::cout << "Recursive DVec reduction          " << (max == 30) <<std::endl;
     dg::blas1::copy( 2., arrdvec1);
     if(rank==0)std::cout << "Recursive DVec Copy Scalar to     "<< (arrdvec1[0].data()[0] == 2 && arrdvec1[1].data()[0]==2)<<std::endl;
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);

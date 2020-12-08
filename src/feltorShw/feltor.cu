@@ -6,6 +6,7 @@
 // #define DG_DEBUG
 
 #include "draw/host_window.h"
+#include "dg/file/json_utilities.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
@@ -13,27 +14,14 @@
 
 
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the Explicit - functor and 
-   - directly visualizes results on the screen using parameters in window_params.txt
-*/
-
-
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
     if( argc == 1)
-    {
-        std::ifstream is("input.json");
-        is >> js;
-    }
+        file::file2Json( "input.json", js, file::comments::are_forbidden);
     else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        file::file2Json( argv[1], js, file::comments::are_forbidden);
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
@@ -43,9 +31,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
-    std::ifstream is( "window_params.js");
-    is >> js;
-    is.close();
+    file::file2Json( "window_params.json", js, file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
     draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////
