@@ -476,6 +476,32 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ *
+ * @param g_new The new grid
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
+ * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
+ * @note also check the transformation matrix, which is the more general solution
+ */
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    thrust::host_vector<real_type> pointsX = dg::evaluate( dg::cooX3d, g_new);
+    thrust::host_vector<real_type> pointsY = dg::evaluate( dg::cooY3d, g_new);
+    return interpolation( pointsX, pointsY, g_old);
+
+}
 ///@}
 
 

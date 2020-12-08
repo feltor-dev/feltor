@@ -36,12 +36,24 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
 
     // Now read in last timestep
     Geometry grid_IN( grid.x0(), grid.x1(), grid.y0(), grid.y1(), grid.z0(), grid.z1(),
-        pINn, pINNx, pINNy, pINsymmetric ? 1 : pINNz, dg::DIR, dg::DIR, dg::PER
+        pINn, pINNx, pINNy, pINNz, dg::DIR, dg::DIR, dg::PER
         #ifdef FELTOR_MPI
         , grid.communicator()
         #endif //FELTOR_MPI
         );
-    IHMatrix interpolateIN = dg::create::interpolation( grid, grid_IN);
+    IHMatrix interpolateIN;
+    HVec transferIN;
+    if( pINsymmetric)
+    {
+        std::unique_ptr< typename Geometry::perpendicular_grid> grid_perp ( static_cast<typename Geometry::perpendicular_grid*>(grid.perp_grid()));
+        interpolateIN = dg::create::interpolation( grid, *grid_perp);
+        transferIN = dg::evaluate(dg::zero, *grid_perp);
+    }
+    else
+    {
+        interpolateIN = dg::create::interpolation( grid, grid_IN);
+        transferIN = dg::evaluate(dg::zero, grid_IN);
+    }
 
     #ifdef FELTOR_MPI
     int dimsIN[3],  coordsIN[3];
@@ -58,8 +70,12 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     size_t countIN[3] = {grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
         grid_IN.n()*grid_IN.Nx()};
     #endif //FELTOR_MPI
-    std::vector<HVec> transferINHvec( 5, dg::evaluate( dg::zero, grid));
-    HVec transferINH( dg::evaluate(dg::zero, grid_IN));
+    if( pINsymmetric)
+    {
+        countIN[0] = 1;
+        startIN[0] = 0;
+    }
+    std::vector<HVec> transferOUTvec( 5, dg::evaluate( dg::zero, grid));
 
     std::string namesIN[5] = {"restart_electrons", "restart_ions", "restart_Ue", "restart_Ui", "restart_induction"};
 
@@ -78,26 +94,26 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
         errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataID);
         errIN = nc_get_vara_double( ncidIN, dataID, startIN, countIN,
             #ifdef FELTOR_MPI
-                transferINH.data().data()
+                transferIN.data().data()
             #else //FELTOR_MPI
-                transferINH.data()
+                transferIN.data()
             #endif //FELTOR_MPI
             );
-        dg::blas2::gemv( interpolateIN, transferINH, transferINHvec[i]);
+        dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec[i]);
     }
     errIN = nc_close(ncidIN);
     /// ///////////////Now Construct initial fields ////////////////////////
     //
     //Convert to N-1 and W
-    dg::blas1::plus( transferINHvec[0], -1.);
-    dg::blas1::plus( transferINHvec[1], -1.);
-    dg::blas1::axpby( 1., transferINHvec[2], 1./p.mu[0], transferINHvec[4], transferINHvec[2]);
-    dg::blas1::axpby( 1., transferINHvec[3], 1./p.mu[1], transferINHvec[4], transferINHvec[3]);
+    dg::blas1::plus( transferOUTvec[0], -1.);
+    dg::blas1::plus( transferOUTvec[1], -1.);
+    dg::blas1::axpby( 1., transferOUTvec[2], 1./p.mu[0], transferOUTvec[4], transferOUTvec[2]);
+    dg::blas1::axpby( 1., transferOUTvec[3], 1./p.mu[1], transferOUTvec[4], transferOUTvec[3]);
 
-    dg::assign( transferINHvec[0], y0[0][0]); //ne-1
-    dg::assign( transferINHvec[1], y0[0][1]); //Ni-1
-    dg::assign( transferINHvec[2], y0[1][0]); //We
-    dg::assign( transferINHvec[3], y0[1][1]); //Wi
+    dg::assign( transferOUTvec[0], y0[0][0]); //ne-1
+    dg::assign( transferOUTvec[1], y0[0][1]); //Ni-1
+    dg::assign( transferOUTvec[2], y0[1][0]); //We
+    dg::assign( transferOUTvec[3], y0[1][1]); //Wi
     return y0;
 }
 }//namespace feltor
