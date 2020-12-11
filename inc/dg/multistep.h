@@ -191,7 +191,8 @@ for a semi-implicit (first order) Euler method
 * Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
 * @note This scheme implements <a href = "https://dx.doi.org/10.1016/0021-9991(91)90007-8"> Karniadakis, et al. J. Comput. Phys. 97 (1991)</a>
 * @note The implicit part equals a third order backward differentiation formula (BDF) https://en.wikipedia.org/wiki/Backward_differentiation_formula
-* while the explicit part equals the minimal projection method by Alfeld (1979)
+* while the explicit part equals the MinimalProjecting method by
+<a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a>
 *
 The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
 * @snippet multistep_t.cu function
@@ -507,7 +508,7 @@ void BDF<ContainerType, SolverType>::step(RHS& rhs, value_type& t, container_typ
     \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11}
 \f]
-@note This scheme needs more storage but **has a larger region of absolute stability** than an Adams-Bashforth method of the same order.
+@note This scheme needs more storage but has **a larger region of absolute stability** than an AdamsBashforth method of the same order.
 * @note This scheme implements <a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a>
 *
 * @copydoc hide_note_multistep

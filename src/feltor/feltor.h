@@ -1038,7 +1038,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 
 #endif
-    if( m_p.explicit_diffusion )
+    //right now we do not support that option i.e everything is explicit
+    //if( m_p.explicit_diffusion )
     {
 #if FELTORPERP == 1
         /* y[0] := n_e - 1
