@@ -531,15 +531,15 @@ To the knowledge of the author this superconvergence has not yet been observed b
 
 \section{Interpolation and Projection}
 Eq.~\eqref{eq:dgexpansion} provides a natural way to interpolate any
-dg expanded function $f_h(x)$ on any point in the interval $[a,b]$. 
-The interpolation has the same order $P$ as the expansion and 
+dg expanded function $f_h(x)$ on any point in the interval $[a,b]$.
+The interpolation has the same order $P$ as the expansion and
 can be formulated as a matrix vector multiplication
 \begin{align}
 f_h(x_0) = \sum_{n=1}^N\sum_{k=0}^{P-1} p_{nk}(x_0) \bar f^{nk} =: \sum_{n=1}^N\sum_{k=0}^{P-1}I_{nk} \bar f^{nk}
 \label{eq:basic_interpolation}
 \end{align}
-where the sparse interpolation matrix $I$ has as many rows as there are 
-points to interpolate. $I$ has $P^d$ entries per line, where $d$ is the dimensionality of the grid. 
+where the sparse interpolation matrix $I$ has as many rows as there are
+points to interpolate. $I$ has $P^d$ entries per line, where $d$ is the dimensionality of the grid.
 
 
 \subsection{Interpolation and Projection}
@@ -623,6 +623,71 @@ If the least common grid reduces to either grid (a) or (b) the
 transformation matrix reduces to either $P_{a2b}$ or $Q_{a2b}$ as expected.
 
 
+\section{Spectral and modal filtering techniques}
+It is well known from Godunov's theorem that linear high order schemes for hyperbolic (advection) problems
+are prone to oscillations. Discontinuous Galerkin methods are no different in that regard
+especially the higher order ones and if the numerical flux $f=nu$ is computed via pointwise multiplication
+of the nodal representations of $n$ and $u$ via $f_{ni} = n_{ni} u_{ni}$~\cite{NodalDG}.
+This is due to aliasing effects. Recall that pointwise multiplication is different from
+actually multiplying the two polynomials $n_h$ and $u_h$ and projecting the result back onto the
+lower polynomial space. The problem is also known in pure spectral methods like
+Fourier representations.
+
+In finite difference and Fourier codes what is often done is adding so-called hyperdiffusion
+(or \textbf{spectral viscosity}) to stabilize a purely hyperbolic system.
+\begin{align}
+    \partial_t n + \partial_x( nu) = \nu (-1)^{s+1}\partial_x^{2s} n
+\end{align}
+Since Fourier modes are Eigenfunctions of the Laplace operator this equation reads in Fourier space (disregaring the convection term)
+\begin{align}
+    \partial_t n_k = -\nu k^{2s} n_k
+\end{align}
+which when discretized in time using the Euler method reads
+\begin{align}
+    n_k^{n+1} = (1-\nu\Delta t k^{2s}) n_k^{n}
+\end{align}
+Here we see that the damping of modes is highest for large wave-numbers and leaves small wave-numbers intact.
+This can be read in a more general setting as applying a low-pass filter $\sigma(k)$ to the solution that acts on large wavenumbers
+\begin{align}
+    n_k^{n+1} = \sigma(k) n_k^{n}
+\end{align}
+where often $\sigma(k) = \exp( - \nu \Delta t k^{2s})$ is proposed. The above Euler discretization is
+then obtained by Taylor-expanding the exponential
+(an implicit Euler is obtained with the Pade approximation of the expontential).
+
+It is now possible to also discretise the hyperdiffusion directly in a dG framework, however, this
+has downsides regarding the performance since the Laplace operator is much more expensive than a
+simple pointwise multiplication as done in Fourier codes and its solution likely needs to be done implicitly
+in order to preserve the time-step restrictions.
+
+The better solution in a dG framework is to apply \textbf{modal filtering} and is motivated in much the same
+way as the spectral viscosity above.
+First we consider that the Legendre polynomials satisfy a Sturm-Liouville type differential equation.
+\begin{align}
+    \frac{d}{\d x} \left[ (1-x^2) \frac{ d }{d x} \right]p_n(x) = -n(n+1) p_n(x) \quad x \in [-1,1]
+\end{align}
+This means that the Legendre polynomials are Eigenfunctions of the Sturm-Liouville operator. If we write
+\begin{align}
+    \partial_t n = \nu (-1)^{s+1}\left[\frac{d}{\d x}  m(x) \frac{ d }{d x} \right]^s  n
+\end{align}
+where $m(x)$ is $(1-x^2)$ properly scaled onto each discrete cell, and use a dG approach to discretize this equation we get for each mode
+\begin{align}
+    \partial_t n_k = -\nu (k(k+1))^s  n_k
+\end{align}
+or in a time-discreized way
+\begin{align}
+    n_k^{n+1} = (1-\nu \Delta t (k(k+1))^s ) n_k^n
+\end{align}
+which is entirely analogous to the derivation above.
+In the same way we can read this as applying a filter functions to the Legendre modes.
+\begin{align}
+    n_k^{n+1} = \sigma(k) n_k^n
+\end{align}
+with $\sigma(k) = \exp( - \nu \Delta t (k(k+1))^s)$.
+Note that the modal filter, as the spectral filter, does not inhibit oscillations from happening (it is not shock-capturing) but it dampens grid-scale oscillations
+and can stabilize the system.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \bibliography{../references}
 %..................................................................
 \end{document}
