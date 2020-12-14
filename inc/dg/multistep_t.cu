@@ -119,18 +119,30 @@ int main()
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error AB "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
     }
-    std::cout << "### Test MinimalProjecting methods with "<<NT<<" steps\n";
+    std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
     for( unsigned s=1; s<7; s++)
     {
         time = 0., y0 = init;
-        dg::MinimalProjecting< std::array<double,2> > ab( s, y0);
+        dg::ExplicitMultistep< std::array<double,2> > ab( "eBDF", s, y0);
         ab.init( full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
             ab.step( full, time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error MP "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+        std::cout << "Relative error eBDF "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+    }
+    for( unsigned s=1; s<6; s++)
+    {
+        time = 0., y0 = init;
+        dg::ExplicitMultistep< std::array<double,2> > ab( "TVB", s, y0);
+        ab.init( full, time, y0, dt);
+        //main time loop
+        for( unsigned k=0; k<NT; k++)
+            ab.step( full, time, y0);
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+        std::cout << "Relative error TVB  "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
     }
     std::cout << "### Test implicit multistep methods with "<<NT<<" steps\n";
     for( unsigned s=1; s<7; s++)

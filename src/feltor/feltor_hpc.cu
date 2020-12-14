@@ -474,7 +474,7 @@ int main( int argc, char* argv[])
     //    feltor::FeltorSpecialSolver<
     //        Geometry, IDMatrix, DMatrix, DVec>
     //    > karniadakis( grid, p, mag);
-    dg::MinimalProjecting< std::array<std::array<DVec,2>,2 > > mp( 3, y0);
+    dg::ExplicitMultistep< std::array<std::array<DVec,2>,2 > > mp( "TVB", 3, y0);
     {
     HVec h_wall = dg::pullback( wall, grid);
     HVec h_sheath = dg::pullback( sheath, grid);

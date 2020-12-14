@@ -83,7 +83,7 @@ int main( int argc, char* argv[])
     //    feltor::FeltorSpecialSolver<
     //        dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
     //    > karniadakis( grid, p, mag);
-    dg::MinimalProjecting< std::array<std::array<dg::DVec,2>,2 > > mp( 3, y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp("TVB", 3, y0);
     double time = 0, TMAX = 0.1;
     mp.init( feltor, time, y0, p.dt);
     while( time < TMAX)
