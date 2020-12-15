@@ -502,24 +502,36 @@ enum multistep_identifier
     /** The family of schemes described in <a href =
      "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S.
      J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep
-     methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a> as
-     **extrapolated BDF**  where it is found to be TVB (**total variation
+     methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a>
+     as **extrapolated BDF**  where it is found to be TVB (**total variation
      bound**), i.e. \f$ || v^n|| \leq M ||v^0||\f$  where the norm signifies
      the total variation semi-norm. (Note that total variation diminishing
-     (TVD) means M=1, and strong stability preserving (SSP) is the same as TVD)
+     (TVD) means M=1, and strong stability preserving (SSP) is the same as TVD, TVB schemes converge to the correct entropy solutions of hyperbolic conservation laws)
      is the same as the **Minimal Projecting** scheme
      described in <a href =
      "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf">
      Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a>
-     * **Possible order is 1, 2,..., 7**
+     * **Possible orders are 1, 2,..., 7**
 
     */
     eBDF,
     /** The family of schemes described in <a href="https://doi.org/10.1016/j.jcp.2005.02.029">S.J. Ruuth and W. Hundsdorfer, High-order linear multistep methods with general monotonicity and boundedness properties, Journal of Computational Physics, Volume 209, Issue 1, 2005 </a> as Total variation Bound.
-     * These schemes have larger stable step sizes than the eBDF family, for example TVB3 has 38% larger stepsize than eBDF3 and TVB4 has 109% larger stepsize than eBDF4
-     * **Possible order is 1,2,...,6**
+     * These schemes have larger stable step sizes than the eBDF family, for
+     * example TVB3 has 38% larger stepsize than eBDF3 and TVB4 has 109% larger
+     * stepsize than eBDF4.  **Possible orders are 1,2,...,6**, The CFL
+     * conditions in relation to forward Euler are (1-1: 1, 2-2: 0.5, 3-3: 0.54, 4-4: 0.46, 5-5:
+     * 0.38, 6-6: 0.33), we disregard the remaining schemes since their
+     * CFL conditions are worse
      */
-    TVB
+    TVB,
+    /** The family of schemes described in <a href="https://doi.org/10.1007/BF02728985">Gottlieb, S. On high order strong stability preserving runge-kutta and multi step time discretizations. J Sci Comput 25, 105–128 (2005)</a> as Strong Stability preserving.
+     * We implement the lowest order schemes for each stage. The CFL conditions
+     * in relation to forward Euler are (1-1: 1, 2-2: 0.5, 3-2: 0.5, 4-2: 0.66, 5-3:
+     * 0.5, 6-3: 0.567).  We disregard the remaining
+     * schemes since their CFL condition is worse than a TVB scheme of the same
+     * order. These schemes are noteworthy because the coefficients b_i are all positive except for the 2-2 method.
+     */
+    SSP
 };
 /**
 * @brief Struct for general explicit linear multistep time-integration
@@ -555,34 +567,35 @@ struct ExplicitMultistep
     ExplicitMultistep(){}
 
     ///@copydoc construct()
-    ExplicitMultistep( std::string method, unsigned order, const ContainerType& copyable){
+    ExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable){
         std::unordered_map < std::string, enum multistep_identifier> str2id{
             {"eBDF", eBDF},
-            {"TVB", TVB}
+            {"TVB", TVB},
+            {"SSP", SSP}
         };
         if( str2id.find(method) == str2id.end())
             throw dg::Error(dg::Message(_ping_)<<"Multistep coefficients for "<<method<<" not found!");
         else
-            construct( str2id[method], order, copyable);
+            construct( str2id[method], stages, copyable);
     }
     ///@copydoc construct()
-    ExplicitMultistep( enum multistep_identifier method, unsigned order, const ContainerType& copyable){
-        construct( method, order, copyable);
+    ExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
+        construct( method, stages, copyable);
     }
     /**
      * @brief Reserve memory for the integration
      *
      * Set the coefficients \f$ \alpha_i,\ \beta_i\f$
      * @param method the name of the family of schemes to be used (a string can be converted to an enum with the same spelling) @sa multistep_identifier
-     * @param order (global) order (= number of steps in the multistep) of the method (Currently, possible values depend on the method
+     * @param stages (global) stages (= number of steps in the multistep) of the method (Currently possible values depend on the method), does not necessarily coincide with the order of the method
      * @param copyable ContainerType of the size that is used in \c step
      * @note it does not matter what values \c copyable contains, but its size is important
      */
-    void construct( enum multistep_identifier method, unsigned order, const ContainerType& copyable){
-        m_k = order;
-        m_f.assign( order, copyable);
-        m_u.assign( order, copyable);
-        init_coeffs(method, order);
+    void construct( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
+        m_k = stages;
+        m_f.assign( stages, copyable);
+        m_u.assign( stages, copyable);
+        init_coeffs(method, stages);
         m_counter = 0;
     }
     ///@brief Return an object of same size as the object used for construction
@@ -617,12 +630,12 @@ struct ExplicitMultistep
     void step( RHS& rhs, value_type& t, ContainerType& u);
 
   private:
-    void init_coeffs(enum multistep_identifier method, unsigned order){
-        m_a.resize( order);
-        m_b.resize( order);
+    void init_coeffs(enum multistep_identifier method, unsigned stages){
+        m_a.resize( stages);
+        m_b.resize( stages);
         switch( method){
             case eBDF:
-            switch (order){
+            switch (stages){
                 case 1: m_a = {1.};
                         m_b = {1.}; break;
                 case 2: m_a = {4./3., -1./3.};
@@ -641,11 +654,11 @@ struct ExplicitMultistep
             }
             break;
             case TVB:
-            switch(order){
+            switch(stages){
                 case 1: m_a = {1.};
                         m_b = {1.}; break;
                 case 2: m_a = {4./3., -1./3.};
-                        m_b = {4./3., -2./3.}; break;
+                        m_b = {4./3., -2./3.}; break; //CLM = 0.5
                 case 3: //CLM = 0.54...
                     m_a[0] =  1.908535476882378;     m_b[0] =  1.502575553858997;
                     m_a[1] = -1.334951446162515;     m_b[1] = -1.654746338401493;
@@ -673,6 +686,23 @@ struct ExplicitMultistep
                     m_a[5] = -0.229780087895259;     m_b[5] = -0.544771649561925;
                     break;
                 default: throw dg::Error(dg::Message()<<"Order not implemented in TVB scheme!");
+            }
+            break;
+            case SSP:
+            switch(stages){
+                case 1: m_a = {1.};
+                        m_b = {1.}; break;
+                case 2: m_a = {4./5., 1./5.};
+                        m_b = {8./5., -2./5.}; break; //CLM = 0.5 ... ,order 2
+                case 3: m_a = { 3./4., 0., 1./4.};
+                        m_b = { 3./2., 0., 0. }; break; //CLM = 0.5..., order 2
+                case 4: m_a = {8./9., 0., 0., 1./9.};
+                        m_b = {4./3., 0., 0., 0.}; break; //CLM = 0.66..., order 2
+                case 5: m_a = {25./32., 0., 0., 0., 7./32.};
+                        m_b = {25./16.,0.,0.,0.,5./16.}; break; //CLM 0.5, order 3
+                case 6: m_a = {108./125.,0.,0.,0.,0.,17./125.};
+                        m_b = {36./25.,0.,0.,0.,0.,6./25.}; break; //CLM 0.567, order 3
+                default: throw dg::Error(dg::Message()<<"Stage not implemented in SSP scheme!");
             }
             break;
         }
