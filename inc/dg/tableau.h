@@ -44,7 +44,7 @@ struct ButcherTableau{
      * which makes the embedded method equal to the actual method
      */
     ButcherTableau(unsigned s, unsigned order,
-                   real_type* a , real_type* b , real_type* c):
+                   const real_type* a , const real_type* b , const real_type* c):
         m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order), m_s(s){}
     /*! @brief Construct an embedded tableau
      *
@@ -57,7 +57,7 @@ struct ButcherTableau{
      * @param c pointer to s real numbers interpreted as c_i=c[i]
      */
     ButcherTableau(unsigned s, unsigned embedded_order, unsigned order,
-               real_type* a, real_type* b, real_type* bt, real_type* c):
+               const real_type* a, const real_type* b, const real_type* bt, const real_type* c):
         m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_s(s), m_embedded(true){}
     ///Construct from ARKode standard format
     /*!@brief Construct embedded method from single array
@@ -67,20 +67,20 @@ struct ButcherTableau{
      */
     ButcherTableau(unsigned s, real_type* data):
         m_a(s), m_b(s), m_c(s), m_bt(s), m_s(s), m_embedded(true)
-   {
-       for( unsigned i=0; i<s; i++)
-       {
-           m_c[i] = data[i*(s+1)];
-           for( unsigned j=0; j<s; j++)
-               m_a(i,j) = data[i*(s+1)+j+1];
-       }
-       m_q = (unsigned)data[s*(s+1)];
-       for( unsigned j=0; j<s; j++)
-           m_b[j] = data[s*(s+1)+j+1];
-       m_p = (unsigned)data[(s+1)*(s+1)];
-       for( unsigned j=0; j<s; j++)
-           m_bt[j] = data[(s+1)*(s+1)+j+1];
-   }
+    {
+        for( unsigned i=0; i<s; i++)
+        {
+            m_c[i] = data[i*(s+1)];
+            for( unsigned j=0; j<s; j++)
+                m_a(i,j) = data[i*(s+1)+j+1];
+        }
+        m_q = (unsigned)data[s*(s+1)];
+        for( unsigned j=0; j<s; j++)
+            m_b[j] = data[s*(s+1)+j+1];
+        m_p = (unsigned)data[(s+1)*(s+1)];
+        for( unsigned j=0; j<s; j++)
+            m_bt[j] = data[(s+1)*(s+1)+j+1];
+    }
 
     /**
     * @brief Read the a_ij coefficients
@@ -236,8 +236,6 @@ ButcherTableau<real_type> sirk3a_im_3_3()
     real_type c[3] = {3./4., 7689./6524., 27028./78288.};
     return ButcherTableau<real_type>( 3,3, a,b,c);
 }
-
-
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Embedded Butcher tables%%%%%%%%%%%%%%%%%%
 //tables copied from: http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html
@@ -816,6 +814,110 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
     };
     return ButcherTableau<real_type>( 8, data);
 }
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+////                Shu-Osher form of RK methods                           ////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+template<class real_type>
+dg::ButcherTableau<real_type> shuosher2butcher( unsigned stages, unsigned order, std::vector<real_type> alpha_v, std::vector<real_type> beta_v)
+{
+    //first parse the input into matrices
+    dg::Operator<real_type> alpha(stages, 0), beta(stages, 0), a(stages, 0);
+    unsigned j=0;
+    for( unsigned i=0; i<stages; i++)
+        for( unsigned k=0; k<i+1; k++)
+        {
+            alpha(i,k) = alpha_v[j];
+            beta(i,k) = beta_v[j];
+            j++;
+        }
+    std::vector< real_type > b(stages), c(stages);
+    //std::cout << alpha << beta;
+
+    //now convert to Butcher tableau
+    for( unsigned i=1; i<stages; i++)
+    {
+        for( unsigned k=0; k<i; k++)
+        {
+            a( i, k) = beta ( i-1, k);
+            for( unsigned j = k+1; j<i; j++)
+                a(i,k) += alpha( i-1,j)*a(j,k);
+        }
+    }
+    for( unsigned k=0; k<stages; k++)
+    {
+        b[k] = beta( stages-1, k);
+        for( unsigned j=k+1; j<stages; j++)
+            b[k] += alpha(stages-1, j)*a( j, k);
+    }
+    for( unsigned i=0; i<stages; i++)
+    {
+        c[i] = a(i,0);
+        for( unsigned k=1; k<stages; k++)
+            c[i] += a(i,k);
+    }
+    dg::ButcherTableau<real_type> tableau(stages, order, &a.data()[0], &b[0], &c[0]);
+    return tableau;
+}
+
+template<class real_type>
+ButcherTableau<real_type> ssprk_2_2()
+{
+    unsigned stages=2, order = 2;
+    std::vector<double> alpha_v = {1., 0.5, 0.5};
+    std::vector<double> beta_v = {1., 0., 0.5};
+    return shuosher2butcher( stages, order, alpha_v, beta_v);
+}
+template<class real_type>
+ButcherTableau<real_type> ssprk_3_2()
+{
+    //CFLL = 2 -> eff = 0.66
+    unsigned stages=3, order = 2;
+    std::vector<double> alpha_v = {1., 0, 1., 1./3., 0, 2./3.};
+    std::vector<double> beta_v = {0.5, 0., 0.5, 0., 0., 1./3.};
+    return shuosher2butcher( stages, order, alpha_v, beta_v);
+}
+template<class real_type>
+ButcherTableau<real_type> ssprk_3_3()
+{
+    //CFL = 1 -> eff = 0.33
+    unsigned stages=3, order = 3;
+    std::vector<double> alpha_v = {1.,3./4.,1./4.,1./3.,0.,2./3.};
+    std::vector<double> beta_v = {1., 0., 1./4.,0.,0.,2./3.};
+    return shuosher2butcher( stages, order, alpha_v, beta_v);
+}
+template<class real_type>
+ButcherTableau<real_type> ssprk_5_3()
+{
+    //Ruuth 2005
+    //CFL = 2.6 -> eff = 0.5
+    unsigned stages=5, order = 3;
+    std::vector<double> alpha_v = {
+        1, 0, 1, 0.56656131914033, 0, 0.43343868085967, 0.09299483444413, 0.00002090369620, 0, 0.90698426185967, 0.00736132260920, 0.20127980325145, 0.00182955389682, 0, 0.78952932024253
+    };
+    std::vector<double> beta_v = {
+        0.37726891511710, 0, 0.37726891511710, 0, 0, 0.16352294089771, 0.00071997378654, 0, 0, 0.34217696850008, 0.00277719819460, 0.00001567934613, 0, 0, 0.29786487010104
+    };
+    return shuosher2butcher( stages, order, alpha_v, beta_v);
+}
+
+template<class real_type>
+ButcherTableau<real_type> ssprk_5_4()
+{
+    //Spiteri & Ruuth 2005
+    //CLM = 1.5 -> eff = 0.37 , better than 3_3
+    unsigned stages=5, order = 4;
+    std::vector<double> alpha_v = {
+        1, 0.44437049406734, 0.55562950593266, 0.62010185138540, 0, 0.37989814861460, 0.17807995410773, 0, 0, 0.82192004589227, 0.00683325884039, 0, 0.51723167208978, 0.12759831133288, 0.34833675773694
+    };
+    std::vector<double> beta_v = {
+        0.39175222700392, 0, 0.36841059262959, 0, 0, 0.25189177424738, 0, 0, 0, 0.54497475021237, 0, 0, 0, 0.08460416338212, 0.22600748319395
+    };
+    return shuosher2butcher( stages, order, alpha_v, beta_v);
+}
+
 
 }//namespace tableau
 ///@endcond
@@ -868,7 +970,13 @@ enum tableau_identifier{
     KVAERNO_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
     ARK436L2SA_DIRK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
     KVAERNO_7_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
-    ARK548L2SA_DIRK_8_4_5//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+    ARK548L2SA_DIRK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+    // SSP RK tableaus
+    SSPRK_2_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a>
+    SSPRK_3_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a>
+    SSPRK_3_3, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a>
+    SSPRK_5_3, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a>
+    SSPRK_5_4 //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a>
 };
 
 ///@cond
@@ -942,6 +1050,16 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::kvaerno_7_4_5<real_type>();
         case ARK548L2SA_DIRK_8_4_5:
             return dg::tableau::ark548l2sa_dirk_8_4_5<real_type>();
+        case SSPRK_2_2:
+            return dg::tableau::ssprk_2_2<real_type>();
+        case SSPRK_3_2:
+            return dg::tableau::ssprk_3_2<real_type>();
+        case SSPRK_3_3:
+            return dg::tableau::ssprk_3_3<real_type>();
+        case SSPRK_5_3:
+            return dg::tableau::ssprk_5_3<real_type>();
+        case SSPRK_5_4:
+            return dg::tableau::ssprk_5_4<real_type>();
     }
     return ButcherTableau<real_type>();
 }
@@ -984,7 +1102,12 @@ ButcherTableau<real_type> tableau( std::string name)
         {"Kvaerno-5-3-4", KVAERNO_5_3_4},
         {"ARK-6-3-4 (implicit)", ARK436L2SA_DIRK_6_3_4},
         {"Kvaerno-7-4-5", KVAERNO_7_4_5},
-        {"ARK-8-4-5 (implicit)", ARK548L2SA_DIRK_8_4_5}
+        {"ARK-8-4-5 (implicit)", ARK548L2SA_DIRK_8_4_5},
+        {"SSPRK-2-2", SSPRK_2_2},
+        {"SSPRK-3-2", SSPRK_3_2},
+        {"SSPRK-3-3", SSPRK_3_3},
+        {"SSPRK-5-3", SSPRK_5_3},
+        {"SSPRK-5-4", SSPRK_5_4},
     };
     if( str2id.find(name) == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Butcher Tableau "<<name<<" not found!");
@@ -1001,7 +1124,12 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Euler                  | dg::EXPLICIT_EULER_1_1     | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Explicit Euler</a>
  *   Midpoint-2-2           | dg::MIDPOINT_2_2           | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint method</a>
  *   Kutta-3-3              | dg::KUTTA_3_3              | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
- *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods"> "The" Runge-Kutta method</a>
+ *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">"The" Runge-Kutta method</a>
+ *   SSPRK-2-2              | dg::SSPRK_2_2                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (2,2)</a> CFL_eff = 0.5
+ *   SSPRK-3-2              | dg::SSPRK_3_2                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (3,2)</a> CFL_eff = 0.66
+ *   SSPRK-3-3              | dg::SSPRK_3_3                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (3,3)</a> CFL_eff = 0.33
+ *   SSPRK-5-3              | dg::SSPRK_5_3                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,3)</a> CFL_eff = 0.5
+ *   SSPRK-5-4              | dg::SSPRK_5_4                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,4)</a> CFL_eff = 0.37
  *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
  *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
  *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
