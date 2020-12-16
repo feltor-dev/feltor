@@ -1101,6 +1101,33 @@ struct DPolynomialHeaviside {
     double x0, a;
 };
 
+/**
+ * @brief \f$ \begin{cases}
+    1 \text{ if } \eta < \eta_c \\
+    \exp\left( -\alpha  \left(\frac{\eta-\eta_c}{1-\eta_c} \right)^{2s}\right) \text { if } \eta \geq \eta_c \\
+    0 \text{ else}
+    \end{cases}\f$
+
+    This function is continuously differentiable
+    @sa Its main use comes from the application in dg::ModalFilter
+ */
+struct ExponentialFilter
+{
+    ExponentialFilter( double alpha, double eta_c, unsigned s): m_alpha(alpha),
+                                                                m_etac(eta_c),
+                                                                m_s(s) {}
+    double operator()( double eta) const
+    {
+        if( eta < m_etac)
+            return 1.;
+        if( eta <= 1.)
+            return exp( -m_alpha*pow( (eta-m_etac)/(1.-m_etac), 2*m_s));
+        return 0;
+    }
+    private:
+    double m_alpha, m_etac;
+    unsigned m_s;
+};
 
 /**
  * @brief Exponential \f$ f(x) = A \exp(\lambda x)\f$

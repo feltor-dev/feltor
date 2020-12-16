@@ -820,6 +820,7 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
 ////                Shu-Osher form of RK methods                           ////
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// Convert between Shu-Osher representation to a Butcher tableau
 template<class real_type>
 dg::ButcherTableau<real_type> shuosher2butcher( unsigned stages, unsigned order, std::vector<real_type> alpha_v, std::vector<real_type> beta_v)
 {
