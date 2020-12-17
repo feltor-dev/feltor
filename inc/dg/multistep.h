@@ -43,128 +43,6 @@ namespace dg{
 */
 
 /**
-* @brief Adams-Bashforth explicit multistep time-integration
-* \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
-*
-* with coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
-* @note This scheme has a smaller region of absolute stability than some of the \c ExplicitMultistep method
-* @copydoc hide_note_multistep
-* @copydoc hide_ContainerType
-* @ingroup time
-*/
-template<class ContainerType>
-struct AdamsBashforth
-{
-    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container_type = ContainerType; //!< the type of the vector class in use
-    ///copydoc RungeKutta::RungeKutta()
-    AdamsBashforth(){}
-    ///@copydoc AdamsBashforth::construct()
-    AdamsBashforth( unsigned order, const ContainerType& copyable){
-        construct( order, copyable);
-    }
-    /**
-    * @brief Reserve internal workspace for the integration
-    *
-    * @param order (global) order (= number of steps in the multistep) of the method (Currently, one of 1, 2, 3, 4 or 5)
-    * @param copyable ContainerType of the size that is used in \c step
-    * @note it does not matter what values \c copyable contains, but its size is important
-    */
-    void construct(unsigned order, const ContainerType& copyable){
-        m_k = order;
-        m_f.assign( order, copyable);
-        m_u = copyable;
-        m_ab.resize( order);
-        switch (order){
-            case 1: m_ab = {1}; break;
-            case 2: m_ab = {1.5, -0.5}; break;
-            case 3: m_ab = { 23./12., -4./3., 5./12.}; break;
-            case 4: m_ab = {55./24., -59./24., 37./24., -3./8.}; break;
-            case 5: m_ab = { 1901./720., -1387./360., 109./30., -637./360., 251./720.}; break;
-            default: throw dg::Error(dg::Message()<<"Order not implemented in AdamsBashforth!");
-        }
-    }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_u;}
-
-    /**
-     * @brief Initialize timestepper. Call before using the step function.
-     *
-     * This routine has to be called before the first timestep is made.
-     * @copydoc hide_rhs
-     * @param rhs The rhs functor
-     * @param t0 The intital time corresponding to u0
-     * @param u0 The initial value of the integration
-     * @param dt The timestep
-     * @note the implementation is such that on output the last call to the rhs is at (t0,u0). This might be interesting if the call to the rhs changes its state.
-     */
-    template< class RHS>
-    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
-    /**
-    * @brief Advance u0 one timestep
-    *
-    * @copydoc hide_rhs
-    * @param rhs right hand side function or functor
-    * @param t (write-only) contains timestep corresponding to \c u on output
-    * @param u (write-only) contains next step of the integration on output
-    * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
-    * @attention The first few steps after the call to the init function are performed with an explicit Runge-Kutta method of the same order
-    */
-    template< class RHS>
-    void step( RHS& rhs, value_type& t, ContainerType& u);
-  private:
-    value_type m_tu, m_dt;
-    std::vector<ContainerType> m_f;
-    ContainerType m_u;
-    std::vector<value_type> m_ab;
-    unsigned m_k, m_counter;
-};
-
-///@cond
-template< class ContainerType>
-template< class RHS>
-void AdamsBashforth<ContainerType>::init( RHS& f, value_type t0, const ContainerType& u0, value_type dt)
-{
-    m_tu = t0, m_dt = dt;
-    f( t0, u0, m_f[m_k-1]); //f may not destroy u0
-    blas1::copy(  u0, m_u);
-    m_counter = 0;
-}
-
-template<class ContainerType>
-template< class RHS>
-void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& u)
-{
-    if( m_counter < m_k-1)
-    {
-        std::map<unsigned, enum tableau_identifier> order2method{
-            {1, EXPLICIT_EULER_1_1},
-            {2, MIDPOINT_2_2},
-            {3, KUTTA_3_3},
-            {4, CLASSIC_4_4},
-            {5, CASH_KARP_6_4_5}
-        };
-        dg::RungeKutta<ContainerType> rk( order2method.at(m_k), u);
-        rk.step( f, t, u, t, u, m_dt);
-        m_counter++;
-        m_tu = t;
-        blas1::copy(  u, m_u);
-        f( m_tu, m_u, m_f[m_k - 1 - m_counter]);
-        return;
-    }
-    for( unsigned i=0; i<m_k; i++)
-        blas1::axpby( m_dt*m_ab[i], m_f[i], 1., m_u);
-    //permute m_f[k-1]  to be the new m_f[0]
-    std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
-    blas1::copy( m_u, u);
-    t = m_tu = m_tu + m_dt;
-    f( m_tu, m_u, m_f[0]); //evaluate f at new point
-}
-///@endcond
-
-
-/**
 * @brief Karniadakis semi-implicit multistep time-integration
 * \f[
 * \begin{align}
@@ -574,21 +452,21 @@ struct BDF
     {
         m_bdf.construct( order, std::forward<SolverParams>(ps)...);
     }
-    ///@copydoc AdamsBashforth::copyable()
+    ///@copydoc RungeKutta::copyable()
     const ContainerType& copyable()const{ return m_bdf.copyable();}
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_bdf.solver();}
     ///Read access to the internal solver for the implicit part
     const SolverType& solver() const { return m_bdf.solver();}
 
-    ///@copydoc AdamsBashforth::init()
+    ///@copydoc ExplicitMultistep::init()
     template<class RHS>
     void init(RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
         dg::IdentityFilter id;
         m_bdf.init( id, rhs, t0, u0, dt);
     }
 
-    ///@copydoc AdamsBashforth::step()
+    ///@copydoc ExplicitMultistep::step()
     template<class RHS>
     void step(RHS& rhs, value_type& t, container_type& u){
         dg::IdentityFilter id;
@@ -601,12 +479,19 @@ struct BDF
 
 
 /**
- * @brief Identify coefficients for linear multistep methods
+ * @brief Identifiers for linear multistep methods
  * @sa ExplicitMultistep
 *  @ingroup time
  */
 enum multistep_identifier
 {
+    /** The family of schemes described in <a href = "https://en.wikipedia.org/wiki/Linear_multistep_method"> Linear multistep methods </a>
+     as **Adams-Bashforth**
+    * \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
+     **Possible stages are 1, 2,..., 5**, the order of the method is the same as its stages
+    @note The Adams-Bashforth schemes implemented here need less storage but may have **a smaller region of absolute stability** than for example an extrapolated BDF method of the same order.
+    */
+    ADAMS_BASHFORTH,
     /** The family of schemes described in <a href =
      "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S.
      J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep
@@ -647,7 +532,7 @@ enum multistep_identifier
 * @brief General explicit linear multistep time-integration with Limiter / Filter
 * \f[
 * \begin{align}
-    \tilde v &= \sum_{j=0}^{s-1} \alpha_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}\beta_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right) \\
+    \tilde v &= \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right) \\
     v^{n+1} &= \Lambda\Pi \left( \tilde v\right)
     \end{align}
     \f]
@@ -659,12 +544,11 @@ enum multistep_identifier
     where \f$ f \f$ contains the equations.
     The coefficients for an order 3 "eBDF" scheme are given as an example:
     \f[
-    \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
-    \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11}
+    a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
+    b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
 \f]
 @sa multistep_identifier
 @note This scheme is the same as ExplicitMultistep with the additional option to use a filter
-@note The schemes implemented here need more storage but may have **a larger region of absolute stability** than an AdamsBashforth method of the same order.
 *
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
@@ -681,6 +565,7 @@ struct FilteredExplicitMultistep
     ///@copydoc construct()
     FilteredExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable){
         std::map < std::string, enum multistep_identifier> str2id{
+            {"Adams-Bashforth", ADAMS_BASHFORTH},
             {"eBDF", eBDF},
             {"TVB", TVB},
             {"SSP", SSP}
@@ -697,7 +582,7 @@ struct FilteredExplicitMultistep
     /**
      * @brief Reserve memory for the integration
      *
-     * Set the coefficients \f$ \alpha_i,\ \beta_i\f$
+     * Set the coefficients \f$ a_i,\ b_i\f$
      * @param method the name of the family of schemes to be used (a string can be converted to an enum with the same spelling) @sa multistep_identifier
      * @param stages (global) stages (= number of steps in the multistep) of the method (Currently possible values depend on the method), does not necessarily coincide with the order of the method
      * @param copyable ContainerType of the size that is used in \c step
@@ -750,6 +635,18 @@ struct FilteredExplicitMultistep
         m_a.resize( stages);
         m_b.resize( stages);
         switch( method){
+            case ADAMS_BASHFORTH:
+            m_a.assign(stages, 0);
+            m_a[0] = 1.;
+            switch (stages){
+                case 1: m_b = {1}; break;
+                case 2: m_b = {1.5, -0.5}; break;
+                case 3: m_b = { 23./12., -4./3., 5./12.}; break;
+                case 4: m_b = {55./24., -59./24., 37./24., -3./8.}; break;
+                case 5: m_b = { 1901./720., -1387./360., 109./30., -637./360., 251./720.}; break;
+                default: throw dg::Error(dg::Message()<<"Order not implemented in AdamsBashforth!");
+            }
+            break;
             case eBDF:
             switch (stages){
                 case 1: m_a = {1.};
@@ -881,7 +778,7 @@ void FilteredExplicitMultistep<ContainerType>::step(Limiter& l, RHS& f, value_ty
 * @brief General explicit linear multistep time-integration
 * \f[
 * \begin{align}
-    v^{n+1} = \sum_{j=0}^{s-1} \alpha_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}\beta_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
+    v^{n+1} = \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
     \end{align}
     \f]
 
@@ -892,11 +789,10 @@ void FilteredExplicitMultistep<ContainerType>::step(Limiter& l, RHS& f, value_ty
     where \f$ f \f$ contains the equations.
     The coefficients for an order 3 "eBDF" scheme are given as an example:
     \f[
-    \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
-    \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11}
+    a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
+    b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
 \f]
 @sa multistep_identifier
-@note The schemes implemented here need more storage but may have **a larger region of absolute stability** than an AdamsBashforth method of the same order.
 *
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
@@ -946,7 +842,7 @@ struct ExplicitMultistep
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
-    * @attention The first few steps after the call to the init function are performed with a semi-implicit Runge-Kutta method to initialize the multistepper
+    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
     */
     template< class RHS>
     void step( RHS& rhs, value_type& t, ContainerType& u){

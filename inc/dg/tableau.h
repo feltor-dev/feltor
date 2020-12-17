@@ -992,7 +992,7 @@ ShuOsherTableau<real_type> ssprk_5_4()
 ///@endcond
 
 /**
-* @brief Identify the Butcher Tableaus provided by this library
+* @brief Identifiers for Butcher Tableaus
 *
 * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
 * as NAME-S-P-Q or NAME-S-Q, where

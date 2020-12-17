@@ -106,11 +106,11 @@ int main()
     double time = 0.;
     std::array<double,2> error( sol);
     exblas::udouble res;
-    std::cout << "### Test Adams Bashforth methods with "<<NT<<" steps\n";
+    std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
     for( unsigned s=1; s<6; s++)
     {
         time = 0., y0 = init;
-        dg::AdamsBashforth< std::array<double,2> > ab( s, y0);
+        dg::ExplicitMultistep< std::array<double,2> > ab( "Adams-Bashforth", s, y0);
         ab.init( full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
@@ -119,7 +119,6 @@ int main()
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error AB "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
     }
-    std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
     for( unsigned s=1; s<7; s++)
     {
         time = 0., y0 = init;
