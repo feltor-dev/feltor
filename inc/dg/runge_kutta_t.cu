@@ -104,11 +104,12 @@ int main()
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
         dg::ShuOsher<std::array<double,2>> rk( name, u);
+        dg::IdentityFilter id;
         const double dt = (t_end-t_start)/(double)N;
         dg::blas1::copy( u, u1);
         double t0 = t_start;
         for( unsigned i=0; i<N; i++)
-            rk.step( functor, t0, u1, t0, u1, dt);
+            rk.step( id, functor, t0, u1, t0, u1, dt);
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }

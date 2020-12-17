@@ -34,7 +34,7 @@ namespace dg{
 
 
 /**
-* @brief Struct for Embedded Runge Kutta explicit time-step with error estimate
+* @brief Embedded Runge Kutta explicit time-step with error estimate
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
@@ -102,6 +102,7 @@ struct ERKStep
     bool m_ignore_fsal = false;
 };
 
+///@cond
 template< class ContainerType>
 template< class RHS>
 void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -241,13 +242,14 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
         swap( m_k[0], m_k[s-1]); //enable free swap functions
     }
 }
+///@endcond
 
 
 //MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
 
 
 /*!
- * @brief Struct for Additive Runge Kutta (semi-implicit) time-step with error estimate
+ * @brief Additive Runge Kutta (semi-implicit) time-step with error estimate
  * following
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
  *
@@ -384,6 +386,7 @@ struct ARKStep
     value_type m_t1 = 1e300;
 };
 
+///@cond
 template<class ContainerType, class SolverType>
 template< class Explicit, class Implicit>
 void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -471,9 +474,10 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     //make sure (t1,u1) is the last call to ex
     ex(t1,u1,m_kE[0]);
 }
+///@endcond
 
 /**
-* @brief Struct for Runge-Kutta fixed-step explicit time-integration
+* @brief Runge-Kutta fixed-step explicit time-integration
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
@@ -582,7 +586,7 @@ struct IdentityFilter
 
 };
 /**
-* @brief Struct for Shu-Osher fixed-step explicit time-integration
+* @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
 * \f[
  \begin{align}
     u_0 &= u_n \\
@@ -634,15 +638,8 @@ struct ShuOsher
     ///@copydoc RungeKutta::copyable()
     const ContainerType& copyable()const{ return m_u[0 ];}
 
-    ///@copydoc RungeKutta::step()
-    template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
-        dg::IdentityFilter id;
-        regularized_step( id, rhs, t0, u0, t1, u1, dt);
-    }
-
     /**
-    * @brief Advance one step using a limiter
+    * @brief Advance one step
     *
     * @copydoc hide_rhs
     * @copydoc hide_limiter
@@ -656,7 +653,7 @@ struct ShuOsher
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     */
     template<class Limiter, class RHS>
-    void regularized_step( Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+    void step( Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         unsigned s = m_t.num_stages();
         std::vector<value_type> ts( m_t.num_stages()+1);
         ts[0] = t0;
@@ -708,7 +705,7 @@ struct ShuOsher
 };
 
 /*!
- * @brief Struct for diagonally implicit Runge Kutta time-step with error estimate
+ * @brief diagonally implicit Runge Kutta time-step with error estimate
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
@@ -718,7 +715,7 @@ struct ShuOsher
 \f]
  *
  * So far we did not implement the use of a mass matrix \c M.
- * You can provide your own coefficients or use one of the embedded methods
+ * You can provide your own coefficients or use one of the methods
  * in the following table:
  * @copydoc hide_implicit_butcher_tableaus
  *
@@ -811,6 +808,7 @@ struct DIRKStep
     std::vector<ContainerType> m_kI;
 };
 
+///@cond
 template<class ContainerType, class SolverType>
 template< class RHS>
 void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -901,8 +899,9 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
             }
     }
 }
+///@endcond
 /**
-* @brief Struct for Runge-Kutta fixed-step implicit time-integration
+* @brief Runge-Kutta fixed-step implicit time-integration
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\

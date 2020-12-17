@@ -1087,6 +1087,7 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"ARK-6-3-4 (implicit)", ARK436L2SA_DIRK_6_3_4},
     {"Kvaerno-7-4-5", KVAERNO_7_4_5},
     {"ARK-8-4-5 (implicit)", ARK548L2SA_DIRK_8_4_5},
+    //Shu-Osher methods
     {"SSPRK-2-2", SSPRK_2_2},
     {"SSPRK-3-2", SSPRK_3_2},
     {"SSPRK-3-3", SSPRK_3_3},
