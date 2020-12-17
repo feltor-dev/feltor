@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include "implicit.h"
 #include "runge_kutta.h"
 
@@ -42,7 +43,7 @@ namespace dg{
 */
 
 /**
-* @brief Struct for Adams-Bashforth explicit multistep time-integration
+* @brief Adams-Bashforth explicit multistep time-integration
 * \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
 *
 * with coefficients taken from https://en.wikipedia.org/wiki/Linear_multistep_method
@@ -108,6 +109,7 @@ struct AdamsBashforth
     * @param t (write-only) contains timestep corresponding to \c u on output
     * @param u (write-only) contains next step of the integration on output
     * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
+    * @attention The first few steps after the call to the init function are performed with an explicit Runge-Kutta method of the same order
     */
     template< class RHS>
     void step( RHS& rhs, value_type& t, ContainerType& u);
@@ -119,6 +121,7 @@ struct AdamsBashforth
     unsigned m_k, m_counter;
 };
 
+///@cond
 template< class ContainerType>
 template< class RHS>
 void AdamsBashforth<ContainerType>::init( RHS& f, value_type t0, const ContainerType& u0, value_type dt)
@@ -135,8 +138,15 @@ void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& 
 {
     if( m_counter < m_k-1)
     {
-        RungeKutta<ContainerType> rk( "ARK-4-2-3 (explicit)", u);
-        rk.step( f, t, u, t, u, m_dt, tmp);
+        std::map<unsigned, enum tableau_identifier> order2method{
+            {1, EXPLICIT_EULER_1_1},
+            {2, MIDPOINT_2_2},
+            {3, KUTTA_3_3},
+            {4, CLASSIC_4_4},
+            {5, CASH_KARP_6_4_5}
+        };
+        dg::RungeKutta<ContainerType> rk( order2method.at(m_k), u);
+        rk.step( f, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         blas1::copy(  u, m_u);
@@ -151,10 +161,11 @@ void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& 
     t = m_tu = m_tu + m_dt;
     f( m_tu, m_u, m_f[0]); //evaluate f at new point
 }
+///@endcond
 
 
 /**
-* @brief Struct for Karniadakis semi-implicit multistep time-integration
+* @brief Karniadakis semi-implicit multistep time-integration
 * \f[
 * \begin{align}
     v^{n+1} = \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^2\beta_q  \hat E(t^{n}-q\Delta t, v^{n-q})\right) + \gamma_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
@@ -264,7 +275,7 @@ struct Karniadakis
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
-    * @attention The first two steps after the call to the init function are performed with a semi-implicit Runge-Kutta method
+    * @attention The first few steps after the call to the init function are performed with a semi-implicit Runge-Kutta method to initialize the multistepper
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
@@ -361,7 +372,158 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, valu
 ///@endcond
 
 /**
-* @brief Struct for Backward differentiation formula implicit multistep time-integration
+* @brief Backward differentiation formula implicit multistep time-integration with Limiter/Filter
+* \f[
+* \begin{align}
+    \tilde v &= \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1}) \\
+    v^{n+1} &= \Lambda\Pi\left(\tilde v\right)
+    \end{align}
+    \f]
+
+    which discretizes
+    \f[
+    \frac{\partial v}{\partial t} = \hat I(t,v)
+    \f]
+    where \f$ \hat I \f$ represents the right hand side of the equations.
+    The coefficients for up to order 6 can be found at
+    https://en.wikipedia.org/wiki/Backward_differentiation_formula
+*
+* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
+* Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$). For nonlinear right hand side we recommend the AndersonSolver
+*
+* @note In our experience the implicit treatment of diffusive or hyperdiffusive
+terms can significantly reduce the required number of time steps. This
+outweighs the increased computational cost of the additional inversions.
+* @copydoc hide_note_multistep
+* @copydoc hide_SolverType
+* @copydoc hide_ContainerType
+* @ingroup time
+*/
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct FilteredBDF
+{
+
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    FilteredBDF(){}
+
+    ///@copydoc construct()
+    template<class ...SolverParams>
+    FilteredBDF( unsigned order, SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...), m_u( order, m_solver.copyable()), m_f(m_solver.copyable()) {
+        init_coeffs(order);
+        m_k = order;
+        m_counter = 0;
+    }
+
+    /*! @brief Reserve memory for integration and construct Solver
+     *
+     * @param order Order of the BDF formula (1 <= order <= 6)
+     * @param ps Parameters that are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     */
+    template<class ...SolverParams>
+    void construct(unsigned order, SolverParams&& ...ps)
+    {
+        m_solver = SolverType( std::forward<SolverParams>(ps)...);
+        init_coeffs(order);
+        m_k = order;
+        m_u.assign( order, m_solver.copyable());
+        m_f = m_solver.copyable();
+        m_counter = 0;
+    }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_u[0];}
+    ///Write access to the internal solver for the implicit part
+    SolverType& solver() { return m_solver;}
+    ///Read access to the internal solver for the implicit part
+    const SolverType& solver() const { return m_solver;}
+
+    ///@copydoc FilteredExplicitMultistep::init()
+    template<class Limiter, class RHS>
+    void init(Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+
+    ///@copydoc FilteredExplicitMultistep::step()
+    template<class Limiter, class RHS>
+    void step(Limiter& limiter, RHS& rhs, value_type& t, container_type& u);
+    private:
+    void init_coeffs(unsigned order){
+        switch (order){
+            case 1: m_bdf = {1.}; m_beta = 1.; break;
+            case 2: m_bdf = {4./3., -1./3.}; m_beta = 2./3.; break;
+            case 3: m_bdf = { 18./11., -9./11., 2./11.}; m_beta = 6./11.; break;
+            case 4: m_bdf = {48./25., -36./25., 16./25., -3./25.}; m_beta = 12./25.; break;
+            case 5: m_bdf = { 300./137., -300./137., 200./137., -75./137., 12./137.}; m_beta = 60/137.; break;
+            case 6: m_bdf = { 360./147., -450./147., 400./147., -225./147., 72./147., -10./147.}; m_beta = 60/147.; break;
+            default: throw dg::Error(dg::Message()<<"Order not implemented in BDF!");
+        }
+    }
+    SolverType m_solver;
+    value_type m_tu, m_dt;
+    std::vector<ContainerType> m_u;
+    ContainerType m_f;
+    std::vector<value_type> m_bdf;
+    value_type m_beta;
+    unsigned m_k, m_counter = 0; //counts how often step has been called after init
+};
+
+///@cond
+template< class ContainerType, class SolverType>
+template<class Limiter, class RHS>
+void FilteredBDF<ContainerType, SolverType>::init(Limiter& l, RHS& rhs, value_type t0,
+    const ContainerType& u0, value_type dt)
+{
+    m_tu = t0, m_dt = dt;
+    l.apply( u0, m_u[m_k-1]);
+    //rhs(m_tu, m_u[m_k-1], m_f); //call f on new point
+    m_counter = 0;
+}
+
+template< class ContainerType, class SolverType>
+template<class Limiter, class RHS>
+void FilteredBDF<ContainerType, SolverType>::step(Limiter& l, RHS& rhs, value_type& t, container_type& u)
+{
+    if( m_counter < m_k-1)
+    {
+        std::map<unsigned, enum tableau_identifier> order2method{
+            {1, IMPLICIT_EULER_1_1},
+            {2, TRAPEZOIDAL_2_2},
+            {3, KVAERNO_4_2_3},
+            {4, SDIRK_5_3_4},
+            {5, KVAERNO_7_4_5},
+            {6, KVAERNO_7_4_5}
+        };
+        ImplicitRungeKutta<ContainerType, SolverType> dirk( order2method.at(m_k), m_solver);
+        dirk.step( rhs, t, u, t, u, m_dt);
+        m_counter++;
+        m_tu = t;
+        l.apply( u, m_u[m_k-1-m_counter]);
+        dg::blas1::copy(  m_u[m_k-1-m_counter], u);
+        //f( m_tu, m_u[m_k-1-m_counter], m_f);
+        return;
+    }
+    //compute right hand side of inversion equation
+    dg::blas1::axpby( m_bdf[0], m_u[0], 0., m_f);
+    for (unsigned i = 1; i < m_k; i++){
+        dg::blas1::axpby( m_bdf[i], m_u[i], 1., m_f);
+    }
+    t = m_tu = m_tu + m_dt;
+
+    value_type alpha[2] = {2., -1.};
+    if( m_k > 1 ) //everything higher than Euler
+        dg::blas1::axpby( alpha[0], m_u[0], alpha[1],  m_u[1], u);
+    else
+        dg::blas1::copy( m_u[0], u);
+    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend()); //Rotate 1 to the right (note the reverse iterator here!)
+    m_solver.solve( -m_dt*m_beta, rhs, t, u, m_f);
+    l.apply( u, m_u[0]);
+    dg::blas1::copy(  m_u[0], u);
+}
+///@endcond
+
+/**
+* @brief Backward differentiation formula implicit multistep time-integration
 * \f[
 * \begin{align}
     v^{n+1} = \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1})
@@ -398,10 +560,8 @@ struct BDF
 
     ///@copydoc construct()
     template<class ...SolverParams>
-    BDF( unsigned order, SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...), m_u( order, m_solver.copyable()), m_f(m_solver.copyable()) {
-        init_coeffs(order);
-        m_k = order;
-    }
+    BDF( unsigned order, SolverParams&& ...ps): m_bdf( order,
+            std::forward<SolverParams>(ps)...) {}
 
     /*! @brief Reserve memory for integration and construct Solver
      *
@@ -412,83 +572,32 @@ struct BDF
     template<class ...SolverParams>
     void construct(unsigned order, SolverParams&& ...ps)
     {
-        m_solver = SolverType( std::forward<SolverParams>(ps)...);
-        init_coeffs(order);
-        m_k = order;
-        m_u.assign( order, m_solver.copyable());
-        m_f = m_solver.copyable();
+        m_bdf.construct( order, std::forward<SolverParams>(ps)...);
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_u[0];}
+    ///@copydoc AdamsBashforth::copyable()
+    const ContainerType& copyable()const{ return m_bdf.copyable();}
     ///Write access to the internal solver for the implicit part
-    SolverType& solver() { return m_solver;}
+    SolverType& solver() { return m_bdf.solver();}
     ///Read access to the internal solver for the implicit part
-    const SolverType& solver() const { return m_solver;}
+    const SolverType& solver() const { return m_bdf.solver();}
 
     ///@copydoc AdamsBashforth::init()
     template<class RHS>
-    void init(RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+    void init(RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
+        dg::IdentityFilter id;
+        m_bdf.init( id, rhs, t0, u0, dt);
+    }
 
     ///@copydoc AdamsBashforth::step()
     template<class RHS>
-    void step(RHS& rhs, value_type& t, container_type& u);
-    private:
-    void init_coeffs(unsigned order){
-        switch (order){
-            case 1: m_bdf = {1.}; m_beta = 1.; break;
-            case 2: m_bdf = {4./3., -1./3.}; m_beta = 2./3.; break;
-            case 3: m_bdf = { 18./11., -9./11., 2./11.}; m_beta = 6./11.; break;
-            case 4: m_bdf = {48./25., -36./25., 16./25., -3./25.}; m_beta = 12./25.; break;
-            case 5: m_bdf = { 300./137., -300./137., 200./137., -75./137., 12./137.}; m_beta = 60/137.; break;
-            case 6: m_bdf = { 360./147., -450./147., 400./147., -225./147., 72./147., -10./147.}; m_beta = 60/147.; break;
-            default: throw dg::Error(dg::Message()<<"Order not implemented in BDF!");
-        }
+    void step(RHS& rhs, value_type& t, container_type& u){
+        dg::IdentityFilter id;
+        m_bdf.step( id, rhs, t, u);
     }
-    SolverType m_solver;
-    value_type m_tu, m_dt;
-    std::vector<ContainerType> m_u;
-    ContainerType m_f;
-    std::vector<value_type> m_bdf;
-    value_type m_beta;
-    unsigned m_k;
+    private:
+    FilteredBDF<ContainerType, SolverType> m_bdf;
 };
 
-template< class ContainerType, class SolverType>
-template<class RHS>
-void BDF<ContainerType, SolverType>::init(RHS& rhs, value_type t0,
-    const ContainerType& u0, value_type dt)
-{
-    m_tu = t0, m_dt = dt;
-    dg::blas1::copy(u0, m_u[0]);
-    //Perform a number of backward euler steps
-    for (unsigned i = 0; i<m_k-1; i++){
-        rhs(t0-i*dt,m_u[i], m_f);
-        dg::blas1::axpby(-dt,m_f,1.,m_u[i],m_u[i+1]);
-    }
-    rhs( t0, u0, m_f); // and set state in f to (t0,u0)
-}
-
-template< class ContainerType, class SolverType>
-template<class RHS>
-void BDF<ContainerType, SolverType>::step(RHS& rhs, value_type& t, container_type& u)
-{
-    //dg::WhichType<RHS> {};
-    dg::blas1::axpby( m_bdf[0], m_u[0], 0., m_f);
-    for (unsigned i = 1; i < m_k; i++){
-        dg::blas1::axpby( m_bdf[i], m_u[i], 1., m_f);
-    }
-    t = m_tu = m_tu + m_dt;
-
-    value_type alpha[2] = {2., -1.};
-    if( m_k > 1 ) //everything higher than Euler
-        dg::blas1::axpby( alpha[0], m_u[0], alpha[1],  m_u[1], u);
-    else
-        dg::blas1::copy( m_u[0], u);
-    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend()); //Rotate 1 to the right (note the reverse iterator here!)
-    m_solver.solve( -m_dt*m_beta, rhs, t, u, m_f);
-    dg::blas1::copy( u, m_u[0]);
-}
 
 
 /**
@@ -532,15 +641,18 @@ enum multistep_identifier
      */
     SSP
 };
+
+
 /**
-* @brief Struct for general explicit linear multistep time-integration
+* @brief General explicit linear multistep time-integration with Limiter / Filter
 * \f[
 * \begin{align}
-    v^{n+1} = \sum_{j=0}^{s-1} \alpha_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}\beta_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
+    \tilde v &= \sum_{j=0}^{s-1} \alpha_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}\beta_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right) \\
+    v^{n+1} &= \Lambda\Pi \left( \tilde v\right)
     \end{align}
     \f]
 
-    which discretizes
+    where \f$ \Lambda\Pi\f$ is the limiter, which discretizes
     \f[
     \frac{\partial v}{\partial t} = \hat f(t,v)
     \f]
@@ -551,6 +663,7 @@ enum multistep_identifier
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11}
 \f]
 @sa multistep_identifier
+@note This scheme is the same as ExplicitMultistep with the additional option to use a filter
 @note The schemes implemented here need more storage but may have **a larger region of absolute stability** than an AdamsBashforth method of the same order.
 *
 * @copydoc hide_note_multistep
@@ -558,16 +671,16 @@ enum multistep_identifier
 * @ingroup time
 */
 template<class ContainerType>
-struct ExplicitMultistep
+struct FilteredExplicitMultistep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    ExplicitMultistep(){}
+    FilteredExplicitMultistep(){}
 
     ///@copydoc construct()
-    ExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable){
-        std::unordered_map < std::string, enum multistep_identifier> str2id{
+    FilteredExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable){
+        std::map < std::string, enum multistep_identifier> str2id{
             {"eBDF", eBDF},
             {"TVB", TVB},
             {"SSP", SSP}
@@ -578,7 +691,7 @@ struct ExplicitMultistep
             construct( str2id[method], stages, copyable);
     }
     ///@copydoc construct()
-    ExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
+    FilteredExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
         construct( method, stages, copyable);
     }
     /**
@@ -605,28 +718,32 @@ struct ExplicitMultistep
      * @brief Initialize timestepper. Call before using the step function.
      *
      * This routine has to be called before the first timestep is made.
+     * @copydoc hide_limiter
      * @copydoc hide_rhs
+     * @param limiter The limiter or filter to use
      * @param rhs The rhs functor
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
      * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
      */
-    template< class RHS>
-    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+    template< class Limiter, class RHS>
+    void init( Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
     *
+    * @copydoc hide_limiter
+    * @param limiter The limiter or filter to use
     * @copydoc hide_rhs
     * @param rhs The rhs functor
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
-    * @attention The first few steps after the call to the init function are performed with an explicit Runge-Kutta method
+    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method
     */
-    template< class RHS>
-    void step( RHS& rhs, value_type& t, ContainerType& u);
+    template< class Limiter, class RHS>
+    void step( Limiter& limiter, RHS& rhs, value_type& t, ContainerType& u);
 
   private:
     void init_coeffs(enum multistep_identifier method, unsigned stages){
@@ -711,26 +828,33 @@ struct ExplicitMultistep
     std::vector<value_type> m_a, m_b;
     unsigned m_k, m_counter; //counts how often step has been called after init
 };
-
 ///@cond
 template< class ContainerType>
-template< class RHS>
-void ExplicitMultistep<ContainerType>::init( RHS& f, value_type t0, const ContainerType& u0, value_type dt)
+template< class Limiter, class RHS>
+void FilteredExplicitMultistep<ContainerType>::init( Limiter& l, RHS& f, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
-    blas1::copy(  u0, m_u[m_k-1]);
+    l.apply( u0, m_u[m_k-1]);
     f(m_tu, m_u[m_k-1], m_f[m_k-1]); //call f on new point
     m_counter = 0;
 }
 
 template<class ContainerType>
-template< class RHS>
-void ExplicitMultistep<ContainerType>::step( RHS& f, value_type& t, ContainerType& u)
+template<class Limiter, class RHS>
+void FilteredExplicitMultistep<ContainerType>::step(Limiter& l, RHS& f, value_type& t, ContainerType& u)
 {
     if( m_counter < m_k-1)
     {
-        RungeKutta<ContainerType> rk( "ARK-4-2-3 (explicit)", u);
-        rk.step( f, t, u, t, u, m_dt);
+        std::map<unsigned, enum tableau_identifier> order2method{
+            {1, SSPRK_2_2},
+            {2, SSPRK_2_2},
+            {3, SSPRK_3_3},
+            {4, SSPRK_5_4},
+            {5, SSPRK_5_4},
+            {6, SSPRK_5_4}
+        };
+        ShuOsher<ContainerType> rk( order2method.at(m_k), u);
+        rk.step( l, f, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         blas1::copy(  u, m_u[m_k-1-m_counter]);
@@ -746,9 +870,92 @@ void ExplicitMultistep<ContainerType>::step( RHS& f, value_type& t, ContainerTyp
     //permute m_f[m_k-1], m_u[m_k-1]  to be the new m_f[0], m_u[0]
     std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
     std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
-    blas1::copy( u, m_u[0]); //store result
+    //apply limiter
+    l.apply( u, m_u[0]);
+    blas1::copy( m_u[0], u); //store result
     f(m_tu, m_u[0], m_f[0]); //call f on new point
 }
 ///@endcond
+
+/**
+* @brief General explicit linear multistep time-integration
+* \f[
+* \begin{align}
+    v^{n+1} = \sum_{j=0}^{s-1} \alpha_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}\beta_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
+    \end{align}
+    \f]
+
+    which discretizes
+    \f[
+    \frac{\partial v}{\partial t} = \hat f(t,v)
+    \f]
+    where \f$ f \f$ contains the equations.
+    The coefficients for an order 3 "eBDF" scheme are given as an example:
+    \f[
+    \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
+    \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11}
+\f]
+@sa multistep_identifier
+@note The schemes implemented here need more storage but may have **a larger region of absolute stability** than an AdamsBashforth method of the same order.
+*
+* @copydoc hide_note_multistep
+* @copydoc hide_ContainerType
+ @ingroup time
+*/
+template<class ContainerType>
+struct ExplicitMultistep
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    ExplicitMultistep(){}
+    ///@copydoc construct()
+    ExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable): m_fem( method, stages, copyable){ }
+    ///@copydoc construct()
+    ExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable): m_fem( method, stages, copyable){}
+    ///@copydoc FilteredExplicitMultistep::construct()
+    void construct( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
+        m_fem.construct( method, stages, copyable);
+    }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_fem.copyable();}
+
+    /**
+     * @brief Initialize timestepper. Call before using the step function.
+     *
+     * This routine has to be called before the first timestep is made.
+     * @copydoc hide_rhs
+     * @param rhs The rhs functor
+     * @param t0 The intital time corresponding to u0
+     * @param u0 The initial value of the integration
+     * @param dt The timestep saved for later use
+     * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
+     */
+    template< class RHS>
+    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
+        dg::IdentityFilter id;
+        m_fem.init( id, rhs, t0, u0, dt);
+    }
+
+    /**
+    * @brief Advance one timestep
+    *
+    * @copydoc hide_rhs
+    * @param rhs The rhs functor
+    * @param t (write-only), contains timestep corresponding to \c u on output
+    * @param u (write-only), contains next step of time-integration on output
+    * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
+    * @attention The first few steps after the call to the init function are performed with a semi-implicit Runge-Kutta method to initialize the multistepper
+    */
+    template< class RHS>
+    void step( RHS& rhs, value_type& t, ContainerType& u){
+        dg::IdentityFilter id;
+        m_fem.step( id, rhs, t, u);
+    }
+
+  private:
+    FilteredExplicitMultistep<ContainerType> m_fem;
+};
 
 } //namespace dg
