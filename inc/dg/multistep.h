@@ -135,9 +135,8 @@ void AdamsBashforth<ContainerType>::step( RHS& f, value_type& t, ContainerType& 
 {
     if( m_counter < m_k-1)
     {
-        ERKStep<ContainerType> erk( "ARK-4-2-3 (explicit)", u);
-        ContainerType tmp ( u);
-        erk.step( f, t, u, t, u, m_dt, tmp);
+        RungeKutta<ContainerType> rk( "ARK-4-2-3 (explicit)", u);
+        rk.step( f, t, u, t, u, m_dt, tmp);
         m_counter++;
         m_tu = t;
         blas1::copy(  u, m_u);
@@ -730,9 +729,8 @@ void ExplicitMultistep<ContainerType>::step( RHS& f, value_type& t, ContainerTyp
 {
     if( m_counter < m_k-1)
     {
-        ERKStep<ContainerType> erk( "ARK-4-2-3 (explicit)", u);
-        ContainerType tmp ( u);
-        erk.step( f, t, u, t, u, m_dt, tmp);
+        RungeKutta<ContainerType> rk( "ARK-4-2-3 (explicit)", u);
+        rk.step( f, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         blas1::copy(  u, m_u[m_k-1-m_counter]);

@@ -91,6 +91,27 @@ int main()
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
+    std::cout << "Shu-Osher Methods with "<<N<<" steps:\n";
+    names = std::vector<std::string> {
+        "SSPRK-2-2",
+        "SSPRK-3-2",
+        "SSPRK-3-3",
+        "SSPRK-5-3",
+        "SSPRK-5-4",
+    };
+    for( auto name : names)
+    {
+        u = solution(t_start, damping, omega_0, omega_drive);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
+        dg::ShuOsher<std::array<double,2>> rk( name, u);
+        const double dt = (t_end-t_start)/(double)N;
+        dg::blas1::copy( u, u1);
+        double t0 = t_start;
+        for( unsigned i=0; i<N; i++)
+            rk.step( functor, t0, u1, t0, u1, dt);
+        dg::blas1::axpby( 1., sol , -1., u1);
+        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
+    }
     ///-------------------------------Implicit Methods----------------------//
     const unsigned N_im = 10; //we can take fewer steps
     const double dt_im = (t_end - t_start)/(double)N_im;

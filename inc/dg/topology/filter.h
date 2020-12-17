@@ -126,7 +126,7 @@ modal_filter( UnaryOp op, const aRealMPITopology3d<real_type>& t)
  * where \f$ V\f$ is the Vandermonde matrix (the backward transformation matrix)
  * and \f$ D \f$ is a diagonal matrix with \f$ D_{ii} = \sigma(i)\f$
  * @copydoc hide_matrix
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @ingroup misc
  */
 template<class MatrixType, class ContainerType>
