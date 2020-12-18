@@ -41,10 +41,13 @@ int main( int argc, char * argv[])
     dg::DVec y0( omega );
     const dg::DVec one = dg::evaluate( dg::one, grid);
     //make solver and stepper
-    dg::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
-    dg::Diffusion< dg::DMatrix, dg::DVec > diff( grid, p.D);
-    dg::Karniadakis< dg::DVec> karniadakis( y0, y0.size(), 1e-10);
-    karniadakis.init( shu, diff, 0., y0, p.dt);
+    shu::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
+    //shu::Diffusion< dg::DMatrix, dg::DVec > diff( grid, p.D);
+    //dg::Karniadakis< dg::DVec> karniadakis( y0, y0.size(), 1e-10);
+    //karniadakis.init( shu, diff, 0., y0, p.dt);
+    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( 36, 0.5, 8, grid);
+    dg::FilteredExplicitMultistep<dg::DVec> stepper( "eBDF", 3, y0);
+    stepper.init( shu, filter, 0., y0, p.dt);
 
     dg::DVec varphi( grid.size()), potential;
     double vorticity = dg::blas2::dot( one , w2d, y0);
@@ -97,7 +100,8 @@ int main( int argc, char * argv[])
         ti.tic();
         for( unsigned j=0; j<p.itstp; j++)
         {
-            karniadakis.step( shu, diff, time, y0);//one step further
+            //karniadakis.step( shu, diff, time, y0);//one step further
+            stepper.step( shu, filter, time, y0);//one step further
             output1d[0] = vorticity = dg::blas2::dot( one , w2d, y0);
             output1d[1] = enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
             potential = shu.potential();

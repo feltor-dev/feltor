@@ -7,9 +7,6 @@
 
 #include "shu.cuh"
 
-using namespace std;
-using namespace dg;
-
 const double lx = 2.*M_PI;//*50.;
 const double ly = 2.*M_PI;//*50.;
 
@@ -17,7 +14,6 @@ const double ly = 2.*M_PI;//*50.;
 //const double R = 0.2*lx;
 const double T = 2.;
 ////const double eps = 1e-7; //CG method
-
 
 double D = 0.01;
 
@@ -34,28 +30,28 @@ double solution_phi( double x, double y){ return sin(kx*x)*sin(ky*y)*exp(-ksqr*D
 //code for either lamb dipole or analytic sine function without graphics
 int main()
 {
-    Timer t;
+    dg::Timer t;
     ////////////////////////////////////////////////////////////
-    //cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
-    //cout << "Type n, N and eps\n";
-    //cin >> n >> Nx >>eps;
+    //std::cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
+    //std::cout << "Type n, N and eps\n";
+    //std::cin >> n >> Nx >>eps;
     //Ny = Nx;
-    //cout << "Type diffusion constant!\n";
-    //cin >> D;
-    //cout << "# of Legendre coefficients: " << n<<endl;
-    //cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "# grid NT dt eps eps_V eps_omega eps_E eps\n";
-    cout << "Diffusion " << D <<endl;
+    //std::cout << "Type diffusion constant!\n";
+    //std::cin >> D;
+    //std::cout << "# of Legendre coefficients: " << n<<std::endl;
+    //std::cout << "# of grid cells:            " << Nx*Ny<<std::endl;
+    std::cout << "# grid NT dt eps eps_V eps_omega eps_E eps\n";
+    std::cout << "Diffusion " << D <<std::endl;
 
     ////////////////////////////////////////////////////////////
     for( unsigned n=2; n<3; n++)
     {
-        cout << "P="<<n<<"\n";
+        std::cout << "P="<<n<<"\n";
         for(unsigned i=1; i<5; i++)
         {
             unsigned Nx = 8*pow(2,i), Ny = Nx;
-            Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-            DVec w2d( create::weights(grid));
+            dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+            dg::DVec w2d( dg::create::weights(grid));
 
             double dx = lx/(double)Nx;
             double eps = 1e-1/pow(10, n)*pow(dx,n);
@@ -63,58 +59,58 @@ int main()
             //if( D!= 0)
                 //NT = std::max((unsigned)(0.06*T*pow(4,n)/dx/dx), NT);
             const double dt = T/(double)NT;
-            //cout << "Runge Kutta stages          " << k <<endl;
-            //cout << "Timestep                    " << dt << endl;
-            //cout << "# of steps                  " << NT <<endl;
+            //cout << "Runge Kutta stages          " << k <<std::endl;
+            //cout << "Timestep                    " << dt << std::endl;
+            //cout << "# of steps                  " << NT <<std::endl;
             ////////////////////////////////////////////////////////////
 
-            DVec stencil = evaluate( one, grid);
-            DVec omega = evaluate( initial, grid );
-            const DVec sol = evaluate( solution, grid );
-            const DVec sol_phi = evaluate( solution_phi, grid );
+            dg::DVec stencil = dg::evaluate( dg::one, grid);
+            dg::DVec omega = dg::evaluate( initial, grid );
+            const dg::DVec sol = dg::evaluate( solution, grid );
+            const dg::DVec sol_phi = dg::evaluate( solution_phi, grid );
 
-            DVec y0( omega), y1( y0);
+            dg::DVec y0( omega), y1( y0);
             //make solver and stepper
-            Shu<DMatrix, DVec> shu( grid, eps);
-            Diffusion<DMatrix, DVec> diffusion( grid, D);
-            Karniadakis< DVec > karniadakis( y0, y0.size(), 1e-8);
+            shu::Shu<dg::DMatrix, dg::DVec> shu( grid, eps);
+            shu::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, D);
+            dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), 1e-8);
 
             shu(0., y0, y1);
-            double vorticity = blas2::dot( stencil, w2d, sol);
-            double enstrophy = 0.5*blas2::dot( sol, w2d, sol);
-            double energy =    0.5*blas2::dot( sol, w2d, sol_phi) ;
+            double vorticity = dg::blas2::dot( stencil, w2d, sol);
+            double enstrophy = 0.5*dg::blas2::dot( sol, w2d, sol);
+            double energy =    0.5*dg::blas2::dot( sol, w2d, sol_phi) ;
 
             double time = 0;
             karniadakis.init( shu,diffusion, time, y0, dt);
             while( time < T)
             {
-                //step 
+                //step
 
                 t.tic();
                 karniadakis.step( shu, diffusion, time, y0);
                 t.toc();
                 time += dt;
                 //std::cout << "Time "<<time<< " "<<t.diff()<<"\n";
-                if( fabs(blas2::dot( w2d, y0)) > 1e16) 
+                if( fabs(dg::blas2::dot( w2d, y0)) > 1e16)
                 {
-                    cerr << "Sim unstable at time "<<time<<"!\n\n\n";
+                    std::cerr << "Sim unstable at time "<<time<<"!\n\n\n";
                     break;
                 }
             }
-            //cout << "Total simulation time:     "<<t.diff()<<"s\n";
-            //cout << "Average Time for one step: "<<t.diff()/(double)NT<<"s\n";
+            //std::cout << "Total simulation time:     "<<t.diff()<<"s\n";
+            //std::cout << "Average Time for one step: "<<t.diff()/(double)NT<<"s\n";
             ////////////////////////////////////////////////////////////////////
-            cout << Nx;
-            cout << " "<<NT;
-            cout << " "<<dt;
-            cout << " "<<eps;
-            cout << " "<<fabs(blas2::dot( stencil, w2d, y0)); 
-            cout << " "<<fabs(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy;
-            cout << " "<<fabs(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<" ";
+            std::cout << Nx;
+            std::cout << " "<<NT;
+            std::cout << " "<<dt;
+            std::cout << " "<<eps;
+            std::cout << " "<<fabs(dg::blas2::dot( stencil, w2d, y0));
+            std::cout << " "<<fabs(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy;
+            std::cout << " "<<fabs(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<" ";
 
-            blas1::axpby( 1., sol, -1., y0);
-            cout << " "<<sqrt( blas2::dot( w2d, y0))<< endl;
-            //cout << "Relative distance to solution "<<sqrt( blas2::dot( w2d, y0))/sqrt( blas2::dot( w2d, sol)) << endl;
+            dg::blas1::axpby( 1., sol, -1., y0);
+            std::cout << " "<<sqrt( dg::blas2::dot( w2d, y0))<< std::endl;
+            //std::cout << "Relative distance to solution "<<sqrt( dg::blas2::dot( w2d, y0))/sqrt( dg::blas2::dot( w2d, sol)) << std::endl;
 
         }
         std::cout << std::endl;

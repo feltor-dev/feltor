@@ -21,9 +21,6 @@ double shearLayer(double x, double y){
     return delta*cos(x) + 1./rho/cosh( (3.*M_PI/2.-y)/rho)/cosh( (3.*M_PI/2.-y)/rho);
 }
 
-using namespace std;
-using namespace dg;
-
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
@@ -40,8 +37,8 @@ int main( int argc, char* argv[])
     const Parameters p( js);
     p.display( std::cout);
     /////////////////////////////////////////////////////////////////
-    Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    DVec w2d( create::weights(grid));
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::DVec w2d( dg::create::weights(grid));
     /////////////////////////////////////////////////////////////////
     std::stringstream title;
     GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
@@ -55,8 +52,8 @@ int main( int argc, char* argv[])
     else if ( p.initial == "shear")
         omega = dg::evaluate ( shearLayer, grid);
 
-    DVec stencil = evaluate( one, grid);
-    DVec y0( omega ), y1( y0);
+    dg::DVec stencil = evaluate( dg::one, grid);
+    dg::DVec y0( omega ), y1( y0);
     //subtract mean mass 
     if( p.bc_x == dg::PER && p.bc_y == dg::PER)
     {
@@ -64,18 +61,21 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -meanMass, stencil, 1., y0);
     }
     //make solver and stepper
-    Shu<DMatrix, DVec> shu( grid, p.eps);
-    Diffusion<DMatrix, DVec> diffusion( grid, p.D);
-    Karniadakis< DVec > karniadakis( y0, y0.size(), p.eps_time);
+    shu::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
+    //shu::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.D);
+    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( 36, 0.5, 8, grid);
+    //dg::Karniadakis< dg::DVec > stepper( y0, y0.size(), p.eps_time);
+    dg::FilteredExplicitMultistep< dg::DVec > stepper( "eBDF", 3, y0);
+    //dg::ShuOsher<dg::DVec> stepper( "SSPRK-3-3", y0);
 
-    Timer t;
+    dg::Timer t;
     t.tic();
     shu( 0., y0, y1);
     t.toc();
-    cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
-    double vorticity = blas2::dot( stencil , w2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
-    double energy =    0.5*blas2::dot( y0, w2d, shu.potential()) ;
+    std::cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
+    double vorticity = dg::blas2::dot( stencil , w2d, y0);
+    double enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
+    double energy =    0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
     
     std::cout << "Total energy:     "<<energy<<"\n";
     std::cout << "Total enstrophy:  "<<enstrophy<<"\n";
@@ -84,14 +84,15 @@ int main( int argc, char* argv[])
     double time = 0;
     ////////////////////////////////glfw//////////////////////////////
     //create visualisation vectors
-    DVec visual( grid.size());
-    HVec hvisual( grid.size());
+    dg::DVec visual( grid.size());
+    dg::HVec hvisual( grid.size());
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
-    karniadakis.init( shu, diffusion, time, y0, p.dt);
-    //cout << "Press any key to start!\n";
-    //double x; 
+    //stepper.init( shu, diffusion, time, y0, p.dt);
+    stepper.init( shu, filter, time, y0, p.dt);
+    //std::cout << "Press any key to start!\n";
+    //double x;
     //cin >> x;
     while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
     {
@@ -109,23 +110,25 @@ int main( int argc, char* argv[])
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            karniadakis.step( shu, diffusion, time, y0 );
+            //stepper.step( shu, diffusion, time, y0 );
+            stepper.step( shu, filter, time, y0 );
+            //stepper.step( shu, filter, time, y0, time, y0, p.dt );
         }
         t.toc();
-        //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
+        //std::cout << "Timer for one step: "<<t.diff()/N<<"s\n";
         time += p.itstp*p.dt;
 
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////
-    cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
-    cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, y0) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
+    std::cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<std::endl;
+    std::cout << "Analytic formula energy    "<<lamb.energy()<<std::endl;
+    std::cout << "Total vorticity          is: "<<dg::blas2::dot( stencil , w2d, y0) << "\n";
+    std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
+    std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
 
-    //blas1::axpby( 1., y0, -1, sol);
-    //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;
+    //dg::blas1::axpby( 1., y0, -1, sol);
+    //cout << "Distance to solution: "<<sqrt(dg::blas2::dot( w2d, sol ))<<std::endl;
 
     //cout << "Press any key to quit!\n";
     //cin >> x;

@@ -11,9 +11,6 @@
 #include "shu.cuh"
 
 
-using namespace std;
-using namespace dg;
-
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -30,12 +27,12 @@ int main()
 {
     unsigned n, Nx, Ny;
     double eps;
-    cout << "Type n, Nx, Ny and eps!\n";
-    cin >> n >> Nx >> Ny>>eps;
+    std::cout << "Type n, Nx, Ny and eps!\n";
+    std::cin >> n >> Nx >> Ny>>eps;
     const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
-    
-    Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    DVec w2d( create::weights( grid));
+
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::DVec w2d( dg::create::weights( grid));
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
@@ -43,33 +40,36 @@ int main()
     GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "Navier Stokes");
     draw::RenderHostData render( 1,1);
     ////////////////////////////////////////////////////////////
-    cout << "# of Legendre coefficients: " << n<<endl;
-    cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "Timestep                    " << dt << endl;
-    //cout << "# of timesteps              " << NT << endl;
-    cout << "Diffusion                   " << D <<endl;
+    std::cout << "# of Legendre coefficients: " << n<<std::endl;
+    std::cout << "# of grid cells:            " << Nx*Ny<<std::endl;
+    std::cout << "Timestep                    " << dt << std::endl;
+    //std::cout << "# of timesteps              " << NT << std::endl;
+    std::cout << "Diffusion                   " << D <<std::endl;
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
-    HVec omega = evaluate ( lamb, grid);
-    DVec stencil = evaluate( one, grid);
-    DVec y0( omega);
-    Shu<dg::DMatrix, dg::DVec> test( grid, eps);
-    Diffusion<DMatrix, DVec> diffusion( grid, D);
-    Karniadakis< DVec > karniadakis( y0, y0.size(), 1e-8);
+    dg::HVec omega = evaluate ( lamb, grid);
+    dg::DVec stencil = evaluate( dg::one, grid);
+    dg::DVec y0( omega);
+    shu::Shu<dg::DMatrix, dg::DVec> test( grid, eps);
+    //shu::Diffusion<DMatrix, DVec> diffusion( grid, D);
+    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( 36, 0.5, 8, grid);
+    //dg::Karniadakis< dg::DVec > stepper( y0, y0.size(), 1e-8);
+    dg::FilteredExplicitMultistep< dg::DVec > stepper( "TVB",3, y0);
 
     ////////////////////////////////glfw//////////////////////////////
     //create visualisation vectors
-    DVec visual( grid.size());
-    HVec hvisual( grid.size());
+    dg::DVec visual( grid.size());
+    dg::HVec hvisual( grid.size());
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     double time = 0;
-    karniadakis.init( test, diffusion, time, y0, dt);
+    //stepper.init( test, diffusion, time, y0, dt);
+    stepper.init( test, filter, time, y0, dt);
     while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid
-        cout << "Total vorticity is: "<<blas2::dot( stencil, w2d, y0) << "\n";
-        cout << "Total enstrophy is: "<<blas2::dot( w2d, y0)<<"\n";
+        std::cout << "Total vorticity is: "<<dg::blas2::dot( stencil, w2d, y0) << "\n";
+        std::cout << "Total enstrophy is: "<<dg::blas2::dot( w2d, y0)<<"\n";
         //compute the color scale
         dg::blas2::symv( equidistant, y0, visual );
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<float>() );
@@ -77,21 +77,19 @@ int main()
         //draw and swap buffers
         dg::blas1::transfer(visual, hvisual);
         render.renderQuad( hvisual, n*Nx, n*Ny, colors);
-        //step 
-        karniadakis.step( test,diffusion, time, y0 );
+        //step
+        //stepper.step( test,diffusion, time, y0 );
+        stepper.step( test,filter, time, y0 );
 
         glfwSwapBuffers(w);
         glfwWaitEvents();
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////
-    /*
-    cout << "Total vorticity is: "<< blas2::dot( stencil, w2d, y0) << "\n";
-    cout << "Total enstrophy  is "<<blas2::dot( y0, w2d, y0)<<"\n";
-    blas1::axpby( 1., sol.data(), -1., y0);
-    cudaThreadSynchronize();
-    cout << "Distance to solution "<<sqrt( blas2::dot( w2d, y0))<<endl; //don't forget sqrt when comuting errors
-    */
+    std::cout << "Total vorticity is: "<< dg::blas2::dot( stencil, w2d, y0) << "\n";
+    std::cout << "Total enstrophy  is "<<dg::blas2::dot( y0, w2d, y0)<<"\n";
+    //dg::blas1::axpby( 1., sol.data(), -1., y0);
+    //std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, y0))<<std::endl; //don't forget sqrt when comuting errors
 
     return 0;
 
