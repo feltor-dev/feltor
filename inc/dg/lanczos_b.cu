@@ -1,4 +1,4 @@
- #undef DG_BENCHMARK
+#undef DG_BENCHMARK
 
 
 #include <iostream>

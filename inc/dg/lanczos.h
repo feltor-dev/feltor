@@ -5,10 +5,103 @@
 
 #include <cusp/dia_matrix.h>
 #include <cusp/coo_matrix.h>
-// #include <cusp/print.h>
 
 namespace dg{
     
+    
+/**
+* @brief Functor class for computing the inverse of a general tridiagonal matrix 
+*/
+template< class ContainerType>
+class InvTridiag
+{
+  public:
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
+    using coo_type =  cusp::coo_matrix<int, value_type, cusp::host_memory>;
+    ///@brief Allocate nothing, Call \c construct method before usage
+    InvTridiag(){}
+    //Constructor
+    InvTridiag(const ContainerType& copyable) : 
+        phi(copyable.size()+1, 0.),
+        theta(copyable.size()+1, 0.)
+    {
+        Tinv.resize(copyable.size(), copyable.size(),  copyable.size()* copyable.size());
+        temp = 0.;
+    }
+
+     /**
+     * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
+     * 
+     * @param a  "0" diagonal vector
+     * @param b "+1" diagonal vector 
+     * @param c "-1" diagonal vector
+     * 
+     * @return the inverse of the tridiagonal matrix (coordinate format)
+     * 
+     * @Note Be careful with indexing of off diagonal vector entries
+     */
+    template<class ContainerType0>
+    coo_type operator()(const ContainerType0& a, const ContainerType0& b,  const ContainerType0& c)
+    {
+
+        //Compute theta and phi
+        unsigned is=0;
+        for( unsigned i = 0; i<theta.size(); i++)
+        {   
+            is = (theta.size() - 1) - i;
+            if (i==0) 
+            {   
+                theta[0] = 1.; 
+                phi[is]  = 1.;
+            }
+            else if (i==1) 
+            {
+                theta[1] = a[0]; 
+                phi[is]  = a[is-1];
+            }
+            else
+            {
+                theta[i] = a[i-1] * theta[i-1] - b[i-2] * c[i-2] * theta[i-2];
+                phi[is]  = a[is]  * phi[is+1]  - b[is]  * c[is]  * phi[is+2];
+            }
+        }
+
+        //Compute inverse tridiagonal matrix elements
+        unsigned counter = 0;
+        for( unsigned i=0; i<a.size(); i++)
+        {   
+            for( unsigned j=0; j<a.size(); j++)
+            {   
+                Tinv.row_indices[counter]    = j;
+                Tinv.column_indices[counter] = i; 
+                temp=1.;
+                if (i<j) {
+                    for (unsigned k=i; k<j; k++) temp*=b[k];
+                    Tinv.values[counter] =temp*pow(-1,i+j) * theta[i] * phi[j+1]/theta[theta.size()-1];
+                    
+                }
+                else if (i>j)
+                {
+                    for (unsigned k=j; k<i; k++) temp*=c[k];           
+                    Tinv.values[counter] =temp*pow(-1,i+j) * theta[j] * phi[i+1]/theta[theta.size()-1];
+
+                }
+                else // if (i==j)
+                {
+                    Tinv.values[counter] =theta[i] * phi[j+1]/theta[theta.size()-1];
+                }   
+                counter++;
+            }
+        }
+        return Tinv;
+    }
+  private:
+    ContainerType phi, theta;
+    coo_type Tinv;    
+    value_type temp;
+};
+
 /**
 * @brief Functor class for the Lanczos method to solve
 * \f[ Ax=b\f]
@@ -119,7 +212,7 @@ class Lanczos
             }
         }     
         
-        //     Check implementation: b=||x|| V T e_1 = || x || (v[0] alpha[01] + v[1] beta[1])
+        //Check implementation: b=||x|| V T e_1 = || x || (v[0] alpha[01] + v[1] beta[1])
         dg::blas1::axpby(alpha[0], v[0], beta[1], v[1], b);
         dg::blas1::scal(b, xnorm ); 
         
@@ -206,6 +299,28 @@ class Lanczos
     std::pair<dia_type, coo_type> TVpair; 
     dia_type T;
     coo_type V;    
+};
+// TODO
+
+template< class ContainerType>
+class CGsqrt
+{
+  public:
+    using container_type = ContainerType;
+    using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
+    using dia_type =  cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using coo_type =  cusp::coo_matrix<int, value_type, cusp::host_memory>;
+    ///@brief Allocate nothing, Call \c construct method before usage
+    CGsqrt(){}
+    ///@copydoc construct()
+    CGsqrt( const ContainerType& copyable, unsigned max_iterations) : 
+        max_iter(max_iterations)
+    {
+          construct(copyable, max_iterations);
+    }
+  private:
+    max_iter
+      
 };
 
 } //namespace dg
