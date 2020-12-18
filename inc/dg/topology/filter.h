@@ -1,4 +1,5 @@
 #pragma once
+#include "dg/functors.h"
 #include "fast_interpolation.h"
 
 /**@file
@@ -20,10 +21,7 @@ modal_filter( UnaryOp op, const RealGrid1d<real_type>& g )
     Operator<real_type> forward=g.dlt().forward();
     Operator<real_type> filter( g.n(), 0);
     for( unsigned i=0; i<g.n(); i++)
-    {
-        real_type eta = (real_type) i / (real_type)(g.n()-1);
-        filter(i,i) = op( eta);
-    }
+        filter(i,i) = op( i);
     filter = backward*filter*forward;
     //Assemble the matrix
     EllSparseBlockMat<real_type> A(g.N(), g.N(), 1, 1, g.n());
@@ -139,30 +137,32 @@ struct ModalFilter
      * @brief Create exponential filter \f$ \begin{cases}
     1 \text{ if } \eta < \eta_c \\
     \exp\left( -\alpha  \left(\frac{\eta-\eta_c}{1-\eta_c} \right)^{2s}\right) \text { if } \eta \geq \eta_c \\
-    0 \text{ else}
+    0 \text{ else} \\
+    \eta := \frac{i}{n-1}
     \end{cases}\f$
      *
      * @tparam Topology Any grid
+     * @param alpha damping for the highest mode is \c exp( -alpha)
      * @param eta_c cutoff frequency (0<eta_c<1), 0.5 or 0 are good starting values
      * @param order 8 or 16 are good values
      * @param t The topology to apply the modal filter on
      * @sa dg::ExponentialFilter
      */
     template<class Topology>
-    ModalFilter( real_type eta_c, unsigned order, const Topology& t):
-        ModalFilter( ExponentialFilter( 36, eta_c, order), t)
+    ModalFilter( real_type alpha, real_type eta_c, unsigned order, const Topology& t):
+        ModalFilter( dg::ExponentialFilter( alpha, eta_c, order, t.n()), t)
     { }
     /**
      * @brief Create arbitrary filter
      *
      * @tparam Topology Any grid
-     * @tparam UnaryOp Model of Unary Function \c real_type \c f(real_type) The input will be the normalized modal number \f$ \eta := \frac{i}{n-1} \f$ where \f$ i=0,...,n-1\f$ and n is the number of polynomial coefficients in use
+     * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
      * @param f The filter to evaluate on the normalized modal coefficients
      * @param t The topology to apply the modal filter on
      */
     template<class UnaryOp, class Topology>
-    ModalFilter( UnaryOp f, const Topology& t) : m_filter (
-            dg::create::modal_filter( f, t)) { }
+    ModalFilter( UnaryOp sigma, const Topology& t) : m_filter (
+            dg::create::modal_filter( sigma, t)) { }
 
     void apply( const ContainerType& x, ContainerType& y) const{ symv( 1., x, 0., y);}
     void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}

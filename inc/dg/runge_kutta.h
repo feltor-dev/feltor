@@ -652,8 +652,8 @@ struct ShuOsher
     * @param dt timestep
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     */
-    template<class Limiter, class RHS>
-    void step( Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+    template<class RHS, class Limiter>
+    void step( RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         unsigned s = m_t.num_stages();
         std::vector<value_type> ts( m_t.num_stages()+1);
         ts[0] = t0;

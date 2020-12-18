@@ -319,12 +319,12 @@ struct FilteredBDF
     const SolverType& solver() const { return m_solver;}
 
     ///@copydoc FilteredExplicitMultistep::init()
-    template<class Limiter, class RHS>
-    void init(Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+    template<class RHS, class Limiter>
+    void init(RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type dt);
 
     ///@copydoc FilteredExplicitMultistep::step()
-    template<class Limiter, class RHS>
-    void step(Limiter& limiter, RHS& rhs, value_type& t, container_type& u);
+    template<class RHS, class Limiter>
+    void step(RHS& rhs, Limiter& limiter, value_type& t, container_type& u);
     private:
     void init_coeffs(unsigned order){
         switch (order){
@@ -348,8 +348,8 @@ struct FilteredBDF
 
 ///@cond
 template< class ContainerType, class SolverType>
-template<class Limiter, class RHS>
-void FilteredBDF<ContainerType, SolverType>::init(Limiter& l, RHS& rhs, value_type t0,
+template<class RHS, class Limiter>
+void FilteredBDF<ContainerType, SolverType>::init(RHS& rhs, Limiter& l, value_type t0,
     const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
@@ -359,8 +359,8 @@ void FilteredBDF<ContainerType, SolverType>::init(Limiter& l, RHS& rhs, value_ty
 }
 
 template< class ContainerType, class SolverType>
-template<class Limiter, class RHS>
-void FilteredBDF<ContainerType, SolverType>::step(Limiter& l, RHS& rhs, value_type& t, container_type& u)
+template<class RHS, class Limiter>
+void FilteredBDF<ContainerType, SolverType>::step(RHS& rhs, Limiter& l, value_type& t, container_type& u)
 {
     if( m_counter < m_k-1)
     {
@@ -463,14 +463,14 @@ struct BDF
     template<class RHS>
     void init(RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
         dg::IdentityFilter id;
-        m_bdf.init( id, rhs, t0, u0, dt);
+        m_bdf.init( rhs, id, t0, u0, dt);
     }
 
     ///@copydoc ExplicitMultistep::step()
     template<class RHS>
     void step(RHS& rhs, value_type& t, container_type& u){
         dg::IdentityFilter id;
-        m_bdf.step( id, rhs, t, u);
+        m_bdf.step( rhs, id, t, u);
     }
     private:
     FilteredBDF<ContainerType, SolverType> m_bdf;
@@ -603,32 +603,32 @@ struct FilteredExplicitMultistep
      * @brief Initialize timestepper. Call before using the step function.
      *
      * This routine has to be called before the first timestep is made.
-     * @copydoc hide_limiter
      * @copydoc hide_rhs
-     * @param limiter The limiter or filter to use
+     * @copydoc hide_limiter
      * @param rhs The rhs functor
+     * @param limiter The limiter or filter to use
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
      * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
      */
-    template< class Limiter, class RHS>
-    void init( Limiter& limiter, RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+    template< class RHS, class Limiter>
+    void init( RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
     *
-    * @copydoc hide_limiter
-    * @param limiter The limiter or filter to use
     * @copydoc hide_rhs
+    * @copydoc hide_limiter
     * @param rhs The rhs functor
+    * @param limiter The limiter or filter to use
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
     * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method
     */
-    template< class Limiter, class RHS>
-    void step( Limiter& limiter, RHS& rhs, value_type& t, ContainerType& u);
+    template< class RHS, class Limiter>
+    void step( RHS& rhs, Limiter& limiter, value_type& t, ContainerType& u);
 
   private:
     void init_coeffs(enum multistep_identifier method, unsigned stages){
@@ -727,8 +727,8 @@ struct FilteredExplicitMultistep
 };
 ///@cond
 template< class ContainerType>
-template< class Limiter, class RHS>
-void FilteredExplicitMultistep<ContainerType>::init( Limiter& l, RHS& f, value_type t0, const ContainerType& u0, value_type dt)
+template< class RHS, class Limiter>
+void FilteredExplicitMultistep<ContainerType>::init( RHS& f, Limiter& l, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
     l.apply( u0, m_u[m_k-1]);
@@ -737,8 +737,8 @@ void FilteredExplicitMultistep<ContainerType>::init( Limiter& l, RHS& f, value_t
 }
 
 template<class ContainerType>
-template<class Limiter, class RHS>
-void FilteredExplicitMultistep<ContainerType>::step(Limiter& l, RHS& f, value_type& t, ContainerType& u)
+template<class RHS, class Limiter>
+void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_type& t, ContainerType& u)
 {
     if( m_counter < m_k-1)
     {
@@ -751,7 +751,7 @@ void FilteredExplicitMultistep<ContainerType>::step(Limiter& l, RHS& f, value_ty
             {6, SSPRK_5_4}
         };
         ShuOsher<ContainerType> rk( order2method.at(m_k), u);
-        rk.step( l, f, t, u, t, u, m_dt);
+        rk.step( f, l, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         blas1::copy(  u, m_u[m_k-1-m_counter]);
@@ -831,7 +831,7 @@ struct ExplicitMultistep
     template< class RHS>
     void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
         dg::IdentityFilter id;
-        m_fem.init( id, rhs, t0, u0, dt);
+        m_fem.init( rhs, id, t0, u0, dt);
     }
 
     /**
@@ -847,7 +847,7 @@ struct ExplicitMultistep
     template< class RHS>
     void step( RHS& rhs, value_type& t, ContainerType& u){
         dg::IdentityFilter id;
-        m_fem.step( id, rhs, t, u);
+        m_fem.step( rhs, id, t, u);
     }
 
   private:

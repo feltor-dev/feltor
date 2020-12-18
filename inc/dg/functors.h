@@ -1105,19 +1105,22 @@ struct DPolynomialHeaviside {
  * @brief \f$ \begin{cases}
     1 \text{ if } \eta < \eta_c \\
     \exp\left( -\alpha  \left(\frac{\eta-\eta_c}{1-\eta_c} \right)^{2s}\right) \text { if } \eta \geq \eta_c \\
-    0 \text{ else}
+    0 \text{ else} \\
+    \eta=\frac{i}{1-n}
     \end{cases}\f$
 
-    This function is continuously differentiable
+    where n is the number of polynomial coefficients
+
+    This function is s times continuously differentiable everywhere
     @sa Its main use comes from the application in dg::ModalFilter
  */
 struct ExponentialFilter
 {
-    ExponentialFilter( double alpha, double eta_c, unsigned s): m_alpha(alpha),
-                                                                m_etac(eta_c),
-                                                                m_s(s) {}
-    double operator()( double eta) const
+    ExponentialFilter( double alpha, double eta_c, unsigned s, unsigned n):
+        m_alpha(alpha), m_etac(eta_c), m_s(s), m_n(n) {}
+    double operator()( unsigned i) const
     {
+        double eta = (double)i/(double)(m_n-1);
         if( eta < m_etac)
             return 1.;
         if( eta <= 1.)
@@ -1126,7 +1129,7 @@ struct ExponentialFilter
     }
     private:
     double m_alpha, m_etac;
-    unsigned m_s;
+    unsigned m_s, m_n;
 };
 
 /**
