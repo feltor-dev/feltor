@@ -66,4 +66,37 @@ using fMDMatrix = dg::RowColDistMat<dg::fDMatrix, dg::fDCooMat, dg::fNNCD>; //!<
 }//namespace dg
 #endif //MPI_VERSION
 
+//MPI-independent definitions
+namespace dg{
+///@addtogroup typedefs
+///@{
+//vectors
+#ifdef MPI_VERSION
+using HVec_t  = MHVec;
+using fHVec_t = fMHVec;
+
+using DVec_t  = MDVec;
+using fDVec_t = fMDVec;
+
+//derivative matrices
+using HMatrix_t = MHMatrix;
+using fHMatrix_t = fMHMatrix;
+using DMatrix_t = MDMatrix;
+using fDMatrix_t = fMDMatrix;
+#else
+using HVec_t  = HVec;
+using fHVec_t = fHVec;
+
+using DVec_t  = DVec;
+using fDVec_t = fDVec;
+
+//derivative matrices
+using HMatrix_t = HMatrix;
+using fHMatrix_t = fHMatrix;
+using DMatrix_t = DMatrix;
+using fDMatrix_t = fDMatrix;
+#endif //MPI_VERSION
+///@}
+}//namespace dg
+
 #endif//_DG_TYPEDEFS_CUH_

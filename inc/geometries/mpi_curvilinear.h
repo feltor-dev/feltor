@@ -204,6 +204,8 @@ RealCurvilinearMPIGrid2d<real_type>::RealCurvilinearMPIGrid2d( const RealCurvili
 //
 using CurvilinearMPIGrid2d         = dg::geo::RealCurvilinearMPIGrid2d<double>;
 using CurvilinearProductMPIGrid3d  = dg::geo::RealCurvilinearProductMPIGrid3d<double>;
+using CurvilinearGrid2d_t         = CurvilinearMPIGrid2d        ;
+using CurvilinearProductGrid3d_t  = CurvilinearProductMPIGrid3d ;
 
 ///@}
 }//namespace geo

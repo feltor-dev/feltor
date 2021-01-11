@@ -14,23 +14,16 @@
 #include "feltor.h"
 #include "implicit.h"
 
+using HVec = dg::HVec_t;
+using DVec = dg::DVec_t;
+using HMatrix = dg::HMatrix_t;
+using DMatrix = dg::DMatrix_t;
+using IDMatrix = dg::IDMatrix_t;
+using IHMatrix = dg::IHMatrix_t;
+using Geometry = dg::CylindricalGrid3d_t;
 #ifdef FELTOR_MPI
-using HVec = dg::MHVec;
-using DVec = dg::MDVec;
-using HMatrix = dg::MHMatrix;
-using DMatrix = dg::MDMatrix;
-using IDMatrix = dg::MIDMatrix;
-using IHMatrix = dg::MIHMatrix;
-using Geometry = dg::CylindricalMPIGrid3d;
 #define MPI_OUT if(rank==0)
 #else //FELTOR_MPI
-using HVec = dg::HVec;
-using DVec = dg::DVec;
-using HMatrix = dg::HMatrix;
-using DMatrix = dg::DMatrix;
-using IDMatrix = dg::IDMatrix;
-using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 

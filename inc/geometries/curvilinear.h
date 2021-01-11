@@ -204,6 +204,10 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
 
 using CurvilinearGrid2d         = dg::geo::RealCurvilinearGrid2d<double>;
 using CurvilinearProductGrid3d  = dg::geo::RealCurvilinearProductGrid3d<double>;
+#ifndef MPI_VERSION
+using CurvilinearGrid2d_t         = CurvilinearGrid2d        ;
+using CurvilinearProductGrid3d_t  = CurvilinearProductGrid3d ;
+#endif
 
 ///@}
 ///@cond

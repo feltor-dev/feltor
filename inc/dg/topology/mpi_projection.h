@@ -22,6 +22,12 @@ using MIHMatrix = tMIHMatrix<double>;
 using MIDMatrix = tMIDMatrix<double>;
 //typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
 //typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
+template<class real_type>
+using tIHMatrix_t = tMIHMatrix<real_type>;
+template<class real_type>
+using tIDMatrix_t = tMIDMatrix<real_type>;
+using IHMatrix_t = MIHMatrix;
+using IDMatrix_t = MIDMatrix;
 ///@}
 
 ///@cond
