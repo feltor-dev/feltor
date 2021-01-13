@@ -40,9 +40,6 @@ double jacobian( double x, double y) {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 //![function]
-double variationRHS( double x, double y) {
-    return cos(x)*cos(y)*cos(x)*cos(y) + sin(x)*sin(y)*sin(x)*sin(y);
-}
 /*
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
@@ -106,11 +103,6 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
-    const dg::DVec variation = dg::evaluate ( variationRHS, grid);
-    arakawa.variation( rhs, jac);
-    dg::blas1::axpby( 1., variation, -1., jac);
-    res.d = sqrt( dg::blas2::dot( w2d, jac));
-    std::cout << "Variation distance   "<<res.d<<"\t"<<res.i-binary[4]<<std::endl; //don't forget sqrt when comuting errors
     std::cout << "\nContinue with topology/average_t.cu !\n\n";
     return 0;
 }
