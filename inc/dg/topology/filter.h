@@ -164,6 +164,19 @@ struct ModalFilter
     ModalFilter( UnaryOp sigma, const Topology& t) : m_filter (
             dg::create::modal_filter( sigma, t)) { }
 
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ModalFilter( std::forward<Params>( ps)...);
+    }
+
     void apply( const ContainerType& x, ContainerType& y) const{ symv( 1., x, 0., y);}
     void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}
     void symv(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const
