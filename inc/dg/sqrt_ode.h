@@ -1,8 +1,12 @@
+#pragma once
+
 #include "blas.h"
 // #include "backend/typedefs.h"
 #include "helmholtz.h"
 
-
+#include "cg.h"
+#include "lgmres.h"
+// #include "bicgstabl.h"
 /**
  * @brief Matrix class that represents the lhs operator of the square root ODE
  *
@@ -222,7 +226,7 @@ struct RhsT
     /**
      * @brief Construct Rhs operator
      *
-     * @param T Helmholtz operator
+     * @param T symmetric matrix
      * @param copyable copyable container
      * @param eps Accuarcy for CG solve
      */
@@ -265,6 +269,71 @@ struct RhsT
 
 };
 
+/**
+ * @brief Rhs of the square root ODE \f[ \dot{y}= \left[(t-1) I -t T\right]^{-1} *(I - A)/2 * y \f]
+ *
+ * where \f[ T\f] is a symmetric tridiagonal matrix
+ * @note Solution of ODE: \f[ y(1) = \sqrt{T} y(0)\f]
+ * @note Todo: Compute inverse analytically
+ */
+template<class Matrix, class Container>
+struct RhsTasym
+{
+  public:
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = dg::get_value_type<Container>;
+    /**
+     * @brief Construct Rhs operator
+     *
+     * @param T asymmetric matrix
+     * @param copyable copyable container
+     * @param eps Accuarcy for LGMRES solve
+     */
+    RhsTasym( const Matrix& T,  const Container& copyable,  const value_type& eps):
+         m_A(T),
+         m_helper( copyable),
+         m_eps(eps),
+         m_lhs(m_A, copyable),
+         m_lgmres( copyable, 30,10,100) //weights not multiplied on rhs
+//         m_bicgstabl(copyable, 50, 2)
+    {
+    }
+    /**
+     * @brief Set the Matrix T
+     *
+     * @param T Matrix
+     */
+     void set_T( const Matrix& T) { 
+         m_A=T; 
+         m_lhs.set_T(T);
+    }  
+    /**
+     * @brief Compute rhs term (including inversion of lhs) 
+     *
+     * i.e. \f[ yp= ((t-1) I -t T)^{-1} *(I - T)/2 * y \f]
+     * @param y  is \f[ y\f]
+     * @param yp is \f[ \dot{y}\f]
+     * @note Solution of ODE: \f[ y(1) = \sqrt{T} y(0)\f]
+     */
+    void operator()(double t, const Container& y, Container& yp)
+    {
+        dg::blas2::symv(m_A, y, m_helper);  //m_helper = A y //is not normed
+        dg::blas1::axpby(0.5, y, -0.5, m_helper); //m_helper = 1/2 y - 1/2  A y 
+        m_lhs.set_time(t);
+        m_lgmres.solve( m_lhs, yp, m_helper, m_lhs.inv_weights(), m_lhs.inv_weights(), m_eps, 1); // ( (t-1)  - A t ) yp = (1-A)/2 y
+//         m_bicgstabl.solve( m_lhs, yp, m_helper, m_lhs.inv_weights(), m_lhs.inv_weights(), m_eps); // ( (t-1)  - A t ) yp = (1-A)/2 y
+
+    }
+  private:
+    Matrix m_A;
+    Container m_helper;
+    value_type m_eps;
+    LhsT<Matrix, Container> m_lhs;
+    dg::LGMRES<Container> m_lgmres;
+//     dg::BICGSTABl<Container> m_bicgstabl;
+
+};
 
 template< class Geometry, class Matrix, class Container>
 struct dg::TensorTraits< Lhs<Geometry,  Matrix, Container> >

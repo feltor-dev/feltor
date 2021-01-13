@@ -1,8 +1,11 @@
 #pragma once
+#define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
+#include <boost/math/special_functions/jacobi_elliptic.hpp>
 
 #include "blas.h"
+
 #include "helmholtz.h"
-#include <cmath>
+// #include <cmath>
 //! M_PI is non-standard ... so MSVC complains
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

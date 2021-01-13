@@ -273,7 +273,9 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
                 Update(dx,x,iteration,H,s,W);
                 dg::blas2::symv(A,x,residual);
                 dg::blas1::axpby(1.,b,-1.,residual);
+#ifdef DG_DEBUG
                 std::cout << sqrt(dg::blas2::dot(S,residual) )<< std::endl;
+#endif
                 return(iteration+totalRestarts*krylovDimension);
             }
         }
