@@ -285,12 +285,14 @@ using CartesianGrid2d       = dg::RealCartesianGrid2d<double>;
 using CartesianGrid3d       = dg::RealCartesianGrid3d<double>;
 using CylindricalGrid3d     = dg::RealCylindricalGrid3d<double>;
 #ifndef MPI_VERSION
-using aGeometry2d_t           = aGeometry2d           ;
-using aGeometry3d_t           = aGeometry3d           ;
-using aProductGeometry3d_t    = aProductGeometry3d    ;
-using CartesianGrid2d_t       = CartesianGrid2d       ;
-using CartesianGrid3d_t       = CartesianGrid3d       ;
-using CylindricalGrid3d_t     = CylindricalGrid3d     ;
+namespace x{
+using aGeometry2d           = aGeometry2d           ;
+using aGeometry3d           = aGeometry3d           ;
+using aProductGeometry3d    = aProductGeometry3d    ;
+using CartesianGrid2d       = CartesianGrid2d       ;
+using CartesianGrid3d       = CartesianGrid3d       ;
+using CylindricalGrid3d     = CylindricalGrid3d     ;
+}//namespace x
 #endif //MPI_VERSION
 
 ///@}

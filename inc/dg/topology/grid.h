@@ -834,11 +834,13 @@ using Grid3d        = dg::RealGrid3d<double>;
 using aTopology2d   = dg::aRealTopology2d<double>;
 using aTopology3d   = dg::aRealTopology3d<double>;
 #ifndef MPI_VERSION
-using Grid1d_t        = Grid1d      ;
-using Grid2d_t        = Grid2d      ;
-using Grid3d_t        = Grid3d      ;
-using aTopology2d_t   = aTopology2d ;
-using aTopology3d_t   = aTopology3d ;
+namespace x {
+using Grid1d        = Grid1d      ;
+using Grid2d        = Grid2d      ;
+using Grid3d        = Grid3d      ;
+using aTopology2d   = aTopology2d ;
+using aTopology3d   = aTopology3d ;
+} //namespace x
 #endif
 ///@}
 

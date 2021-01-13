@@ -10,12 +10,12 @@
 #include "feltor.h"
 #include "implicit.h"
 
-using HVec = dg::HVec_t;
-using DVec = dg::DVec_t;
-using DMatrix = dg::DMatrix_t;
-using IDMatrix = dg::IDMatrix_t;
-using IHMatrix = dg::IHMatrix_t;
-using Geometry = dg::CylindricalGrid3d_t;
+using HVec = dg::x::HVec;
+using DVec = dg::x::DVec;
+using DMatrix = dg::x::DMatrix;
+using IDMatrix = dg::x::IDMatrix;
+using IHMatrix = dg::x::IHMatrix;
+using Geometry = dg::x::CylindricalGrid3d;
 #define MPI_OUT
 
 #include "init.h"

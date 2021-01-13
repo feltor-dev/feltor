@@ -26,12 +26,14 @@ using IDMatrix = tIDMatrix<double>;
 //typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
 //typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 #ifndef MPI_VERSION
+namespace x{
 template<class real_type>
-using tIHMatrix_t = tIHMatrix<real_type>;
+using tIHMatrix = tIHMatrix<real_type>;
 template<class real_type>
-using tIDMatrix_t = tIDMatrix<real_type>;
-using IHMatrix_t = IHMatrix;
-using IDMatrix_t = IDMatrix;
+using tIDMatrix = tIDMatrix<real_type>;
+using IHMatrix = IHMatrix;
+using IDMatrix = IDMatrix;
+} //namespace x
 #endif //MPI_VERSION
 
 ///@}

@@ -741,10 +741,12 @@ using MPIGrid2d         = dg::RealMPIGrid2d<double>;
 using MPIGrid3d         = dg::RealMPIGrid3d<double>;
 using aMPITopology2d    = dg::aRealMPITopology2d<double>;
 using aMPITopology3d    = dg::aRealMPITopology3d<double>;
-using Grid2d_t          = MPIGrid2d      ;
-using Grid3d_t          = MPIGrid3d      ;
-using aTopology2d_t     = aMPITopology2d ;
-using aTopology3d_t     = aMPITopology3d ;
+namespace x{
+using Grid2d          = MPIGrid2d      ;
+using Grid3d          = MPIGrid3d      ;
+using aTopology2d     = aMPITopology2d ;
+using aTopology3d     = aMPITopology3d ;
+}//namespace x
 ///@}
 
 }//namespace dg

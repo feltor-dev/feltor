@@ -71,31 +71,33 @@ namespace dg{
 ///@addtogroup typedefs
 ///@{
 //vectors
+namespace x{
 #ifdef MPI_VERSION
-using HVec_t  = MHVec;
-using fHVec_t = fMHVec;
+using HVec  = MHVec;
+using fHVec = fMHVec;
 
-using DVec_t  = MDVec;
-using fDVec_t = fMDVec;
+using DVec  = MDVec;
+using fDVec = fMDVec;
 
 //derivative matrices
-using HMatrix_t = MHMatrix;
-using fHMatrix_t = fMHMatrix;
-using DMatrix_t = MDMatrix;
-using fDMatrix_t = fMDMatrix;
+using HMatrix = MHMatrix;
+using fHMatrix = fMHMatrix;
+using DMatrix = MDMatrix;
+using fDMatrix = fMDMatrix;
 #else
-using HVec_t  = HVec;
-using fHVec_t = fHVec;
+using HVec  = HVec;
+using fHVec = fHVec;
 
-using DVec_t  = DVec;
-using fDVec_t = fDVec;
+using DVec  = DVec;
+using fDVec = fDVec;
 
 //derivative matrices
-using HMatrix_t = HMatrix;
-using fHMatrix_t = fHMatrix;
-using DMatrix_t = DMatrix;
-using fDMatrix_t = fDMatrix;
+using HMatrix = HMatrix;
+using fHMatrix = fHMatrix;
+using DMatrix = DMatrix;
+using fDMatrix = fDMatrix;
 #endif //MPI_VERSION
+}//namespace x
 ///@}
 }//namespace dg
 
