@@ -36,6 +36,7 @@ struct ArakawaX
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = get_value_type<Container>;
+    ArakawaX(){}
     /**
      * @brief Create Arakawa on a grid
      * @param g The grid
@@ -50,6 +51,19 @@ struct ArakawaX
      * @note chi defaults to 1
      */
     ArakawaX( const Geometry& g, bc bcx, bc bcy);
+
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ArakawaX( std::forward<Params>( ps)...);
+    }
 
     /**
      * @brief Compute Poisson bracket

@@ -1121,6 +1121,7 @@ struct ExponentialFilter
     double operator()( unsigned i) const
     {
         double eta = (double)i/(double)(m_n-1);
+        if( m_n == 1) eta = 0.;
         if( eta < m_etac)
             return 1.;
         if( eta <= 1.)

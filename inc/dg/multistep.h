@@ -119,7 +119,7 @@ struct Karniadakis
     */
     template<class ...SolverParams>
     void construct( SolverParams&& ...ps){
-        m_solver = Solver( std::forward<SolverParams>(ps)...);
+        m_solver = SolverType( std::forward<SolverParams>(ps)...);
         m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
         set_order(3);
         m_counter = 0;
@@ -488,7 +488,7 @@ enum multistep_identifier
     /** The family of schemes described in <a href = "https://en.wikipedia.org/wiki/Linear_multistep_method"> Linear multistep methods </a>
      as **Adams-Bashforth**
     * \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
-     **Possible stages are 1, 2,..., 5**, the order of the method is the same as its stages
+    * **Possible stages are 1, 2,..., 5**, the order of the method is the same as its stages
     @note The Adams-Bashforth schemes implemented here need less storage but may have **a smaller region of absolute stability** than for example an extrapolated BDF method of the same order.
     */
     ADAMS_BASHFORTH,
@@ -504,12 +504,12 @@ enum multistep_identifier
      described in <a href =
      "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf">
      Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a>
-     * **Possible orders are 1, 2,..., 7**
+     * **Possible stages are 1, 2,..., 7** with the order the same as the number of stages
 
     */
     eBDF,
     /** The family of schemes described in <a href="https://doi.org/10.1016/j.jcp.2005.02.029">S.J. Ruuth and W. Hundsdorfer, High-order linear multistep methods with general monotonicity and boundedness properties, Journal of Computational Physics, Volume 209, Issue 1, 2005 </a> as Total variation Bound.
-     * These schemes have larger stable step sizes than the eBDF family, for
+     * These schemes have **larger stable step sizes than the eBDF family**, for
      * example TVB3 has 38% larger stepsize than eBDF3 and TVB4 has 109% larger
      * stepsize than eBDF4.  **Possible orders are 1,2,...,6**, The CFL
      * conditions in relation to forward Euler are (1-1: 1, 2-2: 0.5, 3-3: 0.54, 4-4: 0.46, 5-5:
@@ -521,8 +521,8 @@ enum multistep_identifier
      * We implement the lowest order schemes for each stage. The CFL conditions
      * in relation to forward Euler are (1-1: 1, 2-2: 0.5, 3-2: 0.5, 4-2: 0.66, 5-3:
      * 0.5, 6-3: 0.567).  We disregard the remaining
-     * schemes since their CFL condition is worse than a TVB scheme of the same
-     * order. These schemes are noteworthy because the coefficients b_i are all positive except for the 2-2 method.
+     * schemes since their CFL conditions are worse than the TVB scheme of the same
+     * order. These schemes are noteworthy because the coefficients b_i are all positive except for the 2-2 method and **the "4-2" and "6-3" methods allow slightly larger stepsize than eBDF** of same order (2 and 3)
      */
     SSP
 };
@@ -562,7 +562,15 @@ struct FilteredExplicitMultistep
     ///@copydoc RungeKutta::RungeKutta()
     FilteredExplicitMultistep(){}
 
-    ///@copydoc construct()
+    /**
+     * @brief Reserve memory for the integration
+     *
+     * Set the coefficients \f$ a_i,\ b_i\f$
+     * @param method the name of the family of schemes to be used (a string can be converted to an enum with the same spelling) @sa multistep_identifier
+     * @param stages (global) stages (= number of steps in the multistep) of the method (Currently possible values depend on the method), does not necessarily coincide with the order of the method
+     * @param copyable ContainerType of the size that is used in \c step
+     * @note it does not matter what values \c copyable contains, but its size is important
+     */
     FilteredExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable){
         std::map < std::string, enum multistep_identifier> str2id{
             {"Adams-Bashforth", ADAMS_BASHFORTH},
@@ -573,27 +581,27 @@ struct FilteredExplicitMultistep
         if( str2id.find(method) == str2id.end())
             throw dg::Error(dg::Message(_ping_)<<"Multistep coefficients for "<<method<<" not found!");
         else
-            construct( str2id[method], stages, copyable);
+            *this = FilteredExplicitMultistep( str2id[method], stages, copyable);
     }
-    ///@copydoc construct()
+    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
     FilteredExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
-        construct( method, stages, copyable);
-    }
-    /**
-     * @brief Reserve memory for the integration
-     *
-     * Set the coefficients \f$ a_i,\ b_i\f$
-     * @param method the name of the family of schemes to be used (a string can be converted to an enum with the same spelling) @sa multistep_identifier
-     * @param stages (global) stages (= number of steps in the multistep) of the method (Currently possible values depend on the method), does not necessarily coincide with the order of the method
-     * @param copyable ContainerType of the size that is used in \c step
-     * @note it does not matter what values \c copyable contains, but its size is important
-     */
-    void construct( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
         m_k = stages;
         m_f.assign( stages, copyable);
         m_u.assign( stages, copyable);
         init_coeffs(method, stages);
         m_counter = 0;
+    }
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = FilteredExplicitMultistep( std::forward<Params>( ps)...);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -805,11 +813,11 @@ struct ExplicitMultistep
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     ExplicitMultistep(){}
-    ///@copydoc construct()
+    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
     ExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable): m_fem( method, stages, copyable){ }
-    ///@copydoc construct()
+    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
     ExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable): m_fem( method, stages, copyable){}
-    ///@copydoc FilteredExplicitMultistep::construct()
+    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
     void construct( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
         m_fem.construct( method, stages, copyable);
     }

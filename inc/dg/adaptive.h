@@ -54,6 +54,7 @@ value_type i_control( value_type dt_old, value_type eps_0, value_type eps_1, val
 template<class value_type>
 struct PIDController
 {
+    //PID means proportional (present), integral (past), derivative (future)
     PIDController( ){}
     value_type operator()( value_type dt_old, value_type eps_n, value_type eps_n1, value_type eps_n2, unsigned embedded_order, unsigned order)const
     {
