@@ -65,14 +65,17 @@ struct Shu
 
     const dg::Elliptic<Matrix, Container, Container>& lap() const { return m_multi_laplaceM[0];}
     dg::ArakawaX<Geometry, Matrix, Container>& arakawa() {return m_arakawa;}
-    /**
-     * @brief Returns psi that belong to the last y in operator()
-     *
-     * In a multistep scheme this belongs to the point HEAD-1
-     * @return psi is the potential
-     */
+
     const Container& potential( ) {return m_psi;}
+
     void operator()(double t, const Container& y, Container& yp);
+
+    void variation( const Container& phi, Container& variation_phi){
+        dg::blas2::symv( m_centered_phi[0], phi,  m_temp[0]);
+        dg::blas2::symv( m_centered_phi[1], phi,  m_temp[1]);
+        dg::tensor::multiply2d( m_metric, m_temp[0], m_temp[1], variation_phi, m_temp[2]);
+        dg::blas1::pointwiseDot( 1., m_temp[0], variation_phi, 1., m_temp[1], m_temp[2], 0., variation_phi);
+    }
   private:
     Container m_psi, m_v, m_temp[3], m_fine_psi, m_fine_v, m_fine_temp[3], m_fine_y, m_fine_yp;
     std::vector<dg::Elliptic<Geometry, Matrix, Container>> m_multi_laplaceM;
@@ -81,8 +84,10 @@ struct Shu
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     IMatrix m_inter, m_project;
     Matrix m_forward[2], m_backward[2], m_centered[2];
+    Matrix m_centered_phi[2]; // for variation
     std::vector<double> m_eps;
     std::string m_advection, m_multiplication;
+    dg::SparseTensor<Container> m_metric;
 };
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -93,8 +98,15 @@ Shu< Geometry, IMatrix, Matrix, Container>::Shu(
 {
     m_advection = file::get( mode, js, "advection", "type", "arakawa").asString();
     m_multiplication = file::get( mode, js, "advection", "multiplication", "pointwise").asString();
+    m_metric = g.metric();
 
     m_psi = dg::evaluate( dg::zero, g);
+    m_centered_phi[0] = dg::create::dx( g, g.bcx(), dg::centered);
+    m_centered_phi[1] = dg::create::dy( g, g.bcy(), dg::centered);
+    m_v = dg::evaluate( dg::zero, g);
+    m_temp[0] = dg::evaluate( dg::zero, g);
+    m_temp[1] = dg::evaluate( dg::zero, g);
+    m_temp[2] = dg::evaluate( dg::zero, g);
     if( "projection" == m_multiplication)
     {
         Geometry fine_grid = g;
@@ -125,10 +137,6 @@ Shu< Geometry, IMatrix, Matrix, Container>::Shu(
         m_forward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::forward);
         m_backward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::backward);
         m_backward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::backward);
-        m_v = dg::evaluate( dg::zero, g);
-        m_temp[0] = dg::evaluate( dg::zero, g);
-        m_temp[1] = dg::evaluate( dg::zero, g);
-        m_temp[2] = dg::evaluate( dg::zero, g);
         m_arakawa.construct( g);
     }
 

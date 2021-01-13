@@ -54,7 +54,7 @@ int main( int argc, char* argv[])
     double enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
     double energy =    0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
     dg::DVec varphi( grid.size());
-    shu.arakawa().variation( shu.potential(), varphi);
+    shu.variation( shu.potential(), varphi);
     double variation = dg::blas1::dot( varphi, w2d);
 
     std::cout << "Total energy:     "<<energy<<"\n";
@@ -133,6 +133,7 @@ int main( int argc, char* argv[])
             glfwSwapBuffers(w);
             //step
             t.tic();
+            try{
             if( "Karniadakis" == stepper)
                 for( unsigned i=0; i<itstp; i++)
                     karniadakis.step( shu, diffusion, time, y0);
@@ -142,6 +143,12 @@ int main( int argc, char* argv[])
             else if ( "Shu-Osher" == stepper)
                 for( unsigned i=0; i<itstp; i++)
                     shu_osher.step( shu, filter, time, y0, time, y0, dt);
+            }
+            catch( dg::Fail& fail) {
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                return -1;
+            }
             t.toc();
             //std::cout << "Timer for one step: "<<t.diff()/N<<"s\n";
         }
@@ -208,7 +215,7 @@ int main( int argc, char* argv[])
                 output1d[0] = dg::blas1::dot( w2d, y0);
                 output1d[1] = 0.5*dg::blas2::dot( y0, w2d, y0);
                 output1d[2] = 0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
-                shu.arakawa().variation(shu.potential(), varphi);
+                shu.variation(shu.potential(), varphi);
                 output1d[3] = dg::blas1::dot( varphi, w2d);
                 Estart[0] += 1;
                 for( int k=0;k<4; k++)
@@ -233,6 +240,8 @@ int main( int argc, char* argv[])
         catch( dg::Fail& fail) {
             std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
             std::cerr << "Does Simulation respect CFL condition?\n";
+            err = nc_close(ncid);
+            return -1;
         }
         err = nc_close(ncid);
     }
@@ -248,7 +257,7 @@ int main( int argc, char* argv[])
     std::cout << "Absolute vorticity error is: "<<dg::blas1::dot( w2d, y0) - vorticity << "\n";
     std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
-    shu.arakawa().variation(shu.potential(), varphi);
+    shu.variation(shu.potential(), varphi);
     std::cout << "Variation relative to 0 is:  "<<variation - dg::blas1::dot( varphi, w2d) << std::endl;
 
     return 0;

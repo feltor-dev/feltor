@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: shu_b
 
 shu_b: shu_b.cu shu.cuh
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(GLFLAGS) $(JSONLIB) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(GLFLAGS) $(JSONLIB) -g -DDG_BENCHMARK
 
 .PHONY: clean
 
