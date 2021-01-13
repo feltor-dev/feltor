@@ -86,7 +86,7 @@ struct ArakawaX
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& new_chi) {
-        dg::blas1::pointwiseDot( new_chi, m_inv_perp_vol, m_chi);
+        dg::blas1::pointwiseDivide( new_chi, m_perp_vol, m_chi);
     }
 
     /**
@@ -108,29 +108,10 @@ struct ArakawaX
         return m_bdyf;
     }
 
-    /**
-     * @brief Compute the total variation integrand
-     *
-     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
-     * in the plane of a 2x1 product space
-     * @param phi function
-     * @param varphi may equal phi, contains result on output
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
-    template<class ContainerType0, class ContainerType1>
-    void variation( const ContainerType0& phi, ContainerType1& varphi)
-    {
-        blas2::symv( m_bdxf, phi, m_dxrhs);
-        blas2::symv( m_bdyf, phi, m_dyrhs);
-        tensor::multiply2d( m_metric, m_dxrhs, m_dyrhs, varphi, m_helper);
-        blas1::pointwiseDot( 1., varphi, m_dxrhs, 1., m_helper, m_dyrhs, 0., varphi);
-    }
-
   private:
     Container m_dxlhs, m_dxrhs, m_dylhs, m_dyrhs, m_helper;
     Matrix m_bdxf, m_bdyf;
-    SparseTensor<Container> m_metric;
-    Container m_chi, m_inv_perp_vol;
+    Container m_chi, m_perp_vol;
 };
 ///@cond
 template<class Geometry, class Matrix, class Container>
@@ -143,10 +124,8 @@ ArakawaX<Geometry, Matrix, Container>::ArakawaX( const Geometry& g, bc bcx, bc b
     m_bdxf(dg::create::dx( g, bcx, dg::centered)),
     m_bdyf(dg::create::dy( g, bcy, dg::centered))
 {
-    m_metric=g.metric();
-    m_chi = dg::tensor::determinant2d(m_metric);
-    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<Container>>());
-    m_inv_perp_vol = m_chi;
+    m_chi = m_perp_vol = dg::tensor::volume2d(g.metric());
+    dg::blas1::pointwiseDivide( 1., m_perp_vol, m_chi);
 }
 
 template<class T>

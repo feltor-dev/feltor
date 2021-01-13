@@ -79,7 +79,7 @@ struct Poisson
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& new_chi) {
-        dg::blas1::pointwiseDot( new_chi, m_inv_perp_vol, m_chi);
+        dg::blas1::pointwiseDivide( new_chi, m_perp_vol, m_chi);
     }
 
     /**
@@ -117,29 +117,11 @@ struct Poisson
     const Matrix& dyrhs() {
         return m_dyrhs;
     }
-    /**
-     * @brief Compute the total variation integrand, uses bc of rhs of poisson bracket
-     *
-     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
-     * in the plane of a 2x1 product space
-     * @param phi function
-     * @param varphi may equal phi, contains result on output
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
-    template<class ContainerType0, class ContainerType1>
-    void variationRHS( const ContainerType0& phi, ContainerType1& varphi)
-    {
-        blas2::symv( m_dxrhs, phi, m_dxrhsrhs);
-        blas2::symv( m_dyrhs, phi, m_dyrhsrhs);
-        tensor::multiply2d( m_metric, m_dxrhsrhs, m_dyrhsrhs, varphi, m_helper);
-        blas1::pointwiseDot( 1., varphi, m_dxrhsrhs, 1., m_helper, m_dyrhsrhs, 0., varphi);
-    }
 
   private:
     Container m_dxlhslhs, m_dxrhsrhs, m_dylhslhs, m_dyrhsrhs, m_helper;
     Matrix m_dxlhs, m_dylhs, m_dxrhs, m_dyrhs;
-    SparseTensor<Container> m_metric;
-    Container m_chi, m_inv_perp_vol;
+    Container m_chi, m_perp_vol;
 };
 
 ///@cond
@@ -161,10 +143,8 @@ Poisson<Geometry, Matrix, Container>::Poisson(  const Geometry& g, bc bcxlhs, bc
     m_dxrhs(dg::create::dx( g, bcxrhs, dg::centered)),
     m_dyrhs(dg::create::dy( g, bcyrhs, dg::centered))
 {
-    m_metric=g.metric();
-    m_chi = dg::tensor::determinant2d(m_metric);
-    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<Container>>());
-    m_inv_perp_vol = m_chi;
+    m_chi = m_perp_vol = dg::tensor::volume2d(g.metric());
+    dg::blas1::pointwiseDivide( 1., m_perp_vol, m_chi);
 }
 
 template< class Geometry, class Matrix, class Container>
