@@ -6,7 +6,9 @@
 #include "dg/algorithm.h"
 #include "dg/file/json_utilities.h"
 
+#ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
+#endif
 #include "dg/file/file.h"
 
 #include "init.h"
@@ -107,6 +109,7 @@ int main( int argc, char* argv[])
     unsigned maxout = file::get( mode, js, "output", "maxout", 100).asUInt();
     unsigned itstp = file::get( mode, js, "output", "itstp", 5).asUInt();
     std::string output = file::get( mode, js, "output", "type", "glfw").asString();
+#ifndef WITHOUT_GLFW
     if( "glfw" == output)
     {
         ////////////////////////////////glfw//////////////////////////////
@@ -155,6 +158,7 @@ int main( int argc, char* argv[])
         glfwTerminate();
     }
     else
+#endif //WITHOUT_GLFW
     {
         std::string outputfile;
         if( argc == 1 || argc == 2)
