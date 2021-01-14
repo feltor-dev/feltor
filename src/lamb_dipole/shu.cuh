@@ -7,6 +7,7 @@
 #include "json/json.h"
 #include "file/json_utilities.h"
 #include "dg/algorithm.h"
+#include "init.h"
 
 namespace shu
 {
@@ -76,6 +77,10 @@ struct Shu
         dg::tensor::multiply2d( m_metric, m_temp[0], m_temp[1], variation_phi, m_temp[2]);
         dg::blas1::pointwiseDot( 1., m_temp[0], variation_phi, 1., m_temp[1], m_temp[2], 0., variation_phi);
     }
+    void set_mms_source( double sigma, double velocity) {
+        m_mms = shu::MMSSource( sigma, velocity);
+        m_add_mms = true;
+    }
   private:
     Container m_psi, m_v, m_temp[3], m_fine_psi, m_fine_v, m_fine_temp[3], m_fine_y, m_fine_yp;
     std::vector<dg::Elliptic<Geometry, Matrix, Container>> m_multi_laplaceM;
@@ -88,13 +93,19 @@ struct Shu
     std::vector<double> m_eps;
     std::string m_advection, m_multiplication;
     dg::SparseTensor<Container> m_metric;
+
+    shu::MMSSource m_mms;
+    bool m_add_mms = false;
+    Container m_x, m_y;
 };
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 Shu< Geometry, IMatrix, Matrix, Container>::Shu(
         const Geometry& g, Json::Value& js, enum file::error mode):
     m_old_psi( 2, dg::evaluate( dg::zero, g)),
-    m_multigrid( g, 3)
+    m_multigrid( g, 3),
+    m_x( dg::evaluate( dg::cooX2d, g)),
+    m_y( dg::evaluate( dg::cooY2d, g))
 {
     m_advection = file::get( mode, js, "advection", "type", "arakawa").asString();
     m_multiplication = file::get( mode, js, "advection", "multiplication", "pointwise").asString();
@@ -228,9 +239,10 @@ void Shu<Geometry, IMatrix, Matrix, Container>::operator()(double t, const Conta
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_y
             dg::blas2::symv( -1., m_centered[1], m_fine_temp[0], 1., m_fine_yp);
         }
-
         dg::blas2::symv( m_project, m_fine_yp, yp);
     }
+    if( m_add_mms) //for the manufactured solution we need to add a source term
+        dg::blas1::evaluate( yp, dg::plus_equals(), m_mms, m_x, m_y, t);
 
 }
 

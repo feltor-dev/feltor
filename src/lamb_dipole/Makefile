@@ -10,10 +10,10 @@ INCLUDE+= -I../../inc   # other project libraries
 
 all: shu_b
 
-shu_b: shu_b.cu shu.cuh
+shu_b: shu_b.cu shu.cuh init.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(GLFLAGS) $(JSONLIB) -g
 
-shu_hpc: shu_b.cu shu.cuh
+shu_hpc: shu_b.cu shu.cuh init.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g -DDG_BENCHMARK -DWITHOUT_GLFW
 
 .PHONY: clean

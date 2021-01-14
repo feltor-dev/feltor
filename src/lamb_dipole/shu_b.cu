@@ -34,7 +34,6 @@ int main( int argc, char* argv[])
     std::string initial = file::get( mode, js, "init", "type", "lamb").asString();
     dg::HVec omega = shu::initial_conditions.at( initial)(js, mode, grid);
 
-
     dg::DVec y0( omega ), y1( y0);
     //subtract mean mass
     if( grid.bcx() == dg::PER && grid.bcy() == dg::PER)
@@ -46,6 +45,13 @@ int main( int argc, char* argv[])
     shu::Shu<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec>
         shu( grid, js, mode);
     shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, js, mode);
+    if( "mms" == initial)
+    {
+        double sigma = file::get( mode, js, "init", "sigma", 0.2).asDouble();
+        double velocity = file::get( mode, js, "init", "velocity", 0.1).asDouble();
+        shu.set_mms_source( sigma, velocity);
+    }
+
 
     dg::Timer t;
     t.tic();
@@ -264,6 +270,16 @@ int main( int argc, char* argv[])
         std::cout << "Analytic error to solution "<<error<<std::endl;
         std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - lamb.enstrophy())/lamb.enstrophy()<<"\n";
         std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - lamb.energy())/lamb.energy()<<"\n";
+    }
+    if( "mms" == initial)
+    {
+        double R = file::get( mode, js, "init", "sigma", 0.1).asDouble();
+        double U = file::get( mode, js, "init", "velocity", 1).asDouble();
+        shu::MMSVorticity vortex( R, U, time);
+        dg::DVec sol = dg::evaluate( vortex, grid);
+        dg::blas1::axpby( 1., y0, -1., sol);
+        double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
+        std::cout << "Analytic error to solution "<<error<<std::endl;
     }
     std::cout << "Absolute vorticity error is: "<<dg::blas1::dot( w2d, y0) - vorticity << "\n";
     std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";

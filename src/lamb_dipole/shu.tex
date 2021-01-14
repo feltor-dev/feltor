@@ -1,0 +1,164 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../../doc/related_pages/header.tex}
+\input{../../doc/related_pages/newcommands.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{Testing Advection Schemes}
+\author{ M.~Wiesenberger}
+\maketitle
+
+\begin{abstract}
+  This is a program to test various advection schemes on the 2d incompressible Euler
+  equation used in Reference~\cite{Einkemmer2014}.
+\end{abstract}
+
+\section{Equations}
+We implement the 2d incompressible Euler equation
+\begin{subequations}
+\begin{align}
+ \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = 0 \\
+ -\Delta \phi = \omega
+\end{align}
+\label{eq:euler_poisson}
+\end{subequations}
+with vorticity $\omega$ and stream-function $\phi$.
+The Poisson bracket is given by $\{ \phi, \omega\} := \phi_x \omega_y - \phi_y \omega_x$.
+Eq.~\eqref{eq:euler_poisson} is a reformulation of the standard conservative form
+\begin{subequations}
+\begin{align}
+    \frac{\partial \omega}{\partial t} + \nabla\cdot({\vec v \omega}) = 0 \\
+\nabla\cdot\vec v = 0 \quad \omega = -(\nabla\times \vec v)\cdot \zhat
+\end{align}
+\label{eq:euler_conservative}
+\end{subequations}
+with $v_x = - \phi_y$ and $v_y = \phi_x$.
+
+Eqs.~\eqref{eq:euler_poisson} have an infinite amount of conserved quantities
+among them the total vorticity $V$, the kinetic energy $E$ and the enstrophy $\Omega$
+ \begin{align}
+     V := \int_D \omega \dA\quad
+     E :=\frac{1}{2} \int_D \left( \nabla \phi\right)^2 \dA \quad
+     \Omega:= \frac{1}{2} \int_D \omega^2 \dA
+ \end{align}
+
+
+\section{Initialization}
+We will consider several different initial conditions in order to test
+our numerical methods
+\subsection{Lamb Dipole}
+The Lamb dipole is a stationary solution to the Euler equations~\cite{Nielsen1997} with infinite
+boundary conditions
+\begin{align}
+    \omega(x,y,0) = \begin{cases}
+        \frac{2\lambda U}{J_0(\lambda R)} J_1(\lambda R) \cos \theta,\ r < R,\\
+        0, \text{ else}
+    \end{cases}
+\end{align}
+Unfortunately, for a finite box this is not an exact solution any more.
+on the domain $[0,1]\times [0,1]$.
+\subsection{Manufactured Solution}
+We manufacture a solution via
+\begin{align}
+    \phi(x,y,t) &=
+    x \exp\left( - \frac{ x^2 + (y+vt)^2}{\sigma^2}\right) \\
+    \omega(x,y,t) &= -\Delta \phi = -\sigma^{-4} \left[ 4\phi(x,y,t) ( x^2-2\sigma^2  + (y+tv)^2)\right]
+\end{align}
+which is solution to the modified equations
+\begin{subequations}
+\begin{align}
+    \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = S(x,y,t) \\
+ -\Delta \phi = \omega
+\end{align}
+\label{eq:euler_poisson}
+\end{subequations}
+with the source
+\begin{align}
+    S(x,y,t) = 8 x \sigma^{-6}(y+vt)\exp\left( - 2\frac{ x^2 + (y+vt)^2}{\sigma^2} \right)\left(-\sigma^2  + \exp\left( \frac{ x^2 + (y+vt)^2}{\sigma^2} \right) v( -3\sigma^2 + x^2 + (y+vt)^2) \right)
+\end{align}
+on the domain $[-1,1]\times [-1,1]$.
+
+
+\subsection{ Double Shear layer}
+Here, we follow~\cite{Liu2000} and test the scheme on a double shear layer problem.
+\begin{align}
+    \omega(x,y,0) = \begin{cases}
+        \delta \cos(x) - \frac{1}{\rho} \text{sech}^2 \left(\frac{y-\pi/2}{\rho}\right),\ y \leq \pi \\
+        \delta \cos(x) + \frac{1}{\rho} \text{sech}^2 \left(\frac{3\pi/2-y}{\rho}\right),\ y > \pi \\
+    \end{cases}
+\end{align}
+where $\rho = \pi/15$ and $\delta =0.05$ on the domain $[0,2\pi]\times [0,2\pi]$.
+This solution will quickly roll-up and generate smaller and smaller scales.
+A thin shear layer corresponds to $\rho = \pi/50$ or smaller.
+
+\section{Numerical methods}
+Our goal is to try out various time integration and advection discretization techniques\ldots
+\subsection{Arakawa scheme and centered flux}
+Reference~\cite{Liu2000} reports that the centered flux does not have any numerical
+diffusion while the upwind flux does.
+We also know from Godunov's theorem
+that any linear advection scheme of order 2 or higher is prone to oscillations.
+They also prove that upwind and centered fluxes do not dissipate energy.
+From finite differences we know that centered differences for the advection term
+are unstable (or at least produce a lot of oscillations).
+\subsection{Modal filters}
+\ldots
+\subsection{Artificial viscosity}
+\ldots
+
+\section{Compilation and useage}
+The program shu\_b.cu compiles with
+\begin{verbatim}
+make <shu_b> device = <omp gpu>
+make <shu_hpc> device = <omp gpu>
+\end{verbatim}
+and depends on both GLFW3 and NETCDF. If GLFW3 is not available then compile shu\_hpc which avoids this dependency.
+Run with
+\begin{verbatim}
+path/to/feltor/src/shu/shu_b input.json
+\end{verbatim}
+
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
+
+\subsection{Structure of output file}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &             text attribute & 1 & verbose input file as a string \\
+energy\_time             & Coord. Var. & 1 (energy\_time) & timesteps at which 1d variables are written \\
+time                     & Coord. Var. & 1 (time) & time at which fields are written \\
+x                        & Coord. Var. & 1 (x) & x-coordinate  \\
+y                        & Coord. Var. & 1 (y) & y-coordinate \\
+vorticity\_field         & Dataset & 3 (time, y, x) & electon density $n$ \\
+potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
+vorticity                & Dataset & 1 (energy\_time) & Vorticity $V$  \\
+enstrophy                & Dataset & 1 (energy\_time) & Enstropy $\Omega$  \\
+energy                   & Dataset & 1 (energy\_time) & Total energy integral computed using $E = \int_D \phi\omega \dA$ \\
+variation                & Dataset & 1 (energy\_time) & Total energy integral computed directly $\int_D (\nabla \phi)^2$  \\
+\bottomrule
+\end{longtable}
+
+%..................................................................
+\bibliography{../../doc/related_pages/references}
+%..................................................................
+
+
+\end{document}

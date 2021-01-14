@@ -1,3 +1,4 @@
+#pragma once
 
 #include <map>
 #include <functional>
@@ -35,6 +36,39 @@ struct ShearLayer{
     double m_delta;
 };
 
+struct MMSVorticity{
+    MMSVorticity( double radius, double velocity, double time): m_s(radius), m_v(velocity), m_t(time) {}
+    DG_DEVICE
+    double operator()( double x, double y)const{
+        return -4.*x*exp( - (x*x + (m_t*m_v + y)*(m_t*m_v+y))/m_s/m_s)*
+            (-2*m_s*m_s + x*x+ (m_t*m_v + y)*(m_t*m_v+y))/m_s/m_s/m_s/m_s;
+    }
+    private:
+    double m_s, m_v, m_t;
+};
+
+struct MMSPotential{
+    MMSPotential( double radius, double velocity, double time): m_s(radius), m_v(velocity), m_t(time) {}
+    DG_DEVICE
+    double operator()( double x, double y, double t)const{
+        return exp( - (x*x + (m_t*m_v + y)*(m_t*m_v+y))/m_s/m_s) * x;
+    }
+    private:
+    double m_s, m_v, m_t;
+};
+struct MMSSource{
+    MMSSource( ): m_s(1), m_v(0) {}
+    MMSSource( double radius, double velocity): m_s(radius), m_v(velocity) {}
+    DG_DEVICE
+    double operator()( double x, double y, double t)const{
+        double ss = m_s*m_s;
+        double ad = y+m_v*t;
+        return 8.*x/ss/ss/ss*ad*exp( - 2.*(x*x + ad*ad)/ss)*( -ss +exp( (x*x+ad*ad)/ss)*m_v*(-3.*ss + x*x + ad*ad));
+    }
+    private:
+    double m_s, m_v;
+};
+
 std::map<std::string, std::function< dg::HVec(
     Json::Value& js, enum file::error mode,
     const dg::CartesianGrid2d& grid) >
@@ -62,6 +96,18 @@ std::map<std::string, std::function< dg::HVec(
             double rho = file::get( mode, js, "init", "rho", M_PI/15.).asDouble();
             double delta = file::get( mode, js, "init", "delta", 0.05).asDouble();
             omega = dg::evaluate ( ShearLayer( rho, delta), grid);
+            return omega;
+        }
+    },
+    {"mms", [](
+        Json::Value& js, enum file::error mode,
+        const dg::CartesianGrid2d& grid)
+        {
+            dg::HVec omega;
+            double sigma = file::get( mode, js, "init", "sigma", 0.2).asDouble();
+            double velocity = file::get( mode, js, "init", "velocity", 0.1).asDouble();
+            std::cout << "Sigma "<<sigma<<" "<<velocity<<std::endl;;
+            omega = dg::evaluate ( MMSVorticity( sigma, velocity, 0.), grid);
             return omega;
         }
     }
