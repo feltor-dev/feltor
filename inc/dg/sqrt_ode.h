@@ -154,11 +154,15 @@ struct LhsT
      * @param T Symmetric tridiagonal matrix
      * @param copyable to get the size of the vectors
      */
-    LhsT( const Matrix& T, const Container& copyable):   
-        m_A(T),
-        m_one(copyable),
-        t(0.0)
+    LhsT( const Matrix& T, const Container& copyable)   
     { 
+        construct(T, copyable);
+    }
+    void construct(const Matrix& T, const Container& copyable) 
+    {
+        m_A =T;
+        m_one = copyable;
+        t = 0.0;
         dg::blas1::scal(m_one,0.);
         dg::blas1::plus(m_one,1.0);
     }
@@ -223,6 +227,7 @@ struct RhsT
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
+    RhsT() {}
     /**
      * @brief Construct Rhs operator
      *
@@ -230,12 +235,20 @@ struct RhsT
      * @param copyable copyable container
      * @param eps Accuarcy for CG solve
      */
-    RhsT( const Matrix& T,  const Container& copyable,  value_type eps):
-         m_helper( copyable),
-         m_A(T),
-         m_lhs(m_A, copyable),
-         m_invert( m_helper, copyable.size()*copyable.size(), eps, 1, false, 1.) //weights not multiplied on rhs
+    RhsT( const Matrix& T,  const Container& copyable,  value_type eps)
+//          m_helper( copyable),
+//          m_A(T),
+//          m_lhs(m_A, copyable),
+//          m_invert( m_helper, copyable.size()*copyable.size(), eps, 1, false, 1.) //weights not multiplied on rhs
     {
+        construct(T, copyable, eps);
+    }
+    void construct(const Matrix& T,  const Container& copyable,  value_type eps) 
+    {
+         m_helper = copyable;
+         m_A = T;
+         m_lhs.construct(m_A, copyable);
+         m_invert.construct( m_helper, copyable.size()*copyable.size(), eps, 1, false, 1.); //weights not multiplied on rhs
     }
     /**
      * @brief Set the Matrix T

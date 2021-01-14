@@ -1,7 +1,7 @@
 #define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
-// #define SILENT
-// #undef DG_BENCHMARK
-// #undef DG_DEBUG
+#define SILENT
+#undef DG_BENCHMARK
+#undef DG_DEBUG
 
 #include <boost/math/special_functions/jacobi_elliptic.hpp>
 
@@ -65,102 +65,102 @@ int main()
     dg::Invert<dg::HVec> invert( x, grid.size(), epsCG);
 
 
-//     //////////////////////////Direct Cauchy integral solve
-//     std::cout << "Solving  via Cauchy integral\n";
-//     CauchySqrtInt<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> cauchysqrtint(A, grid, epsCG);
-//     dg::EVE<dg::HVec> eve(b, 100);
-//     std::cout << "# of Cauchy terms?\n";
-//     std::cin >> iter;
-// //     double lambda_min = 1; //Exact estimate missing, However as long as chi in helmholtz is 1 it is correct
-//     double lambda_max;
-//     t.tic();
-//     eve(A, bs, bs, A.inv_weights(),lambda_max);
-//     std::cout << "Maximum EV from EVE is: "<< lambda_max << "\n";
-//     
-//     //analyitcal estimate
-//     double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
-//     double hxhy = lx*ly/(n*n*Nx*Ny);
-//     lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
-//     std::cout << "Min and Maximum EV is: "<< -lmin*alpha+1 << "  "<<-lmax*alpha+1<< "\n";
-//    
-//     cauchysqrtint(b, bs,-lmin*alpha+1 ,-lmax*alpha+1, iter);
-//     t.toc();
-//     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//     std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much smaller after a few iterations with correct EVs, reason is most likely that the EVs are not exactly estimated, error is also very sensible to min and max EVs
-//     
-//     //solve for x=\sqrt{A}^{-1} b'
-//     t.tic();
-//     invert(A,x,bs);
-//     t.toc();
-//     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//     std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
-//     
-//     //////////////////////////Direct sqrt ODE solve
-//     std::cout << "Solving  via Direct sqrt ODE\n";
-//     DirectSqrtODESolve<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
-//     t.tic();
-//     counter = directsqrtodesolve(b, bs); //overwrites b
-//     t.toc();
-// 
-//     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//     std::cout  << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
-//     //solve for x=\sqrt{A}^{-1} b'
-//     t.tic();
-//     invert(A,x,bs);
-//     t.toc();
-//     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//     std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
-// 
-// 
-//         ////////////////////////Krylov solve via Lanczos method and ODE sqrt solve
-//     std::cout << "Solving  via Krylov method and Cauchy ODE\n";
-//     std::cout << "# of Lanczos iterations and Cauchy terms?\n";
-//     std::cin >> iter >> iterCauchy;
-//   
-//     KrylovSqrtCauchySolve<dg::CartesianGrid2d, dg::HMatrix, DiaMatrix, CooMatrix, dg::HVec> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter);
-//     t.tic();
-//     krylovsqrtcauchysolve(b, bs, 5); //overwrites b
-//     t.toc();
-//     
-//     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//     std::cout << " Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";
-//     
-//     //solve for x=\sqrt{A}^{-1} b'
-//     t.tic();
-//     invert(A,x,bs);
-//     t.toc();
-//     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//     std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
-//     
-//     ////////////////////////Krylov solve via Lanczos method and ODE sqrt solve
-//     std::cout << "Solving  via Krylov method and sqrt ODE\n";
-//     std::cout << "# of Lanczos iterations?\n";
-//     std::cin >> iter;
-//   
-//     KrylovSqrtODESolve<dg::CartesianGrid2d, dg::HMatrix, DiaMatrix, CooMatrix, dg::HVec> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter);
-//     t.tic();
-//     counter = krylovsqrtodesolve(b, bs); //overwrites b
-//     t.toc();
-//     
-//     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//     std::cout  << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
-//    
-//     //solve for x=\sqrt{A}^{-1} b'
-//     t.tic();
-//     invert(A,x,bs);
-//     t.toc();
-//     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//     std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
-//     
-//     
+    //////////////////////////Direct Cauchy integral solve
+    std::cout << "Solving  via Cauchy integral\n";
+    CauchySqrtInt<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> cauchysqrtint(A, grid, epsCG);
+    dg::EVE<dg::HVec> eve(b, 100);
+    std::cout << "# of Cauchy terms?\n";
+    std::cin >> iter;
+//     double lambda_min = 1; //Exact estimate missing, However as long as chi in helmholtz is 1 it is correct
+    double lambda_max;
+    t.tic();
+    eve(A, bs, bs, A.inv_weights(),lambda_max);
+    std::cout << "Maximum EV from EVE is: "<< lambda_max << "\n";
+    
+    //analyitcal estimate
+    double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+    double hxhy = lx*ly/(n*n*Nx*Ny);
+    lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
+    std::cout << "Min and Maximum EV is: "<< -lmin*alpha+1 << "  "<<-lmax*alpha+1<< "\n";
+   
+    cauchysqrtint(b, bs,-lmin*alpha+1 ,-lmax*alpha+1, iter);
+    t.toc();
+    dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much smaller after a few iterations with correct EVs, reason is most likely that the EVs are not exactly estimated, error is also very sensible to min and max EVs
+    
+    //solve for x=\sqrt{A}^{-1} b'
+    t.tic();
+    invert(A,x,bs);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
+    
+    //////////////////////////Direct sqrt ODE solve
+    std::cout << "Solving  via Direct sqrt ODE\n";
+    DirectSqrtODESolve<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
+    t.tic();
+    counter = directsqrtodesolve(b, bs); //overwrites b
+    t.toc();
+
+    dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+    std::cout  << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
+    //solve for x=\sqrt{A}^{-1} b'
+    t.tic();
+    invert(A,x,bs);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
+
+
+        ////////////////////////Krylov solve via Lanczos method and ODE sqrt solve
+    std::cout << "Solving  via Krylov method and Cauchy ODE\n";
+    std::cout << "# of Lanczos iterations and Cauchy terms?\n";
+    std::cin >> iter >> iterCauchy;
+  
+    KrylovSqrtCauchySolve<dg::CartesianGrid2d, dg::HMatrix, DiaMatrix, CooMatrix, dg::HVec> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter);
+    t.tic();
+    krylovsqrtcauchysolve(b, bs, 5); //overwrites b
+    t.toc();
+    
+    dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+    std::cout << " Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";
+    
+    //solve for x=\sqrt{A}^{-1} b'
+    t.tic();
+    invert(A,x,bs);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
+    
+    ////////////////////////Krylov solve via Lanczos method and ODE sqrt solve
+    std::cout << "Solving  via Krylov method and sqrt ODE\n";
+    std::cout << "# of Lanczos iterations?\n";
+    std::cin >> iter;
+  
+    KrylovSqrtODESolve<dg::CartesianGrid2d, dg::HMatrix, DiaMatrix, CooMatrix, dg::HVec> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter);
+    t.tic();
+    counter = krylovsqrtodesolve(b, bs); //overwrites b
+    t.toc();
+    
+    dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+    std::cout  << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
+   
+    //solve for x=\sqrt{A}^{-1} b'
+    t.tic();
+    invert(A,x,bs);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+    std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much 
+    
+    
     //Direct CG sqrt solve TODO
     std::cout << "Solving  via CG method and sqrt ODE\n";
     dg::blas1::scal(x,0.0);

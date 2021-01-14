@@ -8,7 +8,6 @@
 #include "sqrt_cauchy.h"
 #include "sqrt_ode.h"
 
-#include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 
 ///@brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve directly via sqrt ODE solve with adaptive ERK class as timestepper
@@ -75,17 +74,26 @@ struct KrylovSqrtODESolve
      * @param epsTimerel relative accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
      * @param epsTimeabs absolute accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
      */
-    KrylovSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned iter):   
-        m_A(A),
-        m_epsTimerel(epsTimerel),
-        m_epsTimeabs(epsTimeabs),
-        m_xnorm(0.),
-        m_e1(iter, 0.),
-        m_y(iter, 1.),
-        m_rhs(m_T, m_e1, epsCG),
-        m_lanczos(copyable, iter)
+    KrylovSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned iter)  
     { 
-        m_e1[0]=1.;
+        construct(A, g, copyable, epsCG, epsTimerel, epsTimeabs, iter);
+    }
+    void construct( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned iter)
+    {      
+        m_A = A;
+        m_epsTimerel = epsTimerel;
+        m_epsTimeabs = epsTimeabs;
+        m_xnorm = 0.;
+        m_e1.assign(iter, 0.);
+        m_e1[0] = 1.;
+        m_y.assign(iter, 1.);
+        m_T.resize(iter, iter, 3*iter-2, 3);
+        m_T.diagonal_offsets[0] = -1;
+        m_T.diagonal_offsets[1] =  0;
+        m_T.diagonal_offsets[2] =  1;
+        m_V.resize(copyable.size(), iter, iter*copyable.size());
+        m_rhs.construct(m_T, m_e1, epsCG);
+        m_lanczos.construct(copyable, iter);
     }
     /**
      * @brief Compute \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f] via sqrt ODE solve.
@@ -99,6 +107,11 @@ struct KrylovSqrtODESolve
     {
         //Lanczos solve first         
         m_xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
+        if( m_xnorm == 0)
+        {
+            dg::blas1::copy( x,b);
+            return 0;
+        }
         m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights()); 
         m_T = m_TVpair.first; 
         m_V = m_TVpair.second;   
@@ -106,7 +119,7 @@ struct KrylovSqrtODESolve
         m_rhs.set_T(m_T);
         
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
-        dg::blas2::gemv(m_V, m_y, b);
+        dg::blas2::symv(m_V, m_y, b);
         dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1     
         return counter;
     }
@@ -124,7 +137,7 @@ struct KrylovSqrtODESolve
 /*! 
  * @brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
  * 
- * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx b \approx ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
+ * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
  */
 template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container>
 struct KrylovSqrtCauchySolve
@@ -334,11 +347,18 @@ class CGsqrt
         Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
     }
     /**
-     * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method
+     * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
+     * @param P The preconditioner to be used
+     * @param S (Inverse) Weights used to compute the norm for the error condition
+     * @param eps The relative error to be respected
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
+     * 
+     * @return Number of iterations used to achieve desired precision
+     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
     unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1)

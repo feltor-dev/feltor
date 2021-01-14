@@ -1,3 +1,6 @@
+#define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
+#include <boost/math/special_functions/jacobi_elliptic.hpp>
+
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -47,13 +50,19 @@ int main( int argc, char* argv[])
     //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    dg::blas2::symv( ex.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::DVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
+    if( p.equations == "arbpolO2") {
+        ex.initgammasqne(y0[0],y0[1]);
+        std::cout << "initialized ni\n";
     }
-    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
-        y0[1] = dg::evaluate( dg::zero, grid);
+    else {
+        dg::blas2::symv( ex.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+        {
+            dg::DVec v2d = dg::create::inv_weights(grid);
+            dg::blas2::symv( v2d, y0[1], y0[1]);
+        }
+        if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
+            y0[1] = dg::evaluate( dg::zero, grid);
+        }
     }
     //////////////////////////////////////////////////////////////////////
 
