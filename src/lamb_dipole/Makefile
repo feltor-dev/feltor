@@ -1,4 +1,4 @@
-device=gpu
+device=omp
 
 #configure machine
 include ../../config/default.mk
@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: shu_b
 
 shu_b: shu_b.cu shu.cuh
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(GLFLAGS) $(JSONLIB) -g -DDG_BENCHMARK
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(GLFLAGS) $(JSONLIB) -g
 
 shu_hpc: shu_b.cu shu.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g -DDG_BENCHMARK -DWITHOUT_GLFW

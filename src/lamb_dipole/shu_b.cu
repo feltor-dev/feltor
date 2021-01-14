@@ -57,7 +57,7 @@ int main( int argc, char* argv[])
     double energy =    0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
     dg::DVec varphi( grid.size());
     shu.variation( shu.potential(), varphi);
-    double variation = dg::blas1::dot( varphi, w2d);
+    double variation = 0.5*dg::blas1::dot( varphi, w2d);
 
     std::cout << "Total energy:     "<<energy<<"\n";
     std::cout << "Total enstrophy:  "<<enstrophy<<"\n";
@@ -220,7 +220,7 @@ int main( int argc, char* argv[])
                 output1d[1] = 0.5*dg::blas2::dot( y0, w2d, y0);
                 output1d[2] = 0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
                 shu.variation(shu.potential(), varphi);
-                output1d[3] = dg::blas1::dot( varphi, w2d);
+                output1d[3] = 0.5*dg::blas1::dot( varphi, w2d);
                 Estart[0] += 1;
                 for( int k=0;k<4; k++)
                     err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
@@ -251,18 +251,25 @@ int main( int argc, char* argv[])
     }
     ////////////////////////////////////////////////////////////////////
     std::cout << "Time "<<time<<std::endl;
-    //dg::Lamb solution( p.posX*p.lx, p.posY*p.ly - p.U*time, p.R, p.U);
-    //dg::DVec sol = dg::evaluate( solution, grid);
-    //dg::blas1::axpby( 1., y0, -1., sol);
-    //double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
-    //std::cout << "Analytic error to solution "<<error<<std::endl;
-    //std::cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<std::endl;
-    //std::cout << "Analytic formula energy    "<<lamb.energy()<<std::endl;
+    if( "lamb" == initial)
+    {
+        double posX = file::get( mode, js, "init", "posX", 0.5).asDouble();
+        double posY = file::get( mode, js, "init", "posY", 0.8).asDouble();
+        double R = file::get( mode, js, "init", "sigma", 0.1).asDouble();
+        double U = file::get( mode, js, "init", "velocity", 1).asDouble();
+        dg::Lamb lamb( posX*grid.lx(), posY*grid.ly() - U*time, R, U);
+        dg::DVec sol = dg::evaluate( lamb, grid);
+        dg::blas1::axpby( 1., y0, -1., sol);
+        double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
+        std::cout << "Analytic error to solution "<<error<<std::endl;
+        std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - lamb.enstrophy())/lamb.enstrophy()<<"\n";
+        std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - lamb.energy())/lamb.energy()<<"\n";
+    }
     std::cout << "Absolute vorticity error is: "<<dg::blas1::dot( w2d, y0) - vorticity << "\n";
     std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
     shu.variation(shu.potential(), varphi);
-    std::cout << "Variation relative to 0 is:  "<<variation - dg::blas1::dot( varphi, w2d) << std::endl;
+    std::cout << "Relative variation error is: "<<(0.5*dg::blas1::dot( varphi, w2d)-variation)/variation << std::endl;
 
     return 0;
 

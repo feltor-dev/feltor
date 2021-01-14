@@ -183,6 +183,17 @@ void Shu<Geometry, IMatrix, Matrix, Container>::operator()(double t, const Conta
             dg::blas2::symv( m_backward[1], m_temp[0], m_temp[2]);
             dg::blas1::subroutine( shu::Upwind(), yp, m_temp[1], m_temp[2], m_v);
         }
+        else if( "centered" == m_advection)
+        {
+            //dx ( nv_x)
+            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
+            dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_x
+            dg::blas2::symv( -1., m_centered[0], m_temp[0], 0., yp);
+            //dy ( nv_y)
+            dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
+            dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_y
+            dg::blas2::symv( -1., m_centered[1], m_temp[0], 1., yp);
+        }
     }
     else // "projection " == multiplication
     {
@@ -206,6 +217,18 @@ void Shu<Geometry, IMatrix, Matrix, Container>::operator()(double t, const Conta
             dg::blas2::symv( m_backward[1], m_fine_temp[0], m_fine_temp[2]);
             dg::blas1::subroutine( shu::Upwind(), m_fine_yp, m_fine_temp[1], m_fine_temp[2], m_fine_v);
         }
+        else if( "centered" == m_advection)
+        {
+            //dx ( nv_x)
+            dg::blas2::symv( -1., m_centered[1], m_fine_psi, 0., m_fine_v); //v_x
+            dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_x
+            dg::blas2::symv( -1., m_centered[0], m_fine_temp[0], 0., m_fine_yp);
+            //dy ( nv_y)
+            dg::blas2::symv( 1., m_centered[0], m_fine_psi, 0., m_fine_v); //v_y
+            dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_y
+            dg::blas2::symv( -1., m_centered[1], m_fine_temp[0], 1., m_fine_yp);
+        }
+
         dg::blas2::symv( m_project, m_fine_yp, yp);
     }
 
