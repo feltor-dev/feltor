@@ -37,36 +37,60 @@ struct ShearLayer{
 };
 
 struct MMSVorticity{
-    MMSVorticity( double radius, double velocity, double time): m_s(radius), m_v(velocity), m_t(time) {}
+    MMSVorticity( double radius, double velocity, double ly, double time): m_s(radius), m_v(velocity), m_ly( ly), m_t(time) {}
     DG_DEVICE
     double operator()( double x, double y)const{
-        return -4.*x*exp( - (x*x + (m_t*m_v + y)*(m_t*m_v+y))/m_s/m_s)*
-            (-2*m_s*m_s + x*x+ (m_t*m_v + y)*(m_t*m_v+y))/m_s/m_s/m_s/m_s;
+        return evaluate( x, y, 0) + evaluate( x,y,m_ly) + evaluate( x,y,-m_ly)
+               + evaluate( x,y,2*m_ly) + evaluate( x,y,-2*m_ly);
     }
     private:
-    double m_s, m_v, m_t;
+    DG_DEVICE
+    double evaluate( double x, double y, double y0) const
+    {
+        double ad = y - y0 +m_v*m_t;
+        if( fabs(ad ) > m_ly) return 0;
+        return -4.*x*exp( - (x*x + ad*ad)/m_s/m_s)*
+            (-2*m_s*m_s + x*x+ ad*ad)/m_s/m_s/m_s/m_s;
+    }
+    double m_s, m_v, m_ly, m_t;
 };
 
 struct MMSPotential{
-    MMSPotential( double radius, double velocity, double time): m_s(radius), m_v(velocity), m_t(time) {}
+    MMSPotential( double radius, double velocity, double ly, double time): m_s(radius), m_v(velocity), m_ly( ly), m_t(time) {}
     DG_DEVICE
-    double operator()( double x, double y, double t)const{
-        return exp( - (x*x + (m_t*m_v + y)*(m_t*m_v+y))/m_s/m_s) * x;
+    double operator()( double x, double y)const{
+        return evaluate( x, y, 0) + evaluate( x,y,m_ly) + evaluate( x,y,-m_ly)
+               + evaluate( x,y,2*m_ly) + evaluate( x,y,-2*m_ly);
     }
     private:
-    double m_s, m_v, m_t;
+    DG_DEVICE
+    double evaluate( double x, double y, double y0) const
+    {
+        double ad = y - y0 +m_v*m_t;
+        if( fabs(ad ) > m_ly) return 0;
+        return exp( - (x*x + ad*ad)/m_s/m_s) * x;
+    }
+    double m_s, m_v, m_ly, m_t;
 };
+
 struct MMSSource{
     MMSSource( ): m_s(1), m_v(0) {}
-    MMSSource( double radius, double velocity): m_s(radius), m_v(velocity) {}
+    MMSSource( double radius, double velocity, double ly): m_s(radius), m_v(velocity), m_ly( ly){}
     DG_DEVICE
     double operator()( double x, double y, double t)const{
-        double ss = m_s*m_s;
-        double ad = y+m_v*t;
-        return 8.*x/ss/ss/ss*ad*exp( - 2.*(x*x + ad*ad)/ss)*( -ss +exp( (x*x+ad*ad)/ss)*m_v*(-3.*ss + x*x + ad*ad));
+        return evaluate( x, y,t, 0) + evaluate( x,y,t,m_ly) + evaluate( x,y,t,-m_ly)
+               + evaluate( x,y,t,2*m_ly) + evaluate( x,y,t,-2*m_ly);
     }
     private:
-    double m_s, m_v;
+    DG_DEVICE
+    double evaluate( double x, double y, double t, double y0) const
+    {
+        double ss = m_s*m_s;
+        double ad = y - y0 +m_v*t;
+        if( fabs(ad ) > m_ly) return 0;
+        return 8.*x/ss/ss/ss*ad*exp( - 2.*(x*x + ad*ad)/ss)*( -ss +exp( (x*x+ad*ad)/ss)*m_v*(-3.*ss + x*x + ad*ad));
+    }
+    double m_s, m_v, m_ly;
 };
 
 std::map<std::string, std::function< dg::HVec(
@@ -106,8 +130,8 @@ std::map<std::string, std::function< dg::HVec(
             dg::HVec omega;
             double sigma = file::get( mode, js, "init", "sigma", 0.2).asDouble();
             double velocity = file::get( mode, js, "init", "velocity", 0.1).asDouble();
-            std::cout << "Sigma "<<sigma<<" "<<velocity<<std::endl;;
-            omega = dg::evaluate ( MMSVorticity( sigma, velocity, 0.), grid);
+            std::cout << "Sigma "<<sigma<<" "<<velocity<<std::endl;
+            omega = dg::evaluate ( MMSVorticity( sigma, velocity,grid.ly(), 0.), grid);
             return omega;
         }
     }

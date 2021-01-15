@@ -49,7 +49,7 @@ int main( int argc, char* argv[])
     {
         double sigma = file::get( mode, js, "init", "sigma", 0.2).asDouble();
         double velocity = file::get( mode, js, "init", "velocity", 0.1).asDouble();
-        shu.set_mms_source( sigma, velocity);
+        shu.set_mms_source( sigma, velocity, grid.ly());
     }
 
 
@@ -257,25 +257,11 @@ int main( int argc, char* argv[])
     }
     ////////////////////////////////////////////////////////////////////
     std::cout << "Time "<<time<<std::endl;
-    if( "lamb" == initial)
-    {
-        double posX = file::get( mode, js, "init", "posX", 0.5).asDouble();
-        double posY = file::get( mode, js, "init", "posY", 0.8).asDouble();
-        double R = file::get( mode, js, "init", "sigma", 0.1).asDouble();
-        double U = file::get( mode, js, "init", "velocity", 1).asDouble();
-        dg::Lamb lamb( posX*grid.lx(), posY*grid.ly() - U*time, R, U);
-        dg::DVec sol = dg::evaluate( lamb, grid);
-        dg::blas1::axpby( 1., y0, -1., sol);
-        double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
-        std::cout << "Analytic error to solution "<<error<<std::endl;
-        std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - lamb.enstrophy())/lamb.enstrophy()<<"\n";
-        std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - lamb.energy())/lamb.energy()<<"\n";
-    }
     if( "mms" == initial)
     {
         double R = file::get( mode, js, "init", "sigma", 0.1).asDouble();
         double U = file::get( mode, js, "init", "velocity", 1).asDouble();
-        shu::MMSVorticity vortex( R, U, time);
+        shu::MMSVorticity vortex( R, U, grid.ly(), time);
         dg::DVec sol = dg::evaluate( vortex, grid);
         dg::blas1::axpby( 1., y0, -1., sol);
         double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);

@@ -77,8 +77,8 @@ struct Shu
         dg::tensor::multiply2d( m_metric, m_temp[0], m_temp[1], variation_phi, m_temp[2]);
         dg::blas1::pointwiseDot( 1., m_temp[0], variation_phi, 1., m_temp[1], m_temp[2], 0., variation_phi);
     }
-    void set_mms_source( double sigma, double velocity) {
-        m_mms = shu::MMSSource( sigma, velocity);
+    void set_mms_source( double sigma, double velocity, double ly) {
+        m_mms = shu::MMSSource( sigma, velocity, ly);
         m_add_mms = true;
     }
   private:

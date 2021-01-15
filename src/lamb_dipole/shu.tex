@@ -94,12 +94,15 @@ This solution will quickly roll-up and generate smaller and smaller scales.
 A thin shear layer corresponds to $\rho = \pi/50$ or smaller.
 
 \section{Numerical methods}
-Our goal is to try out various time integration and advection discretization techniques\ldots
+Our goal is to try out various time integration and advection discretization techniques.
+We know from Godunov's theorem
+that any linear advection scheme of order 2 or higher is prone to oscillations.
+\subsection{Forward time and centered space}
+It is well known that the forward in time, centered in space method for solving
+hyperbolic systems is unconditionally unstable~\cite{LeVeque}.
 \subsection{Arakawa scheme and centered flux}
 Reference~\cite{Liu2000} reports that the centered flux does not have any numerical
 diffusion while the upwind flux does.
-We also know from Godunov's theorem
-that any linear advection scheme of order 2 or higher is prone to oscillations.
 They also prove that upwind and centered fluxes do not dissipate energy.
 From finite differences we know that centered differences for the advection term
 are unstable (or at least produce a lot of oscillations).
