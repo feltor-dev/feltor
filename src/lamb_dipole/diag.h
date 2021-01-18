@@ -30,7 +30,7 @@ struct Record{
 };
 
 std::vector<Record> diagnostics2d_list = {
-    {"vorticity_field", "Vorticity in 2d",
+    {"vorticity", "Vorticity in 2d",
         []( dg::DVec& result, Variables& v ) {
              dg::blas1::copy(v.y0, result);
         }
@@ -40,30 +40,20 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::copy(v.shu.potential(), result);
         }
     },
-    {"vx", "Velocity in x",
-        []( dg::DVec& result, Variables& v ) {
-             dg::blas2::symv( -1., v.shu.dy(), v.shu.potential(), 0., result); //vx
-        }
-    },
-    {"vy", "Velocity in y",
-        []( dg::DVec& result, Variables& v ) {
-             dg::blas2::symv( +1., v.shu.dx(), v.shu.potential(), 0., result); //vy
-        }
-    }
 };
 
 std::vector<Record1d> diagnostics1d_list = {
-    {"vorticity", "Integrated Vorticity",
+    {"vorticity_1d", "Integrated Vorticity",
         []( Variables& v ) {
             return dg::blas1::dot(v.y0, v.weights);
         }
     },
-    {"enstrophy", "Integrated enstrophy",
+    {"enstrophy_1d", "Integrated enstrophy",
         []( Variables& v ) {
             return 0.5*dg::blas2::dot( v.y0, v.weights, v.y0);
         }
     },
-    {"energy", "Integrated energy",
+    {"energy_1d", "Integrated energy",
         []( Variables& v ) {
             return 0.5*dg::blas2::dot( v.y0, v.weights, v.shu.potential()) ;
         }

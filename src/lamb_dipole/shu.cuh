@@ -68,6 +68,8 @@ struct Shu
     dg::ArakawaX<Geometry, Matrix, Container>& arakawa() {return m_arakawa;}
 
     const Container& potential( ) {return m_psi;}
+    Matrix& dx() {return m_centered[0];}
+    Matrix& dy() {return m_centered[1];}
 
     void operator()(double t, const Container& y, Container& yp);
 

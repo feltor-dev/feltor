@@ -12,6 +12,7 @@
 #include "dg/file/file.h"
 
 #include "init.h"
+#include "diag.h"
 #include "shu.cuh"
 
 
@@ -52,25 +53,20 @@ int main( int argc, char* argv[])
         shu.set_mms_source( sigma, velocity, grid.ly());
     }
 
-
+    double time = 0;
+    shu::Variables var = {shu, grid, y0, time, w2d, 0., mode, js};
     dg::Timer t;
     t.tic();
     shu( 0., y0, y1);
     t.toc();
-    std::cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
-    double vorticity = dg::blas1::dot( w2d, y0);
-    double enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
-    double energy =    0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
-    dg::DVec varphi( grid.size());
-    shu.variation( shu.potential(), varphi);
-    double variation = 0.5*dg::blas1::dot( varphi, w2d);
+    var.duration = t.diff();
+    for( auto record : shu::diagnostics1d_list)
+    {
+        double result = record.function( var);
+        std::cout  << "Diagnostics "<<record.name<<" "<<result<<"\n";
+    }
 
-    std::cout << "Total energy:     "<<energy<<"\n";
-    std::cout << "Total enstrophy:  "<<enstrophy<<"\n";
-    std::cout << "Total vorticity:  "<<vorticity<<"\n";
-    std::cout << "Total variation:  "<<variation<<"\n";
-
-    double time = 0;
+    /// ////////////// Initialize timestepper ///////////////////////
     std::string stepper = file::get( mode, js, "timestepper", "stepper", "FilteredMultistep").asString();
     std::string regularization = file::get( mode, js, "regularization", "type", "moddal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
@@ -143,68 +139,110 @@ int main( int argc, char* argv[])
             //step
             t.tic();
             try{
-            if( "Karniadakis" == stepper)
-                for( unsigned i=0; i<itstp; i++)
-                    karniadakis.step( shu, diffusion, time, y0);
-            else if ( "FilteredMultistep" == stepper)
-                for( unsigned i=0; i<itstp; i++)
-                    multistep.step( shu, filter, time, y0);
-            else if ( "Shu-Osher" == stepper)
-                for( unsigned i=0; i<itstp; i++)
-                    shu_osher.step( shu, filter, time, y0, time, y0, dt);
-            }
-            catch( dg::Fail& fail) {
+                for( unsigned j=0; j<itstp; j++)
+                {
+                    if( "Karniadakis" == stepper)
+                        karniadakis.step( shu, diffusion, time, y0);
+                    else if ( "FilteredMultistep" == stepper)
+                        multistep.step( shu, filter, time, y0);
+                    else if ( "Shu-Osher" == stepper)
+                        shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                }
+            } catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 return -1;
             }
             t.toc();
-            //std::cout << "Timer for one step: "<<t.diff()/N<<"s\n";
+            var.duration = t.diff()/(double)itstp;
         }
         glfwTerminate();
     }
     else
 #endif //WITHOUT_GLFW
     {
+        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc == 1 || argc == 2)
             outputfile = "shu.nc";
         else
             outputfile = argv[2];
-        ////////////////////////////set up netcdf/////////////////////////////////////
+        /// //////////////////////set up netcdf/////////////////////////////////////
         file::NC_Error_Handle err;
-        int ncid;
-        err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
-        std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
-        err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+        int ncid=-1;
+        try{
+            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+        }catch( std::exception& e)
+        {
+            std::cerr << "ERROR creating file "<<outputfile<<std::endl;
+            std::cerr << e.what()<<std::endl;
+           return -1;
+        }
+        /// Set global attributes
+        std::map<std::string, std::string> att;
+        att["title"] = "Output file of feltor/src/lamb_dipole/shu_b.cu";
+        att["Conventions"] = "CF-1.7";
+        ///Get local time and begin file history
+        auto ttt = std::time(nullptr);
+        auto tm = *std::localtime(&ttt);
+
+        std::ostringstream oss;
+        ///time string  + program-name + args
+        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        for( int i=0; i<argc; i++) oss << " "<<argv[i];
+        att["history"] = oss.str();
+        att["comment"] = "Find more info in feltor/src/lamb_dipole/shu.tex";
+        att["source"] = "FELTOR";
+        att["references"] = "https://github.com/feltor-dev/feltor";
+        att["inputfile"] = inputfile;
+        for( auto pair : att)
+            err = nc_put_att_text( ncid, NC_GLOBAL,
+                pair.first.data(), pair.second.size(), pair.second.data());
+
         int dim_ids[3], tvarID;
-        int EtimeID, EtimevarID;
-        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
-        err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-        //field IDs
-        std::string names3d[2] = {"vorticity_field", "potential"};
-        std::string names1d[4] = {"vorticity", "enstrophy", "energy", "variation"};
-        int dataIDs[2], variableIDs[4];
-        for( unsigned i=0; i<2; i++){
-            err = nc_def_var( ncid, names3d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
-        for( unsigned i=0; i<4; i++){
-            err = nc_def_var( ncid, names1d[i].data(), NC_DOUBLE, 1, &EtimeID, &variableIDs[i]);}
+        std::map<std::string, int> id1d, id3d;
+        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid,
+                {"time", "y", "x"});
+
+        //Create field IDs
+        for( auto& record : shu::diagnostics2d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id3d[name] = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+                    &id3d.at(name));
+            err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
+        for( auto& record : shu::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id1d[name] = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                &id1d.at(name));
+            err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
         err = nc_enddef(ncid);
         size_t start[3] = {0, 0, 0};
         size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
-        size_t Estart[] = {0};
-        size_t Ecount[] = {1};
         ///////////////////////////////////first output/////////////////////////
-        std::vector<dg::HVec> transferH(2);
-        dg::blas1::transfer( y0, transferH[0]);
-        dg::blas1::transfer( shu.potential(), transferH[1]);
-        for( int k=0;k<2; k++)
-            err = nc_put_vara_double( ncid, dataIDs[k], start, count, transferH[k].data() );
+        dg::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::HVec resultH( resultD);
+        for( auto& record : shu::diagnostics2d_list)
+        {
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
+        }
+        for( auto& record : shu::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
+        }
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        double output1d[4] = {vorticity, enstrophy, energy, variation};
-        for( int k=0;k<4; k++)
-            err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
-        err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
         ///////////////////////////////////timeloop/////////////////////////
         unsigned step=0;
         try{
@@ -221,30 +259,26 @@ int main( int argc, char* argv[])
                     multistep.step( shu, filter, time, y0);
                 else if ( "Shu-Osher" == stepper)
                     shu_osher.step( shu, filter, time, y0, time, y0, dt);
-
-                output1d[0] = dg::blas1::dot( w2d, y0);
-                output1d[1] = 0.5*dg::blas2::dot( y0, w2d, y0);
-                output1d[2] = 0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
-                shu.variation(shu.potential(), varphi);
-                output1d[3] = 0.5*dg::blas1::dot( varphi, w2d);
-                Estart[0] += 1;
-                for( int k=0;k<4; k++)
-                    err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
-                err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-                if( energy>1e6)
-                    throw dg::Error(dg::Message(_ping_)<<"Energy exploded! Exit\n");
             }
             step+=itstp;
-            //output all fields
-            dg::blas1::transfer( y0, transferH[0]);
-            dg::blas1::transfer( shu.potential(), transferH[1]);
-            start[0] = i;
-            for( int k=0;k<2; k++)
-                err = nc_put_vara_double( ncid, dataIDs[k], start, count, transferH[k].data() );
-            err = nc_put_vara_double( ncid, tvarID, start, count, &time);
             ti.toc();
+            var.duration = ti.diff() / (double) itstp;
+            //output all fields
+            start[0] = i;
+            for( auto& record : shu::diagnostics2d_list)
+            {
+                record.function( resultD, var);
+                dg::assign( resultD, resultH);
+                file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
+            }
+            for( auto& record : shu::diagnostics1d_list)
+            {
+                double result = record.function( var);
+                nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
+            }
+            err = nc_put_vara_double( ncid, tvarID, start, count, &time);
             std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time;
-            std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n"<<std::flush;
+            std::cout << "\n\t Average time for one step: "<<var.duration<<"s\n\n"<<std::flush;
         }
         }
         catch( dg::Fail& fail) {
@@ -257,35 +291,11 @@ int main( int argc, char* argv[])
     }
     ////////////////////////////////////////////////////////////////////
     std::cout << "Time "<<time<<std::endl;
-    if( "mms" == initial)
+    for( auto record : shu::diagnostics1d_list)
     {
-        double R = file::get( mode, js, "init", "sigma", 0.1).asDouble();
-        double U = file::get( mode, js, "init", "velocity", 1).asDouble();
-        shu::MMSVorticity vortex( R, U, grid.ly(), time);
-        dg::DVec sol = dg::evaluate( vortex, grid);
-        dg::blas1::axpby( 1., y0, -1., sol);
-        double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
-        std::cout << "Analytic error to solution "<<error<<std::endl;
+        double result = record.function( var);
+        std::cout  << "Diagnostics "<<record.name<<" "<<result<<"\n";
     }
-    if( "sine" == initial)
-    {
-        double nu = 0.;
-        unsigned order = 1;
-        if( "viscosity" == regularization)
-        {
-            nu = file::get( mode, js, "regularization", "nu_perp", 1e-3).asDouble();
-            order = file::get( mode, js, "regularization", "order", 1).asUInt();
-        }
-        dg::DVec sol = dg::evaluate( [time,nu,order](double x, double y) {return 2*sin(x)*sin(y)*exp( -pow(2.*nu,order)*time);}, grid);
-        dg::blas1::axpby( 1., y0, -1., sol);
-        double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
-        std::cout << "Analytic error to solution "<<error<<std::endl;
-    }
-    std::cout << "Absolute vorticity error is: "<<dg::blas1::dot( w2d, y0) - vorticity << "\n";
-    std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
-    std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
-    shu.variation(shu.potential(), varphi);
-    std::cout << "Relative variation error is: "<<(0.5*dg::blas1::dot( varphi, w2d)-variation)/variation << std::endl;
 
     return 0;
 

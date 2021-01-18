@@ -295,6 +295,7 @@ path/to/feltor/src/shu/shu_b input.json
 
 \subsection{Output structure}
 Input file format: json
+
 We can either display the results in real-time to screen using the glfw3 library or
 write the results to a file in netcdf-4 format.
 This is regulated by the output paramters in the input file
@@ -317,18 +318,19 @@ Output file format: netcdf-4/hdf5
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &             text attribute & 1 & verbose input file as a string \\
-energy\_time             & Coord. Var. & 1 (energy\_time) & timesteps at which 1d variables are written \\
 time                     & Coord. Var. & 1 (time) & time at which fields are written \\
 x                        & Coord. Var. & 1 (x) & x-coordinate  \\
 y                        & Coord. Var. & 1 (y) & y-coordinate \\
-vorticity\_field         & Dataset & 3 (time, y, x) & electon density $n$ \\
+vorticity                & Dataset & 3 (time, y, x) & electon density $n$ \\
 potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
-vorticity                & Dataset & 1 (energy\_time) & Vorticity $V$  \\
-enstrophy                & Dataset & 1 (energy\_time) & Enstropy $\Omega$  \\
-energy                   & Dataset & 1 (energy\_time) & Total energy integral computed using $E = \int_D \phi\omega \dA$ \\
-variation                & Dataset & 1 (energy\_time) & Total energy integral computed directly $\int_D (\nabla \phi)^2$  \\
+vorticity\_1d            & Dataset & 1 (time) & Vorticity integral $V$  \\
+enstrophy\_1d            & Dataset & 1 (time) & Enstropy integral $\Omega$  \\
+energy\_1d               & Dataset & 1 (time) & Total energy integral computed using $E = \int_D \phi\omega \dA$ \\
+time\_per\_step          & Dataset & 1 (time) & Average time for one output \\
+error                    & Dataset & 1 (time) & Relative error to analytical solution if available, 0 else \\
 \bottomrule
 \end{longtable}
+The output fields are determined in the file \texttt{feltor/src/lamb\_dipole/diag.h}.
 
 %..................................................................
 \bibliography{../../doc/related_pages/references}
