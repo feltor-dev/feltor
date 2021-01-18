@@ -112,6 +112,30 @@ init &  dict &   & Parameters for initialization \\
 \qquad velocity   & float & 1 & The velocity $v$ \\
 \bottomrule
 \end{longtable}
+\subsection{Simple sine function}
+A simple sine function is given by
+\begin{align}
+    \omega(x,y,0) = 2 \sin(x)\sin(y)
+\end{align}
+which has an analytical solution
+\begin{align}
+\omega(x,y,t) = 2 \sin(x)\sin(y)\exp( -(2\nu)^s t)
+\end{align}
+if there is artificial viscosity and is invariant else.
+on the domain $[0,2\pi]\times [0,2\pi]$.
+
+This solution is chosen with the following parameters in the input file
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+grid & dict &  & Grid parameters \\
+\qquad x & float[2]& [0, 6.283185307179586] & Choose x box boundaries appropriately \\
+\qquad y & float[2]& [0, 6.283185307179586] & Choose y box boundaries appropriately \\
+\qquad bc & string[2] & [DIR, PER] & Choose boundary conditions appropriately \\
+init &  dict &   & Parameters for initialization \\
+\qquad type      & string & sine & No other parameters are necessary \\
+\bottomrule
+\end{longtable}
 
 \subsection{ Double Shear layer}
 Here, we follow~\cite{Liu2000} and test the scheme on a double shear layer problem.

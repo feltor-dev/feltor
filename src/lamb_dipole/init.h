@@ -123,6 +123,15 @@ std::map<std::string, std::function< dg::HVec(
             return omega;
         }
     },
+    {"sine", [](
+        Json::Value& js, enum file::error mode,
+        const dg::CartesianGrid2d& grid)
+        {
+            dg::HVec omega;
+            omega = dg::evaluate ( [](double x, double y) { return 2*sin(x)*sin(y);}, grid);
+            return omega;
+        }
+    },
     {"mms", [](
         Json::Value& js, enum file::error mode,
         const dg::CartesianGrid2d& grid)

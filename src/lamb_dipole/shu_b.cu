@@ -267,6 +267,20 @@ int main( int argc, char* argv[])
         double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
         std::cout << "Analytic error to solution "<<error<<std::endl;
     }
+    if( "sine" == initial)
+    {
+        double nu = 0.;
+        unsigned order = 1;
+        if( "viscosity" == regularization)
+        {
+            nu = file::get( mode, js, "regularization", "nu_perp", 1e-3).asDouble();
+            order = file::get( mode, js, "regularization", "order", 1).asUInt();
+        }
+        dg::DVec sol = dg::evaluate( [time,nu,order](double x, double y) {return 2*sin(x)*sin(y)*exp( -pow(2.*nu,order)*time);}, grid);
+        dg::blas1::axpby( 1., y0, -1., sol);
+        double error = dg::blas2::dot( sol, w2d, sol)/dg::blas2::dot( y0 , w2d, y0);
+        std::cout << "Analytic error to solution "<<error<<std::endl;
+    }
     std::cout << "Absolute vorticity error is: "<<dg::blas1::dot( w2d, y0) - vorticity << "\n";
     std::cout << "Relative enstrophy error is: "<<(0.5*dg::blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     std::cout << "Relative energy error    is: "<<(0.5*dg::blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
