@@ -1,0 +1,111 @@
+#pragma once
+
+#include "dg/algorithm.h"
+#include "dg/file/file.h"
+#include "shu.cuh"
+
+namespace shu{
+
+struct Variables{
+    shu::Shu<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec>& shu;
+    const dg::CartesianGrid2d& grid;
+    const dg::DVec& y0;
+    const double& time;
+    const dg::DVec& weights;
+    double duration;
+    enum file::error mode;
+    Json::Value& js;
+};
+
+struct Record1d{
+    std::string name;
+    std::string long_name;
+    std::function<double( Variables&)> function;
+};
+
+struct Record{
+    std::string name;
+    std::string long_name;
+    std::function<void( dg::DVec&, Variables&)> function;
+};
+
+std::vector<Record> diagnostics2d_list = {
+    {"vorticity_field", "Vorticity in 2d",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.y0, result);
+        }
+    },
+    {"potential", "stream function",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.shu.potential(), result);
+        }
+    },
+    {"vx", "Velocity in x",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas2::symv( -1., v.shu.dy(), v.shu.potential(), 0., result); //vx
+        }
+    },
+    {"vy", "Velocity in y",
+        []( dg::DVec& result, Variables& v ) {
+             dg::blas2::symv( +1., v.shu.dx(), v.shu.potential(), 0., result); //vy
+        }
+    }
+};
+
+std::vector<Record1d> diagnostics1d_list = {
+    {"vorticity", "Integrated Vorticity",
+        []( Variables& v ) {
+            return dg::blas1::dot(v.y0, v.weights);
+        }
+    },
+    {"enstrophy", "Integrated enstrophy",
+        []( Variables& v ) {
+            return 0.5*dg::blas2::dot( v.y0, v.weights, v.y0);
+        }
+    },
+    {"energy", "Integrated energy",
+        []( Variables& v ) {
+            return 0.5*dg::blas2::dot( v.y0, v.weights, v.shu.potential()) ;
+        }
+    },
+    {"time_per_step", "Computation time per step",
+        []( Variables& v ) {
+            return v.duration;
+        }
+    },
+    {"error", "Relative error to analytical solution (not available for every intitial condition)",
+        []( Variables& v ) {
+            std::string initial = file::get( v.mode, v.js, "init", "type", "lamb").asString();
+            if( "mms" == initial)
+            {
+                double R = file::get( v.mode, v.js, "init", "sigma", 0.1).asDouble();
+                double U = file::get( v.mode, v.js, "init", "velocity", 1).asDouble();
+                shu::MMSVorticity vortex( R, U, v.grid.ly(), v.time);
+                dg::DVec sol = dg::evaluate( vortex, v.grid);
+                dg::blas1::axpby( 1., v.y0, -1., sol);
+                return sqrt( dg::blas2::dot( sol, v.weights, sol)/dg::blas2::dot( v.y0 , v.weights, v.y0));
+            }
+            else if( "sine" == initial)
+            {
+                double nu = 0.;
+                unsigned order = 1;
+                std::string regularization = file::get( v.mode, v.js, "regularization", "type", "moddal").asString();
+                if( "viscosity" == regularization)
+                {
+                    nu = file::get( v.mode, v.js, "regularization", "nu_perp", 1e-3).asDouble();
+                    order = file::get( v.mode, v.js, "regularization", "order", 1).asUInt();
+                }
+                double time = v.time;
+                dg::DVec sol = dg::evaluate( [time,nu,order](double x, double y) {
+                    return 2.*sin(x)*sin(y)*exp( -pow(2.*nu,order)*time); },
+                    v.grid);
+                dg::blas1::axpby( 1., v.y0, -1., sol);
+                return sqrt( dg::blas2::dot( sol, v.weights, sol)/
+                             dg::blas2::dot( v.y0 , v.weights, v.y0));
+            }
+            return 0.;
+        }
+    }
+};
+
+}//namespace shu

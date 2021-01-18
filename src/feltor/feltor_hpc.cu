@@ -293,7 +293,7 @@ int main( int argc, char* argv[])
     }
     /// Set global attributes
     std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor_hpc.cu";
+    att["title"] = "Output file of feltor/src/feltor/feltor_hpc.cu";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
     auto ttt = std::time(nullptr);
@@ -304,7 +304,7 @@ int main( int argc, char* argv[])
     oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/feltor.tex";
+    att["comment"] = "Find more info in feltor/src/feltor/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
