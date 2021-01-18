@@ -20,7 +20,7 @@ We implement the 2d incompressible Euler equation
 \begin{subequations}
 \begin{align}
  \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = 0 \\
- -\Delta \phi = \omega
+ -\Delta \phi = \omega \label{eq:euler_poisson_elliptic}
 \end{align}
 \label{eq:euler_poisson}
 \end{subequations}
@@ -59,6 +59,23 @@ boundary conditions
 \end{align}
 Unfortunately, for a finite box this is not an exact solution any more.
 on the domain $[0,1]\times [0,1]$.
+The Lamb dipole is chosen with the following parameters in the input file
+%%This is a booktabs table
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+grid & dict &  & Grid parameters \\
+\qquad x & float[2]& [0,1] & Choose x box boundaries appropriately \\
+\qquad y & float[2]& [0,1] & Choose y box boundaries appropriately \\
+\qquad bc & string[2] & [PER, PER] & Choose boundary conditions [x,y] appropriately \\
+init &  dict &   & Parameters for initialization \\
+\qquad type      & string & lamb & This choice necessitates the following parameters \\
+\qquad velocity  & float &  1    &  blob speed \\
+\qquad sigma     & float &  0.1  & dipole radius in units of lx \\
+\qquad posX      & float &  0.5  & in units of lx \\
+\qquad posY      & float &  0.8  & in units of ly \\
+\bottomrule
+\end{longtable}
 \subsection{Manufactured Solution}
 We manufacture a solution via
 \begin{align}
@@ -70,16 +87,31 @@ which is solution to the modified equations
 \begin{subequations}
 \begin{align}
     \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = S(x,y,t) \\
- -\Delta \phi = \omega
+    -\Delta \phi = \omega
 \end{align}
-\label{eq:euler_poisson}
+\label{eq:euler_poisson_modified}
 \end{subequations}
 with the source
 \begin{align}
-    S(x,y,t) = 8 x \sigma^{-6}(y+vt)\exp\left( - 2\frac{ x^2 + (y+vt)^2}{\sigma^2} \right)\left(-\sigma^2  + \exp\left( \frac{ x^2 + (y+vt)^2}{\sigma^2} \right) v( -3\sigma^2 + x^2 + (y+vt)^2) \right)
+    S(x,y,t) =& 8 x \sigma^{-6}(y+vt)\exp\left( - 2\frac{ x^2 + (y+vt)^2}{\sigma^2} \right) \nonumber\\
+    &\left(-\sigma^2  + \exp\left( \frac{ x^2 + (y+vt)^2}{\sigma^2} \right) v( -3\sigma^2 + x^2 + (y+vt)^2) \right)
 \end{align}
 on the domain $[-1,1]\times [-1,1]$.
 
+The manufactured solution is chosen with the following parameters in the input file
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+grid & dict &  & Grid parameters \\
+\qquad x & float[2]& [-1,1] & Choose x box boundaries appropriately \\
+\qquad y & float[2]& [-1,1] & Choose y box boundaries appropriately \\
+\qquad bc & string[2] & [DIR, PER] & Choose boundary conditions appropriately \\
+init &  dict &   & Parameters for initialization \\
+\qquad type      & string & mms & This choice necessitates the following parameters \\
+\qquad sigma      & float & 0.2 & The width $\sigma$ \\
+\qquad velocity   & float & 1 & The velocity $v$ \\
+\bottomrule
+\end{longtable}
 
 \subsection{ Double Shear layer}
 Here, we follow~\cite{Liu2000} and test the scheme on a double shear layer problem.
@@ -92,24 +124,138 @@ Here, we follow~\cite{Liu2000} and test the scheme on a double shear layer probl
 where $\rho = \pi/15$ and $\delta =0.05$ on the domain $[0,2\pi]\times [0,2\pi]$.
 This solution will quickly roll-up and generate smaller and smaller scales.
 A thin shear layer corresponds to $\rho = \pi/50$ or smaller.
+The double shear layer initialization is chosen with the following parameters in the input file
+%%This is a booktabs table
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+grid & dict &  & Grid parameters \\
+\qquad x & float[2]& [0, 6.283185307179586] & Choose x box boundaries appropriately \\
+\qquad y & float[2]& [0, 6.283185307179586] & Choose y box boundaries appropriately \\
+\qquad bc & string[2] & [PER, PER] & Choose boundary conditions appropriately \\
+init &  dict &   & Parameters for initialization \\
+\qquad type      & string & shear & This choice necessitates the following parameters \\
+\qquad rho    & float & 0.20943951023931953 & The width $\rho = \pi/15$ \\
+\qquad delta  & float & 0.05 & The velocity $v$ \\
+\bottomrule
+\end{longtable}
 
 \section{Numerical methods}
 Our goal is to try out various time integration and advection discretization techniques.
 We know from Godunov's theorem
 that any linear advection scheme of order 2 or higher is prone to oscillations.
-\subsection{Forward time and centered space}
-It is well known that the forward in time, centered in space method for solving
-hyperbolic systems is unconditionally unstable~\cite{LeVeque}.
-\subsection{Arakawa scheme and centered flux}
-Reference~\cite{Liu2000} reports that the centered flux does not have any numerical
-diffusion while the upwind flux does.
-They also prove that upwind and centered fluxes do not dissipate energy.
-From finite differences we know that centered differences for the advection term
-are unstable (or at least produce a lot of oscillations).
-\subsection{Modal filters}
-\ldots
-\subsection{Artificial viscosity}
-\ldots
+\subsection{Spatial grid}
+The spatial grid is a two-dimensional Cartesian product-grid adaptable with the following parameters
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+grid & dict & & \\
+\qquad n  & integer & 3  & The number of polynomial coefficients \\
+\qquad Nx & integer & 48 & Number of cells in x \\
+\qquad Ny & integer & 48 & Number of cells in y \\
+\qquad  x & float[2]& [0,1] & Boundaries in x \\
+\qquad  y & float[2]& [0,1] & Boundaries in y \\
+\qquad bc & string[2] & [DIR, PER] & Boundary conditions in [x,y] \\
+\bottomrule
+\end{longtable}
+\subsection{Time steppers}
+Possible time-steppers are
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+timestepper & dict & & \\
+\qquad stepper  & string& Karniadakis & The \textit{dg::Karniadakis} class \\
+\qquad order    & float & 3 & Order of Karniadakis (1,2 or 3)\\
+\qquad dt       & float & 2e-3 & Fixed timestep \\
+\qquad eps\_time & float & 1e-9 & Accuracy requirement for implicit solver \\
+timestepper & dict & & \\
+\qquad stepper & string & Shu-Osher & The \textit{dg::ShuOsher} class \\
+\qquad order   & string & SSPRK-3-3 & Check dg documentation for possible values \\
+\qquad dt      & float & 1e-3 & Fixed Time-step \\
+timestepper & dict & & \\
+\qquad stepper & string & FilteredMultistep & The \textit{dg::FilteredExplicitMultistep} class \\
+\qquad order   & [string, integer] & [eBDF,3] & Check dg documentation for possible values \\
+\qquad dt      & float & 2e-3 & Fixed timestep \\
+\bottomrule
+\end{longtable}
+\subsection{Regularization technique}
+We support both artificial viscosity and modal filtering choosable by the following
+parameters in the input file
+For artificial viscosity Eqs.~\eqref{eq:euler_poisson} are modified to
+\begin{subequations}
+\begin{align}
+    \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = -(-\nu_\perp \Delta)^s \omega\\
+ -\Delta \phi = \omega
+\end{align}
+\label{eq:euler_poisson_viscous}
+\end{subequations}
+where $\nu_\perp$ is the viscosity coefficient and $s=1,2,3,\cdots$ is the order
+\begin{longtable}{lllp{7.5cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+regularization & dict & & \\
+\qquad type  & string& viscosity & Choosable only for \textbf{Karniadakis} timestepper (because it is solved implicitly) \\
+\qquad order    & integer & 2 & Order: 1 is normal diffusion, 2 is hyperdiffusion, can be arbitrarily high, but higher orders might take longer to solve \\
+\qquad nu\_perp    & float & 1e-3 & Viscosity coefficient \\
+\bottomrule
+\end{longtable}
+The other regularization method is the modal filter that applies an exponential filter
+\begin{align}
+    \begin{cases}
+    1 \text{ if } \eta < \eta_c \\
+    \exp\left( -\alpha  \left(\frac{\eta-\eta_c}{1-\eta_c} \right)^{2s}\right) \text { if } \eta \geq \eta_c \\
+    0 \text{ else} \\
+    \eta := \frac{i}{n-1}
+    \end{cases}
+\end{align}
+and is choosable with the following parameters
+\begin{longtable}{lllp{7.5cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+regularization & dict & & \\
+\qquad type  & string& modal & Not choosable for \textbf{Karniadakis} timestepper\\
+\qquad order & integer & 8 & Order: normally 8 or 16 \\
+\qquad eta\_c & float & 0.5 & cutoff wavelength below which no damping is applied \\
+\qquad alpha & float & 36 & damping coefficient determining damping for highest wavenumber \\
+\bottomrule
+\end{longtable}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Elliptic solver}
+Currently, the multigrid solver is the only one choosable
+to solve Eq.~\eqref{eq:euler_poisson_elliptic}
+\begin{longtable}{lllp{7.5cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+elliptic & dict & & \\
+\qquad type  & string& multigrid & Actually a nested iterations class \\
+\qquad stages    & integer & 3 & Number of stages (3 is best in virtually all cases) \\
+\qquad eps\_pol    & float[stages] & [1e-6,10,10] & Accuracy requirement on each stage of the multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
+\bottomrule
+\end{longtable}
+\subsection{Advection schemes}
+The following parameters control the advection scheme in the code
+\begin{longtable}{lllp{7.5cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+advection & dict & & \\
+\qquad type  & string& arakawa & Discretize Eqs.~\eqref{eq:euler_poisson} using Arakawa's scheme \cite{Einkemmer2014} \\
+\qquad type  & string& centered & Discretize Eqs.~\eqref{eq:euler_conservative} using the centered flux \\
+\qquad type  & string& upwind & Discretize Eqs.~\eqref{eq:euler_conservative} using the upwind flux \\
+\qquad multiplication    & string & pointwise & The multiplications in the scheme
+are done pointwise in nodal space\\
+\qquad multiplication    & string & projection & The multiplications in the scheme
+are done by first interpolating to a higher polynomial grid with $n_{fine} = 2n -1$, and projecting the result back to the coarse grid\\
+\bottomrule
+\end{longtable}
+%\subsection{Forward time and centered space}
+%It is well known that the forward in time, centered in space method for solving
+%hyperbolic systems is unconditionally unstable~\cite{LeVeque}.
+%\subsection{Arakawa scheme and centered flux}
+%Reference~\cite{Liu2000} reports that the centered flux does not have any numerical
+%diffusion while the upwind flux does.
+%They also prove that upwind and centered fluxes do not dissipate energy.
+%From finite differences we know that centered differences for the advection term
+%are unstable (or at least produce a lot of oscillations).
 
 \section{Compilation and useage}
 The program shu\_b.cu compiles with
@@ -123,20 +269,21 @@ Run with
 path/to/feltor/src/shu/shu_b input.json
 \end{verbatim}
 
-\subsection{Input file structure}
+\subsection{Output structure}
 Input file format: json
-
-%%This is a booktabs table
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+We can either display the results in real-time to screen using the glfw3 library or
+write the results to a file in netcdf-4 format.
+This is regulated by the output paramters in the input file
+\begin{longtable}{lllp{7cm}}
 \toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+output & dict & & \\
+\qquad type  & string& glfw & Use glfw to display results in a window while computing (requires to compile with the glfw3 library) \\
+\qquad type  & string& netcdf & Use netcdf to write results into a file (see next section for information about what is written in there) \\
+\qquad itstp  & integer& 4 & The number of steps between outputs of 2d fields \\
+\qquad maxout  & integer& 500 & The total number of field outputs. The endtime is T=itstp*maxout*dt \\
 \bottomrule
 \end{longtable}
-
-The default value is taken if the value name is not found in the input file. If there is no default and
-the value is not found,
-the program exits with an error message.
-
 \subsection{Structure of output file}
 Output file format: netcdf-4/hdf5
 %
