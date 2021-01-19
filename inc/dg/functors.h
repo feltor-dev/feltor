@@ -1116,8 +1116,21 @@ struct DPolynomialHeaviside {
  */
 struct ExponentialFilter
 {
-    ExponentialFilter( double alpha, double eta_c, unsigned s, unsigned n):
-        m_alpha(alpha), m_etac(eta_c), m_s(s), m_n(n) {}
+    /**
+     * @brief Create exponential filter \f$ \begin{cases}
+    1 \text{ if } \eta < \eta_c \\
+    \exp\left( -\alpha  \left(\frac{\eta-\eta_c}{1-\eta_c} \right)^{2s}\right) \text { if } \eta \geq \eta_c \\
+    0 \text{ else} \\
+    \eta := \frac{i}{n-1}
+    \end{cases}\f$
+     *
+     * @param alpha damping for the highest mode is \c exp( -alpha)
+     * @param eta_c cutoff frequency (0<eta_c<1), 0.5 or 0 are good starting values
+     * @param order 8 or 16 are good values
+     * @param n The number of polynomial coefficients
+     */
+    ExponentialFilter( double alpha, double eta_c, unsigned order, unsigned n):
+        m_alpha(alpha), m_etac(eta_c), m_s(order), m_n(n) {}
     double operator()( unsigned i) const
     {
         double eta = (double)i/(double)(m_n-1);

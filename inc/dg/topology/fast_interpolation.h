@@ -41,20 +41,8 @@ struct MultiMatrix
     */
     MultiMatrix( int dimension): inter_(dimension), temp_(dimension-1 > 0 ? dimension-1 : 0 ){}
 
-    template<class OtherMatrix, class OtherContainer>
-    MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src){
-        unsigned dimsM = src.get_matrices().size();
-        unsigned dimsT = src.get_temp().size();
-        inter_.resize( dimsM);
-        temp_.resize(  dimsT);
-        for( unsigned i=0; i<dimsM; i++)
-            inter_[i] = src.get_matrices()[i];
-        for( unsigned i=0; i<dimsT; i++)
-            dg::assign( src.get_temp()[i].data(), temp_[i].data());
-
-    }
-    template<class OtherMatrix, class OtherContainer, class ...Params>
-    void construct( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ...ps){
+    template<class OtherMatrix, class OtherContainer, class ... Params>
+    MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ... ps){
         unsigned dimsM = src.get_matrices().size();
         unsigned dimsT = src.get_temp().size();
         inter_.resize( dimsM);
@@ -63,6 +51,11 @@ struct MultiMatrix
             inter_[i] = src.get_matrices()[i];
         for( unsigned i=0; i<dimsT; i++)
             dg::assign( src.get_temp()[i].data(), temp_[i].data(), std::forward<Params>(ps)...);
+
+    }
+    template<class ...Params>
+    void construct( Params&& ...ps){
+        *this = MultiMatrix( std::forward<Params>(ps)...);
     }
 
 

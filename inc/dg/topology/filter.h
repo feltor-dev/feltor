@@ -132,26 +132,6 @@ struct ModalFilter
 {
     using real_type = get_value_type<ContainerType>;
     ModalFilter(){}
-
-    /**
-     * @brief Create exponential filter \f$ \begin{cases}
-    1 \text{ if } \eta < \eta_c \\
-    \exp\left( -\alpha  \left(\frac{\eta-\eta_c}{1-\eta_c} \right)^{2s}\right) \text { if } \eta \geq \eta_c \\
-    0 \text{ else} \\
-    \eta := \frac{i}{n-1}
-    \end{cases}\f$
-     *
-     * @tparam Topology Any grid
-     * @param alpha damping for the highest mode is \c exp( -alpha)
-     * @param eta_c cutoff frequency (0<eta_c<1), 0.5 or 0 are good starting values
-     * @param order 8 or 16 are good values
-     * @param t The topology to apply the modal filter on
-     * @sa dg::ExponentialFilter
-     */
-    template<class Topology>
-    ModalFilter( real_type alpha, real_type eta_c, unsigned order, const Topology& t):
-        ModalFilter( dg::ExponentialFilter( alpha, eta_c, order, t.n()), t)
-    { }
     /**
      * @brief Create arbitrary filter
      *
@@ -160,9 +140,9 @@ struct ModalFilter
      * @param f The filter to evaluate on the normalized modal coefficients
      * @param t The topology to apply the modal filter on
      */
-    template<class UnaryOp, class Topology>
-    ModalFilter( UnaryOp sigma, const Topology& t) : m_filter (
-            dg::create::modal_filter( sigma, t)) { }
+    template<class UnaryOp, class Topology, class ...Params>
+    ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) : m_filter (
+            dg::create::modal_filter( sigma, t), std::forward<Params>(ps)...) { }
 
     /**
     * @brief Perfect forward parameters to one of the constructors

@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
         double alpha = file::get( mode, js, "regularization", "alpha", 36).asDouble();
         double order = file::get( mode, js, "regularization", "order", 8).asDouble();
         double eta_c = file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
-        filter.construct( alpha, eta_c, order, grid);
+        filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
     }
     double dt = file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
     if( "Karniadakis" == stepper)
