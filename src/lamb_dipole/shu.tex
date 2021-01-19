@@ -203,8 +203,18 @@ timestepper & dict & & \\
 \bottomrule
 \end{longtable}
 \subsection{Regularization technique}
-We support both artificial viscosity and modal filtering choosable by the following
-parameters in the input file
+Choose either no regularization or artificial viscosity or modal filtering by the following
+parameters in the input file.
+
+For no regularization choose
+\begin{longtable}{lllp{7.5cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+regularization & dict & & \\
+\qquad type  & string& none & No regularization\\
+\bottomrule
+\end{longtable}
+
 For artificial viscosity Eqs.~\eqref{eq:euler_poisson} are modified to
 \begin{subequations}
 \begin{align}

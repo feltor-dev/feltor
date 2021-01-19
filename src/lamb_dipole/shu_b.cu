@@ -70,6 +70,8 @@ int main( int argc, char* argv[])
     std::string stepper = file::get( mode, js, "timestepper", "stepper", "FilteredMultistep").asString();
     std::string regularization = file::get( mode, js, "regularization", "type", "moddal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
+    dg::IdentityFilter id;
+    bool apply_filter = true;
     dg::Karniadakis<dg::DVec> karniadakis;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
@@ -80,12 +82,14 @@ int main( int argc, char* argv[])
         double eta_c = file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
         filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
     }
+    if( regularization == "none")
+        apply_filter = false;
     double dt = file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
     if( "Karniadakis" == stepper)
     {
         if( regularization != "viscosity")
         {
-            throw dg::Error(dg::Message(_ping_)<<"Warning! Karniadakis only works with viscosity regularization! Exit now!");
+            throw dg::Error(dg::Message(_ping_)<<"Error: Karniadakis only works with viscosity regularization! Exit now!");
 
             return -1;
         }
@@ -100,7 +104,10 @@ int main( int argc, char* argv[])
     else if( "FilteredMultistep" == stepper)
     {
         multistep.construct( "eBDF", 3, y0);
-        multistep.init( shu, filter, time, y0, dt);
+        if( apply_filter)
+            multistep.init( shu, filter, time, y0, dt);
+        else
+            multistep.init( shu, id, time, y0, dt);
     }
     else
     {
@@ -144,9 +151,19 @@ int main( int argc, char* argv[])
                     if( "Karniadakis" == stepper)
                         karniadakis.step( shu, diffusion, time, y0);
                     else if ( "FilteredMultistep" == stepper)
-                        multistep.step( shu, filter, time, y0);
+                    {
+                        if( apply_filter)
+                            multistep.step( shu, filter, time, y0);
+                        else
+                            multistep.step( shu, id, time, y0);
+                    }
                     else if ( "Shu-Osher" == stepper)
-                        shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                    {
+                        if( apply_filter)
+                            shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                        else
+                            shu_osher.step( shu, id, time, y0, time, y0, dt);
+                    }
                 }
             } catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -256,9 +273,19 @@ int main( int argc, char* argv[])
                 if( "Karniadakis" == stepper)
                     karniadakis.step( shu, diffusion, time, y0);
                 else if ( "FilteredMultistep" == stepper)
-                    multistep.step( shu, filter, time, y0);
+                {
+                    if( apply_filter)
+                        multistep.step( shu, filter, time, y0);
+                    else
+                        multistep.step( shu, id, time, y0);
+                }
                 else if ( "Shu-Osher" == stepper)
-                    shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                {
+                    if( apply_filter)
+                        shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                    else
+                        shu_osher.step( shu, id, time, y0, time, y0, dt);
+                }
             }
             step+=itstp;
             ti.toc();
