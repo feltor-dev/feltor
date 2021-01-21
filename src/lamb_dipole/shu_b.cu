@@ -242,12 +242,28 @@ int main( int argc, char* argv[])
             err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
                 long_name.data());
         }
+        // Output static vars
+        dg::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::HVec resultH( resultD);
+        for( auto& record : shu::diagnostics2d_static_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            int staticID = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
+                &staticID);
+            err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
+                long_name.data());
+            err = nc_enddef(ncid);
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            file::put_var_double( ncid, staticID, grid, resultH);
+            err = nc_redef(ncid);
+        }
         err = nc_enddef(ncid);
         size_t start[3] = {0, 0, 0};
         size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
         ///////////////////////////////////first output/////////////////////////
-        dg::DVec resultD = dg::evaluate( dg::zero, grid);
-        dg::HVec resultH( resultD);
         for( auto& record : shu::diagnostics2d_list)
         {
             record.function( resultD, var);

@@ -42,6 +42,19 @@ std::vector<Record> diagnostics2d_list = {
     },
 };
 
+std::vector<Record> diagnostics2d_static_list = {
+    { "xc", "x-coordinate in Cartesian coordinate system",
+        []( dg::DVec& result, Variables& v ) {
+            result = dg::evaluate( dg::cooX2d, v.grid);
+        }
+    },
+    { "yc", "y-coordinate in Cartesian coordinate system",
+        []( dg::DVec& result, Variables& v ) {
+            result = dg::evaluate( dg::cooY2d, v.grid);
+        }
+    }
+};
+
 std::vector<Record1d> diagnostics1d_list = {
     {"vorticity_1d", "Integrated Vorticity",
         []( Variables& v ) {
