@@ -20,7 +20,7 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
-    enum file::error mode = file::error::is_warning;
+    enum file::error mode = file::error::is_throw;
     if( argc == 1)
         file::file2Json( "input/default.json", js, file::comments::are_discarded);
     else
@@ -175,7 +175,7 @@ int main( int argc, char* argv[])
         }
         glfwTerminate();
     }
-    else
+    else if( "netcdf" == output)
 #endif //WITHOUT_GLFW
     {
         std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
@@ -331,6 +331,12 @@ int main( int argc, char* argv[])
             return -1;
         }
         err = nc_close(ncid);
+    }
+    else
+    {
+        throw dg::Error(dg::Message(_ping_)<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!");
+
+        return -1;
     }
     ////////////////////////////////////////////////////////////////////
     std::cout << "Time "<<time<<std::endl;
