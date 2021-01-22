@@ -21,9 +21,9 @@ struct SqrtCauchyIntOp
     ///@brief empty object ( no memory allocation)
     SqrtCauchyIntOp() {}
     /**
-     * @brief Construct operator \f[ (-w^2 I -A) \f] in cauchy formula
+     * @brief Construct operator \f[ (-w^2 I -V A) \f] in cauchy formula
      *
-     * @param A Helmholtz operator
+     * @param A Helmholtz operator (not normed and symmetric)
      * @param g The grid to use
      */
     SqrtCauchyIntOp( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g):   
@@ -117,7 +117,7 @@ struct CauchySqrtInt
      *
      * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi iter} V A \sum_{j=1}{iter} (w^2 I -V A)^{-1} cn dn  x \f]
      * @param y  is \f[ y\f]
-     * @param b is \f[ b\approx \sqrt{A} x\f]
+     * @param b is \f[ b\approx \sqrt{V A} x\f]
      * @note The Jacobi elliptic functions are related to the Mathematica functions via jacobi_cn(k,u ) = JacobiCN_(u,k^2), ... and the complete elliptic integral of the first kind via comp_ellint_1(k) = EllipticK(k^2) 
      */
     void operator()(const Container& x, Container& b, const value_type& minEV, const value_type& maxEV, const unsigned& iter)
@@ -230,7 +230,7 @@ struct SqrtCauchyIntOpT
     /**
      * @brief Compute operator
      *
-     * i.e. \f[ y= W (w^2 I +V A)*x \f]
+     * i.e. \f[ y=  (w^2 I + A)*x \f]
      * @param x left-hand-side
      * @param y result
      */ 
@@ -299,7 +299,7 @@ struct CauchySqrtIntT
     /**
      * @brief Compute rhs term (including inversion of lhs) 
      *
-     * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi iter} T \sum_{j=1}{iter} (w^2 I -T)^{-1} cn dn  x \f]
+     * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi iter} T \sum_{j=1}{iter} (w^2 I -A)^{-1} cn dn  x \f]
      * @param y  is \f[ y\f]
      * @param b is \f[ b\approx \sqrt{A} x\f]
      * @note The Jacobi elliptic functions are related to the Mathematica functions via jacobi_cn(k,u ) = JacobiCN_(u,k^2), ... and the complete elliptic integral of the first kind via comp_ellint_1(k) = EllipticK(k^2) 

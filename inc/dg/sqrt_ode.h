@@ -13,7 +13,7 @@
  * @ingroup matrixoperators
  *
  * Unnormed discretization of \f[ ((t-1) I -t V A)*x \f]
- * where \f[ A\f] is a helmholtz operator and t is the time.
+ * where \f[ A\f] is the (not normed) helmholtz operator and t is the time.
  */
 template< class Geometry, class Matrix, class Container>
 struct Lhs
@@ -28,7 +28,7 @@ struct Lhs
     /**
      * @brief Construct Lhs operator
      *
-     * @param A Helmholtz operator
+     * @param A Helmholtz operator (not normed and symmetric)
      * @param g The grid to use
      */
     Lhs( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g):   
@@ -88,10 +88,10 @@ struct Lhs
 
 
 /**
- * @brief Rhs of the square root ODE \f[ \dot{y}= \left[(t-1) I -t V A\right]^{-1} *(I - A)/2 * y \f]
+ * @brief Rhs of the square root ODE \f[ \dot{y}= \left[(t-1) I -t V A\right]^{-1} *(I - V A)/2 * y \f]
  *
- * where \f[ A\f] is a helmholtz operator and t is the time
- * @note Solution of ODE: \f[ y(1) = \sqrt{A} y(0)\f]
+ * where \f[ A\f] is the not normed Helmholtz operator and t is the time
+ * @note Solution of ODE: \f[ y(1) = \sqrt{V A} y(0)\f]
  */
 template<class Geometry, class Matrix, class Container>
 struct Rhs
@@ -104,7 +104,7 @@ struct Rhs
     /**
      * @brief Construct Rhs operator
      *
-     * @param A Helmholtz operator
+     * @param A Helmholtz operator (not normed and symmetric)
      * @param g The grid to use
      * @param eps Accuarcy for CG solve
      */
@@ -117,10 +117,10 @@ struct Rhs
     /**
      * @brief Compute rhs term (including inversion of lhs) 
      *
-     * i.e. \f[ yp= ((t-1) I -t V A)^{-1} *(I - A)/2 * y \f]
+     * i.e. \f[ yp= ((t-1) I -t V A)^{-1} *(I - V A)/2 * y \f]
      * @param y  is \f[ y\f]
      * @param yp is \f[ \dot{y}\f]
-     * @note Solution of ODE: \f[ y(1) = \sqrt{A} y(0)\f]
+     * @note Solution of ODE: \f[ y(1) = \sqrt{V A} y(0)\f]
      */
     void operator()(value_type t, const Container& y, Container& yp)
     {
@@ -128,7 +128,7 @@ struct Rhs
         dg::blas1::pointwiseDot(m_lhs.inv_weights(), m_helper, m_helper); //make normed
         dg::blas1::axpby(0.5, y, -0.5, m_helper); //m_helper = 1/2 y - 1/2 V A y //is normed
         m_lhs.set_time(t);
-        m_invert( m_lhs, yp, m_helper); // ( (t-1)  - A t ) yp = (1-A)/2 y
+        m_invert( m_lhs, yp, m_helper); // ( (t-1)  - V A t ) yp = (1-V A)/2 y
     }
   private:
     Container m_helper;
