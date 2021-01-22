@@ -173,13 +173,29 @@ struct SqrtCauchyIntOpT
      * @param T Symmetric tridiagonal matrix
      * @param copyable to get the size of the vectors
      */
-    SqrtCauchyIntOpT( const Matrix& T, const Container& copyable):   
-        m_A(T),
-        m_one(copyable)
+    SqrtCauchyIntOpT( const Matrix& T, const Container& copyable)
     { 
+        construct(T, copyable);
+    }
+    void construct( const Matrix& T, const Container& copyable)
+    {
+        m_A = T;
+        m_one = copyable;
         dg::blas1::scal(m_one,0.);
         dg::blas1::plus(m_one,1.0);
         m_w=0.0;
+        m_size = copyable.size();
+    }
+    /**
+     * @brief Resize matrix T and vectors weights
+     *
+     * @param T Matrix
+     */    
+    void new_size( unsigned new_max) { 
+        m_one.resize(new_max);
+        m_size = new_max;
+        dg::blas1::scal(m_one,0.);
+        dg::blas1::plus(m_one,1.0);
     }
     /**
      * @brief Return the weights of the Helmholtz operator
@@ -228,6 +244,8 @@ struct SqrtCauchyIntOpT
     Matrix m_A;
     Container m_one;
     value_type m_w;
+    unsigned m_size;
+
 };
 
 template<class Matrix, class Container>
@@ -237,6 +255,7 @@ struct CauchySqrtIntT
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
+    CauchySqrtIntT() {}
     /**
      * @brief Construct Rhs operator
      *
@@ -244,13 +263,29 @@ struct CauchySqrtIntT
      * @param copyable copyable container
      * @param eps Accuarcy for CG solve
      */
-    CauchySqrtIntT( const Matrix& A, const Container& copyable, value_type eps):
-         m_helper(copyable),
-         m_helper2(copyable),
-         m_A(A),
-         m_op(m_A, copyable),
-         m_invert( m_helper, copyable.size()*copyable.size(), eps, 1, false, 1.) //weights not multiplied on rhs
+    CauchySqrtIntT( const Matrix& T, const Container& copyable, value_type eps)
     {
+        construct(T, copyable, eps);
+    }
+    void construct(const Matrix& T,  const Container& copyable,  value_type eps) 
+    {
+         m_helper = m_helper2 = copyable;
+         m_A = T;
+         m_size = copyable.size();
+         m_op.construct(T, copyable);
+         m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.); //weights not multiplied on rhs
+    }
+    /**
+     * @brief Resize matrix T and vectors weights
+     *
+     * @param T Matrix
+     */    
+    void new_size( unsigned new_max) { 
+        m_helper.resize(new_max);
+        m_helper2.resize(new_max);
+        m_invert.set_size(m_helper, new_max*new_max);
+        m_op.new_size(new_max);
+        m_size = new_max;
     }
     /**
      * @brief Set the Matrix T
@@ -301,6 +336,7 @@ struct CauchySqrtIntT
     Container m_helper, m_helper2;
     Matrix m_A;
     SqrtCauchyIntOpT<Matrix, Container> m_op;
+    unsigned m_size;
     dg::Invert<Container> m_invert;
 };
 

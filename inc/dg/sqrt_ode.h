@@ -63,7 +63,7 @@ struct Lhs
      *
      * @param time the time
      */
-    void set_time( const double& time) { t=time; }   
+    void set_time( const value_type& time) { t=time; }   
     /**
      * @brief Compute Lhs term and store in output
      *
@@ -83,7 +83,7 @@ struct Lhs
     Container m_helper;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
-    double t;
+    value_type t;
 };
 
 
@@ -122,7 +122,7 @@ struct Rhs
      * @param yp is \f[ \dot{y}\f]
      * @note Solution of ODE: \f[ y(1) = \sqrt{A} y(0)\f]
      */
-    void operator()(double t, const Container& y, Container& yp)
+    void operator()(value_type t, const Container& y, Container& yp)
     {
         dg::blas2::symv(m_A, y, m_helper);  //m_helper = A y
         dg::blas1::pointwiseDot(m_lhs.inv_weights(), m_helper, m_helper); //make normed
@@ -163,9 +163,25 @@ struct LhsT
         m_A =T;
         m_one = copyable;
         t = 0.0;
+        m_size = copyable.size();
         dg::blas1::scal(m_one,0.);
         dg::blas1::plus(m_one,1.0);
     }
+    /**
+     * @brief Resize matrix T and vectors weights
+     *
+     * @param new_max new size of vectors
+     * 
+     */    
+    void new_size( unsigned new_max) { 
+        m_one.resize(new_max);
+        m_size = new_max;
+        dg::blas1::scal(m_one,0.);
+        dg::blas1::plus(m_one,1.0);
+    }
+    ///@brief Get the current size of vectors
+    ///@return the current vector size
+    unsigned get_size() const {return m_size;}
     /**
      * @brief Return the weights
      * 
@@ -189,13 +205,15 @@ struct LhsT
      *
      * @param T Matrix
      */
-    void set_T( const Matrix& T) { m_A=T; }  
+    void set_T( const Matrix& T) {
+        m_A=T;
+    }  
     /**
      * @brief Set the time t
      *
      * @param time the time
      */
-    void set_time( const double& time) { t=time; }   
+    void set_time( const value_type& time) { t=time; }   
     /**
      * @brief Compute Lhs term and store in output
      *
@@ -211,7 +229,8 @@ struct LhsT
   private:
     Matrix m_A;
     Container m_one;
-    double t;
+    value_type t;
+    unsigned m_size;
 };
 /**
  * @brief Rhs of the square root ODE \f[ \dot{y}= \left[(t-1) I -t T\right]^{-1} *(I - A)/2 * y \f]
@@ -236,10 +255,6 @@ struct RhsT
      * @param eps Accuarcy for CG solve
      */
     RhsT( const Matrix& T,  const Container& copyable,  value_type eps)
-//          m_helper( copyable),
-//          m_A(T),
-//          m_lhs(m_A, copyable),
-//          m_invert( m_helper, copyable.size()*copyable.size(), eps, 1, false, 1.) //weights not multiplied on rhs
     {
         construct(T, copyable, eps);
     }
@@ -248,8 +263,23 @@ struct RhsT
          m_helper = copyable;
          m_A = T;
          m_lhs.construct(m_A, copyable);
-         m_invert.construct( m_helper, copyable.size()*copyable.size(), eps, 1, false, 1.); //weights not multiplied on rhs
+         m_size = copyable.size();
+         m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.); //weights not multiplied on rhs
     }
+    /**
+     * @brief Resize matrix and set T and vectors and set new size
+     *
+     * @param T Matrix
+     */
+     void new_size( unsigned new_max) { 
+        m_helper.resize(new_max);
+        m_invert.set_size(m_helper, new_max*new_max);
+        m_lhs.new_size(new_max);
+        m_size = new_max;
+    } 
+    ///@brief Get the current size of vectors
+    ///@return the current vector size
+    unsigned get_size() const {return m_size;}
     /**
      * @brief Set the Matrix T
      *
@@ -267,7 +297,7 @@ struct RhsT
      * @param yp is \f[ \dot{y}\f]
      * @note Solution of ODE: \f[ y(1) = \sqrt{T} y(0)\f]
      */
-    void operator()(double t, const Container& y, Container& yp)
+    void operator()(value_type t, const Container& y, Container& yp)
     {
         dg::blas2::symv(m_A, y, m_helper);  //m_helper = A y //is not normed
         dg::blas1::axpby(0.5, y, -0.5, m_helper); //m_helper = 1/2 y - 1/2  A y 
@@ -278,14 +308,14 @@ struct RhsT
     Container m_helper;
     Matrix m_A;
     LhsT<Matrix, Container> m_lhs;
+    unsigned m_size;
     dg::Invert<Container> m_invert;
-
 };
 
 /**
  * @brief Rhs of the square root ODE \f[ \dot{y}= \left[(t-1) I -t T\right]^{-1} *(I - A)/2 * y \f]
  *
- * where \f[ T\f] is a symmetric tridiagonal matrix
+ * where \f[ T\f] is a asymmetric tridiagonal matrix
  * @note Solution of ODE: \f[ y(1) = \sqrt{T} y(0)\f]
  * @note Todo: Compute inverse analytically
  */
@@ -329,7 +359,7 @@ struct RhsTasym
      * @param yp is \f[ \dot{y}\f]
      * @note Solution of ODE: \f[ y(1) = \sqrt{T} y(0)\f]
      */
-    void operator()(double t, const Container& y, Container& yp)
+    void operator()(value_type t, const Container& y, Container& yp)
     {
         dg::blas2::symv(m_A, y, m_helper);  //m_helper = A y //is not normed
         dg::blas1::axpby(0.5, y, -0.5, m_helper); //m_helper = 1/2 y - 1/2  A y 

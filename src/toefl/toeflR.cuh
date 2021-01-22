@@ -1,6 +1,5 @@
 #pragma once
 #include <exception>
-
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "dg/matrixsqrt.h"
@@ -11,7 +10,9 @@ template<class Geometry, class Matrix, class container>
 struct Implicit
 {
     Implicit( const Geometry& g, double nu):
-        nu_(nu), LaplacianM_perp( g, dg::normed, dg::centered){ }
+        nu_(nu),     
+        temp( dg::evaluate(dg::zero, g)),
+        LaplacianM_perp( g, dg::normed, dg::centered){ }
     void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
@@ -19,9 +20,9 @@ struct Implicit
          */
         for( unsigned i=0; i<x.size(); i++)
         {
-            //dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-            //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            //dg::blas1::axpby( -nu_, y[i], 0., y[i]);
+//             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+//             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+//             dg::blas1::scal( y[i], -nu_);
             dg::blas2::gemv( -nu_, LaplacianM_perp, x[i], 0., y[i]);
         }
     }
@@ -72,7 +73,8 @@ struct Explicit
 
     void initgammasqne( const container& y, container& yp)
     {
-            krylovsqrtodesolve(y, yp); //multiply v2d?  
+//             krylovsqrtodesolve(y, yp); 
+        krylovsqrtcauchysolve(y, yp,10); 
     }
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -130,7 +132,8 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
-    KrylovSqrtODESolve<Geometry, Matrix, cusp::dia_matrix<int, dg::get_value_type<container>, cusp::device_memory>, cusp::coo_matrix<int, dg::get_value_type<container>, cusp::device_memory>, container> krylovsqrtodesolve;
+//     KrylovSqrtODESolve<Geometry, Matrix, cusp::dia_matrix<int, dg::get_value_type<container>, cusp::device_memory>, cusp::coo_matrix<int, dg::get_value_type<container>, cusp::device_memory>, container> krylovsqrtodesolve;
+    KrylovSqrtCauchySolve<Geometry, Matrix, cusp::dia_matrix<int, dg::get_value_type<container>, cusp::device_memory>, cusp::coo_matrix<int, dg::get_value_type<container>, cusp::device_memory>, container> krylovsqrtcauchysolve;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
@@ -179,7 +182,8 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
         }    
             
     }
-    krylovsqrtodesolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  1e-10,1e-10, 1e-14, 17);
+//     krylovsqrtodesolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 1e-10, 1e-14, 500, p.eps_gamma);
+    krylovsqrtcauchysolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 500, p.eps_gamma);
 }
 
 template< class G, class M, class container>
@@ -290,7 +294,6 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     }
     else if( equations == "arbpolO2" )
     {
-        //TODO
         dg::blas1::transfer( y[1], chi);
         dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
@@ -299,25 +302,20 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         for( unsigned u=0; u<3; u++) multi_pol[u].set_chi( multi_chi[u]);
         
         //Compute G^{-1} n_e via LanczosSqrtODE solve
-        krylovsqrtodesolve(y[0], gamma_n); //multiply v2d?  is already normalized?
-//         dg::blas2::symv( v2d, gamma_n, gamma_n);
-
+//         krylovsqrtodesolve(y[0], gamma_n); 
+        krylovsqrtcauchysolve(y[0], gamma_n, 10); 
         dg::blas1::axpby(1.,y[1],  -1., gamma_n, omega);  //- G^{-1} n_e + N_i    
 
-        std::cout << "norm =0? " << dg::blas2::dot(w2d,omega) << "\n";
-        //Solve G^{-1} n_e - N_i = nabla. (chi nabla gamma_phi) for gamma_phi 
-
-        
+        //Solve G^{-1} n_e - N_i = nabla. (chi nabla gamma_phi) for gamma_phi         
         old_gamma_phi.extrapolate(t, gamma_phi);
         std::vector<unsigned> number = multigrid.direct_solve( multi_pol, gamma_phi, omega, eps_pol);
         old_gamma_phi.update( t, gamma_phi);
         if(  number[0] == multigrid.max_iter())
             throw dg::Fail( eps_pol);
-        std::cout << "norm =0? " << dg::blas2::dot(w2d,omega) << "\n";
 
         //Compute \phi = G^{-1} \gamma_phi via LanczosSqrtODE solve
-        krylovsqrtodesolve(gamma_phi, phi[0]); //multiply v2d?  is already normalized?      
-//         dg::blas2::symv( v2d, phi[0], phi[0]);
+//         krylovsqrtodesolve(gamma_phi, phi[0]); 
+        krylovsqrtcauchysolve(gamma_phi, phi[0], 10);      
 
     }
     else {

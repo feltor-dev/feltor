@@ -184,11 +184,11 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 #ifdef MPI_VERSION
         if(rank==0)
 #endif //MPI
-        {
-            std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
-            std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-            std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
-        }
+//         {
+//             std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
+//             std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+//             std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+//         }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction))
             return i;
@@ -210,10 +210,10 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank==0)
 #endif //MPI
-    {
-    std::cout << "# Norm of S b "<<nrmb <<"\n";
-    std::cout << "# Residual errors: \n";
-    }
+//     {
+//     std::cout << "# Norm of S b "<<nrmb <<"\n";
+//     std::cout << "# Residual errors: \n";
+//     }
 #endif //DG_DEBUG
 
 
@@ -242,11 +242,11 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 #ifdef MPI_VERSION
             if(rank==0)
 #endif //MPI
-            {
-                std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-                std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-                std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
-            }
+//             {
+//                 std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+//                 std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+//                 std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+//             }
 #endif //DG_DEBUG
                 if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
                     return i;

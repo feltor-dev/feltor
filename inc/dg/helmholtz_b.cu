@@ -33,12 +33,15 @@ int main()
     const dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.);
     //dg::DVec x(rho);
+    dg::Timer t;
 
     dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1( grid, alpha, dg::centered);
-
+    t.tic();
+    dg::blas2::symv(gamma1, sol, x);
+    t.toc();
+    std::cout << "symv1 took "<< t.diff()<<"s\n";
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);
-    dg::Timer t;
     t.tic();
     unsigned number = cg( gamma1, x, rho, v2d, eps);
     t.toc();

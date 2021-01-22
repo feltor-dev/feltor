@@ -8,7 +8,9 @@
 #include "sqrt_cauchy.h"
 #include "sqrt_ode.h"
 
-#include <cusp/print.h>
+#ifdef DG_BENCHMARK
+#include "backend/timer.h"
+#endif //DG_BENCHMARK
 
 ///@brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve directly via sqrt ODE solve with adaptive ERK class as timestepper
 template< class Geometry, class Matrix, class Container>
@@ -70,30 +72,35 @@ struct KrylovSqrtODESolve
      *
      * @param A Helmholtz operator
      * @param g grid
-     * @param epsCG accuracy of conjugate gradient solver
+     * @param epsCG accuracy of conjugate gradient solver in adaptive ODE solver
      * @param epsTimerel relative accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
      * @param epsTimeabs absolute accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
+     * @param max_iterations max number of iterations
+     * @param eps accuracy of Lanczos method
      */
-    KrylovSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned iter)  
+    KrylovSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned max_iterations, value_type eps)  
     { 
-        construct(A, g, copyable, epsCG, epsTimerel, epsTimeabs, iter);
+        construct(A, g, copyable, epsCG, epsTimerel, epsTimeabs, max_iterations, eps);
     }
-    void construct( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned iter)
+    void construct( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned max_iterations, value_type eps)
     {      
         m_A = A;
+        m_epsCG = epsCG;
         m_epsTimerel = epsTimerel;
         m_epsTimeabs = epsTimeabs;
+        m_max_iter = max_iterations;
+        m_eps = eps;
         m_xnorm = 0.;
-        m_e1.assign(iter, 0.);
+        m_e1.assign(max_iterations, 0.);
         m_e1[0] = 1.;
-        m_y.assign(iter, 1.);
-        m_T.resize(iter, iter, 3*iter-2, 3);
+        m_y.assign(max_iterations, 1.);
+        m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
         m_T.diagonal_offsets[0] = -1;
         m_T.diagonal_offsets[1] =  0;
         m_T.diagonal_offsets[2] =  1;
-        m_V.resize(copyable.size(), iter, iter*copyable.size());
+        m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_rhs.construct(m_T, m_e1, epsCG);
-        m_lanczos.construct(copyable, iter);
+        m_lanczos.construct(copyable, max_iterations);
     }
     /**
      * @brief Compute \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f] via sqrt ODE solve.
@@ -106,32 +113,53 @@ struct KrylovSqrtODESolve
     unsigned operator()(const Container& x, Container& b)
     {
         //Lanczos solve first         
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
         m_xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
         if( m_xnorm == 0)
         {
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights()); 
+        m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
         m_T = m_TVpair.first; 
         m_V = m_TVpair.second;   
-        //update T
-        m_rhs.set_T(m_T);
-        
+        m_e1.resize(m_lanczos.get_iter(),0);
+        m_e1[0] = 1.;
+        m_y.resize( m_lanczos.get_iter());
+        m_rhs.new_size(m_lanczos.get_iter()); //resize  vectors in sqrtODE solver
+        m_rhs.set_T(m_T); //set T in sqrtODE solver
+
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
         dg::blas2::symv(m_V, m_y, b);
-        dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1     
+        dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1    
+#ifdef DG_BENCHMARK
+        t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        {
+            std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+        }
+#endif //DG_BENCHMARK
+        //reset max iterations if () operator is called again
+        m_lanczos.set_iter(m_max_iter);
         return counter;
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
-    value_type m_epsTimerel, m_epsTimeabs, m_xnorm;
+    unsigned m_max_iter;
+    value_type m_epsCG,m_epsTimerel, m_epsTimeabs, m_xnorm, m_eps;
     Container m_e1, m_y;
     RhsT<DiaMatrix, Container> m_rhs;  
     dg::Lanczos< Container > m_lanczos;
     DiaMatrix m_T; 
     CooMatrix m_V;
-    std::pair<DiaMatrix, CooMatrix> m_TVpair; 
+    std::pair<DiaMatrix, CooMatrix> m_TVpair;     
 };
 
 /*! 
@@ -152,17 +180,31 @@ struct KrylovSqrtCauchySolve
      * @param A Helmholtz operator
      * @param g grid
      * @param epsCG accuracy of conjugate gradient solver
-     * @param iter Iterations of Lanczos method
+     * @param max_iterations Max iterations of Lanczos method
      */
-    KrylovSqrtCauchySolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable, value_type epsCG, unsigned iter):   
-        m_A(A),
-        m_xnorm(0.),
-        m_e1(iter, 0.),
-        m_y(iter, 1.),
-        m_cauchysqrt(m_T, m_e1, epsCG),
-        m_lanczos(copyable, iter)
+    KrylovSqrtCauchySolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable, value_type epsCG, unsigned max_iterations, value_type eps)
     { 
-        m_e1[0]=1.;
+        construct(A, g, copyable, epsCG, max_iterations, eps);
+    }
+    void construct( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, unsigned max_iterations, value_type eps)
+    {      
+        m_A = A;
+        m_max_iter = max_iterations;
+        m_eps = eps;
+        m_xnorm = 0.;
+        m_e1.assign(max_iterations, 0.);
+        m_e1[0] = 1.;
+        m_y.assign(max_iterations, 1.);
+        m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
+        m_T.diagonal_offsets[0] = -1;
+        m_T.diagonal_offsets[1] =  0;
+        m_T.diagonal_offsets[2] =  1;
+        m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_cauchysqrt.construct(m_T, m_e1, epsCG);
+        m_lanczos.construct(copyable, max_iterations);
+        value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
+        m_EVmin = 1.-A.alpha()*hxhy*(1+1);
+        m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
     }
     /**
      * @brief Compute \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f] via sqrt ODE solve.
@@ -173,129 +215,61 @@ struct KrylovSqrtCauchySolve
      * 
      * @return number of time steps in sqrt ODE solve
      */    
-    void operator()(const Container& x, Container& b, const unsigned& iterCauchy)
+    unsigned operator()(const Container& x, Container& b, const unsigned& iterCauchy)
     {
         //Lanczos solve first         
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
         m_xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
-        m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights()); 
+        if( m_xnorm == 0)
+        {
+            dg::blas1::copy( x,b);
+            return 0;
+        }
+        m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
+        //for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
         m_T = m_TVpair.first; 
         m_V = m_TVpair.second;   
-        //update T
-        m_cauchysqrt.set_T(m_T);
-        m_cauchysqrt(m_e1, m_y, 1. ,10., iterCauchy); //(minEV, maxEV) estimated to (1, 10) - seems to work
-        
+        m_e1.resize(m_lanczos.get_iter(),0);
+        m_e1[0]=1.;
+        m_y.resize(m_lanczos.get_iter());        
+
+        m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy sqrt solver
+        m_cauchysqrt.set_T(m_T);         //set T in cauchy sqrt solver
+#ifdef DG_DEBUG
+        std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
+#endif //DG_DEBUG
+        m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
         dg::blas2::gemv(m_V, m_y, b);
         dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1     
+#ifdef DG_BENCHMARK
+        t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        {
+            std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+        }
+#endif //DG_BENCHMARK
+        //reset max iterations if () operator is called again
+        m_lanczos.set_iter(m_max_iter);
+        return iterCauchy;
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
-    value_type m_xnorm;
+    unsigned m_max_iter;
+    value_type m_eps, m_xnorm, m_EVmin, m_EVmax;
     Container m_e1, m_y;
-    CauchySqrtIntT<DiaMatrix, Container> m_cauchysqrt;  
-    dg::Lanczos< Container > m_lanczos;
     DiaMatrix m_T; 
     CooMatrix m_V;
     std::pair<DiaMatrix, CooMatrix> m_TVpair; 
+    CauchySqrtIntT<DiaMatrix, Container> m_cauchysqrt;  
+    dg::Lanczos< Container > m_lanczos;
 };
-
-    
-    
-/**
-* @brief Functor class for computing the inverse of a general tridiagonal matrix 
-*/
-template< class ContainerType>
-class InvTridiag
-{
-  public:
-    using container_type = ContainerType;
-    using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using coo_type =  cusp::coo_matrix<int, value_type, cusp::host_memory>;
-    ///@brief Allocate nothing, Call \c construct method before usage
-    InvTridiag(){}
-    //Constructor
-    InvTridiag(const std::vector<value_type>& copyable) 
-    {
-        phi.assign(copyable.size()+1,0.);
-        theta.assign(copyable.size()+1,0.);
-        Tinv.resize(copyable.size(), copyable.size(),  copyable.size()* copyable.size());
-        temp = 0.;
-    }
-
-    void resize(unsigned new_size) {
-        phi.resize(new_size+1);
-        theta.resize(new_size+1);
-        Tinv.resize(new_size, new_size, new_size*new_size);
-    }
-     /**
-     * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
-     * 
-     * @param a  "0" diagonal vector
-     * @param b "+1" diagonal vector (starts with index 0 to (size of b)-1)
-     * @param c "-1" diagonal vector (starts with index 0 to (size of c)-1)
-     * 
-     * @return the inverse of the tridiagonal matrix (coordinate format)
-     */
-    template<class ContainerType0>
-    coo_type operator()(const ContainerType0& a, const ContainerType0& b,  const ContainerType0& c)
-    {
-
-        //Compute theta and phi
-        unsigned is=0;
-        for( unsigned i = 0; i<theta.size(); i++)
-        {   
-            is = (theta.size() - 1) - i;
-            if (i==0) 
-            {   
-                theta[0] = 1.; 
-                phi[is]  = 1.;
-            }
-            else if (i==1) 
-            {
-                theta[1] = a[0]; 
-                phi[is]  = a[is];
-            }
-            else
-            {
-                theta[i] = a[i-1] * theta[i-1] - b[i-2] * c[i-2] * theta[i-2];
-                phi[is]  = a[is]  * phi[is+1]  - b[is]  * c[is]  * phi[is+2];
-            }
-        }
-
-        //Compute inverse tridiagonal matrix elements
-        unsigned counter = 0;
-        for( unsigned i=0; i<a.size(); i++)
-        {   
-            for( unsigned j=0; j<a.size(); j++)
-            {   
-                Tinv.row_indices[counter]    = j;
-                Tinv.column_indices[counter] = i; 
-                temp=1.;
-                if (i<j) {
-                    for (unsigned k=i; k<j; k++) temp*=b[k];
-                    Tinv.values[counter] =temp*pow(-1,i+j) * theta[i] * phi[j+1]/theta[a.size()];
-                    
-                }
-                else if (i==j)
-                {
-                    Tinv.values[counter] =theta[i] * phi[j+1]/theta[a.size()];
-                }   
-                else // if (i>j)
-                {
-                    for (unsigned k=j; k<i; k++) temp*=c[k];           
-                    Tinv.values[counter] =temp*pow(-1,i+j) * theta[j] * phi[i+1]/theta[a.size()];
-
-                }
-                counter++;
-            }
-        }
-        return Tinv;
-    }
-  private:
-    std::vector<value_type> phi, theta;
-    coo_type Tinv;    
-    value_type temp;
-};
-
 
 /*! 
  * @brief Shortcut for \f[x \approx \sqrt{A}^{-1} b  \f] solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
@@ -308,7 +282,7 @@ class CGsqrt
   public:
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using coo_type =  cusp::coo_matrix<int, value_type, cusp::host_memory>;
+    using coo_type =  cusp::coo_matrix<int, value_type, cusp::device_memory>;
     ///@brief Allocate nothing, Call \c construct method before usage
     CGsqrt(){}
     ///@copydoc construct()
@@ -475,5 +449,5 @@ class CGsqrt
     ContainerType r, ap, p, m_e1, m_y;
     unsigned max_iter;
     coo_type R, Tinv;      
-    InvTridiag<ContainerType> invtridiag;
+    dg::InvTridiag<ContainerType> invtridiag;
 };
