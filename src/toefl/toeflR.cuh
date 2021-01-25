@@ -141,7 +141,8 @@ struct Explicit
     std::vector<container> multi_chi, multi_iota;
 
     const container w2d,v2d, one;
-    const double eps_pol, eps_gamma;
+    const std::vector<double> eps_pol;
+    const double eps_gamma;
     const double kappa, friction, nu, tau;
     const std::string equations;
     bool boussinesq;
@@ -287,7 +288,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         std::vector<unsigned> number = multigrid.direct_solve( multi_arbpol, gamma_phi, omega, eps_pol);
         old_gamma_phi.update( t, gamma_phi);
         if(  number[0] == multigrid.max_iter())
-            throw dg::Fail( eps_pol);
+            throw dg::Fail( eps_pol[0]);
 
         dg::blas2::symv(multi_gamma1[0], gamma_phi, chi); //invG gamma_phi
         dg::blas2::symv( v2d, chi, phi[0]);
@@ -311,7 +312,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         std::vector<unsigned> number = multigrid.direct_solve( multi_pol, gamma_phi, omega, eps_pol);
         old_gamma_phi.update( t, gamma_phi);
         if(  number[0] == multigrid.max_iter())
-            throw dg::Fail( eps_pol);
+            throw dg::Fail( eps_pol[0]);
 
         //Compute \phi = G^{-1} \gamma_phi via LanczosSqrtODE solve
 //         krylovsqrtodesolve(gamma_phi, phi[0]); 
@@ -383,10 +384,10 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         //invert
 
         old_phi.extrapolate(t, phi[0]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega,eps_pol);
         old_phi.update( t, phi[0]);
         if(  number[0] == multigrid.max_iter())
-            throw dg::Fail( eps_pol);
+            throw dg::Fail( eps_pol[0]);
     }
     return phi[0];
 }
