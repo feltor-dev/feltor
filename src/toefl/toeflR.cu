@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS
-    toefl::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> ex( grid, p);
+    toefl::Explicit<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p);
     toefl::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> im( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
