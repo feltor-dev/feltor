@@ -2,19 +2,19 @@
     "n" :  3,  
     "Nx" : 64,     
     "Ny" : 64,     
-    "dt" : 0.25,     
+    "dt" : 0.0005,     
     "n_out"  : 3,  
     "Nx_out" : 64, 
     "Ny_out" : 64, 
     "itstp"  : 1,   
     "maxout" : 100,
     "stages"     : 3,
-    "eps_pol"    : [1e-6,0.1,0.1],   
-    "eps_gamma" : 1e-3,  
+    "eps_pol"    : [1e-12,0.1,0.1],   
+    "eps_gamma" : 1e-4,  
     "eps_time"  : 1e-10,  
     "curvature"  : 0.00015, 
     "tau"  : 1,        
-    "nu_perp"  : 1e-3, 
+    "nu_perp"  : 0e-3, 
     "amplitude"  :1,
     "sigma"  : 5,     
     "posX"  : 0.5,     
@@ -25,6 +25,8 @@
     "bc_y"  : "DIR",   
     "equations": "arbpolO2", 
     "boussinesq": false, 
-    "friction": 0  
+    "scheme": "centered",
+    "friction": 0 ,
+    "jfactor": 1
 
 }

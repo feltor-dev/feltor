@@ -47,12 +47,76 @@ struct DirectSqrtODESolve
      */    
     unsigned operator()(const Container& x, Container& b)
     {
-        return dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
+        unsigned counter =  dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
+#ifdef DG_BENCHMARK
+        t.toc();
+        std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
+        return counter;
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     Rhs<Geometry, Matrix, Container> m_rhs;  
     value_type m_epsTimerel, m_epsTimeabs;
+};
+
+///@brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve directly via sqrt Cauchy integral solve
+template< class Geometry, class Matrix, class Container>
+struct DirectSqrtCauchySolve
+{
+   public:
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = dg::get_value_type<Container>;
+    ///@brief empty object ( no memory allocation)
+    DirectSqrtCauchySolve() {}
+    /**
+     * @brief Construct DirectSqrtCauchySolve
+     *
+     * @param A Helmholtz operator
+     * @param g grid
+     * @param epsCG accuracy of conjugate gradient solver
+     */
+    DirectSqrtCauchySolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG)
+    {
+        construct(A, g, epsCG);
+    }
+    void construct(const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG)
+    {
+        m_A = A;
+        m_cauchysqrtint.construct(A, g, epsCG);
+        value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
+        m_EVmin = 1.-A.alpha()*hxhy*(1+1);
+        m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
+    }
+    /**
+     * @brief Compute \f[b \approx \sqrt{A} x  \f] via sqrt Cauchy integral solve
+     *
+     * @param x input vector
+     * @param b output vector. Is approximating \f[b \approx \sqrt{A} x  \f]
+     * @return number of timesteps of sqrt ODE solve
+     */    
+    void operator()(const Container& x, Container& b, const unsigned& iterCauchy)
+    {
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
+        m_cauchysqrtint(x, b, m_EVmin, m_EVmax, iterCauchy);
+#ifdef DG_BENCHMARK
+        t.toc();
+        std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
+    }
+  private:
+    dg::Helmholtz<Geometry,  Matrix, Container> m_A;
+    CauchySqrtInt<Geometry, Matrix, Container> m_cauchysqrtint;
+    value_type m_EVmin,m_EVmax;
 };
 
 /*! 

@@ -27,7 +27,7 @@ struct Parameters
     double lx, ly;
     dg::bc bc_x, bc_y;
 
-    std::string init, equations;
+    std::string init, equations, scheme;
     bool boussinesq;
 
     Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
@@ -64,6 +64,7 @@ struct Parameters
         bc_y = dg::str2bc(js["bc_y"].asString());
         init = "blob";
         equations = js.get("equations", "global").asString();
+        scheme = js.get("scheme", "arakawa").asString();
         boussinesq = js.get("boussinesq", false).asBool();
         friction = js.get("friction", 0.).asDouble();
         jfactor = js.get("jfactor", 1.).asDouble();
@@ -79,6 +80,8 @@ struct Parameters
         os << "Equation parameters are: \n"
             <<"    "<<equations<<"\n"
             <<"    boussinesq  "<<boussinesq<<"\n";
+        os << "Advection scheme: \n"
+            <<"    "<<scheme<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";

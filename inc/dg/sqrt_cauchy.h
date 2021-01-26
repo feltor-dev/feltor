@@ -26,10 +26,14 @@ struct SqrtCauchyIntOp
      * @param A Helmholtz operator (not normed and symmetric)
      * @param g The grid to use
      */
-    SqrtCauchyIntOp( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g):   
-        m_helper( dg::evaluate( dg::zero, g)),
-        m_A(A)
+    SqrtCauchyIntOp( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g)
     { 
+        construct(A, g);
+    }
+    void construct(const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g)
+    {
+        m_helper = dg::evaluate( dg::zero, g);
+        m_A =A;
         dg::assign( dg::create::inv_volume(g),    m_inv_weights);
         dg::assign( dg::create::volume(g),        m_weights);
         dg::assign( dg::create::inv_weights(g),   m_precond);
@@ -97,6 +101,7 @@ struct CauchySqrtInt
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
+    CauchySqrtInt() { }
     /**
      * @brief Construct Rhs operator
      *
@@ -104,13 +109,16 @@ struct CauchySqrtInt
      * @param g The grid to use
      * @param eps Accuarcy for CG solve
      */
-    CauchySqrtInt( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type eps):
-         m_helper( dg::evaluate( dg::zero, g)),
-         m_helper2( dg::evaluate( dg::zero, g)),
-         m_A(A),
-         m_op(m_A, g),
-         m_invert( m_helper, g.size(), eps, 1)
+    CauchySqrtInt( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type eps)
     {
+        construct(A, g, eps);
+    }
+    void construct(const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type eps) 
+    {
+        m_helper = m_helper2 =  dg::evaluate( dg::zero, g);
+        m_A = A;
+        m_op.construct(m_A, g);
+        m_invert.construct( m_helper, g.size(), eps, 1);
     }
     /**
      * @brief Compute rhs term (including inversion of lhs) 

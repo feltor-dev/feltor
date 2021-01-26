@@ -6,6 +6,17 @@
 namespace toefl
 {
 
+struct Upwind{
+DG_DEVICE
+    void operator()( double& result, double fw, double bw, double v)
+    {
+        if( v > 0)
+            result -= bw; // yp = - Div( F)
+        else
+            result -= fw;
+    }
+};
+    
 template<class Geometry, class Matrix, class container>
 struct Implicit
 {
@@ -74,7 +85,8 @@ struct Explicit
     void initgammasqne( const container& y, container& yp)
     {
 //             krylovsqrtodesolve(y, yp); 
-        krylovsqrtcauchysolve(y, yp,10); 
+        krylovsqrtcauchysolve(y, yp, 10); 
+//         directsqrtcauchysolve(y, yp, 30); 
     }
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -120,11 +132,13 @@ struct Explicit
     const container& compute_psi( double t, const container& potential);
     const container& polarisation( double t, const std::vector<container>& y);
 
-    container chi, omega;
+    container chi, omega, iota;
     const container binv; //magnetic field
 
     std::vector<container> phi, dyphi, ype;
     std::vector<container> dyy, lny, lapy;
+    std::vector<container> m_v;
+    
     container gamma_n, gamma_phi;
 
     //matrices and solvers
@@ -134,17 +148,21 @@ struct Explicit
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
 //     KrylovSqrtODESolve<Geometry, Matrix, cusp::dia_matrix<int, dg::get_value_type<container>, cusp::device_memory>, cusp::coo_matrix<int, dg::get_value_type<container>, cusp::device_memory>, container> krylovsqrtodesolve;
     KrylovSqrtCauchySolve<Geometry, Matrix, cusp::dia_matrix<int, dg::get_value_type<container>, cusp::device_memory>, cusp::coo_matrix<int, dg::get_value_type<container>, cusp::device_memory>, container> krylovsqrtcauchysolve;
+//     DirectSqrtCauchySolve<Geometry, Matrix, container> directsqrtcauchysolve;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_gamma_phi, old_psi, old_gammaN;
     std::vector<container> multi_chi, multi_iota;
 
+    Matrix m_forward[2], m_backward[2], m_centered[2];
+
+    
     const container w2d,v2d, one;
     const std::vector<double> eps_pol;
     const double eps_gamma;
     const double kappa, friction, nu, tau;
-    const std::string equations;
+    const std::string equations, scheme;
     bool boussinesq;
 
     double mass_, energy_, diff_, ediff_;
@@ -153,10 +171,10 @@ struct Explicit
 
 template< class Geometry, class M, class container>
 Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Parameters& p ):
-    chi( evaluate( dg::zero, grid)), omega(chi), 
+    chi( evaluate( dg::zero, grid)), omega(chi), iota(chi),
     binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
     phi( 2, chi), dyphi( phi), ype(phi),
-    dyy(2,chi), lny( dyy), lapy(dyy),
+    dyy(2,chi), lny( dyy), lapy(dyy), m_v(2,chi),
     gamma_n(chi), gamma_phi(chi),
     pol(     grid, dg::not_normed, dg::centered, p.jfactor),
     laplaceM( grid, dg::normed, dg::centered),
@@ -164,7 +182,7 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     multigrid( grid, 3),
     old_phi( 2, chi),  old_gamma_phi(2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
+    eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations),  scheme(p.scheme), boussinesq(p.boussinesq)
 {
     multi_chi= multigrid.project( chi);
     multi_iota= multigrid.project( chi);
@@ -185,6 +203,14 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     }
 //     krylovsqrtodesolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 1e-10, 1e-14, 500, p.eps_gamma);
     krylovsqrtcauchysolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 500, p.eps_gamma);
+//     directsqrtcauchysolve.construct(multi_gamma1[0], multigrid.grid(0), p.eps_time);
+    
+    m_centered[0] = dg::create::dx( grid, grid.bcx(), dg::centered);
+    m_centered[1] = dg::create::dy( grid, grid.bcy(), dg::centered);
+    m_forward[0] = dg::create::dx( grid, dg::inverse( grid.bcx()), dg::forward);
+    m_forward[1] = dg::create::dy( grid, dg::inverse( grid.bcy()), dg::forward);
+    m_backward[0] = dg::create::dx( grid, dg::inverse( grid.bcx()), dg::backward);
+    m_backward[1] = dg::create::dy( grid, dg::inverse( grid.bcy()), dg::backward);
 }
 
 template< class G, class M, class container>
@@ -305,6 +331,8 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         //Compute G^{-1} n_e via LanczosSqrtODE solve
 //         krylovsqrtodesolve(y[0], gamma_n); 
         krylovsqrtcauchysolve(y[0], gamma_n, 10); 
+//         directsqrtcauchysolve(y[0], gamma_n, 30); 
+
         dg::blas1::axpby(1.,y[1],  -1., gamma_n, omega);  //- G^{-1} n_e + N_i    
 
         //Solve G^{-1} n_e - N_i = nabla. (chi nabla gamma_phi) for gamma_phi         
@@ -316,7 +344,9 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
 
         //Compute \phi = G^{-1} \gamma_phi via LanczosSqrtODE solve
 //         krylovsqrtodesolve(gamma_phi, phi[0]); 
-        krylovsqrtcauchysolve(gamma_phi, phi[0], 10);      
+        krylovsqrtcauchysolve(gamma_phi, phi[0], 10);    
+//         directsqrtcauchysolve(gamma_phi, phi[0], 30);      
+
 
     }
     else {
@@ -511,20 +541,74 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     }
     else
     {
-        for( unsigned i=0; i<y.size(); i++)
-        {
-            arakawa( y[i], phi[i], yp[i]);
-            if(equations == "global" || equations == "arbpolO4" || equations == "arbpolO2") dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
-        }
         double _tau[2] = {-1., tau};
-        //compute derivatives and exb compression
-        for( unsigned i=0; i<y.size(); i++)
+
+        for( unsigned i=0; i<y.size(); i++) 
         {
-            dg::blas2::gemv( arakawa.dy(), y[i], dyy[i]);
-            dg::blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-            if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2") dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-            dg::blas1::axpbypgz( kappa, dyphi[i], _tau[i]*kappa, dyy[i], 1., yp[i]);
+            if (scheme == "arakawa")
+            {
+                arakawa( y[i], phi[i], yp[i]);
+                if(equations == "global" || equations == "arbpolO4" || equations == "arbpolO2")
+                {
+                dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
+                }
+                dg::blas2::gemv( arakawa.dy(), y[i], dyy[i]);
+                dg::blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
+                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2") {
+                dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+                }
+                dg::blas1::axpbypgz( kappa, dyphi[i], _tau[i]*kappa, dyy[i], 1., yp[i]);
+            }
+            if (scheme == "upwind")
+            {
+                dg::blas1::copy( 0., yp[i]);                    
+            //dx ( nv_x)
+                dg::blas2::symv( -1., m_centered[1], phi[i], 0., m_v[i]); // - dy psi
+                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                {
+                    dg::blas1::pointwiseDot(binv,m_v[i],m_v[i]);   //v_x= - B^{1} dy psi
+                }                    
+                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_x = N v_x
+                dg::blas2::symv( m_forward[0], chi, omega);
+                dg::blas2::symv( m_backward[0], chi, iota);
+                dg::blas1::subroutine( toefl::Upwind(), yp[i], omega, iota, m_v[i]);
+//              //dy ( nv_y)
+                dg::blas2::symv( 1., m_centered[0], phi[i], 0., m_v[i]); //v_y =  dx psi
+                dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         //v_y = B^{1} dx psi
+                //add gradB drift
+                dg::blas1::plus(m_v[i],-kappa*_tau[i]);
+
+
+                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_y = N v_y
+                dg::blas2::symv( m_forward[1], chi, omega);
+                dg::blas2::symv( m_backward[1], chi, iota);
+                dg::blas1::subroutine( toefl::Upwind(), yp[i], omega, iota, m_v[i]);
+            }
+            if (scheme == "centered")
+            {
+                //centered scheme
+                //dx ( nv_x)
+                dg::blas2::symv( -1., m_centered[1], phi[i], 0., m_v[i]); //v_x
+                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                {
+                    dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         
+                }        
+                
+                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_x
+                dg::blas2::symv( -1., m_centered[0], chi, 0., yp[i]);
+                //dy ( nv_y)
+                dg::blas2::symv( 1., m_centered[0], phi[i], 0., m_v[i]); //v_y
+                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                {
+                    dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         
+                }        
+                dg::blas1::plus(m_v[i],-kappa*_tau[i]);
+                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_y
+                dg::blas2::symv( -1., m_centered[1], chi, 1., yp[i]);
+            }
         }
+
+
     }
 
     //If you want to test an explicit timestepper:

@@ -77,24 +77,23 @@ int main()
   
     //////////////////////////Direct Cauchy integral solve
     std::cout << "Solving  via Cauchy integral\n";
-    CauchySqrtInt<dg::CartesianGrid2d, Mat_type, Container_type> cauchysqrtint(A, grid, epsCG);
-    dg::EVE<Container_type> eve(b, 100);
+//     CauchySqrtInt<dg::CartesianGrid2d, Mat_type, Container_type> cauchysqrtint(A, grid, epsCG);
+//     std::cout << "# of Cauchy terms?\n";
+//     std::cin >> iterCauchy;
+//     //analytical estimate
+//     double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+//     double hxhy = lx*ly/(n*n*Nx*Ny);
+//     lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
+//     std::cout << "Min and Maximum EV is: "<< -lmin*alpha+1 << "  "<<-lmax*alpha+1<< "\n";
+//     t.tic();
+//     cauchysqrtint(b, bs,-lmin*alpha+1 ,-lmax*alpha+1, iterCauchy);
+//     t.toc();
+    DirectSqrtCauchySolve<dg::CartesianGrid2d, Mat_type, Container_type> directsqrtcauchysolve(A, grid, epsCG);
     std::cout << "# of Cauchy terms?\n";
-    std::cin >> iterCauchy;
-//     double lambda_min = 1; //Exact estimate missing, However as long as chi in helmholtz is 1 it is correct
-    double lambda_max;
+    std::cin >> iterCauchy;   
     t.tic();
-    eve(A, bs, bs, A.inv_weights(),lambda_max);
-    std::cout << "Maximum EV from EVE is: "<< lambda_max << "\n";
-    
-    //analyitcal estimate
-    double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
-    double hxhy = lx*ly/(n*n*Nx*Ny);
-    lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
-    std::cout << "Min and Maximum EV is: "<< -lmin*alpha+1 << "  "<<-lmax*alpha+1<< "\n";
-   
-    cauchysqrtint(b, bs,-lmin*alpha+1 ,-lmax*alpha+1, iterCauchy);
-    t.toc();
+    directsqrtcauchysolve(b, bs, iterCauchy);
+    t.toc();   
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
     std::cout << "   Time: "<<t.diff()<<"s  Relative error: "<<erel <<"\n";    //error should be much smaller after a few iterations with correct EVs, reason is most likely that the EVs are not exactly estimated, error is also very sensible to min and max EVs
