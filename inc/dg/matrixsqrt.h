@@ -94,7 +94,11 @@ struct DirectSqrtCauchySolve
     void construct(const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG)
     {
         m_A = A;
-        m_cauchysqrtint.construct(A, g, epsCG);
+        Container temp = dg::evaluate(dg::zero,g);
+        m_cauchysqrtint.construct(m_A, temp, epsCG, true);
+        m_cauchysqrtint.set_weights(m_A.weights());
+        m_cauchysqrtint.set_inv_weights(m_A.inv_weights());
+        m_cauchysqrtint.set_precond(m_A.precond());
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1+1);
         m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
@@ -120,7 +124,7 @@ struct DirectSqrtCauchySolve
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
-    CauchySqrtInt<Geometry, Matrix, Container> m_cauchysqrtint;
+    CauchySqrtInt<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_cauchysqrtint;
     value_type m_EVmin,m_EVmax;
 };
 
@@ -269,7 +273,7 @@ struct KrylovSqrtCauchySolve
         m_T.diagonal_offsets[1] =  0;
         m_T.diagonal_offsets[2] =  1;
         m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-        m_cauchysqrt.construct(m_T, m_e1, epsCG);
+        m_cauchysqrt.construct(m_T, m_e1, epsCG, false);
         m_lanczos.construct(copyable, max_iterations);
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1+1);
@@ -306,7 +310,7 @@ struct KrylovSqrtCauchySolve
         m_y.resize(m_lanczos.get_iter());        
 
         m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy sqrt solver
-        m_cauchysqrt.set_T(m_T);         //set T in cauchy sqrt solver
+        m_cauchysqrt.set_A(m_T);         //set T in cauchy sqrt solver
 #ifdef DG_DEBUG
         std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
 #endif //DG_DEBUG
@@ -336,7 +340,7 @@ struct KrylovSqrtCauchySolve
     DiaMatrix m_T; 
     CooMatrix m_V;
     std::pair<DiaMatrix, CooMatrix> m_TVpair; 
-    CauchySqrtIntT<DiaMatrix, Container> m_cauchysqrt;  
+    CauchySqrtInt<DiaMatrix, Container> m_cauchysqrt;  
     dg::Lanczos< Container > m_lanczos;
 };
 
