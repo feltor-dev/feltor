@@ -9,8 +9,8 @@
     "itstp"  : 1,   
     "maxout" : 100,
     "stages"     : 3,
-    "eps_pol"    : [1e-9,0.1,0.1],   
-    "eps_gamma" : 1e-7,  
+    "eps_pol"    : [1e-6,0.1,0.1],   
+    "eps_gamma" : 1e-3,  
     "eps_time"  : 1e-10,  
     "curvature"  : 0.00015, 
     "tau"  : 1,        
@@ -22,12 +22,12 @@
     "lx"  : 70,       
     "ly"  : 70,       
     "bc_x"  : "DIR",   
-    "bc_y"  : "PER",   
-    "equations": "arbpolO2", 
+    "bc_y"  : "DIR",  
+    "equations": "arbpolO4", 
     "boussinesq": false, 
     "friction": 0 ,
     "jfactor": 1,
     "advection": "arakawa",
-    "multiplication": "pointwise"
+    "multiplication": "projection"
 
 }
