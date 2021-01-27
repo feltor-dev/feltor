@@ -130,9 +130,9 @@ struct Explicit
     const container& compute_psi( double t, const container& potential);
     const container& polarisation( double t, const std::vector<container>& y);
 
-    container chi, omega, iota, m_fine_phi[2], m_fine_v[2], m_fine_y[2], m_fine_yp[2], m_fine_chi, m_fine_omega, m_fine_iota;
+    container chi, omega, iota, m_fine_phi[2], m_fine_v[2], m_fine_y[2], m_fine_yp[2], m_fine_ype[2], m_fine_chi, m_fine_omega, m_fine_iota;
     const container binv; //magnetic field
-    container binv_fine;
+    container m_fine_binv;
     std::vector<container> phi, dyphi, ype;
     std::vector<container> dyy, lny, lapy;
     std::vector<container> m_v;
@@ -206,28 +206,28 @@ Explicit< Geometry, IM, M, container>::Explicit( const Geometry& grid, const Par
         fine_grid.set( 2*grid.n()-1, grid.Nx(), grid.Ny());
         m_inter = dg::create::interpolation( fine_grid, grid);
         m_project = dg::create::projection( grid, fine_grid);
-
         m_centered[0] = dg::create::dx( fine_grid, grid.bcx(), dg::centered);
-        m_centered[1] = dg::create::dy( fine_grid, grid.bcy(), dg::centered);
         m_forward[0] = dg::create::dx( fine_grid, dg::inverse( grid.bcx()), dg::forward);
-        m_forward[1] = dg::create::dy( fine_grid, dg::inverse( grid.bcy()), dg::forward);
         m_backward[0] = dg::create::dx( fine_grid, dg::inverse( grid.bcx()), dg::backward);
+        m_centered[1] = dg::create::dy( fine_grid, grid.bcy(), dg::centered);
+        m_forward[1] = dg::create::dy( fine_grid, dg::inverse( grid.bcy()), dg::forward);
         m_backward[1] = dg::create::dy( fine_grid, dg::inverse( grid.bcy()), dg::backward);
-        m_fine_phi[0] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_phi[1] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_y[0] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_y[1] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_yp[0] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_yp[1] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_v[0] = dg::evaluate( dg::zero, fine_grid);
-        m_fine_v[1] = dg::evaluate( dg::zero, fine_grid);
+        for (unsigned i=0;i<2;i++)
+        {
+            m_fine_phi[i] = dg::evaluate( dg::zero, fine_grid);
+            m_fine_y[i] = dg::evaluate( dg::zero, fine_grid);
+            m_fine_yp[i] = dg::evaluate( dg::zero, fine_grid);
+            m_fine_ype[i] = dg::evaluate( dg::zero, fine_grid);
+            m_fine_v[i] = dg::evaluate( dg::zero, fine_grid);
+        }
+
         m_fine_chi = dg::evaluate( dg::zero, fine_grid);
         m_fine_omega = dg::evaluate( dg::zero, fine_grid);
         m_fine_iota = dg::evaluate( dg::zero, fine_grid);
         arakawa_fine.construct( fine_grid);
         arakawa.construct(grid);
 
-        binv_fine = dg::evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), fine_grid);
+        m_fine_binv = dg::evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), fine_grid);
     }
     else
     {
@@ -461,6 +461,7 @@ void Explicit<G, IM, M, container>::operator()( double t, const std::vector<cont
     for( unsigned i=0; i<y.size(); i++)
     {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<double>(1.));
+
         dg::blas1::transform( ype[i], lny[i], dg::LN<double>());
         dg::blas2::symv( laplaceM, y[i], lapy[i]);
     }
@@ -572,86 +573,141 @@ void Explicit<G, IM, M, container>::operator()( double t, const std::vector<cont
         {
             if (m_multiplication == "pointwise")
             {
-            if (m_advection == "arakawa")
-            {
-                arakawa( y[i], phi[i], yp[i]);
-                if(equations == "global" || equations == "arbpolO4" || equations == "arbpolO2")
+                if (m_advection == "arakawa")
                 {
-                dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
+                    arakawa( y[i], phi[i], yp[i]);
+                    if(equations == "global" || equations == "arbpolO4" || equations == "arbpolO2")
+                    {
+                    dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
+                    }
+                    dg::blas2::gemv( arakawa.dy(), y[i], dyy[i]);
+                    dg::blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2") {
+                    dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+                    }
+                    dg::blas1::axpbypgz( kappa, dyphi[i], _tau[i]*kappa, dyy[i], 1., yp[i]);
                 }
-                dg::blas2::gemv( arakawa.dy(), y[i], dyy[i]);
-                dg::blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2") {
-                dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-                }
-                dg::blas1::axpbypgz( kappa, dyphi[i], _tau[i]*kappa, dyy[i], 1., yp[i]);
-            }
-            if (m_advection == "upwind")
-            {
-                dg::blas1::copy( 0., yp[i]);                    
-            //dx ( nv_x)
-                dg::blas2::symv( -1., m_centered[1], phi[i], 0., m_v[i]); // - dy psi
-                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                if (m_advection == "upwind")
                 {
-                    dg::blas1::pointwiseDot(binv,m_v[i],m_v[i]);   //v_x= - B^{1} dy psi
-                }                    
-                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_x = N v_x
-                dg::blas2::symv( m_forward[0], chi, omega);
-                dg::blas2::symv( m_backward[0], chi, iota);
-                dg::blas1::subroutine( toefl::Upwind(), yp[i], omega, iota, m_v[i]);
-//              //dy ( nv_y)
-                dg::blas2::symv( 1., m_centered[0], phi[i], 0., m_v[i]); //v_y =  dx psi
-                dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         //v_y = B^{1} dx psi
-                //add gradB drift
-                dg::blas1::plus(m_v[i],-kappa*_tau[i]);
-
-
-                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_y = N v_y
-                dg::blas2::symv( m_forward[1], chi, omega);
-                dg::blas2::symv( m_backward[1], chi, iota);
-                dg::blas1::subroutine( toefl::Upwind(), yp[i], omega, iota, m_v[i]);
-            }
-            if (m_advection == "centered")
-            {
-                //centered scheme
+                    dg::blas1::copy( 0., yp[i]);                    
                 //dx ( nv_x)
-                dg::blas2::symv( -1., m_centered[1], phi[i], 0., m_v[i]); //v_x
-                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    dg::blas2::symv( -1., m_centered[1], phi[i], 0., m_v[i]); // - dy psi
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(binv,m_v[i],m_v[i]);   //v_x= - B^{1} dy psi
+                    }                    
+                    dg::blas1::pointwiseDot( ype[i], m_v[i], chi); //f_x = N v_x
+                    dg::blas2::symv( m_forward[0], chi, omega);
+                    dg::blas2::symv( m_backward[0], chi, iota);
+                    dg::blas1::subroutine( toefl::Upwind(), yp[i], omega, iota, m_v[i]);
+    //              //dy ( nv_y)
+                    dg::blas2::symv( 1., m_centered[0], phi[i], 0., m_v[i]); //v_y =  dx psi
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         //v_y = B^{1} dx psi
+                    }
+                    //add gradB drift
+                    dg::blas1::plus(m_v[i],-kappa*_tau[i]);
+
+
+                    dg::blas1::pointwiseDot( ype[i], m_v[i], chi); //f_y = N v_y
+                    dg::blas2::symv( m_forward[1], chi, omega);
+                    dg::blas2::symv( m_backward[1], chi, iota);
+                    dg::blas1::subroutine( toefl::Upwind(), yp[i], omega, iota, m_v[i]);
+                }
+                if (m_advection == "centered")
                 {
-                    dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         
-                }        
-                
-                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_x
-                dg::blas2::symv( -1., m_centered[0], chi, 0., yp[i]);
-                //dy ( nv_y)
-                dg::blas2::symv(  1., m_centered[0], phi[i], 0., m_v[i]); //v_y
-                if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
-                {
-                    dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         
-                }        
-                dg::blas1::plus(m_v[i],-kappa*_tau[i]);
-                dg::blas1::pointwiseDot( y[i], m_v[i], chi); //f_y
-                dg::blas2::symv( -1., m_centered[1], chi, 1., yp[i]);
-            }
+                    //centered scheme
+                    //dx ( nv_x)
+                    dg::blas2::symv( -1., m_centered[1], phi[i], 0., m_v[i]); //v_x
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         
+                    }        
+                    
+                    dg::blas1::pointwiseDot( ype[i], m_v[i], chi); //f_x
+                    dg::blas2::symv( -1., m_centered[0], chi, 0., yp[i]);
+                    //dy ( nv_y)
+                    dg::blas2::symv(  1., m_centered[0], phi[i], 0., m_v[i]); //v_y
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(binv, m_v[i], m_v[i]);         
+                    }        
+                    dg::blas1::plus(m_v[i],-kappa*_tau[i]);
+                    dg::blas1::pointwiseDot( ype[i], m_v[i], chi); //f_y
+                    dg::blas2::symv( -1., m_centered[1], chi, 1., yp[i]);
+                }
             }
             else
             {
                 dg::blas2::symv( m_inter, y[i], m_fine_y[i]);
                 dg::blas2::symv( m_inter, phi[i], m_fine_phi[i]);
+                dg::blas1::transform( m_fine_y[i], m_fine_ype[i], dg::PLUS<double>(1.));
+
                 if( m_advection == "arakawa")
                 {
                     arakawa_fine( m_fine_y[i], m_fine_phi[i], m_fine_yp[i]); //A(y,psi)-> yp
                     if(equations == "global" || equations == "arbpolO4" || equations == "arbpolO2")
                     {
-                        dg::blas1::pointwiseDot( binv_fine, m_fine_yp[i], m_fine_yp[i]);
+                        dg::blas1::pointwiseDot( m_fine_binv, m_fine_yp[i], m_fine_yp[i]);
                     }
                     dg::blas2::gemv( m_centered[1], m_fine_y[i], m_fine_chi);
                     dg::blas2::gemv( m_centered[1], m_fine_phi[i], m_fine_iota);
                     if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2") {
-                        dg::blas1::transform( m_fine_y[i], m_fine_omega, dg::PLUS<double>(1.));
-                        dg::blas1::pointwiseDot( m_fine_iota, m_fine_omega, m_fine_iota);
+                        dg::blas1::transform( m_fine_y[i], m_fine_ype[i], dg::PLUS<double>(1.));
+                        dg::blas1::pointwiseDot( m_fine_iota, m_fine_ype[i], m_fine_iota);
                     }
                     dg::blas1::axpbypgz( kappa, m_fine_iota, _tau[i]*kappa, m_fine_chi, 1., m_fine_yp[i]);
+                }
+                if (m_advection == "upwind")
+                {
+                    dg::blas1::copy( 0., m_fine_yp[i]);                    
+                //dx ( nv_x)
+                    dg::blas2::symv( -1., m_centered[1], m_fine_phi[i], 0., m_fine_v[i]); // - dy psi
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(m_fine_binv,m_fine_v[i],m_fine_v[i]);   //v_x= - B^{1} dy psi
+                    }                    
+                    dg::blas1::pointwiseDot( m_fine_ype[i], m_fine_v[i], m_fine_chi); //f_x = N v_x
+                    dg::blas2::symv( m_forward[0], m_fine_chi, m_fine_omega);
+                    dg::blas2::symv( m_backward[0], m_fine_chi, m_fine_iota);
+                    dg::blas1::subroutine( toefl::Upwind(), m_fine_yp[i], m_fine_omega, m_fine_iota, m_fine_v[i]);
+    //              //dy ( nv_y)
+                    dg::blas2::symv( 1., m_centered[0], m_fine_phi[i], 0., m_fine_v[i]); //v_y =  dx psi
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(binv, m_fine_v[i], m_fine_v[i]);         //v_y = B^{1} dx psi
+                    }
+                    //add gradB drift
+                    dg::blas1::plus(m_fine_v[i],-kappa*_tau[i]);
+
+
+                    dg::blas1::pointwiseDot( m_fine_ype[i], m_fine_v[i], m_fine_chi); //f_y = N v_y
+                    dg::blas2::symv( m_forward[1], m_fine_chi, m_fine_omega);
+                    dg::blas2::symv( m_backward[1], m_fine_chi, m_fine_iota);
+                    dg::blas1::subroutine( toefl::Upwind(), m_fine_yp[i], m_fine_omega, m_fine_iota, m_fine_v[i]);
+                }
+                if (m_advection == "centered")
+                {
+                    //centered scheme
+                    //dx ( nv_x)
+                    dg::blas2::symv( -1., m_centered[1], m_fine_phi[i], 0., m_fine_v[i]); //v_x
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(m_fine_binv, m_fine_v[i], m_fine_v[i]);         
+                    }        
+                    
+                    dg::blas1::pointwiseDot( m_fine_ype[i], m_fine_v[i], m_fine_chi); //f_x
+                    dg::blas2::symv( -1., m_centered[0], m_fine_chi, 0., m_fine_yp[i]);
+                    //dy ( nv_y)
+                    dg::blas2::symv(  1., m_centered[0], m_fine_phi[i], 0., m_fine_v[i]); //v_y
+                    if(equations == "global" || equations == "arbpolO4"|| equations == "arbpolO2")
+                    {
+                        dg::blas1::pointwiseDot(m_fine_binv, m_fine_v[i], m_fine_v[i]);         
+                    }        
+                    dg::blas1::plus(m_fine_v[i],-kappa*_tau[i]);
+                    dg::blas1::pointwiseDot( m_fine_ype[i], m_fine_v[i], m_fine_chi); //f_y
+                    dg::blas2::symv( -1., m_centered[1], m_fine_chi, 1., m_fine_yp[i]);
                 }
                 dg::blas2::symv( m_project, m_fine_yp[i], yp[i]);
 
