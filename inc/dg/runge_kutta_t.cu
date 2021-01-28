@@ -78,6 +78,8 @@ int main()
         "Cash-Karp-6-4-5",
         "Fehlberg-6-4-5",
         "Dormand-Prince-7-4-5",
+        "Tsitouras09-7-4-5",
+        "Tsitouras11-7-4-5",
         "ARK-8-4-5 (explicit)",
         "Verner-8-5-6",
         "Fehlberg-13-7-8",
@@ -89,7 +91,8 @@ int main()
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
         dg::stepperRK(name, functor, t_start, u, t_end, u1, N);
         dg::blas1::axpby( 1., sol , -1., u1);
-        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
+        auto b = dg::create::tableau<double>(name);
+        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<(b.isFsal()?" (fsal)" : "") <<"\n";
     }
     std::cout << "Shu-Osher Methods with "<<N<<" steps:\n";
     names = std::vector<std::string> {

@@ -466,6 +466,76 @@ ButcherTableau<real_type> dormand_prince_7_4_5()
     return ButcherTableau<real_type>(7,data);
 }
 template<class real_type>
+ButcherTableau<real_type> tsitouras09_7_4_5()
+{
+    real_type b[7] = {
+        0.091937670648056,1.156529958312496,-0.781330409541651,
+        0.197624776163019,0.271639883438847,0.063598120979232,0
+    };
+    real_type bt[7] = {
+        0.092167469090589,1.131750860603267,-0.759749304413104,
+        0.205573577541223,0.264767065074229,0.040490332103796,1./40.
+    };
+    real_type c[7] = {
+        0., 0.231572163526079, 0.212252555252816,0.596693497318054,
+        0.797009955708112,1.,1.
+    };
+    real_type a[7*7] = {
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,-0.059103796886580,0,0,0,0,0,
+        0,4.560080615554683,-4.006458683473722,0,0,0,0,
+        0,-2.443935658802774,2.631461258707441,0.524706566208284,0,0,0,
+        0,9.516251378071800,-8.467630087008555,-0.987888827522473,0.867009765724064,0,0,
+        0,0,0,0,0,0,0
+    };
+    for( unsigned i=0; i<6; i++)
+    {
+        real_type tmp=0;
+        for( unsigned j=0; j<7; j++)
+            tmp += a[i*7+j];
+        a[i*7] = c[i] - tmp;
+    }
+    for( unsigned j=0; j<7; j++)
+        a[6*7+j] = b[j];
+    return ButcherTableau<real_type>(7,4,5,a,b,bt,c);
+}
+
+template<class real_type>
+ButcherTableau<real_type> tsitouras11_7_4_5()
+{
+    real_type b[7] = {
+        0.09646076681806523,0.01,0.4798896504144996,
+        1.379008574103742,-3.290069515436081,2.324710524099774,0.,
+    };
+    real_type bt[7] = {
+        0.001780011052226,0.000816434459657,-0.007880878010262,0.144711007173263,-0.582357165452555,0.458082105929187,1./66.
+    };
+    real_type c[7] = {
+        0.,0.161,0.327,0.9,0.9800255409045097,1.,1.
+    };
+    real_type a[7*7] = {
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,0.3354806554923570,0,0,0,0,0,
+        0,-6.359448489975075,4.362295432869581,0,0,0,0,
+        0,-11.74888356406283,7.495539342889836,-0.09249506636175525,0,0,0,
+        0,-12.92096931784711,8.159367898576159,-0.07158497328140100,-0.02826905039406838,0,0,
+        0,0,0,0,0,0,0
+    };
+    for( unsigned i=0; i<6; i++)
+    {
+        real_type tmp=0;
+        for( unsigned j=0; j<7; j++)
+            tmp += a[i*7+j];
+        a[i*7] = c[i] - tmp;
+    }
+    for( unsigned j=0; j<7; j++)
+        a[6*7+j] = b[j];
+    return ButcherTableau<real_type>(7,4,5,a,b,bt,c);
+}
+
+template<class real_type>
 ButcherTableau<real_type> ark548l2sa_erk_8_4_5()
 {
     real_type data[] = {
@@ -1019,6 +1089,8 @@ enum tableau_identifier{
     CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
     FEHLBERG_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Fehlberg-6-4-5</a>
     DORMAND_PRINCE_7_4_5,//!< <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince-7-4-5</a>
+    TSITOURAS09_7_4_5,//!< <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
+    TSITOURAS11_7_4_5,//!< <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal), Further improves Tsitouras09
     ARK548L2SA_ERK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
     VERNER_8_5_6,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
     FEHLBERG_13_7_8,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
@@ -1067,6 +1139,8 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"Cash-Karp-6-4-5", CASH_KARP_6_4_5},
     {"Fehlberg-6-4-5", FEHLBERG_6_4_5},
     {"Dormand-Prince-7-4-5", DORMAND_PRINCE_7_4_5},
+    {"Tsitouras09-7-4-5", TSITOURAS09_7_4_5},
+    {"Tsitouras11-7-4-5", TSITOURAS11_7_4_5},
     {"ARK-8-4-5 (explicit)", ARK548L2SA_ERK_8_4_5},
     {"Verner-8-5-6", VERNER_8_5_6},
     {"Fehlberg-13-7-8", FEHLBERG_13_7_8},
@@ -1161,6 +1235,10 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::fehlberg_6_4_5<real_type>();
         case DORMAND_PRINCE_7_4_5:
             return dg::tableau::dormand_prince_7_4_5<real_type>();
+        case TSITOURAS09_7_4_5:
+            return dg::tableau::tsitouras09_7_4_5<real_type>();
+        case TSITOURAS11_7_4_5:
+            return dg::tableau::tsitouras11_7_4_5<real_type>();
         case ARK548L2SA_ERK_8_4_5:
             return dg::tableau::ark548l2sa_erk_8_4_5<real_type>();
         case VERNER_8_5_6:
@@ -1242,6 +1320,8 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
  *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
  *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a> (fsal)
+ *   Tsitouras09-7-4-5   | dg::TSITOURAS09_7_4_5   | <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
+ *   Tsitouras11-7-4-5   | dg::TSITOURAS11_7_4_5   | <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal) Further improves Tsitouras09
  *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
  *   Verner-8-5-6           | dg::VERNER_8_5_6           | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
  *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
