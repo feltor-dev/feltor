@@ -46,7 +46,7 @@ namespace dg{
      * @param g The grid to use
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
-     * @param dir Direction of the Laplace operator
+     * @param dir Direction of the Laplace operator (Note: only dg::centered tested)
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ and \f$\iota\f$ is one
      */
@@ -76,6 +76,7 @@ namespace dg{
         dg::assign( dg::create::volume(g),        m_weights);
         dg::assign( dg::create::inv_weights(g),   m_precond);
         m_chi=g.metric();
+        m_metric=g.metric();
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
@@ -109,6 +110,40 @@ namespace dg{
      * @param iota new container
      */
      void set_iota( const Container& iota) {m_iota=iota; }   
+     /**
+     * @brief compute the variational of the operator (psi_2 in gf theory): \f[ - \frac{chi}{2} \left\{|\nabla \phi|^2 + \alpha chi ( | \nabla^2 \phi | - (\Delta \phi)^2 / 2) \right\}\f]
+     *
+     * @param phi (e.g. Gamma phi)
+     * @param alpha (e.g. tau/2)
+     * @param chi (e.g. 1/B^2)
+     * @param varphi equals psi_2 in gf theory if phi = gamma_phi
+     */
+     void variation(const Container& phi, const value_type& alpha, const Container& chi, Container& varphi)  
+     {
+        //tensor part
+        dg::blas2::gemv( m_rightx, phi, m_tempx); //R_x phi          
+        dg::blas2::gemv( m_righty , m_tempx, m_temp); //R_y R_x phi   
+        //m_temp = tau/2/B^2
+        dg::blas1::pointwiseDot(2.*alpha, chi, m_temp, m_temp, 0., varphi); //varphi = 2. * alpha * chi  (R_y R_x phi)^2
+        
+        dg::blas2::gemv( m_rightx, m_tempx, m_temp); //R_x R_x phi
+        dg::blas1::pointwiseDot(alpha, chi, m_temp, m_temp, 1., varphi); //varphi+= alpha *chi (R_x R_x phi)^2
+        
+        dg::blas2::gemv( m_righty, phi, m_tempy); //R_y phi                
+        dg::blas2::gemv( m_righty, m_tempy, m_temp); //R_y R_y phi  
+        dg::blas1::pointwiseDot(alpha, chi, m_temp, m_temp, 1., varphi); //varphi+= alpha *chi (R_y R_y phi)^2
+        
+        //laplacian part
+        dg::blas2::symv(m_laplaceM_iota, phi, m_temp); 
+        dg::blas1::pointwiseDot(alpha/2, chi, m_temp, m_temp, -1., varphi); //varphi-= alpha *chi/2 (lap phi)^2
+        
+        //elliptic part
+//         arakawa.variation(phi, phi[1]);   // (grad phi)^2
+        tensor::multiply2d( m_metric, m_tempx, m_tempy, m_temp, m_helper);
+        dg::blas1::pointwiseDot( 1., m_temp, m_tempx, 1., m_helper, m_tempy, 0., m_temp); //m_temp = |nabla phi|^2
+        dg::blas1::axpby(-0.5, m_temp, -0.5, varphi);
+        dg::blas1::pointwiseDot(chi, varphi, varphi);
+     }
      /**
      * @brief apply operator
      *
@@ -185,6 +220,7 @@ namespace dg{
      Container m_temp, m_tempx, m_tempy, m_tempxy, m_tempyx, m_iota, m_helper;                                                                                  
      Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
      SparseTensor<Container> m_chi;
+     SparseTensor<Container> m_metric;
      Container m_sigma, m_vol;
      value_type m_jfactor;
 

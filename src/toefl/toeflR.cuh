@@ -191,14 +191,13 @@ Explicit< Geometry, IM, M, container>::Explicit( const Geometry& grid, const Par
     for( unsigned u=0; u<3; u++)
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
-        multi_arbpol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor);
+        multi_arbpol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor); //only centered implemented
         if( equations == "arbpolO2" ) {
-            multi_gamma1[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
+            multi_gamma1[u].construct( multigrid.grid(u), -p.tau, dg::centered, 1.*p.jfactor);
         }
         else {
-            multi_gamma1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered, p.jfactor);
-        }    
-            
+            multi_gamma1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered, 1.*p.jfactor);
+        }               
     }
     krylovsqrtcauchysolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 500, p.eps_gamma);
     
@@ -227,7 +226,6 @@ Explicit< Geometry, IM, M, container>::Explicit( const Geometry& grid, const Par
         m_fine_omega = dg::evaluate( dg::zero, fine_grid);
         m_fine_iota = dg::evaluate( dg::zero, fine_grid);
         arakawa_fine.construct( fine_grid);
-        arakawa.construct(grid);
 
         m_fine_binv = dg::evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), fine_grid);
         
@@ -249,12 +247,12 @@ Explicit< Geometry, IM, M, container>::Explicit( const Geometry& grid, const Par
         m_backward[0] = dg::create::dx( grid, dg::inverse( grid.bcx()), dg::backward);
         m_backward[1] = dg::create::dy( grid, dg::inverse( grid.bcy()), dg::backward);
         
-        m_centered_f[0] = dg::create::dx( grid, dg::NEU, dg::centered);
-        m_centered_f[1] = dg::create::dy( grid, dg::NEU, dg::centered);
-        m_forward_f[0] = dg::create::dx( grid, dg::inverse( dg::NEU), dg::forward);
-        m_forward_f[1] = dg::create::dy( grid, dg::inverse( dg::NEU), dg::forward);
-        m_backward_f[0] = dg::create::dx( grid, dg::inverse( dg::NEU), dg::backward);
-        m_backward_f[1] = dg::create::dy( grid, dg::inverse( dg::NEU), dg::backward);
+        m_centered_f[0] = dg::create::dx( grid, dg::DIR, dg::centered);
+        m_centered_f[1] = dg::create::dy( grid, dg::PER, dg::centered);
+        m_forward_f[0] = dg::create::dx( grid, dg::inverse( dg::DIR), dg::forward);
+        m_forward_f[1] = dg::create::dy( grid, dg::inverse( dg::PER), dg::forward);
+        m_backward_f[0] = dg::create::dx( grid, dg::inverse( dg::DIR), dg::backward);
+        m_backward_f[1] = dg::create::dy( grid, dg::inverse( dg::PER), dg::backward);
         arakawa.construct(grid);
     }
 
@@ -264,35 +262,14 @@ template< class G, class IM, class M, class container>
 const container& Explicit<G, IM, M, container>::compute_psi( double t, const container& potential)
 {
     if( equations == "arbpolO4" )
-    {        
-        //tensor part
-        dg::blas2::gemv( arakawa.dx(), gamma_phi, phi[1]); //R_x Gamma phi          
-        dg::blas2::gemv( arakawa.dy(), phi[1],chi); //R_y R_y Gamma phi   
-        dg::blas1::pointwiseDot(chi,binv,chi); // 1/B R_y R_x Gamma phi
-        dg::blas1::pointwiseDot(tau, chi,chi, 0.0, omega); //omega = tau/B^2 (R_y R_x)^2 Gamma phi)^2
-        
-        dg::blas2::gemv( arakawa.dx(), phi[1], chi); //R_x R_x Gamma phi
-        dg::blas1::pointwiseDot(chi,binv,chi); //1/B R_x R_x Gamma phi   
-        dg::blas1::pointwiseDot(tau/2., chi,chi, 1.0, omega); //omega+= tau/2/B^2 (R_x R_x Gamma phi)^2
-        
-        dg::blas2::gemv( arakawa.dy(), gamma_phi, phi[1]); //R_y Gamma phi                
-        dg::blas2::gemv( arakawa.dy(), phi[1], chi); //R_y R_y Gamma phi  
-        dg::blas1::pointwiseDot(chi,binv,chi); //1/B R_y R_y Gamma phi
-        dg::blas1::pointwiseDot(tau/2., chi,chi, 1.0, omega); //omega+= tau/2/B^2 (R_y R_y Gamma phi)^2
-        
-        //laplacian part
-        dg::blas2::symv(laplaceM,gamma_phi,chi); 
-        dg::blas1::pointwiseDot(chi,binv,chi);
-        dg::blas1::pointwiseDot(tau/4., chi,chi, -1., omega); //omega-= tau/4/B^2 (lap Gamma phi)^2
-        
-        //elliptic part
-        arakawa.variation(gamma_phi, phi[1]);   // (grad gamma phi)^2
-        dg::blas1::pointwiseDot(1.0, binv, binv, phi[1], 1.0, omega); //omega +=  1/B^2 (grad gamma phi)^2 <=> - 2\psi_2
-        dg::blas1::axpby( 1.,  gamma_phi, -0.5, omega,  phi[1]);
+    {     
+        dg::blas1::pointwiseDot(binv, binv, chi);
+        multi_arbpol[0].variation( gamma_phi, tau/2., chi, omega);
+        dg::blas1::axpby( 1.,  gamma_phi, 1.0, omega,  phi[1]);
     }
     else if ( equations == "arbpolO2") {
         //elliptic part
-        arakawa.variation(gamma_phi, phi[1]);   // (grad gamma phi)^2
+        multi_pol[0].variation(gamma_phi, phi[1]);   // (grad gamma phi)^2
         dg::blas1::pointwiseDot(1.0, binv, binv, phi[1], 0.0, omega); //omega =  1/B^2 (grad gamma phi)^2 <=> - 2\psi_2
         dg::blas1::axpby( 1.,  gamma_phi, -0.5, omega,  phi[1]); // omega = psi_1+ psi_2
     }
@@ -313,7 +290,7 @@ const container& Explicit<G, IM, M, container>::compute_psi( double t, const con
             }
         }
         //compute (nabla phi)^2
-        arakawa.variation(potential, omega);
+        multi_pol[0].variation(potential, omega);
         //compute psi
         if(equations == "global")
         {
@@ -357,7 +334,6 @@ const container& Explicit<G, IM, M, container>::polarisation( double t, const st
         dg::blas2::symv( v2d, chi, gamma_n);
 
         dg::blas1::axpby(1., y[1],  -1., gamma_n, omega);      
-
                 
         old_gamma_phi.extrapolate(t, gamma_phi);
         std::vector<unsigned> number = multigrid.direct_solve( multi_arbpol, gamma_phi, omega, eps_pol);
@@ -365,22 +341,8 @@ const container& Explicit<G, IM, M, container>::polarisation( double t, const st
         if(  number[0] == multigrid.max_iter())
             throw dg::Fail( eps_pol[0]);
 
-        if (m_multiplication == "pointwise")
-        {
-
-            dg::blas2::symv(multi_gamma1[0], gamma_phi, phi[0]); //invG gamma_phi
-            dg::blas1::pointwiseDot( v2d, phi[0], phi[0]);
-
-        }
-        else
-        {
-            dg::blas2::symv(m_inter, gamma_phi, m_fine_iota); //invG gamma_phi
-            dg::blas2::symv(m_fine_gamma1, m_fine_iota, m_fine_chi);
-//             dg::blas2::symv(m_fine_gamma1.inv_weights(), m_fine_chi, m_fine_iota);
-            dg::blas2::symv(m_project, m_fine_iota,phi[0]);
-        }
-
-        
+        dg::blas2::symv(multi_gamma1[0], gamma_phi, phi[0]); //invG gamma_phi
+        dg::blas1::pointwiseDot( v2d, phi[0], phi[0]);
 
     }
     else if( equations == "arbpolO2" )
@@ -393,7 +355,7 @@ const container& Explicit<G, IM, M, container>::polarisation( double t, const st
         for( unsigned u=0; u<3; u++) multi_pol[u].set_chi( multi_chi[u]);
         
         //Compute G^{-1} n_e via LanczosSqrtODE solve
-        krylovsqrtcauchysolve(y[0], gamma_n, 10); 
+        krylovsqrtcauchysolve(y[0], gamma_n, 10); //inv weights already multiplied
 
         dg::blas1::axpby(1.,y[1],  -1., gamma_n, omega);  //- G^{-1} n_e + N_i    
         
@@ -407,19 +369,7 @@ const container& Explicit<G, IM, M, container>::polarisation( double t, const st
             throw dg::Fail( eps_pol[0]);
 
         //Compute \phi = G^{-1} \gamma_phi via LanczosSqrtODE solve
-        if (m_multiplication == "pointwise")
-        {
-
-            krylovsqrtcauchysolve(gamma_phi, phi[0], 10);    
-
-        }
-        else
-        {
-            dg::blas2::symv(m_inter, gamma_phi, m_fine_iota); //invG gamma_phi
-            krylovsqrtcauchysolve_fine(m_fine_iota, m_fine_chi, 10);    
-//             dg::blas2::symv(m_fine_gamma1.inv_weights(), m_fine_chi, m_fine_iota);
-            dg::blas2::symv(m_project, m_fine_iota,phi[0]);
-        }
+        krylovsqrtcauchysolve(gamma_phi, phi[0], 10);    //inv weights already multiplied
 
     }
     else {
@@ -484,10 +434,10 @@ const container& Explicit<G, IM, M, container>::polarisation( double t, const st
         if( equations == "global" || equations == "gravity_global" || equations == "drift_global")
             if( boussinesq)
                 dg::blas1::pointwiseDivide( omega, chi, omega);
+        
         //invert
-
         old_phi.extrapolate(t, phi[0]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega,eps_pol);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
         old_phi.update( t, phi[0]);
         if(  number[0] == multigrid.max_iter())
             throw dg::Fail( eps_pol[0]);
@@ -762,7 +712,6 @@ void Explicit<G, IM, M, container>::operator()( double t, const std::vector<cont
             }
         }
     }
-
     //If you want to test an explicit timestepper:
     //for( unsigned i=0; i<y.size(); i++)
     //    dg::blas2::gemv( -nu, laplaceM, y[i], 1., yp[i]);

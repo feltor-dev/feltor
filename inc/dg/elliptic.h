@@ -117,6 +117,7 @@ class Elliptic
         dg::assign( dg::create::inv_weights(g),   m_precond);
         m_temp = m_tempx = m_tempy = m_inv_weights;
         m_chi=g.metric();
+        m_metric=g.metric();
         m_vol=dg::tensor::volume(m_chi);
         dg::tensor::scal( m_chi, m_vol);
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
@@ -206,6 +207,23 @@ class Elliptic
      * @return Whether the weighting of jump terms with chi is enabled. Either true or false.
      */
     bool get_jump_weighting() const {return m_chi_weight_jump;}
+    /**
+     * @brief Compute the total variation integrand
+     *
+     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
+     * in the plane of a 2x1 product space
+     * @param phi function
+     * @param varphi may equal phi, contains result on output
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void variation( const ContainerType0& phi, ContainerType1& varphi)
+    {
+        blas2::symv( m_rightx, phi, m_tempx);
+        blas2::symv( m_righty, phi, m_tempy);
+        tensor::multiply2d( m_metric, m_tempx, m_tempy, varphi, m_temp);
+        blas1::pointwiseDot( 1., varphi, m_tempx, 1., m_temp, m_tempy, 0., varphi);
+    }
     /**
      * @brief Compute elliptic term and store in output
      *
@@ -341,7 +359,7 @@ class Elliptic
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
     Container m_tempx, m_tempy, m_temp;
     norm m_no;
-    SparseTensor<Container> m_chi;
+    SparseTensor<Container> m_chi, m_metric;
     Container m_sigma, m_vol;
     value_type m_jfactor;
     bool m_chi_weight_jump;

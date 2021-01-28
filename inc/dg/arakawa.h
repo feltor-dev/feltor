@@ -108,24 +108,6 @@ struct ArakawaX
         return m_bdyf;
     }
 
-    /**
-     * @brief Compute the total variation integrand
-     *
-     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
-     * in the plane of a 2x1 product space
-     * @param phi function
-     * @param varphi may equal phi, contains result on output
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
-    template<class ContainerType0, class ContainerType1>
-    void variation( const ContainerType0& phi, ContainerType1& varphi)
-    {
-        blas2::symv( m_bdxf, phi, m_dxrhs);
-        blas2::symv( m_bdyf, phi, m_dyrhs);
-        tensor::multiply2d( m_metric, m_dxrhs, m_dyrhs, varphi, m_helper);
-        blas1::pointwiseDot( 1., varphi, m_dxrhs, 1., m_helper, m_dyrhs, 0., varphi);
-    }
-
   private:
     Container m_dxlhs, m_dxrhs, m_dylhs, m_dyrhs, m_helper;
     Matrix m_bdxf, m_bdyf;

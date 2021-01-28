@@ -11,6 +11,14 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+/**
+ * @brief Matrix class that represents the operator in the Caucha square root integral formula
+ *
+ * @ingroup matrixoperators
+ *
+ * discretization of \f[ (-w^2 I -A) x \f]
+ * where \f[ A\f] is matrix and w is scalar and x is a vector.
+ */
 template< class Matrix, class Container>
 struct SqrtCauchyIntOp
 {
@@ -149,6 +157,12 @@ struct dg::TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
     using tensor_category = dg::SelfMadeMatrixTag;
 };
 
+
+/**
+    * @brief Compute the square root matrix - vector product via the Cauchy integral
+    * i.e. \f[ \sqrt{A} x=  \frac{- 2 K' \sqrt{m}}{\pi iter} A \sum_{j=1}{iter} (w_j^2 I -A)^{-1} cn_j dn_j  x \f]
+    * A is the matrix, x is the vector, w is a scalar m is the smallest eigenvalue of A, K' is the conjuated complete elliptic integral and cn dn are the jacobi function
+ */
 template<class Matrix, class Container>
 struct CauchySqrtInt
 {
