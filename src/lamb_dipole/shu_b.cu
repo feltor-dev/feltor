@@ -82,8 +82,11 @@ int main( int argc, char* argv[])
         double eta_c = file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
         filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
     }
-    if( regularization == "none")
+    else
         apply_filter = false;
+    if( regularization == "viscosity" && stepper != "Karniadakis")
+        throw dg::Error(dg::Message(_ping_)<<"Error: Viscosity only works with Karniadakis! Exit now!");
+
     double dt = file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
     if( "Karniadakis" == stepper)
     {
