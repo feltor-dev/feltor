@@ -1,11 +1,9 @@
 #pragma once
-#define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
-#include <boost/math/special_functions/jacobi_elliptic.hpp>
+#include <boost/math/special_functions.hpp>
 
 #include "blas.h"
-
 #include "helmholtz.h"
-// #include <cmath>
+
 //! M_PI is non-standard ... so MSVC complains
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -269,7 +267,8 @@ struct CauchySqrtInt
         value_type sqrtminEV = sqrt(minEV);
         const value_type k2 = minEV/maxEV;
         const value_type sqrt1mk2 = sqrt(1.-k2);
-        const value_type Ks=std::comp_ellint_1(sqrt1mk2 );
+        const value_type Ks=boost::math::ellint_1(sqrt1mk2 );
+
         const value_type fac = -2.* Ks*sqrtminEV/(M_PI*iter);
         for (unsigned j=1; j<iter+1; j++)
         {

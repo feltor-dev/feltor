@@ -1,5 +1,3 @@
-#define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
-#include <boost/math/special_functions/jacobi_elliptic.hpp>
 // #define DG_DEBUG
 #define SILENT
 

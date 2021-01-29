@@ -1,8 +1,6 @@
-#define __STDCPP_WANT_MATH_SPEC_FUNCS__ 1
 #define SILENT
 // #undef DG_BENCHMARK
 // #define DG_DEBUG
-#include <boost/math/special_functions/jacobi_elliptic.hpp>
 
 #include <iostream>
 #include <iomanip>
