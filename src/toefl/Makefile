@@ -12,7 +12,7 @@ all: toeflR toefl_hpc
 
 toeflR: toeflR.cu toeflR.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK  -g
-
+	
 toefl_hpc: toefl_hpc.cu toeflR.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK  -g
 

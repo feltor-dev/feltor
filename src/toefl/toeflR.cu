@@ -46,12 +46,14 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS
-    toefl::Explicit<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> ex( grid, p);
+    toefl::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> ex( grid, p);
     toefl::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> im( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+    
     ex.gamma1_y(y0[0],y0[1]);
+    
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
