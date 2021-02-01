@@ -18,7 +18,10 @@
    - integrates the ToeflR - functor and
    - directly visualizes results on the screen using parameters in window_params.json
 */
-
+using DVec = dg::DVec;
+using DMatrix =  dg::DMatrix;
+using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
+using DCooMatrix = cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 
 int main( int argc, char* argv[])
 {
@@ -44,11 +47,11 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS
-    toefl::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> ex( grid, p);
-    toefl::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> im( grid, p.nu);
+    toefl::Explicit<dg::CartesianGrid2d, DMatrix, DDiaMatrix, DCooMatrix, DVec> ex( grid, p);
+    toefl::Implicit<dg::CartesianGrid2d, DMatrix, DVec> im( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     
     ex.gamma1_y(y0[0],y0[1]);
     
@@ -59,11 +62,11 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////
 
 
-    dg::Karniadakis< std::vector<dg::DVec> > stepper( y0, y0[0].size(), p.eps_time);
-//     dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
-    //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
+    dg::Karniadakis< std::vector<DVec> > stepper( y0, y0[0].size(), p.eps_time);
+//     dg::Adaptive<dg::ARKStep<std::vector<DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
+    //dg::Adaptive<dg::ERKStep<std::vector<DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
 
-    dg::DVec dvisual( grid.size(), 0.);
+    DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);

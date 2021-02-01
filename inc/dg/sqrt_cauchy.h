@@ -158,7 +158,7 @@ struct dg::TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
 
 /**
     * @brief Compute the square root matrix - vector product via the Cauchy integral
-    * i.e. \f[ \sqrt{A} x=  \frac{- 2 K' \sqrt{m}}{\pi iter} A \sum_{j=1}{iter} (w_j^2 I -A)^{-1} cn_j dn_j  x \f]
+    * i.e. \f[ \sqrt{A} x=  \frac{- 2 K' \sqrt{m}}{\pi N} A \sum_{j=1}^{N} (w_j^2 I -A)^{-1} cn_j dn_j  x \f]
     * A is the matrix, x is the vector, w is a scalar m is the smallest eigenvalue of A, K' is the conjuated complete elliptic integral and cn dn are the jacobi function
  */
 template<class Matrix, class Container>
@@ -251,7 +251,7 @@ struct CauchySqrtInt
     /**
      * @brief Compute rhs term (including inversion of lhs) 
      *
-     * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi iter} V A \sum_{j=1}{iter} (w^2 I -V A)^{-1} cn dn  x \f]
+     * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi N} V A \sum_{j=1}^{N} (w^2 I -V A)^{-1} cn dn  x \f]
      * @param y  is \f[ y\f]
      * @param b is \f[ b\approx \sqrt{V A} x\f]
      * @note The Jacobi elliptic functions are related to the Mathematica functions via jacobi_cn(k,u ) = JacobiCN_(u,k^2), ... and the complete elliptic integral of the first kind via comp_ellint_1(k) = EllipticK(k^2) 

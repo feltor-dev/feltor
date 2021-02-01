@@ -23,6 +23,8 @@ using DMatrix = dg::MDMatrix;
 using IDMatrix = dg::MIDMatrix;
 using IHMatrix = dg::MIHMatrix;
 using Geometry = dg::CartesianMPIGrid2d;
+using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
+using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 #define MPI_OUT if(rank==0)
 #else //TOEFL_MPI
 using HVec = dg::HVec;
@@ -32,6 +34,8 @@ using DMatrix = dg::DMatrix;
 using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CartesianGrid2d;
+using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
+using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 #define MPI_OUT
 #endif //TOEFL_MPI
 
@@ -93,7 +97,7 @@ int main( int argc, char* argv[])
         #endif //TOEFL_MPI
     );
     //create RHS
-    toefl::Explicit< Geometry, DMatrix, DVec > exp( grid, p);
+    toefl::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > exp( grid, p);
     toefl::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
     /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);

@@ -66,8 +66,6 @@ namespace dg{
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
-        dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX_sqrt);
-        dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY_sqrt);
         
         dg::assign( dg::evaluate( dg::one, g), m_temp);
         m_tempx = m_tempy = m_tempxy = m_tempyx = m_iota  = m_helper = m_temp;
@@ -77,8 +75,8 @@ namespace dg{
         dg::assign( dg::create::inv_weights(g),   m_precond);
         m_chi=g.metric();
         m_metric=g.metric();
-        m_vol=dg::tensor::volume(m_chi);
-        dg::tensor::scal( m_chi, m_vol);
+        m_vol=dg::tensor::volume(m_chi); //sqrt(g)
+        dg::tensor::scal( m_chi, m_vol); //m_chi = sqrt(g) g^{ij}
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
         dg::assign( dg::evaluate(dg::one, g), m_sigma);
      }
@@ -111,7 +109,7 @@ namespace dg{
      */
      void set_iota( const Container& iota) {m_iota=iota; }   
      /**
-     * @brief compute the variational of the operator (psi_2 in gf theory): \f[ - \frac{chi}{2} \left\{|\nabla \phi|^2 + \alpha chi ( | \nabla^2 \phi | - (\Delta \phi)^2 / 2) \right\}\f]
+     * @brief compute the variational of the operator (psi_2 in gf theory): \f[ - \frac{\chi}{2} \left\{|\nabla \phi|^2 + \alpha \chi ( | \nabla^2 \phi |^2 - (\Delta \phi)^2 / 2) \right\}\f]
      *
      * @param phi (e.g. Gamma phi)
      * @param alpha (e.g. tau/2)
@@ -120,84 +118,88 @@ namespace dg{
      */
      void variation(const Container& phi, const value_type& alpha, const Container& chi, Container& varphi)  
      {
-        //tensor part
-        dg::blas2::gemv( m_rightx, phi, m_tempx); //R_x phi          
-        dg::blas2::gemv( m_righty , m_tempx, m_temp); //R_y R_x phi   
-        //m_temp = tau/2/B^2
-        dg::blas1::pointwiseDot(2.*alpha, chi, m_temp, m_temp, 0., varphi); //varphi = 2. * alpha * chi  (R_y R_x phi)^2
+//         tensor part
+        dg::blas2::symv( m_rightx, phi, m_tempx); //R_x*f        
+        dg::blas2::symv(-1.0, m_leftx, m_tempx, 0.0, m_helper); //L_x R_x *f   
+        dg::blas2::symv(-1.0, m_righty, m_tempx, 0.0, m_tempyx); //R_y R_x*f 
+        dg::blas2::symv( m_righty, phi, m_tempy); //R_y*f                
+        dg::blas2::symv(-1.0, m_lefty, m_tempy, 0.0, m_temp); //L_y R_y *f   
+        dg::blas2::symv(-1.0, m_rightx, m_tempy, 0.0, m_tempxy); //R_x R_y *f
         
-        dg::blas2::gemv( m_rightx, m_tempx, m_temp); //R_x R_x phi
-        dg::blas1::pointwiseDot(alpha, chi, m_temp, m_temp, 1., varphi); //varphi+= alpha *chi (R_x R_x phi)^2
+        dg::blas2::symv( m_jfactor, m_jumpX, phi, 1., m_helper);
+        dg::blas2::symv( m_jfactor, m_jumpY, phi, 1., m_temp);
         
-        dg::blas2::gemv( m_righty, phi, m_tempy); //R_y phi                
-        dg::blas2::gemv( m_righty, m_tempy, m_temp); //R_y R_y phi  
-        dg::blas1::pointwiseDot(alpha, chi, m_temp, m_temp, 1., varphi); //varphi+= alpha *chi (R_y R_y phi)^2
-        
+        dg::blas1::pointwiseDot(alpha, m_temp,     m_temp,  alpha, m_helper,  m_helper,  0., varphi);
+        dg::blas1::pointwiseDot(alpha, m_tempxy, m_tempxy,  alpha, m_tempyx,  m_tempyx,  1., varphi);
+        dg::blas1::pointwiseDot(varphi, chi, varphi);
+         
         //laplacian part
         dg::blas2::symv(m_laplaceM_iota, phi, m_temp); 
         dg::blas1::pointwiseDot(alpha/2, chi, m_temp, m_temp, -1., varphi); //varphi-= alpha *chi/2 (lap phi)^2
         
         //elliptic part
-//         arakawa.variation(phi, phi[1]);   // (grad phi)^2
         tensor::multiply2d( m_metric, m_tempx, m_tempy, m_temp, m_helper);
         dg::blas1::pointwiseDot( 1., m_temp, m_tempx, 1., m_helper, m_tempy, 0., m_temp); //m_temp = |nabla phi|^2
         dg::blas1::axpby(-0.5, m_temp, -0.5, varphi);
         dg::blas1::pointwiseDot(chi, varphi, varphi);
+         
+
      }
      /**
-     * @brief apply operator
+     * @brief apply (not_normed = symmetric) operator
      *
      * Computes
-     * \f[ y = W\left[-\nabla \cdot \chi \nabla - \Delta \iota \Delta +  \nabla \cdot\nabla \cdot 2\iota \nabla \nabla \right] x \f] to make the matrix symmetric
+     * \f[ y = W\left[-\nabla \cdot \chi \nabla_\perp - \Delta_\perp \iota \Delta_\perp +  2\nabla \cdot\nabla \cdot \iota \nabla_\perp \nabla_\perp \right] x \f] to make the matrix symmetric
+     * 
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
+     * 
+     * @Note Note that for cartesian and cylindrical coordinate systems (with the straight field line approximation) the following relation holds  \f[\nabla \cdot\nabla \cdot (\chi \nabla_\perp^2 f) =  \frac{1}{\sqrt{g}}  \partial_j \left\{\partial_i \left[\sqrt{g} \chi P^{ni} \left( \partial_n ( P^{jm} \partial_m f)\right) \right]\right\} \f] where P is the projection tensor
      */
      void symv(const Container& x, Container& y)                                                                   
-     {         
-         //div div (iota nabla^2 f) term
+     {               
+         //tensor term first
         dg::blas2::symv( m_rightx, x, m_helper); //R_x*f        
         dg::blas2::symv(-1.0, m_leftx, m_helper, 0.0, m_tempx); //L_x R_x *f   
-        dg::blas2::symv(-1.0, m_righty, m_helper, 0.0, m_tempyx); //L_y R_x*f //Ry Rx or Ly Rx?
+        dg::blas2::symv(-1.0, m_righty, m_helper, 0.0, m_tempyx); //R_y R_x*f 
         dg::blas2::symv( m_righty, x, m_helper); //R_y*f                
         dg::blas2::symv(-1.0, m_lefty, m_helper, 0.0, m_tempy); //L_y R_y *f   
-        dg::blas2::symv(-1.0, m_rightx, m_helper, 0.0, m_tempxy); //L_x R_y *f//Rx Ry or Lx Ry?   
+        dg::blas2::symv(-1.0, m_rightx, m_helper, 0.0, m_tempxy); //R_x R_y *f 
         
         dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_tempx);
         dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_tempy);
         
-        dg::blas1::pointwiseDivide( 1., m_tempx,  m_vol, 0., m_tempx); //make normed 
-        dg::blas1::pointwiseDivide( 1., m_tempyx, m_vol, 0., m_tempyx); //make normed 
-        dg::blas1::pointwiseDivide( 1., m_tempy,  m_vol, 0., m_tempy); //make normed 
-        dg::blas1::pointwiseDivide( 1., m_tempxy, m_vol, 0., m_tempxy); //make normed 
-        
-        dg::blas1::pointwiseDot(1.0, m_iota, m_tempx,  0.0, m_tempx); 
-        dg::blas1::pointwiseDot(1.0, m_iota, m_tempyx, 0.0, m_tempyx); 
-        dg::blas1::pointwiseDot(1.0, m_iota, m_tempy,  0.0, m_tempy); 
-        dg::blas1::pointwiseDot(1.0, m_iota, m_tempxy, 0.0, m_tempxy); 
+        //multiply sqrt(g) iota
+        dg::blas1::pointwiseDot( 1., m_tempx,  m_iota,  m_vol, 0., m_tempx); 
+        dg::blas1::pointwiseDot( 1., m_tempyx, m_iota, m_vol, 0., m_tempyx); 
+        dg::blas1::pointwiseDot( 1., m_tempy,  m_iota,  m_vol, 0., m_tempy); 
+        dg::blas1::pointwiseDot( 1., m_tempxy, m_iota, m_vol, 0., m_tempxy); 
         
         dg::blas2::symv( m_rightx, m_tempx, m_helper);     
-        dg::blas2::symv(-1.0, m_leftx, m_helper, 0.0, m_temp); 
+        dg::blas2::symv(-1.0, m_leftx, m_helper, 0.0, m_temp);  //L_x R_x 
         dg::blas2::symv( m_leftx, m_tempyx, m_helper);       
-        dg::blas2::symv(-1.0, m_lefty, m_helper, 1.0, m_temp); // L L  or L R ? 
+        dg::blas2::symv(-1.0, m_lefty, m_helper, 1.0, m_temp); //L_y L_x 
         dg::blas2::symv( m_righty, m_tempy, m_helper);       
-        dg::blas2::symv(-1.0, m_lefty, m_helper, 1.0, m_temp); 
+        dg::blas2::symv(-1.0, m_lefty, m_helper, 1.0, m_temp); //L_y R_y
         dg::blas2::symv( m_lefty, m_tempxy, m_helper);       
-        dg::blas2::symv(-1.0, m_leftx, m_helper, 1.0, m_temp);   // L L  or L R ? 
+        dg::blas2::symv(-1.0, m_leftx, m_helper, 1.0, m_temp);   //L_x L_y
         
         dg::blas2::symv( m_jfactor, m_jumpX, m_tempx, 1., m_temp);
         dg::blas2::symv( m_jfactor, m_jumpY, m_tempy, 1., m_temp); 
         
+        dg::blas1::pointwiseDivide(m_temp, m_vol, m_temp); //multiply sqrt(g)^(-1)
+
         //-lap (iota lap f) term
         blas2::symv( m_laplaceM_iota, x, m_tempx);                                    
         blas1::pointwiseDot( m_iota, m_tempx, m_tempx);  
-        blas2::symv(-1.0, m_laplaceM_iota, m_tempx,2.0,m_temp);    
+        blas2::symv(-1.0, m_laplaceM_iota, m_tempx, 2.0, m_temp);    
         
         //elliptic term - div (chi nabla f)
         blas2::symv(1.0, m_laplaceM_chi, x, 1., m_temp);       
         
         //scale with weights to obtain not normed discr
         blas2::symv(1.0, m_weights, m_temp, 0., y);    
-       
+
      }         
      
      private:
@@ -216,7 +218,7 @@ namespace dg{
         return centered;
      }
      Elliptic<Geometry, Matrix, Container> m_laplaceM_chi, m_laplaceM_iota;                                                             
-     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY, m_jumpX_sqrt, m_jumpY_sqrt;
+     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
      Container m_temp, m_tempx, m_tempy, m_tempxy, m_tempyx, m_iota, m_helper;                                                                                  
      Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
      SparseTensor<Container> m_chi;

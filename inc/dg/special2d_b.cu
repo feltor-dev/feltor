@@ -40,14 +40,16 @@ int main()
     double eps;
     double jfactor;
 
-	n = 3;
-	Nx = Ny = 32;
-	eps = 1e-6;
-	jfactor = 1;
+// 	n = 3;
+// 	Nx = Ny = 32;
+// 	eps = 1e-6;
+    
+    
+// 	jfactor = 1;
 
-	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
+	std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
-    std::cin >> eps >> jfactor;*/
+    std::cin >> eps >> jfactor;
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
@@ -68,7 +70,6 @@ int main()
     const dg::DVec derivati = dg::evaluate( der, grid);
     const double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
-    exblas::udouble res;
 
     //std::cout << "Create Polarisation object and set chi!\n";
     {
@@ -101,7 +102,7 @@ int main()
     const dg::DVec b =    dg::evaluate( rhs,     grid);
     dg::DVec x       =    dg::evaluate( initial, grid);
     t.tic();
-    std::vector<unsigned> number = multigrid.direct_solve(multi_arbpol, x, b, eps);
+    std::vector<unsigned> number = multigrid.direct_solve(multi_arbpol, x, b,{eps,eps*0.1,eps*0.1});
     t.toc();
     std::cout << "Solution took "<< t.diff() <<"s\n";
     for( unsigned u=0; u<number.size(); u++)
@@ -109,8 +110,8 @@ int main()
     //! [multigrid]
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
-    err = sqrt( err/norm); res.d = err;
-    std::cout << " "<<err << "\t"<<res.i<<"\n";
+    err = sqrt( err/norm); 
+    std::cout << " "<<err <<"\n";
     }
 
 

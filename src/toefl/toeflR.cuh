@@ -6,17 +6,7 @@
 namespace toefl
 {
 
-struct Upwind{
-DG_DEVICE
-    void operator()( double& result, double fw, double bw, double v)
-    {
-        if( v > 0)
-            result -= bw; // yp = - Div( F)
-        else
-            result -= fw;
-    }
-};
-    
+
 template<class Geometry, class Matrix, class container>
 struct Implicit
 {
@@ -48,7 +38,7 @@ struct Implicit
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
-template< class Geometry, class Matrix, class container >
+template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class container >
 struct Explicit
 {
     /**
@@ -143,7 +133,7 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
-    KrylovSqrtCauchySolve<Geometry, Matrix, cusp::dia_matrix<int, dg::get_value_type<container>, cusp::device_memory>, cusp::coo_matrix<int, dg::get_value_type<container>, cusp::device_memory>, container> krylovsqrtcauchysolve, krylovsqrtcauchysolve_fine;
+    KrylovSqrtCauchySolve<Geometry, Matrix, DiaMatrix, CooMatrix, container> krylovsqrtcauchysolve, krylovsqrtcauchysolve_fine;
     dg::ArakawaX< Geometry, Matrix, container> arakawa, arakawa_fine;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
@@ -162,8 +152,8 @@ struct Explicit
 
 };
 
-template< class Geometry, class M, class container>
-Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Parameters& p ):
+template< class Geometry, class M, class DM, class CM, class container>
+Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const Parameters& p ):
     chi( evaluate( dg::zero, grid)), omega(chi), iota(chi), gamma_n(chi), gamma_phi(chi),
     binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
     phi( 2, chi), dyphi( phi), ype(phi),
@@ -197,8 +187,8 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     krylovsqrtcauchysolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 500, p.eps_gamma);
 }
 
-template< class G,  class M, class container>
-const container& Explicit<G,  M, container>::compute_psi( double t, const container& potential)
+template< class G,  class M, class DM, class CM, class container>
+const container& Explicit<G,  M, DM, CM, container>::compute_psi( double t, const container& potential)
 {
     if( equations == "global-arbpolO4" )
     {     
@@ -249,8 +239,8 @@ const container& Explicit<G,  M, container>::compute_psi( double t, const contai
 
 
 //computes and modifies expy!!
-template<class G,  class M, class container>
-const container& Explicit<G,  M, container>::polarisation( double t, const std::vector<container>& y)
+template<class G,  class M, class DM, class CM, class container>
+const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, const std::vector<container>& y)
 {
     if( equations == "global-arbpolO4" )
     {
@@ -388,8 +378,8 @@ const container& Explicit<G,  M, container>::polarisation( double t, const std::
     return phi[0];
 }
 
-template< class G,  class M, class container>
-void Explicit<G,  M, container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
+template< class G,  class M, class DM, class CM, class container>
+void Explicit<G,  M, DM, CM, container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1 || y[1] = Omega
