@@ -120,7 +120,7 @@ MultistepTableau<real_type> imex_adams_2_2()
     b[0] =  3./2.;
     b[1] = -1./2.;
     c[0] = 9./16.;
-    c[1] = -3./8.;
+    c[1] = 3./8.;
     c[2] = 1./16.;
     return MultistepTableau<real_type>( steps, order, a, b, c);
 }
@@ -136,11 +136,34 @@ MultistepTableau<real_type> imex_adams_3_3()
     b[1] = -4./3.;
     b[2] = 5./12.;
     c[0] =   4661./10000.;
-    c[1] = -15551./30000.;
+    c[1] =  15551./30000.;
     c[2] =     1949/30000;
     c[3] = -1483./30000.;
     return MultistepTableau<real_type>( steps, order, a, b, c);
 }
+template<class real_type>
+MultistepTableau<real_type> imex_koto_2_2()
+{
+    // stabilized 2nd order method
+    unsigned steps = 2, order = 2;
+    std::vector<real_type> am(steps,0), bm(steps, 0), cm(steps+1,0);
+    std::vector<real_type> ap(steps,0), bp(steps, 0), cp(steps+1,0);
+    //real_type a = 1.5, b = 1.5;
+    real_type a = 20., b = 20.;
+    ap[0] = a;
+    ap[1] = 1-2.*a;
+    ap[2] = a-1;
+    cp[0] =  b;
+    cp[1] = 0.5+a-2*b;
+    cp[2] = 0.5-a+b;
+    bp[1] = 0.5+a;
+    bp[2] = 0.5-a;
+    am[0] = -ap[1]/a, am[1] = -ap[2]/a;
+    bm[0] = bp[1]/a, bm[1] = bp[2]/a;
+    cm[0] = cp[0]/a, cm[1] = cp[1]/a, cm[2] = cp[2]/a;
+    return MultistepTableau<real_type>( steps, order, am, bm, cm);
+}
+
 template<class real_type>
 MultistepTableau<real_type> imex_bdf(unsigned steps)
 {
@@ -183,11 +206,6 @@ MultistepTableau<real_type> imex_bdf(unsigned steps)
         a = {360./147.,-450./147.,400./147.,-225./147.,72./147.,-10./147.};
         b = {360./147.,-900./147.,1200./147.,-900./147.,360./147.,-60./147.};
         c[0] = 60./147.;
-        break;
-        case (7):
-        a = { 2940./1089.,-4410./1089.,4900./1089.,-3675./1089.,1764./1089.,-490./1089.,60./1089.};
-        b = { 2940./1089.,-8820./1089.,14700./1089.,-14700./1089.,8820./1089.,-2940./1089.,420./1089.};
-        c[0] = 420./1089.;
         break;
     }
     return MultistepTableau<real_type>( steps, order, a, b, c);
@@ -347,12 +365,12 @@ enum multistep_identifier{
     IMEX_EULER_1_1,
     IMEX_ADAMS_2_2,
     IMEX_ADAMS_3_3,
+    IMEX_KOTO_2_2,
     IMEX_BDF_2_2,
     IMEX_BDF_3_3,
     IMEX_BDF_4_4,
     IMEX_BDF_5_5,
     IMEX_BDF_6_6,
-    IMEX_BDF_7_7,
     IMEX_TVB_3_3,
     IMEX_TVB_4_4,
     IMEX_TVB_5_5,
@@ -368,7 +386,6 @@ enum multistep_identifier{
     eBDF_4_4,
     eBDF_5_5,
     eBDF_6_6,
-    eBDF_7_7,
     TVB_1_1,
     TVB_2_2,
     TVB_3_3,
@@ -382,14 +399,12 @@ enum multistep_identifier{
     SSP_5_3,
     SSP_6_3,
     // implicit methods
-    BDF_1_1, //!<
-    BDF_2_2, //!<
-    BDF_3_3, //!<
-    BDF_4_4, //!<
-    BDF_5_5, //!<
-    BDF_6_6, //!<
-    BDF_7_7, //!<
-
+    BDF_1_1,
+    BDF_2_2,
+    BDF_3_3,
+    BDF_4_4,
+    BDF_5_5,
+    BDF_6_6,
 };
 
 ///@cond
@@ -401,13 +416,13 @@ static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     {"Euler-1-1", IMEX_EULER_1_1},
     {"ImEx-Adams-2-2", IMEX_ADAMS_2_2},
     {"ImEx-Adams-3-3", IMEX_ADAMS_3_3},
+    {"ImEx-Koto-2-2", IMEX_KOTO_2_2},
     {"ImEx-BDF-2-2", IMEX_BDF_2_2},
     {"ImEx-BDF-3-3", IMEX_BDF_3_3},
     {"Karniadakis",  IMEX_BDF_3_3},
     {"ImEx-BDF-4-4", IMEX_BDF_4_4},
     {"ImEx-BDF-5-5", IMEX_BDF_5_5},
     {"ImEx-BDF-6-6", IMEX_BDF_6_6},
-    {"ImEx-BDF-7-7", IMEX_BDF_7_7},
     {"ImEx-TVB-3-3", IMEX_TVB_3_3},
     {"ImEx-TVB-4-4", IMEX_TVB_4_4},
     {"ImEx-TVB-5-5", IMEX_TVB_5_5},
@@ -423,7 +438,6 @@ static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     {"eBDF-4-4", eBDF_4_4},
     {"eBDF-5-5", eBDF_5_5},
     {"eBDF-6-6", eBDF_6_6},
-    {"eBDF-7-7", eBDF_7_7},
     {"TVB-1-1", TVB_1_1},
     {"TVB-2-2", TVB_2_2},
     {"TVB-3-3", TVB_3_3},
@@ -443,7 +457,6 @@ static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     {"BDF-4-4", BDF_4_4},
     {"BDF-5-5", BDF_5_5},
     {"BDF-6-6", BDF_6_6},
-    {"BDF-7-7", BDF_7_7}
 };
 enum multistep_identifier str2lmstableau( std::string name)
 {
@@ -472,6 +485,8 @@ MultistepTableau<real_type> lmstableau( enum multistep_identifier id)
             return dg::tableau::imex_adams_2_2<real_type>();
         case IMEX_ADAMS_3_3:
             return dg::tableau::imex_adams_3_3<real_type>();
+        case IMEX_KOTO_2_2:
+            return dg::tableau::imex_koto_2_2<real_type>();
         case IMEX_BDF_2_2:
             return dg::tableau::imex_bdf<real_type>(2);
         case IMEX_BDF_3_3:
@@ -482,8 +497,6 @@ MultistepTableau<real_type> lmstableau( enum multistep_identifier id)
             return dg::tableau::imex_bdf<real_type>(5);
         case IMEX_BDF_6_6:
             return dg::tableau::imex_bdf<real_type>(6);
-        case IMEX_BDF_7_7:
-            return dg::tableau::imex_bdf<real_type>(7);
         case IMEX_TVB_3_3:
             return dg::tableau::imex_tvb<real_type>(3);
         case IMEX_TVB_4_4:
@@ -501,7 +514,7 @@ MultistepTableau<real_type> lmstableau( enum multistep_identifier id)
         case AB_5_5:
             return dg::tableau::ab<real_type>(5);
         case eBDF_1_1:
-            return dg::tableau::imex_bdf<real_type>(1);
+            return dg::tableau::imex_euler_1_1<real_type>();
         case eBDF_2_2:
             return dg::tableau::imex_bdf<real_type>(2);
         case eBDF_3_3:
@@ -512,10 +525,8 @@ MultistepTableau<real_type> lmstableau( enum multistep_identifier id)
             return dg::tableau::imex_bdf<real_type>(5);
         case eBDF_6_6:
             return dg::tableau::imex_bdf<real_type>(6);
-        case eBDF_7_7:
-            return dg::tableau::imex_bdf<real_type>(7);
         case TVB_1_1:
-            return dg::tableau::tvb<real_type>(1);
+            return dg::tableau::imex_euler_1_1<real_type>();
         case TVB_2_2:
             return dg::tableau::tvb<real_type>(2);
         case TVB_3_3:
@@ -550,8 +561,6 @@ MultistepTableau<real_type> lmstableau( enum multistep_identifier id)
             return dg::tableau::imex_bdf<real_type>(5);
         case BDF_6_6:
             return dg::tableau::imex_bdf<real_type>(6);
-        case BDF_7_7:
-            return dg::tableau::imex_bdf<real_type>(7);
     }
     return MultistepTableau<real_type>(); //avoid compiler warning
 }
@@ -570,12 +579,15 @@ MultistepTableau<real_type> lmstableau( std::string name)
  *    Name  | Identifier | Description
  *   -------|------------| -----------
  *   ImEx-Euler-1-1         | dg::IMEX_EULER_1_1 | Explicit Euler combined with Implicit Euler
-    ImEx-Adams-X-X | dg::IMEX_ADAMS_X_X | <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> @note **X can be 2 (C=0.44) or 3 (C=0.16)**
-    ImEx-BDF-X-X | dg::IMEX_BDF_X_X | The family of schems described in <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> <br>The implicit part is a normal BDF scheme https://en.wikipedia.org/wiki/Backward_differentiation_formula while the explicit part equals the Minimal Projecting method by <a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a> or **extrapolated BDF** in <a href = "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S. J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a> <br> @note Possible values for **X: 1 ( C=1), 2 (C=0.63), 3 (C=0.39), 4 (C=0.22), 5( C=0.09), * 6, 7** <br> Note that X=3 is identical to the "Karniadakis" scheme
+ *   Euler                  | dg::IMEX_EULER_1_1 | For convenience
+    ImEx-Koto-2-2 | dg::IMEX_KOTO_2_2 | <a href="https://dx.doi.org/10.1007/s11464-009-0005-9">Koto T. Front. Math. China 2009, 4(1): 113-129</a> A stabilized 2nd order scheme with a large region of stability
+    ImEx-Adams-X-X | dg::IMEX_ADAMS_X_X | <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> @note **Possible values for X: 2 (C=0.44), 3 (C=0.16)**
+    ImEx-BDF-X-X | dg::IMEX_BDF_X_X | The family of schems described in <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> <br>The implicit part is a normal BDF scheme https://en.wikipedia.org/wiki/Backward_differentiation_formula while the explicit part equals the Minimal Projecting method by <a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a> or **extrapolated BDF** in <a href = "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S. J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a> <br> @note Possible values for **X: 1 (C=1.00), 2 (C=0.63), 3 (C=0.39), 4 (C=0.22), 5 (C=0.09), 6** <br> Note that X=3 is identical to the "Karniadakis" scheme
     * Karniadakis | dg::IMEX_BDF_3_3 | The ImEx-BDF-3-3 scheme is identical to the widely used "Karniadakis" scheme <a href = "https://dx.doi.org/10.1016/0021-9991(91)90007-8"> Karniadakis, et al. J. Comput. Phys. 97 (1991)</a>
-    ImEx-TVB-X-X | dg::IMEX_TVB_X_X | The family of schems described in < <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> <br> The explicit part is a TVB scheme while the implicit part is optimized to maximize damping of high wavelength <br> @note Possible values for **X: 3 (C=0.54), 4 (C=0.458), 5 (C=0.376)**
+    ImEx-TVB-X-X | dg::IMEX_TVB_X_X | The family of schems described in < <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> <br> The explicit part is a TVB scheme while the implicit part is optimized to maximize damping of high wavelength <br> @note Possible values for **X: 3 (C=0.54), 4 (C=0.46), 5 (C=0.38)**
     *
- @note the CFL coefficient C is given relative to the forward Euler method: \f$ \Delta t < C \Delta_{FE}\f$.
+ @note the CFL coefficient C is given relative to the forward Euler method: \f$ \Delta t < C \Delta t_{FE}\f$.
+ @attention The coefficient C is the one that ensures the TVD property of the scheme and is **not** directly related to the stability region of the scheme
  */
 
 /*! @class hide_explicit_multistep_tableaus
@@ -583,19 +595,21 @@ MultistepTableau<real_type> lmstableau( std::string name)
  *    Name  | Identifier | Description
  *   -------|------------| -----------
  *   AB-X-X | dg::AB_X_X | The family of schemes described in <a href = "https://en.wikipedia.org/wiki/Linear_multistep_method"> Linear multistep methods </a> as **Adams-Bashforth** \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f] @note **Possible stages are X: 1, 2,..., 5**, the order of the method is the same as its stages @note The Adams-Bashforth schemes implemented here need less storage but may have **a smaller region of absolute stability** than for example an extrapolated BDF method of the same order.
- * eBDF-X-X | dg::eBDF_X_X | The family of schemes described in <a href = "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S.  J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a> as **extrapolated BDF**  where it is found to be TVB (**total variation bound**). The schemes also appear as **Minimal Projecting** scheme described in <a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a> * <br> @note **Possible stages are X: 1 (C=1), 2, 3 (C=0.39), 4, 5, 6, 7** with the order the same as the number of stages
- * TVB-X-X | dg::TVB_X_X | The family of schemes described in <a href="https://doi.org/10.1016/j.jcp.2005.02.029">S.J. Ruuth and W. Hundsdorfer, High-order linear multistep methods with general monotonicity and boundedness properties, Journal of Computational Physics, Volume 209, Issue 1, 2005 </a> as Total variation Bound. These schemes have **larger stable step sizes than the eBDF family**, <br> @note **Possible values for X are 1 (C=1),2 (C=0.5), 3 (C=0.54), 4 (C=0.46), 5 (C=0.38) 6 (C=0.33)**. We highlight that TVB-3-3 has 38% larger stepsize than eBDF-3-3 and TVB-4-4 has 109% larger stepsize than eBDF-4-4.
- * SSP-X-Y | dg::SSP_X_Y | The family of schemes described in <a href="https://doi.org/10.1007/BF02728985">Gottlieb, S. On high order strong stability preserving runge-kutta and multi step time discretizations. J Sci Comput 25, 105–128 (2005)</a> as Strong Stability preserving. We implement the lowest order schemes for each stage and disregard the remaining schemes in the paper since their CFL conditions are worse than the TVB scheme of the same order.  @note Possible values for **X-Y : 1-1 (C=1), 2-2 (C=0.5), 3-2 (C=0.5), 4-2 (C=0.66), 5-3: (C=0.5), 6-3 (C=0.567)**.@note These schemes are noteworthy because the coefficients b_i are all positive except for the 2-2 method and **the "4-2" and "6-3" methods allow slightly larger stepsize but increased storage requirements than TVB** of same order (2 and 3).
+ * eBDF-X-X | dg::eBDF_X_X | The family of schemes described in <a href = "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S.  J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a> as **extrapolated BDF**  where it is found to be TVB (**total variation bound**). The schemes also appear as **Minimal Projecting** scheme described in <a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a> <br> @note **Possible stages are X: 1 (C=1), 2 (C=0.63), 3 (C=0.39), 4 (C=0.22), 5 (C=0.09), 6** with the order the same as the number of stages
+ * TVB-X-X | dg::TVB_X_X | The family of schemes described in <a href="https://doi.org/10.1016/j.jcp.2005.02.029">S.J. Ruuth and W. Hundsdorfer, High-order linear multistep methods with general monotonicity and boundedness properties, Journal of Computational Physics, Volume 209, Issue 1, 2005 </a> as Total variation Bound. These schemes have larger allowable step sizes than the eBDF family, <br> @note **Possible values for X are 1 (C=1), 2 (C=0.5), 3 (C=0.54), 4 (C=0.46), 5 (C=0.38) 6 (C=0.33)**. We highlight that TVB-3-3 has 38% larger allowable stepsize than eBDF-3-3 and TVB-4-4 has 109% larger stepsize than eBDF-4-4 (to ensure the TVB property, not stability).
+ * SSP-X-Y | dg::SSP_X_Y | The family of schemes described in <a href="https://doi.org/10.1007/BF02728985">Gottlieb, S. On high order strong stability preserving runge-kutta and multi step time discretizations. J Sci Comput 25, 105–128 (2005)</a> as Strong Stability preserving. We implement the lowest order schemes for each stage and disregard the remaining schemes in the paper since their CFL conditions are worse than the TVB scheme of the same order.  @note **Possible values for X-Y : 1-1 (C=1), 2-2 (C=0.5), 3-2 (C=0.5), 4-2 (C=0.66), 5-3 (C=0.5), 6-3 (C=0.567)**.@note These schemes are noteworthy because the coefficients b_i are all positive except for the 2-2 method and **the "4-2" and "6-3" methods allow slightly larger allowable stepsize but increased storage requirements than TVB** of same order (2 and 3).
 
  *@note Total variation bound (TVB) means \f$ || v^n|| \leq M ||v^0||\f$  where the norm signifies the total variation semi-norm. Total variation diminishing
-     (TVD) means M=1, and strong stability preserving (SSP) is the same as TVD, TVB schemes converge to the correct entropy solutions of hyperbolic conservation laws)
+     (TVD) means M=1, and strong stability preserving (SSP) is the same as TVD, TVB schemes converge to the correct entropy solutions of hyperbolic conservation laws
+ @note the CFL coefficient C is given relative to the forward Euler method: \f$ \Delta t < C \Delta t_{FE}\f$.
+ @attention The coefficient C is the one that ensures the TVD property of the scheme and is **not** directly related to the stability region of the scheme
  */
 
 /*! @class hide_implicit_multistep_tableaus
  *
  *    Name  | Identifier | Description
  *   -------|------------| -----------
- *   BDF-X-X | dg::BDF_X_X | The coefficients for backward differences can be found at https://en.wikipedia.org/wiki/Backward_differentiation_formula <br> @note A BDF scheme is simply constructed by discretizing the time derivative with a n-th order backward difference formula and evaluating the right hand side at the new timestep
+ *   BDF-X-X | dg::BDF_X_X | The coefficients for backward differences can be found at https://en.wikipedia.org/wiki/Backward_differentiation_formula <br> @note **Possible values for X: 1, 2, 3, 4, 5, 6** @note A BDF scheme is simply constructed by discretizing the time derivative with a n-th order backward difference formula and evaluating the right hand side at the new timestep. @note Methods with s>6 are not zero-stable so they cannot be used
  *
 */
 

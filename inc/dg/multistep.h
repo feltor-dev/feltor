@@ -295,7 +295,7 @@ struct Karniadakis
     You can use your own coefficients defined as a \c dg::MultistepTableau
     or use one of the predefined coefficients in
     @copydoc hide_implicit_multistep_tableaus
-    and
+    and (any imex tableau can be used in an implicit scheme, disregarding the explicit coefficients)
     @copydoc hide_imex_multistep_tableaus
 *
 * The necessary Inversion in the implicit part is provided by the \c SolverType class.
@@ -473,7 +473,7 @@ void FilteredImplicitMultistep<ContainerType, SolverType>::step(RHS& rhs, Limite
     You can use your own coefficients defined as a \c dg::MultistepTableau
     or use one of the predefined coefficients in
     @copydoc hide_implicit_multistep_tableaus
-    and
+    and (any imex tableau can be used in an implicit scheme, disregarding the explicit coefficients)
     @copydoc hide_imex_multistep_tableaus
 *
 * The necessary Inversion in the implicit part is provided by the \c SolverType class.
@@ -590,8 +590,7 @@ struct FilteredExplicitMultistep
      * @brief Reserve memory for the integration
      *
      * Set the coefficients \f$ a_i,\ b_i\f$
-     * @param method the name of the family of schemes to be used (a string can be converted to an enum with the same spelling) @sa multistep_identifier
-     * @param stages (global) stages (= number of steps in the multistep) of the method (Currently possible values depend on the method), does not necessarily coincide with the order of the method
+     * @param tableau Tableau, name or identifier that \c ConvertsToMultistepTableau
      * @param copyable ContainerType of the size that is used in \c step
      * @note it does not matter what values \c copyable contains, but its size is important
      */
