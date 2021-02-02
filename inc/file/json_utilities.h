@@ -13,6 +13,8 @@
 
 //Note that the json utilities are separate from netcdf utilities because
 //of the different library dependencies that they incur
+namespace dg
+{
 namespace file
 {
 
@@ -308,3 +310,4 @@ static inline void string2Json(std::string input, Json::Value& js, enum comments
 }
 
 }//namespace file
+}//namespace dg

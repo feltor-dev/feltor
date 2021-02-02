@@ -20,6 +20,8 @@
  */
 
 
+namespace dg
+{
 /**
 * @brief Namespace for netcdf output related classes and functions following the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
@@ -309,3 +311,4 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
 #endif //MPI_VERSION
 
 } //namespace file
+} //namespace dg

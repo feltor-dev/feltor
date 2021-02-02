@@ -13,6 +13,8 @@
  * Contains Error handling class
  */
 
+namespace dg
+{
 namespace file
 {
 
@@ -399,3 +401,4 @@ void put_vara_double(int ncid, int varid, unsigned slice,
 #endif //MPI_VERSION
 
 }//namespace file
+}//namespace dg
