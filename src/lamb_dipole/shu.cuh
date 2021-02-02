@@ -5,7 +5,7 @@
 #include <cusp/ell_matrix.h>
 
 #include "json/json.h"
-#include "file/json_utilities.h"
+#include "dg/file/json_utilities.h"
 #include "dg/algorithm.h"
 #include "init.h"
 
@@ -25,13 +25,13 @@ struct Upwind{
 template< class Geometry, class Matrix, class Container>
 struct Diffusion
 {
-    Diffusion( const Geometry& g, Json::Value& js, enum file::error mode)
+    Diffusion( const Geometry& g, Json::Value& js, enum dg::file::error mode)
     {
-        std::string regularization = file::get( mode, js, "regularization", "type", "modal").asString();
+        std::string regularization = dg::file::get( mode, js, "regularization", "type", "modal").asString();
         if( "viscosity" == regularization)
         {
-            m_nu = file::get( mode, js, "regularization", "nu_perp", 1e-3).asDouble();
-            m_order = file::get( mode, js, "regularization", "order", 1).asUInt();
+            m_nu = dg::file::get( mode, js, "regularization", "nu_perp", 1e-3).asDouble();
+            m_order = dg::file::get( mode, js, "regularization", "order", 1).asUInt();
             m_temp = dg::evaluate( dg::zero, g);
             m_LaplacianM.construct( g, dg::normed);
         }
@@ -62,7 +62,7 @@ struct Shu
 {
     using value_type = dg::get_value_type<Container>;
 
-    Shu( const Geometry& grid, Json::Value& js, enum file::error mode);
+    Shu( const Geometry& grid, Json::Value& js, enum dg::file::error mode);
 
     const dg::Elliptic<Matrix, Container, Container>& lap() const { return m_multi_laplaceM[0];}
     dg::ArakawaX<Geometry, Matrix, Container>& arakawa() {return m_arakawa;}
@@ -103,14 +103,14 @@ struct Shu
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 Shu< Geometry, IMatrix, Matrix, Container>::Shu(
-        const Geometry& g, Json::Value& js, enum file::error mode):
+        const Geometry& g, Json::Value& js, enum dg::file::error mode):
     m_old_psi( 2, dg::evaluate( dg::zero, g)),
     m_multigrid( g, 3),
     m_x( dg::evaluate( dg::cooX2d, g)),
     m_y( dg::evaluate( dg::cooY2d, g))
 {
-    m_advection = file::get( mode, js, "advection", "type", "arakawa").asString();
-    m_multiplication = file::get( mode, js, "advection", "multiplication", "pointwise").asString();
+    m_advection = dg::file::get( mode, js, "advection", "type", "arakawa").asString();
+    m_multiplication = dg::file::get( mode, js, "advection", "multiplication", "pointwise").asString();
     m_metric = g.metric();
 
     m_psi = dg::evaluate( dg::zero, g);
@@ -153,17 +153,21 @@ Shu< Geometry, IMatrix, Matrix, Container>::Shu(
         m_arakawa.construct( g);
     }
 
-    unsigned stages = file::get( mode, js, "elliptic", "stages", 3).asUInt();
+    unsigned stages = dg::file::get( mode, js, "elliptic", "stages", 3).asUInt();
     m_eps.resize(stages);
-    m_eps[0] = file::get_idx( mode, js, "elliptic", "eps_pol", 0, 1e-6).asDouble();
+    m_eps[0] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", 0, 1e-6).asDouble();
     for( unsigned i=1;i<stages; i++)
     {
-        m_eps[i] = file::get_idx( mode, js, "elliptic", "eps_pol", i, 1).asDouble();
+        m_eps[i] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", i, 1).asDouble();
         m_eps[i]*= m_eps[0];
     }
+    //this is a hidden parameter
+    //note that only centered works with double periodic boundary conditions
+    enum dg::direction dir = dg::str2direction( dg::file::get( dg::file::error::is_warning, js,
+                "elliptic", "direction", "centered").asString());
     m_multi_laplaceM.resize(stages);
     for( unsigned u=0; u<stages; u++)
-        m_multi_laplaceM[u].construct( m_multigrid.grid(u), dg::not_normed, dg::centered, 1);
+        m_multi_laplaceM[u].construct( m_multigrid.grid(u), dg::not_normed, dir, 1);
 }
 
 template< class Geometry, class IMatrix, class Matrix, class Container>

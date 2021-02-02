@@ -4,21 +4,21 @@
 #include <functional>
 #include "json/json.h"
 #include "dg/algorithm.h"
-#include "file/json_utilities.h"
+#include "dg/file/json_utilities.h"
 
 namespace shu{
 
-dg::CartesianGrid2d createGrid( Json::Value& js, enum file::error mode)
+dg::CartesianGrid2d createGrid( Json::Value& js, enum dg::file::error mode)
 {
-    unsigned n = file::get( mode, js, "grid", "n",3).asUInt();
-    unsigned Nx = file::get( mode, js, "grid", "Nx", 48).asUInt();
-    unsigned Ny = file::get( mode, js, "grid", "Ny", 48).asUInt();
-    double x0 = file::get_idx( mode, js, "grid", "x", 0u, 0.).asDouble();
-    double x1 = file::get_idx( mode, js, "grid", "x", 1u, 1.).asDouble();
-    double y0 = file::get_idx( mode, js, "grid", "y", 0u, 0.).asDouble();
-    double y1 = file::get_idx( mode, js, "grid", "y", 1u, 1.).asDouble();
-    dg::bc bcx = dg::str2bc ( file::get_idx( mode, js, "grid", "bc", 0u, "DIR").asString());
-    dg::bc bcy = dg::str2bc ( file::get_idx( mode, js, "grid", "bc", 1u, "PER").asString());
+    unsigned n = dg::file::get( mode, js, "grid", "n",3).asUInt();
+    unsigned Nx = dg::file::get( mode, js, "grid", "Nx", 48).asUInt();
+    unsigned Ny = dg::file::get( mode, js, "grid", "Ny", 48).asUInt();
+    double x0 = dg::file::get_idx( mode, js, "grid", "x", 0u, 0.).asDouble();
+    double x1 = dg::file::get_idx( mode, js, "grid", "x", 1u, 1.).asDouble();
+    double y0 = dg::file::get_idx( mode, js, "grid", "y", 0u, 0.).asDouble();
+    double y1 = dg::file::get_idx( mode, js, "grid", "y", 1u, 1.).asDouble();
+    dg::bc bcx = dg::str2bc ( dg::file::get_idx( mode, js, "grid", "bc", 0u, "DIR").asString());
+    dg::bc bcy = dg::str2bc ( dg::file::get_idx( mode, js, "grid", "bc", 1u, "PER").asString());
     return dg::CartesianGrid2d( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy);
 }
 
@@ -94,37 +94,37 @@ struct MMSSource{
 };
 
 std::map<std::string, std::function< dg::HVec(
-    Json::Value& js, enum file::error mode,
+    Json::Value& js, enum dg::file::error mode,
     const dg::CartesianGrid2d& grid) >
 > initial_conditions =
 {
     {"lamb", [](
-        Json::Value& js, enum file::error mode,
+        Json::Value& js, enum dg::file::error mode,
         const dg::CartesianGrid2d& grid)
         {
             dg::HVec omega;
-            double posX = file::get( mode, js, "init", "posX", 0.5).asDouble();
-            double posY = file::get( mode, js, "init", "posY", 0.8).asDouble();
-            double R = file::get( mode, js, "init", "sigma", 0.1).asDouble();
-            double U = file::get( mode, js, "init", "velocity", 1).asDouble();
+            double posX = dg::file::get( mode, js, "init", "posX", 0.5).asDouble();
+            double posY = dg::file::get( mode, js, "init", "posY", 0.8).asDouble();
+            double R = dg::file::get( mode, js, "init", "sigma", 0.1).asDouble();
+            double U = dg::file::get( mode, js, "init", "velocity", 1).asDouble();
             dg::Lamb lamb( posX*grid.lx(), posY*grid.ly(), R, U);
             omega = dg::evaluate ( lamb, grid);
             return omega;
         }
     },
     {"shear", [](
-        Json::Value& js, enum file::error mode,
+        Json::Value& js, enum dg::file::error mode,
         const dg::CartesianGrid2d& grid)
         {
             dg::HVec omega;
-            double rho = file::get( mode, js, "init", "rho", M_PI/15.).asDouble();
-            double delta = file::get( mode, js, "init", "delta", 0.05).asDouble();
+            double rho = dg::file::get( mode, js, "init", "rho", M_PI/15.).asDouble();
+            double delta = dg::file::get( mode, js, "init", "delta", 0.05).asDouble();
             omega = dg::evaluate ( ShearLayer( rho, delta), grid);
             return omega;
         }
     },
     {"sine", [](
-        Json::Value& js, enum file::error mode,
+        Json::Value& js, enum dg::file::error mode,
         const dg::CartesianGrid2d& grid)
         {
             dg::HVec omega;
@@ -133,12 +133,12 @@ std::map<std::string, std::function< dg::HVec(
         }
     },
     {"mms", [](
-        Json::Value& js, enum file::error mode,
+        Json::Value& js, enum dg::file::error mode,
         const dg::CartesianGrid2d& grid)
         {
             dg::HVec omega;
-            double sigma = file::get( mode, js, "init", "sigma", 0.2).asDouble();
-            double velocity = file::get( mode, js, "init", "velocity", 0.1).asDouble();
+            double sigma = dg::file::get( mode, js, "init", "sigma", 0.2).asDouble();
+            double velocity = dg::file::get( mode, js, "init", "velocity", 0.1).asDouble();
             std::cout << "Sigma "<<sigma<<" "<<velocity<<std::endl;
             omega = dg::evaluate ( MMSVorticity( sigma, velocity,grid.ly(), 0.), grid);
             return omega;

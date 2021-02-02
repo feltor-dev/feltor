@@ -137,8 +137,9 @@ struct ModalFilter
      *
      * @tparam Topology Any grid
      * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
-     * @param f The filter to evaluate on the normalized modal coefficients
+     * @param sigma The filter to evaluate on the normalized modal coefficients
      * @param t The topology to apply the modal filter on
+     * @param ps parameters that are forwarded to the creation of a ContainerType (e.g. when a std::vector is to be created it is the vector size)
      */
     template<class UnaryOp, class Topology, class ...Params>
     ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) : m_filter (

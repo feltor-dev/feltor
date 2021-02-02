@@ -20,11 +20,11 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
-    enum file::error mode = file::error::is_throw;
+    enum dg::file::error mode = dg::file::error::is_throw;
     if( argc == 1)
-        file::file2Json( "input/default.json", js, file::comments::are_discarded);
+        dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
     else
-        file::file2Json( argv[1], js);
+        dg::file::file2Json( argv[1], js);
     std::cout << js <<std::endl;
 
     /////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ int main( int argc, char* argv[])
     dg::DVec w2d( dg::create::weights(grid));
     /////////////////////////////////////////////////////////////////
 
-    std::string initial = file::get( mode, js, "init", "type", "lamb").asString();
+    std::string initial = dg::file::get( mode, js, "init", "type", "lamb").asString();
     dg::HVec omega = shu::initial_conditions.at( initial)(js, mode, grid);
 
     dg::DVec y0( omega ), y1( y0);
@@ -48,8 +48,8 @@ int main( int argc, char* argv[])
     shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, js, mode);
     if( "mms" == initial)
     {
-        double sigma = file::get( mode, js, "init", "sigma", 0.2).asDouble();
-        double velocity = file::get( mode, js, "init", "velocity", 0.1).asDouble();
+        double sigma = dg::file::get( mode, js, "init", "sigma", 0.2).asDouble();
+        double velocity = dg::file::get( mode, js, "init", "velocity", 0.1).asDouble();
         shu.set_mms_source( sigma, velocity, grid.ly());
     }
 
@@ -67,8 +67,8 @@ int main( int argc, char* argv[])
     }
 
     /// ////////////// Initialize timestepper ///////////////////////
-    std::string stepper = file::get( mode, js, "timestepper", "stepper", "FilteredMultistep").asString();
-    std::string regularization = file::get( mode, js, "regularization", "type", "moddal").asString();
+    std::string stepper = dg::file::get( mode, js, "timestepper", "stepper", "FilteredMultistep").asString();
+    std::string regularization = dg::file::get( mode, js, "regularization", "type", "moddal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter id;
     bool apply_filter = true;
@@ -77,9 +77,9 @@ int main( int argc, char* argv[])
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
     if( regularization == "modal")
     {
-        double alpha = file::get( mode, js, "regularization", "alpha", 36).asDouble();
-        double order = file::get( mode, js, "regularization", "order", 8).asDouble();
-        double eta_c = file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
+        double alpha = dg::file::get( mode, js, "regularization", "alpha", 36).asDouble();
+        double order = dg::file::get( mode, js, "regularization", "order", 8).asDouble();
+        double eta_c = dg::file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
         filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
     }
     else
@@ -87,7 +87,7 @@ int main( int argc, char* argv[])
     if( regularization == "viscosity" && stepper != "Karniadakis")
         throw dg::Error(dg::Message(_ping_)<<"Error: Viscosity only works with Karniadakis! Exit now!");
 
-    double dt = file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
+    double dt = dg::file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
     if( "Karniadakis" == stepper)
     {
         if( regularization != "viscosity")
@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
 
             return -1;
         }
-        double eps_time = file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
+        double eps_time = dg::file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
         karniadakis.construct( y0, y0.size(), eps_time);
         karniadakis.init( shu, diffusion, time, y0, dt);
     }
@@ -106,7 +106,7 @@ int main( int argc, char* argv[])
     }
     else if( "FilteredMultistep" == stepper)
     {
-        multistep.construct( "eBDF", 3, y0);
+        multistep.construct( "eBDF-3-3", y0);
         if( apply_filter)
             multistep.init( shu, filter, time, y0, dt);
         else
@@ -118,9 +118,9 @@ int main( int argc, char* argv[])
 
         return -1;
     }
-    unsigned maxout = file::get( mode, js, "output", "maxout", 100).asUInt();
-    unsigned itstp = file::get( mode, js, "output", "itstp", 5).asUInt();
-    std::string output = file::get( mode, js, "output", "type", "glfw").asString();
+    unsigned maxout = dg::file::get( mode, js, "output", "maxout", 100).asUInt();
+    unsigned itstp = dg::file::get( mode, js, "output", "itstp", 5).asUInt();
+    std::string output = dg::file::get( mode, js, "output", "type", "glfw").asString();
 #ifndef WITHOUT_GLFW
     if( "glfw" == output)
     {
@@ -188,7 +188,7 @@ int main( int argc, char* argv[])
         else
             outputfile = argv[2];
         /// //////////////////////set up netcdf/////////////////////////////////////
-        file::NC_Error_Handle err;
+        dg::file::NC_Error_Handle err;
         int ncid=-1;
         try{
             err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -221,7 +221,7 @@ int main( int argc, char* argv[])
 
         int dim_ids[3], tvarID;
         std::map<std::string, int> id1d, id3d;
-        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid,
+        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid,
                 {"time", "y", "x"});
 
         //Create field IDs
@@ -260,7 +260,7 @@ int main( int argc, char* argv[])
             err = nc_enddef(ncid);
             record.function( resultD, var);
             dg::assign( resultD, resultH);
-            file::put_var_double( ncid, staticID, grid, resultH);
+            dg::file::put_var_double( ncid, staticID, grid, resultH);
             err = nc_redef(ncid);
         }
         err = nc_enddef(ncid);
@@ -271,7 +271,7 @@ int main( int argc, char* argv[])
         {
             record.function( resultD, var);
             dg::assign( resultD, resultH);
-            file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
+            dg::file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
         }
         for( auto& record : shu::diagnostics1d_list)
         {
@@ -315,7 +315,7 @@ int main( int argc, char* argv[])
             {
                 record.function( resultD, var);
                 dg::assign( resultD, resultH);
-                file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
+                dg::file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
             }
             for( auto& record : shu::diagnostics1d_list)
             {

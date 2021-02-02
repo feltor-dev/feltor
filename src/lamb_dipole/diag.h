@@ -13,7 +13,7 @@ struct Variables{
     const double& time;
     const dg::DVec& weights;
     double duration;
-    enum file::error mode;
+    enum dg::file::error mode;
     Json::Value& js;
 };
 
@@ -78,11 +78,11 @@ std::vector<Record1d> diagnostics1d_list = {
     },
     {"error", "Relative error to analytical solution (not available for every intitial condition)",
         []( Variables& v ) {
-            std::string initial = file::get( v.mode, v.js, "init", "type", "lamb").asString();
+            std::string initial = dg::file::get( v.mode, v.js, "init", "type", "lamb").asString();
             if( "mms" == initial)
             {
-                double R = file::get( v.mode, v.js, "init", "sigma", 0.1).asDouble();
-                double U = file::get( v.mode, v.js, "init", "velocity", 1).asDouble();
+                double R = dg::file::get( v.mode, v.js, "init", "sigma", 0.1).asDouble();
+                double U = dg::file::get( v.mode, v.js, "init", "velocity", 1).asDouble();
                 shu::MMSVorticity vortex( R, U, v.grid.ly(), v.time);
                 dg::DVec sol = dg::evaluate( vortex, v.grid);
                 dg::blas1::axpby( 1., v.y0, -1., sol);
@@ -92,11 +92,11 @@ std::vector<Record1d> diagnostics1d_list = {
             {
                 double nu = 0.;
                 unsigned order = 1;
-                std::string regularization = file::get( v.mode, v.js, "regularization", "type", "moddal").asString();
+                std::string regularization = dg::file::get( v.mode, v.js, "regularization", "type", "moddal").asString();
                 if( "viscosity" == regularization)
                 {
-                    nu = file::get( v.mode, v.js, "regularization", "nu_perp", 1e-3).asDouble();
-                    order = file::get( v.mode, v.js, "regularization", "order", 1).asUInt();
+                    nu = dg::file::get( v.mode, v.js, "regularization", "nu_perp", 1e-3).asDouble();
+                    order = dg::file::get( v.mode, v.js, "regularization", "order", 1).asUInt();
                 }
                 double time = v.time;
                 dg::DVec sol = dg::evaluate( [time,nu,order](double x, double y) {
