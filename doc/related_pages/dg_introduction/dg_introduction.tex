@@ -109,8 +109,8 @@ $f_{nj} := f(x^a_{nj})$ and note that
 \end{subequations}
 where $f_{nj}$ are the elements of $\vec f$,
  $\Eins\in\mathbb{R}^{N\times N}$ is the identity matrix and $F,B\in\mathbb{R}^{P\times P}$. Furthermore, we use
-$\otimes$ to denote the Kronecker product which is bilinear and associative. 
-The discontinuous Galerkin expansion $f_h$ of a function $f$ in the interval $[a,b]$ can 
+$\otimes$ to denote the Kronecker product which is bilinear and associative.
+The discontinuous Galerkin expansion $f_h$ of a function $f$ in the interval $[a,b]$ can
 then readily be given as
 \begin{align}
     f_h(x) = \sum_{n=1}^N \sum_{k=0}^{P-1} \bar f^{nk} p_{nk}(x),
@@ -124,7 +124,7 @@ where
     \end{cases}
     \label{}
 \end{align}
-As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\ref{fig:discretization}. 
+As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\ref{fig:discretization}.
 \begin{figure}[htpb]
     \includegraphics[width= 0.9\textwidth]{discretization.pdf}
     \caption{ 
@@ -133,9 +133,9 @@ As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\r
     }
     \label{fig:discretization}
 \end{figure}
-Already with a very low resolution of $P=3$ and $N=5$ 
+Already with a very low resolution of $P=3$ and $N=5$
 we get an acceptable function approximation. We clearly see the discontinuities
-at the cell boundaries. 
+at the cell boundaries.
 
 The use of Legendre polynomials yields a natural approximation of the integrals of $f$
 via Gauss--Legendre quadrature
@@ -153,7 +153,7 @@ With these formulas we have a simple, accurate, and fast
 method to evaluate integrals on the entire domain. This is applied, for example, to compute
 errors in the $L_2$-norm.
 
-We now define some useful quantities that simplify our notation (note that $i,j=0,\dots,P-1$) 
+We now define some useful quantities that simplify our notation (note that $i,j=0,\dots,P-1$)
 \begin{subequations}
     \begin{align}
         S_{ij} &:= \int_{-h/2}^{h/2} p_i\left(\frac{2}{h} x\right)p_j\left(\frac{2}{h} x\right) \dx = \frac{h}{2i+1}\delta_{ij} \\%=: s_i \delta_{ij}\\ 
@@ -679,7 +679,7 @@ or in a time-discreized way
     n_k^{n+1} = (1-\nu \Delta t (k(k+1))^s ) n_k^n
 \end{align}
 which is entirely analogous to the derivation above.
-In the same way we can read this as applying a filter functions to the Legendre modes.
+In the same way we can read this as applying a filter function to the Legendre modes.
 \begin{align}
     n_k^{n+1} = \sigma(k) n_k^n
 \end{align}
