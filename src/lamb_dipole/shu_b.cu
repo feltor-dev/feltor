@@ -67,12 +67,12 @@ int main( int argc, char* argv[])
     }
 
     /// ////////////// Initialize timestepper ///////////////////////
-    std::string stepper = dg::file::get( mode, js, "timestepper", "stepper", "FilteredMultistep").asString();
+    std::string stepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
     std::string regularization = dg::file::get( mode, js, "regularization", "type", "moddal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter id;
     bool apply_filter = true;
-    dg::Karniadakis<dg::DVec> karniadakis;
+    dg::ImExMultistep<dg::DVec> imex;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
     if( regularization == "modal")
@@ -84,27 +84,26 @@ int main( int argc, char* argv[])
     }
     else
         apply_filter = false;
-    if( regularization == "viscosity" && stepper != "Karniadakis")
-        throw dg::Error(dg::Message(_ping_)<<"Error: Viscosity only works with Karniadakis! Exit now!");
 
     double dt = dg::file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
-    if( "Karniadakis" == stepper)
+    if( "ImExMultistep" == stepper)
     {
         if( regularization != "viscosity")
         {
-            throw dg::Error(dg::Message(_ping_)<<"Error: Karniadakis only works with viscosity regularization! Exit now!");
+            throw dg::Error(dg::Message(_ping_)<<"Error: ImExMultistep only works with viscosity regularization! Exit now!");
 
             return -1;
         }
         double eps_time = dg::file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
-        karniadakis.construct( y0, y0.size(), eps_time);
-        karniadakis.init( shu, diffusion, time, y0, dt);
+        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
+        imex.construct( tableau, y0, y0.size(), eps_time);
+        imex.init( shu, diffusion, time, y0, dt);
     }
     else if( "Shu-Osher" == stepper)
     {
         shu_osher.construct( "SSPRK-3-3", y0);
     }
-    else if( "FilteredMultistep" == stepper)
+    else if( "FilteredExplicitMultistep" == stepper)
     {
         multistep.construct( "eBDF-3-3", y0);
         if( apply_filter)
@@ -151,9 +150,9 @@ int main( int argc, char* argv[])
             try{
                 for( unsigned j=0; j<itstp; j++)
                 {
-                    if( "Karniadakis" == stepper)
-                        karniadakis.step( shu, diffusion, time, y0);
-                    else if ( "FilteredMultistep" == stepper)
+                    if( "ImExMultistep" == stepper)
+                        imex.step( shu, diffusion, time, y0);
+                    else if ( "FilteredExplicitMultistep" == stepper)
                     {
                         if( apply_filter)
                             multistep.step( shu, filter, time, y0);
@@ -289,9 +288,9 @@ int main( int argc, char* argv[])
             ti.tic();
             for( unsigned j=0; j<itstp; j++)
             {
-                if( "Karniadakis" == stepper)
-                    karniadakis.step( shu, diffusion, time, y0);
-                else if ( "FilteredMultistep" == stepper)
+                if( "ImExMultistep" == stepper)
+                    imex.step( shu, diffusion, time, y0);
+                else if ( "FilteredExplicitMultistep" == stepper)
                 {
                     if( apply_filter)
                         multistep.step( shu, filter, time, y0);

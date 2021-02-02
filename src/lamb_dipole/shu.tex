@@ -183,25 +183,27 @@ grid & dict & & \\
 \bottomrule
 \end{longtable}
 \subsection{Time steppers}
-Possible time-steppers are
-\begin{longtable}{llll}
+Possible time-steppers are the explicit and semi-implicit multistep schemes
+as well as the Shu-Osher scheme that originally incorporated limiters in the dG scheme.
+\begin{longtable}{lllp{6cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 timestepper & dict & & \\
-\qquad stepper  & string& Karniadakis & The \textit{dg::Karniadakis} class \\
-\qquad order    & float & 3 & Order of Karniadakis (1,2 or 3)\\
+\qquad type     & string& ImExMultistep & The semi-implicit multistep scheme (only in combination with viscosity regularization) \\
+\qquad tableau  & string & Any ImEx tableau & for example ImEx-BDF-3-3* \\
 \qquad dt       & float & 2e-3 & Fixed timestep \\
 \qquad eps\_time & float & 1e-9 & Accuracy requirement for implicit solver \\
 timestepper & dict & & \\
-\qquad stepper & string & Shu-Osher & The \textit{dg::ShuOsher} class \\
-\qquad order   & string & SSPRK-3-3 & Check dg documentation for possible values \\
+\qquad type & string & Shu-Osher & An explicit Runge Kutta method with filter (viscosity is treated explicitly) \\
+\qquad tableau   & string & Any Shu-Osher tableau & for example SSPRK-3-3* \\
 \qquad dt      & float & 1e-3 & Fixed Time-step \\
 timestepper & dict & & \\
-\qquad stepper & string & FilteredMultistep & The \textit{dg::FilteredExplicitMultistep} class \\
-\qquad order   & [string, integer] & [eBDF,3] & Check dg documentation for possible values \\
+\qquad type & string & FilteredExplicitMultistep & an explicit multistep class with the option to use a filter (viscosity is treated explicitly)\\
+\qquad tableau   & string & Any explicit multistep tableau & for example eBDF-3-3* \\
 \qquad dt      & float & 2e-3 & Fixed timestep \\
 \bottomrule
 \end{longtable}
+*See the dg documentation for what tableaus are available.
 \subsection{Regularization technique}
 Choose either no regularization or artificial viscosity or modal filtering by the following
 parameters in the input file.
@@ -218,19 +220,20 @@ regularization & dict & & \\
 For artificial viscosity Eqs.~\eqref{eq:euler_poisson} are modified to
 \begin{subequations}
 \begin{align}
-    \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = -(-\nu_\perp \Delta)^s \omega\\
+    \frac{\partial \omega}{\partial t} + \{ \phi, \omega\} = -(-\nu \Delta)^s \omega\\
  -\Delta \phi = \omega
 \end{align}
 \label{eq:euler_poisson_viscous}
 \end{subequations}
-where $\nu_\perp$ is the viscosity coefficient and $s=1,2,3,\cdots$ is the order
+where $\nu$ is the viscosity coefficient and $s=1,2,3,\cdots$ is the order
 \begin{longtable}{lllp{7.5cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 regularization & dict & & \\
-\qquad type  & string& viscosity & Choosable only for \textbf{Karniadakis} timestepper (because it is solved implicitly) \\
-\qquad order    & integer & 2 & Order: 1 is normal diffusion, 2 is hyperdiffusion, can be arbitrarily high, but higher orders might take longer to solve \\
-\qquad nu\_perp    & float & 1e-3 & Viscosity coefficient \\
+\qquad type  & string& viscosity & the artificial viscosity \\
+\qquad order    & integer & 2 & Order: 1 is normal diffusion, 2 is hyperdiffusion, can be arbitrarily high, but higher orders might take longer to solve or restrict the CFL condition \\
+\qquad nu    & float & 1e-3 & Viscosity coefficient \\
+\qquad directoin & string & centered & Direction of the Laplacian: forward or centered
 \bottomrule
 \end{longtable}
 The other regularization method is the modal filter that applies an exponential filter
@@ -247,7 +250,7 @@ and is choosable with the following parameters
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 regularization & dict & & \\
-\qquad type  & string& modal & Not choosable for \textbf{Karniadakis} timestepper\\
+\qquad type  & string& modal & Not choosable for \textbf{ImExMultistep} timestepper\\
 \qquad order & integer & 8 & Order: normally 8 or 16 \\
 \qquad eta\_c & float & 0.5 & cutoff wavelength below which no damping is applied \\
 \qquad alpha & float & 36 & damping coefficient determining damping for highest wavenumber \\
@@ -264,6 +267,7 @@ elliptic & dict & & \\
 \qquad type  & string& multigrid & Actually a nested iterations class \\
 \qquad stages    & integer & 3 & Number of stages (3 is best in virtually all cases) \\
 \qquad eps\_pol    & float[stages] & [1e-6,10,10] & Accuracy requirement on each stage of the multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
+\qquad directoin & string & centered & Direction of the Laplacian: forward or centered
 \bottomrule
 \end{longtable}
 \subsection{Advection schemes}
