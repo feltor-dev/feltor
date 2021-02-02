@@ -6,7 +6,7 @@
 namespace dg
 {
 
-///@addtogroup time
+///@addtogroup time_utils
 ///@{
 /*! @brief Compute \f[ \sqrt{\sum_i x_i^2}\f] using \c dg::blas1::dot
  *

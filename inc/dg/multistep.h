@@ -3,21 +3,22 @@
 #include <map>
 #include "implicit.h"
 #include "runge_kutta.h"
+#include "multistep_tableau.h"
 
+//MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
 
 /*! @file
   @brief contains multistep explicit& implicit time-integrators
   */
 namespace dg{
 
-//MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
 
 /*! @class hide_explicit_implicit
- * @tparam Explicit The explicit part of the right hand side
-        is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-        i.e. y' = f(t, y) translates to f(t, y, y').
+* @tparam Explicit The explicit part of the right hand side
+    is a functor type with no return value (subroutine)
+    of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+    The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+    i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
  * @tparam Implicit The implicit part of the right hand side
         is a functor type with no return value (subroutine)
@@ -35,94 +36,96 @@ namespace dg{
 * @note Uses only \c blas1::axpby routines to integrate one step.
 * @note The difference between a multistep and a single step method like RungeKutta
 * is that the multistep only takes one right-hand-side evaluation per step.
-* This might be advantageous if the right hand side is expensive to evaluate like in
-* partial differential equations. However, it might also happen that the stability
-* region of the one-step method is larger so that a larger timestep can be taken there
-* and on average they take just the same rhs evaluations.
+* This is advantageous if the right hand side is expensive to evaluate.
+* Even though Runge Kutta methods can have a larger absolute timestep, if
+* the effective timestep per rhs evaluation is compared, multistep methods
+* generally win.
 * @note a disadvantage of multistep is that timestep adaption is not easily done.
 */
 
 /**
-* @brief Karniadakis semi-implicit multistep time-integration
-* \f[
-* \begin{align}
-    v^{n+1} = \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^2\beta_q  \hat E(t^{n}-q\Delta t, v^{n-q})\right) + \gamma_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
-    \end{align}
-    \f]
-
-    which discretizes
-    \f[
-    \frac{\partial v}{\partial t} = \hat E(t,v) + \hat I(t,v)
-    \f]
+ * @brief Semi-implicit multistep time-integration
+ * \f[
+ * \begin{align}
+     v^{n+1} = \sum_{q=0}^{s-1} a_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^{s-1}b_q  \hat E(t^{n}-q\Delta t, v^{n-q}) + \sum_{q=1}^{s} c_q \hat I( t^n - q\Delta t, v^{n-q})\right) + c_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
+     \end{align}
+     \f]
+     which discretizes
+     \f[
+     \frac{\partial v}{\partial t} = \hat E(t,v) + \hat I(t,v)
+     \f]
     where \f$ \hat E \f$ contains the explicit and \f$ \hat I \f$ the implicit part of the equations.
-    The coefficients are
+    As an example, the coefficients for the 3-step, 3rd order "Karniadakis" scheme are
     \f[
-    \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
-    \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\
-    \gamma_0 = \frac{6}{11}
+    a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\  a_2 = \frac{2}{11} \\
+    b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11} \\
+    c_0 = \frac{6}{11}\quad c_1 = c_2 = c_3 = 0 \\
 \f]
-    for the default third order method and
-    \f[
-    \alpha_0 = \frac{4}{3}\ \alpha_1 = -\frac{1}{3}\ \alpha_2 = 0 \\
-    \beta_0  = \frac{4}{3}\ \beta_1 = -\frac{2}{3}\ \beta_2 = 0 \\
-    \gamma_0 = \frac{2}{3}
-\f]
-    for a second order method and
-    \f[
-    \alpha_0 = 1\ \alpha_1 = 0\ \alpha_2 = 0\\
-    \beta_0  = 1\ \beta_1 = 0\ \beta_2 = 0\\
-    \gamma_0 = 1
-\f]
-for a semi-implicit (first order) Euler method
-*
-* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
-* Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
-* @note This scheme implements <a href = "https://dx.doi.org/10.1016/0021-9991(91)90007-8"> Karniadakis, et al. J. Comput. Phys. 97 (1991)</a>
-* @note The implicit part equals a third order backward differentiation formula (BDF) https://en.wikipedia.org/wiki/Backward_differentiation_formula
-* while the explicit part equals the Minimal Projecting method by
-<a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a>
-* or **extrapolated BDF** in <a href = "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S. J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a>
-*
-The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
-* @snippet multistep_t.cu function
-* In the main function:
-* @snippet multistep_t.cu karniadakis
-* @note In our experience the implicit treatment of diffusive or hyperdiffusive
+    You can use your own coefficients defined as a \c dg::MultistepTableau
+    or use one of the predefined coefficients in
+    @copydoc hide_imex_multistep_tableaus
+ *
+ * The necessary Inversion in the implicit part is provided by the \c SolverType class.
+ * Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
+ *
+ * The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
+ * @snippet multistep_t.cu function
+ * In the main function:
+ * @snippet multistep_t.cu karniadakis
+ * @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms may significantly reduce the required number of time steps. This
 outweighs the increased computational cost of the additional matrix inversions.
-However, each PDE is different and general statements like this one should be treated with care.
+However, each PDE is different and general statements like this one should be
+treated with care.
 * @copydoc hide_note_multistep
 * @copydoc hide_SolverType
 * @copydoc hide_ContainerType
 * @ingroup time
 */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
-struct Karniadakis
+struct ImExMultistep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    Karniadakis(){}
+    ImExMultistep(){}
 
-    ///@copydoc construct()
+    /*! @brief Reserve memory for integration and construct Solver
+     *
+     * @param tableau Tableau, name or identifier that \c ConvertsToMultistepTableau
+     * @param ps Parameters that are forwarded to the constructor of \c SolverType
+     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     */
     template<class ...SolverParams>
-    Karniadakis( SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...){
-        m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
-        set_order(3);
+    ImExMultistep( ConvertsToMultistepTableau<value_type> tableau,
+            SolverParams&& ...ps):
+        m_t(tableau),
+        m_solver( std::forward<SolverParams>(ps)...)
+    {
+        //only store implicit part if needed
+        unsigned size_f = 0;
+        for( unsigned i=0; i<m_t.steps(); i++ )
+        {
+            if( m_t.im( i+1) != 0 )
+                size_f = i+1;
+        }
+        m_im.assign( size_f, m_solver.copyable());
+
+        m_u.assign( m_t.steps(), m_solver.copyable());
+        m_ex.assign( m_t.steps(), m_solver.copyable());
         m_counter = 0;
     }
     /**
-     * @brief Reserve memory for the integration
-     *
-     * @param ps Parameters that are forwarded to the constructor of \c SolverType
-     * @tparam SolverParams Type of parameters (deduced by the compiler)
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
     */
-    template<class ...SolverParams>
-    void construct( SolverParams&& ...ps){
-        m_solver = SolverType( std::forward<SolverParams>(ps)...);
-        m_f.fill(m_solver.copyable()), m_u.fill(m_solver.copyable());
-        set_order(3);
-        m_counter = 0;
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ImExMultistep( std::forward<Params>( ps)...);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -158,102 +161,127 @@ struct Karniadakis
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
 
-    /**
-     * @brief Set the order of the method
-     *
-     * Change the coefficients \f$ \alpha_i,\ \beta_i,\ \gamma_0\f$ to a first,
-     * second or third order set.
-     * @param order 1 (Euler), 2 or 3 (default)
-     */
-    void set_order(unsigned order){
-        switch( order){
-            case 1:
-                a[0] = 1.;  b[0] = 1.;
-                a[1] = 0.;  b[1] = 0.;
-                a[2] = 0.;  b[2] = 0.;   //Euler
-                g0 = 1.;
-                break;
-            case 2:
-                a[0] =  4./3.;  b[0] = 4./3.;
-                a[1] = -1./3.;  b[1] = -2./3.;
-                a[2] = 0.;      b[2] = 0.;   //2nd Karniadakis
-                g0 = 2./3.;
-                break;
-            default:
-                a[0] =  18./11.;    b[0] =  18./11.;
-                a[1] = -9./11.;     b[1] = -18./11.;
-                a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis
-                g0 = 6./11.;
-                break;
-        }
+  private:
+    dg::MultistepTableau<value_type> m_t;
+    SolverType m_solver;
+    std::vector<ContainerType> m_u, m_ex, m_im;
+    ContainerType m_tmp;
+    value_type m_tu, m_dt;
+    unsigned m_counter; //counts how often step has been called after init
+};
+
+
+/** @brief Deprecated  (use ImExMultistep and select "Karniadakis" from the multistep tableaus)
+* @ingroup time
+* @sa dg::ImExMultistep
+*/
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct Karniadakis
+{
+    using value_type = get_value_type<ContainerType>;
+    using container_type = ContainerType;
+    Karniadakis(){}
+    template<class ...SolverParams>
+    Karniadakis( SolverParams&& ...ps): m_imex( "Karniadakis", std::forward<SolverParams> (ps)...) { }
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        *this = Karniadakis( std::forward<Params>( ps)...);
+    }
+    const ContainerType& copyable()const{ return m_imex.copyable();}
+    SolverType& solver() { return m_imex.solver();}
+    const SolverType& solver() const { return m_imex.solver();}
+    template< class Explicit, class Implicit>
+    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt){
+        m_imex.init( ex, im, t0, u0, dt);
+    }
+    template< class Explicit, class Implicit>
+    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u){
+        m_imex.step( ex, im, t, u);
     }
   private:
-    SolverType m_solver;
-    std::array<ContainerType,3> m_u, m_f;
-    value_type m_t, m_dt;
-    value_type a[3];
-    value_type b[3], g0 = 6./11.;
-    unsigned m_counter; //counts how often step has been called after init
+    ImExMultistep<ContainerType, SolverType> m_imex;
 };
 
 ///@cond
 template< class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
+void ImExMultistep<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
 {
-    m_t = t0, m_dt = dt;
-    blas1::copy(  u0, m_u[2]);
-    f( t0, u0, m_f[2]); //f may not destroy u0
+    m_tu = t0, m_dt = dt;
+    unsigned s = m_t.steps();
+    blas1::copy(  u0, m_u[s-1]);
+    f( t0, u0, m_ex[s-1]); //f may not destroy u0
     m_counter = 0;
+    if( s-1-m_counter < m_im.size())
+        diff( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
 }
 
 template<class ContainerType, class SolverType>
 template< class RHS, class Diffusion>
-void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, value_type& t, ContainerType& u)
+void ImExMultistep<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, value_type& t, ContainerType& u)
 {
-    if( m_counter < 2)
+    unsigned s = m_t.steps();
+    if( m_counter < s - 1)
     {
-        ARKStep<ContainerType, SolverType> ark( "ARK-4-2-3", m_solver);
+        std::map<unsigned, std::string> order2method{
+            {1, "ARK-4-2-3"},
+            {2, "ARK-4-2-3"},
+            {3, "ARK-4-2-3"},
+            {4, "ARK-6-3-4"},
+            {5, "ARK-8-4-5"},
+            {6, "ARK-8-4-5"},
+            {7, "ARK-8-4-5"}
+        };
+        ARKStep<ContainerType, SolverType> ark( order2method.at( m_t.order()), m_solver);
         ContainerType tmp ( u);
         ark.step( f, diff, t, u, t, u, m_dt, tmp);
         m_counter++;
-        m_t = t;
-        if( m_counter == 1)
-        {
-            blas1::copy(  u, m_u[1]);
-            f( m_t, m_u[1], m_f[1]);
-        }
-        else
-        {
-            blas1::copy(  u, m_u[0]);
-            f( m_t, m_u[0], m_f[0]);
-        }
-        m_solver = ark.solver();
+        m_tu = t;
+        dg::blas1::copy( u, m_u[s-1-m_counter]);
+        f( m_tu, m_u[s-1-m_counter], m_ex[s-1-m_counter]);
+        //only assign to f if we actually need to store it
+        if( s-1-m_counter < m_im.size())
+            diff( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
+        m_solver = ark.solver(); // store the state of the solver
         return;
     }
+    //compute right hand side of inversion equation
+    dg::blas1::axpbypgz( m_t.a(0), m_u[0], m_dt*m_t.ex(0), m_ex[0], 0., m_tmp);
+    for (unsigned i = 1; i < s; i++)
+        dg::blas1::axpbypgz( m_t.a(i), m_u[i], m_dt*m_t.ex(i), m_ex[i], 1., m_tmp);
+    for (unsigned i = 0; i < m_im.size(); i++)
+        dg::blas1::axpby( m_dt*m_t.im(i+1), m_im[i], 1., m_tmp);
+    t = m_tu = m_tu + m_dt;
 
-    blas1::axpbypgz( m_dt*b[0], m_f[0], m_dt*b[1], m_f[1], m_dt*b[2], m_f[2]);
-    blas1::axpbypgz( a[0], m_u[0], a[1], m_u[1], a[2], m_u[2]);
-    //permute m_f[2], m_u[2]  to be the new m_f[0], m_u[0]
-    std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
-    std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
-    blas1::axpby( 1., m_f[0], 1., m_u[0]);
-    //compute implicit part
     value_type alpha[2] = {2., -1.};
     //value_type alpha[2] = {1., 0.};
-    blas1::axpby( alpha[0], m_u[1], alpha[1],  m_u[2], u); //extrapolate previous solutions
-    t = m_t = m_t + m_dt;
-    m_solver.solve( -m_dt*g0, diff, t, u, m_u[0]);
+    if( s > 1 ) //everything higher than Euler
+        dg::blas1::axpby( alpha[0], m_u[0], alpha[1],  m_u[1], u);
+    else
+        dg::blas1::copy( m_u[0], u);
+
+    //Rotate 1 to the right (note the reverse iterator here!)
+    std::rotate( m_u.rbegin(), m_u.rbegin() + 1, m_u.rend());
+    std::rotate( m_ex.rbegin(), m_ex.rbegin() + 1, m_ex.rend());
+    if( !m_im.empty())
+        std::rotate( m_im.rbegin(), m_im.rbegin() + 1, m_im.rend());
+    //compute implicit part
+    m_solver.solve( -m_dt*m_t.im(0), diff, t, u, m_tmp);
+
     blas1::copy( u, m_u[0]); //store result
-    f(m_t, m_u[0], m_f[0]); //call f on new point
+    f(m_tu, m_u[0], m_ex[0]); //call f on new point
+    if( 0 < m_im.size())
+        diff( m_tu, m_u[0], m_im[0]); //call diff on new point
+
 }
 ///@endcond
 
 /**
-* @brief Backward differentiation formula implicit multistep time-integration with Limiter/Filter
+* @brief Implicit multistep time-integration with Limiter/Filter
 * \f[
 * \begin{align}
-    \tilde v &= \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1}) \\
+    \tilde v &= \sum_{i=0}^{s-1} a_i v^{n-i} + \Delta t \sum_{i=1}^{s} c_i\hat I(t^{n+1-i}, v^{n+1-i}) + \Delta t c_{0} \hat I (t + \Delta t, \tilde v) \\
     v^{n+1} &= \Lambda\Pi\left(\tilde v\right)
     \end{align}
     \f]
@@ -263,52 +291,72 @@ void Karniadakis<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, valu
     \frac{\partial v}{\partial t} = \hat I(t,v)
     \f]
     where \f$ \hat I \f$ represents the right hand side of the equations.
-    The coefficients for up to order 6 can be found at
-    https://en.wikipedia.org/wiki/Backward_differentiation_formula
+    You can use your own coefficients defined as a \c dg::MultistepTableau
+    or use one of the predefined coefficients in
+    @copydoc hide_implicit_multistep_tableaus
+    and
+    @copydoc hide_imex_multistep_tableaus
 *
-* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
+* The necessary Inversion in the implicit part is provided by the \c SolverType class.
 * Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$). For nonlinear right hand side we recommend the AndersonSolver
 *
 * @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
 outweighs the increased computational cost of the additional inversions.
+However, each PDE is different and general statements like this one should be
+treated with care.
 * @copydoc hide_note_multistep
 * @copydoc hide_SolverType
 * @copydoc hide_ContainerType
 * @ingroup time
+* @attention The filter function inside the Implicit Multistep method is a
+* somewhat experimental feature, so use this class over
+* \c dg::ImplicitMultistep at your own risk
 */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
-struct FilteredBDF
+struct FilteredImplicitMultistep
 {
 
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    FilteredBDF(){}
-
-    ///@copydoc construct()
-    template<class ...SolverParams>
-    FilteredBDF( unsigned order, SolverParams&& ...ps):m_solver( std::forward<SolverParams>(ps)...), m_u( order, m_solver.copyable()), m_f(m_solver.copyable()) {
-        init_coeffs(order);
-        m_k = order;
-        m_counter = 0;
-    }
+    FilteredImplicitMultistep(){}
 
     /*! @brief Reserve memory for integration and construct Solver
      *
-     * @param order Order of the BDF formula (1 <= order <= 6)
+     * @param tableau Tableau, name or identifier that \c ConvertsToMultistepTableau
      * @param ps Parameters that are forwarded to the constructor of \c SolverType
      * @tparam SolverParams Type of parameters (deduced by the compiler)
      */
     template<class ...SolverParams>
-    void construct(unsigned order, SolverParams&& ...ps)
+    FilteredImplicitMultistep( ConvertsToMultistepTableau<value_type> tableau,
+        SolverParams&& ...ps):
+        m_t( tableau),
+        m_solver( std::forward<SolverParams>(ps)...)
     {
-        m_solver = SolverType( std::forward<SolverParams>(ps)...);
-        init_coeffs(order);
-        m_k = order;
-        m_u.assign( order, m_solver.copyable());
-        m_f = m_solver.copyable();
+        unsigned size_f = 0;
+        for( unsigned i=0; i<m_t.steps(); i++ )
+        {
+            if( m_t.im( i+1) != 0 )
+                size_f = i+1;
+        }
+        m_f.assign( size_f, m_solver.copyable());
+        m_u.assign( m_t.steps(), m_solver.copyable());
+        m_tmp = m_solver.copyable();
         m_counter = 0;
+    }
+
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct(Params&& ...ps)
+    {
+        //construct and swap
+        *this = FilteredImplicitMultistep(  std::forward<Params>(ps)...);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -326,43 +374,37 @@ struct FilteredBDF
     template<class RHS, class Limiter>
     void step(RHS& rhs, Limiter& limiter, value_type& t, container_type& u);
     private:
-    void init_coeffs(unsigned order){
-        switch (order){
-            case 1: m_bdf = {1.}; m_beta = 1.; break;
-            case 2: m_bdf = {4./3., -1./3.}; m_beta = 2./3.; break;
-            case 3: m_bdf = { 18./11., -9./11., 2./11.}; m_beta = 6./11.; break;
-            case 4: m_bdf = {48./25., -36./25., 16./25., -3./25.}; m_beta = 12./25.; break;
-            case 5: m_bdf = { 300./137., -300./137., 200./137., -75./137., 12./137.}; m_beta = 60/137.; break;
-            case 6: m_bdf = { 360./147., -450./147., 400./147., -225./147., 72./147., -10./147.}; m_beta = 60/147.; break;
-            default: throw dg::Error(dg::Message()<<"Order not implemented in BDF!");
-        }
-    }
+    dg::MultistepTableau<value_type> m_t;
     SolverType m_solver;
     value_type m_tu, m_dt;
     std::vector<ContainerType> m_u;
-    ContainerType m_f;
-    std::vector<value_type> m_bdf;
-    value_type m_beta;
-    unsigned m_k, m_counter = 0; //counts how often step has been called after init
+    std::vector<ContainerType> m_f;
+    ContainerType m_tmp;
+    unsigned m_counter = 0; //counts how often step has been called after init
 };
 
 ///@cond
 template< class ContainerType, class SolverType>
 template<class RHS, class Limiter>
-void FilteredBDF<ContainerType, SolverType>::init(RHS& rhs, Limiter& l, value_type t0,
+void FilteredImplicitMultistep<ContainerType, SolverType>::init(RHS& rhs, Limiter& l, value_type t0,
     const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
-    l.apply( u0, m_u[m_k-1]);
-    //rhs(m_tu, m_u[m_k-1], m_f); //call f on new point
+    l.apply( u0, m_u[m_u.size()-1]);
     m_counter = 0;
+    //only assign to f if we actually need to store it
+    unsigned s = m_t.steps();
+    if( s-1-m_counter < m_f.size())
+        rhs( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
 }
 
 template< class ContainerType, class SolverType>
 template<class RHS, class Limiter>
-void FilteredBDF<ContainerType, SolverType>::step(RHS& rhs, Limiter& l, value_type& t, container_type& u)
+void FilteredImplicitMultistep<ContainerType, SolverType>::step(RHS& rhs, Limiter& l, value_type& t, container_type& u)
 {
-    if( m_counter < m_k-1)
+    unsigned s = m_t.steps();
+        //max( m_u.size(), m_f.size())
+    if( m_counter < s - 1)
     {
         std::map<unsigned, enum tableau_identifier> order2method{
             {1, IMPLICIT_EULER_1_1},
@@ -370,41 +412,55 @@ void FilteredBDF<ContainerType, SolverType>::step(RHS& rhs, Limiter& l, value_ty
             {3, KVAERNO_4_2_3},
             {4, SDIRK_5_3_4},
             {5, KVAERNO_7_4_5},
-            {6, KVAERNO_7_4_5}
+            {6, KVAERNO_7_4_5},
+            {7, KVAERNO_7_4_5}
         };
-        ImplicitRungeKutta<ContainerType, SolverType> dirk( order2method.at(m_k), m_solver);
+        ImplicitRungeKutta<ContainerType, SolverType> dirk(
+                order2method.at(m_t.order()), m_solver);
         dirk.step( rhs, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
-        l.apply( u, m_u[m_k-1-m_counter]);
-        dg::blas1::copy(  m_u[m_k-1-m_counter], u);
-        //f( m_tu, m_u[m_k-1-m_counter], m_f);
+        l.apply( u, m_u[s-1-m_counter]);
+        dg::blas1::copy(  m_u[s-1-m_counter], u);
+        //only assign to f if we actually need to store it
+        if( s-1-m_counter < m_f.size())
+            rhs( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
+        m_solver = dirk.solver(); // store the state of the solver
         return;
     }
     //compute right hand side of inversion equation
-    dg::blas1::axpby( m_bdf[0], m_u[0], 0., m_f);
-    for (unsigned i = 1; i < m_k; i++){
-        dg::blas1::axpby( m_bdf[i], m_u[i], 1., m_f);
-    }
+    dg::blas1::axpby( m_t.a(0), m_u[0], 0., m_tmp);
+    for (unsigned i = 1; i < s; i++)
+        dg::blas1::axpby( m_t.a(i), m_u[i], 1., m_tmp);
+    for (unsigned i = 0; i < m_f.size(); i++)
+        dg::blas1::axpby( m_dt*m_t.im(i+1), m_f[i], 1., m_tmp);
     t = m_tu = m_tu + m_dt;
 
     value_type alpha[2] = {2., -1.};
-    if( m_k > 1 ) //everything higher than Euler
+    //value_type alpha[2] = {1., 0.};
+    if( s > 1 ) //everything higher than Euler
         dg::blas1::axpby( alpha[0], m_u[0], alpha[1],  m_u[1], u);
     else
         dg::blas1::copy( m_u[0], u);
-    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend()); //Rotate 1 to the right (note the reverse iterator here!)
-    m_solver.solve( -m_dt*m_beta, rhs, t, u, m_f);
+
+    //Rotate 1 to the right (note the reverse iterator here!)
+    std::rotate(m_u.rbegin(), m_u.rbegin() + 1, m_u.rend());
+    if( !m_f.empty())
+        std::rotate(m_f.rbegin(), m_f.rbegin() + 1, m_f.rend());
+    m_solver.solve( -m_dt*m_t.im(0), rhs, t, u, m_tmp);
+
     l.apply( u, m_u[0]);
+    if( 0 < m_f.size())
+        rhs( m_tu, m_u[0], m_f[0]);
     dg::blas1::copy(  m_u[0], u);
 }
 ///@endcond
 
 /**
-* @brief Backward differentiation formula implicit multistep time-integration
+* @brief Implicit multistep time-integration
 * \f[
 * \begin{align}
-    v^{n+1} = \sum_{q=0}^{s-1} \alpha_q v^{n-q} + \Delta t\beta\hat I(t^{n}+\Delta t, v^{n+1})
+    v^{n+1} &= \sum_{i=0}^{s-1} a_i v^{n-i} + \Delta t \sum_{i=1}^{s} c_i\hat I(t^{n+1-i}, v^{n+1-i}) + \Delta t c_{0} \hat I (t + \Delta t, v^{n+1}) \\
     \end{align}
     \f]
 
@@ -413,44 +469,55 @@ void FilteredBDF<ContainerType, SolverType>::step(RHS& rhs, Limiter& l, value_ty
     \frac{\partial v}{\partial t} = \hat I(t,v)
     \f]
     where \f$ \hat I \f$ represents the right hand side of the equations.
-    The coefficients for up to order 6 can be found at
-    https://en.wikipedia.org/wiki/Backward_differentiation_formula
+    You can use your own coefficients defined as a \c dg::MultistepTableau
+    or use one of the predefined coefficients in
+    @copydoc hide_implicit_multistep_tableaus
+    and
+    @copydoc hide_imex_multistep_tableaus
 *
-* The necessary Inversion in the imlicit part is provided by the \c SolverType class.
+* The necessary Inversion in the implicit part is provided by the \c SolverType class.
 * Per Default, a conjugate gradient method is used (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$). For nonlinear right hand side we recommend the AndersonSolver
 *
 * @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
 outweighs the increased computational cost of the additional inversions.
+However, each PDE is different and general statements like this one should be
+treated with care.
 * @copydoc hide_note_multistep
 * @copydoc hide_SolverType
 * @copydoc hide_ContainerType
 * @ingroup time
 */
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
-struct BDF
+struct ImplicitMultistep
 {
 
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    BDF(){}
-
-    ///@copydoc construct()
-    template<class ...SolverParams>
-    BDF( unsigned order, SolverParams&& ...ps): m_bdf( order,
-            std::forward<SolverParams>(ps)...) {}
+    ImplicitMultistep(){}
 
     /*! @brief Reserve memory for integration and construct Solver
      *
-     * @param order Order of the BDF formula (1 <= order <= 6)
+     * @param tableau Tableau, name or identifier that \c ConvertsToMultistepTableau
      * @param ps Parameters that are forwarded to the constructor of \c SolverType
      * @tparam SolverParams Type of parameters (deduced by the compiler)
      */
     template<class ...SolverParams>
-    void construct(unsigned order, SolverParams&& ...ps)
+    ImplicitMultistep( ConvertsToMultistepTableau<value_type> tableau, SolverParams&& ...ps): m_bdf( tableau,
+            std::forward<SolverParams>(ps)...) {}
+
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct(Params&& ...ps)
     {
-        m_bdf.construct( order, std::forward<SolverParams>(ps)...);
+        //construct and swap
+        *this = ImplicitMultistep(  std::forward<Params>(ps)...);
     }
     ///@copydoc RungeKutta::copyable()
     const ContainerType& copyable()const{ return m_bdf.copyable();}
@@ -473,59 +540,9 @@ struct BDF
         m_bdf.step( rhs, id, t, u);
     }
     private:
-    FilteredBDF<ContainerType, SolverType> m_bdf;
+    FilteredImplicitMultistep<ContainerType, SolverType> m_bdf;
 };
 
-
-
-/**
- * @brief Identifiers for linear multistep methods
- * @sa ExplicitMultistep
-*  @ingroup time
- */
-enum multistep_identifier
-{
-    /** The family of schemes described in <a href = "https://en.wikipedia.org/wiki/Linear_multistep_method"> Linear multistep methods </a>
-     as **Adams-Bashforth**
-    * \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^{s-1} b_j f\left(t^n - j \Delta t, u^{n-j}\right) \f]
-    * **Possible stages are 1, 2,..., 5**, the order of the method is the same as its stages
-    @note The Adams-Bashforth schemes implemented here need less storage but may have **a smaller region of absolute stability** than for example an extrapolated BDF method of the same order.
-    */
-    ADAMS_BASHFORTH,
-    /** The family of schemes described in <a href =
-     "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S.
-     J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep
-     methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a>
-     as **extrapolated BDF**  where it is found to be TVB (**total variation
-     bound**), i.e. \f$ || v^n|| \leq M ||v^0||\f$  where the norm signifies
-     the total variation semi-norm. (Note that total variation diminishing
-     (TVD) means M=1, and strong stability preserving (SSP) is the same as TVD, TVB schemes converge to the correct entropy solutions of hyperbolic conservation laws)
-     is the same as the **Minimal Projecting** scheme
-     described in <a href =
-     "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf">
-     Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a>
-     * **Possible stages are 1, 2,..., 7** with the order the same as the number of stages
-
-    */
-    eBDF,
-    /** The family of schemes described in <a href="https://doi.org/10.1016/j.jcp.2005.02.029">S.J. Ruuth and W. Hundsdorfer, High-order linear multistep methods with general monotonicity and boundedness properties, Journal of Computational Physics, Volume 209, Issue 1, 2005 </a> as Total variation Bound.
-     * These schemes have **larger stable step sizes than the eBDF family**, for
-     * example TVB3 has 38% larger stepsize than eBDF3 and TVB4 has 109% larger
-     * stepsize than eBDF4.  **Possible orders are 1,2,...,6**, The CFL
-     * conditions in relation to forward Euler are (1-1: 1, 2-2: 0.5, 3-3: 0.54, 4-4: 0.46, 5-5:
-     * 0.38, 6-6: 0.33), we disregard the remaining schemes since their
-     * CFL conditions are worse
-     */
-    TVB,
-    /** The family of schemes described in <a href="https://doi.org/10.1007/BF02728985">Gottlieb, S. On high order strong stability preserving runge-kutta and multi step time discretizations. J Sci Comput 25, 105–128 (2005)</a> as Strong Stability preserving.
-     * We implement the lowest order schemes for each stage. The CFL conditions
-     * in relation to forward Euler are (1-1: 1, 2-2: 0.5, 3-2: 0.5, 4-2: 0.66, 5-3:
-     * 0.5, 6-3: 0.567).  We disregard the remaining
-     * schemes since their CFL conditions are worse than the TVB scheme of the same
-     * order. These schemes are noteworthy because the coefficients b_i are all positive except for the 2-2 method and **the "4-2" and "6-3" methods allow slightly larger stepsize than eBDF** of same order (2 and 3)
-     */
-    SSP
-};
 
 
 /**
@@ -547,12 +564,18 @@ enum multistep_identifier
     a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
     b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
 \f]
-@sa multistep_identifier
+    You can use your own coefficients defined as a \c dg::MultistepTableau
+    or use one of the predefined coefficients in
+    @copydoc hide_explicit_multistep_tableaus
+
 @note This scheme is the same as ExplicitMultistep with the additional option to use a filter
 *
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
 * @ingroup time
+* @attention The filter function inside the Explicit Multistep method is a
+* somewhat experimental feature, so use this class over
+* \c dg::ExplicitMultistep at your own risk
 */
 template<class ContainerType>
 struct FilteredExplicitMultistep
@@ -571,24 +594,11 @@ struct FilteredExplicitMultistep
      * @param copyable ContainerType of the size that is used in \c step
      * @note it does not matter what values \c copyable contains, but its size is important
      */
-    FilteredExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable){
-        std::map < std::string, enum multistep_identifier> str2id{
-            {"Adams-Bashforth", ADAMS_BASHFORTH},
-            {"eBDF", eBDF},
-            {"TVB", TVB},
-            {"SSP", SSP}
-        };
-        if( str2id.find(method) == str2id.end())
-            throw dg::Error(dg::Message(_ping_)<<"Multistep coefficients for "<<method<<" not found!");
-        else
-            *this = FilteredExplicitMultistep( str2id[method], stages, copyable);
-    }
-    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
-    FilteredExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
-        m_k = stages;
-        m_f.assign( stages, copyable);
-        m_u.assign( stages, copyable);
-        init_coeffs(method, stages);
+    FilteredExplicitMultistep( ConvertsToMultistepTableau<value_type> tableau,
+            const ContainerType& copyable): m_t(tableau)
+    {
+        m_f.assign( m_t.steps(), copyable);
+        m_u.assign( m_t.steps(), copyable);
         m_counter = 0;
     }
     /**
@@ -639,99 +649,10 @@ struct FilteredExplicitMultistep
     void step( RHS& rhs, Limiter& limiter, value_type& t, ContainerType& u);
 
   private:
-    void init_coeffs(enum multistep_identifier method, unsigned stages){
-        m_a.resize( stages);
-        m_b.resize( stages);
-        switch( method){
-            case ADAMS_BASHFORTH:
-            m_a.assign(stages, 0);
-            m_a[0] = 1.;
-            switch (stages){
-                case 1: m_b = {1}; break;
-                case 2: m_b = {1.5, -0.5}; break;
-                case 3: m_b = { 23./12., -4./3., 5./12.}; break;
-                case 4: m_b = {55./24., -59./24., 37./24., -3./8.}; break;
-                case 5: m_b = { 1901./720., -1387./360., 109./30., -637./360., 251./720.}; break;
-                default: throw dg::Error(dg::Message()<<"Order not implemented in AdamsBashforth!");
-            }
-            break;
-            case eBDF:
-            switch (stages){
-                case 1: m_a = {1.};
-                        m_b = {1.}; break;
-                case 2: m_a = {4./3., -1./3.};
-                        m_b = {4./3., -2./3.}; break;
-                case 3: m_a = { 18./11., -9./11., 2./11.};
-                        m_b = { 18./11., -18./11., 6./11.}; break; //CLM = 0.38... (% of Euler step size)
-                case 4: m_a = {48./25., -36./25., 16./25., -3./25.};
-                        m_b = {48./25.,-72./25.,48./25.,-12./25.}; break; //CLM = 0.21...
-                case 5: m_a = { 300./137., -300./137., 200./137., -75./137., 12./137.};
-                        m_b = {300./137.,-600./137.,600./137.,-300./137.,60./137.}; break;
-                case 6: m_a = { 360./147., -450./147., 400./147., -225./147., 72./147., -10./147.};
-                        m_b = {360./147.,-900./147.,1200./147.,-900./147.,360./147.,-60./147.}; break;
-                case 7: m_a = { 2940./1089.,-4410./1089.,4900./1089.,-3675./1089.,1764./1089.,-490./1089.,60./1089.};
-                        m_b = { 2940./1089.,-8820./1089.,14700./1089.,-14700./1089.,8820./1089.,-2940./1089.,420./1089.}; break;
-                default: throw dg::Error(dg::Message()<<"Order not implemented in Minimal Projecting!");
-            }
-            break;
-            case TVB:
-            switch(stages){
-                case 1: m_a = {1.};
-                        m_b = {1.}; break;
-                case 2: m_a = {4./3., -1./3.};
-                        m_b = {4./3., -2./3.}; break; //CLM = 0.5
-                case 3: //CLM = 0.54...
-                    m_a[0] =  1.908535476882378;     m_b[0] =  1.502575553858997;
-                    m_a[1] = -1.334951446162515;     m_b[1] = -1.654746338401493;
-                    m_a[2] = 0.426415969280137;      m_b[2] = 0.670051276940255;
-                    break;
-                case 4: //CLM = 0.45...
-                    m_a[0] = 2.628241000683208;     m_b[0] = 1.618795874276609;
-                    m_a[1] = -2.777506277494861;     m_b[1] = -3.052866947601049;
-                    m_a[2] = 1.494730011212510;     m_b[2] = 2.229909318681302;
-                    m_a[3] = -0.345464734400857;     m_b[3] = -0.620278703629274;
-                    break;
-                case 5: //CLM = 0.37...
-                    m_a[0] = 3.308891758551210;     m_b[0] = 1.747442076919292;
-                    m_a[1] = -4.653490937946655;     m_b[1] = -4.630745565661800;
-                    m_a[2] = 3.571762873789854;     m_b[2] = 5.086056171401077;
-                    m_a[3] = -1.504199914126327;     m_b[3] = -2.691494591660196;
-                    m_a[4] = 0.277036219731918;     m_b[4] = 0.574321855183372;
-                    break;
-                case 6: //CLM = 0.32...
-                    m_a[0] = 4.113382628475685;     m_b[0] = 1.825457674048542;
-                    m_a[1] = -7.345730559324184;     m_b[1] = -6.414174588309508;
-                    m_a[2] = 7.393648314992094;     m_b[2] = 9.591671249204753;
-                    m_a[3] = -4.455158576186636;     m_b[3] = -7.583521888026967;
-                    m_a[4] = 1.523638279938299;     m_b[4] = 3.147082225022105;
-                    m_a[5] = -0.229780087895259;     m_b[5] = -0.544771649561925;
-                    break;
-                default: throw dg::Error(dg::Message()<<"Order not implemented in TVB scheme!");
-            }
-            break;
-            case SSP:
-            switch(stages){
-                case 1: m_a = {1.};
-                        m_b = {1.}; break;
-                case 2: m_a = {4./5., 1./5.};
-                        m_b = {8./5., -2./5.}; break; //CLM = 0.5 ... ,order 2
-                case 3: m_a = { 3./4., 0., 1./4.};
-                        m_b = { 3./2., 0., 0. }; break; //CLM = 0.5..., order 2
-                case 4: m_a = {8./9., 0., 0., 1./9.};
-                        m_b = {4./3., 0., 0., 0.}; break; //CLM = 0.66..., order 2
-                case 5: m_a = {25./32., 0., 0., 0., 7./32.};
-                        m_b = {25./16.,0.,0.,0.,5./16.}; break; //CLM 0.5, order 3
-                case 6: m_a = {108./125.,0.,0.,0.,0.,17./125.};
-                        m_b = {36./25.,0.,0.,0.,0.,6./25.}; break; //CLM 0.567, order 3
-                default: throw dg::Error(dg::Message()<<"Stage not implemented in SSP scheme!");
-            }
-            break;
-        }
-    }
+    dg::MultistepTableau<value_type> m_t;
     std::vector<ContainerType> m_u, m_f;
     value_type m_tu, m_dt;
-    std::vector<value_type> m_a, m_b;
-    unsigned m_k, m_counter; //counts how often step has been called after init
+    unsigned m_counter; //counts how often step has been called after init
 };
 ///@cond
 template< class ContainerType>
@@ -739,8 +660,9 @@ template< class RHS, class Limiter>
 void FilteredExplicitMultistep<ContainerType>::init( RHS& f, Limiter& l, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
-    l.apply( u0, m_u[m_k-1]);
-    f(m_tu, m_u[m_k-1], m_f[m_k-1]); //call f on new point
+    unsigned s = m_t.steps();
+    l.apply( u0, m_u[s-1]);
+    f(m_tu, m_u[s-1], m_f[s-1]); //call f on new point
     m_counter = 0;
 }
 
@@ -748,7 +670,8 @@ template<class ContainerType>
 template<class RHS, class Limiter>
 void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_type& t, ContainerType& u)
 {
-    if( m_counter < m_k-1)
+    unsigned s = m_t.steps();
+    if( m_counter < s-1)
     {
         std::map<unsigned, enum tableau_identifier> order2method{
             {1, SSPRK_2_2},
@@ -756,23 +679,24 @@ void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_ty
             {3, SSPRK_3_3},
             {4, SSPRK_5_4},
             {5, SSPRK_5_4},
-            {6, SSPRK_5_4}
+            {6, SSPRK_5_4},
+            {7, SSPRK_5_4}
         };
-        ShuOsher<ContainerType> rk( order2method.at(m_k), u);
+        ShuOsher<ContainerType> rk( order2method.at(m_t.order()), u);
         rk.step( f, l, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
-        blas1::copy(  u, m_u[m_k-1-m_counter]);
-        f( m_tu, m_u[m_k-1-m_counter], m_f[m_k-1-m_counter]);
+        blas1::copy(  u, m_u[s-1-m_counter]);
+        f( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
         return;
     }
     //compute new t,u
     t = m_tu = m_tu + m_dt;
-    dg::blas1::axpby( m_a[0], m_u[0], m_dt*m_b[0], m_f[0], u);
-    for (unsigned i = 1; i < m_k; i++){
-        dg::blas1::axpbypgz( m_a[i], m_u[i], m_dt*m_b[i], m_f[i], 1., u);
+    dg::blas1::axpby( m_t.a(0), m_u[0], m_dt*m_t.ex(0), m_f[0], u);
+    for (unsigned i = 1; i < s; i++){
+        dg::blas1::axpbypgz( m_t.a(i), m_u[i], m_dt*m_t.ex(i), m_f[i], 1., u);
     }
-    //permute m_f[m_k-1], m_u[m_k-1]  to be the new m_f[0], m_u[0]
+    //permute m_f[s-1], m_u[s-1]  to be the new m_f[0], m_u[0]
     std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
     std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
     //apply limiter
@@ -800,7 +724,9 @@ void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_ty
     a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
     b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
 \f]
-@sa multistep_identifier
+    You can use your own coefficients defined as a \c dg::MultistepTableau
+    or use one of the predefined coefficients in
+    @copydoc hide_explicit_multistep_tableaus
 *
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
@@ -813,13 +739,19 @@ struct ExplicitMultistep
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     ExplicitMultistep(){}
-    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
-    ExplicitMultistep( std::string method, unsigned stages, const ContainerType& copyable): m_fem( method, stages, copyable){ }
-    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
-    ExplicitMultistep( enum multistep_identifier method, unsigned stages, const ContainerType& copyable): m_fem( method, stages, copyable){}
-    ///@copydoc FilteredExplicitMultistep(std::string,unsigned,const ContainerType&)
-    void construct( enum multistep_identifier method, unsigned stages, const ContainerType& copyable){
-        m_fem.construct( method, stages, copyable);
+    ///@copydoc FilteredExplicitMultistep::FilteredExplicitMultistep(ConvertsToMultistepTableau<value_type>,const ContainerType&)
+    ExplicitMultistep( ConvertsToMultistepTableau<value_type> tableau, const ContainerType& copyable): m_fem( tableau, copyable){ }
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct(Params&& ...ps)
+    {
+        //construct and swap
+        *this = ExplicitMultistep(  std::forward<Params>(ps)...);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important

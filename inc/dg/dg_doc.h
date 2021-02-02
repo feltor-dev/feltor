@@ -51,6 +51,9 @@
  *      Algorithms that make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
+ *     @{
+ *          @defgroup time_utils Utilities for time integration
+ *     @}
  *     @defgroup invert Linear and nonlinear solvers
  *     @defgroup root Root finding
  * @}

@@ -27,7 +27,7 @@ namespace dg{
  * @copydoc hide_implicit_butcher_tableaus
  * @tparam real_type type of the coefficients
  * @sa RungeKutta, ERKStep, ARKStep
- * @ingroup time
+ * @ingroup time_utils_utils
  */
 template<class real_type>
 struct ButcherTableau{
@@ -174,7 +174,7 @@ struct ButcherTableau{
  *
  * @tparam real_type type of the coefficients
  * @sa ShuOsher
- * @ingroup time
+ * @ingroup time_utils_utils
  */
 template<class real_type>
 struct ShuOsherTableau
@@ -267,7 +267,6 @@ struct ShuOsherTableau
     unsigned m_stages, m_order;
     dg::Operator<real_type> m_alpha, m_beta;
 };
-
 ///@cond
 namespace tableau{
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Classic Butcher tables%%%%%%%%%%%%%%%%%%
@@ -313,7 +312,7 @@ ButcherTableau<real_type> classic_4_4()
     return ButcherTableau<real_type>( 4,4, a,b,c);
 }
 //From Yoh and Zhong (AIAA 42, 2004)
-//!Attention! assumes another form of implementation
+// !Attention! assumes another form of implementation
 //than ARK tableaus
 template<class real_type>
 ButcherTableau<real_type> sirk3a_ex_3_3()
@@ -1072,7 +1071,7 @@ ShuOsherTableau<real_type> ssprk_5_4()
 *  - Q is the global order of the method
 *
 *  @note In some of the links below you might want to use the search function of your browser to find the indicated method
-*  @ingroup time
+*  @ingroup time_utils
 */
 enum tableau_identifier{
     EXPLICIT_EULER_1_1, //!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler</a>
@@ -1362,7 +1361,7 @@ ButcherTableau<real_type> tableau( std::string name)
  * Implicit methods
  * @copydoc hide_implicit_butcher_tableaus
  * @param real_type The type of the coefficients in the ButcherTableau
- * @ingroup time
+ * @ingroup time_utils
  */
 template<class real_type>
 struct ConvertsToButcherTableau
@@ -1410,7 +1409,7 @@ struct ConvertsToButcherTableau
  * Explicit methods (the ones that are marked with "Shu-Osher-Form"
  * @copydoc hide_explicit_butcher_tableaus
  * @param real_type The type of the coefficients in the ShuOsherTableau
- * @ingroup time
+ * @ingroup time_utils
  */
 template<class real_type>
 struct ConvertsToShuOsherTableau
