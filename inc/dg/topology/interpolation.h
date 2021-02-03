@@ -435,12 +435,14 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  *
  * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa for integer multiples between old and new %grid you may want to consider the dg::create::fast_interpolation %functions
  *
  * @param g_new The new grid
  * @param g_old The old grid
  *
  * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
  * @note also check the transformation matrix, which is the more general solution
  */
 template<class real_type>
@@ -486,19 +488,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
-/**
- * @brief Create interpolation between two grids
- *
- * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- *
- * @param g_new The new grid
- * @param g_old The old grid
- *
- * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
- * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
- * @note also check the transformation matrix, which is the more general solution
- */
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {

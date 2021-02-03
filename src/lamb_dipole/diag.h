@@ -7,7 +7,7 @@
 namespace shu{
 
 struct Variables{
-    shu::Shu<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec>& shu;
+    shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>& shu;
     const dg::CartesianGrid2d& grid;
     const dg::DVec& y0;
     const double& time;

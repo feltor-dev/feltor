@@ -91,9 +91,9 @@ struct MultigridCG2d
         {
             // Projecting from one grid to the next is the same as
             // projecting from the original grid to the coarse grids
-            m_project[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, dg::normed), std::forward<Params>(ps)...);
-            m_inter[u].construct( dg::create::fast_interpolation(*m_grids[u+1], 2, 2), std::forward<Params>(ps)...);
-            m_interT[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, dg::not_normed), std::forward<Params>(ps)...);
+            m_project[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, 1, dg::normed), std::forward<Params>(ps)...);
+            m_inter[u].construct( dg::create::fast_interpolation(*m_grids[u+1], 2, 2, 1), std::forward<Params>(ps)...);
+            m_interT[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, 1, dg::not_normed), std::forward<Params>(ps)...);
         }
 
         m_x.resize( m_stages);

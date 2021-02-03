@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -meanMass, 1., 1., y0);
     }
     //make solver and stepper
-    shu::Shu<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+    shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>
         shu( grid, js, mode);
     shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, js, mode);
     if( "mms" == initial)

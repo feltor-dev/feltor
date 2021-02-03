@@ -1,7 +1,7 @@
 #error Documentation only
 /*! @namespace dg
  * @brief This is the namespace for all functions and
- * classes defined and used by the discontinuous Galerkin solvers.
+ * classes defined and used by the discontinuous Galerkin library.
  */
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations

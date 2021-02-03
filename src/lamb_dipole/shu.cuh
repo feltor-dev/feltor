@@ -61,7 +61,7 @@ struct Diffusion
     dg::Elliptic<Geometry, Matrix,Container> m_LaplacianM;
 };
 
-template< class Geometry, class IMatrix, class Matrix, class Container >
+template< class Geometry, class Matrix, class Container >
 struct Shu
 {
     using value_type = dg::get_value_type<Container>;
@@ -94,7 +94,7 @@ struct Shu
     dg::ArakawaX<Geometry, Matrix, Container> m_arakawa;
     dg::Extrapolation<Container> m_old_psi;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
-    IMatrix m_inter, m_project;
+    dg::MultiMatrix<Matrix,Container> m_inter, m_project;
     Matrix m_forward[2], m_backward[2], m_centered[2];
     Matrix m_centered_phi[2]; // for variation
     std::vector<double> m_eps;
@@ -109,8 +109,8 @@ struct Shu
     bool m_add_viscosity = false;
 };
 
-template<class Geometry, class IMatrix, class Matrix, class Container>
-Shu< Geometry, IMatrix, Matrix, Container>::Shu(
+template<class Geometry, class Matrix, class Container>
+Shu< Geometry, Matrix, Container>::Shu(
         const Geometry& g, Json::Value& js, enum dg::file::error mode):
     m_old_psi( 2, dg::evaluate( dg::zero, g)),
     m_multigrid( g, 3),
@@ -131,9 +131,10 @@ Shu< Geometry, IMatrix, Matrix, Container>::Shu(
     if( "projection" == m_multiplication)
     {
         Geometry fine_grid = g;
-        fine_grid.set( 2*g.n()-1, g.Nx(), g.Ny());
-        m_inter = dg::create::interpolation( fine_grid, g);
-        m_project = dg::create::projection( g, fine_grid);
+        fine_grid.set( 2*g.n(), g.Nx(), g.Ny());
+        //theoretically we only need 2n-1 but it isn't wrong to take more
+        m_inter = dg::create::fast_interpolation( g, 1, 1, 2);
+        m_project = dg::create::fast_projection( fine_grid, 1, 1, 2);
 
         m_centered[0] = dg::create::dx( fine_grid, g.bcx(), dg::centered);
         m_centered[1] = dg::create::dy( fine_grid, g.bcy(), dg::centered);
@@ -190,8 +191,8 @@ Shu< Geometry, IMatrix, Matrix, Container>::Shu(
     }
 }
 
-template< class Geometry, class IMatrix, class Matrix, class Container>
-void Shu<Geometry, IMatrix, Matrix, Container>::operator()(double t, const Container& y, Container& yp)
+template< class Geometry, class Matrix, class Container>
+void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, Container& yp)
 {
     //solve elliptic equation
     m_old_psi.extrapolate( t, m_psi);

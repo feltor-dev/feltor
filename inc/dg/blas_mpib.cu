@@ -84,8 +84,8 @@ int main( int argc, char* argv[])
     value_type gbytes=(value_type)x.size()*grid.size()*sizeof(value_type)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     dg::MultiMatrix<Matrix, ArrayVec> inter, project;
-    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
-    dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
+    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2,1), inter);
+    dg::blas2::transfer(dg::create::fast_projection( grid, 2,2,1), project);
 
     int multi=100;
     if(rank==0)std::cout<<"\nNo communication\n";
