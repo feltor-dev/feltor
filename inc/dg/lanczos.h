@@ -1,26 +1,21 @@
-// #include <cmath>
 #pragma once
 
 #include "blas.h"
 #include "functors.h"
 
-#include <cusp/dia_matrix.h>
-#include <cusp/coo_matrix.h>
-#include <cusp/print.h>
+
 
 namespace dg{
     
 /**
 * @brief Functor class for computing the inverse of a general tridiagonal matrix 
 */
-template< class ContainerType>
+template< class ContainerType, class DiaMatrix, class CooMatrix>
 class InvTridiag
 {
   public:
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using coo_type =  cusp::coo_matrix<int, value_type, cusp::device_memory>;
-    using dia_type =  cusp::dia_matrix<int, value_type, cusp::device_memory>;
     ///@brief Allocate nothing, Call \c construct method before usage
     InvTridiag(){}
     //Constructor
@@ -48,7 +43,7 @@ class InvTridiag
      * 
      * @return the inverse of the tridiagonal matrix (coordinate format)
      */
-    coo_type operator()(const dia_type& T)
+    CooMatrix operator()(const DiaMatrix& T)
     {
         ContainerType alpha(theta.size()-1,0.);
         ContainerType beta(theta.size()-1,0.);
@@ -72,7 +67,7 @@ class InvTridiag
      * @return the inverse of the tridiagonal matrix (coordinate format)
      */
     template<class ContainerType0>
-    coo_type operator()(const ContainerType0& a, const ContainerType0& b,  const ContainerType0& c)
+    CooMatrix operator()(const ContainerType0& a, const ContainerType0& b,  const ContainerType0& c)
     {
         //Compute theta and phi
         unsigned is=0;
@@ -127,25 +122,22 @@ class InvTridiag
     }
   private:
     std::vector<value_type> phi, theta;
-    coo_type Tinv;    
+    CooMatrix Tinv;    
     value_type temp;
 };
 /**
-* @brief Functor class for the Lanczos method to solve
-* \f[ Ax=b\f]
-* for b. A is a symmetric 
+* @brief Functor class for the Lanczos method to solve \f[b = Ax\f] or \f[b = S^{-1} A x\f]
+* for b. A is a symmetric and \f[S^{-1}\f] are typically the inverse weights.
 *
 * 
 * @note The common lanczos method (and M-Lanczos) method are prone to loss of orthogonality for finite precision. Here, only the basic Paige fix is used. Thus the iterations should be kept as small as possible. Could be fixed via full, partial or selective reorthogonalization strategies, but so far no problems occured due to this.
 */
-template< class ContainerType>
+template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
 class Lanczos
 {
   public:
     using container_type = ContainerType;
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using dia_type =  cusp::dia_matrix<int, value_type, cusp::device_memory>;
-    using coo_type =  cusp::coo_matrix<int, value_type, cusp::device_memory>;
     ///@brief Allocate nothing, Call \c construct method before usage
     Lanczos(){}
     ///@copydoc construct()
@@ -160,114 +152,121 @@ class Lanczos
      * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable, unsigned max_iterations) {
-        alpha.assign(max_iterations,0.);
-        beta.assign(max_iterations,0.);
-        v.assign(max_iterations,copyable);
-        w.assign(max_iterations,copyable);
-        vi = vip = wi = wim = wip= copyable;
-        max_iter = max_iterations;
-        iter = max_iterations;
-        T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
-        T.diagonal_offsets[0] = -1;
-        T.diagonal_offsets[1] =  0;
-        T.diagonal_offsets[2] =  1;
-        Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-        V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_alpha.assign(max_iterations,0.);
+        m_beta.assign(max_iterations,0.);
+        m_v.assign(max_iterations,copyable);
+        m_w.assign(max_iterations,copyable);
+        m_vi = m_vip = m_wi = m_wim = m_wip= copyable;
+        m_max_iter = max_iterations;
+        m_iter = max_iterations;
+        m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
+        m_T.diagonal_offsets[0] = -1;
+        m_T.diagonal_offsets[1] =  0;
+        m_T.diagonal_offsets[2] =  1;
+        m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_e1.assign(m_max_iter, 0.);
+        m_temp.assign(m_max_iter, 0.);
+        m_e1[0]=1.;
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
     void set_iter( unsigned new_iter) {
-        T.resize(new_iter, new_iter, 3*new_iter-2, 3, max_iter);
-        T.diagonal_offsets[0] = -1;
-        T.diagonal_offsets[1] =  0;
-        T.diagonal_offsets[2] =  1;
-        V.resize(vi.size(), new_iter, new_iter*vi.size()); 
-        iter = new_iter;
+        m_T.resize(new_iter, new_iter, 3*new_iter-2, 3, m_max_iter);
+        m_T.diagonal_offsets[0] = -1;
+        m_T.diagonal_offsets[1] =  0;
+        m_T.diagonal_offsets[2] =  1;
+        m_V.resize(m_vi.size(), new_iter, new_iter*m_vi.size()); 
+        m_e1.assign(new_iter, 0.);
+        m_temp.assign(new_iter, 0.);
+        m_e1[0]=1.;
+        m_iter = new_iter;
     }
     ///@brief Get the current  number of iterations
     ///@return the current number of iterations
-    unsigned get_iter() const {return iter;}
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return w;}
+    unsigned get_iter() const {return m_iter;}
     /**
-     * @brief Solve the system A*x = b for b using Lanczos method
+     * @brief Solve the system \f[ b= A x \approx || x ||_2 V T e_1\f] using Lanczos method. Useful for tridiagonalization of A (cf return statement).
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
+     * 
+     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \f[ T = V^T A V \f].
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    std::pair<dia_type, coo_type> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b)
+    std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b)
     {
         get_value_type<ContainerType> xnorm = sqrt(dg::blas1::dot(x, x));
 
         //Initial vector
-        dg::blas1::axpby(1./xnorm, x, 0.0, v[0]); //v[1] = x/||x||
-        beta[0] = 0.;
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v[0]); //m_v[1] = x/||x||
+        m_beta[0] = 0.;
 
         //Algorithm for i=1
-        dg::blas2::symv(A, v[0], v[1]);  
-        alpha[0] = dg::blas1::dot(v[1], v[0]);      
-        dg::blas1::axpby(-alpha[0], v[0], 1.0, v[1]);            
-        beta[1] = sqrt(dg::blas1::dot(v[1], v[1]));  
+        dg::blas2::symv(A, m_v[0], m_v[1]);  
+        m_alpha[0] = dg::blas1::dot(m_v[1], m_v[0]);      
+        dg::blas1::axpby(-m_alpha[0], m_v[0], 1.0, m_v[1]);            
+        m_beta[1] = sqrt(dg::blas1::dot(m_v[1], m_v[1]));  
 
-        dg::blas1::scal(v[1], 1./beta[1]);
+        dg::blas1::scal(m_v[1], 1./m_beta[1]);
         //Algorithm for i>1
-        for( unsigned i=1; i<max_iter-1; i++)
+        for( unsigned i=1; i<m_max_iter-1; i++)
         {
-            dg::blas2::symv(A, v[i], v[i+1]);                    
-            dg::blas1::axpby(-beta[i], v[i-1], 1.0, v[i+1]);     
-            alpha[i] = dg::blas1::dot(v[i+1], v[i]);            
-            dg::blas1::axpby(-alpha[i], v[i], 1.0, v[i+1]);      
-            beta[i+1] = sqrt(dg::blas1::dot(v[i+1], v[i+1]));     
-    //         if (beta[i+1] == 0) break;
-//             std::cout << beta[i+1]  << "\n";
-            dg::blas1::scal(v[i+1], 1./beta[i+1]);  
+            dg::blas2::symv(A, m_v[i], m_v[i+1]);                    
+            dg::blas1::axpby(-m_beta[i], m_v[i-1], 1.0, m_v[i+1]);     
+            m_alpha[i] = dg::blas1::dot(m_v[i+1], m_v[i]);            
+            dg::blas1::axpby(-m_alpha[i], m_v[i], 1.0, m_v[i+1]);      
+            m_beta[i+1] = sqrt(dg::blas1::dot(m_v[i+1], m_v[i+1]));     
+    //         if (m_beta[i+1] == 0) break;
+//             std::cout << m_beta[i+1]  << "\n";
+            dg::blas1::scal(m_v[i+1], 1./m_beta[i+1]);  
             
         }
-        //Last alpha
-        dg::blas2::symv(A, v[max_iter-1], vi);
+        //Last m_alpha
+        dg::blas2::symv(A, m_v[m_max_iter-1], m_vi);
 
-        dg::blas1::axpby(-beta[max_iter-1], v[max_iter-2], 1.0, vi); 
-        alpha[max_iter-1] = dg::blas1::dot(vi, v[max_iter-1]);
+        dg::blas1::axpby(-m_beta[m_max_iter-1], m_v[m_max_iter-2], 1.0, m_vi); 
+        m_alpha[m_max_iter-1] = dg::blas1::dot(m_vi, m_v[m_max_iter-1]);
         
         //Fill T and V Matrix
         unsigned counter = 0;
-        for( unsigned i=0; i<max_iter; i++)
+        for( unsigned i=0; i<m_max_iter; i++)
         {
-            T.values(i,0) =  beta[i];  // -1 diagonal
-            T.values(i,1) =  alpha[i];  // 0 diagonal
-            T.values(i,2) =  beta[i+1];  // +1 diagonal //dia_rows entry works since its outside of matrix
+            m_T.values(i,0) =  m_beta[i];  // -1 diagonal
+            m_T.values(i,1) =  m_alpha[i];  // 0 diagonal
+            m_T.values(i,2) =  m_beta[i+1];  // +1 diagonal //dia_rows entry works since its outside of matrix
             
-            for( unsigned j=0; j<v[0].size(); j++)
+            for( unsigned j=0; j<m_v[0].size(); j++)
             {            
-                V.row_indices[counter]    = j;
-                V.column_indices[counter] = i; 
-                V.values[counter]         = v[i][j];
+                m_V.row_indices[counter]    = j;
+                m_V.column_indices[counter] = i; 
+                m_V.values[counter]         = m_v[i][j];
                 counter++;
             }
         }     
         
-        //Check implementation: b=||x|| V T e_1 = || x || (v[0] alpha[01] + v[1] beta[1])
-        dg::blas1::axpby(alpha[0], v[0], beta[1], v[1], b);
+        //Check implementation: b=||x|| V T e_1 = || x || (m_v[0] m_alpha[01] + m_v[1] beta[1])
+        dg::blas1::axpby(m_alpha[0], m_v[0], m_beta[1], m_v[1], b);
         dg::blas1::scal(b, xnorm ); 
         
-        TVpair = std::make_pair(T,V);
-        return TVpair;
+        m_TVpair = std::make_pair(m_T, m_V);
+        return m_TVpair;
     }
     /**
-     * @brief Solve the system A*x = b for b using M-Lanczos method
+     * @brief Solve the system \f[b= S^{-1} A x \approx || x ||_S V T e_1\f] for b using M-Lanczos (in this case S-Lanczos) method. Useful for the fast computatin of matrix functions of \f[ S^{-1} A\f].
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
-     * @param S should be the weights 
-     * @param Sinv should be the inverse of S, the inverse weights
+     * @param S the weights 
+     * @param Sinv the inverse of S - the inverse weights
      * @param eps accuracy of residual
+     * 
+     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \[f T = V^T A V \f]
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    std::pair<dia_type, coo_type> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& S, SquareNorm2& Sinv, value_type eps)
+    std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& S, SquareNorm2& Sinv, value_type eps)
     {
         value_type xnorm = sqrt(dg::blas2::dot(x, S, x));
         value_type residual;
@@ -276,96 +275,96 @@ class Lanczos
         value_type invtime=0.;
 #endif //DG_BENCHMARK
    /*//     Implementation #1 (naiv implementation, however slightly faster than 2 and 3)
-        dg::blas1::axpby(1./xnorm, x, 0.0, v[0]); //v[1] = x/||x||
-        beta[0] = 0.;
-        dg::blas2::symv(A, v[0], vi);  
-        dg::blas2::symv(Sinv, vi, v[1]);
-        alpha[0] = dg::blas2::dot(v[1], S, v[0]);      
-        dg::blas1::axpby(-alpha[0], v[0], 1.0, v[1]);            
-        beta[1] = sqrt(dg::blas2::dot( S, v[1]));   
-        dg::blas1::scal(v[1], 1./beta[1]);
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v[0]); //m_v[1] = x/||x||
+        m_beta[0] = 0.;
+        dg::blas2::symv(A, m_v[0], m_vi);  
+        dg::blas2::symv(Sinv, m_vi, m_v[1]);
+        m_alpha[0] = dg::blas2::dot(m_v[1], S, m_v[0]);      
+        dg::blas1::axpby(-m_alpha[0], m_v[0], 1.0, m_v[1]);            
+        m_beta[1] = sqrt(dg::blas2::dot( S, m_v[1]));   
+        dg::blas1::scal(m_v[1], 1./m_beta[1]);
  
-        for( unsigned i=1; i<max_iter-1; i++)
+        for( unsigned i=1; i<m_max_iter-1; i++)
         {
-            dg::blas2::symv(A, v[i],vi);                    
-            dg::blas2::symv(Sinv,vi,v[i+1]);                
-            dg::blas1::axpby(-beta[i], v[i-1], 1.0, v[i+1]);   
-            alpha[i] = dg::blas2::dot(v[i+1], S, v[i]);          
-            dg::blas1::axpby(-alpha[i], v[i], 1.0, v[i+1]);      
-            beta[i+1] = sqrt(dg::blas2::dot(S, v[i+1]));       
-            dg::blas1::scal(v[i+1], 1./beta[i+1]);       
+            dg::blas2::symv(A, m_v[i],m_vi);                    
+            dg::blas2::symv(Sinv,m_vi,m_v[i+1]);                
+            dg::blas1::axpby(-m_beta[i], m_v[i-1], 1.0, m_v[i+1]);   
+            m_alpha[i] = dg::blas2::dot(m_v[i+1], S, m_v[i]);          
+            dg::blas1::axpby(-m_alpha[i], m_v[i], 1.0, m_v[i+1]);      
+            m_beta[i+1] = sqrt(dg::blas2::dot(S, m_v[i+1]));       
+            dg::blas1::scal(m_v[i+1], 1./m_beta[i+1]);       
             
         }
-        dg::blas2::symv(A, v[max_iter-1], vi);
-        dg::blas2::symv(Sinv,vi, vi); 
-        dg::blas1::axpby(-beta[max_iter-1], v[max_iter-2], 1.0, vi);
-        alpha[max_iter-1] = dg::blas2::dot(vi, S, v[max_iter-1]);
+        dg::blas2::symv(A, m_v[m_max_iter-1], m_vi);
+        dg::blas2::symv(Sinv,m_vi, m_vi); 
+        dg::blas1::axpby(-m_beta[m_max_iter-1], m_v[m_max_iter-2], 1.0, m_vi);
+        m_alpha[m_max_iter-1] = dg::blas2::dot(m_vi, S, m_v[m_max_iter-1]);
 
 //         //Implementation #2 (with w and blas1 dots)
-        dg::blas1::axpby(1./xnorm, x, 0.0, v[0]); //v[1] = x/||x||
-        beta[0] = 0.;
-        dg::blas2::symv(S, v[0], w[0]);
-//         dg::blas2::symv(A, v[0], w[1]); 
-//         alpha[0] = dg::blas1::dot(w[1], v[0]); 
-//         dg::blas1::axpby(-alpha[0], w[0], 1.0, w[1]);   
-//         dg::blas2::symv(Sinv,w[1],v[1]);
-//         beta[1] = sqrt(dg::blas1::dot( w[1], v[1]));  
-//         dg::blas1::scal(v[1], 1./beta[1]);              
-//         dg::blas1::scal(w[1], 1./beta[1]);
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v[0]); //m_v[1] = x/||x||
+        m_beta[0] = 0.;
+        dg::blas2::symv(S, m_v[0], m_w[0]);
+//         dg::blas2::symv(A, m_v[0], m_w[1]); 
+//         m_alpha[0] = dg::blas1::dot(m_w[1], m_v[0]); 
+//         dg::blas1::axpby(-m_alpha[0], m_w[0], 1.0, m_w[1]);   
+//         dg::blas2::symv(Sinv,m_w[1],m_v[1]);
+//         m_beta[1] = sqrt(dg::blas1::dot( m_w[1], m_v[1]));  
+//         dg::blas1::scal(m_v[1], 1./m_beta[1]);              
+//         dg::blas1::scal(m_w[1], 1./m_beta[1]);
 
-        for( unsigned i=0; i<max_iter-1; i++)
+        for( unsigned i=0; i<m_max_iter-1; i++)
         {    
-            dg::blas2::symv(A, v[i], w[i+1]);                    
-            if (i>0) dg::blas1::axpby(-beta[i], w[i-1], 1.0, w[i+1]);    
-            alpha[i] = dg::blas1::dot(w[i+1], v[i]);          
-            dg::blas1::axpby(-alpha[i], w[i], 1.0, w[i+1]);       
-            dg::blas2::symv(Sinv,w[i+1],v[i+1]);
-            beta[i+1] = sqrt(dg::blas1::dot(w[i+1], v[i+1]));       
-            dg::blas1::scal(v[i+1], 1./beta[i+1]);              
-            dg::blas1::scal(w[i+1], 1./beta[i+1]);  
+            dg::blas2::symv(A, m_v[i], m_w[i+1]);                    
+            if (i>0) dg::blas1::axpby(-m_beta[i], m_w[i-1], 1.0, m_w[i+1]);    
+            m_alpha[i] = dg::blas1::dot(m_w[i+1], m_v[i]);          
+            dg::blas1::axpby(-m_alpha[i], m_w[i], 1.0, m_w[i+1]);       
+            dg::blas2::symv(Sinv,m_w[i+1],m_v[i+1]);
+            m_beta[i+1] = sqrt(dg::blas1::dot(m_w[i+1], m_v[i+1]));       
+            dg::blas1::scal(m_v[i+1], 1./m_beta[i+1]);              
+            dg::blas1::scal(m_w[i+1], 1./m_beta[i+1]);  
             
             //TODO convergence criterium for sqrt operator
         }
-        dg::blas2::symv(A, v[max_iter-1], vi);                    
-        dg::blas1::axpby(-beta[max_iter-1], w[max_iter-2], 1.0, vi);    
-        alpha[max_iter-1] = dg::blas1::dot(vi, v[max_iter-1]);   
+        dg::blas2::symv(A, m_v[m_max_iter-1], m_vi);                    
+        dg::blas1::axpby(-m_beta[m_max_iter-1], m_w[m_max_iter-2], 1.0, m_vi);    
+        m_alpha[m_max_iter-1] = dg::blas1::dot(m_vi, m_v[m_max_iter-1]);   
         Fill T and V Matrix for #1 and #2
        unsigned counter = 0;
-        for( unsigned i=0; i<max_iter; i++)
+        for( unsigned i=0; i<m_max_iter; i++)
         {
-            T.values(i,0) =  beta[i];  // -1 diagonal
-            T.values(i,1) =  alpha[i];  // 0 diagonal
-            T.values(i,2) =  beta[i+1];  // +1 diagonal //dia_rows entry works since its outside of matrix
+            m_T.values(i,0) =  m_beta[i];  // -1 diagonal
+            m_T.values(i,1) =  m_alpha[i];  // 0 diagonal
+            m_T.values(i,2) =  m_beta[i+1];  // +1 diagonal //dia_rows entry works since its outside of matrix
             
-            for( unsigned j=0; j<v[0].size(); j++)
+            for( unsigned j=0; j<m_v[0].size(); j++)
             {            
                 V.row_indices[counter]    = j;
                 V.column_indices[counter] = i; 
-                V.values[counter]         = v[i][j];
+                V.values[counter]         = m_v[i][j];
                 counter++;
             }
         } */      
         //Implementation #3 (with w and blas1 dots and without vectors)
-        dg::blas1::axpby(1./xnorm, x, 0.0, vi); //v[1] = x/||x||
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
         value_type betaip = 0;
-        dg::blas2::symv(S, vi, wi);
+        dg::blas2::symv(S, m_vi, m_wi);
         unsigned counter = 0;
-        for( unsigned i=0; i<max_iter; i++)
+        for( unsigned i=0; i<m_max_iter; i++)
         {  
-            for( unsigned j=0; j<v[0].size(); j++)
+            for( unsigned j=0; j<m_v[0].size(); j++)
             {            
-                V.row_indices[counter]    = j;
-                V.column_indices[counter] = i; 
-                V.values[counter]         = vi[j];
+                m_V.row_indices[counter]    = j;
+                m_V.column_indices[counter] = i; 
+                m_V.values[counter]         = m_vi.data()[j];
                 counter++;
             }
-            T.values(i,0) =  betaip;  // -1 diagonal
-            dg::blas2::symv(A, vi, wip); 
-            dg::blas1::axpby(-betaip, wim, 1.0, wip);    //only -= if i>0, therefore no if (i>0)
-            T.values(i,1) = dg::blas1::dot(wip, vi);    
-            dg::blas1::axpby(-T.values(i,1), wi, 1.0, wip);     
-            dg::blas2::symv(Sinv,wip,vip);
-            betaip = sqrt(dg::blas1::dot(wip, vip)); 
+            m_T.values(i,0) =  betaip;  // -1 diagonal
+            dg::blas2::symv(A, m_vi, m_wip); 
+            dg::blas1::axpby(-betaip, m_wim, 1.0, m_wip);    //only -= if i>0, therefore no if (i>0)
+            m_T.values(i,1) = dg::blas1::dot(m_wip, m_vi);    
+            dg::blas1::axpby(-m_T.values(i,1), m_wi, 1.0, m_wip);     
+            dg::blas2::symv(Sinv,m_wip,m_vip);
+            betaip = sqrt(dg::blas1::dot(m_wip, m_vip)); 
             if (betaip == 0) {
 #ifdef DG_DEBUG
                 std::cout << "beta[i+1]=0 encountered\n";
@@ -373,23 +372,23 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             } 
-            dg::blas1::scal(vip, 1./betaip);     
-            dg::blas1::scal(wip, 1./betaip);  
-            vi=vip;
-            wim=wi;
-            wi=wip;
-            T.values(i,2) =  betaip;  // +1 diagonal
+            dg::blas1::scal(m_vip, 1./betaip);     
+            dg::blas1::scal(m_wip, 1./betaip);  
+            m_vi=m_vip;
+            m_wim=m_wi;
+            m_wi=m_wip;
+            m_T.values(i,2) =  betaip;  // +1 diagonal
             if (i>0) {
-                invtridiag.resize(i);
+                m_invtridiag.resize(i);
 #ifdef DG_BENCHMARK
                 t.tic();
 #endif //DG_BENCHMARK
-                Tinv = invtridiag(T); //Compute inverse of T
+                m_Tinv = m_invtridiag(m_T); //Compute inverse of T
 #ifdef DG_BENCHMARK
                 t.toc();
                 invtime+=t.diff();
 #endif //DG_BENCHMARK
-                residual = xnorm*betaip*betaip*abs(Tinv.values[i-1]);
+                residual = xnorm*betaip*betaip*abs(m_Tinv.values[i-1]);
 #ifdef DG_DEBUG
                 std::cout << "||r||_S =  " << residual << "  # of iterations = " << i+1 << "\n";
 #endif //DG_DEBUG
@@ -403,27 +402,26 @@ class Lanczos
         std::cout << get_iter() << " T inversions took " << invtime << "s\n";
 #endif //DG_BENCHMARK
 
-//         Check implementation: b=||x|| V T e_1 = || x || (v[0] alpha[01] + v[1] beta[1])
+//         Check implementation: b=||x|| V T e_1 = || x || (m_v[0] m_alpha[01] + m_v[1] m_beta[1])
 //         Note that it depends only on first two vectors and alpha,beta (changes if square root is applied upon T)
-//         dg::blas1::axpby(alpha[0], v[0], beta[1], v[1], b); //faster alternative
-        
-        ContainerType e1( get_iter(), 0.), temp(e1);
-        e1[0]=1.;
-        dg::blas2::symv(T, e1, temp); //T e_1
-        dg::blas2::symv(V, temp, b); // V T e_1
+//         dg::blas1::axpby(m_alpha[0], m_v[0], m_beta[1], m_v[1], b); //faster alternative
+
+        dg::blas2::symv(m_T, m_e1, m_temp); //T e_1
+        dg::blas2::symv(m_V, m_temp, b); // V T e_1
         dg::blas1::scal(b, xnorm ); 
-        TVpair = std::make_pair(T,V);
-        return TVpair;
+        m_TVpair = std::make_pair(m_T,m_V);
+        return m_TVpair;
     }
   private:
-    std::vector<value_type> alpha, beta;
-    std::vector<ContainerType> v, w;
-    ContainerType  vi, vip, wi, wip, wim;
-    unsigned iter, max_iter;
-    std::pair<dia_type, coo_type> TVpair; 
-    dia_type T;
-    coo_type V, Tinv;    
-    InvTridiag<ContainerType> invtridiag;
+    std::vector<value_type> m_alpha, m_beta;
+    std::vector<ContainerType> m_v, m_w;
+    ContainerType  m_vi, m_vip, m_wi, m_wip, m_wim;
+    SubContainerType m_e1, m_temp;
+    unsigned m_iter, m_max_iter;
+    std::pair<DiaMatrix, CooMatrix> m_TVpair; 
+    DiaMatrix m_T;
+    CooMatrix m_V, m_Tinv;    
+    InvTridiag<SubContainerType, DiaMatrix, CooMatrix> m_invtridiag;
 
 };
 

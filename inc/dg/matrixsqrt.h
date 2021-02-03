@@ -133,7 +133,7 @@ struct DirectSqrtCauchySolve
  * 
  * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx b \approx ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
  */
-template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container>
+template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 struct KrylovSqrtODESolve
 {
    public:
@@ -206,7 +206,12 @@ struct KrylovSqrtODESolve
         m_rhs.set_A(m_T); //set T in sqrtODE solver
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
+#ifdef MPI_VERSION
+        dg::blas2::symv(m_V, m_y, m_b);
+        dg::assign(m_b, b);
+#else //ifndef MPI_VERSION
         dg::blas2::symv(m_V, m_y, b);
+#endif //MPI_VERSION
         dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1    
 #ifdef DG_BENCHMARK
         t.toc();
@@ -227,9 +232,12 @@ struct KrylovSqrtODESolve
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
     value_type m_epsCG,m_epsTimerel, m_epsTimeabs, m_xnorm, m_eps;
-    Container m_e1, m_y;
-    Rhs<DiaMatrix, Container> m_rhs;  
-    dg::Lanczos< Container > m_lanczos;
+    SubContainer m_e1, m_y;
+#ifdef MPI_VERSION
+    SubContainer m_b;
+#endif
+    Rhs<DiaMatrix, SubContainer> m_rhs;  
+    dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix > m_lanczos;
     DiaMatrix m_T; 
     CooMatrix m_V;
     std::pair<DiaMatrix, CooMatrix> m_TVpair;     
@@ -240,7 +248,7 @@ struct KrylovSqrtODESolve
  * 
  * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
  */
-template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container>
+template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 struct KrylovSqrtCauchySolve
 {
    public:
@@ -336,12 +344,12 @@ struct KrylovSqrtCauchySolve
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
     value_type m_eps, m_xnorm, m_EVmin, m_EVmax;
-    Container m_e1, m_y;
+    SubContainer m_e1, m_y;
     DiaMatrix m_T; 
     CooMatrix m_V;
     std::pair<DiaMatrix, CooMatrix> m_TVpair; 
-    CauchySqrtInt<DiaMatrix, Container> m_cauchysqrt;  
-    dg::Lanczos< Container > m_lanczos;
+    CauchySqrtInt<DiaMatrix, SubContainer> m_cauchysqrt;  
+    dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix> m_lanczos;
 };
 
 /*! 
@@ -349,31 +357,25 @@ struct KrylovSqrtCauchySolve
  * 
  * @note The approximation relies on Projection \f[x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the PCG solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T^{-1}} e_1\f] is computed via the sqrt ODE solve.
  */
-template< class ContainerType>
+template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
 class CGsqrt
 {
   public:
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using coo_type =  cusp::coo_matrix<int, value_type, cusp::device_memory>;
     ///@brief Allocate nothing, Call \c construct method before usage
     CGsqrt(){}
     ///@copydoc construct()
-    CGsqrt( const ContainerType& copyable, unsigned max_iterations) : 
-        max_iter(max_iterations)
+    CGsqrt( const ContainerType& copyable, unsigned max_iterations)
     {
           construct(copyable, max_iterations);
     }
     ///@brief Set the maximum number of iterations
     ///@param new_max New maximum number
-    void set_max( unsigned new_max) {max_iter = new_max;}
+    void set_max( unsigned new_max) {m_max_iter = new_max;}
     ///@brief Get the current maximum number of iterations
     ///@return the current maximum
-    unsigned get_max() const {return max_iter;}
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return p;}
-
+    unsigned get_max() const {return m_max_iter;}
     /**
      * @brief Allocate memory for the pcg method
      *
@@ -382,16 +384,28 @@ class CGsqrt
      */
     void construct( const ContainerType& copyable, unsigned max_iterations)
     {
-        v0.assign(max_iterations,0.);
-        vp.assign(max_iterations,0.);
-        vm.assign(max_iterations,0.);
-        rh.assign(max_iterations, copyable);
+        m_v0.assign(max_iterations,0.);
+        m_vp.assign(max_iterations,0.);
+        m_vm.assign(max_iterations,0.);
         m_e1.assign(max_iterations,0.);
         m_y.assign(max_iterations,0.);
-        ap = p = r =  copyable;
-        max_iter = max_iterations;
-        R.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-        Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_ap = m_p = m_r = m_rh = copyable;
+        m_max_iter = max_iterations;
+        m_R.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+    }
+    ///@brief Set the new number of iterations and resize Matrix T and V
+    ///@param new_iter new number of iterations
+    void set_iter( unsigned new_iter) {
+        m_v0.resize(new_iter);
+        m_vp.resize(new_iter);
+        m_vm.resize(new_iter);
+        m_e1.resize(new_iter,0.);
+        m_e1[0]=1.;
+        m_y.resize(new_iter,0.);
+        m_R.resize(m_rh.size(), new_iter, new_iter*m_rh.size());
+        m_Tinv.resize(new_iter, new_iter, new_iter*new_iter);
+        m_invtridiag.resize(new_iter);
     }
     /**
      * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
@@ -430,99 +444,84 @@ class CGsqrt
             dg::blas1::copy( b, x);
             return 0;
         }
-        dg::blas2::symv( A, x, r);
-        dg::blas1::axpby( 1., b, -1., r);
-        dg::blas2::symv( P, r, p );//<-- compute p_0
-        dg::blas1::copy( p, rh[0]);
+        dg::blas2::symv( A, x, m_r);
+        dg::blas1::axpby( 1., b, -1., m_r);
+        dg::blas2::symv( P, m_r, m_p );//<-- compute p_0
+        dg::blas1::copy( m_p, m_rh);
 
         //note that dot does automatically synchronize
-        value_type nrm2r_old = dg::blas1::dot( rh[0],r); //and store the norm of it
+        value_type nrm2r_old = dg::blas1::dot( m_rh, m_r); //and store the norm of it
         value_type nrm2r_new;
         
-        for( unsigned i=0; i<max_iter; i++)
+        unsigned counter = 0;
+        for( unsigned i=0; i<m_max_iter; i++)
         {
-            dg::blas2::symv( A, p, ap);
-            alpha = nrm2r_old /dg::blas1::dot( p, ap);
-            dg::blas1::axpby( -alpha, ap, 1., r);
+            for( unsigned j=0; j<m_rh.size(); j++)
+            {            
+                m_R.row_indices[counter]    = j;
+                m_R.column_indices[counter] = i; 
+                m_R.values[counter]         = m_rh.data()[j];
+                counter++;
+            }
+            dg::blas2::symv( A, m_p, m_ap);
+            m_alpha = nrm2r_old /dg::blas1::dot( m_p, m_ap);
+            dg::blas1::axpby( -m_alpha, m_ap, 1., m_r);
     #ifdef DG_DEBUG
     #ifdef MPI_VERSION
             if(rank==0)
     #endif //MPI
             {
-                std::cout << "# Absolute r*S*r "<<sqrt( dg::blas2::dot(S,r)) <<"\t ";
+                std::cout << "# Absolute r*S*r "<<sqrt( dg::blas2::dot(S,m_r)) <<"\t ";
                 std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(S,r) )/nrmb << ")\n";
+                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(S,m_r) )/nrmb << ")\n";
             }
     #endif //DG_DEBUG
-            if( sqrt( dg::blas2::dot( S, r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
+            if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
             {
-                dg::blas2::symv(P, r, rh[i+1]);
-                nrm2r_new = dg::blas1::dot( rh[i+1], r);
-                    
-                vp[i] = -nrm2r_new/nrm2r_old/alpha;
-                vm[i] = -1./alpha;
-                v0[i+1] = -vp[i];
-                v0[i] -= vm[i];
+                dg::blas2::symv(P, m_r, m_rh);
+                nrm2r_new = dg::blas1::dot( m_rh, m_r);
                 
-                max_iter=i+1;
+                m_vp[i] = -nrm2r_new/nrm2r_old/m_alpha;
+                m_vm[i] = -1./m_alpha;
+                m_v0[i+1] = -m_vp[i];
+                m_v0[i] -= m_vm[i];
+                
+                m_max_iter=i+1;
                 break;
             }
-            dg::blas2::symv(P, r, rh[i+1]);
-            nrm2r_new = dg::blas1::dot( rh[i+1], r);
-            dg::blas1::axpby(1., rh[i+1], nrm2r_new/nrm2r_old, p );
-                 
-            vp[i] = -nrm2r_new/nrm2r_old/alpha;
-            vm[i] = -1./alpha;
-            v0[i+1] = -vp[i];
-            v0[i] -= vm[i];
+            dg::blas2::symv(P, m_r, m_rh);
+            nrm2r_new = dg::blas1::dot( m_rh, m_r);
+            dg::blas1::axpby(1., m_rh, nrm2r_new/nrm2r_old, m_p );
+                       
+            m_vp[i] = -nrm2r_new/nrm2r_old/m_alpha;
+            m_vm[i] = -1./m_alpha;
+            m_v0[i+1] = -m_vp[i];
+            m_v0[i] -= m_vm[i];
             nrm2r_old=nrm2r_new;
         }
-        //Resize vectors and matrix first
-        v0.resize(max_iter);
-        vp.resize(max_iter);
-        vm.resize(max_iter);
-        rh.resize(max_iter);
-        m_e1.resize(max_iter,0.);
-        m_e1[0]=1.;
-        m_y.resize(max_iter,0.);
 
-        R.resize(rh[0].size(), max_iter, max_iter*rh[0].size());
-        Tinv.resize(max_iter, max_iter, max_iter*max_iter);
-        invtridiag.resize(max_iter);
-
+        set_iter(m_max_iter);
         //Compute inverse of tridiagonal matrix
-        Tinv = invtridiag(v0,vp,vm);
-        // fill R matrix
-        unsigned counter = 0;
-        for( unsigned i=0; i<max_iter; i++)
-        {           
-            for( unsigned j=0; j<rh[0].size(); j++)
-            {            
-                R.row_indices[counter]    = j;
-                R.column_indices[counter] = i; 
-                R.values[counter]         = rh[i][j];
-                counter++;
-            }
-        }     
-        //Compute x (with initODE with gemres replacing cg invert)
-//         RhsTasym<coo_type, ContainerType> m_rhs(Tinv, m_e1, eps);
-        Rhs<coo_type, ContainerType> m_rhs(Tinv, m_e1, eps, false, false);        
+        m_Tinv = m_invtridiag(m_v0,m_vp,m_vm);
 
-        m_rhs.set_A(Tinv);
+        //Compute x (with initODE with gemres replacing cg invert)
+        Rhs<CooMatrix, SubContainerType> m_rhs(m_Tinv, m_e1, eps, false, false);        
+
+        m_rhs.set_A(m_Tinv);
 
         //could be replaced by Cauchy sqrt solve
         unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, 1e-8, 1e-10);
         std::cout << "Time iterations  " << time_iter  << "\n";
-        dg::blas2::gemv(R, m_y, x);  // x =  R T^(-1/2) e_1   
+        dg::blas2::gemv(m_R, m_y, x);  // x =  R T^(-1/2) e_1   
 
-        return max_iter;
+        return m_max_iter;
     }
   private:
-    value_type alpha;
-    std::vector<value_type> v0, vp, vm;
-    std::vector<ContainerType> rh;
-    ContainerType r, ap, p, m_e1, m_y;
-    unsigned max_iter;
-    coo_type R, Tinv;      
-    dg::InvTridiag<ContainerType> invtridiag;
+    value_type m_alpha;
+    std::vector<value_type> m_v0, m_vp, m_vm;
+    ContainerType m_r, m_ap, m_p, m_rh;
+    SubContainerType m_e1, m_y;
+    unsigned m_max_iter;
+    CooMatrix m_R, m_Tinv;      
+    dg::InvTridiag<SubContainerType, DiaMatrix, CooMatrix> m_invtridiag;
 };

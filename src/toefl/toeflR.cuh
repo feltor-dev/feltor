@@ -133,8 +133,8 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
-    KrylovSqrtCauchySolve<Geometry, Matrix, DiaMatrix, CooMatrix, container> krylovsqrtcauchysolve, krylovsqrtcauchysolve_fine;
-    dg::ArakawaX< Geometry, Matrix, container> arakawa, arakawa_fine;
+    KrylovSqrtCauchySolve<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> krylovsqrtcauchysolve;
+    dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_gamma_phi, old_psi, old_gamma_n;

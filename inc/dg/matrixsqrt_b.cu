@@ -26,14 +26,21 @@ double lhs2( double x, double y){ return sin(x)*sin(4.*y);}
 double rhsHelmholtz2( double x, double y){ return (1.-17.*alpha)*sin(x)*sin(4.*y);}
 double rhsHelmholtzsqrt2( double x, double y){ return sqrt(1.-17.*alpha)*sin(x)*sin(4.*y);}
 
-using dia_type = cusp::dia_matrix<int, double, cusp::device_memory>;
-using coo_type = cusp::coo_matrix<int, double, cusp::device_memory>;
-using Mat_type = dg::DMatrix;
-using Container_type = dg::DVec;
+using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
+using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+using Matrix = dg::DMatrix;
+using Container = dg::DVec;
+using SubContainer = dg::DVec;
+
+// using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
+// using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
+// using Matrix = dg::HMatrix;
+// using Container = dg::HVec;
+// using SubContainer = dg::HVec;
+
 int main()
 {
     dg::Timer t;
-    std::cout << "Test program for A^(1/2) x computation \n";
     
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
@@ -44,20 +51,20 @@ int main()
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     dg::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
    //start and end vectors
-    Container_type x = dg::evaluate(lhs, grid);
-    Container_type x_exac = dg::evaluate(lhs, grid);
-    Container_type b = dg::evaluate(rhsHelmholtzsqrt, grid), b_exac(b), error(b_exac);
-    Container_type bs = dg::evaluate(rhsHelmholtz, grid), bs_exac(bs);
+    Container x = dg::evaluate(lhs, grid);
+    Container x_exac = dg::evaluate(lhs, grid);
+    Container b = dg::evaluate(rhsHelmholtzsqrt, grid), b_exac(b), error(b_exac);
+    Container bs = dg::evaluate(rhsHelmholtz, grid), bs_exac(bs);
     
-    Container_type x2 = dg::evaluate(lhs2, grid);
-    Container_type x_exac2 = dg::evaluate(lhs2, grid);
-    Container_type b2 = dg::evaluate(rhsHelmholtzsqrt2, grid), b_exac2(b2);
-    Container_type bs2 = dg::evaluate(rhsHelmholtz2, grid), bs_exac2(bs2);
+    Container x2 = dg::evaluate(lhs2, grid);
+    Container x_exac2 = dg::evaluate(lhs2, grid);
+    Container b2 = dg::evaluate(rhsHelmholtzsqrt2, grid), b_exac2(b2);
+    Container bs2 = dg::evaluate(rhsHelmholtz2, grid), bs_exac2(bs2);
 
-    const Container_type w2d = dg::create::weights( grid);
-    const Container_type v2d = dg::create::inv_weights( grid);
+    const Container w2d = dg::create::weights( grid);
+    const Container v2d = dg::create::inv_weights( grid);
 
-    dg::Helmholtz<dg::CartesianGrid2d, Mat_type, Container_type> A( grid, alpha, dg::centered); //not_normed
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( grid, alpha, dg::centered); //not_normed
     double epsCG, epsTimerel, epsTimeabs;    
 
 //     std::cout << "Type epsilon for CG (1e-5), and eps_rel (1e-5) and eps_abs (1e-10) for TimeStepper\n";
@@ -70,12 +77,12 @@ int main()
     unsigned iter = 1;
     unsigned iterCauchy = 1;
     
-    dg::Invert<Container_type> invert( x, grid.size(), epsCG);
+    dg::Invert<Container> invert( x, grid.size(), epsCG);
 
   
     //////////////////////////Direct Cauchy integral solve
     std::cout << "Solving  via Cauchy integral\n";
-//     CauchySqrtInt<dg::CartesianGrid2d, Mat_type, Container_type> cauchysqrtint(A, grid, epsCG);
+//     CauchySqrtInt<dg::CartesianGrid2d, Matrix, Container> cauchysqrtint(A, grid, epsCG);
 //     std::cout << "# of Cauchy terms?\n";
 //     std::cin >> iterCauchy;
 //     //analytical estimate
@@ -86,7 +93,7 @@ int main()
 //     t.tic();
 //     cauchysqrtint(b, bs,-lmin*alpha+1 ,-lmax*alpha+1, iterCauchy);
 //     t.toc();
-    DirectSqrtCauchySolve<dg::CartesianGrid2d, Mat_type, Container_type> directsqrtcauchysolve(A, grid, epsCG);
+    DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, grid, epsCG);
     std::cout << "# of Cauchy terms?\n";
     std::cin >> iterCauchy;   
     t.tic();
@@ -106,7 +113,7 @@ int main()
     
     //////////////////////////Direct sqrt ODE solve
     std::cout << "Solving  via Direct sqrt ODE\n";
-    DirectSqrtODESolve<dg::CartesianGrid2d, Mat_type, Container_type> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
+    DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
     t.tic();
     counter = directsqrtodesolve(b, bs); //overwrites b
     t.toc();
@@ -127,7 +134,7 @@ int main()
     std::cout << "# of Lanczos iterations and Cauchy terms?\n";
     std::cin >> iter >> iterCauchy;
   
-    KrylovSqrtCauchySolve<dg::CartesianGrid2d, Mat_type, dia_type, coo_type, Container_type> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter,eps);
+    KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter,eps);
     t.tic();
     krylovsqrtcauchysolve(b, bs, iterCauchy); //overwrites b
     t.toc();
@@ -163,7 +170,7 @@ int main()
     std::cout << "# of Lanczos iterations?\n";
     std::cin >> iter;
   
-    KrylovSqrtODESolve<dg::CartesianGrid2d, Mat_type, dia_type, coo_type, Container_type> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
+    KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
     b = dg::evaluate(rhsHelmholtzsqrt, grid);
     t.tic();
     counter = krylovsqrtodesolve(b, bs); //overwrites b
@@ -201,7 +208,7 @@ int main()
     std::cout << "Solving  via CG method and sqrt ODE\n";
     dg::blas1::scal(x,0.0);
 
-    CGsqrt<Container_type> cgsqrt(x,1000);
+    CGsqrt<Container, SubContainer, DiaMatrix, CooMatrix> cgsqrt(x,1000);
     dg::blas2::symv(w2d, b, b);
     t.tic();
     counter = cgsqrt(A, x, b, v2d, v2d, eps,1.);

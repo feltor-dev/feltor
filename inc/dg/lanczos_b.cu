@@ -3,7 +3,8 @@
 #include <iostream>
 #include <iomanip>
 #include "backend/timer.h"
-
+#include <cusp/dia_matrix.h>
+#include <cusp/coo_matrix.h>
 #include "lanczos.h"
 #include "helmholtz.h"
 
@@ -20,10 +21,12 @@ double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
 double lhs2( double x, double y) {return sin(x)*sin(4.*y);}
 double rhs2( double x, double y){ return (1.-17.*alpha)*sin(x)*sin(4.*y);}
 
-using dia_type = cusp::dia_matrix<int, double, cusp::device_memory>;
-using coo_type = cusp::coo_matrix<int, double, cusp::device_memory>;
-using Mat_type = dg::DMatrix;
+using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
+using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+using Matrix = dg::DMatrix;
 using Container_type = dg::DVec;
+using SubContainer_type = dg::DVec;
+
 int main()
 {
     dg::Timer t;
@@ -47,17 +50,17 @@ int main()
     Container_type bexac2 = dg::evaluate( rhs2, grid);
     dg::blas1::scal(zero, 0.0);
     one = dg::evaluate(dg::one, grid);
-    dg::Helmholtz<dg::CartesianGrid2d, Mat_type, Container_type> A( grid, alpha, dg::centered); //not_normed
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container_type> A( grid, alpha, dg::centered); //not_normed
     
     //Create Lanczos class
     t.tic();
-    dg::Lanczos< Container_type > lanczos(x, max_iter);
+    dg::Lanczos< Container_type, SubContainer_type, DiaMatrix, CooMatrix > lanczos(x, max_iter);
     t.toc();
     std::cout << "Creation of Lanczos  took "<< t.diff()<<"s   \n";
 
-    dia_type T; 
-    coo_type V, Vt;
-    std::pair<dia_type, coo_type> TVpair; 
+    DiaMatrix T; 
+    CooMatrix V, Vt;
+    std::pair<DiaMatrix, CooMatrix> TVpair; 
     
     std::cout << "Computing with Lanczos method \n";
     t.tic();
