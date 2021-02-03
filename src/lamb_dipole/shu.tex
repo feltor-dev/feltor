@@ -67,7 +67,7 @@ The Lamb dipole is chosen with the following parameters in the input file
 grid & dict &  & Grid parameters \\
 \qquad x & float[2]& [0,1] & Choose x box boundaries appropriately \\
 \qquad y & float[2]& [0,1] & Choose y box boundaries appropriately \\
-\qquad bc & string[2] & [PER, PER] & Choose boundary conditions [x,y] appropriately \\
+\qquad bc & string[2] & [DIR, PER] & Choose boundary conditions [x,y] appropriately \\
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & lamb & This choice necessitates the following parameters \\
 \qquad velocity  & float &  1    &  blob speed \\
@@ -156,7 +156,7 @@ The double shear layer initialization is chosen with the following parameters in
 grid & dict &  & Grid parameters \\
 \qquad x & float[2]& [0, 6.283185307179586] & Choose x box boundaries appropriately \\
 \qquad y & float[2]& [0, 6.283185307179586] & Choose y box boundaries appropriately \\
-\qquad bc & string[2] & [PER, PER] & Choose boundary conditions appropriately \\
+\qquad bc & string[2] & [PER, DIR] & Choose boundary conditions appropriately \\
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & shear & This choice necessitates the following parameters \\
 \qquad rho    & float & 0.20943951023931953 & The width $\rho = \pi/15$ \\
