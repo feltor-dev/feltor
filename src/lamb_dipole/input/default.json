@@ -13,25 +13,22 @@
     },
     //"timestepper":
     //{
-    //    "stepper": "Karniadakis",
-    //    "order": 3,
-    //    "dt" : 2e-3,
-    //    "eps_time" : 1e-9, // (stopping for implicit part)
-    //    "solver":{
-    //        "type": "default"
-    //    }
+    //    "type": "ImExMultistep",
+    //    "tableau": "ImEx-BDF-3-3",
+    //    "dt" : 5e-3,
+    //    "eps_time" : 1e-9 // (stopping for implicit part)
     //},
     //"timestepper":
     //{
-    //    "stepper": "Shu-Osher",
-    //    "order": "SSPRK-3-3",
-    //    "dt" : 1e-3
+    //    "type": "Shu-Osher",
+    //    "tableau": "SSPRK-3-3",
+    //    "dt" : 1.5e-2
     //},
     "timestepper":
     {
-        "stepper": "FilteredMultistep",
-        "order": ["eBDF", 3],
-        "dt" : 5e-4
+        "type": "FilteredExplicitMultistep",
+        "tableau": "ImEx-BDF-3-3",
+        "dt" : 1e-3
     },
     "regularization":
     {
@@ -44,7 +41,9 @@
     //{
     //    "type" : "viscosity",
     //    "order": 2,
-    //    "nu_perp": 1.0e-3  //(viscosity)  
+    //    "direction": "forward",
+    //    //"direction": "centered",
+    //    "nu": 1.0e-3  //(viscosity)
     //},
     "output":
     {
@@ -58,7 +57,9 @@
     {
         "type" : "multigrid",
         "stages": 3,
-        "eps_pol" : [1e-6,10,10] // (stopping on each steage )
+        "eps_pol" : [1e-6,10.0,10.0], // (stopping on each steage )
+        "direction" : "forward" //does not work with double PER
+        //"direction" : "centered"
     },
     "advection":
     {
@@ -82,7 +83,7 @@
     //    "rho":  0.20943951023931953, //pi/15
     //    "delta": 0.05
     //}
-    //"init": //use [-1,1]x[-1,1]
+    //"init":
     //{
     //    "type" : "mms",
     //    "sigma":  0.2,
