@@ -77,7 +77,11 @@ struct ArakawaX
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1, class ContainerType2>
-    void operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result);
+    void operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result){
+        return this->operator()( 1., lhs, rhs, 0., result);
+    }
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void operator()( value_type alpha, const ContainerType0& lhs, const ContainerType1& rhs, value_type beta, ContainerType2& result);
     /**
      * @brief Change Chi
      *
@@ -151,18 +155,18 @@ struct ArakawaFunctor
 
 template< class Geometry, class Matrix, class Container>
 template<class ContainerType0, class ContainerType1, class ContainerType2>
-void ArakawaX< Geometry, Matrix, Container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
+void ArakawaX< Geometry, Matrix, Container>::operator()( value_type alpha, const ContainerType0& lhs, const ContainerType1& rhs, value_type beta, ContainerType2& result)
 {
     //compute derivatives in x-space
     blas2::symv( m_bdxf, lhs, m_dxlhs);
     blas2::symv( m_bdyf, lhs, m_dylhs);
     blas2::symv( m_bdxf, rhs, m_dxrhs);
-    blas2::symv( m_bdyf, rhs, result);
-    blas1::subroutine( ArakawaFunctor<get_value_type<Container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, result);
+    blas2::symv( m_bdyf, rhs, m_dyrhs);
+    blas1::subroutine( ArakawaFunctor<get_value_type<Container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, m_dyrhs);
 
-    blas2::symv( 1., m_bdxf, m_dylhs, 1., result);
-    blas2::symv( 1., m_bdyf, m_dxrhs, 1., result);
-    blas1::pointwiseDot( m_chi, result, result);
+    blas2::symv( 1., m_bdxf, m_dylhs, 1., m_dyrhs);
+    blas2::symv( 1., m_bdyf, m_dxrhs, 1., m_dyrhs);
+    blas1::pointwiseDot( alpha, m_chi, m_dyrhs, beta, result);
 }
 ///@endcond
 

@@ -16,10 +16,20 @@ struct Upwind{
     DG_DEVICE
     void operator()( double& result, double fw, double bw, double v)
     {
-        if( v > 0)
-            result -= bw; // yp = - Div( F)
+        if( v < 0)
+            result -= fw; // yp = - Div( F)
         else
-            result -= fw;
+            result -= bw;
+    }
+};
+struct UpwindAdvection{
+    DG_DEVICE
+    void operator()( double& result, double fw, double bw, double v)
+    {
+        if( v < 0)
+            result -= v*fw; // yp = - v Grad f
+        else
+            result -= v*bw;
     }
 };
 template< class Geometry, class Matrix, class Container>
@@ -96,6 +106,7 @@ struct Shu
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     dg::MultiMatrix<Matrix,Container> m_inter, m_project;
     Matrix m_forward[2], m_backward[2], m_centered[2];
+    Matrix m_fine_forward[2], m_fine_backward[2], m_fine_centered[2];
     Matrix m_centered_phi[2]; // for variation
     std::vector<double> m_eps;
     std::string m_advection, m_multiplication;
@@ -136,12 +147,12 @@ Shu< Geometry, Matrix, Container>::Shu(
         m_inter = dg::create::fast_interpolation( g, 1, 1, 2);
         m_project = dg::create::fast_projection( fine_grid, 1, 1, 2);
 
-        m_centered[0] = dg::create::dx( fine_grid, g.bcx(), dg::centered);
-        m_centered[1] = dg::create::dy( fine_grid, g.bcy(), dg::centered);
-        m_forward[0] = dg::create::dx( fine_grid, dg::inverse( g.bcx()), dg::forward);
-        m_forward[1] = dg::create::dy( fine_grid, dg::inverse( g.bcy()), dg::forward);
-        m_backward[0] = dg::create::dx( fine_grid, dg::inverse( g.bcx()), dg::backward);
-        m_backward[1] = dg::create::dy( fine_grid, dg::inverse( g.bcy()), dg::backward);
+        m_fine_centered[0] = dg::create::dx( fine_grid, g.bcx(), dg::centered);
+        m_fine_centered[1] = dg::create::dy( fine_grid, g.bcy(), dg::centered);
+        m_fine_forward[0] = dg::create::dx( fine_grid, dg::inverse( g.bcx()), dg::forward);
+        m_fine_forward[1] = dg::create::dy( fine_grid, dg::inverse( g.bcy()), dg::forward);
+        m_fine_backward[0] = dg::create::dx( fine_grid, dg::inverse( g.bcx()), dg::backward);
+        m_fine_backward[1] = dg::create::dy( fine_grid, dg::inverse( g.bcy()), dg::backward);
         m_fine_psi = dg::evaluate( dg::zero, fine_grid);
         m_fine_y = dg::evaluate( dg::zero, fine_grid);
         m_fine_yp = dg::evaluate( dg::zero, fine_grid);
@@ -151,16 +162,13 @@ Shu< Geometry, Matrix, Container>::Shu(
         m_fine_temp[2] = dg::evaluate( dg::zero, fine_grid);
         m_arakawa.construct( fine_grid);
     }
-    else
-    {
-        m_centered[0] = dg::create::dx( g, g.bcx(), dg::centered);
-        m_centered[1] = dg::create::dy( g, g.bcy(), dg::centered);
-        m_forward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::forward);
-        m_forward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::forward);
-        m_backward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::backward);
-        m_backward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::backward);
-        m_arakawa.construct( g);
-    }
+    m_centered[0] = dg::create::dx( g, g.bcx(), dg::centered);
+    m_centered[1] = dg::create::dy( g, g.bcy(), dg::centered);
+    m_forward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::forward);
+    m_forward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::forward);
+    m_backward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::backward);
+    m_backward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::backward);
+    m_arakawa.construct( g);
 
     unsigned stages = dg::file::get( mode, js, "elliptic", "stages", 3).asUInt();
     m_eps.resize(stages);
@@ -232,39 +240,107 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
             dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_y
             dg::blas2::symv( -1., m_centered[1], m_temp[0], 1., yp);
         }
+        else if( "upwind-advection" == m_advection)
+        {
+            dg::blas1::copy( 0., yp);
+            // v_x dx n
+            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
+            dg::blas2::symv( m_forward[0], y, m_temp[1]);
+            dg::blas2::symv( m_backward[0], y, m_temp[2]);
+            dg::blas1::subroutine( shu::UpwindAdvection(), yp, m_temp[1], m_temp[2], m_v);
+            // v_y dy n
+            dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
+            dg::blas2::symv( m_forward[1], y, m_temp[1]);
+            dg::blas2::symv( m_backward[1], y, m_temp[2]);
+            dg::blas1::subroutine( shu::UpwindAdvection(), yp, m_temp[1], m_temp[2], m_v);
+        }
+        else if( "centered-advection" == m_advection)
+        {
+            //dx ( nv_x)
+            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
+            dg::blas2::symv( -1., m_centered[0], y, 0., m_temp[0]); // -v_x dx omega
+            dg::blas1::pointwiseDot( m_v, m_temp[0], yp);
+            //dy ( nv_y)
+            dg::blas2::symv(  1., m_centered[0], m_psi, 0., m_v); //v_y
+            dg::blas2::symv( -1., m_centered[1], y, 0., m_temp[0]);
+            dg::blas1::pointwiseDot( 1., m_v, m_temp[0], 1., yp); //f_y
+        }
     }
     else // "projection " == multiplication
     {
-        dg::blas2::symv( m_inter, y, m_fine_y);
-        dg::blas2::symv( m_inter, m_psi, m_fine_psi);
         if( "arakawa" == m_advection)
+        {
+            dg::blas2::symv( m_inter, y, m_fine_y);
+            dg::blas2::symv( m_inter, m_psi, m_fine_psi);
             m_arakawa( m_fine_y, m_fine_psi, m_fine_yp); //A(y,psi)-> yp
+        }
         else if( "upwind" == m_advection)
         {
+            dg::blas2::symv( m_inter, y, m_fine_y);
+            dg::blas2::symv( m_inter, m_psi, m_fine_psi);
             dg::blas1::copy( 0., m_fine_yp);
             //dx ( nv_x)
-            dg::blas2::symv( -1., m_centered[1], m_fine_psi, 0., m_fine_v); //v_x
+            dg::blas2::symv( -1., m_fine_centered[1], m_fine_psi, 0., m_fine_v); //v_x
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_x
-            dg::blas2::symv( m_forward[0], m_fine_temp[0], m_fine_temp[1]);
-            dg::blas2::symv( m_backward[0], m_fine_temp[0], m_fine_temp[2]);
+            dg::blas2::symv( m_fine_forward[0], m_fine_temp[0], m_fine_temp[1]);
+            dg::blas2::symv( m_fine_backward[0], m_fine_temp[0], m_fine_temp[2]);
             dg::blas1::subroutine( shu::Upwind(), m_fine_yp, m_fine_temp[1], m_fine_temp[2], m_fine_v);
             //dy ( nv_y)
-            dg::blas2::symv( 1., m_centered[0], m_fine_psi, 0., m_fine_v); //v_y
+            dg::blas2::symv( 1., m_fine_centered[0], m_fine_psi, 0., m_fine_v); //v_y
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_y
-            dg::blas2::symv( m_forward[1], m_fine_temp[0], m_fine_temp[1]);
-            dg::blas2::symv( m_backward[1], m_fine_temp[0], m_fine_temp[2]);
+            dg::blas2::symv( m_fine_forward[1], m_fine_temp[0], m_fine_temp[1]);
+            dg::blas2::symv( m_fine_backward[1], m_fine_temp[0], m_fine_temp[2]);
             dg::blas1::subroutine( shu::Upwind(), m_fine_yp, m_fine_temp[1], m_fine_temp[2], m_fine_v);
         }
         else if( "centered" == m_advection)
         {
+            dg::blas2::symv( m_inter, y, m_fine_y);
+            dg::blas2::symv( m_inter, m_psi, m_fine_psi);
             //dx ( nv_x)
-            dg::blas2::symv( -1., m_centered[1], m_fine_psi, 0., m_fine_v); //v_x
+            dg::blas2::symv( -1., m_fine_centered[1], m_fine_psi, 0., m_fine_v); //v_x
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_x
-            dg::blas2::symv( -1., m_centered[0], m_fine_temp[0], 0., m_fine_yp);
+            dg::blas2::symv( -1., m_fine_centered[0], m_fine_temp[0], 0., m_fine_yp);
             //dy ( nv_y)
-            dg::blas2::symv( 1., m_centered[0], m_fine_psi, 0., m_fine_v); //v_y
+            dg::blas2::symv( 1., m_fine_centered[0], m_fine_psi, 0., m_fine_v); //v_y
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_y
-            dg::blas2::symv( -1., m_centered[1], m_fine_temp[0], 1., m_fine_yp);
+            dg::blas2::symv( -1., m_fine_centered[1], m_fine_temp[0], 1., m_fine_yp);
+        }
+        else if( "upwind-advection" == m_advection)
+        {
+            // v_x dx n
+            dg::blas1::copy( 0., m_fine_yp);
+            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
+            dg::blas2::symv( m_forward[0], y, m_temp[1]);
+            dg::blas2::symv( m_backward[0], y, m_temp[2]);
+            dg::blas2::symv( m_inter, m_v, m_fine_v);
+            dg::blas2::symv( m_inter, m_temp[1], m_fine_temp[1]);
+            dg::blas2::symv( m_inter, m_temp[2], m_fine_temp[2]);
+            dg::blas1::subroutine( shu::UpwindAdvection(), m_fine_yp,
+                    m_fine_temp[1], m_fine_temp[2], m_fine_v);
+            // v_y dy n
+            dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
+            dg::blas2::symv( m_forward[1], y, m_temp[1]);
+            dg::blas2::symv( m_backward[1], y, m_temp[2]);
+            dg::blas2::symv( m_inter, m_temp[1], m_fine_temp[1]);
+            dg::blas2::symv( m_inter, m_temp[2], m_fine_temp[2]);
+            dg::blas2::symv( m_inter, m_v, m_fine_v);
+            dg::blas1::subroutine( shu::UpwindAdvection(), m_fine_yp,
+                    m_fine_temp[1], m_fine_temp[2], m_fine_v);
+        }
+        else if( "centered-advection" == m_advection)
+        {
+            // v_x dx n
+            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
+            dg::blas2::symv( -1., m_centered[0], y, 0., m_temp[0]);
+            dg::blas2::symv( m_inter, m_temp[0], m_fine_temp[0]);
+            dg::blas2::symv( m_inter, m_v, m_fine_v);
+            dg::blas1::pointwiseDot( m_fine_v, m_fine_temp[0], m_fine_yp);
+            // v_y dy n
+            dg::blas2::symv(  1., m_centered[0], m_psi, 0., m_v); //v_y
+            dg::blas2::symv( -1., m_centered[1], y, 0., m_temp[0]);
+            dg::blas2::symv( m_inter, m_temp[0], m_fine_temp[0]);
+            dg::blas2::symv( m_inter, m_v, m_fine_v);
+            dg::blas1::pointwiseDot( 1., m_fine_v, m_fine_temp[0], 1., m_fine_yp);
         }
         dg::blas2::symv( m_project, m_fine_yp, yp);
     }

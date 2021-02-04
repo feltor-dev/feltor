@@ -34,7 +34,15 @@ Eq.~\eqref{eq:euler_poisson} is a reformulation of the standard conservative for
 \end{align}
 \label{eq:euler_conservative}
 \end{subequations}
-with $v_x = - \phi_y$ and $v_y = \phi_x$.
+with $v_x = - \phi_y$ and $v_y = \phi_x$
+or since the divergence of $\vec v$ is $0$, $\nc \vec v = 0$ we have the advection form
+\begin{subequations}
+\begin{align}
+    \frac{\partial \omega}{\partial t} + \vec v\cn \omega = 0 \\
+    -\Delta\phi = \omega \quad v_x = -\phi_y \quad v_y = \phi_x
+\end{align}
+\label{eq:euler_advection}
+\end{subequations}
 
 Eqs.~\eqref{eq:euler_poisson} have an infinite amount of conserved quantities
 among them the total vorticity $V$, the kinetic energy $E$ and the enstrophy $\Omega$
@@ -233,7 +241,7 @@ regularization & dict & & \\
 \qquad type  & string& viscosity & the artificial viscosity \\
 \qquad order    & integer & 2 & Order: 1 is normal diffusion, 2 is hyperdiffusion, can be arbitrarily high, but higher orders might take longer to solve or restrict the CFL condition \\
 \qquad nu    & float & 1e-3 & Viscosity coefficient \\
-\qquad directoin & string & centered & Direction of the Laplacian: forward or centered
+\qquad direction & string & centered & Direction of the Laplacian: forward or centered \\
 \bottomrule
 \end{longtable}
 The other regularization method is the modal filter that applies an exponential filter
@@ -267,7 +275,7 @@ elliptic & dict & & \\
 \qquad type  & string& multigrid & Actually a nested iterations class \\
 \qquad stages    & integer & 3 & Number of stages (3 is best in virtually all cases) \\
 \qquad eps\_pol    & float[stages] & [1e-6,10,10] & Accuracy requirement on each stage of the multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
-\qquad directoin & string & centered & Direction of the Laplacian: forward or centered
+\qquad direction & string & centered & Direction of the Laplacian: forward or centered \\
 \bottomrule
 \end{longtable}
 \subsection{Advection schemes}
@@ -279,10 +287,12 @@ advection & dict & & \\
 \qquad type  & string& arakawa & Discretize Eqs.~\eqref{eq:euler_poisson} using Arakawa's scheme \cite{Einkemmer2014} \\
 \qquad type  & string& centered & Discretize Eqs.~\eqref{eq:euler_conservative} using the centered flux \\
 \qquad type  & string& upwind & Discretize Eqs.~\eqref{eq:euler_conservative} using the upwind flux \\
+\qquad type  & string& centered-advection & Discretize Eqs.~\eqref{eq:euler_advection} using the centered flux \\
+\qquad type  & string& upwind-advection & Discretize Eqs.~\eqref{eq:euler_advection} using the upwind flux \\
 \qquad multiplication    & string & pointwise & The multiplications in the scheme
 are done pointwise in nodal space\\
 \qquad multiplication    & string & projection & The multiplications in the scheme
-are done by first interpolating to a higher polynomial grid with $n_{fine} = 2n -1$, and projecting the result back to the coarse grid\\
+are done by first interpolating to a higher polynomial grid with $n_{fine} = 2n$, and projecting the result back to the coarse grid\\
 \bottomrule
 \end{longtable}
 %\subsection{Forward time and centered space}
