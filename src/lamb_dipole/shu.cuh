@@ -124,8 +124,8 @@ Shu< Geometry, Matrix, Container>::Shu(
         Geometry fine_grid = g;
         fine_grid.set( 2*g.n(), g.Nx(), g.Ny());
         //theoretically we only need 2n-1 but it isn't wrong to take more
-        m_inter = dg::create::fast_interpolation( g, 1, 1, 2);
-        m_project = dg::create::fast_projection( fine_grid, 1, 1, 2);
+        m_inter = dg::create::fast_interpolation( g, 2, 1, 1);
+        m_project = dg::create::fast_projection( fine_grid, 2, 1, 1);
 
         m_fine_centered[0] = dg::create::dx( fine_grid, g.bcx(), dg::centered);
         m_fine_centered[1] = dg::create::dy( fine_grid, g.bcy(), dg::centered);
@@ -142,13 +142,14 @@ Shu< Geometry, Matrix, Container>::Shu(
         m_fine_temp[2] = dg::evaluate( dg::zero, fine_grid);
         m_arakawa.construct( fine_grid);
     }
+    else
+        m_arakawa.construct( g);
     m_centered[0] = dg::create::dx( g, g.bcx(), dg::centered);
     m_centered[1] = dg::create::dy( g, g.bcy(), dg::centered);
     m_forward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::forward);
     m_forward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::forward);
     m_backward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::backward);
     m_backward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::backward);
-    m_arakawa.construct( g);
 
     unsigned stages = dg::file::get( mode, js, "elliptic", "stages", 3).asUInt();
     m_eps.resize(stages);

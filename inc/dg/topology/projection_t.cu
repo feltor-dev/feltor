@@ -13,7 +13,7 @@ double sine( double x, double y, double z){return sin(x)*sin(y);}
 int main()
 {
     std::cout << "TEST 1D\n";
-    unsigned n_old = 6, n_new = 3, N_old = 40, N_new = 20;
+    unsigned n_old = 9, n_new = 3, N_old = 40, N_new = 20;
     //std::cout << "Type n and N of old (fine) grid!\n";
     //std::cin >> n_old >> N_old;
     //std::cout << "Type n and N of new (coarser) grid!\n";
@@ -24,8 +24,8 @@ int main()
     dg::Grid1d gn ( 0, M_PI/2., n_new, N_new);
     //cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection( gn, go);
     //cusp::coo_matrix<int, double, cusp::host_memory> inte = dg::create::interpolation( go, gn);
-    dg::MultiMatrix< dg::DMatrix, dg::DVec > proj = dg::create::fast_projection( go,  N_old/N_new, n_old/n_new);
-    dg::MultiMatrix< dg::DMatrix, dg::DVec > inte = dg::create::fast_interpolation( gn, N_old/N_new, n_old/n_new);
+    dg::MultiMatrix< dg::DMatrix, dg::DVec > proj = dg::create::fast_projection( go, n_old/n_new,  N_old/N_new);
+    dg::MultiMatrix< dg::DMatrix, dg::DVec > inte = dg::create::fast_interpolation( gn, n_old/n_new, N_old/N_new);
     dg::DVec v = dg::evaluate( sine, go);
     dg::DVec w1do = dg::create::weights( go);
     dg::DVec w1dn = dg::create::weights( gn);
@@ -49,10 +49,10 @@ int main()
     //cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
     cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
     //dg::MultiMatrix< dg::HMatrix, std::vector<thrust::host_vector<double>> > proj2d;
-    //proj2d.construct( dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new, n_old/n_new), 2);
+    //proj2d.construct( dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new), 2);
     //dg::IHMatrix proj2d = dg::create::projection( g2n, g2o);
-    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new, n_old/n_new);
-    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > fast_inte2d = dg::create::fast_interpolation( g2n, N_old/N_new, N_old/N_new, n_old/n_new);
+    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new);
+    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > fast_inte2d = dg::create::fast_interpolation( g2n, n_old/n_new, N_old/N_new, N_old/N_new);
     const dg::HVec sinO( dg::evaluate( sine, g2o)),
                                 sinN( dg::evaluate( sine, g2n));
     dg::HVec w2do = dg::create::weights( g2o);

@@ -208,8 +208,8 @@ int main( int argc, char* argv[])
     // helper variables for output computations
     std::map<std::string, dg::Simpsons<HVec>> time_integrals;
     dg::Average<HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
-    dg::MultiMatrix<HMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
-    dg::MultiMatrix<DMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    dg::MultiMatrix<HMatrix,HVec> projectH = dg::create::fast_projection( grid, 1, p.cx, p.cy, dg::normed);
+    dg::MultiMatrix<DMatrix,DVec> projectD = dg::create::fast_projection( grid, 1, p.cx, p.cy, dg::normed);
     HVec transferH( dg::evaluate(dg::zero, g3d_out));
     DVec transferD( dg::evaluate(dg::zero, g3d_out));
     HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);

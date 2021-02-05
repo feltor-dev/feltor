@@ -35,14 +35,14 @@ int main(int argc, char* argv[])
 
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0)std::cout << "TEST 2D and 3D\n";
-    unsigned n_old = 6, n_new = 3, N_old = 40, N_new = 20;
+    unsigned n_old = 9, n_new = 3, N_old = 40, N_new = 20;
     if(rank==0)std::cout << "Fine   Grid "<< n_old << " x "<<N_old <<"\n";
     if(rank==0)std::cout << "Coarse Grid "<< n_new << " x "<<N_new <<"\n";
     dg::MPIGrid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4, comm);
     dg::MPIGrid3d g2n (0, M_PI, 0, M_PI, 0,1, n_new, N_new, N_new, 4, comm);
     dg::MIHMatrix inte2d = dg::create::interpolation( g2n, g2o);
-    dg::MultiMatrix< dg::MHMatrix, dg::MHVec > proj2d = dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new, n_old/n_new);
-    dg::MultiMatrix< dg::MHMatrix, dg::MHVec > fast_inte2d = dg::create::fast_interpolation( g2n, N_old/N_new, N_old/N_new, n_old/n_new);
+    dg::MultiMatrix< dg::MHMatrix, dg::MHVec > proj2d = dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new);
+    dg::MultiMatrix< dg::MHMatrix, dg::MHVec > fast_inte2d = dg::create::fast_interpolation( g2n, n_old/n_new, N_old/N_new, N_old/N_new);
     const dg::MHVec sinO( dg::evaluate( sine, g2o)),
                                 sinN( dg::evaluate( sine, g2n));
     dg::MHVec w2do = dg::create::weights( g2o);

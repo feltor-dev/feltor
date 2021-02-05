@@ -76,8 +76,8 @@ int main()
     value_type gbytes=(value_type)x.size()*x[0].size()*sizeof(value_type)/1e9;
     std::cout << "Size of vectors is "<<gbytes<<" GB\n";
     dg::MultiMatrix<Matrix, ArrayVec> inter, project;
-    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2,1), inter);
-    dg::blas2::transfer(dg::create::fast_projection( grid, 2,2,1), project);
+    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 1,2,2), inter);
+    dg::blas2::transfer(dg::create::fast_projection( grid, 1,2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
     int multi=100;
