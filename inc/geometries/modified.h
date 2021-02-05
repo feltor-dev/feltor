@@ -204,7 +204,7 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
 };
 //some possible predicates
 static bool nowhere( double R, double Z){return false;}
-static bool everywhere( double R, double Z){return true;}
+static bool everywhere( double R, double Z){return !nowhere(R,Z);}
 struct HeavisideZ{
     HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}
     bool operator()(double R, double Z){
