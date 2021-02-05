@@ -127,7 +127,7 @@ int main(int argc, char**argv)
     for( unsigned i=1; i<nIter; i++)
     {
         Nx*=2; Ny*=2;
-        dg::MultiMatrix<dg::DMatrix, dg::DVec >  inter = dg::create::fast_interpolation(g2d.grid(), 2, 2);
+        dg::MultiMatrix<dg::DMatrix, dg::DVec >  inter = dg::create::fast_interpolation(g2d.grid(), 2, 2, 1);
         dg::geo::CurvilinearGridX2d g2d_new( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::DIR);
         std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
         dg::DVec x_new = dg::evaluate( dg::zero, g2d_new);

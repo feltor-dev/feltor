@@ -178,10 +178,10 @@ int main( int argc, char* argv[])
     map2d.emplace_back( "FuncDirNeu2", X, "FuncDirNeu");
     std::cout << "OPEN FILE orthogonalX.nc ...\n";
     int ncid;
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3];
-    err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
+    err = dg::file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     for(auto tp : map2d)
     {
         int vid;

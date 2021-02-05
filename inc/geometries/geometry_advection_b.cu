@@ -173,12 +173,6 @@ int main(int argc, char** argv)
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
-    arakawa.variation( lhs, jac);
-    const double normVar = dg::blas2::dot( vol, variation);
-    //std::cout << "norm of variation "<<normVar<<"\n";
-    dg::blas1::axpby( 1., variation, -1., jac);
-    result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING POISSON\n";
     dg::Poisson<dg::aGeometry2d, dg::DMatrix, dg::DVec> poisson( grid);
@@ -195,10 +189,6 @@ int main(int argc, char** argv)
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
-    poisson.variationRHS( lhs, jac);
-    dg::blas1::axpby( 1., variation, -1., jac);
-    result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
 
     ////////////////////////////transform curvature components////////
     std::cout << "TESTING CURVATURE 3D\n";

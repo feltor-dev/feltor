@@ -47,10 +47,10 @@ int main(int argc, char**argv)
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
-    file::NC_Error_Handle ncerr;
+    dg::file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    ncerr = file::define_dimensions(  ncid, dim2d, *g2d);
+    ncerr = dg::file::define_dimensions(  ncid, dim2d, *g2d);
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);

@@ -41,20 +41,20 @@ struct Parameters
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
-    Parameters( const Json::Value& js, file::error mode = file::error::is_silent) {
-        pp  = file::get( mode, js, "PP", 1).asDouble();
-        pi  = file::get( mode, js, "PI", 1).asDouble();
-        M = file::get( mode, js, "M", 1).asUInt();
-        N = file::get( mode, js, "N", 1).asUInt();
+    Parameters( const Json::Value& js, dg::file::error mode = dg::file::error::is_silent) {
+        pp  = dg::file::get( mode, js, "PP", 1).asDouble();
+        pi  = dg::file::get( mode, js, "PI", 1).asDouble();
+        M = dg::file::get( mode, js, "M", 1).asUInt();
+        N = dg::file::get( mode, js, "N", 1).asUInt();
         c.resize(M*N);
         for (unsigned i=0;i<M*N;i++)
-            c[i] = file::get_idx( mode, js, "c", i, 0.).asDouble();
+            c[i] = dg::file::get_idx( mode, js, "c", i, 0.).asDouble();
 
-        R_0  = file::get( mode, js, "R_0", 0.).asDouble();
-        a  = R_0*file::get( mode, js, "inverseaspectratio", 0.).asDouble();
-        elongation=file::get( mode, js, "elongation", 1.).asDouble();
-        triangularity=file::get( mode, js, "triangularity", 0.).asDouble();
-        description = file::get( mode, js, "description", "standardX").asString();
+        R_0  = dg::file::get( mode, js, "R_0", 0.).asDouble();
+        a  = R_0*dg::file::get( mode, js, "inverseaspectratio", 0.).asDouble();
+        elongation=dg::file::get( mode, js, "elongation", 1.).asDouble();
+        triangularity=dg::file::get( mode, js, "triangularity", 0.).asDouble();
+        description = dg::file::get( mode, js, "description", "standardX").asString();
     }
     /**
      * @brief Put values into a json string

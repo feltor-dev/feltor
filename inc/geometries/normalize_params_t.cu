@@ -10,7 +10,7 @@ int main( int argc, char* argv[])
     if( argc == 3)
     {
         std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
-        file::file2Json( argv[1], geom_js, file::comments::are_discarded);
+        dg::file::file2Json( argv[1], geom_js, dg::file::comments::are_discarded);
     }
     else
     {
@@ -21,20 +21,20 @@ int main( int argc, char* argv[])
 
     std::cout << "Input file: \n"<< geom_js.toStyledString();
     dg::geo::TokamakMagneticField mag;
-    std::string e = file::get( file::error::is_throw, geom_js, "equilibrium", "solovev" ).asString();
+    std::string e = dg::file::get( dg::file::error::is_throw, geom_js, "equilibrium", "solovev" ).asString();
     dg::geo::equilibrium equi = dg::geo::str2equilibrium.at( e);
     switch( equi){
         case dg::geo::equilibrium::polynomial:
         {
             std::cout << "Creating polynomial Field!\n";
-            dg::geo::polynomial::Parameters gp( geom_js, file::error::is_warning);
+            dg::geo::polynomial::Parameters gp( geom_js, dg::file::error::is_warning);
             mag = dg::geo::createPolynomialField( gp);
             break;
         }
         case dg::geo::equilibrium::solovev:
         {
             std::cout << "Creating Solovev Field!\n";
-            dg::geo::solovev::Parameters gp( geom_js, file::error::is_warning);
+            dg::geo::solovev::Parameters gp( geom_js, dg::file::error::is_warning);
             mag = dg::geo::createSolovevField( gp);
             break;
         }
