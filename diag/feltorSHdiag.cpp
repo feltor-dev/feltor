@@ -22,7 +22,7 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     ///////////////////read in and show inputfile//////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     size_t length;
@@ -31,7 +31,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
     p.display(std::cout);
     
@@ -64,16 +64,16 @@ int main( int argc, char* argv[])
     size_t start1d[2]  = {0, 0};    
     //1d netcdf output file    
 
-    file::NC_Error_Handle err1d;
+    dg::file::NC_Error_Handle err1d;
     int ncid1d,dim_ids1d[2], tvarID1d,namescomID[6],timeID, timevarID;
     err1d = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid1d);
     err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err1d = file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, g1d);
+    err1d = dg::file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, g1d);
     err1d = nc_close(ncid1d); 
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
     err1d = nc_redef(ncid1d);
 
-    err1d = file::define_time( ncid1d, "ptime", &timeID, &timevarID);
+    err1d = dg::file::define_time( ncid1d, "ptime", &timeID, &timevarID);
     std::string namescom[6] = {"posX" , "posY" , "velX" , "velY" , "accX" , "accY" };
 
     for( unsigned i=0; i<6; i++){

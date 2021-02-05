@@ -19,7 +19,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     //nc defs
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     int dataIDs[14];
     std::string names[14] = {"Rx","Guynx","Tnx","A","Rfn","difffauy1","difffauy2","Sfauy",
@@ -35,7 +35,7 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        file::string2Json( input, js, file::comments::are_forbidden);
+        dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
         const eule::Parameters p(js);
         
         dg::Grid1d g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);

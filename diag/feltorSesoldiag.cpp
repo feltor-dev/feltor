@@ -22,7 +22,7 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     ///////////////////read in and show inputfile//////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     size_t length;
@@ -31,7 +31,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
     p.display(std::cout);
 
@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     std::string names[4] = {"electrons", "ions",  "potential","vor"}; 
     int dataIDs[4]; 
     //1d profiles
-    file::NC_Error_Handle err_out;
+    dg::file::NC_Error_Handle err_out;
     int ncid_out,dataIDs1d[8], tvarIDout;
     std::string names1d[8] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_","vyavg"}; 
     int dim_ids2d[3],dataIDs2d[4];
@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
     size_t start2d_out[3]  = {0, 0, 0};
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
+    err_out= dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
  int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
     for( unsigned i=0; i<8; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
@@ -121,7 +121,7 @@ int main( int argc, char* argv[])
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
     int timeID, timevarID;
-    err_out = file::define_time( ncid_out, "ptime", &timeID, &timevarID);
+    err_out = dg::file::define_time( ncid_out, "ptime", &timeID, &timevarID);
     for( unsigned i=0; i<num_probes; i++){
         std::stringstream ss1,ss2,ss3;
         ss1<<"Ne_p"<<i;

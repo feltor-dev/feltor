@@ -95,10 +95,10 @@ int main( int argc, char* argv[])
     int dataIDs1[2],dataIDs2[2],dataIDs12[1];
     int dim_ids1[1],dim_ids2[1],dim_ids12[2];
     int ncid;
-    file::NC_Error_Handle err; 
+    dg::file::NC_Error_Handle err; 
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid); 
     //plot 1
-    err = file::define_dimension( ncid, &dim_ids1[0],  g1d1,"A1_");
+    err = dg::file::define_dimension( ncid, &dim_ids1[0],  g1d1,"A1_");
     err = nc_def_var( ncid, "P(A1)",   NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[0]);
     err = nc_def_var( ncid, "A1",    NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[1]);
     err = nc_enddef( ncid);
@@ -106,7 +106,7 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, dataIDs1[1], A1.data() );
     err = nc_redef(ncid);
     //plot 2
-    err = file::define_dimension( ncid, &dim_ids2[0],  g1d2,"A2_");
+    err = dg::file::define_dimension( ncid, &dim_ids2[0],  g1d2,"A2_");
     err = nc_def_var( ncid, "P(A2)",   NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[0]);
     err = nc_def_var( ncid, "A2",    NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[1]);
     err = nc_enddef( ncid);
@@ -118,7 +118,7 @@ int main( int argc, char* argv[])
 //     dim_ids12[1]=dim_ids2[0];
     dim_ids12[0]=dataIDs1[0];
     dim_ids12[1]=dataIDs2[0];
-    err = file::define_dimensions( ncid, &dim_ids12[0],  g2d);
+    err = dg::file::define_dimensions( ncid, &dim_ids12[0],  g2d);
     err = nc_def_var( ncid, "P(A1,A2)",   NC_DOUBLE, 2, &dim_ids12[0], &dataIDs12[0]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, dataIDs12[0], PA1A2.data() );

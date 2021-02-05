@@ -25,7 +25,7 @@ int main( int argc, char* argv[])
     
     
     //nc defs
-    file::NC_Error_Handle err, err_out;
+    dg::file::NC_Error_Handle err, err_out;
     int ncid, ncid_out, tvarIDout,EtimeID, EtimevarID;
     int dim_ids2d[3];
     size_t start2d_out[3]  = {0, 0, 0};
@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        file::string2Json( input, js, file::comments::are_forbidden);
+        dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
         const eule::Parameters p(js);
         
         dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
@@ -54,8 +54,8 @@ int main( int argc, char* argv[])
         if (i==1) {
             err_out = nc_create(argv[argc-1],NC_NETCDF4|NC_CLOBBER, &ncid_out);
             err_out = nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-            err_out = file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
-            err_out = file::define_time( ncid_out, "energy_time", &EtimeID, &EtimevarID);
+            err_out = dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
+            err_out = dg::file::define_time( ncid_out, "energy_time", &EtimeID, &EtimevarID);
             for( unsigned j=0; j<4; j++) {
                 err_out  = nc_def_var(ncid_out, names[j].data(),  NC_DOUBLE, 3, dim_ids2d, &dataIDs_out[j]);
             }

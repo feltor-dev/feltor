@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     }
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;   
     ///////////////////read in and show inputfile//////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     size_t length;
@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
     p.display(std::cout);
 
@@ -126,11 +126,11 @@ int main( int argc, char* argv[])
     int dataIDs1[2],dataIDs2[2],dataIDs12[1];
     int dim_ids1[1],dim_ids2[1],dim_ids12[2];
     int ncidout;
-    file::NC_Error_Handle errout; 
+    dg::file::NC_Error_Handle errout; 
     errout = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncidout); 
     //plot 1
     std::cout << "1d plot of Ne"<<std::endl;
-    errout = file::define_dimension( ncidout, &dim_ids1[0],  g1d1, "Ne_");
+    errout = dg::file::define_dimension( ncidout, &dim_ids1[0],  g1d1, "Ne_");
     errout = nc_def_var( ncidout, "P(Ne)",   NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[0]);
     errout = nc_def_var( ncidout, "Ne",    NC_DOUBLE, 1, &dim_ids1[0], &dataIDs1[1]);
     errout = nc_enddef( ncidout);
@@ -139,7 +139,7 @@ int main( int argc, char* argv[])
     //plot 2
     std::cout << "1d plot of Phi"<<std::endl;
     errout = nc_redef(ncidout);
-    errout = file::define_dimension( ncidout, &dim_ids2[0],  g1d2,"Phi_");
+    errout = dg::file::define_dimension( ncidout, &dim_ids2[0],  g1d2,"Phi_");
     errout = nc_def_var( ncidout, "P(Phi)",   NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[0]);
     errout = nc_def_var( ncidout, "Phi",    NC_DOUBLE, 1, &dim_ids2[0], &dataIDs2[1]);
     errout = nc_enddef( ncidout);
@@ -150,7 +150,7 @@ int main( int argc, char* argv[])
     errout = nc_redef(ncidout);
     dim_ids12[0]=dataIDs1[0];
     dim_ids12[1]=dataIDs2[0];
-    errout = file::define_dimensions( ncidout, &dim_ids12[0],  g2d);
+    errout = dg::file::define_dimensions( ncidout, &dim_ids12[0],  g2d);
     errout = nc_def_var( ncidout, "P(Ne,Phi)",   NC_DOUBLE, 2, &dim_ids12[0], &dataIDs12[0]);
     errout = nc_enddef( ncidout);
     errout = nc_put_var_double( ncidout, dataIDs12[0], PA1A2.data() );

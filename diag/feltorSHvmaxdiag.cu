@@ -18,7 +18,7 @@ int main( int argc, char* argv[])
         std::cerr << "Usage: "<<argv[0]<<" [input1.nc] [input2.nc] ...\n";
         return -1;
     }
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int timeID, varID,varID2,varID3;
     size_t start = {0}, numOut;
     for( int i=1; i< argc; i++)
@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
 //         std::cout << "input "<<input<<std::endl;
         Json::Value js;
-        file::string2Json( input, js, file::comments::are_forbidden);
+        dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
         const eule::Parameters p(js);
         err = nc_inq_dimid( ncid, "time", &timeID);
         err = nc_inq_dimlen( ncid, timeID, &numOut);

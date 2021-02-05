@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     //nc defs
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     int dataIDs[31];
     std::string names[31] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","difflnnnorm","difffauy1norm","difffauy2norm","Slnnnorm","Sfauynorm","vyfavgnorm"}; 
@@ -49,7 +49,7 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        file::string2Json( input, js, file::comments::are_forbidden);
+        dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
         const eule::Parameters p(js);
         
 	size_t start0d  = 0;    

@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
     }
     std::cout << argv[1] << " -> " << argv[2]<<std::endl;
     ////////process parameter from .nc datafile////////
-    file::NC_Error_Handle err_in;
+    dg::file::NC_Error_Handle err_in;
     int ncid_in;
     err_in = nc_open(argv[1], NC_NOWRITE, &ncid_in);
     //read & print parameter string
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     std::cout << "input "<< input << std::endl;
     //parse: parameter string--json-->p.xxx
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
 
   const imp::Parameters p(js);
   p.display(std::cout);
@@ -163,14 +163,14 @@ int main( int argc, char* argv[])
   int cache_size = (transfer2d.capacity()*sizeof(transfer2d[0])+sizeof(transfer2d))*nelems;
   int cache_nelems = nelems;
   double cache_preemption = 0.9;
-  file::NC_Error_Handle err_out;
+  dg::file::NC_Error_Handle err_out;
   int ncid_out, dim_t_x_y_id[3], tvar_id, etvar_w_id, etdim_w_id;
   err_out = nc_create(argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
   err_out = nc_put_att_text(ncid_out, NC_GLOBAL, "inputfile",
                             input.size(), input.data());
-  err_out = file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout+1,
+  err_out = dg::file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout+1,
                                     &tvar_id, g2d);
-  err_out = file::define_limited_time(ncid_out, "etime", num_etime,
+  err_out = dg::file::define_limited_time(ncid_out, "etime", num_etime,
                                       &etdim_w_id, &etvar_w_id);
   int k = 0;
   for (unsigned i = 0; i < num_species; i++)

@@ -23,7 +23,7 @@ int main( int argc, char* argv[])
 //     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     ///////////////////read in and show inputfile//////////////////
@@ -33,7 +33,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
     p.display(std::cout);
     
@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     
     
     //2d field netcdf vars of outputkxky.nc
-    file::NC_Error_Handle err2d_f;
+    dg::file::NC_Error_Handle err2d_f;
     int ncid2d_f,dim_ids2d_f[3],dataIDs2d_f[3], tvarID2d_f;
     std::string names2d_f[3] = {"S(ne)","S(phi)","gamma(phi)"};    
 
@@ -78,21 +78,21 @@ int main( int argc, char* argv[])
     size_t start2d_f[3]  = {0, 0, 0};    
     err2d_f = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid2d_f);
     err2d_f = nc_put_att_text( ncid2d_f, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err2d_f = file::define_dimensions( ncid2d_f, dim_ids2d_f, &tvarID2d_f, g2d_f);
+    err2d_f = dg::file::define_dimensions( ncid2d_f, dim_ids2d_f, &tvarID2d_f, g2d_f);
     for( unsigned i=0; i<3; i++){
         err2d_f = nc_def_var( ncid2d_f, names2d_f[i].data(), NC_DOUBLE, 3, dim_ids2d_f, &dataIDs2d_f[i]);
     }   
     err2d_f = nc_close(ncid2d_f); 
     
     //1d file netcdf vars of outputk.nc
-    file::NC_Error_Handle err1d_f;
+    dg::file::NC_Error_Handle err1d_f;
     int ncid1d_f,dim_ids1d_f[2],dataIDs1d_f[4], tvarID1d_f;
     std::string names1d_f[4] = {"Sk(ne)","Sk(phi)","gamma(phi)","k",}; //may  goto ln(n/<n>)
     size_t count1d_f[2]  = {1, g1d_f.N()};
     size_t start1d_f[2]  = {0, 0};    
     err1d_f = nc_create(argv[3],NC_NETCDF4|NC_CLOBBER, &ncid1d_f);
     err1d_f = nc_put_att_text( ncid1d_f, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err1d_f = file::define_dimensions( ncid1d_f, dim_ids1d_f, &tvarID1d_f, g1d_f);
+    err1d_f = dg::file::define_dimensions( ncid1d_f, dim_ids1d_f, &tvarID1d_f, g1d_f);
     for( unsigned i=0; i<4; i++){
         err1d_f = nc_def_var( ncid1d_f, names1d_f[i].data(), NC_DOUBLE, 2, dim_ids1d_f, &dataIDs1d_f[i]);
     }   
