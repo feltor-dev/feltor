@@ -8,7 +8,7 @@
 #include "cg.h"
 #include "functors.h"
 
-const double eps = 1e-8;
+const double eps = 1e-13;
 const double tau=1.0;
 const double alpha = -0.5*tau;
 double lhs2( double x,double y){ return sin(x);}
@@ -18,6 +18,7 @@ double rhs2( double x,double y){
     return  (-2.-2.*x+2.*cos(x)+2*x*cos(x)+sin(x)+2*x*sin(x)+x*x*sin(x)-2*alpha*sin(x)-2*x*alpha*sin(x)+alpha*alpha*sin(x))/(1.0+x)/alpha;
 
 }
+
 // double rhs1( double x,double y){ return  (1.-2.*(-0.5*tau))*sin(x)*sin(y);}
 double rhs1( double x,double y){ return  (1.-alpha)*sin(x);}
 // double dx2rhs2( double x,double y){ return (1.0 - 2.*alpha + alpha*alpha)*sin(x);}

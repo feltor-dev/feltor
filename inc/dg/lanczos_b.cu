@@ -18,8 +18,8 @@ const double alpha = -0.5;
 
 double lhs( double x, double y) {return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
-double lhs2( double x, double y) {return sin(x)*sin(4.*y);}
-double rhs2( double x, double y){ return (1.-17.*alpha)*sin(x)*sin(4.*y);}
+// double lhs2( double x, double y) {return sin(x)*sin(4.*y);}
+// double rhs2( double x, double y){ return (1.-17.*alpha)*sin(x)*sin(4.*y);}
 
 using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
 using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
@@ -44,10 +44,8 @@ int main()
     const Container_type w2d = dg::create::weights( grid);
     const Container_type v2d = dg::create::inv_weights( grid);
         
-    Container_type x = dg::evaluate( lhs, grid), b(x), zero(x), one(x),bsymv(x), error(x), bsymv2(x), helper(x);
-    Container_type x2 = dg::evaluate( lhs2, grid);
+    Container_type x = dg::evaluate( lhs, grid), b(x), zero(x), one(x), bsymv(x), error(x), bsymv2(x), helper(x), xexac(x);
     Container_type bexac = dg::evaluate( rhs, grid);
-    Container_type bexac2 = dg::evaluate( rhs2, grid);
     dg::blas1::scal(zero, 0.0);
     one = dg::evaluate(dg::one, grid);
     dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container_type> A( grid, alpha, dg::centered); //not_normed
@@ -122,6 +120,27 @@ int main()
     std::cout << "# Relative error between b=V T V^T S x  and to b=S^{-1} A x:" << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bsymv)) << "\n";    
     dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
     std::cout << "# Relative error between b=V T V^T S x  and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";  
+    
+    std::cout << "\nComputing with CG method \n";
+    
+    
+    CooMatrix R, Tinv;
+    std::pair<CooMatrix, CooMatrix> TinvRpair;
+    
+    dg::CGtridiag<Container_type, SubContainer_type, DiaMatrix, CooMatrix> cgtridiag(x, max_iter);
+    dg::blas1::scal(x, 0.0);
+    dg::blas2::symv(w2d, bexac, b); //multiply weights
+    t.tic();
+    TinvRpair = cgtridiag(A, x, b, v2d, w2d, eps, 1.); 
+    t.toc();
+    Tinv = TinvRpair.first; 
+    R    = TinvRpair.second;
+
+    dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
+    std::cout << "# of CG Iterations: "<< cgtridiag.get_iter() <<" | time: "<< t.diff()<<"s \n";
+    std::cout << "# Relative error between x= R T^{-1} e_1 and x: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
+   
+
     
     return 0;
 }

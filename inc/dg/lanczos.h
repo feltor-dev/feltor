@@ -383,7 +383,7 @@ class Lanczos
 #ifdef DG_BENCHMARK
                 t.tic();
 #endif //DG_BENCHMARK
-                m_Tinv = m_invtridiag(m_T); //Compute inverse of T
+                m_Tinv = m_invtridiag(m_T); //Compute inverse of T //TODO is slow - criterium without inversion ? 
 #ifdef DG_BENCHMARK
                 t.toc();
                 invtime+=t.diff();
@@ -425,6 +425,177 @@ class Lanczos
 
 };
 
+/*! 
+ * @brief Shortcut for \f[x \approx \sqrt{A}^{-1} b  \f] solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
+ * 
+ * @note The approximation relies on Projection \f[x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the PCG solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T^{-1}} e_1\f] is computed via the sqrt ODE solve.
+ */
+template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
+class CGtridiag
+{
+  public:
+    using container_type = ContainerType;
+    using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
+    ///@brief Allocate nothing, Call \c construct method before usage
+    CGtridiag(){}
+    ///@copydoc construct()
+    CGtridiag( const ContainerType& copyable, unsigned max_iterations)
+    {
+          construct(copyable, max_iterations);
+    }
+    ///@brief Set the maximum number of iterations
+    ///@param new_max New maximum number
+    void set_max( unsigned new_max) {m_max_iter = new_max;}
+    ///@brief Get the current maximum number of iterations
+    ///@return the current maximum
+    unsigned get_max() const {return m_max_iter;}
+    /**
+     * @brief Allocate memory for the pcg method
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param max_iterations Maximum number of iterations to be used
+     */
+    void construct( const ContainerType& copyable, unsigned max_iterations)
+    {
+        m_v0.assign(max_iterations,0.);
+        m_vp.assign(max_iterations,0.);
+        m_vm.assign(max_iterations,0.);
+        m_e1.assign(max_iterations,0.);
+        m_y.assign(max_iterations,0.);
+        m_ap = m_p = m_r = m_rh = copyable;
+        m_max_iter = max_iterations;
+        m_iter = max_iterations;
+        m_R.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+    }
+    ///@brief Set the new number of iterations and resize Matrix T and V
+    ///@param new_iter new number of iterations
+    void set_iter( unsigned new_iter) {
+        m_v0.resize(new_iter);
+        m_vp.resize(new_iter);
+        m_vm.resize(new_iter);
+        m_e1.assign(new_iter,0.);
+        m_e1[0]=1.;
+        m_y.assign(new_iter,0.);
+        m_R.resize(m_rh.size(), new_iter, new_iter*m_rh.size());
+        m_Tinv.resize(new_iter, new_iter, new_iter*new_iter);
+        m_invtridiag.resize(new_iter);
+        m_iter = new_iter;
+
+    }
+    ///@brief Get the current  number of iterations
+    ///@return the current number of iterations
+    unsigned get_iter() const {return m_iter;}
+    /**
+     * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
+     * 
+     * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
+     * @param x Contains an initial value
+     * @param b The right hand side vector. 
+     * @param P The preconditioner to be used
+     * @param S (Inverse) Weights used to compute the norm for the error condition
+     * @param eps The relative error to be respected
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
+     * 
+     * @return Number of iterations used to achieve desired precision
+     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.
+      */
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
+    std::pair<CooMatrix, CooMatrix> operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1)
+    {
+        //Do CG iteration do get R and T matrix
+        value_type nrmb = sqrt( dg::blas2::dot( S, b));
+    #ifdef DG_DEBUG
+    #ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+    #endif //MPI
+        {
+        std::cout << "# Norm of b "<<nrmb <<"\n";
+        std::cout << "# Residual errors: \n";
+        }
+    #endif //DG_DEBUG
+        if( nrmb == 0)
+        {
+            dg::blas1::copy( b, x);
+            return m_TinvRpair;
+        }
+        dg::blas2::symv( A, x, m_r);
+        dg::blas1::axpby( 1., b, -1., m_r);
+        dg::blas2::symv( P, m_r, m_p );//<-- compute p_0
+        dg::blas1::copy( m_p, m_rh);
+
+        //note that dot does automatically synchronize
+        value_type nrm2r_old = dg::blas1::dot( m_rh, m_r); //and store the norm of it
+        value_type nrm2r_new;
+        
+        unsigned counter = 0;
+        for( unsigned i=0; i<m_max_iter; i++)
+        {
+
+            for( unsigned j=0; j<m_rh.size(); j++)
+            {            
+                m_R.row_indices[counter]    = j;
+                m_R.column_indices[counter] = i; 
+                m_R.values[counter]         = m_rh.data()[j];
+                counter++;
+            }
+            dg::blas2::symv( A, m_p, m_ap);
+            m_alpha = nrm2r_old /dg::blas1::dot( m_p, m_ap);
+            dg::blas1::axpby( -m_alpha, m_ap, 1., m_r);
+    #ifdef DG_DEBUG
+    #ifdef MPI_VERSION
+            if(rank==0)
+    #endif //MPI
+            {
+                std::cout << "# Absolute r*S*r "<<sqrt( dg::blas2::dot(S,m_r)) <<"\t ";
+                std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(S,m_r) )/nrmb << ")\n";
+            }
+    #endif //DG_DEBUG
+            if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
+            {
+                dg::blas2::symv(P, m_r, m_rh);
+                nrm2r_new = dg::blas1::dot( m_rh, m_r);
+                m_vp[i] = -nrm2r_new/nrm2r_old/m_alpha;
+                m_vm[i] = -1./m_alpha;
+                m_v0[i+1] = -m_vp[i];
+                m_v0[i] -= m_vm[i];
+                
+                m_max_iter=i+1;
+                break;
+            }
+            dg::blas2::symv(P, m_r, m_rh);
+            nrm2r_new = dg::blas1::dot( m_rh, m_r);
+            dg::blas1::axpby(1., m_rh, nrm2r_new/nrm2r_old, m_p );
+                       
+            m_vp[i] = -nrm2r_new/nrm2r_old/m_alpha;
+            m_vm[i] = -1./m_alpha;
+            m_v0[i+1] = -m_vp[i];
+            m_v0[i] -= m_vm[i];
+            nrm2r_old=nrm2r_new;
+        }
+
+        set_iter(m_max_iter);
+        //Compute inverse of tridiagonal matrix
+        m_Tinv = m_invtridiag(m_v0,m_vp,m_vm);
+
+        dg::blas2::symv(m_Tinv, m_e1, m_y);  //  T^(-1) e_1   
+        dg::blas2::symv(m_R, m_y, x);  // x =  R T^(-1) e_1   
+        m_TinvRpair = std::make_pair(m_Tinv, m_R);
+        return m_TinvRpair;
+    }
+  private:
+    value_type m_alpha;
+    std::vector<value_type> m_v0, m_vp, m_vm;
+    ContainerType m_r, m_ap, m_p, m_rh;
+    SubContainerType m_e1, m_y;
+    unsigned m_max_iter, m_iter;
+    std::pair<CooMatrix, CooMatrix> m_TinvRpair;
+    CooMatrix m_R, m_Tinv;      
+    dg::InvTridiag<SubContainerType, DiaMatrix, CooMatrix> m_invtridiag;
+};
 
 } //namespace dg
 

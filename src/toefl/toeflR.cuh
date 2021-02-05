@@ -67,14 +67,27 @@ struct Explicit
 
     void gamma1_y( const container& y, container& yp)
     {
+        if (equations == "global-arbpolO2") {
+            dg::blas1::pointwiseDot(w2d,y,chi);
+            dg::blas1::scal(yp,0.0);
+            sqrtinvert(yp, chi);
+        }
+        else {
+            std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, yp, y, eps_gamma);
+            if(  number[0] == multigrid.max_iter())
+                throw dg::Fail( eps_gamma);
+        }
+    }
+    void gamma1inv_y( const container& y, container& yp)
+    {
         if (equations == "global-arbpolO2")
         {
-            krylovsqrtcauchysolve(y, yp, 10); 
+            sqrtsolve(y, yp);
         }
         else
         {
-            dg::blas2::symv( multi_gamma1[0], y ,chi); 
-            dg::blas2::symv( v2d, chi, yp);
+        dg::blas2::symv( multi_gamma1[0],y,chi); //invG ne-1
+        dg::blas2::symv( v2d, chi, yp);
         }
     }
     /**
@@ -133,12 +146,19 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
-    KrylovSqrtCauchySolve<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> krylovsqrtcauchysolve;
+    
+    KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
+    KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
+//     KrylovSqrtODESolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
+//     KrylovSqrtODEinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
+    
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_gamma_phi, old_psi, old_gamma_n;
     std::vector<container> multi_chi, multi_iota;
+    
+    
     
     const container w2d,v2d, one;
     const std::vector<double> eps_pol;
@@ -178,13 +198,17 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
         multi_arbpol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor); //only centered implemented
         multi_gamma0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "global-arbpolO2" ) {
-            multi_gamma1[u].construct( multigrid.grid(u), -p.tau, dg::centered, 1.*p.jfactor);
+            multi_gamma1[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
+            sqrtsolve.construct( multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 200, 20,  p.eps_gamma);
+            sqrtinvert.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 200, 20,  p.eps_gamma);
+//             sqrtsolve.construct( multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 1e-8, 1e-12, 200,   p.eps_gamma);
+//             sqrtinvert.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 1e-8, 1e-12, 200,  p.eps_gamma);
         }
         else {
             multi_gamma1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered, p.jfactor);
         }               
     }
-    krylovsqrtcauchysolve.construct(multi_gamma1[0], multigrid.grid(0), chi,  p.eps_time, 500, p.eps_gamma);
+
 }
 
 template< class G,  class M, class DM, class CM, class container>
@@ -262,7 +286,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         dg::blas2::symv( v2d, chi, gamma_n);
 
         dg::blas1::axpby(1., y[1],  -1., gamma_n, omega);      
-                
+        
         old_gamma_phi.extrapolate(t, gamma_phi);
         std::vector<unsigned> number = multigrid.direct_solve( multi_arbpol, gamma_phi, omega, eps_pol);
         old_gamma_phi.update( t, gamma_phi);
@@ -283,9 +307,9 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         for( unsigned u=0; u<3; u++) multi_pol[u].set_chi( multi_chi[u]);
         
         //Compute G^{-1} n_e via LanczosSqrtODE solve
-        krylovsqrtcauchysolve(y[0], gamma_n, 10); //inv weights already multiplied
+        sqrtsolve(y[0], gamma_n); //inv weights already multiplied
 
-        dg::blas1::axpby(1.,y[1],  -1., gamma_n, omega);  //- G^{-1} n_e + N_i    
+        dg::blas1::axpby(1., y[1],  -1., gamma_n, omega);  //- G^{-1} n_e + N_i    
         
         //Solve G^{-1} n_e - N_i = nabla. (chi nabla gamma_phi) for gamma_phi         
         old_gamma_phi.extrapolate(t, gamma_phi);
@@ -295,7 +319,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             throw dg::Fail( eps_pol[0]);
 
         //Compute \phi = G^{-1} \gamma_phi via LanczosSqrtODE solve
-        krylovsqrtcauchysolve(gamma_phi, phi[0], 10);    //inv weights already multiplied
+        sqrtsolve(gamma_phi, phi[0]);    //inv weights already multiplied
 
     }
     else {
@@ -353,7 +377,11 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             }
             dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
 
-
+            if (equations == "local-arbpolO2") 
+            {            
+                dg::blas2::symv(multi_gamma0[0], omega, chi);
+                dg::blas2::symv(v2d, chi, omega);
+            }
         }
         else
             dg::blas1::axpby( -1. ,y[1], 0., omega);
@@ -369,11 +397,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         if(  number[0] == multigrid.max_iter())
             throw dg::Fail( eps_pol[0]);
         
-        if (equations == "local-arbpolO2") 
-        {            
-            dg::blas2::symv(multi_gamma0[0], phi[0], chi);
-            dg::blas2::symv(v2d, chi, phi[0]);
-        }
+
     }
     return phi[0];
 }

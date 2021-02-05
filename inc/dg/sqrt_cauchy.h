@@ -3,6 +3,7 @@
 
 #include "blas.h"
 #include "helmholtz.h"
+#include "lgmres.h"
 
 //! M_PI is non-standard ... so MSVC complains
 #ifndef M_PI
@@ -33,7 +34,7 @@ struct SqrtCauchyIntOp
      * @param copyable a copyable container 
      * @param multiply_weights multiply inverse weights in front of matrix A (important if matrix A is not_normed) 
      */
-    SqrtCauchyIntOp( const Matrix& A, const Container& copyable, const bool& multiply_weights)
+    SqrtCauchyIntOp( const Matrix& A, const Container& copyable, const bool& multiply_weights )
     { 
         construct(A, copyable, multiply_weights);
     }
@@ -176,10 +177,11 @@ struct CauchySqrtInt
      * @param g The grid to use
      * @param eps Accuarcy for CG solve
      * @param multiply_weights multiply inverse weights in front of matrix A 
+     * @param symmetric true = symmetric A / false = non-symmetric A
      */
-    CauchySqrtInt( const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights)
+    CauchySqrtInt( const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights, const bool& symmetric)
     {
-        construct(A, copyable, eps, multiply_weights);
+        construct(A, copyable, eps, multiply_weights, symmetric);
     }
     /**
      * @brief Construct Rhs operator
@@ -188,16 +190,23 @@ struct CauchySqrtInt
      * @param g The grid to use
      * @param eps Accuarcy for CG solve
      * @param multiply_weights multiply inverse weights in front of matrix A 
+     * @param symmetric true = symmetric A / false = non-symmetric A
      */
-    void construct(const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights) 
+    void construct(const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights, const bool& symmetric) 
     {
         m_helper = m_helper2 = m_helper3 = copyable;
         m_A = A;
         m_multiply_weights = multiply_weights;
+        m_symmetric = symmetric;
+        m_eps = eps;
         m_size = m_helper.size();
         m_op.construct(m_A, m_helper, m_multiply_weights);
-        if (m_multiply_weights==true) m_invert.construct( m_helper, m_size*m_size, eps, 1, true, 1.);
-        else m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.);
+        if (m_symmetric == true) 
+        {
+            if (m_multiply_weights==true) m_invert.construct( m_helper, m_size*m_size, eps, 1, true, 1.);
+            else m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.);
+        }
+        else m_lgmres.construct( m_helper, 30, 10, m_size*m_size);
     }
     /**
      * @brief Resize matrix and set A and vectors and set new size
@@ -208,7 +217,8 @@ struct CauchySqrtInt
         m_helper.resize(new_max);
         m_helper2.resize(new_max);
         m_helper3.resize(new_max);
-        m_invert.set_size(m_helper, new_max*new_max);
+        if (m_symmetric == true) m_invert.set_size(m_helper, new_max*new_max);
+        else m_lgmres.construct( m_helper, 30, 10, m_size*m_size);
         m_op.new_size(new_max);
         m_size = new_max;
     } 
@@ -279,7 +289,8 @@ struct CauchySqrtInt
             w = sqrtminEV*sn;
             dg::blas1::axpby(cn*dn, x, 0.0 , m_helper); //m_helper = cn dn x
             m_op.set_w(w);
-            m_invert( m_op, m_helper2, m_helper);      // m_helper2 = (w^2 +V A)^(-1) cn dn x
+            if (m_symmetric == true) m_invert( m_op, m_helper2, m_helper);      // m_helper2 = (w^2 +V A)^(-1) cn dn x
+            else m_lgmres.solve( m_op, m_helper2, m_helper, m_op.inv_weights(), m_op.inv_weights(), m_eps, 1); 
             dg::blas1::axpby(-fac, m_helper2, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) cn dn x
         }
         dg::blas2::symv(m_A, m_helper3, b); // - A fac sum (w^2 +V A)^(-1) cn dn x
@@ -291,6 +302,9 @@ struct CauchySqrtInt
     Matrix m_A;
     SqrtCauchyIntOp< Matrix, Container> m_op;
     unsigned m_size;
-    bool m_multiply_weights;
+    bool m_multiply_weights, m_symmetric;
+    value_type m_eps;
     dg::Invert<Container> m_invert;
+    dg::LGMRES<Container> m_lgmres;
+
 };
