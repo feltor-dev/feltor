@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     const asela::Parameters p( js);
     if(rank==0)p.display( std::cout);
     std::string input = js.toStyledString();
@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( asela, rolkar,0., y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
@@ -120,7 +120,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     dg::Grid2d global_grid_out (  -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, dg::DIR, dg::PER);  
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
     
     
     //field IDs 
@@ -130,7 +130,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);
     //energy IDs 
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, energyIDs[8], dissID, alignedID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);

@@ -98,9 +98,9 @@ int main(int argc, char* argv[])
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
     if( argc == 1)
-        file::file2Json( "input.json", js, file::comments::are_discarded);
+        dg::file::file2Json( "input.json", js, dg::file::comments::are_discarded);
     else if( argc == 2)
-        file::file2Json( argv[1], js, file::comments::are_discarded);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded);
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";

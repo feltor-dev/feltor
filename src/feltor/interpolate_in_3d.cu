@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid_in;
     err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
     size_t length;
@@ -53,14 +53,14 @@ int main( int argc, char* argv[])
     std::string geomfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
     Json::Value js,gs;
-    file::string2Json(inputfile, js, file::comments::are_forbidden);
-    file::string2Json(geomfile, gs, file::comments::are_forbidden);
-    const feltor::Parameters p(js, file::error::is_warning);
+    dg::file::string2Json(inputfile, js, dg::file::comments::are_forbidden);
+    dg::file::string2Json(geomfile, gs, dg::file::comments::are_forbidden);
+    const feltor::Parameters p(js, dg::file::error::is_warning);
     p.display();
     std::cout << gs.toStyledString() << std::endl;
     dg::geo::TokamakMagneticField mag;
     try{
-        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
+        mag = dg::geo::createMagneticField(gs, dg::file::error::is_throw);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
@@ -120,7 +120,7 @@ int main( int argc, char* argv[])
 
     // define 4d dimension
     int dim_ids[4], tvarID;
-    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
+    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
     std::map<std::string, int> id4d;
 
     /////////////////////////////////////////////////////////////////////////
@@ -206,7 +206,7 @@ int main( int argc, char* argv[])
             bool available = true;
             try{
                 err = nc_inq_varid(ncid_in, record.name.data(), &dataID);
-            } catch ( file::NC_Error& error)
+            } catch ( dg::file::NC_Error& error)
             {
                 if(  i == 0)
                 {

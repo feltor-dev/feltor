@@ -56,7 +56,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     if(rank==0)p.display( std::cout);
@@ -86,12 +86,12 @@ int main( int argc, char* argv[])
     karniadakis.init( test, diffusion, 0., y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     if(rank==0)err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     if(rank==0)err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
-    if(rank==0)err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
+    if(rank==0)err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     //field IDs
     std::string names[4] = {"electrons", "positrons", "potential", "vorticity"}; 
     int dataIDs[4]; 
@@ -100,7 +100,7 @@ int main( int argc, char* argv[])
 
     //energy IDs
     int EtimeID, EtimevarID;
-    if(rank==0)err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    if(rank==0)err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, dissID, dEdtID;
     if(rank==0)err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
     if(rank==0)err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
@@ -123,19 +123,19 @@ int main( int argc, char* argv[])
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
         dg::blas1::transfer( transferD, transferH);
-        file::put_vara_double( ncid, dataIDs[i], 0, grid_out, transferH);
+        dg::file::put_vara_double( ncid, dataIDs[i], 0, grid_out, transferH);
     }
     //pot
     transfer = test.potential();
     dg::blas2::gemv( interpolate, transfer, transferD);
     dg::blas1::transfer( transferD, transferH);
-    file::put_vara_double( ncid, dataIDs[2], 0, grid_out, transferH );
+    dg::file::put_vara_double( ncid, dataIDs[2], 0, grid_out, transferH );
     //Vor
     transfer = test.potential();
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
     dg::blas2::gemv( interpolate,y1[1], transferD);
     dg::blas1::transfer( transferD, transferH);
-    file::put_vara_double( ncid, dataIDs[3], 0, grid_out, transferH );
+    dg::file::put_vara_double( ncid, dataIDs[3], 0, grid_out, transferH );
     if(rank==0)err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     if(rank==0)err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -192,17 +192,17 @@ int main( int argc, char* argv[])
         {
             dg::blas2::gemv( interpolate, y0[j], transferD);
             dg::blas1::transfer( transferD, transferH);
-            file::put_vara_double( ncid, dataIDs[j], i, grid, transferH);
+            dg::file::put_vara_double( ncid, dataIDs[j], i, grid, transferH);
         }
         transfer = test.potential();
         dg::blas2::gemv( interpolate, transfer, transferD);
         dg::blas1::transfer( transferD, transferH);
-        file::put_vara_double( ncid, dataIDs[2], i, grid, transferH );
+        dg::file::put_vara_double( ncid, dataIDs[2], i, grid, transferH );
         transfer = test.potential();
         dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?    
         dg::blas2::gemv( interpolate,y1[1], transferD);
         dg::blas1::transfer( transferD, transferH);
-        file::put_vara_double( ncid, dataIDs[3], i, grid, transferH );
+        dg::file::put_vara_double( ncid, dataIDs[3], i, grid, transferH );
         if(rank==0)err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         if(rank==0)err = nc_close(ncid);
 

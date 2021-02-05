@@ -16,7 +16,7 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     std::array<std::array<DVec,2>,2> y0;
     ///////////////////read in and show inputfile
 
-    file::NC_Error_Handle errIN;
+    dg::file::NC_Error_Handle errIN;
     int ncidIN;
     errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
     Json::Value jsIN;
@@ -24,7 +24,7 @@ std::array<std::array<DVec,2>,2> init_from_file( std::string file_name, const Ge
     errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
     std::string input(length, 'x');
     errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    file::string2Json( input, jsIN, file::comments::are_forbidden);
+    dg::file::string2Json( input, jsIN, dg::file::comments::are_forbidden);
     unsigned  pINn  = jsIN["n"].asUInt();
     unsigned  pINNx = jsIN["Nx"].asUInt();
     unsigned  pINNy = jsIN["Ny"].asUInt();
