@@ -110,11 +110,25 @@
  * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
- *     @defgroup functions Functions and Functors
+ *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
+ *     @{
+ *          @defgroup basics Simple
+ *              For the dg::evaluate and dg::blas1::evaluate functions
  *
- *         The functions are useful mainly in the constructor of Operator objects.
- *         The functors are useful for either vector transformations or
- *         as init functions in the evaluate routines.
+ *          @defgroup functions A large collection
+ *              For the dg::evaluate and dg::blas1::evaluate functions
+ *
+ *          @defgroup composition Composition of two or more functors
+ *
+ *          @defgroup binary_operators blas1::evaluate binary operators
+ *              Binary subroutines for the dg::blas1::evaluate function
+ *
+ *          @defgroup variadic_evaluates blas1::evaluate variadic subroutines
+ *              Functors with an arbitrary number of arguments to use in the dg::blas1::evaluate function
+ *
+ *          @defgroup variadic_subroutines blas1::subroutine subroutines
+ *              Functors with a variable number of arguments for use in the dg::blas1::subroutine functions
+ *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *
  *         Low level helper routines.

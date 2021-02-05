@@ -27,7 +27,7 @@ namespace dg{
 /*! @brief BLAS Level 1 routines
  *
  * @ingroup blas1
- * Only those routines that are actually called need to be implemented.
+ *
  * @note successive calls to blas routines are executed sequentially
  * @note A manual synchronization of threads or devices is never needed in an application
  * using these functions. All functions returning a value block until the value is ready.
@@ -40,7 +40,7 @@ namespace blas1
 
 /**
  * @class hide_iterations
- * where \c i iterates over @b all elements inside the given vectors. The order of iterations is indetermined. Scalar arguments to container types are interpreted as vectors with all elements constant. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
+ * where \c i iterates over @b all elements inside the given vectors. The order of iterations is undefined. Scalar arguments to container types are interpreted as vectors with all elements constant. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
  * If the vector sizes do not match, the result is undefined.
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  */
@@ -489,15 +489,15 @@ dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
 // result[i] = sin(M_PI/2.)*sin(3*M_PI/2.) = -1
 @endcode
+ * @tparam BinarySubroutine Functor with signature: <tt> void operator()( value_type_y&, value_type_g) </tt> i.e. it writes into the first and reads from its (first and) second argument
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @param y contains result
- * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals
- * @param g The functor to evaluate
+ * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals, see @ref binary_operators for a collection of predefined functors to use here
+ * @param g The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
  * @param x0 first input
  * @param xs more input
  * @note all aliases allowed
- * @tparam BinarySubroutine Functor with signature: <tt> void operator()( value_type_y&, value_type_g) </tt> i.e. it writes into the first and reads from its (first and) second argument
- * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
- * @note Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_ContainerType
  *
  */
@@ -550,14 +550,14 @@ dg::blas1::subroutine( Routine(), two, 3., four);
 // four[i] now has the value 21 (7*2+3+4)
 @endcode
 
- * @param f the subroutine
+ * @param f the subroutine, see @ref variadic_subroutines for a collection of predefind subroutines to use here
  * @param x the first argument
  * @param xs other arguments
 @note This function can compute @b any trivial parallel expression for @b any
-number of input and output arguments. In this sense it replaces all other \c blas1 functions
-except the scalar product, which is not trivial parallel.
+number of input and output arguments, which is quite remarkable really. In this sense it replaces all other \c blas1 functions
+except the scalar product, which is not trivially parallel.
 @attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
- * @tparam Subroutine a function or functor taking a \c value_type argument for each input argument in the call
+ * @tparam Subroutine a function or functor with an arbitrary number of arguments and no return type; taking a \c value_type argument for each input argument in the call
  * and a <tt> value_type&  </tt> argument for each output argument.
  * \c Subroutine must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_ContainerType

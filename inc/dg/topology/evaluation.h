@@ -55,7 +55,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  * .
  * @copydoc hide_code_evaluate1d
  * @tparam UnaryOp Model of Unary Function \c real_type \c f(real_type)
- * @param f The function to evaluate
+ * @param f The function to evaluate, see @ref functions for a host of predefined functors to evaluate
  * @param g The grid that defines the computational space on which to evaluate f
  *
  * @return The output vector \c v as a host vector
@@ -92,7 +92,7 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
  *.
  * @copydoc hide_code_evaluate2d
  * @copydoc hide_binary
- * @param f The function to evaluate: f = f(x,y)
+ * @param f The function to evaluate: f = f(x,y), see @ref functions for a host of predefined functors to evaluate
  * @param g The 2d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector
@@ -136,7 +136,7 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  *.
  * @copydoc hide_code_evaluate3d
  * @copydoc hide_ternary
- * @param f The function to evaluate: f = f(x,y,z)
+ * @param f The function to evaluate: f = f(x,y,z), see @ref functions for a host of predefined functors to evaluate
  * @param g The 3d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector
