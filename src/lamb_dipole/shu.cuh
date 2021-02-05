@@ -12,26 +12,6 @@
 namespace shu
 {
 
-struct Upwind{
-    DG_DEVICE
-    void operator()( double& result, double fw, double bw, double v)
-    {
-        if( v < 0)
-            result -= fw; // yp = - Div( F)
-        else
-            result -= bw;
-    }
-};
-struct UpwindAdvection{
-    DG_DEVICE
-    void operator()( double& result, double fw, double bw, double v)
-    {
-        if( v < 0)
-            result -= v*fw; // yp = - v Grad f
-        else
-            result -= v*bw;
-    }
-};
 template< class Geometry, class Matrix, class Container>
 struct Diffusion
 {
@@ -216,26 +196,26 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
         else if( "upwind" == m_advection)
         {
             dg::blas1::copy( 0., yp);
-            //dx ( nv_x)
+            // - dx ( nv_x)
             dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
             dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_x
             dg::blas2::symv( m_forward[0], m_temp[0], m_temp[1]);
             dg::blas2::symv( m_backward[0], m_temp[0], m_temp[2]);
-            dg::blas1::subroutine( shu::Upwind(), yp, m_temp[1], m_temp[2], m_v);
-            //dy ( nv_y)
+            dg::blas1::evaluate( yp, dg::minus_equals(), dg::Upwind(), m_v, m_temp[2], m_temp[1]);
+            // - dy ( nv_y)
             dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
             dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_y
             dg::blas2::symv( m_forward[1], m_temp[0], m_temp[1]);
             dg::blas2::symv( m_backward[1], m_temp[0], m_temp[2]);
-            dg::blas1::subroutine( shu::Upwind(), yp, m_temp[1], m_temp[2], m_v);
+            dg::blas1::evaluate( yp, dg::minus_equals(), dg::Upwind(), m_v, m_temp[2], m_temp[1]);
         }
         else if( "centered" == m_advection)
         {
-            //dx ( nv_x)
+            // - dx ( nv_x)
             dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
             dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_x
             dg::blas2::symv( -1., m_centered[0], m_temp[0], 0., yp);
-            //dy ( nv_y)
+            // - dy ( nv_y)
             dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
             dg::blas1::pointwiseDot( y, m_v, m_temp[0]); //f_y
             dg::blas2::symv( -1., m_centered[1], m_temp[0], 1., yp);
@@ -243,16 +223,16 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
         else if( "upwind-advection" == m_advection)
         {
             dg::blas1::copy( 0., yp);
-            // v_x dx n
+            //  - v_x dx n
             dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
             dg::blas2::symv( m_forward[0], y, m_temp[1]);
             dg::blas2::symv( m_backward[0], y, m_temp[2]);
-            dg::blas1::subroutine( shu::UpwindAdvection(), yp, m_temp[1], m_temp[2], m_v);
-            // v_y dy n
+            dg::blas1::evaluate( yp, dg::minus_equals(), dg::UpwindProduct(), m_v, m_temp[2], m_temp[1]);
+            //  - v_y dy n
             dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
             dg::blas2::symv( m_forward[1], y, m_temp[1]);
             dg::blas2::symv( m_backward[1], y, m_temp[2]);
-            dg::blas1::subroutine( shu::UpwindAdvection(), yp, m_temp[1], m_temp[2], m_v);
+            dg::blas1::evaluate( yp, dg::minus_equals(), dg::UpwindProduct(), m_v, m_temp[2], m_temp[1]);
         }
         else if( "centered-advection" == m_advection)
         {
@@ -284,13 +264,13 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_x
             dg::blas2::symv( m_fine_forward[0], m_fine_temp[0], m_fine_temp[1]);
             dg::blas2::symv( m_fine_backward[0], m_fine_temp[0], m_fine_temp[2]);
-            dg::blas1::subroutine( shu::Upwind(), m_fine_yp, m_fine_temp[1], m_fine_temp[2], m_fine_v);
+            dg::blas1::evaluate( m_fine_yp, dg::minus_equals(), dg::Upwind(), m_fine_v, m_fine_temp[2], m_fine_temp[1]);
             //dy ( nv_y)
             dg::blas2::symv( 1., m_fine_centered[0], m_fine_psi, 0., m_fine_v); //v_y
             dg::blas1::pointwiseDot( m_fine_y, m_fine_v, m_fine_temp[0]); //f_y
             dg::blas2::symv( m_fine_forward[1], m_fine_temp[0], m_fine_temp[1]);
             dg::blas2::symv( m_fine_backward[1], m_fine_temp[0], m_fine_temp[2]);
-            dg::blas1::subroutine( shu::Upwind(), m_fine_yp, m_fine_temp[1], m_fine_temp[2], m_fine_v);
+            dg::blas1::evaluate( m_fine_yp, dg::minus_equals(), dg::Upwind(), m_fine_v, m_fine_temp[2], m_fine_temp[1]);
         }
         else if( "centered" == m_advection)
         {
@@ -315,8 +295,7 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
             dg::blas2::symv( m_inter, m_v, m_fine_v);
             dg::blas2::symv( m_inter, m_temp[1], m_fine_temp[1]);
             dg::blas2::symv( m_inter, m_temp[2], m_fine_temp[2]);
-            dg::blas1::subroutine( shu::UpwindAdvection(), m_fine_yp,
-                    m_fine_temp[1], m_fine_temp[2], m_fine_v);
+            dg::blas1::evaluate( m_fine_yp, dg::minus_equals(), dg::UpwindProduct(), m_fine_v, m_fine_temp[2], m_fine_temp[1]);
             // v_y dy n
             dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
             dg::blas2::symv( m_forward[1], y, m_temp[1]);
@@ -324,8 +303,7 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
             dg::blas2::symv( m_inter, m_temp[1], m_fine_temp[1]);
             dg::blas2::symv( m_inter, m_temp[2], m_fine_temp[2]);
             dg::blas2::symv( m_inter, m_v, m_fine_v);
-            dg::blas1::subroutine( shu::UpwindAdvection(), m_fine_yp,
-                    m_fine_temp[1], m_fine_temp[2], m_fine_v);
+            dg::blas1::evaluate( m_fine_yp, dg::minus_equals(), dg::UpwindProduct(), m_fine_v, m_fine_temp[2], m_fine_temp[1]);
         }
         else if( "centered-advection" == m_advection)
         {
