@@ -19,4 +19,4 @@ shu_hpc: shu_b.cu shu.cuh init.h
 .PHONY: clean
 
 clean:
-	rm -f shu_b
+	rm -f shu_b shu_hpc

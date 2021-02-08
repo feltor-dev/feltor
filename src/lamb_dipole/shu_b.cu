@@ -334,7 +334,7 @@ int main( int argc, char* argv[])
         }
         err = nc_close(ncid);
     }
-    else
+    if( !("netcdf" == output) && !("glfw" == output))
     {
         throw dg::Error(dg::Message(_ping_)<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!");
 
