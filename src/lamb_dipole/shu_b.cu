@@ -177,8 +177,8 @@ int main( int argc, char* argv[])
         }
         glfwTerminate();
     }
-    else if( "netcdf" == output)
 #endif //WITHOUT_GLFW
+    if( "netcdf" == output)
     {
         std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
