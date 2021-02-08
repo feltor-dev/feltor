@@ -1130,7 +1130,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         else // "bohm" == m_p.sheath_bc
         {
             //exp(-phi)
-            dg::blas1::transform( m_phi[0], m_temp0, dg::EXP<double>(1., -1.));
+            dg::blas1::transform( m_phi[0], m_temp0, dg::ExpProfX(1., 0., 1.));
             dg::blas1::pointwiseDot( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, m_temp0, 1.,  yp[1][0]);
         }
         // u_i = +- sqrt(1+tau)

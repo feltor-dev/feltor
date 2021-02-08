@@ -140,7 +140,7 @@ int main( int argc, char* argv[])
     //    feltor::FeltorSpecialSolver<
     //        Geometry, IDMatrix, DMatrix, DVec>
     //    > karniadakis( grid, p, mag);
-    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp("TVB", 3, y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp("TVB-3-3", y0);
     {
     HVec h_wall = dg::pullback( wall, grid);
     HVec h_sheath = dg::pullback( sheath, grid);

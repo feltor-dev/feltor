@@ -942,7 +942,7 @@ struct IslandXY
 struct SinXSinY
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude A
      * @param bamp backgroundamp B
@@ -970,7 +970,7 @@ struct SinXSinY
 struct CosXCosY
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude A
      * @param bamp backgroundamp B
@@ -998,7 +998,7 @@ struct CosXCosY
 struct SinXCosY
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude
      * @param bamp backgroundamp
@@ -1026,7 +1026,7 @@ struct SinXCosY
 struct SinX
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude A
      * @param bamp backgroundamp B
@@ -1049,7 +1049,7 @@ struct SinX
 struct SinY
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude
      * @param bamp backgroundamp
@@ -1068,7 +1068,7 @@ struct SinY
 struct CosY
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude A
      * @param bamp backgroundamp B
@@ -1109,7 +1109,7 @@ struct InvCoshXsq
 struct SinProfX
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct
      *
      * @param amp amplitude A
      * @param bamp backgroundamp B
@@ -1127,16 +1127,16 @@ struct SinProfX
 };
 /**
  * @brief
- * \f$ f(x) = f(x,y) = f(x,y,z) = B + A\exp(-x/L_n) \f$
+ * \f$ f(x) = f(x,y) = f(x,y,z) = A\exp(-x/L_n) + B \f$
  */
 struct ExpProfX
 {
     /**
-     * @brief Construct with two coefficients
+     * @brief Construct with three coefficients
      *
-     * @param amp amplitude B
-     * @param bamp backgroundamp A (choose zero for constant gradient length
-     * @param ln  ln (must be !=0)
+     * @param amp amplitude A
+     * @param bamp background amplitude B (choose zero for constant gradient length
+     * @param ln  gradient lenght L_n (must be !=0)
      */
     ExpProfX( double amp, double bamp, double ln):m_amp(amp),m_bamp(bamp),m_ln(ln){
         assert( ln!=0 && "ln parameter must be != 0 in ExpProfX!");
