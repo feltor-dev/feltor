@@ -13,11 +13,14 @@ double function( double x)
 {
     return exp(x);
 }
-
 template<class T>
-T function( T x, T y)
+T function(T x, T y)
 {
-        return exp(x)*exp(y);
+    T rho = 0.20943951023931953; //pi/15
+    T delta = 0.050000000000000003;
+    if( y<= M_PI)
+        return delta*cos(x) - 1./rho/cosh( (y-M_PI/2.)/rho)/cosh( (y-M_PI/2.)/rho);
+    return delta*cos(x) + 1./rho/cosh( (3.*M_PI/2.-y)/rho)/cosh( (3.*M_PI/2.-y)/rho);
 }
 double function( double x, double y, double z)
 {
@@ -35,14 +38,14 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
     MPI_Comm comm2d, comm3d;
     mpi_init2d( dg::PER, dg::PER, comm2d);
-    dg::MPIGrid2d g2d( 1, 2., 3, 4, n, Nx, Ny, dg::PER, dg::PER, comm2d);
-    dg::RealMPIGrid2d<float> gf2d( 1, 2., 3, 4, n, Nx, Ny, dg::PER, dg::PER, comm2d);
+    dg::MPIGrid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
+    dg::RealMPIGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
     mpi_init3d( dg::PER, dg::PER, dg::PER, comm3d);
     dg::MPIGrid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
 
     //test evaluation and expand functions
     dg::MDVec func2d = dg::construct<dg::MDVec>(dg::evaluate( function<double>, g2d));
-    dg::MDVec funcf2d = dg::construct<dg::MDVec>(dg::evaluate( function<float>, g2d));
+    dg::fMDVec funcf2d = dg::construct<dg::fMDVec>(dg::evaluate( function<float>, gf2d));
     dg::MDVec func3d = dg::construct<dg::MDVec>(dg::evaluate( function, g3d));
     //test weights
     const dg::MDVec w2d = dg::construct<dg::MDVec>(dg::create::weights(g2d));
@@ -51,31 +54,31 @@ int main(int argc, char** argv)
     exblas::udouble res;
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
-    if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i - 4639875759346476257 << "\n";
-    double sol2d = (exp(2.)-exp(1))*(exp(4.)-exp(3));
+    if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823280491526356992<< "\n";
+    double sol2d = 0.;
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
-    if(rank==0)std::cout << "Relative 2d error is      "<<(integral2d-sol2d)/sol2d<<"\n\n";
+    if(rank==0)std::cout << "2d error is               "<<(integral2d-sol2d)<<"\n\n";
     float integralf2d = dg::blas1::dot( wf2d, funcf2d); res.d = integralf2d;
-    if(rank==0)std::cout << "2D integral (float)       "<<std::setw(6)<<integralf2d <<"\t" << res.i - 4639875760323035136<< "\n";
-    float solf2d = (exp(2.)-exp(1))*(exp(4.)-exp(3));
+    if(rank==0)std::cout << "2D integral (float)       "<<std::setw(6)<<integralf2d <<"\t" << res.i - 4525606114229747712<< "\n";
+    float solf2d = 0.;
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<solf2d<<std::endl;
-    if(rank==0)std::cout << "Relative 2d error (float) "<<(integralf2d-solf2d)/solf2d<<"\n\n";
+    if(rank==0)std::cout << "2d error (float)          "<<(integralf2d-solf2d)<<"\n\n";
 
     double integral3d = dg::blas1::dot( w3d, func3d); res.d = integral3d;
     if(rank==0)std::cout << "3D integral               "<<std::setw(6)<<integral3d <<"\t" << res.i - 4675882723962622631<< "\n";
-    double sol3d = sol2d*(exp(6.)-exp(5));
+    double sol3d = (exp(2.)-exp(1))*(exp(4.)-exp(3))*(exp(6.)-exp(5));
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol3d<<std::endl;
     if(rank==0)std::cout << "Relative 3d error is      "<<(integral3d-sol3d)/sol3d<<"\n\n";
 
     double norm2d = dg::blas2::dot( w2d, func2d); res.d = norm2d;
-    if(rank==0)std::cout << "Square normalized 2D norm "<<std::setw(6)<<norm2d<<"\t" << res.i - 4674091193523851724<<"\n";
-    double solution2d = (exp(4.)-exp(2))/2.*(exp(8.) -exp(6))/2.;
+    if(rank==0)std::cout << "Square normalized 2D norm "<<std::setw(6)<<norm2d<<"\t" << res.i - 4635333359953759707<<"\n";
+    double solution2d = 80.0489;
     if(rank==0)std::cout << "Correct square norm is    "<<std::setw(6)<<solution2d<<std::endl;
     if(rank==0)std::cout << "Relative 2d error is      "<<(norm2d-solution2d)/solution2d<<"\n\n";
 
     double norm3d = dg::blas2::dot( func3d, w3d, func3d); res.d = norm3d;
     if(rank==0)std::cout << "Square normalized 3D norm "<<std::setw(6)<<norm3d<<"\t" << res.i - 4746764681002108278<<"\n";
-    double solution3d = solution2d*(exp(12.)-exp(10))/2.;
+    double solution3d = (exp(4.)-exp(2))/2.*(exp(8.)-exp(6.))/2.*(exp(12.)-exp(10))/2.;
     if(rank==0)std::cout << "Correct square norm is    "<<std::setw(6)<<solution3d<<std::endl;
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
     if(rank==0)std::cout << "\nFINISHED! Continue with topology/derivatives_mpit.cu !\n\n";
