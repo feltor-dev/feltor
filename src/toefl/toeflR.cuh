@@ -3,6 +3,7 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "dg/matrixsqrt.h"
+#include "dg/polarization.h"
 namespace toefl
 {
 
@@ -147,6 +148,8 @@ struct Explicit
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
     
+    std::vector<dg::Polarization<Geometry, Matrix, container> > multi_dfpolarization;
+    
     KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
     KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
 //     KrylovSqrtODESolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
@@ -188,6 +191,7 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     multi_iota= multigrid.project( chi);
     multi_pol.resize(3);
     multi_arbpol.resize(3);
+    multi_dfpolarization.resize(3);
     multi_gamma1.resize(3);
     multi_gamma0.resize(3);
     arakawa.construct(grid);
@@ -196,6 +200,8 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
         multi_arbpol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor); //only centered implemented
+        multi_dfpolarization[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false); 
+        
         multi_gamma0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "global-arbpolO2" ) {
             multi_gamma1[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
@@ -232,7 +238,7 @@ const container& Explicit<G,  M, DM, CM, container>::compute_psi( double t, cons
         if( equations == "local" || equations == "local-arbpolO2" || equations == "global")
         {
             if (tau == 0.) {
-                dg::blas1::axpby( 1.,potential, 0.,phi[1]); 
+                dg::blas1::axpby( 1., potential, 0.,phi[1]); 
             }
             else {
                 old_psi.extrapolate( t, phi[1]);
@@ -377,11 +383,11 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             }
             dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
 
-            if (equations == "local-arbpolO2") 
-            {            
-                dg::blas2::symv(multi_gamma0[0], omega, chi);
-                dg::blas2::symv(v2d, chi, omega);
-            }
+//             if (equations == "local-arbpolO2") 
+//             {            
+//                 dg::blas2::symv(multi_gamma0[0], omega, chi);
+//                 dg::blas2::symv(v2d, chi, omega);
+//             }
         }
         else
             dg::blas1::axpby( -1. ,y[1], 0., omega);
@@ -390,13 +396,24 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
                 dg::blas1::pointwiseDivide( omega, chi, omega);
        
 
-        //invert
-        old_phi.extrapolate(t, phi[0]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
-        old_phi.update( t, phi[0]);
-        if(  number[0] == multigrid.max_iter())
-            throw dg::Fail( eps_pol[0]);
-        
+        if (equations == "local-arbpolO2") 
+        {
+                        //invert
+            old_phi.extrapolate(t, phi[0]);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_dfpolarization, phi[0], omega, eps_pol);
+            old_phi.update( t, phi[0]);
+            if(  number[0] == multigrid.max_iter())
+                throw dg::Fail( eps_pol[0]);
+        }
+        else
+        {
+            //invert
+            old_phi.extrapolate(t, phi[0]);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
+            old_phi.update( t, phi[0]);
+            if(  number[0] == multigrid.max_iter())
+                throw dg::Fail( eps_pol[0]);
+        }
 
     }
     return phi[0];

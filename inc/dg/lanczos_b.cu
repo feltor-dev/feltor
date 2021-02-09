@@ -15,11 +15,12 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 const double alpha = -0.5;
 
+const double m =4.;
+const double n=4.;
 
-double lhs( double x, double y) {return sin(x)*sin(y);}
-double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
-// double lhs2( double x, double y) {return sin(x)*sin(4.*y);}
-// double rhs2( double x, double y){ return (1.-17.*alpha)*sin(x)*sin(4.*y);}
+
+double lhs( double x, double y) {return sin(m*x)*sin(n*y);}
+double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
 using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
 using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;

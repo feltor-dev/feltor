@@ -197,7 +197,7 @@ struct Rhs
              if (m_multiply_weights==true) m_invert.construct( m_helper, m_size*m_size, eps, 1, true, 1.);
              else m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.);
          }
-         else m_lgmres.construct( m_helper, 30, 10, 100);
+         else m_lgmres.construct( m_helper, 30, 10, 10*m_size*m_size);
     }
     /**
      * @brief Resize matrix and set A and vectors and set new size
@@ -207,7 +207,7 @@ struct Rhs
      void new_size( unsigned new_max) { 
         m_helper.resize(new_max);
         if (m_symmetric == true) m_invert.set_size(m_helper, new_max*new_max);
-        else m_lgmres.construct( m_helper, 30, 10, 100);
+        else m_lgmres.construct( m_helper, 30, 10, 10*new_max*new_max);
         m_lhs.new_size(new_max);
         m_size = new_max;
     } 

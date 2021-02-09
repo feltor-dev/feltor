@@ -200,13 +200,14 @@ struct CauchySqrtInt
         m_symmetric = symmetric;
         m_eps = eps;
         m_size = m_helper.size();
+        std::cout << " size " << m_size<< "\n";
         m_op.construct(m_A, m_helper, m_multiply_weights);
         if (m_symmetric == true) 
         {
             if (m_multiply_weights==true) m_invert.construct( m_helper, m_size*m_size, eps, 1, true, 1.);
             else m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.);
         }
-        else m_lgmres.construct( m_helper, 30, 10, m_size*m_size);
+        else m_lgmres.construct( m_helper, 30, 10, 10*m_size*m_size);
     }
     /**
      * @brief Resize matrix and set A and vectors and set new size
@@ -217,10 +218,15 @@ struct CauchySqrtInt
         m_helper.resize(new_max);
         m_helper2.resize(new_max);
         m_helper3.resize(new_max);
-        if (m_symmetric == true) m_invert.set_size(m_helper, new_max*new_max);
-        else m_lgmres.construct( m_helper, 30, 10, m_size*m_size);
+        if (m_symmetric == true) 
+        {
+            if (m_multiply_weights==true) m_invert.construct( m_helper, new_max*new_max, m_eps, 1, true, 1.);
+            else m_invert.construct( m_helper, new_max*new_max, m_eps, 1, false, 1.);
+        }
+        else m_lgmres.construct( m_helper, 30, 10, 10*new_max*new_max);
         m_op.new_size(new_max);
         m_size = new_max;
+        std::cout << " size " << m_size<< "\n";
     } 
     ///@brief Get the current size of vectors
     ///@return the current vector size

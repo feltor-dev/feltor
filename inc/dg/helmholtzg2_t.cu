@@ -1,4 +1,5 @@
 #include <iostream>
+#undef DG_DEBUG
 
 #include "blas.h"
 
@@ -72,6 +73,7 @@ int main()
     number = invert( gamma1inv, x_, rho1);
             if(  number == invert.get_max())
             throw dg::Fail( eps);
+    
     //test gamma 1
     dg::blas1::axpby( 1., sol1, -1., x_);
     res.d = sqrt( dg::blas2::dot( w2d, x_));

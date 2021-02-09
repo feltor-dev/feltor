@@ -1,5 +1,4 @@
 #include <cmath>
-
 #include "blas.h"
 #include "functors.h"
 
@@ -201,11 +200,12 @@ struct KrylovSqrtODESolve
         m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
         m_T = m_TVpair.first; 
         m_V = m_TVpair.second;   
-        m_e1.resize(m_lanczos.get_iter(),0);
+        m_e1.resize(m_lanczos.get_iter(), 0.);
         m_e1[0] = 1.;
         m_y.resize( m_lanczos.get_iter());
-        m_rhs.new_size(m_lanczos.get_iter()); //resize  vectors in sqrtODE solver
-        m_rhs.set_A(m_T); //set T in sqrtODE solver
+        
+        m_rhs.new_size(m_lanczos.get_iter()); //resize  vectors in sqrtODE
+        m_rhs.set_A(m_T); //set T in sqrtODE 
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
 #ifdef MPI_VERSION
@@ -223,7 +223,7 @@ struct KrylovSqrtODESolve
         if(rank==0)
 #endif //MPI
         {
-            std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+            std::cout << "# sqrt(A)x took \t"<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
         //reset max iterations if () operator is called again
@@ -246,7 +246,7 @@ struct KrylovSqrtODESolve
 };
 
 /*! 
- * @brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
+ * @brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly cauchy solve
  * 
  * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
  */
@@ -291,6 +291,9 @@ struct KrylovSqrtCauchySolve
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0); //EVs of Helmholtz
         m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); //EVs of Helmholtz
+#ifdef DG_DEBUG
+        std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
+#endif //DG_DEBUG
     }
     /**
      * @brief Compute \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f] via sqrt ODE solve.
@@ -315,18 +318,16 @@ struct KrylovSqrtCauchySolve
             return 0;
         }
         m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
-        //for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
+        //TODO for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
         m_T = m_TVpair.first; 
         m_V = m_TVpair.second;   
-        m_e1.resize(m_lanczos.get_iter(),0);
-        m_e1[0]=1.;
+        m_e1.resize(m_lanczos.get_iter(), 0.);
+        m_e1[0] = 1.;
         m_y.resize(m_lanczos.get_iter());        
 
-        m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy sqrt solver
-        m_cauchysqrt.set_A(m_T);         //set T in cauchy sqrt solver
-#ifdef DG_DEBUG
-        std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
-#endif //DG_DEBUG
+        m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
+        m_cauchysqrt.set_A(m_T);         //set T in cauchy
+
         m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
 #ifdef MPI_VERSION
         dg::blas2::symv(m_V, m_y, m_b);
@@ -341,9 +342,9 @@ struct KrylovSqrtCauchySolve
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
-#endif //MPI
+#endif // MPI_VERSION
         {
-            std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+            std::cout << "# sqrt(A)x took \t"<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
         //reset max iterations if () operator is called again

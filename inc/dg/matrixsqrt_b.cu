@@ -1,4 +1,4 @@
-#define SILENT
+// #define SILENT
 // #undef DG_BENCHMARK
 // #define DG_DEBUG
 
@@ -16,7 +16,7 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-const double alpha = -0.5;
+const double alpha = -0.;
 const double m=4.;
 const double n=4.;
 double lhs( double x, double y){ return sin(x*m)*sin(y*n);}
@@ -58,9 +58,9 @@ int main()
 
 //     std::cout << "Type epsilon for CG (1e-5), and eps_rel (1e-5) and eps_abs (1e-10) for TimeStepper\n";
 //     std::cin >> epsCG >> epsTimerel >> epsTimeabs;
-    epsCG=1e-14;
-    epsTimerel=1e-8;
-    epsTimeabs=1e-14;
+    epsCG = 1e-14;
+    epsTimerel = 1e-12;
+    epsTimeabs = 1e-14;
     int counter = 0;
     double erel = 0;
     unsigned iter = 1;
@@ -87,7 +87,7 @@ int main()
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
     std::cout << "   Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"\n";    
-    //solve for x=\sqrt{A}^{-1} b'
+//     solve for x=\sqrt{A}^{-1} b'
     t.tic();
     invert(A,x,bs);
     t.toc();
@@ -99,7 +99,7 @@ int main()
     std::cout << "ODE\n";
     DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
     t.tic();
-    counter = directsqrtodesolve(b, bs); //overwrites b
+    counter = directsqrtodesolve(b, bs);
     t.toc();
 
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
@@ -117,7 +117,7 @@ int main()
     std::cout << "Lanczos + Cauchy ";
     KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter, iterCauchy, eps);
     t.tic();
-    krylovsqrtcauchysolve(b, bs); //overwrites b
+    krylovsqrtcauchysolve(b, bs); 
     t.toc();
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   

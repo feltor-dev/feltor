@@ -383,7 +383,7 @@ class Lanczos
 #ifdef DG_BENCHMARK
                 t.tic();
 #endif //DG_BENCHMARK
-                m_Tinv = m_invtridiag(m_T); //Compute inverse of T //TODO is slow - criterium without inversion ? 
+                m_Tinv = m_invtridiag(m_T); //Compute inverse of T //TODO slow -> criterium without inversion ? 
 #ifdef DG_BENCHMARK
                 t.toc();
                 invtime+=t.diff();
