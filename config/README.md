@@ -22,7 +22,7 @@ Your machine specific config file (e.g. feltor/config/your-machine.mk) should ha
 | NVCCFLAGS | -std=c++14  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
 | NVCCARCH  | -arch sm_35                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
-|  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
+|  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
 |  JSONLIB  | -L$(HOME)/include/json/../../src/lib_json -ljsoncpp | the JSONCPP library                      |
 |  GLFLAGS  | $$(pkg-config --static --libs glfw3)     | glfw3 installation (if glfw3 was installed correctly the default should work) |
@@ -60,6 +60,6 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
  - If MPI is used in connection with the gpu backend, the mpi installation needs to be **cuda-aware**
  - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
- - The library headers are compliant with the c++11 standard but we reserve the right to upgrade that in future updates
+ - The library headers are compliant with the c++14 standard but we reserve the right to upgrade that in future updates
 
 
