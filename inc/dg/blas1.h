@@ -55,7 +55,10 @@ For example
 dg::DVec two( 100,2), three(100,3);
 double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
 @endcode
- * @attention if one of the input vectors contains \c NaN then the behaviour is undefined and the function may throw
+ * @attention if one of the input vectors contains \c Inf or \c NaN or the
+ * product of the input numbers reaches \c Inf or \c Nan then the behaviour
+ * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
+ * dg::ISNSANE in that case
  * @note Our implementation guarantees binary reproducible results.
  * The sum is computed with infinite precision and the result is rounded
  * to the nearest double precision number.
@@ -88,11 +91,12 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 
 For example
 @code
-//Check if a vector contains NaN
+//Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
 thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNAN<double>());
+dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
 bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
  * @param x Left Container
  * @param init initial value of the reduction

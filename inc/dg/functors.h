@@ -271,18 +271,65 @@ struct MOD
     T m_m;
 
 };
+
 /**
- * @brief \f$ f(x) =\f$ \c std::isnan(x)
+ * @brief \f$ f(x) =\f$ \c !std::isfinite(x)
  *
- * Check for NaN
+ * return true if \c x is \c NaN or \c Inf
+@code
+//Check if a vector contains Inf or NaN
+thrust::device_vector<double> x( 100);
+thrust::device_vector<bool> boolvec ( 100, false);
+dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
+bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
+@endcode
  */
 template <class T>
-struct ISNAN
+struct ISNFINITE
 {
 #ifdef __CUDACC__
-    DG_DEVICE bool operator()(T x){return isnan(x);}
+    DG_DEVICE bool operator()(T x){ return !isfinite(x);}
 #else
-    bool operator()( T x){ return std::isnan(x);}
+    bool operator()( T x){ return !std::isfinite(x);}
+#endif
+};
+/**
+ * @brief \f$ f(x) =\begin{cases} \mathrm{true\ if}\ |x| > 10^{100}\\
+ * \mathrm{false\ else}
+ * \end{cases}\f$
+ *
+ * Also return true if \c x is \c NaN or \c Inf.
+ * The intention is to use this in the reduce function to debug code if
+ * you get an error message of Inf or Nan from the \c dot function
+@code
+//Check if a vector contains is sane
+thrust::device_vector<double> x( 100);
+thrust::device_vector<bool> boolvec ( 100, false);
+dg::blas1::transform( x, boolvec, dg::ISNSANE<double>());
+bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+std::cout << "x contains insane numbers "<<std::boolalpha<<hasnan<<"\n";
+@endcode
+ */
+template <class T>
+struct ISNSANE
+{
+#ifdef __CUDACC__
+    DG_DEVICE bool operator()(T x){
+        if( !isfinite(x))
+            return true;
+        if( x > 1e100 || x < -1e100)
+            return true;
+        return false;
+    }
+#else
+    bool operator()( T x){
+        if( !std::isfinite(x))
+            return true;
+        if( x > 1e100 || x < -1e100)
+            return true;
+        return false;
+    }
 #endif
 };
 

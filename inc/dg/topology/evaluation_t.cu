@@ -125,7 +125,12 @@ int main()
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
     std::cout << " Error norm of  1d integral function "<<norm<<"\n";
     // TEST if dot throws on NaN
+    std::cout << "TEST if dot throws on Inf or Nan:\n";
     dg::blas1::transform( x,x, dg::LN<double>());
+    thrust::device_vector<bool> boolvec ( 100, false);
+    dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
+    bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+    std::cout << "x contains Inf or Nan numbers "<<std::boolalpha<<hasnan<<"\n";
     try{
         dg::blas1::dot( x,x);
     }catch ( std::exception& e)
