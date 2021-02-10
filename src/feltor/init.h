@@ -127,6 +127,8 @@ HVec turbulent_bath(const Geometry& grid,
 }
 
 
+//actually we should always invert according to Markus
+//because the dG direct application is supraconvergent
 void init_ni(
     std::array<std::array<DVec,2>,2>& y0,
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& feltor,

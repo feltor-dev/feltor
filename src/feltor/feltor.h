@@ -696,6 +696,8 @@ template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
     const Container& src, Container& target, std::string initphi)
 {
+    //According to Markus we should actually always invert
+    //so we should reconsider this function
     // Ni = ne
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
