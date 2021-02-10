@@ -131,7 +131,7 @@ template<class ContainerTypeIn, class ContainerTypeOut>
 inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
     if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==(const ContainerTypeIn*)&target)
         return;
-    dg::blas1::subroutine( dg::equals(), target, source );
+    dg::blas1::subroutine( dg::equals(), source, target);
 }
 
 /*! @brief \f$ x = \alpha x\f$
@@ -301,12 +301,12 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         return;
     }
     if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x2, y );
+        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
         return;
     }
     if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
-        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, y );
+        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x1, y );
 
         return;
     }
@@ -419,7 +419,7 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 }
 
 /**
-* @brief \f$ z = \alpha x_1x_2 + \beta x_2y_2 + \gamma z\f$
+* @brief \f$ z = \alpha x_1y_1 + \beta x_2y_2 + \gamma z\f$
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
 * @copydoc hide_iterations
@@ -480,9 +480,9 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
     dg::blas1::subroutine( dg::Evaluate<dg::equals, UnaryOp>(dg::equals(),op), y, x);
 }
 
-/*! @brief \f$ f(y, g(x_0,x_1,...))\f$
+/*! @brief \f$ f(g(x_0,x_1,...), y)\f$
  *
- * This routine elementwise evaluates \f[ f(y_i , g(x_{0i}, x_{1i}, ...)) \f]
+ * This routine elementwise evaluates \f[ f(g(x_{0i}, x_{1i}, ...), y_i) \f]
  * @copydoc hide_iterations
  *
 @code
@@ -493,7 +493,7 @@ dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
 // result[i] = sin(M_PI/2.)*sin(3*M_PI/2.) = -1
 @endcode
- * @tparam BinarySubroutine Functor with signature: <tt> void operator()( value_type_y&, value_type_g) </tt> i.e. it writes into the first and reads from its (first and) second argument
+ * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @param y contains result

@@ -7,47 +7,47 @@ namespace dg{
 ///@addtogroup binary_operators
 ///@{
 
-///\f$ x=y\f$
+///\f$ y=x\f$
 struct equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1& out, T2 in) const
+DG_DEVICE void operator()( T1 in, T2& out) const
     {
         out = in;
     }
 };
-///\f$ x+=y\f$
+///\f$ y=y+x\f$
 struct plus_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1& out, T2 in) const
+DG_DEVICE void operator()( T1 in, T2& out) const
     {
         out += in;
     }
 };
-///\f$ x-=y\f$
+///\f$ y=y-x\f$
 struct minus_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1& out, T2 in) const
+DG_DEVICE void operator()( T1 in, T2& out) const
     {
         out -= in;
     }
 };
-///\f$ x*=y\f$
+///\f$ y=xy\f$
 struct times_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1& out, T2 in) const
+DG_DEVICE void operator()( T1 in, T2& out) const
     {
         out *= in;
     }
 };
-///\f$ x/=y\f$
+///\f$ y = y/x\f$
 struct divides_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1& out, T2 in) const
+DG_DEVICE void operator()( T1 in, T2& out) const
     {
         out /= in;
     }
@@ -176,7 +176,7 @@ struct Evaluate
         m_g( g) {}
     template< class T, class... Ts>
 DG_DEVICE void operator() ( T& y, Ts... xs){
-        m_f(y, m_g(xs...));
+        m_f(m_g(xs...), y);
     }
     private:
     BinarySub m_f;
@@ -209,7 +209,8 @@ DG_DEVICE
     T m_a;
 };
 
-/// \f$ y\leftarrow ax+by \f$
+///@brief \f$ y\leftarrow ax+by \f$
+///@ingroup binary_operators
 template<class T>
 struct Axpby
 {
@@ -218,6 +219,20 @@ DG_DEVICE
     void operator()( T x, T& y)const {
         T temp = y*m_b;
         y = DG_FMA( m_a, x, temp);
+    }
+    private:
+    T m_a, m_b;
+};
+///@brief \f$ y\leftarrow axy+by \f$
+///@ingroup binary_operators
+template<class T>
+struct AxyPby
+{
+    AxyPby( T a, T b): m_a(a), m_b(b){}
+DG_DEVICE
+    void operator()( T x, T& y)const {
+        T temp = y*m_b;
+        y = DG_FMA( m_a*x, y, temp);
     }
     private:
     T m_a, m_b;
@@ -244,13 +259,8 @@ template<class T>
 struct PointwiseDot
 {
     PointwiseDot( T a, T b, T g = (T)0): m_a(a), m_b(b), m_g(g) {}
-DG_DEVICE
-    void operator()( T x, T &y)const{
-        T temp = y*m_b;
-        y = DG_FMA( m_a*x, y, temp);
-    }
-DG_DEVICE
-    void operator()( T x, T y, T& z)const{
+    ///\f$ z = axy+bz \f$
+DG_DEVICE void operator()( T x, T y, T& z)const{
         T temp = z*m_b;
         z = DG_FMA( m_a*x, y, temp);
     }
