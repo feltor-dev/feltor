@@ -17,7 +17,6 @@
   */
 namespace dg
 {
-//citation missing in documentation
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
@@ -26,6 +25,9 @@ namespace dg
  * If \f$ \chi=1\f$, then the discretization conserves, mass, energy and enstrophy.
  * @snippet arakawa_t.cu function
  * @snippet arakawa_t.cu doxygen
+ * @note This is the algorithm published in
+ * <a href="https://doi.org/10.1016/j.cpc.2014.07.007">L. Einkemmer, M. Wiesenberger A conservative discontinuous Galerkin scheme for the 2D incompressible Navier-Stokes equations Computer Physics Communications 185, 2865-2873 (2014)</a>
+ * @sa A discussion of this and other advection schemes can also be found here https://mwiesenberger.github.io/advection
  * @copydoc hide_geometry_matrix_container
  * @ingroup arakawa
  */
