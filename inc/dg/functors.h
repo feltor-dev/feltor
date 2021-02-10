@@ -134,16 +134,18 @@ struct LN
 template < class T = double>
 struct SQRT
 {
-    /**
-     * @brief Square root
-     *
-     * @param x of x
-     *
-     * @return sqrt(x)
-     */
     DG_DEVICE T operator() (T x) const
     {
         return sqrt(x);
+    }
+};
+///@brief \f$ f(x) = \frac{1}{\sqrt{x}}\f$
+template < class T = double>
+struct InvSqrt
+{
+    DG_DEVICE T operator() (T x) const
+    {
+        return 1./sqrt(x);
     }
 };
 
@@ -152,12 +154,6 @@ struct SQRT
 template <class T = double>
 struct INVERT
 {
-    /**
-     * @brief Invert the given value
-     *
-     * @param x  the input
-     * @return  1/x
-     */
     DG_DEVICE T operator()( T x)const{ return 1./x;}
 };
 
@@ -273,7 +269,7 @@ struct MOD
 };
 
 /**
- * @brief \f$ f(x) =\f$ \c !std::isfinite(x)
+ * @brief \f$ f(x) = \mathrm{!std::isfinite(x)}\f$
  *
  * return true if \c x is \c NaN or \c Inf
 @code

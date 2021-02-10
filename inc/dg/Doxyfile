@@ -881,6 +881,21 @@ EXCLUDE                = topology/ell_interpolation.cuh \
                          backend/average_cpu.h \
                          backend/average_gpu.cuh \
                          backend/average_omp.h \
+                         backend/blas1_array.h \
+                         backend/blas1_cuda.cuh \
+                         backend/blas1_omp.h \
+                         backend/blas1_serial.h \
+                         backend/blas1_dispatch_mpi.h \
+                         backend/blas1_dispatch_scalar.h \
+                         backend/blas1_dispatch_shared.h \
+                         backend/blas1_dispatch_vector.h \
+                         backend/blas2_cusp.h \
+                         backend/blas2_dispatch_mpi.h \
+                         backend/blas2_dispatch_scalar.h \
+                         backend/blas2_dispatch_shared.h \
+                         backend/blas2_dispatch_vector.h \
+                         backend/blas2_selfmade.h \
+                         backend/blas2_sparseblockmat.h \
                          backend/config.h \
                          backend/predicate.h \
                          backend/sparseblockmat_gpu_kernels.cuh \

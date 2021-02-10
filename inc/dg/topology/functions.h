@@ -74,7 +74,5 @@ DG_DEVICE static inline float zero( float x, float y) {return 0.;}
 ///@brief \f$ f(x,y,z) = 0\f$
 DG_DEVICE static inline float zero( float x, float y, float z) {return 0.;}
 
-} //namespace dg
-
 ///@}
-
+} //namespace dg
