@@ -51,7 +51,7 @@ namespace dg
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in blas2::symv functions
  * and thus in a conjugate gradient solver.
- * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
+ * @note The constructors initialize \f$ \chi=g\f$ so that a negative laplacian operator
  * results
  * @note The inverse of \f$ \chi\f$ makes a good general purpose preconditioner
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
@@ -78,7 +78,7 @@ class Elliptic
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed 1 per default
+     * @note chi is assumed the metric per default
      */
     Elliptic( const Geometry& g, norm no = not_normed,
         direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
@@ -97,7 +97,7 @@ class Elliptic
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed 1 per default
+     * @note chi is assumed the metric per default
      */
     Elliptic( const Geometry& g, bc bcx, bc bcy,
         norm no = not_normed, direction dir = forward,
@@ -353,7 +353,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.
- * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
+ * @note The constructors initialize \f$ \chi=g\f$ so that a negative laplacian operator
  * results
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
@@ -380,7 +380,7 @@ class Elliptic3d
      * the direction of the z derivative is always \c dg::centered
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed 1 per default
+     * @note chi is assumed the metric per default
      */
     Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
         Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor, chi_weight_jump)

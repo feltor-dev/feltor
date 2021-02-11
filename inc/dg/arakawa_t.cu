@@ -103,6 +103,6 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
-    std::cout << "\nContinue with topology/average_t.cu !\n\n";
+    std::cout << "\nContinue with gradient_t.cu !\n\n";
     return 0;
 }
