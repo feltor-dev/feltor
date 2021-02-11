@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -186,6 +186,13 @@ int main(int argc, char** argv)
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     if(rank==0)std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
+    ///////////////////////////////////////////////////////////////////////
+    if(rank==0)std::cout << "TESTING VARIATION 3D\n";
+    dg::Gradient<Geometry, dg::MDMatrix, dg::MDVec> gradient( grid);
+    gradient.variation( 1., lhs, 0., jac);
+    dg::blas1::axpby( 1., variation, -1., jac);
+    result = dg::blas2::dot( jac, vol, jac);
+    if(rank==0)std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
 
     ////////////////////////////transform curvature components////////
     if(rank==0)std::cout << "TESTING CURVATURE 3D\n";

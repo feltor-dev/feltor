@@ -29,6 +29,7 @@
 #include "refined_elliptic.h"
 #include "arakawa.h"
 #include "advection.h"
+#include "gradient.h"
 #include "poisson.h"
 #include "simpsons.h"
 #include "topology/average.h"

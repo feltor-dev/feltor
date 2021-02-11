@@ -39,6 +39,7 @@ double variation3d( double x, double y, double z) {
         + dzphi3d(x,y,z)*dzphi3d(x,y,z)/x/x;
 }
 
+// There are more tests in geometries/geometry_advection_(mpi)b.cu
 int main()
 {
     std::cout<<"This program tests the execution of the gradient and variation scheme! A test is passed if the number in the second column shows exactly zero!\n";

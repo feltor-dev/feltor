@@ -90,15 +90,10 @@ class Gradient
         *this = Gradient( std::forward<Params>( ps)...);
     }
 
-    /**
-     * @copydoc Gradient3d::set_chi(const SparseTensor<ContainerType0>&)
-     * @note the 3d parts in \c tau will be ignored
-     */
-    template<class ContainerType0>
-    void set_chi( const SparseTensor<ContainerType0>& tau)
-    {
-        m_chi = SparseTensor<Container>(tau);
-    }
+    ///@copydoc Gradient3d::chi()
+    SparseTensor<Container>& chi( ){return m_chi;}
+    ///@brief Access the Chi tensor
+    const SparseTensor<Container>& chi( ) const{return m_chi;}
 
     /**
      * @brief \f$ \vec v=\chi \nabla f \f$
@@ -232,17 +227,10 @@ class Gradient3d
         *this = Gradient3d( std::forward<Params>( ps)...);
     }
 
-    /**
-     * @brief Change the Chi tensor
-     *
-     * @param tau The new tensor \f$\chi\f$
-     * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
-     */
-    template<class ContainerType0>
-    void set_chi( const SparseTensor<ContainerType0>& tau)
-    {
-        m_chi = SparseTensor<Container>(tau);
-    }
+    ///@brief Access the Chi tensor
+    SparseTensor<Container>& chi( ){return m_chi;}
+    ///@brief Access the Chi tensor
+    const SparseTensor<Container>& chi( ) const{return m_chi;}
 
     /**
      * @brief Restrict the problem to the first 2 dimensions
