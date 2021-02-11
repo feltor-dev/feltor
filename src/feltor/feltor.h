@@ -193,21 +193,11 @@ struct ComputeChi{
 };
 struct ComputePsi{
     DG_DEVICE
-    void operator()( double& gradPhi2, double dxPhi, double dyPhi,
-        double dzPhi, double& HdxPhi, double HdyPhi, double HdzPhi
-        ) const{
-        gradPhi2 = (dxPhi*HdxPhi + dyPhi*HdyPhi + dzPhi*HdzPhi);
-    }
-    DG_DEVICE
-    void operator()( double& GammaPhi, double dxPhi, double dyPhi,
-        double dzPhi, double& HdxPhi, double HdyPhi, double HdzPhi,
-        double binv) const{
+    void operator()( double& GammaPhi, double& uE2, double binv) const{
         //u_E^2
-        this->operator()(
-            HdxPhi, dxPhi, dyPhi, dzPhi, HdxPhi, HdyPhi , HdzPhi);
-        HdxPhi   = binv*binv*HdxPhi;
+        uE2   = binv*binv*uE2;
         //Psi
-        GammaPhi = GammaPhi - 0.5*HdxPhi;
+        GammaPhi = GammaPhi - 0.5*uE2;
     }
 };
 //struct ComputeLogN{
@@ -805,10 +795,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
     dg::blas2::symv( m_dx_P, m_phi[0], m_dP[0][0]);
     dg::blas2::symv( m_dy_P, m_phi[0], m_dP[0][1]);
     if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[0], m_dP[0][2]);
-    dg::tensor::multiply3d( m_hh, //grad_perp
-        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_UE2, m_temp0, m_temp1);
-    dg::blas1::subroutine( routines::ComputePsi(), m_phi[1],
-        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_UE2, m_temp0, m_temp1, m_binv);
+    dg::tensor::scalar_product3d( 1.,
+        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, //grad_perp
+        m_dP[0][0], m_dP[0][1], m_dP[0][2], 0., m_UE2);
+    dg::blas1::subroutine( routines::ComputePsi(), m_phi[1], m_UE2, m_binv);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
