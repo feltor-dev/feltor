@@ -521,8 +521,8 @@ struct GeneralComm : public aCommunicator<Vector>
             get_execution_policy<Vector>(),
             this->local_size(),
             dg::equals(),
-            values,
-            0
+            0,
+            values
         );
         thrust::scatter( m_store.data().begin(), m_store.data().end(), m_scatterMap.begin(), values_ptr);
     }
