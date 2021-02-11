@@ -17,7 +17,7 @@ namespace dg
 {
 
 /**
- * @brief The upwind advection operator \f$ y =  \alpha \vec v\cdot\nabla f + \beta y \f$
+ * @brief Upwind discretization of advection operator \f$ \vec v\cdot\nabla f\f$
  *
  * This is the upwind scheme where a backward derivative is used if v is
  * positive and a forward derivative else

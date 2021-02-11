@@ -13,18 +13,21 @@
  *         time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
+ *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x\cdot y\f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
+ *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M \cdot y \f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
+ *              \f$ v^i = T^{ij} w_j\f$
  *
  *              Although a tensor needs a topology to be well-defined mathematically,
  *              we do not need a grid to perform basic operations computationally.
@@ -45,17 +48,18 @@
  *             the chapter \ref mpi_backend in the introduction for more
  *             details.
  *     @defgroup dispatch The tag dispatch system
- *           Read the chapter \ref dispatch in the introduction.
+ *           Implementation details of \ref dispatch
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
- *      Algorithms that make use only of blas level 1 and 2 functions
+ *      Based on blas1 and blas2 functions
  * @{
  *     @defgroup time Time integrators
+ *      \f$ \dot y = f(y,t) \f$
  *     @{
  *          @defgroup time_utils Utilities for time integration
  *     @}
  *     @defgroup invert Linear and nonlinear solvers
- *     @defgroup root Root finding
+ *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
  * @}
  * @defgroup geo Level 3: Topology and Geometry
  * @{
@@ -103,13 +107,17 @@
  *      These routines make use of both the basic operations as well as the
  *      interfaces defined in the Geometry section.
  * @{
- *     @defgroup arakawa Discretization of Poisson bracket
- *     @defgroup matrixoperators Elliptic and Helmholtz operators
- *     @defgroup multigrid Advanced matrix inversion
+ *     @defgroup arakawa Advection terms
+ *          \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
+ *     @defgroup matrixoperators Matrix operators
+ *     Gradient \f$ \chi\cdot\nabla f\f$, Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
+ *     @defgroup multigrid Multigrid matrix inversion
+ *     \f$ A x = b\f$
  * @}
  * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
+ *          t.tic() and T.toc()
  *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
  *     @{
  *          @defgroup basics Simple

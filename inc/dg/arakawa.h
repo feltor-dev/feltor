@@ -18,9 +18,9 @@
 namespace dg
 {
 /**
- * @brief X-space generalized version of Arakawa's scheme
+ * @brief Arakawa's scheme for %Poisson bracket \f$ \{ f,g\} \f$
  *
- * Computes \f[ [f,g] := \chi/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
+ * Computes \f[ \{f,g\} := \chi/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
  * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space and \f$ \chi\f$ is an optional factor.
  * If \f$ \chi=1\f$, then the discretization conserves, mass, energy and enstrophy.
  * @snippet arakawa_t.cu function

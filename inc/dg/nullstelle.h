@@ -14,7 +14,7 @@ namespace dg{
 
 /*! @brief Exception class, that stores boundaries for 1D root finding
  *
- * @ingroup root
+ * @ingroup misc
  */
 class NoRoot1d: public std::exception
 {
@@ -41,9 +41,10 @@ class NoRoot1d: public std::exception
     char const* what() const throw(){ return "There is no root!";}
 };
 
-/*! @brief Find a root of a 1d function in given boundaries using bisection
+/*! @brief Find a root of a 1d function \f$ f(x) = 0\f$
  *
- * @ingroup root
+ * in given boundaries using bisection
+ * @ingroup invert
  * It is assumed that a sign change occurs at the root.
  * Function jumps closer to the root by checking the sign.
  * \tparam UnaryOp unary function operator
