@@ -82,6 +82,7 @@ struct Shu
     std::vector<dg::Elliptic<Geometry, Matrix, Container>> m_multi_laplaceM;
     dg::Elliptic<Geometry, Matrix,Container> m_LaplacianM;
     dg::ArakawaX<Geometry, Matrix, Container> m_arakawa;
+    dg::Advection<Geometry, Matrix, Container> m_adv;
     dg::Extrapolation<Container> m_old_psi;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     dg::MultiMatrix<Matrix,Container> m_inter, m_project;
@@ -141,9 +142,13 @@ Shu< Geometry, Matrix, Container>::Shu(
         m_fine_temp[1] = dg::evaluate( dg::zero, fine_grid);
         m_fine_temp[2] = dg::evaluate( dg::zero, fine_grid);
         m_arakawa.construct( fine_grid);
+        m_adv.construct( fine_grid);
     }
     else
+    {
         m_arakawa.construct( g);
+        m_adv.construct(g);
+    }
     m_centered[0] = dg::create::dx( g, g.bcx(), dg::centered);
     m_centered[1] = dg::create::dy( g, g.bcy(), dg::centered);
     m_forward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::forward);
@@ -223,17 +228,12 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
         }
         else if( "upwind-advection" == m_advection)
         {
-            dg::blas1::copy( 0., yp);
             //  - v_x dx n
-            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_v); //v_x
-            dg::blas2::symv( m_forward[0], y, m_temp[1]);
-            dg::blas2::symv( m_backward[0], y, m_temp[2]);
-            dg::blas1::evaluate( yp, dg::minus_equals(), dg::UpwindProduct(), m_v, m_temp[2], m_temp[1]);
+            dg::blas2::symv( -1., m_centered[1], m_psi, 0., m_temp[0]); //v_x
+
             //  - v_y dy n
-            dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_v); //v_y
-            dg::blas2::symv( m_forward[1], y, m_temp[1]);
-            dg::blas2::symv( m_backward[1], y, m_temp[2]);
-            dg::blas1::evaluate( yp, dg::minus_equals(), dg::UpwindProduct(), m_v, m_temp[2], m_temp[1]);
+            dg::blas2::symv( 1., m_centered[0], m_psi, 0., m_temp[1]); //v_y
+            m_adv.upwind( -1., m_temp[0], m_temp[1], y, 0., yp);
         }
         else if( "centered-advection" == m_advection)
         {
