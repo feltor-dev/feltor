@@ -120,6 +120,7 @@ private:
     //matrices and solvers
     Helmholtz< Geometry, Matrix, container > gamma1;
     ArakawaX< Geometry, Matrix, container> arakawa; 
+    Gradient< Geometry, Matrix, container> gradient; 
     dg::Elliptic< Geometry, Matrix, container > pol, laplaceM; 
     dg::Invert<container> invert_pol, invert_invgamma;
 
@@ -132,19 +133,20 @@ private:
 
 template< class Geometry, class Matrix, class container>
 ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Parameters p) :
-    chi( evaluate( dg::zero, grid )), omega(chi),  
+    chi( evaluate( dg::zero, grid )), omega(chi),
     binv( evaluate( LinearX( p.kappa, 1.), grid)),
     phi( 3, chi), dyphi( phi), ype(phi),
     dyy( 3, chi), lny(dyy), lapy( dyy),
     gamma_n( 2, chi),
     gamma1(  grid, -0.5*p.tau[1]),
-    arakawa( grid), 
-    pol(     grid, not_normed, centered), 
+    arakawa( grid),
+    gradient( grid),
+    pol(     grid, not_normed, centered),
     laplaceM( grid, normed, centered),
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)), p(p)
-    { 
+    {
     }
 
 
@@ -155,12 +157,10 @@ const container& ToeflI<G, M, container>::compute_psi( const container& potentia
     gamma1.alpha() = -0.5*p.tau[idx]*p.mu[idx];
     invert_invgamma( gamma1, phi[idx], potential);
 
-    arakawa.variation(potential, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
+    gradient.variation(binv,potential, omega); // u_E^2
 
     dg::blas1::axpby( 1., phi[idx], -0.5*p.mu[idx], omega, phi[idx]);   //psi  Gamma phi - 0.5 u_E^2
-    return phi[idx];    
+    return phi[idx];
 }
 
 

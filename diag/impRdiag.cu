@@ -122,6 +122,7 @@ int main( int argc, char* argv[])
   std::vector<dg::HVec> npe_h(3, dg::evaluate(dg::zero, g2d));
   //eval field
   dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa(g2d);
+  dg::Gradient< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient(g2d);
   //eval particle densities
   const dg::DVec binv( dg::evaluate(dg::LinearX(p.kappa, 1.), g2d));
   dg::DVec chi = dg::evaluate(dg::zero, g2d);
@@ -373,7 +374,7 @@ int main( int argc, char* argv[])
       m[j]++;
     }
     //field
-    arakawa.variation(field[0], helper);
+    gradient.variation(field[0], helper);
     double energy[5] = {};
     energy[0] = dg::blas2::dot(lnn[0], w2d, npe[0]);
     energy[1] = p.a[1]*p.tau[1]*dg::blas2::dot(npe[1], w2d, lnn[1]);

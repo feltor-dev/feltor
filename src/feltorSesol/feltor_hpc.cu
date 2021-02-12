@@ -169,7 +169,7 @@ int main( int argc, char* argv[])
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
     //dim_ids_probe[1] = 
-    file :: define_dimension(ncid, &dim_ids_probe[1],  grid_probe, "X_probe" );
+    dg::file::define_dimension(ncid, &dim_ids_probe[1],  grid_probe, "X_probe" );
     for(unsigned i = 0; i < varname_probes.size(); i++)
     {
         err = nc_def_var(ncid, varname_probes[i].data(), NC_DOUBLE, 2, dim_ids_probe, &ID_probes[i]);

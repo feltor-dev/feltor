@@ -62,6 +62,7 @@ int main( int argc, char* argv[])
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
+    dg::Gradient<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> gradient(g2d, p.bc_x, p.bc_y);
 
 
     //2d field
@@ -185,9 +186,9 @@ int main( int argc, char* argv[])
             polavg(logn[1],temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
             polavg(phi,temp1d,false);
-            poisson.variationRHS(phi,temp2);
+            gradient.variation(phi,temp2);
             double T_perp = 0.5*dg::blas2::dot( npe[1], w2d, temp2);
-            poisson.variationRHS(temp,temp2);
+            gradient.variation(temp,temp2);
             double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
             double T_perpratio = T_perp_zonal/T_perp;
             dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
