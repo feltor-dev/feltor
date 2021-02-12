@@ -13,9 +13,8 @@
 #include <fstream>
 #include <sstream>
 
-//using namespace std;
-/* 
- * Class that takes care of probe output
+/**
+ * @brief Class that takes care of probe output
  * 
  * Upon instantiation, generate N probesm positioned in equidistant radial
  * positions at the vertical center of the simulation domain:
@@ -25,7 +24,6 @@
  * Creates files probe_[0-9][0-9][0-9].dat in which to write output
  *
  */
-
 template<class IMatrix, class Matrix, class container = thrust::device_vector<double> >
 struct probes
 {
@@ -70,8 +68,8 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
     dg::blas1::transfer( y_c, t2);
     dg::blas2::transfer( dg::create::interpolation( t1, t2, g, dg::NEU), probe_interp);
     assert(x_coords.size () == y_coords.size());
-    ofstream of;
-    stringstream fn;
+    std::ofstream of;
+    std::stringstream fn;
 
     /* Create datafiles for probe data */
     for(int n = 0; n < num_probes; n++)
@@ -83,7 +81,7 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
         of << x_coords[n] << "\t" << y_coords[n] << "\n";
         of.close();
 
-        fn.str(string(""));
+        fn.str(std::string(""));
     }
 
     /* Create datafiles for radial profiles */
@@ -105,19 +103,19 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
 template<class IMatrix, class Matrix, class container>
 void probes<IMatrix, Matrix, container> :: profiles(double time, container& npe, container& phi)
 {
-    cout << "Computing profiles " << std::endl;
+    std::cout << "Computing profiles " << std::endl;
 
     static container prof_phi(Nx);
     static container prof_ne(Nx);
 
-    ofstream of_ne;
-    ofstream of_phi;
+    std::ofstream of_ne;
+    std::ofstream of_phi;
 
     pol_avg(phi, prof_phi,false);
     pol_avg(npe, prof_ne,false);
 
-    of_ne.open("ne_prof.dat", ios::trunc);
-    of_phi.open("phi_prof.dat", ios::trunc);
+    of_ne.open("ne_prof.dat", std::ios::trunc);
+    of_phi.open("phi_prof.dat", std::ios::trunc);
     of_ne << time << "\n";
     of_phi << time << "\n";
 
@@ -157,7 +155,7 @@ void probes<IMatrix, Matrix, container> :: fluxes(double time, container& npe, c
     // Compute radial flux
     dg::blas2::gemv(probe_interp, phi_y, ip_phi_y);
 
-    ofstream of;
+    std::ofstream of;
 
     for(int n = 0; n < num_probes; n++)
     {
@@ -170,7 +168,7 @@ void probes<IMatrix, Matrix, container> :: fluxes(double time, container& npe, c
         of << ip_n[n] << "\t";
         of << ip_phi[n] << "\t";
         of << ip_gamma_n;
-        of << endl;
+        of << std::endl;
         of.close();
     }
 
