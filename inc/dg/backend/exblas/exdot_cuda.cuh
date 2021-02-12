@@ -19,6 +19,8 @@
 #include "thrust/device_vector.h"
 #include "accumulate.cuh"
 
+namespace dg
+{
 namespace exblas{
 ///@cond
 namespace gpu{
@@ -396,3 +398,4 @@ void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, Po
 }
 
 }//namespace exblas
+} //namespace dg

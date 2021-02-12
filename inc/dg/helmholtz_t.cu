@@ -65,7 +65,7 @@ int main()
 
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "ALL METHODS SHOULD DO THE SAME!\n";
-    exblas::udouble res;
+    dg::exblas::udouble res;
     res.d = sqrt( dg::blas2::dot( w2d, x));
     std::cout << "error1 " << res.d<<"\t"<<res.i<<std::endl;
     res.d = sqrt( dg::blas2::dot( w2d, x_));

@@ -26,6 +26,8 @@
 #include "ExSUM.FPE.hpp"
 #include <omp.h>
 
+namespace dg
+{
 namespace exblas{
 ///@cond
 namespace cpu{
@@ -299,3 +301,4 @@ void exdot_omp(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, Po
 }
 
 }//namespace exblas
+} //namespace dg

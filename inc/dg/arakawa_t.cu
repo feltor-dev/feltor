@@ -81,7 +81,7 @@ int main()
     //![doxygen]
 
     int64_t binary[] = {4358628400772939776,4360428067382886400,4362477496701026304,4562674804459845067,4552797036354693398};
-    exblas::udouble res;
+    dg::exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
     //dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);

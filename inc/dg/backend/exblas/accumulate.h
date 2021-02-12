@@ -20,6 +20,8 @@
 #include "mylibm.hpp"
 //this file has a direct correspondance to gpu code accumulate.cuh
 
+namespace dg
+{
 namespace exblas {
 namespace cpu {
 ///@cond
@@ -247,3 +249,4 @@ static inline double Round( int64_t * accumulator) {
 
 }//namespace cpu
 } //namespace exblas
+} //namespace dg

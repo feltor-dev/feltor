@@ -72,7 +72,7 @@ int main()
 
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     norm = sqrt(normerr/norm); res.d = norm;
     std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
     const dg::DVec deriv = dg::evaluate( derivative, grid);

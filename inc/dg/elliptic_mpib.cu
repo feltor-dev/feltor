@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
 
     value_type normerr = dg::blas2::dot( w3d, error);
     value_type norm = dg::blas2::dot( w3d, solution);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     norm = sqrt(normerr/norm); res.d = norm;
     if(rank==0)std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);

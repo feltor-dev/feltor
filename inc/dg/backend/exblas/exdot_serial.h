@@ -25,7 +25,23 @@
 #include "accumulate.h"
 #include "ExSUM.FPE.hpp"
 
+namespace dg
+{
 namespace exblas{
+
+/*! @brief Utility union to display all bits of a double (using <a href="https://en.wikipedia.org/wiki/Type_punning">type-punning</a>)
+@code
+double result; // = ...
+udouble res;
+res.d = result;
+std::cout << "Result as double "<<res.d<<"  as integer "<<res.i<<std::endl;
+@endcode
+*/
+union udouble{
+    double d; //!< a double
+    int64_t i; //!< a 64 bit integer
+};
+
 ///@cond
 namespace cpu{
 
@@ -186,3 +202,4 @@ void exdot_cpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, Po
 
 
 }//namespace exblas
+} //namespace dg

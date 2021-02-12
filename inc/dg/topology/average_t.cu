@@ -29,7 +29,7 @@ int main()
     dg::DVec solution = dg::evaluate( pol_average, gx);
     dg::blas1::axpby( 1., solution, -1., average_y);
     int64_t binary[] = {4406193765905047925,4395311848786989976};
-    exblas::udouble res;
+    dg::exblas::udouble res;
     res.d = sqrt( dg::blas2::dot( average_y, w1d, average_y));
     std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
     std::cout << "Averaging x ... \n";

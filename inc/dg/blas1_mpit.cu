@@ -37,7 +37,7 @@ int main( int argc, char* argv[])
     MVec v3 = dg::evaluate( five5, g);
     MVec v4 = dg::evaluate( four4, g), v5(v4);
     if(rank==0)std::cout << "A TEST IS PASSED IF THE RESULT IS ZERO.\n";
-    exblas::udouble ud;
+    dg::exblas::udouble ud;
     dg::blas1::scal( v3, 3e-10); ud.d = v3.data()[0];
     if(rank==0)std::cout << "scal (x=ax)           "<<ud.i-4474825110624711575<<std::endl;
     dg::blas1::plus( v3, 3e-10); ud.d = v3.data()[0];

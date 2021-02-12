@@ -65,7 +65,7 @@ int main()
     gradient.variation( ph, va);
 
     int64_t binary[] = {4500635718861276907,4487444521638156650,4499885861996435701};
-    exblas::udouble res;
+    dg::exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
 
     dg::blas1::axpby( 1., phx, -1., dxph);
@@ -106,7 +106,7 @@ int main()
     gradient3d.variation( ph3d, va3d);
 
     int64_t binary3d[] = {4504451755369532568,4491224193368827475,4549042274897523598,4550331496568322612};
-    exblas::udouble res3d;
+    dg::exblas::udouble res3d;
     dg::DVec w3d = dg::create::weights( grid3d);
 
     dg::blas1::axpby( 1., phx3d, -1., dxph3d);

@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     const dg::MDVec w2d = dg::construct<dg::MDVec>(dg::create::weights(g2d));
     const dg::fMDVec wf2d = dg::construct<dg::fMDVec>(dg::create::weights(gf2d));
     const dg::MDVec w3d = dg::construct<dg::MDVec>(dg::create::weights(g3d));
-    exblas::udouble res;
+    dg::exblas::udouble res;
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
     if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823280491526356992<< "\n";

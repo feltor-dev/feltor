@@ -61,7 +61,7 @@ int main()
     const dg::DVec w2d = dg::construct<dg::DVec>( dg::create::weights( g2d));
     const dg::fDVec wf2d = dg::construct<dg::fDVec>( dg::create::weights( gf2d));
     const dg::DVec w3d = dg::construct<dg::DVec>( dg::create::weights( g3d));
-    exblas::udouble res;
+    dg::exblas::udouble res;
 
     double integral = dg::blas1::dot( w1d, func1d); res.d = integral;
     std::cout << "1D integral               "<<std::setw(6)<<integral <<"\t" << res.i - 4616944842743393935  << "\n";

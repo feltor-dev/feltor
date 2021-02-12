@@ -102,7 +102,7 @@ int main()
     const std::array<double,2> sol = solution(T,nu);
     const double norm_sol = dg::blas1::dot( sol, sol);
     double time = 0.;
-    exblas::udouble res;
+    dg::exblas::udouble res;
     std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
     std::vector<std::string> ex_names{
     "AB-1-1", "AB-2-2", "AB-3-3", "AB-4-4", "AB-5-5",

@@ -57,7 +57,7 @@ int main()
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     std::cout << std::scientific;
     res.d = dg::blas2::dot( eins, w2d, jac);
     std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";

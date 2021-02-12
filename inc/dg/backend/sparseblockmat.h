@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <thrust/host_vector.h>
-#include "exblas/config.h"
+#include "exblas/exdot_serial.h"
 #include "config.h"
 #include "exceptions.h"
 #include "tensor_traits.h"
@@ -279,7 +279,7 @@ void EllSparseBlockMat<T>::display( std::ostream& os, bool show_data ) const
         for( unsigned i=0; i<data.size()/n/n; i++)
             for(unsigned k=0; k<n*n; k++)
             {
-                exblas::udouble res;
+                dg::exblas::udouble res;
                 res.d = data[i*n*n+k];
                 os << "idx "<<i<<" "<<res.d <<"\t"<<res.i<<"\n";
             }
@@ -306,7 +306,7 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) c
         for( unsigned i=0; i<data.size()/n/n; i++)
             for(unsigned k=0; k<n*n; k++)
             {
-                exblas::udouble res;
+                dg::exblas::udouble res;
                 res.d = data[i*n*n+k];
                 os << "idx "<<i<<" "<<res.d <<"\t"<<res.i<<"\n";
             }

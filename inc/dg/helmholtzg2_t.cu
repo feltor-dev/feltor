@@ -61,7 +61,7 @@ int main()
             throw dg::Fail( eps);
 
     dg::blas1::axpby( 1., sol, -1., x_);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     res.d = sqrt( dg::blas2::dot( w2d, x_));
 
     std::cout << "number of iterations:  "<<number<<std::endl;
