@@ -192,7 +192,7 @@ int main(int argc, char** argv)
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING VARIATION\n";
     dg::Gradient<dg::aGeometry2d, dg::DMatrix, dg::DVec> gradient( grid);
-    gradient.variation( 1., lhs, 0., jac);
+    gradient.variation( lhs, jac);
     dg::blas1::axpby( 1., variation, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
