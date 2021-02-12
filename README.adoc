@@ -69,8 +69,8 @@ ____
 |=======================================================================
 |    | Minimum system requirements  | Recommended system requirements
 | *CPU*     | Any         |support for AVX and FMA instruction set
-| *Compiler*| gcc-4.9 or msvc-15 or icc-15.0 (C{plus}{plus}-14 standard)| OpenMP-4 support, avx, fma instruction set flags
-| *GPU*     | - | NVidia GPU with compute-capability > 6 and nvcc-8.0
+| *Compiler*| gcc-5.1 or msvc-15 or icc-17.0 (C{plus}{plus}-14 standard)| gcc-9.3, OpenMP-4 support, avx, fma instruction set flags
+| *GPU*     | - | NVidia GPU with compute-capability > 6 and nvcc-11.0
 | *MPI*     | - | mpi installation compatible with compiler (must be cuda-aware in case hybrid MPI+GPU is the target system)
 |=======================================================================
 ____

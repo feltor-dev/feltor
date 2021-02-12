@@ -20,7 +20,7 @@ Your machine specific config file (e.g. feltor/config/your-machine.mk) should ha
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |
 | NVCCFLAGS | -std=c++14  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
-| NVCCARCH  | -arch sm_35                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
+| NVCCARCH  | -arch sm_61                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
@@ -40,17 +40,17 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 
 ### Examples
 
-The **device** variable should be, the **OPT** and the **NVCCARCH** variables can be specified on the command line: 
+The **device** variable should be, the **OPT** and the **NVCCARCH** variables can be specified on the command line:
 
 ```shell
 #Compile using nvcc for a Tesla K40:
-make blas_b device=gpu NVCCARCH='-arch sm_35'
+make blas_b device=gpu NVCCARCH='-arch sm_61'
 
 #Compile for OpenMP using -O2:
 make blas_b device=omp OPT=-O2
 
 #Hybrid MPI+OpenMP program for the Xeon Phi architecture:
-make blas_mpib device=mic 
+make blas_mpib device=mic
 
 #Hybrid MPI+GPU program for the Tesla P100 GPU, host code with -O2:
 make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
