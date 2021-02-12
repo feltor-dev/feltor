@@ -1167,14 +1167,14 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"SSPRK-5-3", SSPRK_5_3},
     {"SSPRK-5-4", SSPRK_5_4},
 };
-enum tableau_identifier str2tableau( std::string name)
+static inline enum tableau_identifier str2tableau( std::string name)
 {
     if( str2id.find(name) == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Tableau "<<name<<" not found!");
     else
         return str2id[name];
 }
-std::string tableau2str( enum tableau_identifier id)
+static inline std::string tableau2str( enum tableau_identifier id)
 {
     for( auto name: str2id)
     {

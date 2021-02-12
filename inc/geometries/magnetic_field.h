@@ -191,14 +191,14 @@ struct TokamakMagneticField
 };
 
 ///@cond
-CylindricalFunctorsLvl1 periodify( const CylindricalFunctorsLvl1& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
+static inline CylindricalFunctorsLvl1 periodify( const CylindricalFunctorsLvl1& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
 {
     return CylindricalFunctorsLvl1(
             Periodify( in.f(),   R0, R1, Z0, Z1, bcx, bcy),
             Periodify( in.dfx(), R0, R1, Z0, Z1, inverse(bcx), bcy),
             Periodify( in.dfy(), R0, R1, Z0, Z1, bcx, inverse(bcy)));
 }
-CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
+static inline CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
 {
     return CylindricalFunctorsLvl2(
             Periodify( in.f(),   R0, R1, Z0, Z1, bcx, bcy),
@@ -224,7 +224,7 @@ CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& in, double R0,
  *
  * @return new periodified magnetic field
  */
-TokamakMagneticField periodify( const TokamakMagneticField& mag, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy)
+static inline TokamakMagneticField periodify( const TokamakMagneticField& mag, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy)
 {
     return TokamakMagneticField( mag.R0(),
             periodify( mag.get_psip(), R0, R1, Z0, Z1, bcx, bcy),
