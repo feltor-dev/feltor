@@ -13,14 +13,14 @@
  *         time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
- *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x\cdot y\f$
+ *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
- *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M \cdot y \f$
+ *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
@@ -51,7 +51,6 @@
  *           Implementation details of \ref dispatch
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
- *      Based on blas1 and blas2 functions
  * @{
  *     @defgroup time Time integrators
  *      \f$ \dot y = f(y,t) \f$
@@ -70,6 +69,7 @@
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
+ *          \f$ f_i = f(x_i) \f$
  *
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -84,9 +84,11 @@
  *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives
+ *           \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
+ *          \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
@@ -97,7 +99,9 @@
  *     @{
  *         @defgroup basicgeometry Geometry base classes
  *         @defgroup pullback pullback and pushforward
+ *          \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
+ *           \f$ \sqrt{g} \f$
  *         @defgroup generators Grid Generator classes
  *     @}
  *     @defgroup gridtypes Useful Typedefs
@@ -132,10 +136,10 @@
  *              Binary subroutines for the dg::blas1::evaluate function
  *
  *          @defgroup variadic_evaluates blas1::evaluate variadic subroutines
- *              Functors with an arbitrary number of arguments to use in the dg::blas1::evaluate function
+ *              Functors to use in the dg::blas1::evaluate function
  *
  *          @defgroup variadic_subroutines blas1::subroutine subroutines
- *              Functors with a variable number of arguments for use in the dg::blas1::subroutine functions
+ *              Functors to use in the dg::blas1::subroutine functions
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *

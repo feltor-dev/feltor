@@ -85,9 +85,6 @@ struct Full
 };
 
 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
-
 //const unsigned NT = (unsigned)(nu*T*n*n*N*N/0.01/lx/lx);
 
 int main()
@@ -105,7 +102,6 @@ int main()
     const std::array<double,2> sol = solution(T,nu);
     const double norm_sol = dg::blas1::dot( sol, sol);
     double time = 0.;
-    std::array<double,2> error( sol);
     exblas::udouble res;
     std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
     std::vector<std::string> ex_names{

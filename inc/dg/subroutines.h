@@ -11,45 +11,45 @@ namespace dg{
 struct equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1 in, T2& out) const
+DG_DEVICE void operator()( T1 x, T2& y) const
     {
-        out = in;
+        y = x;
     }
 };
 ///\f$ y=y+x\f$
 struct plus_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1 in, T2& out) const
+DG_DEVICE void operator()( T1 x, T2& y) const
     {
-        out += in;
+        y += x;
     }
 };
 ///\f$ y=y-x\f$
 struct minus_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1 in, T2& out) const
+DG_DEVICE void operator()( T1 x, T2& y) const
     {
-        out -= in;
+        y -= x;
     }
 };
 ///\f$ y=xy\f$
 struct times_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1 in, T2& out) const
+DG_DEVICE void operator()( T1 x, T2& y) const
     {
-        out *= in;
+        y *= x;
     }
 };
 ///\f$ y = y/x\f$
 struct divides_equals
 {
     template< class T1, class T2>
-DG_DEVICE void operator()( T1 in, T2& out) const
+DG_DEVICE void operator()( T1 x, T2& y) const
     {
-        out /= in;
+        y /= x;
     }
 };
 ///@}

@@ -19,7 +19,7 @@ namespace dg
 {
 
 /**
- * @brief A 2d negative elliptic differential operator
+ * @brief A 2d negative elliptic differential operator \f$ -\nabla \cdot ( \chi \nabla ) \f$
  *
  * @ingroup matrixoperators
  *
@@ -323,7 +323,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
 
 //Elliptic3d is tested in inc/geometries/elliptic3d_t.cu
 /**
- * @brief A 3d negative elliptic differential operator
+ * @brief A 3d negative elliptic differential operator \f$ -\nabla \cdot ( \chi \nabla ) \f$
  *
  * @ingroup matrixoperators
  *

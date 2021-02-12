@@ -245,41 +245,9 @@ void ImExMultistep<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, va
 }
 ///@endcond
 
-/** @brief Deprecated  (use ImExMultistep and select "Karniadakis" from the multistep tableaus)
-* @ingroup time
-* @sa dg::ImExMultistep
-*/
-template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
-struct Karniadakis
-{
-    using value_type = get_value_type<ContainerType>;
-    using container_type = ContainerType;
-    Karniadakis(){}
-    template<class ...SolverParams>
-    Karniadakis( SolverParams&& ...ps): m_imex( "Karniadakis", std::forward<SolverParams> (ps)...) { }
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        *this = Karniadakis( std::forward<Params>( ps)...);
-    }
-    const ContainerType& copyable()const{ return m_imex.copyable();}
-    SolverType& solver() { return m_imex.solver();}
-    const SolverType& solver() const { return m_imex.solver();}
-    template< class Explicit, class Implicit>
-    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt){
-        m_imex.init( ex, im, t0, u0, dt);
-    }
-    template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u){
-        m_imex.step( ex, im, t, u);
-    }
-  private:
-    ImExMultistep<ContainerType, SolverType> m_imex;
-};
-
 
 /**
-* @brief Implicit multistep time-integration with Limiter/Filter
+* @brief EXPERIMENTAL: Implicit multistep time-integration with Limiter/Filter
 * \f[
 * \begin{align}
     \tilde v &= \sum_{i=0}^{s-1} a_i v^{n-i} + \Delta t \sum_{i=1}^{s} c_i\hat I(t^{n+1-i}, v^{n+1-i}) + \Delta t c_{0} \hat I (t + \Delta t, \tilde v) \\
@@ -547,7 +515,7 @@ struct ImplicitMultistep
 
 
 /**
-* @brief General explicit linear multistep time-integration with Limiter / Filter
+* @brief EXPERIMENTAL: General explicit linear multistep time-integration with Limiter / Filter
 * \f[
 * \begin{align}
     \tilde v &= \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right) \\
@@ -793,5 +761,38 @@ struct ExplicitMultistep
   private:
     FilteredExplicitMultistep<ContainerType> m_fem;
 };
+
+/** @brief DEPRECATED  (use ImExMultistep and select "Karniadakis" from the multistep tableaus)
+* @ingroup time
+* @sa dg::ImExMultistep
+*/
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct Karniadakis
+{
+    using value_type = get_value_type<ContainerType>;
+    using container_type = ContainerType;
+    Karniadakis(){}
+    template<class ...SolverParams>
+    Karniadakis( SolverParams&& ...ps): m_imex( "Karniadakis", std::forward<SolverParams> (ps)...) { }
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        *this = Karniadakis( std::forward<Params>( ps)...);
+    }
+    const ContainerType& copyable()const{ return m_imex.copyable();}
+    SolverType& solver() { return m_imex.solver();}
+    const SolverType& solver() const { return m_imex.solver();}
+    template< class Explicit, class Implicit>
+    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt){
+        m_imex.init( ex, im, t0, u0, dt);
+    }
+    template< class Explicit, class Implicit>
+    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u){
+        m_imex.step( ex, im, t, u);
+    }
+  private:
+    ImExMultistep<ContainerType, SolverType> m_imex;
+};
+
 
 } //namespace dg

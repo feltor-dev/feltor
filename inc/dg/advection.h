@@ -17,10 +17,21 @@ namespace dg
 {
 
 /**
- * @brief Upwind discretization of advection operator \f$ \vec v\cdot\nabla f\f$
+ * @brief %Upwind discretization of advection operator \f$ \vec v\cdot\nabla f\f$
  *
  * This is the upwind scheme where a backward derivative is used if v is
  * positive and a forward derivative else
+ * For example
+ * @code
+// v_x  = -dy phi
+dg::blas2::symv( -1., dy, phi, 0., vx);
+// v_y = dx phi
+dg::blas2::symv( 1., dx, phi, 0., vy);
+// compute on Cartesian grid in 2d on device
+dg::Advection < dg::CartesianGrid2d, dg::DMatrix, dg::DVec> advection(grid);
+// df = - v Grad f
+advection.upwind( -1., vx, vy, f, 0., df);
+@endcode
  * @note This scheme brings its own numerical diffusion and thus does not need any other artificial viscosity mechanisms. The only places where the scheme might run into oscillations is if there is a stagnation point with v==0 at a fixed position
  * @sa A discussion of this and other advection schemes can be found here https://mwiesenberger.github.io/advection
  * @copydoc hide_geometry_matrix_container
