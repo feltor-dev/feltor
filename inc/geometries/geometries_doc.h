@@ -19,6 +19,7 @@
         @defgroup guenther The Guenther expansion
         @defgroup toroidal The Purely Toroidal expansion
         @defgroup circular The Circular expansion
+        @defgroup mod  Modification of any expansion
       @}
       @defgroup magnetic 3.2 Magnetic field, curvatures and associated functors
       @defgroup profiles 3.3 Penalization, weight and monitor metric functors

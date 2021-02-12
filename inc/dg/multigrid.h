@@ -163,7 +163,7 @@ struct MultigridCG2d
     ///@return A copyable object; what it contains is undefined, its size is important
     const Container& copyable() const {return m_x[0];}
     /**
-     * @brief Nested iterations (USE THIS ONE!)
+     * @brief USE THIS ONE Nested iterations
      *
      * Equivalent to the following
      * -# Compute residual with given initial guess.
@@ -250,7 +250,7 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief Nested iterations with Chebyshev as preconditioner for CG (experimental)
+     * @brief EXPERIMENTAL Nested iterations with Chebyshev as preconditioner for CG
      *
      * @note This function does the same as direct_solve but uses a
      * ChebyshevPreconditioner (with EVE to estimate the largest EV) at the coarse
@@ -367,7 +367,7 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief Full multigrid cycles (experimental, use at own risk)
+     * @brief EXPERIMENTAL Full multigrid cycles (use at own risk)
      *
      * - Compute residual with given initial guess.
      * - If error larger than tolerance, do a full multigrid cycle with Chebeyshev iterations as smoother
@@ -431,7 +431,7 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief A conjugate gradient with a full multigrid cycle as preconditioner (experimental, use at own risk)
+     * @brief EXPERIMENTAL A conjugate gradient with a full multigrid cycle as preconditioner (use at own risk)
      *
      * @copydoc hide_symmetric_op
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch

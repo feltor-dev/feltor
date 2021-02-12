@@ -64,8 +64,8 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
  * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
  * dg::ISNSANE in that case
- * @note Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result.
- * Furthermore, the sum is computed with infinite precision and the result is then rounded
+ * @note Our implementation guarantees **binary reproducible** results up to and excluding the last mantissa bit of the result.
+ * Furthermore, the sum is computed with **infinite precision** and the result is then rounded
  * to the nearest double precision number. Although the products are not computed with
  * infinite precision, the order of multiplication is guaranteed.
  * This is possible with the help of an adapted version of the \c dg::exblas library and

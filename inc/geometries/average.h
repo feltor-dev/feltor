@@ -16,7 +16,7 @@ namespace geo
 
 /**
  * @brief Flux surface integral of the form
- \f[ \int dR dZ f(R,Z) \delta(\psi_p(R,Z)-\psi_0) g(R,Z) \f]
+ \f$ \int dR dZ f(R,Z) \delta(\psi_p(R,Z)-\psi_0) g(R,Z) \f$
 
  where for the width of the Gaussian shaped delta function we use the maximum of \c 0.5*h*GradPsip
      where \c h is the cell size in the grid
@@ -84,7 +84,7 @@ struct FluxSurfaceIntegral
 //This method for computing volumes is tested against flux-aligned grids in e.g. flux_t.cu
 /**
  * @brief Flux volume integral of the form
- \f[ \int dR dZ f(R,Z) \Theta(\psi_p(R,Z)-\psi_0) g(R,Z) \f]
+ \f$ \int dR dZ f(R,Z) \Theta(\psi_p(R,Z)-\psi_0) g(R,Z) \f$
 
  where \c Theta is the Heaviside function
  * @ingroup misc_geo
@@ -144,7 +144,7 @@ struct FluxVolumeIntegral
 
 /**
  * @brief Flux surface average (differential volume average) over quantity
- \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dR dZ \delta(\psi_p(R,Z)-\psi_0) f(R,Z)H(R,Z) \f]
+ \f$ \langle f\rangle(\psi_0) = \frac{1}{A} \int dR dZ \delta(\psi_p(R,Z)-\psi_0) f(R,Z)H(R,Z) \f$
 
  with \f$ A = \int dRdZ \delta(\psi_p(R,Z)-\psi_0)H(R,Z)\f$
  where \c H is a weight function that can be used to e.g. cut away parts of the domain below the X-point or contain a volume form
@@ -201,7 +201,7 @@ struct FluxSurfaceAverage
 
 /**
  * @brief Class for the evaluation of the safety factor q based on a flux-surface integral
- * \f[ q(\psi_0) = \frac{1}{2\pi} \int dRdZ \frac{I(\psi_p)}{R} \delta(\psi_p - \psi_0)H(R,Z) \f]
+ * \f$ q(\psi_0) = \frac{1}{2\pi} \int dRdZ \frac{I(\psi_p)}{R} \delta(\psi_p - \psi_0)H(R,Z) \f$
 
 where \c H is a weights function that can optionally be used to cut away parts of the domain e.g. below the X-point.
  * @copydoc hide_container
@@ -245,7 +245,7 @@ struct SafetyFactorAverage
 
 /**
  * @brief Evaluation of the safety factor q based on direct integration of
- * \f[ q(\psi_0) = \frac{1}{2\pi} \int d\Theta \frac{B^\varphi}{B^\Theta} \f]
+ * \f$ q(\psi_0) = \frac{1}{2\pi} \int d\Theta \frac{B^\varphi}{B^\Theta} \f$
 
  * @attention Return value undefined if evaluated outside the closed fieldline region, but the function always returns, it won't throw an error or something
  * @copydoc hide_container

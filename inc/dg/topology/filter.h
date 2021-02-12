@@ -123,6 +123,8 @@ modal_filter( UnaryOp op, const aRealMPITopology3d<real_type>& t)
  * \f[ y = V D V^{-1}\f]
  * where \f$ V\f$ is the Vandermonde matrix (the backward transformation matrix)
  * and \f$ D \f$ is a diagonal matrix with \f$ D_{ii} = \sigma(i)\f$
+ * @sa A discussion of the effects of the modal filter on advection schemes can be found here https://mwiesenberger.github.io/advection
+ * @note basically the result is that it is usually not advantageous to use a modal filter
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
  * @ingroup misc

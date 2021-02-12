@@ -168,8 +168,8 @@ static inline direction inverse( direction dir)
 
 ///@brief Space of DG coefficients
 enum space{
-    lspace, //!< DG Polynomial space
-    xspace //!< Configuration space
+    lspace, //!< DG Polynomial space "modal values"
+    xspace //!< Configuration space "nodal values"
 };
 
 ///@brief 2d coordinates

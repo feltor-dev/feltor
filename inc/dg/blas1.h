@@ -59,8 +59,8 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
  * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
  * dg::ISNSANE in that case
- * @note Our implementation guarantees binary reproducible results.
- * The sum is computed with infinite precision and the result is rounded
+ * @note Our implementation guarantees **binary reproducible** results.
+ * The sum is computed with **infinite precision** and the result is rounded
  * to the nearest double precision number.
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.

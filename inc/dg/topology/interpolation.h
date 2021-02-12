@@ -508,7 +508,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
 }//namespace create
 
 /**
- * @brief Transform a vector from XSPACE to LSPACE
+ * @brief Transform a vector from dg::xspace (nodal values) to dg::lspace (modal values)
  *
  * @param in input
  * @param g grid
@@ -536,12 +536,12 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
  * @brief Interpolate a vector on a single point on a 1d Grid
  *
  * @param sp Indicate whether the elements of the vector
- * v are in xspace or lspace
+ * v are in xspace (nodal values) or lspace (modal values)
  *  (choose dg::xspace if you don't know what is going on here,
  *      It is faster to interpolate in dg::lspace so consider
  *      transforming v using dg::forward_transform( )
  *      if you do it very many times)
- * @param v The vector to interpolate in dg::xspace
+ * @param v The vector to interpolate
  * @param x X-coordinate of interpolation point
  * @param g The Grid on which to operate
  * @copydoc hide_bcx_doc
@@ -603,7 +603,7 @@ real_type interpolate(
  * @brief Interpolate a vector on a single point on a 2d Grid
  *
  * @param sp Indicate whether the elements of the vector
- * v are in xspace or lspace
+ * v are in xspace (nodal values) or lspace  (modal values)
  *  (choose dg::xspace if you don't know what is going on here,
  *      It is faster to interpolate in dg::lspace so consider
  *      transforming v using dg::forward_transform( )

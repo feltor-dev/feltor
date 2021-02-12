@@ -11,28 +11,81 @@ doxygen documentation, READMEs or tex writeups.
  - json utility functions get, get_idx in json_utilities.h which adds a small abstraction layer that gives a user more control over what happens if a variable is not found
  - json utility functions file2Json, and string2Json in json_utilities.h which adds a small abstraction layer that gives a user more control over what happens if an error happens during the parsing of a file
  - "easy output" netcdf utility functions that are particularly useful for MPI output: either write data in parallel or funnel through the master thread
- - new include files dg/file/json_utilities.h and dg/exblas/exblas.h
+ - new include files dg/file/file.h, dg/file/json_utilities.h and dg/exblas/exblas.h
  - new class dg::Gradient for gradient and variation
- - new tensor functions tensor::
- - new class dg::Advection for the upwind scheme
- - dg::blas1::dot and dg::blas2::dot and corresponding exblas functions now detect NaN and Inf errors
+ - new class dg::Advection for the upwind advection scheme
+ - new blas1::reduce function for custom reductions
+ - new "exchangeable" dg::x::DVec, dg::x::HVec, ..., dg::x::CartesianGrid2d, ..., dg::x::IHMatrix, ... typedefs. The idea is that these resolve to either shared memory or mpi distributed memory versions depending on the MPI_VERSION macro. This helps merging shared and mpi programs into single ones.
+ - added "simple" mode to Average computation, which is beneficial for GPU computing
+ - add dg::integrate that computes an indefinite integral of a function (essentially the opposite of the derivative)
+ - add dg::ModalFilter inclusive tests
+ - new compose function that concatenates two or more functors to one
+ - add dg::cooRZP2X coordinate transformation functions to easily transform between Cylindrical and Cartesian coordinates
+ - interpolate function has an additional dg::space parameter to indicate nodal or modal values
+ - Grid classes now have host_vector and host_grid member typedefs
+ - new tensor functions dg::tensor::scalar_product2d and dg::scalar_product3d that can compute uE2 in one go
+ - new extended tensor functions dg::tensor::multiply2d and dg::multiply3d that can compute uE2 in one go
+ - new single step timestepper ShuOsher including new ShuOsherTableau and ConversToShuOsherTableau classes to hold corresponding coefficients
+ - new ShuOsher tableaus SSPRK
+ - new Runge Kutta embedded tableaus tsitouras, the default timesteppers in Julia
+ - new implicit RK tableau trapezoidal, implicit midpoint and sdirk-2-1-2
+ - new class Simpsons that implements Simpsons rule for (time) integration
+ - new implicit timesteppers DIRKStep and ImplicitRungeKutta
+ - implicit time steppers give access to solver
+ - Redesign of multistep time steppers consistent with Runge-Kutta ones in terms of MultistepTableau and ConvertsToMultistepTableau
+ - a host of new explicit, implicit and semi-implicit multistep tableaus
+ - experimental "filtered" multistep time-steppers that allow modal filtering (first tests are not promising though)
+ - new experimental multigrid solvers involving Chebyshev iterations as smoother (but none are better than nested iterations so they remain experimental)
+ - new class EVE (courtesy of Eduard Reiter)
+ - new class ChebyshevIterations and ChebyshevPreconditioner (for chebyshev iterations)
+ - new solvers LGMRES, BICGSTABL, and AndersonAcceleration (courtesy of Aslak Poulsen)
+ - new FixedPointSolver and AndersonSolver for nonlinear problems in time
+ - new class Gradient that computes gradients and variations
+ - a host of new functors for the evaluate and pullback functions
+ - FluxSurfaceIntegral, FluxVolumeIntegral and SafetyFactorAverage classes
 ### Changed
  - namespace file changed to **dg::file** and exblas changed to **dg::exblas** (for consistency reasons, everything should go into the dg namespace, which in particular reduces the chance for name-clashes to just one, namely 'dg')
  - changed file paths **dg/file/file.h**, **dg/geometries/geometries.h** , **dg/file/nc_utilities.h**
+ - Moved variation member function into new class Gradient (previously in ArakawaX and Poisson)
  - std=c++14 We use the C++-14 standard now (previously 11)
  - vectorclass dependency changed to vectorclass/version1 (previously we used a custom upload on feltor-dev repository)
  - default cuda compute capability bumped to sm-61 (previously sm-35)
- - Marconi config now uses jsoncpp module (previously manually installed)
- - Moved variation memeber function into new class Gradient (previously in ArakawaX and Poisson)
- - blas1::dot and blas2::dot now both do not accumulate rest of multiplication
+ - marconi config now uses jsoncpp module (previously manually installed)
+ - blas1::dot and blas2::dot now both do not accumulate rest of multiplication (inconsistent before)
+ - swapped input and output parameters in dg::blas1::evaluate first subroutine
+ - the fast_interpolation and fast_projection functions now can also double / divide the polynomial coefficient consistent with the grids
+ - change shift_topologic() shared RealTopology member functions to shift() and have an additional negative parameter that indicates sign swaps
+ - clarify and unify the behaviour of the interpolation functions when points lie outside the grid boundaries
+ - split and join functions have an additional real_type template parameter
+ - stopping criterion for bisection1d function
+ - multistep time-stepper now initialize with Runge-Kutta timesteppers of corresponding order
+ - Multigrid nested iteration algorithm now allows accuracies for each stage separately (which can give a significant speed-up)
+ - dg::inverse( bc) function is now a free-standing function to invert a boundary condition
+ - Elliptic classes now have jump_weighting and multiply_sigma functions
+ - CG operator now has a test-frequency parameter to control the number of times the error condition is evaluated
+ - Extrapolation class now has a derive member function to interpolate the derivative of the interpolating polynomial
+ - Adapt all src and diag project to changed file and json utilities and the moved variation member
+ - Rename all input files with correct json file-ending
+ - Complete redesign of src/feltor and src/lamb_dipole
+ - Merge toefl_hpc with old toefl_mpi program
+
 ### Deprecated
+ - Karniadakis time-stepper is now superceded by the ImExMultistep class
 ### Removed
- - removed diag/feltordiag.cu
+ - remove diag/feltordiag.cu
+ - remove dg::MemoryTraits and associated dimensionality and memory_category traits in favor of direct host_vector and host_grid typedefs in topology classes
+ - old txt input files
+ - DeltaFunction and Alpha for the computation of flux-surface averages no longer needed
 ### Fixed
  - Fix bug: race condition in dg::blas1::dot and dg::blas2::dot on GPUs that led to hard to reproduce and seemingly unreasonable crashes
- - Fix bugs: std namespace in diag/probes.h
+ - Fix bug: std namespace in diag/probes.h
  - Fix bug: const in exblas::cpu::get_element 
  - Fix bug: correct  indices in exblas::cpu::make_vcl_vec8d
+ - Fix bug: infinite creation of MPI communicators in exblas::mpi_reduce_communicator . Lead to MPI crashes due to memory overflow.
+ - dg::blas1::dot and dg::blas2::dot and corresponding exblas functions now detect NaN and Inf errors
+ - correct capture of cuda-aware mpi, create a fall-back for cuda-unaware mpi-installations
+ - Fix bug: test for no-communication in mpi_communicator (indicated false positives)
+ - Fix bug: coefficient and initialization in Extrpolate
 
 ## [v5.1]
 ### Added
