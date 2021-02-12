@@ -17,6 +17,13 @@ namespace dg
 {
 namespace file
 {
+/**
+ * @defgroup json JsonCPP utilities
+ * \#include "dg/file/json_utilities.h" (link -ljsoncpp)
+ *
+ * @addtogroup json
+ * @{
+ */
 
 ///@brief Switch between how to handle errors in a Json utitlity functions
 enum class error{
@@ -309,5 +316,6 @@ static inline void string2Json(std::string input, Json::Value& js, enum comments
     }
 }
 
+///@}
 }//namespace file
 }//namespace dg

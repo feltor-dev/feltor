@@ -17,6 +17,13 @@ namespace dg
 {
 namespace file
 {
+/**
+ * @defgroup netcdf NetCDF utilities
+ * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5 -lhdf5_hl)
+ *
+ * @addtogroup netcdf
+ * @{
+ */
 
 /**
  * @brief Class thrown by the NC_Error_Handle
@@ -400,5 +407,6 @@ void put_vara_double(int ncid, int varid, unsigned slice,
 }
 #endif //MPI_VERSION
 
+///@}
 }//namespace file
 }//namespace dg
