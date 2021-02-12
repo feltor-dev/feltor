@@ -333,19 +333,9 @@ void ExDOTCompleteFinal(
 }//namespace gpu
 ///@endcond
 
-/*!@brief gpu version of exact dot product
- *
- * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
- * @ingroup highlevel
- * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
- * @param size size N of the arrays to sum
- * @param x1_ptr first array
- * @param x2_ptr second array
- * @param d_superacc pointer to an array of 64 bit integers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
- * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
- * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
-*/
+///@brief GPU version of exact dot product
+///@copydoc hide_exdot2
+///@copydoc hide_deviceacc
 template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=3>
 __host__
 void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* d_superacc, int* status)
@@ -364,20 +354,9 @@ void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, in
     if( d_errorV[0] ) *status = 1;
 }
 
-/*!@brief gpu version of exact triple dot product
- *
- * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
- * @ingroup highlevel
- * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
- * @param size size N of the arrays to sum
- * @param x1_ptr first array
- * @param x2_ptr second array
- * @param x3_ptr third array
- * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
- * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
- * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
- */
+///@brief GPU version of exact dot product
+///@copydoc hide_exdot3
+///@copydoc hide_deviceacc
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=3>
 __host__
 void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* d_superacc, int* status)

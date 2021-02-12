@@ -129,7 +129,7 @@ EXCLUDE                = mylibm.hpp \
                          exblas.h
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =
-EXCLUDE_SYMBOLS        =
+EXCLUDE_SYMBOLS        = hide_*
 EXAMPLE_PATH           =
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO

@@ -139,19 +139,63 @@ void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c
 }//namespace cpu
 ///@endcond
 
-/*!@brief serial version of exact dot product
+/*!@class hide_exdot2
  *
- * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
+ * Accumulate the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f] into a superaccumulator.
+ * The superaccumulator is an array of \c exblas::BIN_COUNT (39) 64 bit integers that
+ * represents a large fixed point number such that the summation is computed with virtually infinite precision and is thus bitwise reproducible even in a parallel environment.
+ * @note The superaccumulator can be converted to
+ * a double precision number using the Round function:
+ * \ref dg::exblas::cpu::Round for cpu and omp version or \ref dg::exblas::gpu::Round for gpu version
+ * @attention the product \f$ x_iy_i\f$ of numbers is **not** computed with infinite precision only the sum is (this does not break the reproducibility)
+ * @note The algorithm is described in the paper
+ <a href = "https://hal.archives-ouvertes.fr/hal-00949355v3">Sylvain Collange, David Defour, Stef Graillat, Roman Iakymchuk. "Numerical Reproducibility for the Parallel Reduction on Multi- and Many-Core Architectures", 2015. </a>
  * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
  * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
- * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ */
+
+/*!@class hide_exdot3
+ *
+ * Accumulate the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f] into a superaccumulator.
+ * The superaccumulator is an array of \c exblas::BIN_COUNT (39) 64 bit integers that
+ * represents a large fixed point number such that the summation is computed with virtually infinite precision and is thus bitwise reproducible even in a parallel environment.
+ * @note The superaccumulator can be converted to
+ * a double precision number using the Round function:
+ * \ref dg::exblas::cpu::Round for cpu and omp version or \ref dg::exblas::gpu::Round for gpu version
+ * @attention the product \f$ x_iw_iy_i\f$ of numbers is **not** computed with infinite precision only the sum is (this does not break the reproducibility)
+ * @note The algorithm is described in the paper
+ <a href = "https://hal.archives-ouvertes.fr/hal-00949355v3">Sylvain Collange, David Defour, Stef Graillat, Roman Iakymchuk. "Numerical Reproducibility for the Parallel Reduction on Multi- and Many-Core Architectures", 2015. </a>
+ * @ingroup highlevel
+ * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
+ * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
+ * @param size size N of the arrays to sum
+ * @param x1_ptr first array
+ * @param x2_ptr second array
+ * @param x3_ptr third array
+ */
+/*!@class hide_hostacc
+ * @param h_superacc pointer to an array of 64 bit integegers (the
+ * superaccumulator) in **host memory** with size at least \c exblas::BIN_COUNT
+ * (39) (contents are overwritten, the function does not allocate memory i.e.
+ * the memory needs to be allocated **before** calling the function)
  * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
- * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
-*/
+ */
+/*!@class hide_deviceacc
+ * @param d_superacc pointer to an array of 64 bit integegers (the
+ * superaccumulator) in **device memory** with size at least \c
+ * exblas::BIN_COUNT (39) (contents are overwritten, the function does not
+ * allocate memory i.e. the memory needs to be allocated **before** calling the
+ * function)
+ * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
+ */
+
+///@brief Serial version of exact dot product
+///@copydoc hide_exdot2
+///@copydoc hide_hostacc
 template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=8>
 void exdot_cpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* h_superacc, int* status){
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
@@ -168,20 +212,9 @@ void exdot_cpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, in
     if( error ) *status = 1;
 }
 
-/*!@brief gpu version of exact triple dot product
- *
- * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
- * @ingroup highlevel
- * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
- * @param size size N of the arrays to sum
- * @param x1_ptr first array
- * @param x2_ptr second array
- * @param x3_ptr third array
- * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
- * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
- * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
- */
+///@brief Serial version of exact dot product
+///@copydoc hide_exdot3
+///@copydoc hide_hostacc
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=8>
 void exdot_cpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* h_superacc, int* status) {
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");

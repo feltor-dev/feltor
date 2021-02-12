@@ -62,7 +62,7 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * @note Our implementation guarantees binary reproducible results.
  * The sum is computed with infinite precision and the result is rounded
  * to the nearest double precision number.
- * This is possible with the help of an adapted version of the \c ::exblas library and
+ * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
 
  * @param x Left Container

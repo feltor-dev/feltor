@@ -3,10 +3,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 We do not (yet) follow semantic versioning.
-Only code changes are reported here, we do not track changes in the
+Only changes in code are reported here, we do not track changes in the
 doxygen documentation, READMEs or tex writeups.
+## [v5.2]
+### Added
+ - M100 config file
+ - json utility functions get, get_idx in json_utilities.h which adds a small abstraction layer that gives a user more control over what happens if a variable is not found
+ - json utility functions file2Json, and string2Json in json_utilities.h which adds a small abstraction layer that gives a user more control over what happens if an error happens during the parsing of a file
+ - "easy output" netcdf utility functions that are particularly useful for MPI output: either write data in parallel or funnel through the master thread
+ - new include files dg/file/json_utilities.h and dg/exblas/exblas.h
+ - new class dg::Gradient for gradient and variation
+ - new tensor functions tensor::
+ - new class dg::Advection for the upwind scheme
+ - dg::blas1::dot and dg::blas2::dot and corresponding exblas functions now detect NaN and Inf errors
+### Changed
+ - namespace file changed to **dg::file** and exblas changed to **dg::exblas** (for consistency reasons, everything should go into the dg namespace, which in particular reduces the chance for name-clashes to just one, namely 'dg')
+ - changed file paths **dg/file/file.h**, **dg/geometries/geometries.h** , **dg/file/nc_utilities.h**
+ - std=c++14 We use the C++-14 standard now (previously 11)
+ - vectorclass dependency changed to vectorclass/version1 (previously we used a custom upload on feltor-dev repository)
+ - default cuda compute capability bumped to sm-61 (previously sm-35)
+ - Marconi config now uses jsoncpp module (previously manually installed)
+ - Moved variation memeber function into new class Gradient (previously in ArakawaX and Poisson)
+ - blas1::dot and blas2::dot now both do not accumulate rest of multiplication
+### Deprecated
+### Removed
+ - removed diag/feltordiag.cu
+### Fixed
+ - Fix bug: race condition in dg::blas1::dot and dg::blas2::dot on GPUs that led to hard to reproduce and seemingly unreasonable crashes
+ - Fix bugs: std namespace in diag/probes.h
+ - Fix bug: const in exblas::cpu::get_element 
+ - Fix bug: correct  indices in exblas::cpu::make_vcl_vec8d
 
-## [Unreleased]
+## [v5.1]
 ### Added
 - dg::Elliptic3d: a three-dimensional version of dg::Elliptic
 - Add 4 parameter symv member to dg::Elliptic class
