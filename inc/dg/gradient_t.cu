@@ -28,15 +28,15 @@ double dxphi3d( double x, double y, double z) {
     return cos(x)*cos(y)*cos(z);
 }
 double dyphi3d( double x, double y, double z) {
-    return -sin(x)*sin(y)*sin(z);
+    return -sin(x)*sin(y)*cos(z);
 }
 double dzphi3d( double x, double y, double z) {
-    return -x*x*sin(x)*cos(y)*sin(z);
+    return -sin(x)*cos(y)*sin(z)/x/x;
 }
 double variation3d( double x, double y, double z) {
     return dxphi3d(x,y,z)*dxphi3d(x,y,z)
         + dyphi3d(x,y,z)*dyphi3d(x,y,z)
-        + dzphi3d(x,y,z)*dzphi3d(x,y,z)/x/x;
+        + dzphi3d(x,y,z)*dzphi3d(x,y,z)*x*x;
 }
 
 // There are more tests in geometries/geometry_advection_(mpi)b.cu
@@ -62,9 +62,9 @@ int main()
 
     //apply arakawa scheme
     gradient.gradient( ph, dxph, dyph);
-    gradient.variation( 1.,ph, 0.,va);
+    gradient.variation( ph, va);
 
-    int64_t binary[] = {4517228146715811314,4506390577922324430,4519650974219167728};
+    int64_t binary[] = {4500635718861276907,4487444521638156650,4499885861996435701};
     exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
 
@@ -94,18 +94,18 @@ int main()
     const dg::DVec ph3d = dg::construct<dg::DVec>( dg::evaluate( phi3d, grid3d));
     const dg::DVec phx3d = dg::construct<dg::DVec>( dg::evaluate( dxphi3d, grid3d));
     const dg::DVec phy3d = dg::construct<dg::DVec>( dg::evaluate( dyphi3d, grid3d));
-    const dg::DVec phz3d = dg::construct<dg::DVec>( dg::evaluate( dyphi3d, grid3d));
+    const dg::DVec phz3d = dg::construct<dg::DVec>( dg::evaluate( dzphi3d, grid3d));
     const dg::DVec var3d = dg::construct<dg::DVec>( dg::evaluate( variation3d, grid3d));
-    dg::DVec dxph3d(ph3d), dyph3d(ph3d), va3d(ph3d);
+    dg::DVec dxph3d(ph3d), dyph3d(ph3d), dzph3d(ph3d), va3d(ph3d);
 
     // create a Gradient object
-    dg::Gradient<dg::aGeometry3d, dg::DMatrix, dg::DVec> gradient3d( grid3d);
+    dg::Gradient3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> gradient3d( grid3d);
 
     //apply arakawa scheme
-    gradient3d.gradient( ph3d, dxph3d, dyph3d);
-    gradient3d.variation( 1.,ph3d, 0.,va3d);
+    gradient3d.gradient( ph3d, dxph3d, dyph3d, dzph3d);
+    gradient3d.variation( ph3d, va3d);
 
-    int64_t binary3d[] = {4520797903162066895,4520797903162066895,4520797903162066895};
+    int64_t binary3d[] = {4504451755369532568,4491224193368827475,4549042274897523598,4550331496568322612};
     exblas::udouble res3d;
     dg::DVec w3d = dg::create::weights( grid3d);
 
@@ -113,11 +113,14 @@ int main()
     res3d.d = sqrt(dg::blas2::dot( w3d, dxph3d)); //don't forget sqrt when computing errors
     std::cout << "Gx Distance to solution "<<res3d.d<<"\t\t"<<res3d.i-binary3d[0]<<std::endl;
     dg::blas1::axpby( 1., phy3d, -1., dyph3d);
-    res.d = sqrt(dg::blas2::dot( w3d, dyph3d)); //don't forget sqrt when computing errors
+    res3d.d = sqrt(dg::blas2::dot( w3d, dyph3d)); //don't forget sqrt when computing errors
     std::cout << "Gy Distance to solution "<<res3d.d<<"\t\t"<<res3d.i-binary3d[1]<<std::endl;
+    dg::blas1::axpby( 1., phz3d, -1., dzph3d);
+    res3d.d = sqrt(dg::blas2::dot( w3d, dzph3d)); //don't forget sqrt when computing errors
+    std::cout << "Gz Distance to solution "<<res3d.d<<"\t\t"<<res3d.i-binary3d[2]<<std::endl;
     dg::blas1::axpby( 1., var3d, -1., va3d);
-    res.d = sqrt(dg::blas2::dot( w3d, va3d)); //don't forget sqrt when computing errors
-    std::cout << "V  Distance to solution "<<res3d.d<<"\t\t"<<res3d.i-binary3d[2]<<std::endl;
+    res3d.d = sqrt(dg::blas2::dot( w3d, va3d)); //don't forget sqrt when computing errors
+    std::cout << "V  Distance to solution "<<res3d.d<<"\t\t"<<res3d.i-binary3d[3]<<std::endl;
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |
     //n = 2 -> p = 1    |

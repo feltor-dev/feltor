@@ -19,23 +19,30 @@ namespace dg
 {
 
 /**
- * @brief A 2d gradient operator
+ * @brief A 2d gradient \f$\chi\cdot\nabla\f$ and variation \f$ \nabla\phi \cdot \chi \nabla\phi\f$ operator
  *
  * @ingroup matrixoperators
  *
- * The term discretized is \f[ \chi \nabla  \f]
+ * The terms discretized are the gradient \f[\chi\cdot\nabla\f] and the variation \f[ \nabla\phi \cdot \chi \nabla\phi\f]
  * where \f$ \nabla \f$ is the two-dimensional nabla and \f$\chi\f$ is a
  * tensor (usually the metric).
  *
  * In general coordinates that means
- * \f[\left(\chi^{xx}\partial_x + \chi^{xy}\partial_y \right)\right)
+ * \f[\chi\cdot\nabla = \left(\chi^{xx}\partial_x + \chi^{xy}\partial_y \right)
  + \left(\chi^{yx}\partial_x + \chi^{yy}\partial_y \right) \f]
  is discretized.
  Per default, \f$ \chi\f$ is the metric tensor but you can set it to any tensor
  you like.
 
  * @copydoc hide_geometry_matrix_container
- * @note The constructors initialize \f$ \chi=g\f$ so that a traditional gradient results
+ * @note The constructors initialize \f$ \chi=g\f$ so that a traditional
+ * gradient results
+ * @attention This a convenience class. It is often more
+ * efficient to compute the simple derivatives of a vector yourself, because
+ * you can re-use them in other places; the same goes for the storage of the
+ * metric tensor, it often can be re-used at other places.  To compute the above
+ * expressions you then simply use the relevant tensor functions
+ * \c dg::tensor::multiply2d and \c dg::tensor::scalar_product2d
  */
 template <class Geometry, class Matrix, class Container>
 class Gradient
@@ -55,7 +62,7 @@ class Gradient
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @note chi is assumed the metric per default
      */
-    Gradient( const Geometry& g, direction dir = forward):
+    Gradient( const Geometry& g, direction dir = centered):
         Gradient( g, g.bcx(), g.bcy(), dir)
     {
     }
@@ -69,7 +76,7 @@ class Gradient
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @note chi is assumed the metric per default
      */
-    Gradient( const Geometry& g, bc bcx, bc bcy, direction dir = forward)
+    Gradient( const Geometry& g, bc bcx, bc bcy, direction dir = centered)
     {
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
@@ -96,7 +103,7 @@ class Gradient
     const SparseTensor<Container>& chi( ) const{return m_chi;}
 
     /**
-     * @brief \f$ \vec v=\chi \nabla f \f$
+     * @brief \f$ \vec v=\chi \cdot\nabla f \f$
      *
      * @param f the vector to take the gradient of
      * @param vx (output) x-component
@@ -111,7 +118,7 @@ class Gradient
     }
 
     /**
-     * @brief \f$ \vec v = \lambda \chi\nabla f + \mu \vec v \f$
+     * @brief \f$ \vec v = \lambda \chi\cdot\nabla f + \mu \vec v \f$
      *
      * @param lambda a prefactor
      * @param f the vector to take the gradient of
@@ -131,20 +138,44 @@ class Gradient
         dg::tensor::multiply2d(lambda, m_chi, m_tempx, m_tempy, mu, vx, vy);
     }
     /**
-     * @brief \f$ \sigma = \alpha (\nabla\phi\chi\nabla \phi) + \beta \sigma\f$
+     * @brief \f$ \sigma = (\nabla\phi\cdot\chi\cdot\nabla \phi) \f$
      *
-     * @param alpha input prefactor
+     * @param phi the vector to take the variation of
+     * @param sigma (inout) the variation
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void variation(const ContainerType0& phi, ContainerType1& sigma){
+        variation(1., 1., phi, 0., sigma);
+    }
+    /**
+     * @brief \f$ \sigma = \lambda^2(\nabla\phi\cdot\chi\cdot\nabla \phi) \f$
+     *
+     * @param lambda input prefactor
+     * @param phi the vector to take the variation of
+     * @param sigma (out) the variation
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerTypeL, class ContainerType0, class ContainerType1>
+    void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma){
+        variation(1.,lambda, phi, 0., sigma);
+    }
+    /**
+     * @brief \f$ \sigma = \alpha \lambda^2 (\nabla\phi\cdot\chi\cdot\nabla \phi) + \beta \sigma\f$
+     *
+     * @param alpha scalar input prefactor
+     * @param lambda input prefactor
      * @param phi the vector to take the variation of
      * @param beta the output prefactor
      * @param sigma (inout) the variation
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
-    template<class ContainerType0, class ContainerType1>
-    void variation(value_type alpha, const ContainerType0& phi, value_type beta, ContainerType1& sigma)
+    template<class ContainerTypeL, class ContainerType0, class ContainerType1>
+    void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma)
     {
         dg::blas2::gemv( m_rightx, phi, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, phi, m_tempy); //R_y*f
-        dg::tensor::scalar_product2d(alpha,  m_tempx, m_tempy, m_chi, m_tempx, m_tempy, beta, sigma);
+        dg::tensor::scalar_product2d(alpha, lambda, m_tempx, m_tempy, m_chi, lambda, m_tempx, m_tempy, beta, sigma);
     }
     private:
     Matrix m_rightx, m_righty;
@@ -158,14 +189,14 @@ template <class Geometry, class Matrix, class Container>
 using Gradient2d = Gradient<Geometry, Matrix, Container>;
 
 /**
- * @brief A 3d gradient operator
+ * @brief A 3d gradient \f$\chi\cdot\nabla\f$ and variation \f$ \nabla\phi \cdot \chi \nabla\phi\f$ operator
  *
  * @ingroup matrixoperators
  *
- * The term discretized is \f[ \chi\cdot \nabla  \f]
+ * The terms discretized are the gradient \f$\chi\cdot\nabla\f$ and the variation \f[ \nabla\phi \cdot \chi \nabla\phi\f]
  * where \f$ \mathbf \chi \f$ is a tensor (usually the metric).
  * In general coordinates that means
- * \f[
+ * \f[ \chi\cdot\nabla =
  * \left(\chi^{xx}\partial_x + \chi^{xy}\partial_y + \chi^{xz}\partial_z \right)
  + \left(\chi^{yx}\partial_x + \chi^{yy}\partial_y + \chi^{yz}\partial_z \right)
  + \left(\chi^{zx}\partial_x + \chi^{zy}\partial_y + \chi^{zz}\partial_z \right)
@@ -175,6 +206,12 @@ using Gradient2d = Gradient<Geometry, Matrix, Container>;
  * @copydoc hide_geometry_matrix_container
  * @note The constructors initialize \f$ \chi=g\f$ so that a traditional gradient
  * results
+ * @attention This a convenience class. It is often more
+ * efficient to compute the simple derivatives of a vector yourself, because
+ * you can re-use them in other places; the same goes for the storage of the
+ * metric tensor, it often can be re-used at other places.  To compute the above
+ * expressions you then simply use the relevant tensor functions
+ * \c dg::tensor::multiply3d and \c dg::tensor::scalar_product3d
  */
 template <class Geometry, class Matrix, class Container>
 class Gradient3d
@@ -195,7 +232,7 @@ class Gradient3d
      * the direction of the z derivative is always \c dg::centered
      * @note chi is assumed the metric per default
      */
-    Gradient3d( const Geometry& g, direction dir = forward):
+    Gradient3d( const Geometry& g, direction dir = centered):
         Gradient3d( g, g.bcx(), g.bcy(), g.bcz(), dir)
     {
     }
@@ -211,7 +248,7 @@ class Gradient3d
      * the direction of the z derivative is always \c dg::centered
      * @note chi is assumed the metric per default
      */
-    Gradient3d( const Geometry& g, bc bcx, bc bcy, bc bcz, direction dir = forward)
+    Gradient3d( const Geometry& g, bc bcx, bc bcy, bc bcz, direction dir = centered)
     {
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
@@ -243,7 +280,7 @@ class Gradient3d
         m_multiplyZ = !compute_in_2d;
     }
     /**
-     * @brief \f$ \vec v=\chi \nabla f \f$
+     * @brief \f$ \vec v=\chi \cdot\nabla f \f$
      *
      * @param f the vector to take the gradient of
      * @param vx (output) x-component
@@ -264,7 +301,7 @@ class Gradient3d
     }
 
     /**
-     * @brief \f$ \vec v = \lambda \chi\nabla f + \mu \vec v \f$
+     * @brief \f$ \vec v = \lambda \chi\cdot\nabla f + \mu \vec v \f$
      *
      * @param lambda a prefactor
      * @param f the vector to take the gradient of
@@ -289,16 +326,40 @@ class Gradient3d
         dg::tensor::multiply3d(lambda, m_chi, m_tempx, m_tempy, m_tempz, mu, vx, vy, vz);
     }
     /**
-     * @brief \f$ \sigma = \alpha (\nabla\phi\chi\nabla \phi) + \beta \sigma\f$
+     * @brief \f$ \sigma = (\nabla\phi\cdot\chi\cdot\nabla \phi) \f$
      *
-     * @param alpha input prefactor
+     * @param phi the vector to take the variation of
+     * @param sigma (out) the variation
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1>
+    void variation(const ContainerType0& phi, ContainerType1& sigma){
+        variation(1.,1., phi, 0., sigma);
+    }
+    /**
+     * @brief \f$ \sigma = \lambda^2(\nabla\phi\cdot\chi\cdot\nabla \phi) \f$
+     *
+     * @param lambda input prefactor
+     * @param phi the vector to take the variation of
+     * @param sigma (out) the variation
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerTypeL, class ContainerType0, class ContainerType1>
+    void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma){
+        variation(1.,lambda, phi, 0., sigma);
+    }
+    /**
+     * @brief \f$ \sigma = \alpha\lambda^2 (\nabla\phi\cdot\chi\cdot\nabla \phi) + \beta \sigma\f$
+     *
+     * @param alpha scalar input prefactor
+     * @param lambda input prefactor
      * @param phi the vector to take the variation of
      * @param beta the output prefactor
      * @param sigma (inout) the variation
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
-    template<class ContainerType0, class ContainerType1>
-    void variation(value_type alpha, const ContainerType0& phi, value_type beta, ContainerType1& sigma)
+    template<class ContainerTypeL, class ContainerType0, class ContainerType1>
+    void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma)
     {
         dg::blas2::gemv( m_rightx, phi, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, phi, m_tempy); //R_y*f
@@ -306,7 +367,7 @@ class Gradient3d
             dg::blas2::gemv( m_rightz, phi, m_tempz); //R_y*f
         else
             dg::blas1::scal( m_tempz, 0.);
-        dg::tensor::scalar_product3d(alpha,  m_tempx, m_tempy, m_tempz, m_chi, m_tempx, m_tempy, m_tempz, beta, sigma);
+        dg::tensor::scalar_product3d(alpha, lambda,  m_tempx, m_tempy, m_tempz, m_chi, lambda, m_tempx, m_tempy, m_tempz, beta, sigma);
     }
     private:
     Matrix m_rightx, m_righty, m_rightz;

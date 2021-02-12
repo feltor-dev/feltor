@@ -113,37 +113,41 @@ struct InverseTensorMultiply3d{
     }
 };
 
-/// \f$ y \leftarrow \alpha v_i\lambda T_{ij} w_j + \beta y\f$
+/// \f$ y = \lambda\mu v_i T_{ij} w_j \f$
 template<class value_type>
 struct TensorDot2d{
     DG_DEVICE
     value_type operator() (
+              value_type lambda,
               value_type v0,  value_type v1,
               value_type t00, value_type t01,
               value_type t10, value_type t11,
+              value_type mu,
               value_type w0, value_type w1
               ) const
     {
         value_type tmp0 = DG_FMA(t00,w0 , t01*w1);
         value_type tmp1 = DG_FMA(t10,w0 , t11*w1);
-        return DG_FMA(v0,tmp0  , v1*tmp1);
+        return lambda*mu*DG_FMA(v0,tmp0  , v1*tmp1);
     }
 };
-/// \f$ y \leftarrow \alpha v_i\lambda T_{ij} w_j + \beta y\f$
+/// \f$ y = \lambda \mu v_i T_{ij} w_j \f$
 template<class value_type>
 struct TensorDot3d{
     DG_DEVICE
     value_type operator() (
-                      value_type v0,  value_type v1,  value_type v2,
-                      value_type t00, value_type t01, value_type t02,
-                      value_type t10, value_type t11, value_type t12,
-                      value_type t20, value_type t21, value_type t22,
-                      value_type w0, value_type w1, value_type w2) const
+              value_type lambda,
+              value_type v0,  value_type v1,  value_type v2,
+              value_type t00, value_type t01, value_type t02,
+              value_type t10, value_type t11, value_type t12,
+              value_type t20, value_type t21, value_type t22,
+              value_type mu,
+              value_type w0, value_type w1, value_type w2) const
     {
         value_type tmp0 = DG_FMA( t00,w0 , (DG_FMA( t01,w1 , t02*w2)));
         value_type tmp1 = DG_FMA( t10,w0 , (DG_FMA( t11,w1 , t12*w2)));
         value_type tmp2 = DG_FMA( t20,w0 , (DG_FMA( t21,w1 , t22*w2)));
-        return DG_FMA(v0,tmp0 , DG_FMA(v1,tmp1 , v2*tmp2));
+        return lambda*mu*DG_FMA(v0,tmp0 , DG_FMA(v1,tmp1 , v2*tmp2));
     }
 };
 ///@}
@@ -474,26 +478,30 @@ void inv_multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1
 }
 
 /**
- * @brief \f$ y = \alpha \sum_{i=0}^1 v_it^{ij}w_j + \beta y \text{ for } i\in \{0,1\}\f$
+ * @brief \f$ y = \alpha \lambda\mu \sum_{i=0}^1 v_it^{ij}w_j + \beta y \text{ for } i\in \{0,1\}\f$
  *
  * Ignore the 3rd dimension in \c t.
- * @param alpha input prefactor
+ * @param alpha scalar input prefactor
+ * @param lambda second input prefactor
  * @param v0 (input) first component  of \c v  (may alias w0)
  * @param v1 (input) second component of \c v  (may alias w1)
  * @param t input Tensor
+ * @param mu third input prefactor
  * @param w0 (input) first component  of \c w  (may alias v0)
  * @param w1 (input) second component of \c w  (may alias v1)
- * @param beta output prefactor
+ * @param beta scalar output prefactor
  * @param y (output)
  * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with \c dg::TensorDot2d
  * @copydoc hide_ContainerType
  */
-template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class ContainerType5>
+template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5>
 void scalar_product2d(
         get_value_type<ContainerType0> alpha,
+        const ContainerTypeL& lambda,
         const ContainerType0& v0,
         const ContainerType1& v1,
         const SparseTensor<ContainerType2>& t,
+        const ContainerTypeM& mu,
         const ContainerType3& w0,
         const ContainerType4& w1,
         get_value_type<ContainerType0> beta,
@@ -502,35 +510,41 @@ void scalar_product2d(
     dg::blas1::evaluate( y,
              dg::Axpby<get_value_type<ContainerType0>>( alpha, beta),
              dg::TensorDot2d<get_value_type<ContainerType0>>(),
+             lambda,
              v0, v1,
              t.value(0,0), t.value(0,1),
              t.value(1,0), t.value(1,1),
+             mu,
              w0, w1);
 }
 
 /**
- * @brief \f$ y = \alpha \sum_{i=0}^2 v_it^{ij}w_j + \beta y \text{ for } i\in \{0,1,2\}\f$
+ * @brief \f$ y = \alpha \lambda\mu \sum_{i=0}^2 v_it^{ij}w_j + \beta y \text{ for } i\in \{0,1,2\}\f$
  *
- * @param alpha input prefactor
+ * @param alpha scalar input prefactor
+ * @param lambda second input prefactor
  * @param v0 (input) first component  of \c v  (may alias w0)
  * @param v1 (input) second component of \c v  (may alias w1)
  * @param v2 (input) third component of \c v  (may alias w1)
  * @param t input Tensor
+ * @param mu third input prefactor
  * @param w0 (input) first component  of \c w  (may alias v0)
  * @param w1 (input) second component of \c w  (may alias v1)
  * @param w2 (input) third component of \c w  (may alias v1)
- * @param beta output prefactor
+ * @param beta scalar output prefactor
  * @param y (output)
  * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with \c dg::TensorDot3d
  * @copydoc hide_ContainerType
  */
-template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class ContainerType5, class ContainerType6, class ContainerType7>
+template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5, class ContainerType6, class ContainerType7>
 void scalar_product3d(
         get_value_type<ContainerType0> alpha,
+        const ContainerTypeL& lambda,
         const ContainerType0& v0,
         const ContainerType1& v1,
         const ContainerType2& v2,
         const SparseTensor<ContainerType3>& t,
+        const ContainerTypeM& mu,
         const ContainerType4& w0,
         const ContainerType5& w1,
         const ContainerType6& w2,
@@ -540,11 +554,13 @@ void scalar_product3d(
     dg::blas1::evaluate( y,
             dg::Axpby<get_value_type<ContainerType0>>( alpha, beta),
             dg::TensorDot3d<get_value_type<ContainerType0>>(),
-             v0, v1, v2,
-             t.value(0,0), t.value(0,1), t.value(0,2),
-             t.value(1,0), t.value(1,1), t.value(1,2),
-             t.value(2,0), t.value(2,1), t.value(2,2),
-             w0, w1, w2);
+            lambda,
+            v0, v1, v2,
+            t.value(0,0), t.value(0,1), t.value(0,2),
+            t.value(1,0), t.value(1,1), t.value(1,2),
+            t.value(2,0), t.value(2,1), t.value(2,2),
+            mu,
+            w0, w1, w2);
 }
 ///@}
 

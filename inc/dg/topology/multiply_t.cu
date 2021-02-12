@@ -46,9 +46,10 @@ int main()
     std::cout << "Multiply T with [8,9]\n";
     dg::tensor::multiply2d( t, eight, nine, work0, work1);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<"] ([86 120])\n";
-    std::cout << "Scalar product [1,2] T [8,9]\n";
-    dg::tensor::scalar_product2d( 1., one, two, t, eight, nine, 0., inout0);
-    std::cout << "Result         is "<<inout0[0]<<" (326)\n";
+    std::cout << "Scalar product 2d\n";
+    inout0 = eight;
+    dg::tensor::scalar_product2d( 1., 2., one, two, t, 2., eight, nine, 1., inout0);
+    std::cout << "Result         is "<<inout0[0]<<" (1312)\n";
     std::cout << "Multiply T^{-1} with [86,120]\n";
     dg::tensor::inv_multiply2d(1., t, work0, work1, 0., work0, work1);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<"] ([8 9])\n";
@@ -59,9 +60,10 @@ int main()
     std::cout << "Multiply T with [8,9,2]\n";
     dg::tensor::multiply3d(t, eight, nine,two, work0, work1, work2);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"] ([102 48 76])\n";
-    std::cout << "Scalar product [1,2,3] T [8,9,2]\n";
-    dg::tensor::scalar_product3d( 1., 1.,2.,3., t, 8.,9.,2., 0., inout0);
-    std::cout << "Result         is "<<inout0[0]<<" (426)\n";
+    std::cout << "Scalar product 3d\n";
+    inout0 = eight;
+    dg::tensor::scalar_product3d( 1., 3., one, two,three, t, 3., 8.,9.,2., -100., inout0);
+    std::cout << "Result         is "<<inout0[0]<<" (3034)\n";
     std::cout << "Multiply T^{-1} with [102,48,76]\n";
     dg::tensor::inv_multiply3d(1., t, work0, work1, work2, 0., work0, work1, work2);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"] ([8 9 2])\n";
