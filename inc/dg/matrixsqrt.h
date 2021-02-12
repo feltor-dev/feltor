@@ -58,7 +58,7 @@ struct DirectSqrtODESolve
         unsigned counter =  dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+        std::cout << "# b = sqrt(A) x took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
         return counter;
     }
@@ -119,7 +119,7 @@ struct DirectSqrtCauchySolve
         m_cauchysqrtint(x, b, m_EVmin, m_EVmax, m_iterCauchy);
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "# Square root matrix computation took \t"<<t.diff()<<"s\n";
+        std::cout << "# b = sqrt(A) x took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
     }
   private:
@@ -223,7 +223,7 @@ struct KrylovSqrtODESolve
         if(rank==0)
 #endif //MPI
         {
-            std::cout << "# sqrt(A)x took \t"<<t.diff()<<"s\n";
+            std::cout << "# b = sqrt(A) x with " << m_lanczos.get_iter()  << " iterations took "<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
         //reset max iterations if () operator is called again
@@ -327,7 +327,6 @@ struct KrylovSqrtCauchySolve
 
         m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
         m_cauchysqrt.set_A(m_T);         //set T in cauchy
-
         m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
 #ifdef MPI_VERSION
         dg::blas2::symv(m_V, m_y, m_b);
@@ -344,7 +343,7 @@ struct KrylovSqrtCauchySolve
         if(rank==0)
 #endif // MPI_VERSION
         {
-            std::cout << "# sqrt(A)x took \t"<<t.diff()<<"s\n";
+            std::cout << "# b = sqrt(A) x with " << m_lanczos.get_iter()  << " iterations took "<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
         //reset max iterations if () operator is called again
@@ -398,6 +397,7 @@ class KrylovSqrtODEinvert
         m_epsTimerel = epsTimerel;
         m_epsTimeabs = epsTimeabs;
         m_max_iter = max_iterations;
+        m_b = copyable;
         m_eps = eps;
         m_e1.assign(max_iterations, 0.);
         m_e1[0] = 1.;
@@ -412,7 +412,7 @@ class KrylovSqrtODEinvert
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
-     * @param b The right hand side vector. (must be multiplied by weights)
+     * @param b The right hand side vector. (is multiplied by weights)
      * @param P The preconditioner to be used
      * @param S (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
@@ -423,14 +423,23 @@ class KrylovSqrtODEinvert
       */
     unsigned operator()(Container& x, const Container& b)
     {
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
         if( sqrt(dg::blas2::dot(m_A.weights(), b)) == 0)
         {
             dg::blas1::copy( b, x);
+#ifdef DG_BENCHMARK
+            t.toc();
+            std::cout << "# x = sqrt(A)^(-1) b with 0 iterations took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
             return 0;
         }
-
+        //multiply weights
+        dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_TinvRpair = m_cgtridiag(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, 1.); 
+        m_TinvRpair = m_cgtridiag(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1.); 
         m_Tinv = m_TinvRpair.first; 
         m_R    = m_TinvRpair.second;   
         
@@ -443,14 +452,19 @@ class KrylovSqrtODEinvert
         //could be replaced by Cauchy sqrt solve
         unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, 1e-8, 1e-10);
         std::cout << "Time iterations  " << time_iter  << "\n";
-        dg::blas2::gemv(m_R, m_y, x);  // x =  R T^(-1/2) e_1   
+        dg::blas2::gemv(m_R, m_y, x);  // x =  R T^(-1/2) e_1
+#ifdef DG_BENCHMARK
+        t.toc();
+        std::cout << "# x = sqrt(A)^(-1) b with " << m_cgtridiag.get_iter()  << " iterations took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
         m_cgtridiag.set_iter(m_max_iter);
         return time_iter;
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
-    value_type m_epsCG,m_epsTimerel, m_epsTimeabs,  m_eps;
+    value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps;
+    Container m_b;
     SubContainer m_e1, m_y;
     Rhs<DiaMatrix, SubContainer> m_rhs;  
     dg::CGtridiag< Container, SubContainer, DiaMatrix, CooMatrix > m_cgtridiag;
@@ -494,6 +508,7 @@ class KrylovSqrtCauchyinvert
         m_max_iter = max_iterations;
         m_iterCauchy = iterCauchy;
         m_eps = eps;
+        m_b = copyable;
         m_e1.assign(max_iterations, 0.);
         m_e1[0] = 1.;
         m_y.assign(max_iterations, 1.);
@@ -504,13 +519,16 @@ class KrylovSqrtCauchyinvert
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmax = 1./(1.-A.alpha()*hxhy*(1.0 + 1.0)); //EVs of inverse Helmholtz
         m_EVmin = 1./(1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()))); //EVs of inverse Helmholtz
+#ifdef DG_DEBUG
+        std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
+#endif //DG_DEBUG
     }
     /**
      * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
-     * @param b The right hand side vector. (must be multiplied by weights)
+     * @param b The right hand side vector. (is multiplied by weights)
      * @param P The preconditioner to be used
      * @param S (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
@@ -521,28 +539,39 @@ class KrylovSqrtCauchyinvert
       */
     unsigned operator()(Container& x, const Container& b)
     {
+#ifdef DG_BENCHMARK
+        dg::Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
         if( sqrt(dg::blas2::dot(m_A.weights(), b)) == 0)
         {
             dg::blas1::copy( b, x);
+#ifdef DG_BENCHMARK
+            t.toc();
+            std::cout << "# x = sqrt(A)^(-1) b with 0 iterations took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
             return 0;
         }
-
+        //multiply weights
+        dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_TinvRpair = m_cgtridiag(m_A, x, b, m_A.inv_weights(), m_A.inv_weights(), m_eps, 1.); 
+        m_TinvRpair = m_cgtridiag(m_A, x, m_b, m_A.inv_weights(), m_A.inv_weights(), m_eps, 1.); 
         m_Tinv = m_TinvRpair.first; 
         m_R    = m_TinvRpair.second;   
+            
         
         m_e1.resize(m_cgtridiag.get_iter(), 0);
         m_e1[0] = 1.;
         m_y.resize( m_cgtridiag.get_iter());
         m_cauchysqrt.new_size(m_cgtridiag.get_iter()); //resize  vectors in sqrtODE solver
         m_cauchysqrt.set_A(m_Tinv);
-
-#ifdef DG_DEBUG
-        std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
-#endif //DG_DEBUG
+        
         m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated
-        dg::blas2::gemv(m_R, m_y, x);  // x =  R T^(-1/2) e_1   
+        dg::blas2::gemv(m_R, m_y, x);  // x =  R T^(-1/2) e_1  
+#ifdef DG_BENCHMARK
+        t.toc();
+        std::cout << "# x = sqrt(A)^(-1) b with " << m_cgtridiag.get_iter()  << " iterations took "<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
         m_cgtridiag.set_iter(m_max_iter);
         return m_iterCauchy;
     }
@@ -550,6 +579,7 @@ class KrylovSqrtCauchyinvert
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter, m_iterCauchy;
     value_type m_epsCG,  m_eps, m_EVmin, m_EVmax;
+    Container m_b;
     SubContainer m_e1, m_y;
     CauchySqrtInt<DiaMatrix, SubContainer> m_cauchysqrt; 
     dg::CGtridiag< Container, SubContainer, DiaMatrix, CooMatrix > m_cgtridiag;

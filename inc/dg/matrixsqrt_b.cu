@@ -1,6 +1,6 @@
 // #define SILENT
 // #undef DG_BENCHMARK
-// #define DG_DEBUG
+#define DG_DEBUG
 
 #include <iostream>
 #include <iomanip>
@@ -16,7 +16,7 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-const double alpha = -0.;
+const double alpha = -1.;
 const double m=4.;
 const double n=4.;
 double lhs( double x, double y){ return sin(x*m)*sin(y*n);}
@@ -76,7 +76,7 @@ int main()
     
     dg::Invert<Container> invert( x, grid.size(), epsCG);
 
-  
+  /*
     //////////////////////////Direct Cauchy integral solve
     std::cout << "Cauchy \n";
     DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, grid, epsCG, iterCauchy);
@@ -146,27 +146,26 @@ int main()
     t.toc();
     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-    std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";    //error should be much 
+    std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";    //error should be much */
     
 
-    std::cout << "CG + ODE\n";
-    dg::blas1::scal(x,0.0);
-    KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
-    dg::blas2::symv(w2d, b_exac, b);
-    t.tic();
-    counter = krylovsqrtodeinvert( x, b);
-    t.toc();
-    dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-    std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"  Iterations: "<<std::setw(3)<<counter << "\n"; 
+//     std::cout << "CG + ODE\n";
+//     dg::blas1::scal(x,0.0);
+//     KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
+//     t.tic();
+//     counter = krylovsqrtodeinvert( x, b_exac);
+//     t.toc();
+//     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
+//     std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"  Iterations: "<<std::setw(3)<<counter << "\n"; 
 
     
     std::cout << "CG + Cauchy\n";
-    dg::blas1::scal(x,0.0);
+    dg::blas1::scal(x, 0.0);
+//         dg::blas1::copy(x_exac, x);
     KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtcauchyinvert(A, grid, x,  epsCG, iter, iterCauchy, eps);
-    dg::blas2::symv(w2d, b_exac, b);
     t.tic();
-    counter = krylovsqrtcauchyinvert( x, b);
+    counter = krylovsqrtcauchyinvert( x, b_exac);
     t.toc();
     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));

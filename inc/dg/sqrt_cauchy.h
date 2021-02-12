@@ -194,20 +194,17 @@ struct CauchySqrtInt
      */
     void construct(const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights, const bool& symmetric) 
     {
-        m_helper = m_helper2 = m_helper3 = copyable;
+        m_helper = m_temp = m_helper3 = copyable;
         m_A = A;
         m_multiply_weights = multiply_weights;
         m_symmetric = symmetric;
         m_eps = eps;
         m_size = m_helper.size();
-        std::cout << " size " << m_size<< "\n";
+        m_number = 0;
         m_op.construct(m_A, m_helper, m_multiply_weights);
-        if (m_symmetric == true) 
-        {
-            if (m_multiply_weights==true) m_invert.construct( m_helper, m_size*m_size, eps, 1, true, 1.);
-            else m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.);
-        }
+        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size);
         else m_lgmres.construct( m_helper, 30, 10, 10*m_size*m_size);
+        m_temp_ex.set_max(1, copyable);
     }
     /**
      * @brief Resize matrix and set A and vectors and set new size
@@ -216,17 +213,13 @@ struct CauchySqrtInt
      */
      void new_size( unsigned new_max) { 
         m_helper.resize(new_max);
-        m_helper2.resize(new_max);
+        m_temp.resize(new_max);
         m_helper3.resize(new_max);
-        if (m_symmetric == true) 
-        {
-            if (m_multiply_weights==true) m_invert.construct( m_helper, new_max*new_max, m_eps, 1, true, 1.);
-            else m_invert.construct( m_helper, new_max*new_max, m_eps, 1, false, 1.);
-        }
+        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max);
         else m_lgmres.construct( m_helper, 30, 10, 10*new_max*new_max);
         m_op.new_size(new_max);
+        m_temp_ex.set_max(1, m_temp);
         m_size = new_max;
-        std::cout << " size " << m_size<< "\n";
     } 
     ///@brief Get the current size of vectors
     ///@return the current vector size
@@ -293,24 +286,36 @@ struct CauchySqrtInt
             sn = boost::math::jacobi_sn(sqrt1mk2, t)*cn;
             dn = boost::math::jacobi_dn(sqrt1mk2, t)*cn;
             w = sqrtminEV*sn;
-            dg::blas1::axpby(cn*dn, x, 0.0 , m_helper); //m_helper = cn dn x
+            if (m_multiply_weights == true) 
+                dg::blas2::symv(cn*dn, m_op.weights(), x, 0.0 , m_helper); //m_helper = cn dn x
+            else 
+                dg::blas1::axpby(cn*dn, x, 0.0 , m_helper); //m_helper = cn dn x
             m_op.set_w(w);
-            if (m_symmetric == true) m_invert( m_op, m_helper2, m_helper);      // m_helper2 = (w^2 +V A)^(-1) cn dn x
-            else m_lgmres.solve( m_op, m_helper2, m_helper, m_op.inv_weights(), m_op.inv_weights(), m_eps, 1); 
-            dg::blas1::axpby(-fac, m_helper2, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) cn dn x
+            m_temp_ex.extrapolate(t, m_temp);
+
+            if (m_symmetric == true) 
+            {
+                m_number = m_pcg( m_op, m_temp, m_helper, m_op.inv_weights(), m_op.weights(), m_eps); // m_temp = (w^2 +V A)^(-1) cn dn x
+                if(  m_number == m_pcg.get_max()) throw dg::Fail( m_eps);
+            }
+            else 
+                m_lgmres.solve( m_op, m_temp, m_helper, m_op.inv_weights(), m_op.weights(), m_eps, 1); 
+            m_temp_ex.update(t, m_temp);
+
+            dg::blas1::axpby(-fac, m_temp, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) cn dn x
         }
         dg::blas2::symv(m_A, m_helper3, b); // - A fac sum (w^2 +V A)^(-1) cn dn x
         if (m_multiply_weights == true) dg::blas1::pointwiseDot(m_op.inv_weights(),  b, b);  // fac V A (-w^2 I -V A)^(-1) cn dn x
 
     }
   private:
-    Container m_helper, m_helper2, m_helper3;
+    Container m_helper, m_temp, m_helper3;
     Matrix m_A;
     SqrtCauchyIntOp< Matrix, Container> m_op;
-    unsigned m_size;
+    unsigned m_size, m_number;
     bool m_multiply_weights, m_symmetric;
     value_type m_eps;
-    dg::Invert<Container> m_invert;
+    dg::CG<Container> m_pcg;
     dg::LGMRES<Container> m_lgmres;
-
+    dg::Extrapolation<Container> m_temp_ex;
 };

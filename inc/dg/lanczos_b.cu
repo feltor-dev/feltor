@@ -137,7 +137,7 @@ int main()
     Tinv = TinvRpair.first; 
     R    = TinvRpair.second;
 
-    dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
+    dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
     std::cout << "# of CG Iterations: "<< cgtridiag.get_iter() <<" | time: "<< t.diff()<<"s \n";
     std::cout << "# Relative error between x= R T^{-1} e_1 and x: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
    

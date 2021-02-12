@@ -185,19 +185,17 @@ struct Rhs
      */
     void construct(const Matrix& A,  const Container& copyable,  value_type eps, const bool& multiply_weights, const bool& symmetric) 
     {
-         m_helper = copyable;
-         m_A = A;
-         m_multiply_weights = multiply_weights;
-         m_symmetric = symmetric;
-         m_eps = eps;
-         m_size = m_helper.size();
-         m_lhs.construct(m_A, m_helper, multiply_weights);
-         if (m_symmetric == true) 
-         {
-             if (m_multiply_weights==true) m_invert.construct( m_helper, m_size*m_size, eps, 1, true, 1.);
-             else m_invert.construct( m_helper, m_size*m_size, eps, 1, false, 1.);
-         }
-         else m_lgmres.construct( m_helper, 30, 10, 10*m_size*m_size);
+        m_helper = copyable;
+        m_A = A;
+        m_multiply_weights = multiply_weights;
+        m_symmetric = symmetric;
+        m_eps = eps;
+        m_size = m_helper.size();
+        m_number = 0;
+        m_lhs.construct(m_A, m_helper, multiply_weights);
+        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size);
+        else m_lgmres.construct( m_helper, 30, 10, 100*m_size*m_size);
+        m_yp_ex.set_max(3, copyable);
     }
     /**
      * @brief Resize matrix and set A and vectors and set new size
@@ -206,9 +204,10 @@ struct Rhs
      */
      void new_size( unsigned new_max) { 
         m_helper.resize(new_max);
-        if (m_symmetric == true) m_invert.set_size(m_helper, new_max*new_max);
-        else m_lgmres.construct( m_helper, 30, 10, 10*new_max*new_max);
+        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max);
+        else m_lgmres.construct( m_helper, 30, 10, 100*new_max*new_max);
         m_lhs.new_size(new_max);
+        m_yp_ex.set_max(3, m_helper);
         m_size = new_max;
     } 
     ///@brief Get the current size of vectors
@@ -259,22 +258,33 @@ struct Rhs
     void operator()(value_type t, const Container& y, Container& yp)
     {
         dg::blas2::symv(m_A, y, m_helper);  
-        if (m_multiply_weights == true) dg::blas1::pointwiseDot(m_lhs.inv_weights(), m_helper, m_helper); 
-        dg::blas1::axpby(0.5, y, -0.5, m_helper); 
+        if (m_multiply_weights == true) 
+            dg::blas2::symv(0.5, m_lhs.weights(), y, -0.5, m_helper); 
+        else
+            dg::blas1::axpby(0.5, y, -0.5, m_helper); 
+        
         m_lhs.set_time(t);
-        if (m_symmetric == true) m_invert( m_lhs, yp, m_helper); 
-        else m_lgmres.solve( m_lhs, yp, m_helper, m_lhs.inv_weights(), m_lhs.inv_weights(), m_eps, 1); 
+        m_yp_ex.extrapolate(t, yp);
+        if (m_symmetric == true) 
+        {
+            m_number = m_pcg( m_lhs, yp, m_helper, m_lhs.inv_weights(), m_lhs.weights(), m_eps); 
+            if( m_number == m_pcg.get_max()) throw dg::Fail( m_eps);
+        }
+        else 
+            m_lgmres.solve( m_lhs, yp, m_helper, m_lhs.inv_weights(), m_lhs.weights(), m_eps, 1); 
+        
+        m_yp_ex.update(t, yp);
     }
   private:
     Container m_helper;
     Matrix m_A;
     Lhs<Matrix, Container> m_lhs;
-    unsigned m_size;
+    unsigned m_size, m_number;
     bool m_multiply_weights, m_symmetric;
     value_type m_eps;
-    dg::Invert<Container> m_invert;  
+    dg::CG<Container> m_pcg;  
     dg::LGMRES<Container> m_lgmres;
-
+    dg::Extrapolation<Container> m_yp_ex;
 };
 
 

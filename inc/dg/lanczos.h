@@ -6,7 +6,8 @@
 
 
 namespace dg{
-    
+   
+
 /**
 * @brief Functor class for computing the inverse of a general tridiagonal matrix 
 */
@@ -36,6 +37,12 @@ class InvTridiag
         theta.resize(new_size+1);
         Tinv.resize(new_size, new_size, new_size*new_size);
     }
+
+    int sign(unsigned i)
+    {  
+        if (i%2==0) return 1;
+        else return -1;
+    }
  /**
      * @brief Compute the inverse of a tridiagonal matrix T
      * 
@@ -54,7 +61,7 @@ class InvTridiag
             beta[i]  = T.values(i,2)  ;  // +1 diagonal //dia_rows entry works since its outside of matrix
             gamma[i] = T.values(i+1,0);  // -1 diagonal            
         }
-        Tinv = this->operator()(alpha,beta,gamma);
+        Tinv = this->operator()(alpha, beta, gamma);
         return Tinv;
     }
      /**
@@ -71,6 +78,7 @@ class InvTridiag
     {
         //Compute theta and phi
         unsigned is=0;
+        unsigned vector_size = a.size();
         for( unsigned i = 0; i<theta.size(); i++)
         {   
             is = (theta.size() - 1) - i;
@@ -90,30 +98,23 @@ class InvTridiag
                 phi[is]  = a[is]  * phi[is+1]  - b[is]  * c[is]  * phi[is+2];
             }
         }
-
         //Compute inverse tridiagonal matrix elements
         unsigned counter = 0;
-        for( unsigned i=0; i<a.size(); i++)
+        for( unsigned i=0; i<vector_size; i++)
         {   
-            for( unsigned j=0; j<a.size(); j++)
+            for( unsigned j=0; j<vector_size; j++)
             {   
                 Tinv.row_indices[counter]    = j;
                 Tinv.column_indices[counter] = i; 
-                temp=1.;
-                if (i<j) {
-                    for (unsigned k=i; k<j; k++) temp*=b[k];
-                    Tinv.values[counter] =temp*pow(-1,i+j) * theta[i] * phi[j+1]/theta[a.size()];
-                    
-                }
-                else if (i==j)
-                {
-                    Tinv.values[counter] =theta[i] * phi[j+1]/theta[a.size()];
+                if (i<=j) {
+                    temp = std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>());
+                    Tinv.values[counter] =temp*sign(i+j) * theta[i] * phi[j+1]/theta[vector_size];
+
                 }   
                 else // if (i>j)
                 {
-                    for (unsigned k=j; k<i; k++) temp*=c[k];           
-                    Tinv.values[counter] =temp*pow(-1,i+j) * theta[j] * phi[i+1]/theta[a.size()];
-
+                    temp = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>());
+                    Tinv.values[counter] =temp*sign(i+j) * theta[j] * phi[i+1]/theta[vector_size];
                 }
                 counter++;
             }
@@ -125,6 +126,7 @@ class InvTridiag
     CooMatrix Tinv;    
     value_type temp;
 };
+
 /**
 * @brief Functor class for the Lanczos method to solve \f[b = Ax\f] or \f[b = S^{-1} A x\f]
 * for b. A is a symmetric and \f[S^{-1}\f] are typically the inverse weights.
@@ -519,10 +521,17 @@ class CGtridiag
         if( nrmb == 0)
         {
             dg::blas1::copy( b, x);
+            set_iter(1);
             return m_TinvRpair;
         }
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
+        
+        if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) 
+        {
+            set_iter(1);
+            return m_TinvRpair;
+        }
         dg::blas2::symv( P, m_r, m_p );//<-- compute p_0
         dg::blas1::copy( m_p, m_rh);
 
@@ -554,7 +563,8 @@ class CGtridiag
                 std::cout << "# (Relative "<<sqrt( dg::blas2::dot(S,m_r) )/nrmb << ")\n";
             }
     #endif //DG_DEBUG
-            if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
+            if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) 
+                //TODO change this criterium  for square root matrix
             {
                 dg::blas2::symv(P, m_r, m_rh);
                 nrm2r_new = dg::blas1::dot( m_rh, m_r);
@@ -562,8 +572,8 @@ class CGtridiag
                 m_vm[i] = -1./m_alpha;
                 m_v0[i+1] = -m_vp[i];
                 m_v0[i] -= m_vm[i];
-                
-                m_max_iter=i+1;
+                set_iter(i+1);
+
                 break;
             }
             dg::blas2::symv(P, m_r, m_rh);
@@ -577,7 +587,6 @@ class CGtridiag
             nrm2r_old=nrm2r_new;
         }
 
-        set_iter(m_max_iter);
         //Compute inverse of tridiagonal matrix
         m_Tinv = m_invtridiag(m_v0,m_vp,m_vm);
 

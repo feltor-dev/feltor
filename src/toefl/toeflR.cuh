@@ -2,7 +2,6 @@
 #include <exception>
 #include "dg/algorithm.h"
 #include "parameters.h"
-#include "dg/matrixsqrt.h"
 #include "dg/polarization.h"
 namespace toefl
 {
@@ -69,9 +68,8 @@ struct Explicit
     void gamma1_y( const container& y, container& yp)
     {
         if (equations == "global-arbpolO2") {
-            dg::blas1::pointwiseDot(w2d,y,chi);
             dg::blas1::scal(yp,0.0);
-            sqrtinvert(yp, chi);
+            sqrtinvert(yp, y);
         }
         else {
             std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, yp, y, eps_gamma);
@@ -148,7 +146,7 @@ struct Explicit
     std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
     
-    std::vector<dg::Polarization<Geometry, Matrix, container> > multi_dfpolarization;
+    std::vector<dg::Polarization<Geometry, Matrix,  DiaMatrix, CooMatrix, container, dg::DVec> > multi_dfpolarization;
     
     KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
     KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
@@ -200,7 +198,7 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
         multi_arbpol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor); //only centered implemented
-        multi_dfpolarization[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false); 
+        multi_dfpolarization[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false, "df"); 
         
         multi_gamma0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "global-arbpolO2" ) {
