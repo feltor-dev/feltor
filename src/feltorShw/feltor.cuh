@@ -106,7 +106,7 @@ struct Explicit
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
-    dg::Gradient< Geometry, Matrix, container> gradient; 
+    dg::Variation< Geometry, Matrix, container> gradient; 
 
     dg::Elliptic< Geometry, Matrix, container > lapperp; 
     std::vector<container> multi_chi;

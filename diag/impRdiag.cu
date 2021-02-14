@@ -122,7 +122,7 @@ int main( int argc, char* argv[])
   std::vector<dg::HVec> npe_h(3, dg::evaluate(dg::zero, g2d));
   //eval field
   dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa(g2d);
-  dg::Gradient< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient(g2d);
+  dg::Variation< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient(g2d);
   //eval particle densities
   const dg::DVec binv( dg::evaluate(dg::LinearX(p.kappa, 1.), g2d));
   dg::DVec chi = dg::evaluate(dg::zero, g2d);

@@ -202,7 +202,7 @@ struct Asela
 
     //matrices and solvers
     dg::ArakawaX< Geometry, Matrix, container > arakawa; 
-    dg::Gradient< Geometry, Matrix, container > gradient; 
+    dg::Variation< Geometry, Matrix, container > gradient; 
     dg::Elliptic<  Geometry, Matrix, container  > lapperp; //note the host vector    
     
     std::vector<container> multi_chi;

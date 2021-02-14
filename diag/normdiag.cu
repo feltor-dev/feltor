@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
     dg::DVec nG(dg::evaluate(prof,g2d));
     dg::DVec w2d = dg::create::weights( g2d);
     dg::Poisson<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x_phi, p.bc_y);
-    dg::Gradient<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient(g2d, p.bc_x_phi, p.bc_y);
+    dg::Variation<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient(g2d, p.bc_x_phi, p.bc_y);
     //open netcdf files
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     //set min and max timesteps

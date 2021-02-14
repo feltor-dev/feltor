@@ -126,7 +126,7 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
-    dg::Gradient< Geometry, Matrix, container> gradient;
+    dg::Variation< Geometry, Matrix, container> gradient;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;

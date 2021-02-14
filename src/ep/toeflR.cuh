@@ -125,7 +125,7 @@ struct ToeflR
     dg::Elliptic<Geometry, Matrix, container> pol, laplaceM; //contains normalized laplacian
     dg::Helmholtz<Geometry,  Matrix, container> gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa; 
-    dg::Gradient< Geometry, Matrix, container> gradient; 
+    dg::Variation< Geometry, Matrix, container> gradient; 
 
     dg::Invert<container> invert_pol, invert_invgamma;
 

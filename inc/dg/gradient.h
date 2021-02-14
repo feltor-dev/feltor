@@ -187,6 +187,14 @@ class Gradient
 ///@ingroup matrixoperators
 template <class Geometry, class Matrix, class Container>
 using Gradient2d = Gradient<Geometry, Matrix, Container>;
+///@copydoc Gradient
+///@ingroup matrixoperators
+template <class Geometry, class Matrix, class Container>
+using Variation = Gradient<Geometry,Matrix,Container>;
+///@copydoc Gradient
+///@ingroup matrixoperators
+template <class Geometry, class Matrix, class Container>
+using Variation2d = Gradient<Geometry,Matrix,Container>;
 
 /**
  * @brief A 3d gradient \f$\chi\cdot\nabla\f$ and variation \f$ \nabla\phi \cdot \chi \nabla\phi\f$ operator
@@ -375,5 +383,10 @@ class Gradient3d
     SparseTensor<Container> m_chi;
     bool m_multiplyZ = true;
 };
+
+///@copydoc Gradient3d
+///@ingroup matrixoperators
+template <class Geometry, class Matrix, class Container>
+using Variation3d = Gradient3d<Geometry,Matrix,Container>;
 
 } //namespace dg

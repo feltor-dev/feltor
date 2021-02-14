@@ -69,7 +69,7 @@ int main( int argc, char* argv[])
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x_phi, p.bc_y);
-    dg::Gradient<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> gradient(g2d, p.bc_x_phi, p.bc_y);
+    dg::Variation<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> gradient(g2d, p.bc_x_phi, p.bc_y);
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> pol(g2d,   p.bc_x_phi, p.bc_y, dg::normed, dg::centered);
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> lap(g2d,   p.bc_x, p.bc_y, dg::normed, dg::centered);
     

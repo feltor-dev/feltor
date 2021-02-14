@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
     dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( g2d); 
-    dg::Gradient< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient( g2d); 
+    dg::Variation< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient( g2d); 
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
