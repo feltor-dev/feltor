@@ -14,9 +14,32 @@ namespace geo
 {
 namespace solovev
 {
+/*! @class hide_solovev_json
+ * @code
+// Solovev (and Taylor) geometry parameters
+{
+    "equilibrium": "solovev",
+    // Note that for the taylor field you need to include boost before the geometries header!
+    // "equilibrium" : "taylor",
+    "A": 0,
+    "R_0": 213.36,
+    "PP": 1,
+    "PI": 1,
+    "c":[
+        0.072597888572520090,
+        -0.14926096478076946,
+        // ... 12 coefficients in total
+    ],
+    "description" : "standardX",
+    "inverseaspectratio": 0.3211009174311926,
+    "triangularity": 0.3,
+    "elongation": 1.44
+}
+@endcode
+*/
 /**
  * @brief Constructs and display geometric parameters for the solovev and taylor fields
- * @ingroup geom
+ * @ingroup solovev
  * @note include \c json/json.h before \c geometries.h in order to activate json functionality
  */
 struct Parameters
@@ -33,9 +56,10 @@ struct Parameters
 #ifdef JSONCPP_VERSION_STRING
     /**
      * @brief Construct from Json dataset
-     * @param js Can contain the variables "A" (0), "c" (0), "PP" (1.), "PI"
-     * (1.), "R_0" , "inverseaspectratio" , "elongation" (1), "triangularity"
-     * (0)
+     * @copydoc hide_solovev_json
+     * @sa \c dg::geo::description to see valid values for the %description field
+     * @note the \c dg::geo::taylor field is chosen by setting "taylor" in the equilibrium field (but also note that you need to include boost for the taylor field)
+     * @param js valid Json object (see code above to see the valid key : value pairs)
      * @param mode determine what happens when a key is missing
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h

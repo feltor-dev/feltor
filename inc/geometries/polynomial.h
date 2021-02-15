@@ -165,7 +165,7 @@ static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
  * Based on \c dg::geo::polynomial::Psip(gp) and \c dg::geo::polynomial::Ipol(gp)
  * @param gp Polynomial parameters
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup polynomial
  */
 static inline dg::geo::TokamakMagneticField createPolynomialField(
     dg::geo::polynomial::Parameters gp)

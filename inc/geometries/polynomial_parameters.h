@@ -14,9 +14,32 @@ namespace geo
 {
 namespace polynomial
 {
+/*! @class hide_polynomial_json
+ * @code
+// Polynomial geometry parameters
+{
+    "equilibrium" : "polynomial",
+    "M" : 8,
+    "N" : 8,
+    "PI" : -1.0,
+    "PP" : -1.0,
+    "R_0" : 906.38,
+    "c" :
+    [
+        -0.96689843290517163,
+        3.0863312163153722,
+        // ... M*N coefficients in total
+    ],
+    "description" : "standardX",
+    "elongation" : 1.5,
+    "inverseaspectratio" : 0.27593818984547458,
+    "triangularity" : 0.40000000000000002
+}
+@endcode
+*/
 /**
  * @brief Constructs and display geometric parameters for the polynomial fields
- * @ingroup geom
+ * @ingroup polynomial
  * @note include \c json/json.h before \c geometries.h in order to activate json functionality
  */
 struct Parameters
@@ -34,9 +57,9 @@ struct Parameters
 #ifdef JSONCPP_VERSION_STRING
     /**
      * @brief Construct from Json dataset
-     * @param js Can contain the variables "M" (1), "N" (1), "c" (0), "PP" (1.), "PI"
-     * (1.), "R_0" , "inverseaspectratio" , "elongation" (1), "triangularity"
-     * (0)
+     * @copydoc hide_polynomial_json
+     * @sa dg::geo::description to see valid values for the %description field
+     * @param js valid Json object (see code above to see the valid key : value pairs)
      * @param mode determine what happens when a key is missing
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h

@@ -26,9 +26,9 @@ enum class equilibrium
 {
     solovev, //!< dg::geo::solovev::Psip
     taylor, //!< dg::geo::taylor::Psip
-    polynomial, ///!< dg::geo::polynomial::Psip
+    polynomial, //!< dg::geo::polynomial::Psip
     guenther, //!< dg::geo::guenther::Psip
-    toroidal, //!< dg::geo::toroidal::Psip
+    toroidal, //!< dg::geo::createToroidalField
     circular //!< dg::geo::circular::Psip
 };
 ///@brief How flux-function is modified
@@ -38,7 +38,12 @@ enum class modifier
     heaviside, //!< Psip is dampened to a constant outside a critical value
     sol_pfr //!< Psip is dampened in the SOL and PFR regions but not in the closed field line region
 };
-///@brief How flux function looks like. Decider on whether and what flux aligned grid to construct
+/**
+ * @brief How flux function looks like. Decider on whether and what flux aligned grid to construct
+ *
+ * The reason for this enum is that it is very hard to automatically detect if the construction
+ * of a flux aligned X-grid is possible, but for a human it is very easy to see.
+ */
 enum class description
 {
     standardO, //!< closed flux surfaces centered around an O-point located near (R_0, 0); flux-aligned grids can be constructed
@@ -77,12 +82,10 @@ static const std::map<std::string, description> str2description{
 /**
  * @brief Meta-data about the magnetic field in particular the flux function
  *
- * The purpose of this is to give a unified set of parameters for
- * all equilibria that can be used to stear program execution.
- *
- * For example it is very hard to automatically detect if the construction
- * of a flux aligned X-grid is possible, but for a human it is very easy.
- * Here we give the \c description specifier that can be used in an if-else statement.
+ * The purpose of this is to give a unified set of parameters for all
+ * equilibria that can be used to stear program execution based on
+ * characteristics of the magnetic flux functions (for example double X-point
+ * vs single X-point vs no X-point)
  */
 struct MagneticFieldParameters
 {
@@ -111,17 +114,29 @@ struct MagneticFieldParameters
         m_triangularity( triangularity),
         m_equilibrium( equ),
         m_modifier(mod), m_description( des){}
- //!< The minor radius; the purpose of this parameter is not to be exact but to serve as a refernce of how to setup the size of a simulation box
+    /**
+     * @brief The minor radius
+     *
+     * the purpose of this parameter is not to be exact but to serve as a refernce of how to setup the size of a simulation box
+     */
     double a() const{return m_a;}
- //!< (maximum Z - minimum Z of lcfs)/2a; 1 for a circle; the purpose of this parameter is not to be exact but more to be a reference of how to setup the aspect ratio of a simulation box
+    /**
+     * @brief \f$ e := \frac{\max Z_{\mathrm{lcfs}} - \min Z_{\mathrm{lcfs}}}{2a}\f$
+     *
+     * (1 for a circle); the purpose of this parameter is not to be exact but more to be a reference of how to setup the aspect ratio of a simulation box
+     */
     double elongation() const{return m_elongation;}
- //!< (R_0 - R_X) /a;  The purpose of this parameter is to find the approximate location of R_X (if an X-point is present, Z_X is given by elongation) the exact location can be computed by the \c findXpoint function
+    /**
+     * @brief \f$ \delta := \frac{R_0 - R_X}{a}\f$
+     *
+     * The purpose of this parameter is to find the approximate location of R_X (if an X-point is present, Z_X is given by elongation) the exact location can be computed by the \c findXpoint function
+     */
     double triangularity() const{return m_triangularity;}
- //!< the way the flux function is computed
+    /// the way the flux function is computed
     equilibrium getEquilibrium() const{return m_equilibrium;}
- //!<  the way the flux function is modified
+    ///  the way the flux function is modified
     modifier getModifier() const{return m_modifier;}
- //!< human readable descriptor of how the flux function looks
+    /// how the flux function looks
     description getDescription() const{return m_description;}
     private:
     double m_a,
@@ -181,6 +196,11 @@ struct TokamakMagneticField
 
     const CylindricalFunctorsLvl2& get_psip() const{return m_psip;}
     const CylindricalFunctorsLvl1& get_ipol() const{return m_ipol;}
+    /**
+     * @brief Access Meta-data of the field
+     *
+     * @return Meta-data
+     */
     const MagneticFieldParameters& params() const{return m_params;}
 
     private:
@@ -210,7 +230,7 @@ static inline CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& 
 }
 ///@endcond
 /**
- * @brief Use dg::geo::Periodify to periodify every function the magnetic field
+ * @brief Use dg::geo::Periodify to periodify every function in the magnetic field
  *
  * Note that derivatives are periodified with dg::inverse boundary conditions
  * @param mag The magnetic field to periodify
@@ -220,7 +240,7 @@ static inline CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& 
  * @param Z1 upper boundary in Z
  * @param bcx boundary condition in x (determines how function is periodified)
  * @param bcy boundary condition in y (determines how function is periodified)
- * @note So far this was only tested for Neumann boundary conditions. It is uncertain if Dirichlet boundary conditions work
+ * @attention So far this was only tested for Neumann boundary conditions. It is uncertain if Dirichlet boundary conditions work
  *
  * @return new periodified magnetic field
  */

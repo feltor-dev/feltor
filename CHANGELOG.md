@@ -2,7 +2,6 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-We do not (yet) follow semantic versioning.
 Only changes in code are reported here, we do not track changes in the
 doxygen documentation, READMEs or tex writeups.
 ## [v5.2]
@@ -43,6 +42,16 @@ doxygen documentation, READMEs or tex writeups.
  - new class Gradient that computes gradients and variations
  - a host of new functors for the evaluate and pullback functions
  - FluxSurfaceIntegral, FluxVolumeIntegral and SafetyFactorAverage classes
+ - new implementation: ds_centered_bc_along_field and dss_centered_bc_along_field that implement boundary condition "Stegmeir" style along the magnetic field lines
+ - new Fieldaligned member functions integrate_between_coarse_grid and interpolate_from_coarse_grid that allow field-aligned interpolations
+ - dg::geo::Periodify class and dg::geo::periodify function to extend flux-functions periodically beyond grid boundaries
+ - new dg::geometries::findCriticalPoint function that generalizes X-point and O-point identification
+ - new classes dg::geo::SquareNorm and dg::geo::ScalarProduct that work on cylindrical vector fields
+ - new set utility functors dg::geo::SetUnion, dg::geo::SetIntersection, and dg::geo::SetNot that help construct damping regions
+ - dg::geo::createMagneticField and dg::geo::createModifiedField with associated utility functions and classes that generalize the creation of magnetic flux functions and wall and sheath regions
+ - new polynomial expansion and associated dg::Horner2d functor for magnetic flux functions that can in particular approximate any experimental equilibrium
+ - new equilibrium, modifier and description fields for tokamak magnetic fields
+ - Sign reversal of magnetic field and associated flux functions is now possible
 ### Changed
  - namespace file changed to **dg::file** and exblas changed to **dg::exblas** (for consistency reasons, everything should go into the dg namespace, which in particular reduces the chance for name-clashes to just one, namely 'dg')
  - changed file paths **dg/file/file.h**, **dg/geometries/geometries.h** , **dg/file/nc_utilities.h**
@@ -68,6 +77,11 @@ doxygen documentation, READMEs or tex writeups.
  - Rename all input files with correct json file-ending
  - Complete redesign of src/feltor and src/lamb_dipole
  - Merge toefl_hpc with old toefl_mpi program
+ - bump Doxygen version to 1.8.17
+ - DS forward, backward, centered and dss functions are now free-standing, only requiring a fielaligned object, plus, and minus applications (this allows to reduce the number of times the plus and minus interpolation has to be applied)
+ - changed Fieldaligned members hp_inv to hbp to give more control
+ - dg::forward_transform function (previously dg::create::forward_transform)
+ - new dg::geo::MagneticFieldParameters struct to unify the representation of Meta-data in the TokamakMagneticField class (simplifies construction)
 
 ### Deprecated
  - Karniadakis time-stepper is now superceded by the ImExMultistep class
@@ -86,6 +100,8 @@ doxygen documentation, READMEs or tex writeups.
  - correct capture of cuda-aware mpi, create a fall-back for cuda-unaware mpi-installations
  - Fix bug: test for no-communication in mpi_communicator (indicated false positives)
  - Fix bug: coefficient and initialization in Extrpolate
+ - Fix bug: Fpsi safety-factor in case nan is encountered still works
+ - Fix bug: Fpsi safety-factor works up to the O-point
 
 ## [v5.1]
 ### Added
@@ -147,6 +163,7 @@ doxygen documentation, READMEs or tex writeups.
 - Optimization: implement fast EllSparseBlockMat kernel for z derivative
 - Optimization: change buffer layout in dg::NearestNeighborComm and CooSparseBlockMat kernels to avoid slow scatter/gather operations in mpi matrix-vector multiplication
 - Optimization: implement faster kernels for CooSparseBlockMat symv kernel to accelerate mpi symv with low computation to communication ratio
+- separate modification of fluxfunctions into mod namespace that works on flux functions in general (previously only solovev)
 
 ### Deprecated
 - dg::blas1::transfer (replaced by the more general dg::assign and dg::construct)

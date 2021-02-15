@@ -102,7 +102,7 @@ static inline CylindricalFunctorsLvl1 createIpol( double I0 )
  * \f[ \psi_p(R,Z) = 1, \quad I(\psi_p) = 1\f]
  * @param R0 the major radius
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup toroidal
  * @note The solovev field can also be made to model a todoidal slab field
  */
 static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
@@ -118,7 +118,7 @@ static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
  * @param R0 the major radius
  * @param I0 the current
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup toroidal
  */
 static inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
 {

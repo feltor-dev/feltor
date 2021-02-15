@@ -311,7 +311,7 @@ static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
  * Based on \c dg::geo::taylor::Psip(gp) and \c dg::geo::taylor::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup taylor
  * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
 static inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)

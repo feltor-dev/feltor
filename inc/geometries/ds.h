@@ -219,6 +219,11 @@ struct ComputeDSSDIR{
 /*!@class hide_ds_dir
  * @param dir indicate the direction in the bracket operator and in symv
  */
+/*!@class hide_ds_freestanding
+ * @note This function computes the same as the corresponding member function of DS
+ * and you have to compute the einsPlus and einsMinus interpolations from dg::Fieldaligned yourself. The reasoning for this function is that you can re-use the latter interpolations if you compute for example both first and second derivative of a function.
+ */
+
 
 /*!@class hide_ds_attention
 @attention The \c div and \c symv member functions reliably converge only if fieldlines
@@ -674,6 +679,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fp
 * @ingroup fieldaligned
+* @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
 void ds_forward(const FieldAligned& fa, double alpha, const container& f, const container& fp, double beta, container& g)
@@ -681,9 +687,6 @@ void ds_forward(const FieldAligned& fa, double alpha, const container& f, const 
     //direct
     dg::blas1::subroutine( detail::ComputeDSForward( alpha, beta),
             g, f, fp, fa.hp());
-    //m_fa(einsPlus, m_tempP, m_tempM);
-    //dg::blas1::subroutine( detail::ComputeDSForward( alpha, beta),
-    //        g, f, m_tempP, m_tempM, m_fa.hp());
 }
 /**
 * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -693,6 +696,7 @@ void ds_forward(const FieldAligned& fa, double alpha, const container& f, const 
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
 * @ingroup fieldaligned
+* @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
 void ds_backward( const FieldAligned& fa, double alpha, const container& fm, const container& f, double beta, container& g)
@@ -700,9 +704,6 @@ void ds_backward( const FieldAligned& fa, double alpha, const container& fm, con
     //direct
     dg::blas1::subroutine( detail::ComputeDSBackward( alpha, beta),
             g, f, fm, fa.hm());
-    //m_fa(einsMinus, m_tempM, m_tempP);
-    //dg::blas1::subroutine( detail::ComputeDSBackward( alpha, beta),
-    //        g, f, m_tempM, m_tempP, m_fa.hm());
 }
 /**
 * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -713,6 +714,7 @@ void ds_backward( const FieldAligned& fa, double alpha, const container& fm, con
 * @copydoc hide_ds_fm
 * @copydoc hide_ds_fp
 * @ingroup fieldaligned
+* @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
 void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
@@ -732,9 +734,10 @@ void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
  * to the numerical stability and toroidal resolution.
  * @param fa this object will be used to get grid distances
  * @copydoc hide_ds_parameters4
-* @copydoc hide_ds_fm
-* @copydoc hide_ds_fp
-* @ingroup fieldaligned
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_freestanding
  */
 template<class FieldAligned, class container>
 void dss_centered( const FieldAligned& fa, double alpha, const container&
@@ -745,19 +748,19 @@ void dss_centered( const FieldAligned& fa, double alpha, const container&
 }
 
 /**
-* @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
-*
-* The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
+ * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+ *
+ * The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
  * the boundary condition is implemented
  * along the field-line, that is the boundary condition is used as part of the polynomial interpolation.
  * @param fa this object will be used to get grid distances
-* @copydoc hide_ds_parameters4
-* @copydoc hide_ds_fm
-* @copydoc hide_ds_fp
-* @param bound either dg::NEU or dg::DIR (rest not implemented yet)
-* @param boundary_value first value is for incoming fieldlines, second one for outgoing
-* @ingroup fieldaligned
-*/
+ * @copydoc hide_ds_parameters4
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
+ * @param boundary_value first value is for incoming fieldlines, second one for outgoing
+ * @ingroup fieldaligned
+ */
 template<class FieldAligned, class container>
 void ds_centered_bc_along_field( const FieldAligned& fa, double alpha, const container& fm,
         const container& f, const container& fp, double beta, container& g,

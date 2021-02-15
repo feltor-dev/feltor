@@ -371,7 +371,7 @@ static inline dg::geo::CylindricalFunctorsLvl1 createIpol( const Parameters& gp,
  * Based on \c dg::geo::solovev::Psip(gp) and \c dg::geo::solovev::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup solovev
  */
 static inline dg::geo::TokamakMagneticField createSolovevField(
     dg::geo::solovev::Parameters gp)
@@ -384,8 +384,8 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
 /**
  * @brief Create a modified Solovev Magnetic field
  *
- * Based on \c dg::geo::solovev::mod::Psip(gp) and
- * \c dg::geo::solovev::mod::Ipol(gp)
+ * Based on \c dg::geo::mod::Psip(gp) and
+ * \c dg::geo::solovev::Ipol(gp)
  * We modify psi above a certain value to a constant using the
  * \c dg::IPolynomialHeaviside function (an approximation to the integrated Heaviside
  * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
@@ -396,7 +396,7 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
  * @param alpha radius of the transition region where the modification acts (smaller is quicker)
  * @param sign determines which side of Psi to dampen (negative or positive, forwarded to \c dg::IPolynomialHeaviside)
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup solovev
  */
 static inline dg::geo::TokamakMagneticField createModifiedSolovevField(
     dg::geo::solovev::Parameters gp, double psi0, double alpha, double sign = -1)

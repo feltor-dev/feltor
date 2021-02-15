@@ -141,6 +141,7 @@ struct ZCutter : public aCylindricalFunctor<ZCutter>
 
 /**
  * @brief This function uses the dg::Grid2d::shift member to extend another function beyond the grid boundaries
+ * @sa dg::geo::periodify
  */
 struct Periodify : public aCylindricalFunctor<Periodify>
 {
@@ -286,6 +287,7 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
     double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
     while( (eps < eps_old || eps > 1e-7) && eps > 1e-10 && counter < 100)
     {
+        //newton iteration
         XN[0] = X[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
         XN[1] = X[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
         XN.swap(X);
