@@ -81,10 +81,8 @@ int main()
     Container x(rho.size(), 0.), temp(rho), error(rho), x_gamma(x);
     const Container chi =  dg::evaluate( chi_ana, grid2d);
     const Container rho_FFO4 =    dg::evaluate( rho_ana_FFO4, grid2d);
-
     
     exblas::udouble res;
-
 
     dg::CG <Container> pcg( x, grid2d.size());
     

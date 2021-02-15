@@ -142,11 +142,11 @@ struct Explicit
     
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, container>  laplaceM; //contains normalized laplacian
-    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
-    std::vector<dg::TensorElliptic<Geometry, Matrix, container> > multi_arbpol;
+    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_elliptic;
+    std::vector<dg::TensorElliptic<Geometry, Matrix, container> > multi_tensorelliptic;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
     
-    std::vector<dg::Polarization<Geometry, Matrix,  DiaMatrix, CooMatrix, container, dg::DVec> > multi_dfpolarization;
+    std::vector<dg::PolCharge<Geometry, Matrix,  DiaMatrix, CooMatrix, container, dg::DVec> > multi_dfpolcharge;
     
     KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
     KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
@@ -187,18 +187,18 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
 {
     multi_chi= multigrid.project( chi);
     multi_iota= multigrid.project( chi);
-    multi_pol.resize(3);
-    multi_arbpol.resize(3);
-    multi_dfpolarization.resize(3);
+    multi_elliptic.resize(3);
+    multi_tensorelliptic.resize(3);
+    multi_dfpolcharge.resize(3);
     multi_gamma1.resize(3);
     multi_gamma0.resize(3);
     arakawa.construct(grid);
     
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
-        multi_arbpol[u].construct( multigrid.grid(u),  dg::not_normed, dg::centered, p.jfactor); //only centered implemented
-        multi_dfpolarization[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false, "df"); 
+        multi_elliptic[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
+        multi_tensorelliptic[u].construct( multigrid.grid(u),  dg::not_normed, dg::centered, p.jfactor); //only centered implemented
+        multi_dfpolcharge[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false, "df"); 
         
         multi_gamma0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "global-arbpolO2" ) {
@@ -221,12 +221,12 @@ const container& Explicit<G,  M, DM, CM, container>::compute_psi( double t, cons
     if( equations == "global-arbpolO4" )
     {     
         dg::blas1::pointwiseDot(binv, binv, chi);
-        multi_arbpol[0].variation( gamma_phi, tau/2., chi, omega);
+        multi_tensorelliptic[0].variation( gamma_phi, tau/2., chi, omega);
         dg::blas1::axpby( 1.,  gamma_phi, 1.0, omega,  phi[1]);
     }
     else if ( equations == "global-arbpolO2") {
         //elliptic part
-        multi_pol[0].variation(gamma_phi, phi[1]);   // (grad gamma phi)^2
+        multi_elliptic[0].variation(gamma_phi, phi[1]);   // (grad gamma phi)^2
         dg::blas1::pointwiseDot(1.0, binv, binv, phi[1], 0.0, omega); //omega =  1/B^2 (grad gamma phi)^2 <=> - 2\psi_2
         dg::blas1::axpby( 1.,  gamma_phi, -0.5, omega,  phi[1]); // omega = psi_1+ psi_2
     }
@@ -247,7 +247,7 @@ const container& Explicit<G,  M, DM, CM, container>::compute_psi( double t, cons
             }
         }
         //compute (nabla phi)^2
-        multi_pol[0].variation(potential, omega); //omega used for ExB energy derivation
+        multi_elliptic[0].variation(potential, omega); //omega used for ExB energy derivation
         //compute psi
         if(equations == "global")
         {
@@ -282,8 +282,8 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         multigrid.project( chi, multi_iota);
         for( unsigned u=0; u<3; u++)
         {
-            multi_arbpol[u].set_chi( multi_chi[u]);
-            multi_arbpol[u].set_iota( multi_iota[u]);
+            multi_tensorelliptic[u].set_chi( multi_chi[u]);
+            multi_tensorelliptic[u].set_iota( multi_iota[u]);
         }
 
         dg::blas2::symv( multi_gamma1[0],y[0],chi); //invG ne-1
@@ -292,7 +292,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         dg::blas1::axpby(1., y[1],  -1., gamma_n, omega);      
         
         old_gamma_phi.extrapolate(t, gamma_phi);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_arbpol, gamma_phi, omega, eps_pol);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_tensorelliptic, gamma_phi, omega, eps_pol);
         old_gamma_phi.update( t, gamma_phi);
         if(  number[0] == multigrid.max_iter())
             throw dg::Fail( eps_pol[0]);
@@ -308,7 +308,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
         multigrid.project( chi, multi_chi);
-        for( unsigned u=0; u<3; u++) multi_pol[u].set_chi( multi_chi[u]);
+        for( unsigned u=0; u<3; u++) multi_elliptic[u].set_chi( multi_chi[u]);
         
         //Compute G^{-1} n_e via LanczosSqrtODE solve
         sqrtsolve(y[0], gamma_n); //inv weights already multiplied
@@ -317,7 +317,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         
         //Solve G^{-1} n_e - N_i = nabla. (chi nabla gamma_phi) for gamma_phi         
         old_gamma_phi.extrapolate(t, gamma_phi);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_pol, gamma_phi, omega, eps_pol);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_elliptic, gamma_phi, omega, eps_pol);
         old_gamma_phi.update( t, gamma_phi);
         if(  number[0] == multigrid.max_iter())
             throw dg::Fail( eps_pol[0]);
@@ -338,7 +338,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             {
                 multigrid.project( chi, multi_chi);
                 for( unsigned u=0; u<3; u++)
-                    multi_pol[u].set_chi( multi_chi[u]);
+                    multi_elliptic[u].set_chi( multi_chi[u]);
             }
         }
         else if(equations == "gravity_global" )
@@ -349,7 +349,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             {
                 multigrid.project( chi, multi_chi);
                 for( unsigned u=0; u<3; u++)
-                    multi_pol[u].set_chi( multi_chi[u]);
+                    multi_elliptic[u].set_chi( multi_chi[u]);
             }
         }
         else if( equations == "drift_global" )
@@ -362,7 +362,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             {
                 multigrid.project( chi, multi_chi);
                 for( unsigned u=0; u<3; u++)
-                    multi_pol[u].set_chi( multi_chi[u]);
+                    multi_elliptic[u].set_chi( multi_chi[u]);
                 //pol.set_chi( chi);
             }
         }
@@ -398,7 +398,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         {
                         //invert
             old_phi.extrapolate(t, phi[0]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_dfpolarization, phi[0], omega, eps_pol);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_dfpolcharge, phi[0], omega, eps_pol);
             old_phi.update( t, phi[0]);
             if(  number[0] == multigrid.max_iter())
                 throw dg::Fail( eps_pol[0]);
@@ -407,7 +407,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         {
             //invert
             old_phi.extrapolate(t, phi[0]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_elliptic, phi[0], omega, eps_pol);
             old_phi.update( t, phi[0]);
             if(  number[0] == multigrid.max_iter())
                 throw dg::Fail( eps_pol[0]);
