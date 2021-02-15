@@ -4,6 +4,7 @@
 #include "helmholtz.h"
 #include "multigrid.h"
 #include "matrixsqrt.h"
+#include "tensorelliptic.h"
 
 namespace dg
 {
@@ -32,14 +33,14 @@ class PolCharge
         m_eps_gamma = eps_gamma;
         m_mode = mode;
         m_commute = commute;
-        m_no=no,
+        m_no = no,
         m_temp2 = dg::evaluate(dg::zero, g);
         m_temp =  m_temp2;        
-        m_ell.construct(g, bcx, bcy, m_no, dir, jfactor, chi_weight_jump );
-        dg::assign( dg::create::weights(g), w2d);
-        dg::assign(dg::create::inv_weights( g), v2d);
+        m_temp2_ex.set_max(1, m_temp2);
+        m_temp_ex.set_max(1, m_temp);
         if (m_mode == "df")
         {
+            m_ell.construct(g, bcx, bcy, m_no, dir, jfactor, chi_weight_jump );
             m_multi_gamma.resize(3);
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
@@ -47,18 +48,27 @@ class PolCharge
                 m_multi_gamma[u].construct( m_multi_g.grid(u), bcx, bcy, m_alpha, dir, jfactor);
             }
         }
-        else if (m_mode == "ff")
+        if (m_mode == "ff")
         {
+            m_ell.construct(g, bcx, bcy, m_no, dir, jfactor, chi_weight_jump );
             m_multi_gamma.resize(1);
             m_multi_gamma_PER.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
             m_multi_gamma_PER[0].construct( g, dg::PER, bcy, m_alpha, dir, jfactor);
-            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-12, g.size(), 20, eps_gamma[0]);
-            m_sqrtG0inv_PER.construct(m_multi_gamma_PER[0], g,  m_temp,  1e-12, g.size(), 20, eps_gamma[0]);
+            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-10, g.size(), 20, eps_gamma[0]);
+            m_sqrtG0inv_PER.construct(m_multi_gamma_PER[0], g,  m_temp,  1e-10, g.size(), 20, eps_gamma[0]);
+        }
+        if (m_mode == "ffO4")
+        {
+            m_tensorell.construct(g, bcx, bcy, m_no, dir, jfactor); //not normed by default
+            m_multi_gamma.resize(3);
+            m_multi_g.construct(g, 3);
+            for( unsigned u=0; u<3; u++)
+            {
+                m_multi_gamma[u].construct( m_multi_g.grid(u), bcx, bcy, m_alpha, dir, jfactor);
+            }
         }
         
-        m_temp2_ex.set_max(1, m_temp2);
-        m_temp_ex.set_max(1, m_temp);
 
         
     }
@@ -66,7 +76,12 @@ class PolCharge
     template<class ContainerType0>
     void set_chi( const ContainerType0& sigma)
     {
-        m_ell.set_chi(sigma);
+        if (m_mode == "ff")
+            m_ell.set_chi(sigma);
+        if (m_mode == "ffO4")
+        {
+            m_tensorell.set_chi(sigma);
+        }
     }
     /**
      * @copydoc PolChargeN3d::set_chi(const SparseTensor<ContainerType0>&)
@@ -75,7 +90,24 @@ class PolCharge
     template<class ContainerType0>
     void set_chi( const SparseTensor<ContainerType0>& tau)
     {
-        m_ell.set_chi(tau);
+        if (m_mode == "ff")
+            m_ell.set_chi(tau);
+        if (m_mode == "ffO4")
+        {
+            m_tensorell.set_chi(tau);
+        }
+    }
+    /**
+     * @brief Set the iota in the tensor elliptic operator
+     * @param sigma iota in the tensor elliptic operator
+     */
+    template<class ContainerType0>
+    void set_iota( const ContainerType0& sigma)
+    {
+        if (m_mode == "ffO4")
+        {
+            m_tensorell.set_iota(sigma);
+        }
     }
     /**
      * @brief Set the commute
@@ -94,7 +126,9 @@ class PolCharge
      * @return inverse volume form including inverse weights
      */
     const Container& inv_weights()const {
-        return m_ell.inv_weights();
+        if (m_mode == "ffO4")
+            return m_tensorell.inv_weights();
+        else return m_ell.inv_weights();
     }
     /**
      * @brief Return the vector making the matrix symmetric
@@ -103,7 +137,9 @@ class PolCharge
      * @return volume form including weights
      */
     const Container& weights()const {
-        return  m_ell.weights();
+        if (m_mode == "ffO4")
+             return  m_tensorell.weights();
+        else return  m_ell.weights();
     }
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
@@ -113,13 +149,18 @@ class PolCharge
      * @return the inverse of \f$\chi\f$.
      */
     const Container& precond()const {
-        return m_ell.precond();
+        if (m_mode == "ffO4")
+            return m_tensorell.precond();
+        else return m_ell.precond();
     }
     
     template<class ContainerType0, class ContainerType1>
     void variation( const ContainerType0& phi, ContainerType1& varphi)
     {
-        m_ell.variation(phi, varphi);
+        if (m_mode == "ff")
+            m_ell.variation(phi, varphi);
+        if (m_mode == "ffO4")
+            m_tensorell.variation(phi, varphi);
     }
     /**
      * @brief Compute elliptic term and store in output
@@ -162,7 +203,12 @@ class PolCharge
 
         if (m_alpha == 0)
         {
-            m_ell.symv(alpha, x, beta, y);
+            if (m_mode == "ffO4")
+            {
+                m_tensorell.symv(alpha, x, beta, y); //is not normed by default
+            }
+            if (m_mode == "ff" || m_mode == "df")                
+                m_ell.symv(alpha, x, beta, y);            
         }
         else
         {
@@ -231,16 +277,47 @@ class PolCharge
                     //TODO not implemented so far (relevant thermal models)
                 }
             }
+            if (m_mode == "ffO4")
+            {  
+                if (m_commute == false)
+                {      
+                    m_temp2_ex.extrapolate(m_temp2);
+                    std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, x, m_eps_gamma);
+                    if(  number[0] == m_multi_g.max_iter())
+                        throw dg::Fail( m_eps_gamma[0]);
+                    m_temp2_ex.update(m_temp2);
+
+                    m_tensorell.symv(1.0, m_temp2, 0.0, m_temp); 
+                    if (m_no == not_normed) 
+                        dg::blas1::pointwiseDot(m_temp, m_tensorell.inv_weights(), m_temp);
+                    
+                    m_temp_ex.extrapolate(m_temp2);
+                    number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, m_temp, m_eps_gamma);
+                    if(  number[0] == m_multi_g.max_iter())
+                        throw dg::Fail( m_eps_gamma[0]);
+                    m_temp_ex.update(m_temp2);
+                    
+                    if( m_no == normed)
+                        dg::blas1::axpby(alpha, m_temp2, beta, y);  
+                    if( m_no == not_normed)
+                        dg::blas1::pointwiseDot( alpha, m_temp2, m_tensorell.weights(), beta, y); 
+                }
+                if (m_commute == true)
+                {
+                    //TODO not implemented so far (relevant thermal models)
+                }
+            }
         }
     }
 
     private:
     dg::Elliptic<Geometry,  Matrix, Container> m_ell;
+    dg::TensorElliptic<Geometry,  Matrix, Container> m_tensorell;
+    
     std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma, m_multi_gamma_PER;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
     KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> m_sqrtG0inv, m_sqrtG0inv_PER;    
     Container m_temp, m_temp2;
-    Container v2d, w2d;
     norm m_no;
     value_type  m_alpha;
     std::vector<value_type> m_eps_gamma;

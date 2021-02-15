@@ -76,8 +76,8 @@ int main()
     
     dg::Invert<Container> invert( x, grid.size(), epsCG);
 
-  /*
-    //////////////////////////Direct Cauchy integral solve
+  
+    ////////////////////////Direct Cauchy integral solve
     std::cout << "Cauchy \n";
     DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, grid, epsCG, iterCauchy);
 
@@ -95,7 +95,7 @@ int main()
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
     std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";    
     
-    //////////////////////////Direct sqrt ODE solve
+    ////////////////////////Direct sqrt ODE solve
     std::cout << "ODE\n";
     DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
     t.tic();
@@ -105,7 +105,7 @@ int main()
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
     std::cout  << "   Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
-    //solve for x=\sqrt{A}^{-1} b'
+//     solve for x=\sqrt{A}^{-1} b'
     t.tic();
     invert(A,x,bs);
     t.toc();
@@ -113,7 +113,7 @@ int main()
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
     std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";   
     
-    //////////////////////Krylov solve via Lanczos method and Cauchy solve
+    ////////////////////Krylov solve via Lanczos method and Cauchy solve
     std::cout << "Lanczos + Cauchy ";
     KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter, iterCauchy, eps);
     t.tic();
@@ -122,7 +122,7 @@ int main()
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
     std::cout << " Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"\n";
-    // solve for x=\sqrt{A}^{-1} b'
+//     solve for x=\sqrt{A}^{-1} b'
     t.tic();
     invert(A,x,bs);
     t.toc();
@@ -130,7 +130,7 @@ int main()
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
     std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";   
     
-    ////////////////////Krylov solve via Lanczos method and ODE sqrt solve
+    //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     std::cout << "Lanczos + ODE \n";  
     KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
     b = dg::evaluate(rhsHelmholtzsqrt, grid);
@@ -140,7 +140,7 @@ int main()
     dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
     std::cout  << " Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
-    //solve for x=\sqrt{A}^{-1} b'
+//     solve for x=\sqrt{A}^{-1} b'
     t.tic();
     invert(A,x,bs);
     t.toc();
@@ -149,15 +149,15 @@ int main()
     std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";    //error should be much */
     
 
-//     std::cout << "CG + ODE\n";
-//     dg::blas1::scal(x,0.0);
-//     KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
-//     t.tic();
-//     counter = krylovsqrtodeinvert( x, b_exac);
-//     t.toc();
-//     dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//     erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-//     std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"  Iterations: "<<std::setw(3)<<counter << "\n"; 
+    std::cout << "CG + ODE\n";
+    dg::blas1::scal(x,0.0);
+    KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
+    t.tic();
+    counter = krylovsqrtodeinvert( x, b_exac);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+    erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
+    std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"  Iterations: "<<std::setw(3)<<counter << "\n"; 
 
     
     std::cout << "CG + Cauchy\n";

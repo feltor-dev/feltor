@@ -143,7 +143,7 @@ struct Explicit
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, container>  laplaceM; //contains normalized laplacian
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
-    std::vector<dg::ArbPol<Geometry, Matrix, container> > multi_arbpol;
+    std::vector<dg::TensorElliptic<Geometry, Matrix, container> > multi_arbpol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
     
     std::vector<dg::Polarization<Geometry, Matrix,  DiaMatrix, CooMatrix, container, dg::DVec> > multi_dfpolarization;
@@ -197,7 +197,7 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     for( unsigned u=0; u<3; u++)
     {
         multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
-        multi_arbpol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor); //only centered implemented
+        multi_arbpol[u].construct( multigrid.grid(u),  dg::not_normed, dg::centered, p.jfactor); //only centered implemented
         multi_dfpolarization[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false, "df"); 
         
         multi_gamma0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);

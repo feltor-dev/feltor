@@ -20,28 +20,28 @@ namespace dg{
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  */
  template< class Geometry, class Matrix, class Container>
- struct ArbPol
+ struct TensorElliptic
  {
      using container_type = Container;
      using geometry_type = Geometry;
      using matrix_type = Matrix;
      using value_type = get_value_type<Container>;
      ///@brief empty object ( no memory allocation)
-     ArbPol() {}
+     TensorElliptic() {}
      /**
-     * @brief Construct \c ArbPol operator
+     * @brief Construct \c TensorElliptic operator
      *
      * @param g The grid to use
-     * @param dir Direction of the Laplace operator
+     * @param dir Direction of the Laplace operator (Note: only dg::centered tested)
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ and \f$\iota\f$ is one
      */
-     ArbPol( const Geometry& g, direction dir = dg::forward, value_type jfactor=1.)
+     TensorElliptic( const Geometry& g, norm no = not_normed, direction dir = dg::centered, value_type jfactor=1.)
      {
-         construct( g, dir, jfactor);
+         construct( g, no, dir, jfactor);
      }
      /**
-     * @brief Construct \c ArbPol operator
+     * @brief Construct \c TensorElliptic operator
      *
      * @param g The grid to use
      * @param bcx boundary condition in x
@@ -50,14 +50,20 @@ namespace dg{
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ and \f$\iota\f$ is one
      */
-     ArbPol( const Geometry& g, bc bcx, bc bcy,  direction dir = dg::centered, value_type jfactor=1.)
+     TensorElliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = dg::centered, value_type jfactor=1.)
      {
-         construct( g, bcx, bcy, dir, jfactor);
+         construct( g, bcx, bcy, no, dir, jfactor);
      }
-     ///@copydoc ArbPol::ArbPol(const Geometry&,bc,bc,value_type,direction,value_type)
-     void construct( const Geometry& g, bc bcx, bc bcy, direction dir = dg::centered, value_type jfactor = 1.)
+     ///@copydoc TensorElliptic::ArbPo(const Geometry&,value_type,direction,value_type)
+     void construct( const Geometry& g,  norm no = not_normed, direction dir = dg::centered, value_type jfactor = 1.)
+     {
+         construct( g, g.bcx(), g.bcy(), no,  dir, jfactor);
+     }
+     ///@copydoc TensorElliptic::TensorElliptic(const Geometry&,bc,bc,value_type,direction,value_type)
+     void construct( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = dg::centered, value_type jfactor = 1.)
      {
         m_jfactor=jfactor;
+        m_no = no,
         m_laplaceM_chi.construct( g, bcx, bcy, dg::normed, dir, jfactor);
         m_laplaceM_iota.construct( g, bcx, bcy, dg::normed, dir, jfactor);
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
@@ -80,11 +86,7 @@ namespace dg{
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
         dg::assign( dg::evaluate(dg::one, g), m_sigma);
      }
-     ///@copydoc ArbPol::ArbPo(const Geometry&,value_type,direction,value_type)
-     void construct( const Geometry& g,  direction dir = dg::centered, value_type jfactor = 1.)
-     {
-         construct( g, g.bcx(), g.bcy(),  dir, jfactor);
-     }
+
      ///@copydoc Elliptic::weights()const
      const Container& weights()const {return m_laplaceM_chi.weights();}
      ///@copydoc Elliptic::inv_weights()const
@@ -101,13 +103,15 @@ namespace dg{
      *
      * @param chi new container
      */
-     void set_chi( const Container& chi) {m_laplaceM_chi.set_chi(chi); }
+     template<class ContainerType0>
+     void set_chi( const ContainerType0& chi) {m_laplaceM_chi.set_chi(chi); }
      /**
      * @brief Set Iota in the above formula
      *
      * @param iota new container
      */
-     void set_iota( const Container& iota) {m_iota=iota; }   
+     template<class ContainerType0>
+     void set_iota( const ContainerType0& iota) {m_iota=iota; }   
      /**
      * @brief compute the variational of the operator (psi_2 in gf theory): \f[ - \frac{\chi}{2} \left\{|\nabla \phi|^2 + \alpha \chi ( | \nabla^2 \phi |^2 - (\Delta \phi)^2 / 2) \right\}\f]
      *
@@ -135,7 +139,7 @@ namespace dg{
          
         //laplacian part
         dg::blas2::symv(m_laplaceM_iota, phi, m_temp); 
-        dg::blas1::pointwiseDot(alpha/2, chi, m_temp, m_temp, -1., varphi); //varphi-= alpha *chi/2 (lap phi)^2
+        dg::blas1::pointwiseDot(alpha/2., chi, m_temp, m_temp, -1., varphi); //varphi-= alpha *chi/2 (lap phi)^2
         
         //elliptic part
         tensor::multiply2d( m_metric, m_tempx, m_tempy, m_temp, m_helper);
@@ -145,6 +149,16 @@ namespace dg{
          
 
      }
+
+    template<class ContainerType0, class ContainerType1>
+    void operator()( const ContainerType0& x, ContainerType1& y){
+        symv( 1, x, 0, y);
+    }
+
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y){
+        symv( 1, x, 0, y);
+    }
      /**
      * @brief apply (not_normed = symmetric) operator
      *
@@ -156,7 +170,8 @@ namespace dg{
      * 
      * @Note Note that for cartesian and cylindrical coordinate systems (with the straight field line approximation) the following relation holds  \f[\nabla \cdot\nabla \cdot (\chi \nabla_\perp^2 f) =  \frac{1}{\sqrt{g}}  \partial_j \left\{\partial_i \left[\sqrt{g} \chi P^{ni} \left( \partial_n ( P^{jm} \partial_m f)\right) \right]\right\} \f] where P is the projection tensor
      */
-     void symv(const Container& x, Container& y)                                                                   
+    template<class ContainerType0, class ContainerType1>
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)                                                               
      {               
          //tensor term first
         dg::blas2::symv( m_rightx, x, m_helper); //R_x*f        
@@ -190,15 +205,17 @@ namespace dg{
         dg::blas1::pointwiseDivide(m_temp, m_vol, m_temp); //multiply sqrt(g)^(-1)
 
         //-lap (iota lap f) term
-        blas2::symv( m_laplaceM_iota, x, m_tempx);                                    
-        blas1::pointwiseDot( m_iota, m_tempx, m_tempx);  
-        blas2::symv(-1.0, m_laplaceM_iota, m_tempx, 2.0, m_temp);    
+        dg::blas2::symv( m_laplaceM_iota, x, m_tempx);                                    
+        dg::blas1::pointwiseDot( m_iota, m_tempx, m_tempx);  
+        dg::blas2::symv(-1.0, m_laplaceM_iota, m_tempx, 2.0, m_temp);    
         
         //elliptic term - div (chi nabla f)
-        blas2::symv(1.0, m_laplaceM_chi, x, 1., m_temp);       
+        dg::blas2::symv(1.0, m_laplaceM_chi, x, 1., m_temp);       
         
-        //scale with weights to obtain not normed discr
-        blas2::symv(1.0, m_weights, m_temp, 0., y);    
+        if( m_no == normed)
+            dg::blas1::axpby(alpha, m_temp, beta, y); 
+        if( m_no == not_normed)
+            dg::blas2::symv(alpha, m_weights, m_temp, beta, y);    
 
      }         
      
@@ -224,13 +241,12 @@ namespace dg{
      SparseTensor<Container> m_chi;
      SparseTensor<Container> m_metric;
      Container m_sigma, m_vol;
+     norm m_no;
      value_type m_jfactor;
-
 };
 ///@cond
-
 template< class G, class M, class V>
-struct TensorTraits< ArbPol<G, M, V> >
+struct TensorTraits< TensorElliptic<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
