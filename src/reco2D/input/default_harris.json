@@ -1,6 +1,4 @@
-
-//                * Input-File for "HEAT" *
-//                -------------------------
+//                * Input-File for reconnection code *
 {
     //----------------------------Space and Time discretization------------
     "n"  : 3,   //(# of x,y-polynomials)
@@ -33,4 +31,3 @@
     "lxhalf"  : 10,   //(in units rho_s)   
     "lyhalf"  : 20   //(in units rho_s)
 }
-//@ ------------------------------------------------------------

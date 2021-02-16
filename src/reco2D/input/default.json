@@ -1,6 +1,4 @@
-
-//                * Input-File for "HEAT" *
-//                -------------------------
+//                * Input-File for reconnection code *
 {
     //----------------------------Space and Time discretization------------
     "n"  : 3,   //(# of x,y-polynomials)
@@ -14,7 +12,7 @@
     "itstp"  : 20,   //(steps between outputs)
     "maxout" : 10,  //total # of outputs (excluding first)
     //-------------------------------Algorithmic parameters---------------------
-    "eps_pol"    : 1e-6, //( stop for polarisation)   
+    "eps_pol"    : 1e-7, //( stop for polarisation)   
     "jumpfactor" : 1, //jumpfactor € [0.01,1]
     "eps_maxwell": 1e-7, //( stop for induction equ.) 
     "eps_gamma"  : 1e-14, //( stop for Gamme operator) 
@@ -31,6 +29,5 @@
     "mY"        : 1,  //y-mode number
     //-------------------------------Sim Setup-----------------------------
     "lxhalf"  : 80,   //(in units rho_s)   
-    "lyhalf"  : 80,   //(in units rho_s)
+    "lyhalf"  : 80   //(in units rho_s)
 }
-//@ ------------------------------------------------------------

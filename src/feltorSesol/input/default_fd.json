@@ -31,7 +31,7 @@
     "bc_y"    : "PER",
     "bc_x_phi": "DIR_NEU",
     "hwmode": 1,
-    "ln": 100,
+    "invkappa": 100,
     "SOL_b" : 0.3,
     "prof_source_rate" : 0.005 ,
     "source_b" : 0.1,

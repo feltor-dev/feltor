@@ -1,6 +1,4 @@
-
-//                * Input-File for "HEAT" *
-//                -------------------------
+//                * Input-File for reconnection code *
 {
     //----------------------------Space and Time discretization------------
     "n"  : 3,   //(# of x,y-polynomials)
@@ -31,6 +29,5 @@
     "mY"        : 1,  //y-mode number
     //-------------------------------Sim Setup-----------------------------
     "lxhalf"  : 80,   //(in units rho_s)   
-    "lyhalf"  : 80,   //(in units rho_s)
+    "lyhalf"  : 80   //(in units rho_s)
 }
-//@ ------------------------------------------------------------

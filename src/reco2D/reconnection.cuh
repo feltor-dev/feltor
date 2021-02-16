@@ -111,7 +111,6 @@ struct Asela
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
-// <<<<<<< HEAD
     /**
      * @brief Returns Aparallel that belongs to the last solve of the induction equation
      *
@@ -346,7 +345,7 @@ container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& p
         if(  number[0] == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma); 
     }
-    arakawa.variation(potential, omega); 
+    multi_pol[0].variation(potential, omega); 
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
     return phi[1];  
 }
@@ -452,7 +451,7 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( double time,  cons
     }
     mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w2d, omega);   // Tperp = 0.5 mu_i N_i u_E^2
-    arakawa.variation( apar[0], omega); // |nabla_\perp Aparallel|^2 
+    multi_pol[0].variation( apar[0], omega); // |nabla_\perp Aparallel|^2 
     double Uapar = 0.5*p.beta*dg::blas2::dot( one, w2d, omega); // Uapar = 0.5 beta |nabla_\perp Aparallel|^2
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1]; evec[5] = Uapar;
