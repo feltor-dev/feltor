@@ -56,6 +56,15 @@ DG_DEVICE void operator()( T1 x, T2& y) const
 
 ///@addtogroup variadic_evaluates
 ///@{
+///\f$ y = x_1/x_2
+struct divides
+{
+    template< class T1, class T2>
+DG_DEVICE T1 operator()( T1 x1, T2 x2) const
+    {
+        return x1/x2;
+    }
+};
 
 ///@brief \f$ y = \sum_i x_i \f$
 struct Sum
@@ -264,11 +273,13 @@ DG_DEVICE void operator()( T x, T y, T& z)const{
         T temp = z*m_b;
         z = DG_FMA( m_a*x, y, temp);
     }
+    ///\f$ y = ax_1x_2x_3 +by \f$
 DG_DEVICE
     void operator()( T x1, T x2, T x3, T& y)const{
         T temp = y*m_b;
         y = DG_FMA( m_a*x1, x2*x3, temp);
     }
+    /// \f$ z = ax_1y_1+bx_2y_2+gz \f$
 DG_DEVICE
     void operator()( T x1, T y1, T x2, T y2, T& z)const{
         T temp = z*m_g;
@@ -285,6 +296,7 @@ template<class T>
 struct PointwiseDivide
 {
     PointwiseDivide( T a, T b): m_a(a), m_b(b){}
+    ///\f$ z = az/y +bz \f$
 DG_DEVICE
     void operator()( T y, T& z)const{
         T temp = z*m_b;

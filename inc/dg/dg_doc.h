@@ -135,7 +135,7 @@
  *          @defgroup binary_operators blas1::evaluate binary operators
  *              Binary subroutines for the dg::blas1::evaluate function
  *
- *          @defgroup variadic_evaluates blas1::evaluate variadic subroutines
+ *          @defgroup variadic_evaluates blas1::evaluate variadic functors
  *              Functors to use in the dg::blas1::evaluate function
  *
  *          @defgroup variadic_subroutines blas1::subroutine subroutines

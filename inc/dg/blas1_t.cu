@@ -23,6 +23,13 @@ int main()
     thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
     Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p), v5(v4p);
     dg::exblas::udouble ud;
+    v3[0] = 1./0.; //we test here if nan breaks code
+    dg::blas1::copy( v3p, v3); ud.d = v3[0];
+    std::cout << "copy (x=x)            ";
+    if ( !std::isfinite( v3[0]))
+        std::cerr << "Error: Result has NaN!\n";
+    else
+        std::cout <<ud.i-4617316080911554445<<std::endl;
     dg::blas1::scal( v3, 3e-10); ud.d = v3[0];
     std::cout << "scal (x=ax)           "<<ud.i-4474825110624711575<<std::endl;
     dg::blas1::plus( v3, 3e-10); ud.d = v3[0];
@@ -31,20 +38,45 @@ int main()
     std::cout << "fma (y=ax+y)          "<<ud.i-4633360230582305548<<std::endl;
     dg::blas1::axpby( 3e-10, v1, -2e-10 , v2); ud.d = v2[0];
     std::cout << "axpby (y=ax+by)       "<<ud.i-4408573477492505937<<std::endl;
+    v5[0] = 1./0.; //we test here if nan breaks code
+    dg::blas1::axpby( 3e-10, v1, -2. , v2, v5); ud.d = v5[0];
+    std::cout << "axpby (z=ax+by)       ";
+    if ( !std::isfinite( v5[0]))
+        std::cerr << "Error: Result has NaN!\n";
+    else
+        std::cout <<ud.i-4468869610430797025<<std::endl;
     dg::blas1::axpbypgz( 2.5, v1, 7.e+10, v2, -0.125, v3); ud.d = v3[0];
     std::cout << "axpbypgz (y=ax+by+gz) "<<ud.i-4617320336812948958<<std::endl;
+    v3[0] = 1./0.; //we test here if nan breaks code
     dg::blas1::pointwiseDot( v1, v2, v3); ud.d = v3[0];
-    std::cout << "pDot (z=xy)           "<<ud.i-4413077932784031586<<std::endl;
+    std::cout << "pDot (z=xy)           ";
+    if ( !std::isfinite( v3[0]))
+        std::cerr << "Error: Result has NaN!\n";
+    else
+        std::cout <<ud.i-4413077932784031586<<std::endl;
     dg::blas1::pointwiseDot( 0.2, v1, v2, +0.4e10, v3); ud.d = v3[0];
     std::cout << "pDot ( z=axy+bz)      "<<ud.i-4556605413983777388<<std::endl;
+    v5 = v4p;
     dg::blas1::pointwiseDot( -0.2, v1, v2, 0.4, v3, v4, 0.1, v5); ud.d = v5[0];
     std::cout << "pDot (z=axy+bfh+gz)   "<<ud.i-4601058031075598447<<std::endl;
     dg::blas1::pointwiseDot( 0.2, v1, v2,v4, 0.4, v3); ud.d = v3[0];
     std::cout << "pDot (z=awxy + bz)    "<<ud.i-4550507856334720009<<std::endl;
+    v5[0] = 1./0.; //we test here if nan breaks code
+    dg::blas1::pointwiseDivide( v1,v2,v5); ud.d = v5[0];
+    std::cout << "pDivide (z=x/y)       ";
+    if ( !std::isfinite( v5[0]))
+        std::cerr << "Error: result has NaN!\n";
+    else
+        std::cout <<ud.i-4810082017219139146<<std::endl;
     dg::blas1::pointwiseDivide( 5.,v1,v2,-1,v3); ud.d = v3[0];
     std::cout << "pDivide (z=ax/y+bz)   "<<ud.i-4820274520177585116<<std::endl;
+    v3[0] = 1./0.; //we test here if nan breaks code
     dg::blas1::transform( v1, v3, dg::EXP<>()); ud.d = v3[0];
-    std::cout << "transform y=exp(x)    "<<ud.i-4620007020034741378<<std::endl;
+    std::cout << "transform y=exp(x)    ";
+    if ( !std::isfinite( v3[0]))
+        std::cerr << "Error: result has NaN!\n";
+    else
+        std::cout <<ud.i-4620007020034741378<<std::endl;;
     }
 
     //v1 = 2, v2 = 3
@@ -74,6 +106,8 @@ int main()
     std::cout << "2.5*2+ 2.*5-0.125*96 = " << w3[0][0] <<" (3)\n";
     dg::blas1::pointwiseDivide( 5.,w1,5.,-1,w3);
     std::cout << "5*2/5-1*3 = " << w3[0][0] <<" (-1)\n";
+    dg::blas1::pointwiseDivide( w1,5.,w3);
+    std::cout << "2/5 = " << w3[0][0] <<" (0.4)\n";
     dg::blas1::copy( w2, w1);
     std::cout << "5 = " << w1[0][0] <<" (5)"<< std::endl;
     dg::blas1::scal( w1, 0.4);
