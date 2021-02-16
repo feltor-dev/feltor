@@ -30,7 +30,7 @@ struct Parameters
     std::string init, equations;
     bool boussinesq;
 
-    Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
+    Parameters( const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
@@ -41,12 +41,12 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
 
-        stages      = file::get( mode, js, "stages", 3).asUInt();
+        stages      = dg::file::get( mode, js, "stages", 3).asUInt();
         eps_pol.resize(stages);
-        eps_pol[0] = file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
+        eps_pol[0] = dg::file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
         for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
+            eps_pol[i] = dg::file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
             eps_pol[i]*=eps_pol[0];
         }
         eps_gamma = js["eps_gamma"].asDouble();

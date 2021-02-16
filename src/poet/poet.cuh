@@ -152,11 +152,14 @@ struct Explicit
     KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
+    dg::Advection<Geometry, Matrix, container> m_adv;
+    
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_gamma_phi, old_psi, old_gamma_n;
     std::vector<container> multi_chi, multi_iota;
     
-    
+    Matrix m_centered[2];
+ 
     
     const container w2d,v2d, one;
     const std::vector<double> eps_pol;
@@ -190,7 +193,9 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     multi_gamma1.resize(3);
     multi_gamma0.resize(3);
     arakawa.construct(grid);
-    
+    m_adv.construct(grid);
+    m_centered[0] = dg::create::dx( grid, grid.bcx(), dg::centered);
+    m_centered[1] = dg::create::dy( grid, grid.bcy(), dg::centered);
     for( unsigned u=0; u<3; u++)
     {
         multi_elliptic[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
@@ -344,11 +349,11 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             }
             dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
 
-//             if (equations == "local-arbpolO2") 
-//             {            
-//                 dg::blas2::symv(multi_gamma0[0], omega, chi);
-//                 dg::blas2::symv(v2d, chi, omega);
-//             }
+            if (equations == "local-arbpolO2") 
+            {            
+                dg::blas2::symv(multi_gamma0[0], omega, chi);
+                dg::blas2::symv(v2d, chi, omega);
+            }
         }
         else
             dg::blas1::axpby( -1. ,y[1], 0., omega);
@@ -356,24 +361,24 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             if( boussinesq)
                 dg::blas1::pointwiseDivide( omega, chi, omega);
 
-        if (equations == "local-arbpolO2") 
-        {
-                        //invert
-            old_phi.extrapolate(t, phi[0]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_dfpolcharge, phi[0], omega, eps_pol);
-            old_phi.update( t, phi[0]);
-            if(  number[0] == multigrid.max_iter())
-                throw dg::Fail( eps_pol[0]);
-        }
-        else
-        {
+//         if (equations == "local-arbpolO2") 
+//         {
+//                         //invert with nested iterations
+//             old_phi.extrapolate(t, phi[0]);
+//             std::vector<unsigned> number = multigrid.direct_solve( multi_dfpolcharge, phi[0], omega, eps_pol);
+//             old_phi.update( t, phi[0]);
+//             if(  number[0] == multigrid.max_iter())
+//                 throw dg::Fail( eps_pol[0]);
+//         }
+//         else
+//         {
             //invert
             old_phi.extrapolate(t, phi[0]);
             std::vector<unsigned> number = multigrid.direct_solve( multi_elliptic, phi[0], omega, eps_pol);
             old_phi.update( t, phi[0]);
             if(  number[0] == multigrid.max_iter())
                 throw dg::Fail( eps_pol[0]);
-        }
+//         }
 
     }
     return phi[0];
@@ -433,7 +438,15 @@ void Explicit<G,  M, DM, CM, container>::operator()( double t, const std::vector
 
     for( unsigned i=0; i<y.size(); i++) 
     {
-        arakawa( y[i], phi[i], yp[i]);
+//         arakawa( y[i], phi[i], yp[i]);
+        
+        //  - v_x dx n
+        dg::blas2::symv( -1., m_centered[1], phi[i], 0., chi); //v_x
+
+        //  - v_y dy n
+        dg::blas2::symv( 1., m_centered[0], phi[i], 0., iota); //v_y
+        m_adv.upwind( -1., chi, iota, y[i], 0., yp[i]);  
+        
         if(equations == "global" || equations == "global-arbpolO4" || equations == "global-arbpolO2")
         {
             dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
