@@ -28,14 +28,15 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
         return do_compute_jacobian();
     }
     /**
-    * @brief The Metric tensor of the coordinate system
+    * @brief The (inverse) metric tensor of the coordinate system
     *
-    *  The elements are the contravariant elements (if x,y are the coordinates)
+    *  The elements of the inverse metric tensor are the contravariant elements
+    *  of the metric \f$g\f$. If x,y are the coordinates, then
     \f[
-    g = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
+    g^{-1} = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
     \f]
     * @return symmetric tensor
-    * @note use the dg::tensor functions to compute the volume element from here
+    * @note use the \c dg::tensor::volume2d function to compute the volume element from here
     * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > metric()const {
@@ -103,16 +104,17 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
         return do_compute_jacobian();
     }
     /**
-    * @brief The (contravariant) metric tensor of the coordinate system
+    * @brief The (inverse) metric tensor of the coordinate system
     *
-    *  The elements are the contravariant elements (if x,y,z are the coordinates)
+    *  The elements of the inverse metric tensor are the contravariant elements
+    *  of the metric \f$g\f$. If x,y,z are the coordinates, then
     \f[
-    g = \begin{pmatrix} g^{xx}(x,y,z) & g^{xy}(x,y,z) & g^{zz}(x,y,z)\\
+    g^{-1} = \begin{pmatrix} g^{xx}(x,y,z) & g^{xy}(x,y,z) & g^{zz}(x,y,z)\\
       & g^{yy}(x,y,z) & g^{yz}(x,y,z) \\
       & & g^{zz}(x,y,z)\end{pmatrix}
     \f]
     * @return symmetric tensor
-    * @note use the dg::tensor functions to compute the volume element from here
+    * @note use the \c dg::tensor::volume function to compute the volume element from here
     * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > metric()const {
