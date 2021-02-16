@@ -20,7 +20,7 @@ struct Parameters
 
     double eps_gamma, eps_time;
     double jfactor;
-    double tau, kappa, friction, nu;
+    double tau, kappa,  nu;
 
     double amp, sigma, posX, posY;
 
@@ -65,7 +65,6 @@ struct Parameters
         init = "blob";
         equations = js.get("equations", "global").asString();
         boussinesq = js.get("boussinesq", false).asBool();
-        friction = js.get("friction", 0.).asDouble();
         jfactor = js.get("jfactor", 1.).asDouble();
     }
 
@@ -74,7 +73,6 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"    Friction:        = "<<friction<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
         os << "Equation parameters are: \n"
             <<"    "<<equations<<"\n"
