@@ -10,6 +10,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+namespace dg
+{
 /**
  * @brief Matrix class that represents the operator in the Caucha square root integral formula
  *
@@ -163,13 +165,13 @@ struct TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
     * A is the matrix, x is the vector, w is a scalar m is the smallest eigenvalue of A, K' is the conjuated complete elliptic integral and cn dn are the jacobi function
  */
 template<class Matrix, class Container>
-struct CauchySqrtInt
+struct SqrtCauchyInt
 {
   public:
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
-    CauchySqrtInt() { }
+    SqrtCauchyInt() { }
     /**
      * @brief Construct Rhs operator
      *
@@ -179,7 +181,7 @@ struct CauchySqrtInt
      * @param multiply_weights multiply inverse weights in front of matrix A 
      * @param symmetric true = symmetric A / false = non-symmetric A
      */
-    CauchySqrtInt( const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights, const bool& symmetric)
+    SqrtCauchyInt( const Matrix& A, const Container& copyable, value_type eps, const bool& multiply_weights, const bool& symmetric)
     {
         construct(A, copyable, eps, multiply_weights, symmetric);
     }
@@ -319,3 +321,5 @@ struct CauchySqrtInt
     dg::LGMRES<Container> m_lgmres;
     dg::Extrapolation<Container> m_temp_ex;
 };
+
+} //namespace dg

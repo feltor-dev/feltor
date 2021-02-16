@@ -11,6 +11,8 @@
 #include "backend/timer.h"
 #endif //DG_BENCHMARK
 
+namespace dg
+{
 ///@brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve directly via sqrt ODE solve with adaptive ERK class as timestepper
 template< class Geometry, class Matrix, class Container>
 struct DirectSqrtODESolve
@@ -64,7 +66,7 @@ struct DirectSqrtODESolve
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
-    Rhs<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_rhs;  
+    dg::SqrtODE<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_rhs;  
     value_type m_epsTimerel, m_epsTimeabs;
 };
 
@@ -125,7 +127,7 @@ struct DirectSqrtCauchySolve
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_iterCauchy;
-    CauchySqrtInt<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_cauchysqrtint;
+    dg::SqrtCauchyInt<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_cauchysqrtint;
     value_type m_EVmin,m_EVmax;
 };
 
@@ -238,7 +240,7 @@ struct KrylovSqrtODESolve
 #ifdef MPI_VERSION
     SubContainer m_b;
 #endif
-    Rhs<DiaMatrix, SubContainer> m_rhs;  
+    dg::SqrtODE<DiaMatrix, SubContainer> m_rhs;  
     dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix > m_lanczos;
     DiaMatrix m_T; 
     CooMatrix m_V;
@@ -358,7 +360,7 @@ struct KrylovSqrtCauchySolve
     DiaMatrix m_T; 
     CooMatrix m_V;
     std::pair<DiaMatrix, CooMatrix> m_TVpair; 
-    CauchySqrtInt<DiaMatrix, SubContainer> m_cauchysqrt;  
+    dg::SqrtCauchyInt<DiaMatrix, SubContainer> m_cauchysqrt;  
     dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix> m_lanczos;
 };
 
@@ -466,7 +468,7 @@ class KrylovSqrtODEinvert
     value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps;
     Container m_b;
     SubContainer m_e1, m_y;
-    Rhs<DiaMatrix, SubContainer> m_rhs;  
+    dg::SqrtODE<DiaMatrix, SubContainer> m_rhs;  
     dg::CGtridiag< Container, SubContainer, DiaMatrix, CooMatrix > m_cgtridiag;
     CooMatrix m_R, m_Tinv;     
     std::pair<CooMatrix, CooMatrix> m_TinvRpair;   
@@ -581,8 +583,10 @@ class KrylovSqrtCauchyinvert
     value_type m_epsCG,  m_eps, m_EVmin, m_EVmax;
     Container m_b;
     SubContainer m_e1, m_y;
-    CauchySqrtInt<DiaMatrix, SubContainer> m_cauchysqrt; 
+    dg::SqrtCauchyInt<DiaMatrix, SubContainer> m_cauchysqrt; 
     dg::CGtridiag< Container, SubContainer, DiaMatrix, CooMatrix > m_cgtridiag;
     CooMatrix m_R, m_Tinv;     
     std::pair<CooMatrix, CooMatrix> m_TinvRpair;   
 };
+
+} //namespace dg

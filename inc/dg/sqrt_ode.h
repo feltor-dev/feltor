@@ -3,6 +3,10 @@
 #include "blas.h"
 #include "cg.h"
 #include "lgmres.h"
+
+
+namespace dg
+{
 /**
  * @brief Matrix class that represents the lhs operator of the square root ODE
  *
@@ -12,27 +16,27 @@
  * where \f[ A\f] is matrix and t is the time and x is a vector.
  */
 template< class Matrix, class Container>
-struct Lhs
+struct SqrtODEOp
 {
     public:
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
     ///@brief empty object ( no memory allocation)
-    Lhs() {}
+    SqrtODEOp() {}
     /**
-     * @brief Construct Lhs operator
+     * @brief Construct SqrtODE operator
      *
      * @param A symmetric or non-symmetric Matrix, e.g.: a not_normed Helmholtz operator or a symmetric or non-symmetric tridiagonal matrix
      * @param copyable a copyable container 
      * @param multiply_weights multiply (inverse) weights in front of matrix A and vectors (important if matrix A is not_normed) 
      */
-    Lhs( const Matrix& A, const Container& copyable, const bool& multiply_weights)
+    SqrtODEOp( const Matrix& A, const Container& copyable, const bool& multiply_weights)
     { 
         construct(A, copyable, multiply_weights);
     }
     /**
-     * @brief Construct Lhs operator
+     * @brief Construct SqrtODEOp operator
      *
      * @param A symmetric or non-symmetric Matrix, e.g.: a not_normed Helmholtz operator or a symmetric or non-symmetric tridiagonal matrix
      * @param copyable a copyable container 
@@ -125,7 +129,7 @@ struct Lhs
         m_precond = precond;
     }
     /**
-     * @brief Compute Lhs term and store in output
+     * @brief Compute square root ode operator and store in output
      *
      * i.e. \f[ y= W ((t-1) I -t V A)*x \f] if weights are multiplied or \f[ y=  ((t-1) I -t  A)*x \f] otherwise
      * @param x left-hand-side
@@ -153,16 +157,16 @@ struct Lhs
  * @note Solution of ODE: \f[ y(1) = \sqrt{A} y(0)\f]
  */
 template< class Matrix, class Container>
-struct Rhs
+struct SqrtODE
 {
   public:
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
-    Rhs() {};
+    SqrtODE() {};
 
     /**
-     * @brief Construct Rhs operator
+     * @brief Construct SqrtOde operator
      *
      * @param A symmetric matrix
      * @param copyable copyable container
@@ -170,12 +174,12 @@ struct Rhs
      * @param multiply_weights multiply inverse weights in front of matrix A 
      * @param symmetric true = symmetric A / false = non-symmetric A
      */
-    Rhs( const Matrix& A,  const Container& copyable,  value_type eps, const bool& multiply_weights, const bool& symmetric)
+    SqrtODE( const Matrix& A,  const Container& copyable,  value_type eps, const bool& multiply_weights, const bool& symmetric)
     {
         construct(A, copyable, eps, multiply_weights, symmetric);
     }
     /**
-     * @brief Construct Rhs operator
+     * @brief Construct SqrtOde operator
      *
      * @param A symmetric matrix
      * @param copyable copyable container
@@ -278,7 +282,7 @@ struct Rhs
   private:
     Container m_helper;
     Matrix m_A;
-    Lhs<Matrix, Container> m_lhs;
+    SqrtODEOp<Matrix, Container> m_lhs;
     unsigned m_size, m_number;
     bool m_multiply_weights, m_symmetric;
     value_type m_eps;
@@ -289,9 +293,10 @@ struct Rhs
 
 
 template<  class Matrix, class Container>
-struct TensorTraits< Lhs< Matrix, Container> >
+struct TensorTraits< SqrtODEOp< Matrix, Container> >
 {
     using value_type  = dg::get_value_type<Container>;
     using tensor_category = dg::SelfMadeMatrixTag;
 };
 
+} //namespace dg
