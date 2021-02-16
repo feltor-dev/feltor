@@ -150,7 +150,7 @@ struct SqrtCauchyIntOp
 
 
 template< class Matrix, class Container>
-struct dg::TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
+struct TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
 {
     using value_type  = dg::get_value_type<Container>;
     using tensor_category = dg::SelfMadeMatrixTag;

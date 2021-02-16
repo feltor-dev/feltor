@@ -289,7 +289,7 @@ struct Rhs
 
 
 template<  class Matrix, class Container>
-struct dg::TensorTraits< Lhs< Matrix, Container> >
+struct TensorTraits< Lhs< Matrix, Container> >
 {
     using value_type  = dg::get_value_type<Container>;
     using tensor_category = dg::SelfMadeMatrixTag;
