@@ -365,6 +365,12 @@ ContainerType determinant( const SparseTensor<ContainerType>& t)
     ContainerType vol=determinant2d(t);
     dg::blas1::transform(vol, vol, dg::InvSqrt<>());
     @endcode
+ *  @note The function is called volume because when you apply it to the inverse metric
+    tensor of our grids then you obtain the volume
+    \f[ \sqrt{g} = 1 / \sqrt{ \det( g^{-1})}\f]
+    @code
+    ContainerType vol = volume2d( g.metric());
+    @endcode
  * @param t the input tensor
  * @return the inverse square root of the determinant of \c t
  * @copydoc hide_ContainerType
@@ -385,6 +391,12 @@ ContainerType volume2d( const SparseTensor<ContainerType>& t)
  * @code
     ContainerType vol=determinant(t);
     dg::blas1::transform(vol, vol, dg::InvSqrt<>());
+    @endcode
+ *  @note The function is called volume because when you apply it to the inverse metric
+    tensor of our grids then you obtain the volume
+    \f[ \sqrt{g} = 1 / \sqrt{ \det( g^{-1})}\f]
+    @code
+    ContainerType vol = dg::tensor::volume( g.metric());
     @endcode
  * @param t the input tensor
  * @return the inverse square root of the determinant of \c t

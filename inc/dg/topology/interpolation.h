@@ -18,19 +18,16 @@ namespace dg{
 ///@addtogroup typedefs
 ///@{
 template<class real_type>
-using tIHMatrix = cusp::csr_matrix<int, real_type, cusp::host_memory>;
+using IHMatrix_t = cusp::csr_matrix<int, real_type, cusp::host_memory>;
 template<class real_type>
-using tIDMatrix = cusp::csr_matrix<int, real_type, cusp::device_memory>;
-using IHMatrix = tIHMatrix<double>;
-using IDMatrix = tIDMatrix<double>;
+using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
+using IHMatrix = IHMatrix_t<double>;
+using IDMatrix = IDMatrix_t<double>;
 //typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
 //typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 #ifndef MPI_VERSION
 namespace x{
-template<class real_type>
-using tIHMatrix = tIHMatrix<real_type>;
-template<class real_type>
-using tIDMatrix = tIDMatrix<real_type>;
+//introduce into namespace x
 using IHMatrix = IHMatrix;
 using IDMatrix = IDMatrix;
 } //namespace x

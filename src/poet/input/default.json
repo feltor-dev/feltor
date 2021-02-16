@@ -9,7 +9,7 @@
     "itstp"  : 1,   
     "maxout" : 1,
     "stages"     : 3,
-    "eps_pol"    : [1e-6,0.1,0.01],   
+    "eps_pol"    : [1e-6,10,10],   
     "eps_gamma" : 1e-7,  
     "eps_time"  : 1e-10,  
     "curvature"  : 0.00015, 

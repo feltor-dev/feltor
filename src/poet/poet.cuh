@@ -3,6 +3,7 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "dg/polarization.h"
+
 namespace poet
 {
 
