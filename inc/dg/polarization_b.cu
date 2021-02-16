@@ -82,7 +82,7 @@ int main()
     const Container chi =  dg::evaluate( chi_ana, grid2d);
     const Container rho_FFO4 =    dg::evaluate( rho_ana_FFO4, grid2d);
     
-    exblas::udouble res;
+    dg::exblas::udouble res;
 
     dg::CG <Container> pcg( x, grid2d.size());
     
@@ -243,7 +243,7 @@ int main()
         lapperp.set_chi( chi);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv_per(  grid2d, dg::PER, grid2d.bcy(), alpha ,dg::centered);
-        KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> sqrtsolve, sqrtsolve_per;
+        dg::KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> sqrtsolve, sqrtsolve_per;
         sqrtsolve.construct( gamma0inv, grid2d, chi,  1e-10, 200, 20,  eps_gamma);
         sqrtsolve_per.construct( gamma0inv_per, grid2d, chi,  1e-10, 200, 20,  eps_gamma);
         

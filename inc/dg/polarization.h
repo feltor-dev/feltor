@@ -316,7 +316,7 @@ class PolCharge
     
     std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma, m_multi_gamma_PER;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
-    KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> m_sqrtG0inv, m_sqrtG0inv_PER;    
+    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> m_sqrtG0inv, m_sqrtG0inv_PER;    
     Container m_temp, m_temp2;
     norm m_no;
     value_type  m_alpha;
