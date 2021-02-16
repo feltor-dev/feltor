@@ -165,7 +165,7 @@ struct Explicit
     const container w2d,v2d, one;
     const std::vector<double> eps_pol;
     const double eps_gamma;
-    const double kappa, friction, nu, tau;
+    const double kappa,  nu, tau;
     const std::string equations;
     bool boussinesq;
 
@@ -184,7 +184,7 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     multigrid( grid, 3),
     old_phi( 2, chi),  old_gamma_phi(2, chi), old_psi( 2, chi), old_gamma_n( 2, chi),
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations),  boussinesq(p.boussinesq)
+    eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), nu(p.nu), tau( p.tau), equations( p.equations),  boussinesq(p.boussinesq)
 {
     multi_chi= multigrid.project( chi);
     multi_iota= multigrid.project( chi);

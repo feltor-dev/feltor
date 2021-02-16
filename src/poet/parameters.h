@@ -30,7 +30,7 @@ struct Parameters
     std::string init, equations;
     bool boussinesq;
 
-    Parameters( const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
+    Parameters(const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
