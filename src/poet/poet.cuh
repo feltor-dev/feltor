@@ -149,8 +149,8 @@ struct Explicit
     
     std::vector<dg::PolCharge<Geometry, Matrix,  DiaMatrix, CooMatrix, container, dg::DVec> > multi_dfpolcharge;
     
-    KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
-    KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
+    dg::KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
+    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
 
     dg::Advection<Geometry, Matrix, container> m_adv;
