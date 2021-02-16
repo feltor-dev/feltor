@@ -48,7 +48,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-        file::file2Json(argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json(argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
     if(rank==0)p.display( std::cout);
@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, time, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
@@ -134,7 +134,7 @@ int main( int argc, char* argv[])
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     //field IDs
     std::string names[5] = {"electrons", "ions", "impurities", "potential", "vorticity"};
     int dataIDs[5];
@@ -142,7 +142,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);

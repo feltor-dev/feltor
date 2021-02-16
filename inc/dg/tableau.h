@@ -27,7 +27,7 @@ namespace dg{
  * @copydoc hide_implicit_butcher_tableaus
  * @tparam real_type type of the coefficients
  * @sa RungeKutta, ERKStep, ARKStep
- * @ingroup time
+ * @ingroup time_utils_utils
  */
 template<class real_type>
 struct ButcherTableau{
@@ -44,7 +44,7 @@ struct ButcherTableau{
      * which makes the embedded method equal to the actual method
      */
     ButcherTableau(unsigned s, unsigned order,
-                   real_type* a , real_type* b , real_type* c):
+                   const real_type* a , const real_type* b , const real_type* c):
         m_a(a, a+s*s), m_b(b, b+s), m_c(c, c+s), m_bt(b,b+s), m_q(order), m_p(order), m_s(s){}
     /*! @brief Construct an embedded tableau
      *
@@ -57,7 +57,7 @@ struct ButcherTableau{
      * @param c pointer to s real numbers interpreted as c_i=c[i]
      */
     ButcherTableau(unsigned s, unsigned embedded_order, unsigned order,
-               real_type* a, real_type* b, real_type* bt, real_type* c):
+               const real_type* a, const real_type* b, const real_type* bt, const real_type* c):
         m_a(a, a+s*s), m_b(b,b+s), m_c(c,c+s), m_bt(bt, bt+s), m_q(order), m_p(embedded_order), m_s(s), m_embedded(true){}
     ///Construct from ARKode standard format
     /*!@brief Construct embedded method from single array
@@ -67,20 +67,20 @@ struct ButcherTableau{
      */
     ButcherTableau(unsigned s, real_type* data):
         m_a(s), m_b(s), m_c(s), m_bt(s), m_s(s), m_embedded(true)
-   {
-       for( unsigned i=0; i<s; i++)
-       {
-           m_c[i] = data[i*(s+1)];
-           for( unsigned j=0; j<s; j++)
-               m_a(i,j) = data[i*(s+1)+j+1];
-       }
-       m_q = (unsigned)data[s*(s+1)];
-       for( unsigned j=0; j<s; j++)
-           m_b[j] = data[s*(s+1)+j+1];
-       m_p = (unsigned)data[(s+1)*(s+1)];
-       for( unsigned j=0; j<s; j++)
-           m_bt[j] = data[(s+1)*(s+1)+j+1];
-   }
+    {
+        for( unsigned i=0; i<s; i++)
+        {
+            m_c[i] = data[i*(s+1)];
+            for( unsigned j=0; j<s; j++)
+                m_a(i,j) = data[i*(s+1)+j+1];
+        }
+        m_q = (unsigned)data[s*(s+1)];
+        for( unsigned j=0; j<s; j++)
+            m_b[j] = data[s*(s+1)+j+1];
+        m_p = (unsigned)data[(s+1)*(s+1)];
+        for( unsigned j=0; j<s; j++)
+            m_bt[j] = data[(s+1)*(s+1)+j+1];
+    }
 
     /**
     * @brief Read the a_ij coefficients
@@ -165,6 +165,108 @@ struct ButcherTableau{
     bool m_embedded = false;
 };
 
+/**
+ * @brief Manage coefficients in Shu-Osher form
+ *
+ * Currently only explicit tables that are marked with "Shu-Osher-Form" are available in this form
+ * @copydoc hide_explicit_butcher_tableaus
+ * @note A Shu-Osher Tableau can be uniquely converted to a ButcherTableau but the converse is not true
+ *
+ * @tparam real_type type of the coefficients
+ * @sa ShuOsher
+ * @ingroup time_utils_utils
+ */
+template<class real_type>
+struct ShuOsherTableau
+{
+    using value_type = real_type;
+    ///No memory allocation
+    ShuOsherTableau(){}
+    /*! @brief Construct a non-embedded explicit tableau
+     * @param stages number of stages
+     * @param order (global) order of the resulting method
+     * @param alpha_v s*s/2 real numbers interpreted as a linearized triangle
+     * @param beta_v s*s/2 real numbers interpreted as a linearized triangle
+     */
+    ShuOsherTableau( unsigned stages, unsigned order, const std::vector<real_type>& alpha_v, const std::vector<real_type>& beta_v){
+        // parse the input into matrices
+        m_stages = stages;
+        m_order = order;
+        m_alpha = dg::Operator<real_type>(stages, 0);
+        m_beta = dg::Operator<real_type>(stages, 0);
+        unsigned j=0;
+        for( unsigned i=0; i<stages; i++)
+            for( unsigned k=0; k<i+1; k++)
+            {
+                m_alpha(i,k) = alpha_v[j];
+                m_beta(i,k) = beta_v[j];
+                j++;
+            }
+        //std::cout << m_alpha << m_beta;
+    }
+
+    /**
+     * @brief A Shu-Osher Tableau can be converted to a Butcher table
+     *
+     * @return the corresponding Butcher Tableau
+     */
+    operator ButcherTableau<real_type>( )const{
+        //the converse is not unique:
+        //AN  EXTENSION  AND  ANALYSISOF  THE
+        //SHU-OSHER  REPRESENTATIONOF  RUNGE-KUTTA  METHODS
+        dg::Operator<real_type> a(m_stages, 0);
+        std::vector< real_type > b(m_stages), c(m_stages);
+        //convert to Butcher tableau
+        for( unsigned i=1; i<m_stages; i++)
+        {
+            for( unsigned k=0; k<i; k++)
+            {
+                a( i, k) = m_beta ( i-1, k);
+                for( unsigned j = k+1; j<i; j++)
+                    a(i,k) += m_alpha( i-1,j)*a(j,k);
+            }
+        }
+        for( unsigned k=0; k<m_stages; k++)
+        {
+            b[k] = m_beta( m_stages-1, k);
+            for( unsigned j=k+1; j<m_stages; j++)
+                b[k] += m_alpha(m_stages-1, j)*a( j, k);
+        }
+        for( unsigned i=0; i<m_stages; i++)
+        {
+            c[i] = a(i,0);
+            for( unsigned k=1; k<m_stages; k++)
+                c[i] += a(i,k);
+        }
+        dg::ButcherTableau<real_type> tableau(m_stages, m_order, &a.data()[0], &b[0], &c[0]);
+        return tableau;
+    }
+    /**
+    * @brief Read the alpha_ij coefficients
+    * @param i row number 0<=i<s, i>=s results in undefined behaviour
+    * @param j col number 0<=j<s, j>=s results in undefined behaviour
+    * @return alpha_ij
+    */
+    real_type alpha( unsigned i, unsigned j){ return m_alpha(i,j);}
+    /**
+    * @brief Read the beta_ij coefficients
+    * @param i row number 0<=i<s, i>=s results in undefined behaviour
+    * @param j col number 0<=j<s, j>=s results in undefined behaviour
+    * @return beta_ij
+    */
+    real_type beta( unsigned i, unsigned j){ return m_beta(i,j);}
+    ///The number of stages s
+    unsigned num_stages() const  {
+        return m_stages;
+    }
+    ///global order of accuracy for the method
+    unsigned order() const {
+        return m_order;
+    }
+    private:
+    unsigned m_stages, m_order;
+    dg::Operator<real_type> m_alpha, m_beta;
+};
 ///@cond
 namespace tableau{
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Classic Butcher tables%%%%%%%%%%%%%%%%%%
@@ -210,7 +312,7 @@ ButcherTableau<real_type> classic_4_4()
     return ButcherTableau<real_type>( 4,4, a,b,c);
 }
 //From Yoh and Zhong (AIAA 42, 2004)
-//!Attention! assumes another form of implementation
+// !Attention! assumes another form of implementation
 //than ARK tableaus
 template<class real_type>
 ButcherTableau<real_type> sirk3a_ex_3_3()
@@ -236,8 +338,6 @@ ButcherTableau<real_type> sirk3a_im_3_3()
     real_type c[3] = {3./4., 7689./6524., 27028./78288.};
     return ButcherTableau<real_type>( 3,3, a,b,c);
 }
-
-
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Embedded Butcher tables%%%%%%%%%%%%%%%%%%
 //tables copied from: http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html
@@ -364,6 +464,76 @@ ButcherTableau<real_type> dormand_prince_7_4_5()
     };
     return ButcherTableau<real_type>(7,data);
 }
+template<class real_type>
+ButcherTableau<real_type> tsitouras09_7_4_5()
+{
+    real_type b[7] = {
+        0.091937670648056,1.156529958312496,-0.781330409541651,
+        0.197624776163019,0.271639883438847,0.063598120979232,0
+    };
+    real_type bt[7] = {
+        0.092167469090589,1.131750860603267,-0.759749304413104,
+        0.205573577541223,0.264767065074229,0.040490332103796,1./40.
+    };
+    real_type c[7] = {
+        0., 0.231572163526079, 0.212252555252816,0.596693497318054,
+        0.797009955708112,1.,1.
+    };
+    real_type a[7*7] = {
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,-0.059103796886580,0,0,0,0,0,
+        0,4.560080615554683,-4.006458683473722,0,0,0,0,
+        0,-2.443935658802774,2.631461258707441,0.524706566208284,0,0,0,
+        0,9.516251378071800,-8.467630087008555,-0.987888827522473,0.867009765724064,0,0,
+        0,0,0,0,0,0,0
+    };
+    for( unsigned i=0; i<6; i++)
+    {
+        real_type tmp=0;
+        for( unsigned j=0; j<7; j++)
+            tmp += a[i*7+j];
+        a[i*7] = c[i] - tmp;
+    }
+    for( unsigned j=0; j<7; j++)
+        a[6*7+j] = b[j];
+    return ButcherTableau<real_type>(7,4,5,a,b,bt,c);
+}
+
+template<class real_type>
+ButcherTableau<real_type> tsitouras11_7_4_5()
+{
+    real_type b[7] = {
+        0.09646076681806523,0.01,0.4798896504144996,
+        1.379008574103742,-3.290069515436081,2.324710524099774,0.,
+    };
+    real_type bt[7] = {
+        0.001780011052226,0.000816434459657,-0.007880878010262,0.144711007173263,-0.582357165452555,0.458082105929187,1./66.
+    };
+    real_type c[7] = {
+        0.,0.161,0.327,0.9,0.9800255409045097,1.,1.
+    };
+    real_type a[7*7] = {
+        0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,
+        0,0.3354806554923570,0,0,0,0,0,
+        0,-6.359448489975075,4.362295432869581,0,0,0,0,
+        0,-11.74888356406283,7.495539342889836,-0.09249506636175525,0,0,0,
+        0,-12.92096931784711,8.159367898576159,-0.07158497328140100,-0.02826905039406838,0,0,
+        0,0,0,0,0,0,0
+    };
+    for( unsigned i=0; i<6; i++)
+    {
+        real_type tmp=0;
+        for( unsigned j=0; j<7; j++)
+            tmp += a[i*7+j];
+        a[i*7] = c[i] - tmp;
+    }
+    for( unsigned j=0; j<7; j++)
+        a[6*7+j] = b[j];
+    return ButcherTableau<real_type>(7,4,5,a,b,bt,c);
+}
+
 template<class real_type>
 ButcherTableau<real_type> ark548l2sa_erk_8_4_5()
 {
@@ -816,12 +986,82 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
     };
     return ButcherTableau<real_type>( 8, data);
 }
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+////                Shu-Osher form of RK methods                           ////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// Convert between Shu-Osher representation to a Butcher tableau
+template<class real_type>
+dg::ButcherTableau<real_type> shuosher2butcher( unsigned stages, unsigned order, std::vector<real_type> alpha_v, std::vector<real_type> beta_v)
+{
+    ShuOsherTableau<real_type> shu( stages, order, alpha_v, beta_v);
+    return dg::ButcherTableau<real_type>(shu);
+}
+
+template<class real_type>
+ShuOsherTableau<real_type> ssprk_2_2()
+{
+    unsigned stages=2, order = 2;
+    std::vector<double> alpha_v = {1., 0.5, 0.5};
+    std::vector<double> beta_v = {1., 0., 0.5};
+    return ShuOsherTableau<real_type>( stages, order, alpha_v, beta_v);
+}
+template<class real_type>
+ShuOsherTableau<real_type> ssprk_3_2()
+{
+    //CFLL = 2 -> eff = 0.66
+    unsigned stages=3, order = 2;
+    std::vector<double> alpha_v = {1., 0, 1., 1./3., 0, 2./3.};
+    std::vector<double> beta_v = {0.5, 0., 0.5, 0., 0., 1./3.};
+    return ShuOsherTableau<real_type>( stages, order, alpha_v, beta_v);
+}
+template<class real_type>
+ShuOsherTableau<real_type> ssprk_3_3()
+{
+    //CFL = 1 -> eff = 0.33
+    unsigned stages=3, order = 3;
+    std::vector<double> alpha_v = {1.,3./4.,1./4.,1./3.,0.,2./3.};
+    std::vector<double> beta_v = {1., 0., 1./4.,0.,0.,2./3.};
+    return ShuOsherTableau<real_type>( stages, order, alpha_v, beta_v);
+}
+template<class real_type>
+ShuOsherTableau<real_type> ssprk_5_3()
+{
+    //Ruuth 2005
+    //CFL = 2.6 -> eff = 0.5
+    unsigned stages=5, order = 3;
+    std::vector<double> alpha_v = {
+        1, 0, 1, 0.56656131914033, 0, 0.43343868085967, 0.09299483444413, 0.00002090369620, 0, 0.90698426185967, 0.00736132260920, 0.20127980325145, 0.00182955389682, 0, 0.78952932024253
+    };
+    std::vector<double> beta_v = {
+        0.37726891511710, 0, 0.37726891511710, 0, 0, 0.16352294089771, 0.00071997378654, 0, 0, 0.34217696850008, 0.00277719819460, 0.00001567934613, 0, 0, 0.29786487010104
+    };
+    return ShuOsherTableau<real_type>( stages, order, alpha_v, beta_v);
+}
+
+template<class real_type>
+ShuOsherTableau<real_type> ssprk_5_4()
+{
+    //Spiteri & Ruuth 2005
+    //CLM = 1.5 -> eff = 0.37 , better than 3_3
+    unsigned stages=5, order = 4;
+    std::vector<double> alpha_v = {
+        1, 0.44437049406734, 0.55562950593266, 0.62010185138540, 0, 0.37989814861460, 0.17807995410773, 0, 0, 0.82192004589227, 0.00683325884039, 0, 0.51723167208978, 0.12759831133288, 0.34833675773694
+    };
+    std::vector<double> beta_v = {
+        0.39175222700392, 0, 0.36841059262959, 0, 0, 0.25189177424738, 0, 0, 0, 0.54497475021237, 0, 0, 0, 0.08460416338212, 0.22600748319395
+    };
+    return ShuOsherTableau<real_type>( stages, order, alpha_v, beta_v);
+}
+
 
 }//namespace tableau
 ///@endcond
 
 /**
-* @brief Identify the Butcher Tableaus provided by this library
+* @brief Identifiers for Butcher Tableaus
 *
 * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
 * as NAME-S-P-Q or NAME-S-Q, where
@@ -831,7 +1071,7 @@ ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
 *  - Q is the global order of the method
 *
 *  @note In some of the links below you might want to use the search function of your browser to find the indicated method
-*  @ingroup time
+*  @ingroup time_utils
 */
 enum tableau_identifier{
     EXPLICIT_EULER_1_1, //!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler</a>
@@ -848,6 +1088,8 @@ enum tableau_identifier{
     CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
     FEHLBERG_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Fehlberg-6-4-5</a>
     DORMAND_PRINCE_7_4_5,//!< <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince-7-4-5</a>
+    TSITOURAS09_7_4_5,//!< <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
+    TSITOURAS11_7_4_5,//!< <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal), Further improves Tsitouras09
     ARK548L2SA_ERK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
     VERNER_8_5_6,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
     FEHLBERG_13_7_8,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
@@ -868,12 +1110,100 @@ enum tableau_identifier{
     KVAERNO_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
     ARK436L2SA_DIRK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
     KVAERNO_7_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
-    ARK548L2SA_DIRK_8_4_5//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+    ARK548L2SA_DIRK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+    // SSP RK tableaus
+    SSPRK_2_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
+    SSPRK_3_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
+    SSPRK_3_3, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
+    SSPRK_5_3, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
+    SSPRK_5_4 //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
 };
 
 ///@cond
 namespace create{
 
+static std::unordered_map<std::string, enum tableau_identifier> str2id{
+    //Explicit methods
+    {"Euler", EXPLICIT_EULER_1_1},
+    {"Midpoint-2-2", MIDPOINT_2_2},
+    {"Kutta-3-3", KUTTA_3_3},
+    {"Runge-Kutta-4-4", CLASSIC_4_4},
+    //Embedded explicit methods
+    {"Heun-Euler-2-1-2", HEUN_EULER_2_1_2},
+    {"Bogacki-Shampine-4-2-3", BOGACKI_SHAMPINE_4_2_3},
+    {"ARK-4-2-3 (explicit)", ARK324L2SA_ERK_4_2_3},
+    {"Zonneveld-5-3-4", ZONNEVELD_5_3_4},
+    {"ARK-6-3-4 (explicit)", ARK436L2SA_ERK_6_3_4},
+    {"Sayfy-Aburub-6-3-4", SAYFY_ABURUB_6_3_4},
+    {"Cash-Karp-6-4-5", CASH_KARP_6_4_5},
+    {"Fehlberg-6-4-5", FEHLBERG_6_4_5},
+    {"Dormand-Prince-7-4-5", DORMAND_PRINCE_7_4_5},
+    {"Tsitouras09-7-4-5", TSITOURAS09_7_4_5},
+    {"Tsitouras11-7-4-5", TSITOURAS11_7_4_5},
+    {"ARK-8-4-5 (explicit)", ARK548L2SA_ERK_8_4_5},
+    {"Verner-8-5-6", VERNER_8_5_6},
+    {"Fehlberg-13-7-8", FEHLBERG_13_7_8},
+    {"Feagin-17-8-10", FEAGIN_17_8_10},
+    //Implicit methods
+    {"Euler (implicit)", IMPLICIT_EULER_1_1},
+    {"Midpoint (implicit)", IMPLICIT_MIDPOINT_1_2},
+    {"Trapezoidal-2-2", TRAPEZOIDAL_2_2},
+    {"SDIRK-2-1-2", SDIRK_2_1_2},
+    {"Billington-3-3-2", BILLINGTON_3_3_2},
+    {"TRBDF2-3-3-2", TRBDF2_3_3_2},
+    {"Kvaerno-4-2-3", KVAERNO_4_2_3},
+    {"ARK-4-2-3 (implicit)", ARK324L2SA_DIRK_4_2_3},
+    {"Cash-5-2-4", CASH_5_2_4},
+    {"Cash-5-3-4", CASH_5_3_4},
+    {"SDIRK-5-3-4", SDIRK_5_3_4},
+    {"Kvaerno-5-3-4", KVAERNO_5_3_4},
+    {"ARK-6-3-4 (implicit)", ARK436L2SA_DIRK_6_3_4},
+    {"Kvaerno-7-4-5", KVAERNO_7_4_5},
+    {"ARK-8-4-5 (implicit)", ARK548L2SA_DIRK_8_4_5},
+    //Shu-Osher methods
+    {"SSPRK-2-2", SSPRK_2_2},
+    {"SSPRK-3-2", SSPRK_3_2},
+    {"SSPRK-3-3", SSPRK_3_3},
+    {"SSPRK-5-3", SSPRK_5_3},
+    {"SSPRK-5-4", SSPRK_5_4},
+};
+static inline enum tableau_identifier str2tableau( std::string name)
+{
+    if( str2id.find(name) == str2id.end())
+        throw dg::Error(dg::Message(_ping_)<<"Tableau "<<name<<" not found!");
+    else
+        return str2id[name];
+}
+static inline std::string tableau2str( enum tableau_identifier id)
+{
+    for( auto name: str2id)
+    {
+        if( name.second == id)
+            return name.first;
+    }
+    throw dg::Error(dg::Message(_ping_)<<"Tableau conversion failed!");
+}
+
+template<class real_type>
+ShuOsherTableau<real_type> shuosher_tableau( enum tableau_identifier id)
+{
+    switch(id)
+    {
+        case SSPRK_2_2:
+            return dg::tableau::ssprk_2_2<real_type>();
+        case SSPRK_3_2:
+            return dg::tableau::ssprk_3_2<real_type>();
+        case SSPRK_3_3:
+            return dg::tableau::ssprk_3_3<real_type>();
+        case SSPRK_5_3:
+            return dg::tableau::ssprk_5_3<real_type>();
+        case SSPRK_5_4:
+            return dg::tableau::ssprk_5_4<real_type>();
+        default:
+            throw dg::Error(dg::Message(_ping_)<<"Tableau "<<tableau2str(id)<<" is not in Shu-Osher form!");
+    }
+    return ShuOsherTableau<real_type>(); //avoid compiler warning
+}
 template<class real_type>
 ButcherTableau<real_type> tableau( enum tableau_identifier id)
 {
@@ -904,6 +1234,10 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::fehlberg_6_4_5<real_type>();
         case DORMAND_PRINCE_7_4_5:
             return dg::tableau::dormand_prince_7_4_5<real_type>();
+        case TSITOURAS09_7_4_5:
+            return dg::tableau::tsitouras09_7_4_5<real_type>();
+        case TSITOURAS11_7_4_5:
+            return dg::tableau::tsitouras11_7_4_5<real_type>();
         case ARK548L2SA_ERK_8_4_5:
             return dg::tableau::ark548l2sa_erk_8_4_5<real_type>();
         case VERNER_8_5_6:
@@ -942,55 +1276,24 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::kvaerno_7_4_5<real_type>();
         case ARK548L2SA_DIRK_8_4_5:
             return dg::tableau::ark548l2sa_dirk_8_4_5<real_type>();
+        default:
+            return ButcherTableau<real_type>(shuosher_tableau<real_type>(id));
     }
-    return ButcherTableau<real_type>();
+    return ButcherTableau<real_type>(); //avoid compiler warning
 }
 
+
+template<class real_type>
+ShuOsherTableau<real_type> shuosher_tableau( std::string name)
+{
+        return shuosher_tableau<real_type>( str2tableau(name));
+}
 template<class real_type>
 ButcherTableau<real_type> tableau( std::string name)
 {
-    static std::unordered_map<std::string, enum tableau_identifier> str2id{
-        //Explicit methods
-        {"Euler", EXPLICIT_EULER_1_1},
-        {"Midpoint-2-2", MIDPOINT_2_2},
-        {"Kutta-3-3", KUTTA_3_3},
-        {"Runge-Kutta-4-4", CLASSIC_4_4},
-        //Embedded explicit methods
-        {"Heun-Euler-2-1-2", HEUN_EULER_2_1_2},
-        {"Bogacki-Shampine-4-2-3", BOGACKI_SHAMPINE_4_2_3},
-        {"ARK-4-2-3 (explicit)", ARK324L2SA_ERK_4_2_3},
-        {"Zonneveld-5-3-4", ZONNEVELD_5_3_4},
-        {"ARK-6-3-4 (explicit)", ARK436L2SA_ERK_6_3_4},
-        {"Sayfy-Aburub-6-3-4", SAYFY_ABURUB_6_3_4},
-        {"Cash-Karp-6-4-5", CASH_KARP_6_4_5},
-        {"Fehlberg-6-4-5", FEHLBERG_6_4_5},
-        {"Dormand-Prince-7-4-5", DORMAND_PRINCE_7_4_5},
-        {"ARK-8-4-5 (explicit)", ARK548L2SA_ERK_8_4_5},
-        {"Verner-8-5-6", VERNER_8_5_6},
-        {"Fehlberg-13-7-8", FEHLBERG_13_7_8},
-        {"Feagin-17-8-10", FEAGIN_17_8_10},
-        //Implicit methods
-        {"Euler (implicit)", IMPLICIT_EULER_1_1},
-        {"Midpoint (implicit)", IMPLICIT_MIDPOINT_1_2},
-        {"Trapezoidal-2-2", TRAPEZOIDAL_2_2},
-        {"SDIRK-2-1-2", SDIRK_2_1_2},
-        {"Billington-3-3-2", BILLINGTON_3_3_2},
-        {"TRBDF2-3-3-2", TRBDF2_3_3_2},
-        {"Kvaerno-4-2-3", KVAERNO_4_2_3},
-        {"ARK-4-2-3 (implicit)", ARK324L2SA_DIRK_4_2_3},
-        {"Cash-5-2-4", CASH_5_2_4},
-        {"Cash-5-3-4", CASH_5_3_4},
-        {"SDIRK-5-3-4", SDIRK_5_3_4},
-        {"Kvaerno-5-3-4", KVAERNO_5_3_4},
-        {"ARK-6-3-4 (implicit)", ARK436L2SA_DIRK_6_3_4},
-        {"Kvaerno-7-4-5", KVAERNO_7_4_5},
-        {"ARK-8-4-5 (implicit)", ARK548L2SA_DIRK_8_4_5}
-    };
-    if( str2id.find(name) == str2id.end())
-        throw dg::Error(dg::Message(_ping_)<<"Butcher Tableau "<<name<<" not found!");
-    else
-        return tableau<real_type>( str2id[name]);
+        return tableau<real_type>( str2tableau(name));
 }
+
 }//namespace create
 ///@endcond
 
@@ -1001,7 +1304,12 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Euler                  | dg::EXPLICIT_EULER_1_1     | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Explicit Euler</a>
  *   Midpoint-2-2           | dg::MIDPOINT_2_2           | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint method</a>
  *   Kutta-3-3              | dg::KUTTA_3_3              | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Kutta-3-3</a>
- *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods"> "The" Runge-Kutta method</a>
+ *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">"The" Runge-Kutta method</a>
+ *   SSPRK-2-2              | dg::SSPRK_2_2                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (2,2)</a> CFL_eff = 0.5 "Shu-Osher-Form"
+ *   SSPRK-3-2              | dg::SSPRK_3_2                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (3,2)</a> CFL_eff = 0.66 "Shu-Osher-Form"
+ *   SSPRK-3-3              | dg::SSPRK_3_3                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (3,3)</a> CFL_eff = 0.33 "Shu-Osher-Form"
+ *   SSPRK-5-3              | dg::SSPRK_5_3                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,3)</a> CFL_eff = 0.5 "Shu-Osher-Form"
+ *   SSPRK-5-4              | dg::SSPRK_5_4                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,4)</a> CFL_eff = 0.37 "Shu-Osher-Form"
  *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
  *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
  *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
@@ -1011,6 +1319,8 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
  *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
  *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a> (fsal)
+ *   Tsitouras09-7-4-5   | dg::TSITOURAS09_7_4_5   | <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
+ *   Tsitouras11-7-4-5   | dg::TSITOURAS11_7_4_5   | <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal) Further improves Tsitouras09
  *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
  *   Verner-8-5-6           | dg::VERNER_8_5_6           | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
  *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
@@ -1051,7 +1361,7 @@ ButcherTableau<real_type> tableau( std::string name)
  * Implicit methods
  * @copydoc hide_implicit_butcher_tableaus
  * @param real_type The type of the coefficients in the ButcherTableau
- * @ingroup time
+ * @ingroup time_utils
  */
 template<class real_type>
 struct ConvertsToButcherTableau
@@ -1088,6 +1398,54 @@ struct ConvertsToButcherTableau
     }
     private:
     ButcherTableau<real_type> m_t;
+};
+
+/*! @brief Convert identifiers to their corresponding \c dg::ShuOsherTableau
+ *
+ * This is a helper class to simplify the interfaces of our timestepper functions and classes.
+ * The sole purpose is to implicitly convert either a ShuOsherTableau or one of
+ * the following identifiers to an instance of a ShuOsherTableau.
+ *
+ * Explicit methods (the ones that are marked with "Shu-Osher-Form"
+ * @copydoc hide_explicit_butcher_tableaus
+ * @param real_type The type of the coefficients in the ShuOsherTableau
+ * @ingroup time_utils
+ */
+template<class real_type>
+struct ConvertsToShuOsherTableau
+{
+    using value_type = real_type;
+    ///Of course a ShuOsherTableau converts to a ShuOsherTableau
+    ///Useful if you constructed your very own coefficients
+    ConvertsToShuOsherTableau( ShuOsherTableau<real_type> tableau): m_t(tableau){}
+
+    /*! @brief Create ShuOsherTableau from \c dg::tableau_identifier
+    *
+    * The use of this constructor might be a bit awkward because you'll have to write all caps.
+    * @param id the identifier, for example \c dg::SSPRK_3_3
+    */
+    ConvertsToShuOsherTableau( enum tableau_identifier id):m_t( dg::create::shuosher_tableau<real_type>(id)){}
+    /*! @brief Create ShuOsherTableau from its name (very useful)
+    *
+    *  @note In some of the links in the Description below you might want to use the search function of your browser to find the indicated method
+    *
+    * Explicit methods
+    * @copydoc hide_explicit_butcher_tableaus
+    * Implicit methods
+    * @copydoc hide_implicit_butcher_tableaus
+    * @param name The name of the tableau as stated in the Name column above, as a string, for example "SSPRK-3-3"
+    */
+    ConvertsToShuOsherTableau( std::string name):m_t( dg::create::shuosher_tableau<real_type>(name)){}
+    ///@copydoc ConvertsToShuOsherTableau(std::string)
+    ConvertsToShuOsherTableau( const char* name):m_t( dg::create::shuosher_tableau<real_type>(std::string(name))){}
+    ///Convert to ShuOsherTableau
+    ///
+    ///which means an object can be directly assigned to a ShuOsherTableau
+    operator ShuOsherTableau<real_type>( )const{
+        return m_t;
+    }
+    private:
+    ShuOsherTableau<real_type> m_t;
 };
 
 }//namespace dg

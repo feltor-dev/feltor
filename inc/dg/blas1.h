@@ -27,7 +27,7 @@ namespace dg{
 /*! @brief BLAS Level 1 routines
  *
  * @ingroup blas1
- * Only those routines that are actually called need to be implemented.
+ *
  * @note successive calls to blas routines are executed sequentially
  * @note A manual synchronization of threads or devices is never needed in an application
  * using these functions. All functions returning a value block until the value is ready.
@@ -40,7 +40,7 @@ namespace blas1
 
 /**
  * @class hide_iterations
- * where \c i iterates over @b all elements inside the given vectors. The order of iterations is indetermined. Scalar arguments to container types are interpreted as vectors with all elements constant. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
+ * where \c i iterates over @b all elements inside the given vectors. The order of iterations is undefined. Scalar arguments to container types are interpreted as vectors with all elements constant. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
  * If the vector sizes do not match, the result is undefined.
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  */
@@ -55,11 +55,14 @@ For example
 dg::DVec two( 100,2), three(100,3);
 double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
 @endcode
- * @attention if one of the input vectors contains \c NaN then the behaviour is undefined and the function may throw
- * @note Our implementation guarantees binary reproducible results.
- * The sum is computed with infinite precision and the result is rounded
+ * @attention if one of the input vectors contains \c Inf or \c NaN or the
+ * product of the input numbers reaches \c Inf or \c Nan then the behaviour
+ * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
+ * dg::ISNSANE in that case
+ * @note Our implementation guarantees **binary reproducible** results.
+ * The sum is computed with **infinite precision** and the result is rounded
  * to the nearest double precision number.
- * This is possible with the help of an adapted version of the \c ::exblas library and
+ * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
 
  * @param x Left Container
@@ -88,11 +91,12 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 
 For example
 @code
-//Check if a vector contains NaN
+//Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
 thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNAN<double>());
+dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
 bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
  * @param x Left Container
  * @param init initial value of the reduction
@@ -127,7 +131,7 @@ template<class ContainerTypeIn, class ContainerTypeOut>
 inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
     if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==(const ContainerTypeIn*)&target)
         return;
-    dg::blas1::subroutine( dg::equals(), target, source );
+    dg::blas1::subroutine( dg::equals(), source, target);
 }
 
 /*! @brief \f$ x = \alpha x\f$
@@ -297,12 +301,12 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         return;
     }
     if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x2, y );
+        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
         return;
     }
     if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
-        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, y );
+        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x1, y );
 
         return;
     }
@@ -415,7 +419,7 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 }
 
 /**
-* @brief \f$ z = \alpha x_1x_2 + \beta x_2y_2 + \gamma z\f$
+* @brief \f$ z = \alpha x_1y_1 + \beta x_2y_2 + \gamma z\f$
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
 * @copydoc hide_iterations
@@ -476,9 +480,9 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
     dg::blas1::subroutine( dg::Evaluate<dg::equals, UnaryOp>(dg::equals(),op), y, x);
 }
 
-/*! @brief \f$ f(y, g(x_0,x_1,...))\f$
+/*! @brief \f$ f(g(x_0,x_1,...), y)\f$
  *
- * This routine elementwise evaluates \f[ f(y_i , g(x_{0i}, x_{1i}, ...)) \f]
+ * This routine elementwise evaluates \f[ f(g(x_{0i}, x_{1i}, ...), y_i) \f]
  * @copydoc hide_iterations
  *
 @code
@@ -489,15 +493,15 @@ dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
 // result[i] = sin(M_PI/2.)*sin(3*M_PI/2.) = -1
 @endcode
+ * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @param y contains result
- * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals
- * @param g The functor to evaluate
+ * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals, see @ref binary_operators for a collection of predefined functors to use here
+ * @param g The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
  * @param x0 first input
  * @param xs more input
  * @note all aliases allowed
- * @tparam BinarySubroutine Functor with signature: <tt> void operator()( value_type_y&, value_type_g) </tt> i.e. it writes into the first and reads from its (first and) second argument
- * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
- * @note Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_ContainerType
  *
  */
@@ -550,14 +554,14 @@ dg::blas1::subroutine( Routine(), two, 3., four);
 // four[i] now has the value 21 (7*2+3+4)
 @endcode
 
- * @param f the subroutine
+ * @param f the subroutine, see @ref variadic_subroutines for a collection of predefind subroutines to use here
  * @param x the first argument
  * @param xs other arguments
 @note This function can compute @b any trivial parallel expression for @b any
-number of input and output arguments. In this sense it replaces all other \c blas1 functions
-except the scalar product, which is not trivial parallel.
+number of input and output arguments, which is quite remarkable really. In this sense it replaces all other \c blas1 functions
+except the scalar product, which is not trivially parallel.
 @attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
- * @tparam Subroutine a function or functor taking a \c value_type argument for each input argument in the call
+ * @tparam Subroutine a function or functor with an arbitrary number of arguments and no return type; taking a \c value_type argument for each input argument in the call
  * and a <tt> value_type&  </tt> argument for each output argument.
  * \c Subroutine must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_ContainerType

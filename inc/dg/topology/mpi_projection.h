@@ -22,6 +22,14 @@ using MIHMatrix = tMIHMatrix<double>;
 using MIDMatrix = tMIDMatrix<double>;
 //typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
 //typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
+namespace x{
+template<class real_type>
+using tIHMatrix = tMIHMatrix<real_type>;
+template<class real_type>
+using tIDMatrix = tMIDMatrix<real_type>;
+using IHMatrix = MIHMatrix;
+using IDMatrix = MIDMatrix;
+} //namespace x
 ///@}
 
 ///@cond
@@ -114,33 +122,39 @@ dg::tMIHMatrix<real_type> interpolation( const aRealMPITopology2d<real_type>& g_
 {
     return tMIHMatrix<real_type>( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
-///@copydoc interpolation(const RealGrid1d&,const RealGrid1d&)
+///@copydoc dg::create::interpolation(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 dg::tMIHMatrix<real_type> interpolation( const aRealMPITopology3d<real_type>& g_new, const aRealMPITopology3d<real_type>& g_old)
 {
     return tMIHMatrix<real_type>( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
+///@copydoc dg::create::interpolation(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolation( const aRealMPITopology3d<real_type>& g_new, const aRealMPITopology2d<real_type>& g_old)
+{
+    return tMIHMatrix<real_type>( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
+}
 
-///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
+///@copydoc dg::create::interpolationT(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 dg::tMIHMatrix<real_type> interpolationT( const aRealMPITopology2d<real_type>& g_new, const aRealMPITopology2d<real_type>& g_old)
 {
     return tMIHMatrix<real_type>( interpolationT( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
-///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
+///@copydoc dg::create::interpolationT(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 dg::tMIHMatrix<real_type> interpolationT( const aRealMPITopology3d<real_type>& g_new, const aRealMPITopology3d<real_type>& g_old)
 {
     return tMIHMatrix<real_type>( interpolationT( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 
-///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+///@copydoc dg::create::projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 dg::tMIHMatrix<real_type> projection( const aRealMPITopology2d<real_type>& g_new, const aRealMPITopology2d<real_type>& g_old)
 {
     return tMIHMatrix<real_type>( projection( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
-///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+///@copydoc dg::create::projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 dg::tMIHMatrix<real_type> projection( const aRealMPITopology3d<real_type>& g_new, const aRealMPITopology3d<real_type>& g_old)
 {

@@ -97,8 +97,8 @@ int main( int argc, char* argv[])
         #endif //TOEFL_MPI
     );
     //create RHS
-    toefl::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > exp( grid, p);
-    toefl::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
+    poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > exp( grid, p);
+    poet::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
     /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian

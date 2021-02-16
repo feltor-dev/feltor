@@ -191,25 +191,6 @@ struct ComputeChi{
         chi = mu_i*(tilde_Ni+1.)*binv*binv;
     }
 };
-struct ComputePsi{
-    DG_DEVICE
-    void operator()( double& gradPhi2, double dxPhi, double dyPhi,
-        double dzPhi, double& HdxPhi, double HdyPhi, double HdzPhi
-        ) const{
-        gradPhi2 = (dxPhi*HdxPhi + dyPhi*HdyPhi + dzPhi*HdzPhi);
-    }
-    DG_DEVICE
-    void operator()( double& GammaPhi, double dxPhi, double dyPhi,
-        double dzPhi, double& HdxPhi, double HdyPhi, double HdzPhi,
-        double binv) const{
-        //u_E^2
-        this->operator()(
-            HdxPhi, dxPhi, dyPhi, dzPhi, HdxPhi, HdyPhi , HdzPhi);
-        HdxPhi   = binv*binv*HdxPhi;
-        //Psi
-        GammaPhi = GammaPhi - 0.5*HdxPhi;
-    }
-};
 //struct ComputeLogN{
 //    DG_DEVICE
 //    void operator()( double tilde_n, double& npe, double& logn) const{
@@ -696,6 +677,8 @@ template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
     const Container& src, Container& target, std::string initphi)
 {
+    //According to Markus we should actually always invert
+    //so we should reconsider this function
     // Ni = ne
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
@@ -803,10 +786,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
     dg::blas2::symv( m_dx_P, m_phi[0], m_dP[0][0]);
     dg::blas2::symv( m_dy_P, m_phi[0], m_dP[0][1]);
     if( !m_p.symmetric) dg::blas2::symv( m_dz, m_phi[0], m_dP[0][2]);
-    dg::tensor::multiply3d( m_hh, //grad_perp
-        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_UE2, m_temp0, m_temp1);
-    dg::blas1::subroutine( routines::ComputePsi(), m_phi[1],
-        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_UE2, m_temp0, m_temp1, m_binv);
+    dg::tensor::scalar_product3d( 1., m_binv,
+        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
+        m_dP[0][0], m_dP[0][1], m_dP[0][2], 0., m_UE2);
+    dg::blas1::axpby( -0.5, m_UE2, 1., m_phi[1]);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -1038,7 +1021,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 
 #endif
-    if( m_p.explicit_diffusion )
+    //right now we do not support that option i.e everything is explicit
+    //if( m_p.explicit_diffusion )
     {
 #if FELTORPERP == 1
         /* y[0] := n_e - 1
@@ -1129,7 +1113,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         else // "bohm" == m_p.sheath_bc
         {
             //exp(-phi)
-            dg::blas1::transform( m_phi[0], m_temp0, dg::EXP<double>(1., -1.));
+            dg::blas1::transform( m_phi[0], m_temp0, dg::ExpProfX(1., 0., 1.));
             dg::blas1::pointwiseDot( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, m_temp0, 1.,  yp[1][0]);
         }
         // u_i = +- sqrt(1+tau)

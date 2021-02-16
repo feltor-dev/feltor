@@ -37,10 +37,6 @@ double jacobian( double x, double y)
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
-double variationRHS( double x, double y)
-{
-    return cos(x)*cos(y)*cos(x)*cos(y) + sin(x)*sin(y)*sin(x)*sin(y);
-}
 
 int main()
 {
@@ -61,8 +57,7 @@ int main()
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
-    const dg::DVec variation = dg::evaluate ( variationRHS, grid);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     std::cout << std::scientific;
     res.d = dg::blas2::dot( eins, w2d, jac);
     std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
@@ -73,9 +68,5 @@ int main()
     dg::blas1::axpby( 1., sol, -1., jac);
     res.d = sqrt(dg::blas2::dot( w2d, jac));
     std::cout << "Distance to solution "<<res.d<<"\t"<<res.i<<std::endl;
-    poisson.variationRHS( rhs, jac);
-    dg::blas1::axpby( 1., variation, -1., jac);
-    res.d = sqrt( dg::blas2::dot( w2d, jac));
-    std::cout << "Variation distance to solution "<<res.d<<"\t"<<res.i<<std::endl;
     return 0;
 }

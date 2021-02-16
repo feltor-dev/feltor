@@ -12,6 +12,8 @@
 #include <map>
 #include "accumulate.h"
 
+namespace dg
+{
 namespace exblas {
 
 ///@cond
@@ -99,3 +101,4 @@ static void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, M
 }
 
 }//namespace exblas
+} //namespace dg

@@ -84,7 +84,7 @@ static inline bc str2bc( std::string s)
  * @param bound boundary condition to invert
  * @return NEU for DIR, DIR for NEU, NEU_DIR for DIR_NEU, DIR_NEU for NEU_DIR and PER for PER
  */
-bc inverse( bc bound)
+static inline bc inverse( bc bound)
 {
     if( bound == DIR) return NEU;
     if( bound == NEU) return DIR;
@@ -108,12 +108,58 @@ enum direction{
 
 
 /**
+ * @brief convert a string to a direction
+ *
+ * converts
+ * - "forward" to forward
+ * - "backward" to backward
+ * - "centered" to centered
+ *
+ * @param s the input string
+ * @return a valid direction
+ * \throw std::runtime_error if string doesn't match any of the above
+ */
+static inline direction str2direction( std::string s)
+{
+    if( "forward" == s)
+        return forward;
+    if( "backward" == s)
+        return backward;
+    if( "centered" == s)
+        return centered;
+    throw std::runtime_error( "Direction '"+s+"' not recognized!");
+}
+/**
+ * @brief convert a direciton to string
+ *
+ * converts
+ * - forward to "forward"
+ * - backward to "backward"
+ * - centered to "centered"
+ *
+ * @param dir the input direction
+ * @return a string
+ */
+static inline std::string direction2str( enum direction dir)
+{
+    std::string s;
+    switch(dir)
+    {
+        case(dg::forward): s = "forward"; break;
+        case(dg::backward): s = "backward"; break;
+        case(dg::centered): s = "centered"; break;
+        default: s = "Not specified!!";
+    }
+    return s;
+}
+
+/**
  * @brief invert direction
  *
  * @param dir direction to invert
  * @return backward for forward, forward for backward, centered for centered
  */
-direction inverse( direction dir)
+static inline direction inverse( direction dir)
 {
     if( dir == forward) return backward;
     if( dir == backward) return forward;
@@ -122,8 +168,8 @@ direction inverse( direction dir)
 
 ///@brief Space of DG coefficients
 enum space{
-    lspace, //!< DG Polynomial space
-    xspace //!< Configuration space
+    lspace, //!< DG Polynomial space "modal values"
+    xspace //!< Configuration space "nodal values"
 };
 
 ///@brief 2d coordinates

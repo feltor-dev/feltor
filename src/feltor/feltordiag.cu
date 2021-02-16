@@ -30,7 +30,7 @@ int main( int argc, char* argv[])
     std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid_in;
     err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
     size_t length;
@@ -42,10 +42,10 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
     err = nc_close( ncid_in);
     Json::Value js,gs;
-    file::string2Json(inputfile, js, file::comments::are_forbidden);
-    file::string2Json(geomfile, gs, file::comments::are_forbidden);
+    dg::file::string2Json(inputfile, js, dg::file::comments::are_forbidden);
+    dg::file::string2Json(geomfile, gs, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
-    const feltor::Parameters p(js, file::error::is_warning);
+    const feltor::Parameters p(js, dg::file::error::is_warning);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();
@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
 
     dg::geo::CylindricalFunctor wall, transition;
     dg::geo::TokamakMagneticField mag =
-        dg::geo::createModifiedField(gs, js, file::error::is_warning, wall, transition);
+        dg::geo::createModifiedField(gs, js, dg::file::error::is_warning, wall, transition);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     // Construct weights and temporaries
 
@@ -213,13 +213,13 @@ int main( int argc, char* argv[])
 
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
+    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
     //Write long description
     std::string long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
     int dim_ids1d[2] = {dim_ids[0], 0}; //time,  psi
-    err = file::define_dimension( ncid_out, &dim_ids1d[1], g1d_out, {"psi"} );
+    err = dg::file::define_dimension( ncid_out, &dim_ids1d[1], g1d_out, {"psi"} );
     std::map<std::string, int> id0d, id1d, id2d;
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
@@ -316,7 +316,7 @@ int main( int argc, char* argv[])
         std::cout << "Opening file "<<argv[j]<<"\n";
         try{
             err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
-        } catch ( file::NC_Error& error)
+        } catch ( dg::file::NC_Error& error)
         {
             std::cerr << "An error occurded opening file "<<argv[j]<<"\n";
             std::cerr << error.what()<<std::endl;
@@ -349,7 +349,7 @@ int main( int argc, char* argv[])
                 bool available = true;
                 try{
                     err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
-                } catch ( file::NC_Error& error)
+                } catch ( dg::file::NC_Error& error)
                 {
                     if(  i == 0)
                     {
@@ -398,7 +398,7 @@ int main( int argc, char* argv[])
                 available = true;
                 try{
                     err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
-                } catch ( file::NC_Error& error)
+                } catch ( dg::file::NC_Error& error)
                 {
                     if(  i == 0)
                     {

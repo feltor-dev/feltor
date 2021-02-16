@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     if(rank==0) p.display( std::cout);
@@ -151,7 +151,7 @@ int main( int argc, char* argv[])
       }
     }
     if (argc==4) {
-        file::NC_Error_Handle errIN;
+        dg::file::NC_Error_Handle errIN;
         int ncidIN;
         errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         ///////////////////read in and show inputfile und geomfile//////////////////
@@ -160,7 +160,7 @@ int main( int argc, char* argv[])
         std::string inputIN(length, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
         Json::Value jsIN;
-        file::string2Json(inputIN, jsIN, file::comments::are_forbidden);
+        dg::file::string2Json(inputIN, jsIN, dg::file::comments::are_forbidden);
         const eule::Parameters pIN(  jsIN);    
         if(rank==0) std::cout << "[input.nc] file parameters" << std::endl;
         if(rank==0) pIN.display( std::cout);   
@@ -203,7 +203,7 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     if(rank==0) std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
 //         err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
@@ -212,7 +212,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     dg::Grid2d global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
     err = nc_enddef( ncid);
     err = nc_redef(ncid);
 
@@ -227,7 +227,7 @@ int main( int argc, char* argv[])
 
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
 
     int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID;

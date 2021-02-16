@@ -126,7 +126,7 @@ int main()
     dg::blas2::symv(  A, x, Ax);
     dg::blas1::axpby( 1.,Ax,-1.,resi);
 
-    exblas::udouble res;
+    dg::exblas::udouble res;
     res.d = sqrt(dg::blas2::dot( w2d, x));
     std::cout << "L2 Norm of x0 is              " << res.d<<"\t"<<res.i << std::endl;
     res.d = sqrt(dg::blas2::dot(w2d , solution));

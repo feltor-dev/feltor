@@ -90,10 +90,10 @@ int main( int argc, char* argv[])
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     //////////////////////////////setup and write netcdf//////////////////
     int ncid;
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     err = nc_create( "flux.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    err = file::define_dimensions(  ncid, dim2d, g2d_periodic);
+    err = dg::file::define_dimensions(  ncid, dim2d, g2d_periodic);
     int coordsID[2];
     err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);

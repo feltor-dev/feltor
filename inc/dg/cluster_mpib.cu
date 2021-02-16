@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi<<std::flush;
     //The Elliptic scheme
-    exblas::udouble res;
+    dg::exblas::udouble res;
     if( !(Nz > 2))
     {
         const Vector ellw3d = dg::create::volume(gridEll);

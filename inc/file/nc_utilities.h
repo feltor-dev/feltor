@@ -20,9 +20,12 @@
  */
 
 
+namespace dg
+{
 /**
 * @brief Namespace for netcdf output related classes and functions following the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
+ @sa @ref json and @ref netcdf
 */
 namespace file
 {
@@ -49,6 +52,9 @@ inline int put_var_T<double>( int ncid, int varID, double* data){
     return nc_put_var_double( ncid, varID, data);
 }
 ///@endcond
+
+///@addtogroup netcdf
+///@{
 
 ///@copydoc define_time
 template<class T>
@@ -308,4 +314,6 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
 }
 #endif //MPI_VERSION
 
+///@}
 } //namespace file
+} //namespace dg

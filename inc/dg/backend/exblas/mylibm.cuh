@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+namespace dg
+{
 namespace exblas
 {
 namespace gpu
@@ -60,3 +62,4 @@ static inline double OddRoundSumNonnegative(double th, double tl) {
 }
 }//namespace gpu
 }//namespace exblas
+} //namespace dg

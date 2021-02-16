@@ -10,12 +10,12 @@
 #include "feltor.h"
 #include "implicit.h"
 
-using HVec = dg::HVec;
-using DVec = dg::DVec;
-using DMatrix = dg::DMatrix;
-using IDMatrix = dg::IDMatrix;
-using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CylindricalGrid3d;
+using HVec = dg::x::HVec;
+using DVec = dg::x::DVec;
+using DMatrix = dg::x::DMatrix;
+using IDMatrix = dg::x::IDMatrix;
+using IHMatrix = dg::x::IHMatrix;
+using Geometry = dg::x::CylindricalGrid3d;
 #define MPI_OUT
 
 #include "init.h"
@@ -37,8 +37,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     try{
-        file::file2Json( inputfile, js, file::comments::are_forbidden, file::error::is_throw);
-        feltor::Parameters(js, file::error::is_throw);
+        dg::file::file2Json( inputfile, js, dg::file::comments::are_forbidden, dg::file::error::is_throw);
+        feltor::Parameters(js, dg::file::error::is_throw);
     }catch(std::runtime_error& e)
     {
 
@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     try{
-        file::file2Json( geomfile, gs, file::comments::are_discarded, file::error::is_throw);
+        dg::file::file2Json( geomfile, gs, dg::file::comments::are_discarded, dg::file::error::is_throw);
     }catch(std::runtime_error& e)
     {
 
@@ -62,8 +62,8 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField mag, mod_mag;
     dg::geo::CylindricalFunctor wall, transition, sheath, direction;
     try{
-        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
-        mod_mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, wall, transition);
+        mag = dg::geo::createMagneticField(gs, dg::file::error::is_throw);
+        mod_mag = dg::geo::createModifiedField(gs, js, dg::file::error::is_throw, wall, transition);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER);
     try{
-        dg::geo::createSheathRegion( js, file::error::is_throw, mag, wall,
+        dg::geo::createSheathRegion( js, dg::file::error::is_throw, mag, wall,
                 Rmin, Rmax, Zmin, Zmax, sheath, direction);
     }catch(std::runtime_error& e)
     {
@@ -140,7 +140,7 @@ int main( int argc, char* argv[])
     //    feltor::FeltorSpecialSolver<
     //        Geometry, IDMatrix, DMatrix, DVec>
     //    > karniadakis( grid, p, mag);
-    dg::MinimalProjecting< std::array<std::array<dg::DVec,2>,2 > > mp( 3, y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp("TVB-3-3", y0);
     {
     HVec h_wall = dg::pullback( wall, grid);
     HVec h_sheath = dg::pullback( sheath, grid);
@@ -170,7 +170,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     //
     std::stringstream title;
-    file::file2Json( "window_params.json", js, file::comments::are_discarded);
+    dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
     unsigned red = js.get("reduction", 1).asUInt();
     double rows = js["rows"].asDouble(), cols = p.Nz/red+1,
            width = js["width"].asDouble(), height = js["height"].asDouble();

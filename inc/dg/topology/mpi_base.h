@@ -262,6 +262,14 @@ using aProductMPIGeometry3d = dg::aRealProductMPIGeometry3d<double>;
 using CartesianMPIGrid2d    = dg::RealCartesianMPIGrid2d<double>;
 using CartesianMPIGrid3d    = dg::RealCartesianMPIGrid3d<double>;
 using CylindricalMPIGrid3d  = dg::RealCylindricalMPIGrid3d<double>;
+namespace x{
+using aGeometry2d           = aMPIGeometry2d           ;
+using aGeometry3d           = aMPIGeometry3d           ;
+using aProductGeometry3d    = aProductMPIGeometry3d    ;
+using CartesianGrid2d       = CartesianMPIGrid2d       ;
+using CartesianGrid3d       = CartesianMPIGrid3d       ;
+using CylindricalGrid3d     = CylindricalMPIGrid3d     ;
+}//namespace x
 ///@}
 
 }//namespace dg

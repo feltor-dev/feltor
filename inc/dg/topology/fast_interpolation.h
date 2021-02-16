@@ -2,6 +2,7 @@
 
 #include <thrust/host_vector.h>
 #include "dg/backend/memory.h"
+#include "dg/backend/typedefs.h"
 #include "dg/enums.h"
 #include "dg/blas.h"
 #include "grid.h"
@@ -25,6 +26,7 @@ namespace dg
  *
  * \f[ y = M_{N-1}(...M_1(M_0x))\f]
  * where \f$ M_i\f$ is the i-th matrix
+ * @sa mainly used by dg::create::fast_interpolation and dg::ModalFilter
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
  * @ingroup misc
@@ -41,20 +43,8 @@ struct MultiMatrix
     */
     MultiMatrix( int dimension): inter_(dimension), temp_(dimension-1 > 0 ? dimension-1 : 0 ){}
 
-    template<class OtherMatrix, class OtherContainer>
-    MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src){
-        unsigned dimsM = src.get_matrices().size();
-        unsigned dimsT = src.get_temp().size();
-        inter_.resize( dimsM);
-        temp_.resize(  dimsT);
-        for( unsigned i=0; i<dimsM; i++)
-            inter_[i] = src.get_matrices()[i];
-        for( unsigned i=0; i<dimsT; i++)
-            dg::assign( src.get_temp()[i].data(), temp_[i].data());
-
-    }
-    template<class OtherMatrix, class OtherContainer, class ...Params>
-    void construct( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ...ps){
+    template<class OtherMatrix, class OtherContainer, class ... Params>
+    MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ... ps){
         unsigned dimsM = src.get_matrices().size();
         unsigned dimsT = src.get_temp().size();
         inter_.resize( dimsM);
@@ -63,6 +53,11 @@ struct MultiMatrix
             inter_[i] = src.get_matrices()[i];
         for( unsigned i=0; i<dimsT; i++)
             dg::assign( src.get_temp()[i].data(), temp_[i].data(), std::forward<Params>(ps)...);
+
+    }
+    template<class ...Params>
+    void construct( Params&& ...ps){
+        *this = MultiMatrix( std::forward<Params>(ps)...);
     }
 
 
@@ -96,166 +91,205 @@ struct TensorTraits<MultiMatrix<M, V> >
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
+///@endcond
 
 
 namespace create
 {
+///@addtogroup interpolation
+///@{
+
+/**
+ * @brief Create interpolation matrix for integer multipliers
+ *
+ * When creating an interpolation from a given dg grid to one that has
+ * an integer multiple of cells and/or polynomial coefficients, the
+ * resulting interpolation matrix fits into our \c dg::EllSparseBlockMat format,
+ * which is much faster to apply than the full sparse matrix format from
+ * the general purpose interpolation function, especially since it requires
+ * no communication from neighboring cells
+ * @sa dg::create::interpolation
+ * @sa For a derivation of the coefficients consult the %dg manual <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @tparam real_type a floating point type
+ * @return a matrix that when applied to vectors on the old grid produces a vector on the new grid
+ * @param t The existing (old/coarse) grid
+ * @param multiplyn integer multiplier, the new grid has \c n*multiplyn polynomial coefficients
+ * @param multiplyNx integer multiplier, the new grid has \c Nx*multiplyNx points
+ */
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const RealGrid1d<real_type>& t, unsigned multiply)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolation( const RealGrid1d<real_type>& t, unsigned multiplyn, unsigned multiplyNx)
 {
     unsigned n=t.n();
     dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
-    dg::RealGrid1d<real_type> g_new( -1., 1., n, multiply);
+    dg::RealGrid1d<real_type> g_new( -1., 1., n*multiplyn, multiplyNx);
     cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX = dg::create::interpolation( g_new, g_old);
-    EllSparseBlockMat<real_type> iX( multiply*t.N(), t.N(), 1, multiply, t.n());
-    for( unsigned  k=0; k<multiply; k++)
+    EllSparseBlockMat<real_type> iX( multiplyn*multiplyNx*t.N(), t.N(), 1, multiplyNx*multiplyn, t.n());
+    for( unsigned  k=0; k<multiplyNx*multiplyn; k++)
     for( unsigned  i=0; i<n; i++)
     for( unsigned  j=0; j<n; j++)
         iX.data[(k*n+i)*n+j] = interpolX.values[(k*n+i)*n+j];
-    for( unsigned i=0; i<multiply*t.N(); i++)
+    for( unsigned i=0; i<multiplyNx*multiplyn*t.N(); i++)
     {
-        iX.cols_idx[i] = i/multiply;
-        iX.data_idx[i] = i%multiply;
+        iX.cols_idx[i] = i/(multiplyNx*multiplyn);
+        iX.data_idx[i] = i%(multiplyNx*multiplyn);
     }
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(1);
     inter.get_matrices()[0] = iX;
     return inter;
 }
 
+/**
+ * @brief Create projecton or interpolationT matrix for integer dividers
+ *
+ * When creating a projection from a given dg grid to one that has
+ * an integer division of cells and/or polynomial coefficients, the
+ * resulting projection matrix fits into our \c dg::EllSparseBlockMat format,
+ * which is much faster to apply than the full sparse matrix format from
+ * the general purpose projection function, especially since it requires
+ * no communication from neighboring cells
+ * @sa dg::create::projection dg::create::interpolationT
+ * @sa For a derivation of the coefficients consult the %dg manual <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @tparam real_type a floating point type
+ * @return a matrix that when applied to vectors on the old grid produces a vector on the new grid
+ * @param t The existing (old/fine) grid
+ * @param dividen integer divisor, the new grid has \c n/multiplyn polynomial coefficients
+ * @param divideNx integer divisor, the new grid has \c Nx/multiplyNx points
+ * @param no if dg::normed than a projection matrix is returned, if dg::not_normed the interpolationT is computed
+ */
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const RealGrid1d<real_type>& t, unsigned divide, enum dg::norm no = normed)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( const RealGrid1d<real_type>& t, unsigned dividen, unsigned divideNx, enum dg::norm no = normed)
 {
-    unsigned n=t.n();
-    if( t.N()%divide != 0) throw Error( Message(_ping_)<< "Nx and divide don't match: Nx: " << t.N()<< " divide "<< (unsigned)divide);
-    dg::RealGrid1d<real_type> g_old( -1., 1., n, divide);
+    if( t.N()%divideNx != 0) throw Error( Message(_ping_)<< "Nx and divideNx don't match: Nx: " << t.N()<< " divideNx "<< (unsigned)divideNx);
+    if( t.n()%dividen != 0) throw Error( Message(_ping_)<< "n and dividen don't match: n: " << t.n()<< " dividen "<< (unsigned)dividen);
+    unsigned n=t.n()/dividen;
+    dg::RealGrid1d<real_type> g_old( -1., 1., n*dividen, divideNx);
     dg::RealGrid1d<real_type> g_new( -1., 1., n, 1);
     dg::HVec w1d = dg::create::weights( g_old);
     dg::HVec v1d = dg::create::inv_weights( g_new);
     cusp::coo_matrix<int, real_type, cusp::host_memory> projectX;
     //Here, we cannot use create::projection because that would remove explicit zeros!!
     projectX = dg::create::interpolationT( g_new, g_old);
-    EllSparseBlockMat<real_type> pX( t.N()/divide, t.N(), divide, divide, t.n());
-    for( unsigned k=0; k<divide; k++)
+    EllSparseBlockMat<real_type> pX( t.N()/divideNx, t.N()*dividen, divideNx*dividen, divideNx*dividen, n);
+    for( unsigned k=0; k<divideNx; k++)
+    for( unsigned l=0; l<dividen; l++)
     for( unsigned i=0; i<n; i++)
     for( unsigned j=0; j<n; j++)
     {
-        pX.data[(k*n+i)*n+j] = projectX.values[(i*divide +k)*n+j];
+        pX.data[((k*dividen+l)*n+i)*n+j] = projectX.values[((i*divideNx+k)*dividen + l)*n+j];
         if( no == normed)
-            pX.data[(k*n+i)*n+j] *= v1d[i]*w1d[j];
+            pX.data[((k*dividen+l)*n+i)*n+j] *= v1d[i]*w1d[l*n+j];
     }
-    for( unsigned i=0; i<t.N()/divide; i++)
-        for( unsigned d=0; d<divide; d++)
+    for( unsigned i=0; i<t.N()/divideNx; i++)
+        for( unsigned d=0; d<divideNx*dividen; d++)
         {
-            pX.cols_idx[i*divide+d] = i*divide+d;
-            pX.data_idx[i*divide+d] = d;
+            pX.cols_idx[i*divideNx*dividen+d] = i*divideNx*dividen+d;
+            pX.data_idx[i*divideNx*dividen+d] = d;
         }
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(1);
     inter.get_matrices()[0] = pX;
     return inter;
 }
 
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@param multiplyNy integer multiplier, the new grid has \c Ny*multiplyNy points
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const aRealTopology2d<real_type>& t, unsigned multiplyX, unsigned multiplyY)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolation( const aRealTopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
     dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
     dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyX);
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyn,multiplyNx);
     interX.get_matrices()[0].left_size = t.n()*t.Ny();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( gy, multiplyY);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()*multiplyX;
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( gy, multiplyn,multiplyNy);
+    interY.get_matrices()[0].right_size = t.n()*t.Nx()*multiplyNx*multiplyn;
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
     inter.get_matrices()[0] = interX.get_matrices()[0];
     inter.get_matrices()[1] = interY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size()*multiplyX);
+    thrust::host_vector<real_type> vec( t.size()*multiplyNx*multiplyn);
     inter.get_temp()[0] = Buffer<thrust::host_vector<real_type > >(vec);
     return inter;
 }
 
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned,enum dg::norm)
+///@param divideNy integer multiplier, the new grid has \c Ny/divideNy points
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const aRealTopology2d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( const aRealTopology2d<real_type>& t, unsigned dividen, unsigned divideNx, unsigned divideNy, enum dg::norm no = normed)
 {
     dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
     dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, divideX, no);
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, dividen, divideNx, no);
     interX.get_matrices()[0].left_size = t.n()*t.Ny();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( gy, divideY, no);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideX;
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( gy, dividen, divideNy, no);
+    interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideNx/dividen;
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
     inter.get_matrices()[0] = interX.get_matrices()[0];
     inter.get_matrices()[1] = interY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size()/divideX);
+    thrust::host_vector<real_type> vec( t.size()/divideNx/dividen);
     inter.get_temp()[0] = Buffer<thrust::host_vector<real_type> >(vec);
     return inter;
 }
 
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@param multiplyNy integer multiplier, the new grid has \c Ny*multiplyNy points
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const aRealTopology3d<real_type>& t, unsigned multiplyX, unsigned multiplyY)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolation( const aRealTopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
     dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
     dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyX);
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyn, multiplyNx);
     interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( gy, multiplyY);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()*multiplyX;
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( gy, multiplyn, multiplyNy);
+    interY.get_matrices()[0].right_size = t.n()*t.Nx()*multiplyNx*multiplyn;
     interY.get_matrices()[0].left_size = t.Nz();
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
     inter.get_matrices()[0] = interX.get_matrices()[0];
     inter.get_matrices()[1] = interY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size()*multiplyX);
+    thrust::host_vector<real_type> vec( t.size()*multiplyNx*multiplyn);
     inter.get_temp()[0] = Buffer<thrust::host_vector<real_type > >(vec);
     return inter;
 }
 
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned,enum dg::norm)
+///@param divideNy integer multiplier, the new grid has \c Ny/divideNy points
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const aRealTopology3d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( const aRealTopology3d<real_type>& t, unsigned dividen, unsigned divideNx, unsigned divideNy, enum dg::norm no = normed)
 {
     dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
     dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, divideX, no);
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, dividen,divideNx, no);
     interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( gy, divideY, no);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideX;
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( gy, dividen, divideNy, no);
+    interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideNx/dividen;
     interY.get_matrices()[0].left_size = t.Nz();
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
     inter.get_matrices()[0] = interX.get_matrices()[0];
     inter.get_matrices()[1] = interY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size()/divideX);
+    thrust::host_vector<real_type> vec( t.size()/divideNx/dividen);
     inter.get_temp()[0] = Buffer<thrust::host_vector<real_type> >(vec);
     return inter;
 }
 
 #ifdef MPI_VERSION
 //very elaborate way of telling the compiler to just apply the local matrix to the local vector
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@param multiplyNy integer multiplier, the new grid has \c Ny*multiplyNy points
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_interpolation( const aRealMPITopology2d<real_type>& t, unsigned divideX, unsigned divideY)
+MultiMatrix< MHMatrix_t<real_type>, MHVec_t<real_type> > fast_interpolation( const aRealMPITopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_interpolation( t.local(), divideX, divideY);
-    MultiMatrix< Matrix, Vector > inter(2);
-    inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    inter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
-    return inter;
-}
-template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_projection( const aRealMPITopology2d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
-{
-    typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
-    typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_projection( t.local(), divideX, divideY, no);
+    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_interpolation( t.local(), multiplyn,multiplyNx, multiplyNy);
     MultiMatrix< Matrix, Vector > inter(2);
     inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
     inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
@@ -263,12 +297,14 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_
     return inter;
 }
 
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned,enum dg::norm)
+///@param divideNy integer multiplier, the new grid has \c Ny/divideNy points
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_interpolation( const aRealMPITopology3d<real_type>& t, unsigned divideX, unsigned divideY)
+MultiMatrix< MHMatrix_t<real_type>, MHVec_t<real_type> > fast_projection( const aRealMPITopology2d<real_type>& t, unsigned dividen, unsigned divideNx, unsigned divideNy, enum dg::norm no = normed)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_interpolation( t.local(), divideX, divideY);
+    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_projection( t.local(), dividen,divideNx, divideNy, no);
     MultiMatrix< Matrix, Vector > inter(2);
     inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
     inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
@@ -276,12 +312,29 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_
     return inter;
 }
 
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@param multiplyNy integer multiplier, the new grid has \c Ny*multiplyNy points
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_projection( const aRealMPITopology3d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< MHMatrix_t<real_type>, MHVec_t<real_type> > fast_interpolation( const aRealMPITopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_projection( t.local(), divideX, divideY, no);
+    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_interpolation( t.local(), multiplyn,multiplyNx, multiplyNy);
+    MultiMatrix< Matrix, Vector > inter(2);
+    inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
+    inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
+    inter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
+    return inter;
+}
+
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned,enum dg::norm)
+///@param divideNy integer multiplier, the new grid has \c Ny/divideNy points
+template<class real_type>
+MultiMatrix< MHMatrix_t<real_type>, MHVec_t<real_type> > fast_projection( const aRealMPITopology3d<real_type>& t, unsigned dividen, unsigned divideNx, unsigned divideNy, enum dg::norm no = normed)
+{
+    typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
+    typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
+    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::fast_projection( t.local(), dividen,divideNx, divideNy, no);
     MultiMatrix< Matrix, Vector > inter(2);
     inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
     inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
@@ -290,7 +343,8 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_
 }
 
 #endif //MPI_VERSION
+///@}
+
 }//namespace create
 
-///@endcond
 }//namespace dg

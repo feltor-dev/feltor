@@ -22,7 +22,7 @@ int main()
     //Vector v1( {2,2.0002}), v2({3,3.00003}), v3({5,5.0005}), v4({4,4.00004}), v5(v4); //std::array
     thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
     Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p), v5(v4p);
-    exblas::udouble ud;
+    dg::exblas::udouble ud;
     dg::blas1::scal( v3, 3e-10); ud.d = v3[0];
     std::cout << "scal (x=ax)           "<<ud.i-4474825110624711575<<std::endl;
     dg::blas1::plus( v3, 3e-10); ud.d = v3[0];

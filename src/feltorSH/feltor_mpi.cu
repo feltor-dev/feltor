@@ -40,7 +40,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const eule::Parameters p( js);
     if(rank==0)p.display( std::cout);
@@ -120,7 +120,7 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     if(rank==0) std::cout << "Done!\n";    
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
 //     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
@@ -132,7 +132,7 @@ int main( int argc, char* argv[])
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
     dg::Grid2d global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
     err = nc_enddef( ncid);
     err = nc_redef(ncid);
 
@@ -146,7 +146,7 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
 
     int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID;

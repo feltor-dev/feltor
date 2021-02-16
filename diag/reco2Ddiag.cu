@@ -22,7 +22,7 @@ int main( int argc, char* argv[])
     }
 
     ///////////////////read in and show inputfile//////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     size_t length;
@@ -31,7 +31,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const asela::Parameters p(js);
 
     //////////////////////////////Grids//////////////////////////////////////

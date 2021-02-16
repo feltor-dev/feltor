@@ -1,6 +1,3 @@
-// #define DG_DEBUG
-#define SILENT
-
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -23,8 +20,6 @@ using DMatrix = dg::MDMatrix;
 using IDMatrix = dg::MIDMatrix;
 using IHMatrix = dg::MIHMatrix;
 using Geometry = dg::CartesianMPIGrid2d;
-using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
-using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 #define MPI_OUT if(rank==0)
 #else //TOEFL_MPI
 using HVec = dg::HVec;
@@ -34,8 +29,6 @@ using DMatrix = dg::DMatrix;
 using IDMatrix = dg::IDMatrix;
 using IHMatrix = dg::IHMatrix;
 using Geometry = dg::CartesianGrid2d;
-using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
-using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 #define MPI_OUT
 #endif //TOEFL_MPI
 
@@ -80,7 +73,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     MPI_OUT std::cout << js<<std::endl;
     const Parameters p( js);
     MPI_OUT p.display( std::cout);
@@ -97,12 +90,16 @@ int main( int argc, char* argv[])
         #endif //TOEFL_MPI
     );
     //create RHS
-    toefl::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > exp( grid, p);
+    toefl::Explicit< Geometry, DMatrix, DVec > exp( grid, p);
     toefl::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
     /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    exp.gamma1_y(y0[0],y0[1]);
+    dg::blas2::symv( exp.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    {
+        DVec v2d = dg::create::inv_weights(grid);
+        dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
@@ -112,13 +109,13 @@ int main( int argc, char* argv[])
     karniadakis.init( exp, imp, time, y0, p.dt);
     y1 = y0;
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     MPI_OUT err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     std::string input = js.toStyledString();
     MPI_OUT err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
-    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    MPI_OUT err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     //field IDs
     std::string names[4] = {"electrons", "ions", "potential", "vorticity"};
     int dataIDs[4];
@@ -127,7 +124,7 @@ int main( int argc, char* argv[])
 
     //energy IDs
     int EtimeID, EtimevarID;
-    MPI_OUT err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    MPI_OUT err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, dissID, dEdtID;
     MPI_OUT err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
     MPI_OUT err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
@@ -150,7 +147,7 @@ int main( int argc, char* argv[])
     for( int k=0;k<4; k++)
     {
         dg::blas1::transfer( transferD[k], transferH);
-        file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
+        dg::file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
     }
     MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
     MPI_OUT err = nc_close(ncid);
@@ -207,7 +204,7 @@ int main( int argc, char* argv[])
         for( int k=0;k<4; k++)
         {
             dg::blas1::transfer( transferD[k], transferH);
-            file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
+            dg::file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
         }
         MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
         MPI_OUT err = nc_close(ncid);

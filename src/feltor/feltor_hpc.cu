@@ -14,23 +14,16 @@
 #include "feltor.h"
 #include "implicit.h"
 
+using HVec = dg::x::HVec;
+using DVec = dg::x::DVec;
+using HMatrix = dg::x::HMatrix;
+using DMatrix = dg::x::DMatrix;
+using IDMatrix = dg::x::IDMatrix;
+using IHMatrix = dg::x::IHMatrix;
+using Geometry = dg::x::CylindricalGrid3d;
 #ifdef FELTOR_MPI
-using HVec = dg::MHVec;
-using DVec = dg::MDVec;
-using HMatrix = dg::MHMatrix;
-using DMatrix = dg::MDMatrix;
-using IDMatrix = dg::MIDMatrix;
-using IHMatrix = dg::MIHMatrix;
-using Geometry = dg::CylindricalMPIGrid3d;
 #define MPI_OUT if(rank==0)
 #else //FELTOR_MPI
-using HVec = dg::HVec;
-using DVec = dg::DVec;
-using HMatrix = dg::HMatrix;
-using DMatrix = dg::DMatrix;
-using IDMatrix = dg::IDMatrix;
-using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CylindricalGrid3d;
 #define MPI_OUT
 #endif //FELTOR_MPI
 
@@ -121,8 +114,8 @@ int main( int argc, char* argv[])
     else
     {
         try{
-            file::file2Json( argv[1], js, file::comments::are_discarded, file::error::is_throw);
-            feltor::Parameters( js, file::error::is_throw);
+            dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded, dg::file::error::is_throw);
+            feltor::Parameters( js, dg::file::error::is_throw);
         } catch( std::exception& e) {
             MPI_OUT std::cerr << "ERROR in input parameter file "<<argv[1]<<std::endl;
             MPI_OUT std::cerr << e.what()<<std::endl;
@@ -132,7 +125,7 @@ int main( int argc, char* argv[])
             return -1;
         }
         try{
-            file::file2Json( argv[2], gs, file::comments::are_discarded, file::error::is_throw);
+            dg::file::file2Json( argv[2], gs, dg::file::comments::are_discarded, dg::file::error::is_throw);
         } catch( std::exception& e) {
             MPI_OUT std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
             MPI_OUT std::cerr << e.what()<<std::endl;
@@ -149,8 +142,8 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField mag, mod_mag;
     dg::geo::CylindricalFunctor wall, transition, sheath, direction;
     try{
-        mag = dg::geo::createMagneticField(gs, file::error::is_throw);
-        mod_mag = dg::geo::createModifiedField(gs, js, file::error::is_throw, wall, transition);
+        mag = dg::geo::createMagneticField(gs, dg::file::error::is_throw);
+        mod_mag = dg::geo::createModifiedField(gs, js, dg::file::error::is_throw, wall, transition);
     }catch(std::runtime_error& e)
     {
         std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
@@ -194,7 +187,7 @@ int main( int argc, char* argv[])
 #endif
 
     try{
-        dg::geo::createSheathRegion( js, file::error::is_throw, mag, wall,
+        dg::geo::createSheathRegion( js, dg::file::error::is_throw, mag, wall,
                 Rmin, Rmax, Zmin, Zmax, sheath, direction);
     }catch(std::runtime_error& e)
     {
@@ -215,8 +208,8 @@ int main( int argc, char* argv[])
     // helper variables for output computations
     std::map<std::string, dg::Simpsons<HVec>> time_integrals;
     dg::Average<HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
-    dg::MultiMatrix<HMatrix,HVec> projectH = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
-    dg::MultiMatrix<DMatrix,DVec> projectD = dg::create::fast_projection( grid, p.cx, p.cy, dg::normed);
+    dg::MultiMatrix<HMatrix,HVec> projectH = dg::create::fast_projection( grid, 1, p.cx, p.cy, dg::normed);
+    dg::MultiMatrix<DMatrix,DVec> projectD = dg::create::fast_projection( grid, 1, p.cx, p.cy, dg::normed);
     HVec transferH( dg::evaluate(dg::zero, g3d_out));
     DVec transferD( dg::evaluate(dg::zero, g3d_out));
     HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
@@ -284,7 +277,7 @@ int main( int argc, char* argv[])
     }
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     std::string file_name = argv[3];
     int ncid=-1;
     try{
@@ -300,7 +293,7 @@ int main( int argc, char* argv[])
     }
     /// Set global attributes
     std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor_hpc.cu";
+    att["title"] = "Output file of feltor/src/feltor/feltor_hpc.cu";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
     auto ttt = std::time(nullptr);
@@ -311,7 +304,7 @@ int main( int argc, char* argv[])
     oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/feltor.tex";
+    att["comment"] = "Find more info in feltor/src/feltor/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
@@ -322,8 +315,8 @@ int main( int argc, char* argv[])
 
     // Define dimensions (t,z,y,x)
     int dim_ids[4], restart_dim_ids[3], tvarID;
-    MPI_OUT err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out, {"time", "z", "y", "x"});
-    MPI_OUT err = file::define_dimensions( ncid, restart_dim_ids, grid, {"zr", "yr", "xr"});
+    MPI_OUT err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out, {"time", "z", "y", "x"});
+    MPI_OUT err = dg::file::define_dimensions( ncid, restart_dim_ids, grid, {"zr", "yr", "xr"});
     int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
     bool write2d = true;
 #ifdef FELTOR_MPI
@@ -344,7 +337,7 @@ int main( int argc, char* argv[])
         record.function( transferH, var, g3d_out);
         //record.function( resultH, var, grid);
         //dg::blas2::symv( projectH, resultH, transferH);
-        file::put_var_double( ncid, vecID, g3d_out, transferH);
+        dg::file::put_var_double( ncid, vecID, g3d_out, transferH);
         MPI_OUT err = nc_redef(ncid);
     }
     //create & output static 2d variables into file
@@ -360,7 +353,7 @@ int main( int argc, char* argv[])
         //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal varialbes return full grid functions
         record.function( resultH, var, grid);
         dg::blas2::symv( projectH, resultH, transferH);
-        if(write2d)file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
+        if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
         MPI_OUT err = nc_redef(ncid);
     }
 
@@ -429,13 +422,13 @@ int main( int argc, char* argv[])
         record.function( resultD, var);
         dg::blas2::symv( projectD, resultD, transferD);
         dg::assign( transferD, transferH);
-        file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
+        dg::file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
     }
     for( auto& record : feltor::restart3d_list)
     {
         record.function( resultD, var);
         dg::assign( resultD, resultH);
-        file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
+        dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
     }
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -453,7 +446,7 @@ int main( int argc, char* argv[])
         tti.toc();
         MPI_OUT std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
         tti.tic();
-        if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+        if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         tti.tic();
@@ -463,7 +456,7 @@ int main( int argc, char* argv[])
         feltor::slice_vector3d( transferD, transferD2d, local_size2d);
         dg::assign( transferD2d, transferH2d);
         if( record.integral) time_integrals[name].init( time, transferH2d);
-        if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+        if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
         tti.toc();
         MPI_OUT std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
     }
@@ -474,7 +467,7 @@ int main( int argc, char* argv[])
     //    feltor::FeltorSpecialSolver<
     //        Geometry, IDMatrix, DMatrix, DVec>
     //    > karniadakis( grid, p, mag);
-    dg::MinimalProjecting< std::array<std::array<DVec,2>,2 > > mp( 3, y0);
+    dg::ExplicitMultistep< std::array<std::array<DVec,2>,2 > > mp( "TVB-3-3", y0);
     {
     HVec h_wall = dg::pullback( wall, grid);
     HVec h_sheath = dg::pullback( sheath, grid);
@@ -593,13 +586,13 @@ int main( int argc, char* argv[])
             record.function( resultD, var);
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
-            file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
+            dg::file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
         }
         for( auto& record : feltor::restart3d_list)
         {
             record.function( resultD, var);
             dg::assign( resultD, resultH);
-            file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
+            dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
         for( auto& record : feltor::diagnostics2d_list)
         {
@@ -608,12 +601,12 @@ int main( int argc, char* argv[])
                 std::string name = record.name+"_ta2d";
                 transferH2d = time_integrals.at(name).get_integral();
                 time_integrals.at(name).flush();
-                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
 
                 name = record.name+"_2d";
                 transferH2d = time_integrals.at(name).get_integral( );
                 time_integrals.at(name).flush( );
-                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
             }
             else // compute from scratch
             {
@@ -623,13 +616,13 @@ int main( int argc, char* argv[])
                 std::string name = record.name+"_ta2d";
                 dg::assign( transferD, transferH);
                 toroidal_average( transferH, transferH2d, false);
-                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
 
                 // 2d data of plane varphi = 0
                 name = record.name+"_2d";
                 feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                 dg::assign( transferD2d, transferH2d);
-                if(write2d) file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
             }
         }
         MPI_OUT err = nc_close(ncid);

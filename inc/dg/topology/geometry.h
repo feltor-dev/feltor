@@ -4,6 +4,7 @@
 #include "thrust/host_vector.h"
 #include "evaluation.h"
 #include "weights.h"
+#include "filter.h"
 #ifdef MPI_VERSION
 #include "dg/backend/mpi_vector.h"
 #include "mpi_evaluation.h"

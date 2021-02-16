@@ -12,7 +12,7 @@
 namespace dg{
 
 /**
- * @brief Matrix class that represents a Helmholtz-type operator
+ * @brief Matrix class that represents a Helmholtz-type operator \f$ (\chi+\alpha\Delta) \f$
  *
  * @ingroup matrixoperators
  *
@@ -152,7 +152,7 @@ struct Helmholtz
 };
 
 /**
- * @brief Matrix class that represents a 3d Helmholtz-type operator
+ * @brief Matrix class that represents a 3d Helmholtz-type operator \f$ (\chi+\alpha\Delta) \f$
  *
  * @ingroup matrixoperators
  *

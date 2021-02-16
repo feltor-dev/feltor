@@ -273,8 +273,8 @@ struct aRealMPITopology2d
     aRealMPITopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), l(g), comm( comm)
     {
-        update_local();
         check_division( Nx, Ny, bcx, bcy);
+        update_local();
     }
     ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
     aRealMPITopology2d(const aRealMPITopology2d& src) = default;
@@ -563,8 +563,8 @@ struct aRealMPITopology3d
     aRealMPITopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), l(g), comm( comm)
     {
-        update_local();
         check_division( Nx, Ny, Nz, bcx, bcy, bcz);
+        update_local();
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
     }
@@ -741,6 +741,12 @@ using MPIGrid2d         = dg::RealMPIGrid2d<double>;
 using MPIGrid3d         = dg::RealMPIGrid3d<double>;
 using aMPITopology2d    = dg::aRealMPITopology2d<double>;
 using aMPITopology3d    = dg::aRealMPITopology3d<double>;
+namespace x{
+using Grid2d          = MPIGrid2d      ;
+using Grid3d          = MPIGrid3d      ;
+using aTopology2d     = aMPITopology2d ;
+using aTopology3d     = aMPITopology3d ;
+}//namespace x
 ///@}
 
 }//namespace dg

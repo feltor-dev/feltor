@@ -19,6 +19,8 @@
 #include "thrust/device_vector.h"
 #include "accumulate.cuh"
 
+namespace dg
+{
 namespace exblas{
 ///@cond
 namespace gpu{
@@ -62,7 +64,7 @@ __global__ void ExDOT(
     //Initialize superaccs
     for (uint i = 0; i < BIN_COUNT; i++)
         l_workingBase[i * WARP_COUNT] = 0;
-    __syncthreads();
+    __syncthreads(); //syncs all threads in a block (but not across blocks)
 
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
@@ -153,7 +155,7 @@ __global__ void ExDOT(
     //Initialize superaccs
     for (uint i = 0; i < BIN_COUNT; i++)
         l_workingBase[i * WARP_COUNT] = 0;
-    __syncthreads();
+    __syncthreads(); //syncs all threads in a block (but not across blocks)
 
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
@@ -301,18 +303,27 @@ void ExDOTComplete(
         d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE + lid] = sum;
     }
 
-    __syncthreads();
+    __syncthreads(); //syncs all threads in a block (but not across blocks)
     if (lid == 0) { //every block normalize its summed superacc
         int imin = IMIN, imax = IMAX;
         Normalize(&d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE], imin, imax);
     }
-
-    //MW: don't we need a global synchronization here??
-    __syncthreads();
+}
+//MW: we need a global synchronization here!!
+//one block of threads with at least 39 threads
+template<uint MERGE_SIZE>
+__global__
+void ExDOTCompleteFinal(
+     int64_t *d_PartialSuperaccs,
+     int64_t *d_superacc
+) {
+    uint lid = threadIdx.x;
+    uint gid = blockIdx.x;
+    uint blocks = gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE;
     if ((lid < BIN_COUNT) && (gid == 0)) {
         int64_t sum = 0;
 
-        for(uint i = 0; i < gridDim.x; i++)
+        for(uint i = 0; i < blocks; i++)
             sum += d_PartialSuperaccs[i * BIN_COUNT * MERGE_SIZE + lid];
 
         d_superacc[lid] = sum;
@@ -322,49 +333,30 @@ void ExDOTComplete(
 }//namespace gpu
 ///@endcond
 
-/*!@brief gpu version of exact dot product
- *
- * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
- * @ingroup highlevel
- * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
- * @param size size N of the arrays to sum
- * @param x1_ptr first array
- * @param x2_ptr second array
- * @param d_superacc pointer to an array of 64 bit integers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
- * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
- * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
-*/
+///@brief GPU version of exact dot product
+///@copydoc hide_exdot2
+///@copydoc hide_deviceacc
 template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=3>
 __host__
 void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* d_superacc, int* status)
 {
     static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
     static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
-    static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
+    static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     thrust::device_vector<bool> d_errorV(1, false);
     bool *d_error = thrust::raw_pointer_cast( d_errorV.data());
     gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size, d_error);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    //# blocks, # threads per block
+    gpu::ExDOTCompleteFinal<gpu::MERGE_SUPERACCS_SIZE><<<1, 64>>>( d_PartialSuperaccs, d_superacc );
     *status = 0;
     if( d_errorV[0] ) *status = 1;
 }
 
-/*!@brief gpu version of exact triple dot product
- *
- * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
- * @ingroup highlevel
- * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
- * @param size size N of the arrays to sum
- * @param x1_ptr first array
- * @param x2_ptr second array
- * @param x3_ptr third array
- * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
- * @param status 0 indicates success, 1 indicates an input value was NaN or Inf
- * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
- */
+///@brief GPU version of exact dot product
+///@copydoc hide_exdot3
+///@copydoc hide_deviceacc
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=3>
 __host__
 void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* d_superacc, int* status)
@@ -378,8 +370,11 @@ void exdot_gpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, Po
     bool *d_error = thrust::raw_pointer_cast( d_errorV.data());
     gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size,d_error);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    //# blocks, # threads per block
+    gpu::ExDOTCompleteFinal<gpu::MERGE_SUPERACCS_SIZE><<<1, 64>>>( d_PartialSuperaccs, d_superacc );
     *status = 0;
     if( d_errorV[0] ) *status = 1;
 }
 
 }//namespace exblas
+} //namespace dg

@@ -6,7 +6,7 @@
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "Extension: ExBLAS"
 PROJECT_NUMBER         =
-PROJECT_BRIEF          = "Adaption of the exblas library (included in \"dg/algorithm.h\")"
+PROJECT_BRIEF          = "Adaption of the ExBLAS library (included in \"dg/algorithm.h\" by default or available as a standalone library as \"dg/exblas/exblas.h\")"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./doc
 CREATE_SUBDIRS         = NO
@@ -125,10 +125,11 @@ RECURSIVE              = NO
 EXCLUDE                = mylibm.hpp \
                          mylibm.cuh \
                          config.h \
-                         ExSUM.FPE.hpp
+                         ExSUM.FPE.hpp \
+                         exblas.h
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =
-EXCLUDE_SYMBOLS        =
+EXCLUDE_SYMBOLS        = hide_*
 EXAMPLE_PATH           =
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO
@@ -207,7 +208,7 @@ EXT_LINKS_IN_WINDOW    = NO
 FORMULA_FONTSIZE       = 10
 FORMULA_TRANSPARENT    = YES
 FORMULA_MACROFILE      =
-USE_MATHJAX            = NO
+USE_MATHJAX            = YES
 MATHJAX_FORMAT         = HTML-CSS
 MATHJAX_RELPATH        = http://cdn.mathjax.org/mathjax/latest
 MATHJAX_EXTENSIONS     =

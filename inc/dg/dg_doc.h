@@ -1,7 +1,7 @@
 #error Documentation only
 /*! @namespace dg
  * @brief This is the namespace for all functions and
- * classes defined and used by the discontinuous Galerkin solvers.
+ * classes defined and used by the discontinuous Galerkin library.
  */
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
@@ -13,18 +13,21 @@
  *         time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
+ *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
+ *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
+ *              \f$ v^i = T^{ij} w_j\f$
  *
  *              Although a tensor needs a topology to be well-defined mathematically,
  *              we do not need a grid to perform basic operations computationally.
@@ -45,14 +48,17 @@
  *             the chapter \ref mpi_backend in the introduction for more
  *             details.
  *     @defgroup dispatch The tag dispatch system
- *           Read the chapter \ref dispatch in the introduction.
+ *           Implementation details of \ref dispatch
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
- *      Algorithms that make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
+ *      \f$ \dot y = f(y,t) \f$
+ *     @{
+ *          @defgroup time_utils Utilities for time integration
+ *     @}
  *     @defgroup invert Linear and nonlinear solvers
- *     @defgroup root Root finding
+ *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
  * @}
  * @defgroup geo Level 3: Topology and Geometry
  * @{
@@ -63,6 +69,7 @@
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
+ *          \f$ f_i = f(x_i) \f$
  *
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -77,9 +84,11 @@
  *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives
+ *           \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
+ *          \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
@@ -90,7 +99,9 @@
  *     @{
  *         @defgroup basicgeometry Geometry base classes
  *         @defgroup pullback pullback and pushforward
+ *          \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
+ *           \f$ \sqrt{g} \f$
  *         @defgroup generators Grid Generator classes
  *     @}
  *     @defgroup gridtypes Useful Typedefs
@@ -100,18 +111,36 @@
  *      These routines make use of both the basic operations as well as the
  *      interfaces defined in the Geometry section.
  * @{
- *     @defgroup arakawa Discretization of Poisson bracket
- *     @defgroup matrixoperators Elliptic and Helmholtz operators
- *     @defgroup multigrid Advanced matrix inversion
+ *     @defgroup arakawa Advection terms
+ *          \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
+ *     @defgroup matrixoperators Matrix operators
+ *     Gradient \f$ \chi\cdot\nabla f\f$, Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
+ *     @defgroup multigrid Multigrid matrix inversion
+ *     \f$ A x = b\f$
  * @}
  * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
- *     @defgroup functions Functions and Functors
+ *          t.tic() and T.toc()
+ *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
+ *     @{
+ *          @defgroup basics Simple
+ *              For the dg::evaluate and dg::blas1::evaluate functions
  *
- *         The functions are useful mainly in the constructor of Operator objects.
- *         The functors are useful for either vector transformations or
- *         as init functions in the evaluate routines.
+ *          @defgroup functions A large collection
+ *              For the dg::evaluate and dg::blas1::evaluate functions
+ *
+ *          @defgroup composition Composition of two or more functors
+ *
+ *          @defgroup binary_operators blas1::evaluate binary operators
+ *              Binary subroutines for the dg::blas1::evaluate function
+ *
+ *          @defgroup variadic_evaluates blas1::evaluate variadic subroutines
+ *              Functors to use in the dg::blas1::evaluate function
+ *
+ *          @defgroup variadic_subroutines blas1::subroutine subroutines
+ *              Functors to use in the dg::blas1::subroutine functions
+ *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *
  *         Low level helper routines.

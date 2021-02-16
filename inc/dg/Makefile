@@ -1,4 +1,4 @@
-device=omp
+device=gpu
 
 #configure machine
 include ../../config/default.mk

@@ -25,6 +25,16 @@ using IHMatrix = tIHMatrix<double>;
 using IDMatrix = tIDMatrix<double>;
 //typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
 //typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
+#ifndef MPI_VERSION
+namespace x{
+template<class real_type>
+using tIHMatrix = tIHMatrix<real_type>;
+template<class real_type>
+using tIDMatrix = tIDMatrix<real_type>;
+using IHMatrix = IHMatrix;
+using IDMatrix = IDMatrix;
+} //namespace x
+#endif //MPI_VERSION
 
 ///@}
 
@@ -425,12 +435,14 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  *
  * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa for integer multiples between old and new %grid you may want to consider the dg::create::fast_interpolation %functions
  *
  * @param g_new The new grid
  * @param g_old The old grid
  *
  * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
  * @note also check the transformation matrix, which is the more general solution
  */
 template<class real_type>
@@ -476,13 +488,27 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    thrust::host_vector<real_type> pointsX = dg::evaluate( dg::cooX3d, g_new);
+    thrust::host_vector<real_type> pointsY = dg::evaluate( dg::cooY3d, g_new);
+    return interpolation( pointsX, pointsY, g_old);
+
+}
 ///@}
 
 
 }//namespace create
 
 /**
- * @brief Transform a vector from XSPACE to LSPACE
+ * @brief Transform a vector from dg::xspace (nodal values) to dg::lspace (modal values)
  *
  * @param in input
  * @param g grid
@@ -510,12 +536,12 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
  * @brief Interpolate a vector on a single point on a 1d Grid
  *
  * @param sp Indicate whether the elements of the vector
- * v are in xspace or lspace
+ * v are in xspace (nodal values) or lspace (modal values)
  *  (choose dg::xspace if you don't know what is going on here,
  *      It is faster to interpolate in dg::lspace so consider
  *      transforming v using dg::forward_transform( )
  *      if you do it very many times)
- * @param v The vector to interpolate in dg::xspace
+ * @param v The vector to interpolate
  * @param x X-coordinate of interpolation point
  * @param g The Grid on which to operate
  * @copydoc hide_bcx_doc
@@ -577,7 +603,7 @@ real_type interpolate(
  * @brief Interpolate a vector on a single point on a 2d Grid
  *
  * @param sp Indicate whether the elements of the vector
- * v are in xspace or lspace
+ * v are in xspace (nodal values) or lspace  (modal values)
  *  (choose dg::xspace if you don't know what is going on here,
  *      It is faster to interpolate in dg::lspace so consider
  *      transforming v using dg::forward_transform( )

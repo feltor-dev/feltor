@@ -82,14 +82,14 @@ int main( int argc, char* argv[])
     {
         newfilename = argv[3];
         std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
-        file::file2Json( argv[1], input_js, file::comments::are_discarded);
-        file::file2Json( argv[2], geom_js, file::comments::are_discarded);
+        dg::file::file2Json( argv[1], input_js, dg::file::comments::are_discarded);
+        dg::file::file2Json( argv[2], geom_js, dg::file::comments::are_discarded);
     }
     else if( argc == 3)
     {
         newfilename = argv[2];
         std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
-        file::NC_Error_Handle err;
+        dg::file::NC_Error_Handle err;
         int ncid_in;
         err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
         size_t length;
@@ -101,8 +101,8 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
         err = nc_close( ncid_in);
         Json::Value js,gs;
-        file::string2Json(inputfile, input_js, file::comments::are_discarded);
-        file::string2Json(geomfile, geom_js, file::comments::are_discarded);
+        dg::file::string2Json(inputfile, input_js, dg::file::comments::are_discarded);
+        dg::file::string2Json(geomfile, geom_js, dg::file::comments::are_discarded);
     }
     else
     {
@@ -119,9 +119,9 @@ int main( int argc, char* argv[])
     //Test coefficients
     dg::geo::CylindricalFunctor wall, transition, sheath, direction;
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(geom_js,
-            file::error::is_throw);
+            dg::file::error::is_throw);
     dg::geo::TokamakMagneticField mod_mag =
-        dg::geo::createModifiedField(geom_js, input_js, file::error::is_throw,
+        dg::geo::createModifiedField(geom_js, input_js, dg::file::error::is_throw,
                 wall, transition);
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
-    dg::geo::createSheathRegion( input_js, file::error::is_warning,
+    dg::geo::createSheathRegion( input_js, dg::file::error::is_warning,
             mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
 
     dg::geo::description mag_description = mag.params().getDescription();
@@ -335,7 +335,7 @@ int main( int argc, char* argv[])
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     std::cout << "CREATING/OPENING FILE AND WRITING ... \n";
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( newfilename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
@@ -364,7 +364,7 @@ int main( int argc, char* argv[])
     if( mag_description == dg::geo::description::standardX)
     {
         int dim_idsX[2] = {0,0};
-        err = file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
+        err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
         std::string long_name = "Flux surface label";
         err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
             long_name.size(), long_name.data());
@@ -388,7 +388,7 @@ int main( int argc, char* argv[])
     }
     else
     {
-        err = file::define_dimension( ncid, &dim1d_ids[0], grid1d, "zeta");
+        err = dg::file::define_dimension( ncid, &dim1d_ids[0], grid1d, "zeta");
         std::string psi_long_name = "Flux surface label";
         err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
             psi_long_name.size(), psi_long_name.data());
@@ -396,7 +396,7 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
 
-    err = file::define_dimensions( ncid, &dim3d_ids[0], fgrid3d);
+    err = dg::file::define_dimensions( ncid, &dim3d_ids[0], fgrid3d);
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors

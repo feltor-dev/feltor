@@ -20,6 +20,8 @@
 #include "mylibm.cuh"
 //this file has a direct correspondance to cpu code accumulate.h
 
+namespace dg
+{
 namespace exblas
 {
 namespace gpu
@@ -213,3 +215,4 @@ static inline double Round( int64_t * accumulator) {
 
 } //namespace gpu
 } //namespace exblas
+} //namespace dg

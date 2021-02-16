@@ -49,12 +49,6 @@ struct MultigridCG2d
     using value_type = get_value_type<Container>;
     ///@brief Allocate nothing, Call \c construct method before usage
     MultigridCG2d(){}
-    ///@copydoc construct()
-    template<class ...Params>
-    MultigridCG2d( const Geometry& grid, const unsigned stages, Params&& ... ps)
-    {
-        construct( grid, stages, std::forward<Params>(ps)...);
-    }
     /**
      * @brief Construct the grids and the interpolation/projection operators
      *
@@ -64,14 +58,18 @@ struct MultigridCG2d
      * @param ps parameters necessary for \c dg::construct to construct a \c Container from a \c dg::HVec
     */
     template<class ...Params>
-    void construct( const Geometry& grid, const unsigned stages, Params&& ... ps)
+    MultigridCG2d( const Geometry& grid, const unsigned stages, Params&& ... ps):
+        m_stages(stages),
+        m_grids( stages),
+        m_inter(    stages-1),
+        m_interT(   stages-1),
+        m_project(  stages-1),
+        m_cg(    stages),
+        m_cheby( stages),
+        m_x( stages)
     {
-        m_stages = stages;
-        if(stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
-
-		m_grids.resize(stages);
-        m_cg.resize(stages);
-        m_cheby.resize(stages);
+        if(stages < 2 )
+            throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
 
         m_grids[0].reset( grid);
         //m_grids[0].get().display();
@@ -83,20 +81,15 @@ struct MultigridCG2d
             //m_grids[u]->display();
         }
 
-		m_inter.resize(stages-1);
-		m_interT.resize(stages-1);
-        m_project.resize( stages-1);
-
 		for(unsigned u=0; u<stages-1; u++)
         {
             // Projecting from one grid to the next is the same as
             // projecting from the original grid to the coarse grids
-            m_project[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, dg::normed), std::forward<Params>(ps)...);
-            m_inter[u].construct( dg::create::fast_interpolation(*m_grids[u+1], 2, 2), std::forward<Params>(ps)...);
-            m_interT[u].construct( dg::create::fast_projection(*m_grids[u], 2, 2, dg::not_normed), std::forward<Params>(ps)...);
+            m_project[u].construct( dg::create::fast_projection(*m_grids[u], 1, 2, 2, dg::normed), std::forward<Params>(ps)...);
+            m_inter[u].construct( dg::create::fast_interpolation(*m_grids[u+1], 1, 2, 2), std::forward<Params>(ps)...);
+            m_interT[u].construct( dg::create::fast_projection(*m_grids[u], 1, 2, 2, dg::not_normed), std::forward<Params>(ps)...);
         }
 
-        m_x.resize( m_stages);
         for( unsigned u=0; u<m_stages; u++)
             m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero, *m_grids[u]), std::forward<Params>(ps)...);
         m_r = m_b = m_x;
@@ -109,6 +102,18 @@ struct MultigridCG2d
         }
     }
 
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = MultigridCG2d( std::forward<Params>( ps)...);
+    }
 
     /**
     * @brief Project vector to all involved grids
@@ -158,7 +163,7 @@ struct MultigridCG2d
     ///@return A copyable object; what it contains is undefined, its size is important
     const Container& copyable() const {return m_x[0];}
     /**
-     * @brief Nested iterations (USE THIS ONE!)
+     * @brief USE THIS ONE Nested iterations
      *
      * Equivalent to the following
      * -# Compute residual with given initial guess.
@@ -245,7 +250,7 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief Nested iterations with Chebyshev as preconditioner for CG (experimental)
+     * @brief EXPERIMENTAL Nested iterations with Chebyshev as preconditioner for CG
      *
      * @note This function does the same as direct_solve but uses a
      * ChebyshevPreconditioner (with EVE to estimate the largest EV) at the coarse
@@ -362,7 +367,7 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief Full multigrid cycles (experimental, use at own risk)
+     * @brief EXPERIMENTAL Full multigrid cycles (use at own risk)
      *
      * - Compute residual with given initial guess.
      * - If error larger than tolerance, do a full multigrid cycle with Chebeyshev iterations as smoother
@@ -426,7 +431,7 @@ struct MultigridCG2d
     }
 
     /**
-     * @brief A conjugate gradient with a full multigrid cycle as preconditioner (experimental, use at own risk)
+     * @brief EXPERIMENTAL A conjugate gradient with a full multigrid cycle as preconditioner (use at own risk)
      *
      * @copydoc hide_symmetric_op
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch

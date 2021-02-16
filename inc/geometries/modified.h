@@ -28,6 +28,14 @@ namespace mod
 ///@addtogroup mod
 ///@{
 
+/**
+ * @brief \f$ \psi_{mod} := \begin{cases} H(\psi_p(R,Z))\text{ for } P(R,Z) \\
+ * \psi_p(R,Z) \text { else }
+ * \end{cases}
+ * \f$
+ *
+ * where H is the integrated dg::IPolynomialHeaviside function and P is a predicate that returns either true or false.
+ */
 struct Psip: public aCylindricalFunctor<Psip>
 {
     Psip( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
@@ -151,6 +159,19 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
     std::function<bool(double,double)> m_pred;
 };
 
+
+/**
+ * @copydoc dg::geo::mod::Psip
+ *
+ * @param predicate P(R,Z) indicates the positions where Psi is to be modified (true) or not (false)
+ * @param psip the flux function to be modified
+ * @param psi0 parameter for dg::PolynomialHeaviside function
+ * @param alpha parameter for dg::PolynomialHeaviside function
+ * @param sign parameter for dg::PolynomialHeaviside function
+ * @sa nowhere, everywhere, HeavisideZ
+ *
+ * @return  the modified flux function
+ */
 static inline dg::geo::CylindricalFunctorsLvl2 createPsip(
         const std::function<bool(double,double)> predicate,
         const CylindricalFunctorsLvl2& psip,
@@ -204,7 +225,7 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
 };
 //some possible predicates
 static bool nowhere( double R, double Z){return false;}
-static bool everywhere( double R, double Z){return true;}
+static bool everywhere( double R, double Z){return !nowhere(R,Z);}
 struct HeavisideZ{
     HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}
     bool operator()(double R, double Z){

@@ -201,6 +201,7 @@ struct Asela
 
     //matrices and solvers
     dg::ArakawaX< Geometry, Matrix, container > arakawa; 
+    dg::Variation< Geometry, Matrix, container > gradient; 
     dg::Elliptic<  Geometry, Matrix, container  > lapperp; //note the host vector    
     
     std::vector<container> multi_chi;
@@ -222,7 +223,8 @@ struct Asela
 template<class Grid, class IMatrix, class Matrix, class container>
 Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p): 
     //////////the arakawa operators ////////////////////////////////////////
-    arakawa(g, g.bcx(), g.bcy()), 
+    arakawa(g, g.bcx(), g.bcy()),
+    gradient(g, g.bcx(), g.bcy(), dg::centered ),
     //////////the elliptic and Helmholtz operators//////////////////////////
     lapperp (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     multigrid( g, 3),

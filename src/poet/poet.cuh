@@ -3,7 +3,7 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "dg/polarization.h"
-namespace toefl
+namespace poet
 {
 
 
@@ -90,7 +90,7 @@ struct Explicit
         }
     }
     /**
-     * @brief Compute the right-hand side of the toefl equations
+     * @brief Compute the right-hand side of the poet equations
      *
      * y[0] = N_e - 1, 
      * y[1] = N_i - 1 || y[1] = Omega

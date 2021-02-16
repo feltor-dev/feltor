@@ -37,25 +37,6 @@ use Cartesian coordinates $x$, $y$.
 \end{align}
 \end{subequations}
 
-"local-arbpolO2"
-\begin{subequations}
-\begin{align}
- -\Gamma_0\nabla^2 \phi =  \Gamma_1 N -n, \quad
-\psi = \Gamma_1 \phi 
-\\ \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}  \quad \Gamma_0 = ( 1- \tau\nabla^2)^{-1} \\
- \frac{\partial n}{\partial t}     = 
-    \{ n, \phi\} 
-  + \kappa \frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla^2 n  \\
-  \frac{\partial N}{\partial t} =
-  \{ N, \psi\} 
-  + \kappa \frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla^2N
-\end{align}
-\end{subequations}
-
-
 "global"
 \begin{subequations}
 \begin{align}
@@ -63,43 +44,6 @@ B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
  -\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right) = \Gamma_1 N-n, \quad
  \text{Boussinesq:}\quad -\nabla_\perp^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
 \psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla_\perp^2 n  \\
-  \frac{\partial N}{\partial t} =
-  \frac{1}{B}\{ N, \psi\} 
-  + \kappa N\frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N
-\end{align}
-\end{subequations}
-
-
-"global-arbpolO2"
-\begin{subequations}
-\begin{align}
-B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = \sqrt{1- \tau\nabla^2}^{-1}\\
- -\Gamma_1\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\Gamma_1 \phi\right) = \Gamma_1 N-n,  \\
-\psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla \Gamma_1\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla_\perp^2 n  \\
-  \frac{\partial N}{\partial t} =
-  \frac{1}{B}\{ N, \psi\} 
-  + \kappa N\frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N
-\end{align}
-\end{subequations}
-
-"global-arbpolO4"
-\begin{subequations}
-\begin{align}
-B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = (1- \tau/2\nabla^2)^{-1}\\
- -\Gamma_1 \left[\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\right)-2   \nabla\cdot\nabla\cdot \left(\frac{\tau N}{B^4} \nabla_\perp^2\right)+  \Delta_\perp \left(\frac{\tau N}{B^4} \Delta_\perp\right)\right]\Gamma_1 \phi = \Gamma_1 N-n,  \\
-\psi = \Gamma_1 \phi - \frac{1}{2 B^2} \left[|\nabla_\perp \Gamma_1\phi|^2 + \frac{\tau}{2 B^2} \left[|\nabla_\perp^2 \Gamma_1\phi |^2 - (\Delta_\perp \Gamma_1\phi)^2 /2 \right]\right]\\
  \frac{\partial n}{\partial t}     = 
     \frac{1}{B}\{ n, \phi\} 
   + \kappa n\frac{\partial \phi}{\partial y} 
@@ -239,7 +183,7 @@ ly         & float &200    & - & $l_y$  \\
 friction   & float & 0     & 0 & friction coefficient $\eta$ in gravity model \\
 bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-equations  & char & "global" & "global" &local, local-arbpolO2, global, global-arbpolO2, global-arbpolO4, gravity\_local, gravity\_global, drift\_global \\
+equations  & char & "global" & "global" &local, global, gravity\_local, gravity\_global, drift\_global \\
 boussinesq & bool & false    & false &boussinesq approximation in global models true or false\\
 \bottomrule
 \end{longtable}

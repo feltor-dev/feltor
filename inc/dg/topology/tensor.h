@@ -6,6 +6,11 @@
 #include "dg/functors.h"
 #include "dg/blas1.h"
 
+/*!@file
+ *
+ * SparseTensor
+ */
+
 namespace dg
 {
     //separate algorithms from interface!!

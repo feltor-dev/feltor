@@ -88,13 +88,13 @@ struct Mima
 };
 
 template< class M, class container>
-Mima< M, container>::Mima( const dg::CartesianGrid2d& grid, double kappa, double alpha, double eps, bool global ): 
+Mima< M, container>::Mima( const dg::CartesianGrid2d& grid, double kappa, double alpha, double eps, bool global ):
     kappa( kappa), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi), lambda(phi), chi(phi),
     nGinv(dg::evaluate(dg::ExpProfX(1.0, 0.0,kappa),grid)),
     dxxphi( phi), dxyphi(phi),
     laplaceM( grid, dg::normed, dg::centered),
-    arakawa( grid), 
+    arakawa( grid),
     w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)),
     invert( phi, grid.size(), eps),
     helmholtz( grid, -1)
@@ -117,24 +117,24 @@ void Mima< M, container>::operator()( double t, const container& y, container& y
     //gradient terms
     dg::blas1::axpby( -1, dyphi, 1., yp);
 
-    
+
     //full-F terms (NOB) correction terms
     if( global )
     {
-        arakawa.variation(phi,omega); //(nabla phi)^2
-        dg::blas1::scal(omega,0.5);   //0.5*(nabla phi)^2
+        //0.5*(nabla phi)^2
+        dg::blas1::pointwiseDot( 0.5, dxphi, dxphi, 0.5, dyphi, dyphi, 0., omega);
         dg::blas2::gemv( arakawa.dy(), omega, dyphi); //d_y 0.5*(nabla phi)^2
         dg::blas1::axpby( +kappa, dyphi, 1., yp);     //kappa* d_y 0.5*(nabla phi)^2
-        
+
         arakawa( omega,phi, lambda);        // [0.5*(nabla phi)^2, phi]
         dg::blas1::axpby( -kappa, lambda, 1., yp);  // -kappa* [0.5*(nabla phi)^2, phi]
-        
+
         arakawa( omega, dxphi, lambda);         // [0.5*(nabla phi)^2, d_x phi]
         dg::blas1::axpby( +kappa*kappa, lambda, 1., yp); //kappa^2* [0.5*(nabla phi)^2, d_x phi]
-        
-        dg::blas1::pointwiseDot(y,dxphi,omega);   //omega = (phi - lap phi) d_x phi 
-        dg::blas1::pointwiseDivide(omega,nGinv,omega);   //omega = e^(kappa*x)*(phi - lap phi)*d_x phi 
-        dg::blas1::axpby( -kappa*alpha, omega, 1., yp);  // -kappa*alpha*e^(kappa*x)*(phi - lap phi)*d_x phi 
+
+        dg::blas1::pointwiseDot(y,dxphi,omega);   //omega = (phi - lap phi) d_x phi
+        dg::blas1::pointwiseDivide(omega,nGinv,omega);   //omega = e^(kappa*x)*(phi - lap phi)*d_x phi
+        dg::blas1::axpby( -kappa*alpha, omega, 1., yp);  // -kappa*alpha*e^(kappa*x)*(phi - lap phi)*d_x phi
     }
 }
 

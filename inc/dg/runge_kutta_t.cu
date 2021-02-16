@@ -64,6 +64,11 @@ int main()
         "Midpoint-2-2",
         "Kutta-3-3",
         "Runge-Kutta-4-4",
+        "SSPRK-2-2",
+        "SSPRK-3-2",
+        "SSPRK-3-3",
+        "SSPRK-5-3",
+        "SSPRK-5-4",
         "Heun-Euler-2-1-2",
         "Bogacki-Shampine-4-2-3",
         "ARK-4-2-3 (explicit)",
@@ -73,6 +78,8 @@ int main()
         "Cash-Karp-6-4-5",
         "Fehlberg-6-4-5",
         "Dormand-Prince-7-4-5",
+        "Tsitouras09-7-4-5",
+        "Tsitouras11-7-4-5",
         "ARK-8-4-5 (explicit)",
         "Verner-8-5-6",
         "Fehlberg-13-7-8",
@@ -83,6 +90,29 @@ int main()
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
         dg::stepperRK(name, functor, t_start, u, t_end, u1, N);
+        dg::blas1::axpby( 1., sol , -1., u1);
+        auto b = dg::create::tableau<double>(name);
+        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<(b.isFsal()?" (fsal)" : "") <<"\n";
+    }
+    std::cout << "Shu-Osher Methods with "<<N<<" steps:\n";
+    names = std::vector<std::string> {
+        "SSPRK-2-2",
+        "SSPRK-3-2",
+        "SSPRK-3-3",
+        "SSPRK-5-3",
+        "SSPRK-5-4",
+    };
+    for( auto name : names)
+    {
+        u = solution(t_start, damping, omega_0, omega_drive);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
+        dg::ShuOsher<std::array<double,2>> rk( name, u);
+        dg::IdentityFilter id;
+        const double dt = (t_end-t_start)/(double)N;
+        dg::blas1::copy( u, u1);
+        double t0 = t_start;
+        for( unsigned i=0; i<N; i++)
+            rk.step( functor, id, t0, u1, t0, u1, dt);
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }

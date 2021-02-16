@@ -22,7 +22,7 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     ///////////////////read in and show inputfile//////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     size_t length;
@@ -31,7 +31,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
     p.display(std::cout);
 
@@ -62,6 +62,7 @@ int main( int argc, char* argv[])
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
+    dg::Variation<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> gradient(g2d, p.bc_x, p.bc_y);
 
 
     //2d field
@@ -70,7 +71,7 @@ int main( int argc, char* argv[])
     std::string names[4] = {"electrons", "ions",  "potential","vor"}; 
     int dataIDs[4]; 
     //1d profiles
-    file::NC_Error_Handle err_out;
+    dg::file::NC_Error_Handle err_out;
     int ncid_out,dataIDs1d[8], tvarIDout;
     std::string names1d[8] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_","vyavg"}; 
     int dim_ids2d[3],dataIDs2d[4];
@@ -81,7 +82,7 @@ int main( int argc, char* argv[])
     size_t start2d_out[3]  = {0, 0, 0};
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
+    err_out= dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
  int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
     for( unsigned i=0; i<8; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
@@ -121,7 +122,7 @@ int main( int argc, char* argv[])
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
     int timeID, timevarID;
-    err_out = file::define_time( ncid_out, "ptime", &timeID, &timevarID);
+    err_out = dg::file::define_time( ncid_out, "ptime", &timeID, &timevarID);
     for( unsigned i=0; i<num_probes; i++){
         std::stringstream ss1,ss2,ss3;
         ss1<<"Ne_p"<<i;
@@ -185,9 +186,9 @@ int main( int argc, char* argv[])
             polavg(logn[1],temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
             polavg(phi,temp1d,false);
-            poisson.variationRHS(phi,temp2);
+            gradient.variation(phi,temp2);
             double T_perp = 0.5*dg::blas2::dot( npe[1], w2d, temp2);
-            poisson.variationRHS(temp,temp2);
+            gradient.variation(temp,temp2);
             double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
             double T_perpratio = T_perp_zonal/T_perp;
             dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 

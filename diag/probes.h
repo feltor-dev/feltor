@@ -13,8 +13,9 @@
 #include <fstream>
 #include <sstream>
 
-/* 
- * Class that takes care of probe output
+
+/**
+ * @brief Class that takes care of probe output
  * 
  * Upon instantiation, generate N probesm positioned in equidistant radial
  * positions at the vertical center of the simulation domain:
@@ -24,7 +25,6 @@
  * Creates files probe_[0-9][0-9][0-9].dat in which to write output
  *
  */
-
 template<class IMatrix, class Matrix, class container = thrust::device_vector<double> >
 struct probes
 {

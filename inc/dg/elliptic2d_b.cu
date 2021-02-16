@@ -66,7 +66,7 @@ int main()
     const dg::DVec derivati = dg::evaluate( der, grid);
     const double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
-    exblas::udouble res;
+    dg::exblas::udouble res;
 
     //std::cout << "Create Polarisation object and set chi!\n";
     {

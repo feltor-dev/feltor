@@ -21,7 +21,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const eule::Parameters p( js);
     p.display( std::cout);
@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
     
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     err = nc_enddef( ncid);
     err = nc_redef(ncid);
 
@@ -100,7 +100,7 @@ int main( int argc, char* argv[])
 
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);

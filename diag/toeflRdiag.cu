@@ -58,7 +58,7 @@ int main( int argc, char* argv[])
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     ///////////////////read in and show inputfile//////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     size_t length;
@@ -67,7 +67,7 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    file::string2Json( input, js, file::comments::are_forbidden);
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const Parameters p(js);
     p.display(std::cout);
     
@@ -76,6 +76,7 @@ int main( int argc, char* argv[])
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
     dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( g2d); 
+    dg::Variation< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient( g2d); 
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -120,7 +121,7 @@ int main( int argc, char* argv[])
     //size_t start1d[2]  = {0, 0};    
     //1d netcdf output file    
 
-    file::NC_Error_Handle err_out;
+    dg::file::NC_Error_Handle err_out;
     const size_t number_of_names = 17;
     int ncid_out;
     int namescomID[number_of_names],tvarID1d;
@@ -134,9 +135,9 @@ int main( int argc, char* argv[])
     
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out = nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-    //err_out = file::define_dimensions( ncid_out, dim_ids2d, &tvarID1d, g2d);
-    err_out = file::define_limited_time( ncid_out, "time", p.maxout+1, &dim_ids2d[0], &tvarID1d);
-    //err_out = file::define_time( ncid_out, "ptime", &timeID, &timevarID);
+    //err_out = dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarID1d, g2d);
+    err_out = dg::file::define_limited_time( ncid_out, "time", p.maxout+1, &dim_ids2d[0], &tvarID1d);
+    //err_out = dg::file::define_time( ncid_out, "ptime", &timeID, &timevarID);
     for( unsigned i=0; i<number_of_names; i++){
         err_out = nc_def_var( ncid_out, namescom[i].data(),  NC_DOUBLE, 1, &dim_ids2d[0], &namescomID[i]);
     }   
@@ -273,7 +274,7 @@ int main( int argc, char* argv[])
         double Ue, Ui, Uphi;
         for( unsigned j=0; j<2; j++)
             dg::blas1::transform( npe[j], lnn[j], dg::LN<double>()); 
-        arakawa.variation(phi, helper); 
+        gradient.variation(phi, helper);
         if(p.equations == "global" || p.equations == "ralf_global")
         {
             Ue = dg::blas2::dot( lnn[0], w2d, npe[0]);

@@ -104,6 +104,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealT
  between old and new vector small.
  * The projection matrix is the adjoint of the interpolation matrix
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa for integer multiples between old and new grid you may want to consider the dg::create::fast_projection functions
  *
  * @param g_new The new (coarse) grid
  * @param g_old The old (fine) grid

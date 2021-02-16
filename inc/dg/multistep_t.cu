@@ -7,13 +7,12 @@
 #include "adaptive.h"
 #include "elliptic.h"
 
-//![function]
 //method of manufactured solution
 std::array<double,2> solution( double t, double nu) {
     return {exp( -nu*t) + cos(t), exp( -nu*t) + sin(t)};
 }
 
-//the explicit part contains the source Tp = S(x,y,t)
+//![function]
 struct Explicit
 {
     Explicit( double nu): m_nu( nu) {}
@@ -39,6 +38,7 @@ struct Implicit
   private:
     double m_nu;
 };
+// solve y + alpha I(t,y)  = rhs
 struct ImplicitSolver
 {
     ImplicitSolver( double nu): m_nu(nu) { }
@@ -52,6 +52,8 @@ struct ImplicitSolver
   private:
     double m_nu;
 };
+
+//![function]
 struct FullSolver
 {
     FullSolver( double nu): m_nu(nu) { }
@@ -66,7 +68,6 @@ struct FullSolver
     double m_nu;
 };
 
-//![function]
 
 struct Full
 {
@@ -83,9 +84,6 @@ struct Full
     std::array<double,2> m_temp;
 };
 
-
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
 
 //const unsigned NT = (unsigned)(nu*T*n*n*N*N/0.01/lx/lx);
 
@@ -104,75 +102,64 @@ int main()
     const std::array<double,2> sol = solution(T,nu);
     const double norm_sol = dg::blas1::dot( sol, sol);
     double time = 0.;
-    std::array<double,2> error( sol);
-    exblas::udouble res;
-    std::cout << "### Test Adams Bashforth methods with "<<NT<<" steps\n";
-    for( unsigned s=1; s<6; s++)
+    dg::exblas::udouble res;
+    std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
+    std::vector<std::string> ex_names{
+    "AB-1-1", "AB-2-2", "AB-3-3", "AB-4-4", "AB-5-5",
+    "eBDF-1-1", "eBDF-2-2", "eBDF-3-3", "eBDF-4-4", "eBDF-5-5", "eBDF-6-6",
+    "TVB-1-1", "TVB-2-2", "TVB-3-3", "TVB-4-4", "TVB-5-5", "TVB-6-6",
+    "SSP-1-1", "SSP-2-2", "SSP-3-2", "SSP-4-2", "SSP-5-3", "SSP-6-3",
+    };
+    for( auto name : ex_names)
     {
         time = 0., y0 = init;
-        dg::AdamsBashforth< std::array<double,2> > ab( s, y0);
+        dg::ExplicitMultistep< std::array<double,2> > ab( name, y0);
         ab.init( full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
             ab.step( full, time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error AB "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
-    }
-    std::cout << "### Test MinimalProjecting methods with "<<NT<<" steps\n";
-    for( unsigned s=1; s<7; s++)
-    {
-        time = 0., y0 = init;
-        dg::MinimalProjecting< std::array<double,2> > ab( s, y0);
-        ab.init( full, time, y0, dt);
-        //main time loop
-        for( unsigned k=0; k<NT; k++)
-            ab.step( full, time, y0);
-        dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error MP "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
     }
     std::cout << "### Test implicit multistep methods with "<<NT<<" steps\n";
-    for( unsigned s=1; s<7; s++)
+    std::vector<std::string> imex_names{
+    "Euler", "ImEx-Koto-2-2", "ImEx-Adams-2-2", "ImEx-Adams-3-3", "ImEx-BDF-2-2",
+    "ImEx-BDF-3-3", "ImEx-BDF-4-4", "ImEx-BDF-5-5", "ImEx-BDF-6-6",
+    "ImEx-TVB-3-3", "ImEx-TVB-4-4", "ImEx-TVB-5-5",
+    };
+    for( auto name : imex_names)
     {
         time = 0., y0 = init;
-        dg::BDF< std::array<double,2>, FullSolver > bdf( s, nu);
+        dg::ImplicitMultistep< std::array<double,2>, FullSolver > bdf( name, nu);
         bdf.init( full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
             bdf.step( full, time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error BDF "<<s<<"        is "<< res.d<<"\t"<<res.i<<std::endl;
+        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
     }
+    std::cout << "### Test ImEx multistep methods with "<<NT<<" steps\n";
     Explicit ex( nu);
     Implicit im( nu);
-    std::cout << "### Test semi-implicit Karniadakis methods with "<<NT<<" steps\n";
-    //![karniadakis]
-    //construct time stepper
-    dg::Karniadakis< std::array<double,2>, ImplicitSolver > karniadakis( nu);
-    time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
-    //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
-    karniadakis.init( ex, im, time, y0, dt);
-    //main time loop (NT = 20)
-    for( unsigned i=0; i<NT; i++)
-        karniadakis.step( ex, im, time, y0); //inplace step
-    //![karniadakis]
-    dg::blas1::axpby( -1., sol, 1., y0);
-    res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-    std::cout << "Relative error Karniadakis 3 is "<< res.d<<"\t"<<res.i<<std::endl;
-    for( unsigned s=2; s>0; s--)
+    // Test Semi-Implicit methods
+    for( auto name : imex_names)
     {
-        time = 0., y0 = init;
-        karniadakis.set_order(s);
-        karniadakis.init( ex, im, time, y0, dt);
-        for( unsigned i=0; i<NT; i++)
-            karniadakis.step( ex, im, time, y0);
+        //![karniadakis]
+        //construct time stepper
+        dg::ImExMultistep< std::array<double,2>, ImplicitSolver > imex( name, nu);
+        time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
+        //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
+        imex.init( ex, im, time, y0, dt);
+        //main time loop (NT = 20)
+        for( unsigned k=0; k<NT; k++)
+            imex.step( ex, im, time, y0); //inplace step
+        //![karniadakis]
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error Karniadakis "<<s<<" is "<< res.d<<"\t"<<res.i<<std::endl;
+        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
     }
-
 
     std::cout << "### Test semi-implicit ARK methods\n";
     std::vector<std::string> names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
@@ -200,7 +187,7 @@ int main()
     }
     std::cout << "### Test Strang operator splitting\n";
 
-    std::vector<std::string> ex_names{
+    std::vector<std::string> rk_names{
         "Heun-Euler-2-1-2",
         "Bogacki-Shampine-4-2-3",
         "ARK-4-2-3 (explicit)",
@@ -212,7 +199,7 @@ int main()
         "Dormand-Prince-7-4-5",
         "ARK-8-4-5 (explicit)"
     };
-    for( auto name : ex_names)
+    for( auto name : rk_names)
     {
         time = 0., y0 = init;
         dg::Adaptive<dg::ERKStep<std::array<double,2>>> adapt( name, y0);
@@ -235,7 +222,7 @@ int main()
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << std::setw(4)<<counter <<" steps! ";
-        std::cout << "Relative error "<<std::setw(24) <<name<<"\t"<<res.d<<"\n";
+        std::cout << "Relative error: "<<std::setw(24) <<name<<"\t"<<res.d<<"\n";
     }
     return 0;
 }

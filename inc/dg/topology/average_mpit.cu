@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     dg::MDVec solution = dg::evaluate( z_average, gxy);
     dg::blas1::axpby( 1., solution, -1., average_z);
     int64_t binary[] = {4406193765905047925,4395311848786989976};
-    exblas::udouble res;
+    dg::exblas::udouble res;
     res.d = sqrt( dg::blas2::dot( average_z, w2d, average_z));
     if(rank==0)std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
     if(rank==0)std::cout << "(Converges with 2nd order).\n";

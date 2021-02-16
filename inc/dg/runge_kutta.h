@@ -23,10 +23,18 @@ namespace dg{
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
   */
+ /** @class hide_limiter
+  * @tparam Limiter The filter or limiter class to use in connection with the time-stepper
+        has a member function \c apply
+        of signature <tt> void apply( const ContainerType&, ContainerType&)</tt>
+        The first argument is the input vector, which the functor may \b not override, and the second is the output,
+        i.e. y' = L( y) translates to L.apply( y, y').
+        The two ContainerType arguments never alias each other in calls to the functor.
+  */
 
 
 /**
-* @brief Struct for Embedded Runge Kutta explicit time-step with error estimate
+* @brief Embedded Runge Kutta explicit time-step with error estimate
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
@@ -63,8 +71,7 @@ struct ERKStep
         m_rk = tableau;
         m_k.assign(m_rk.num_stages(), copyable);
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
+    ///@copydoc RungeKutta::copyable()
     const ContainerType& copyable()const{ return m_k[0];}
 
     ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
@@ -95,6 +102,7 @@ struct ERKStep
     bool m_ignore_fsal = false;
 };
 
+///@cond
 template< class ContainerType>
 template< class RHS>
 void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -234,13 +242,14 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
         swap( m_k[0], m_k[s-1]); //enable free swap functions
     }
 }
+///@endcond
 
 
 //MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
 
 
 /*!
- * @brief Struct for Additive Runge Kutta (semi-implicit) time-step with error estimate
+ * @brief Additive Runge Kutta (semi-implicit) time-step with error estimate
  * following
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
  *
@@ -377,6 +386,7 @@ struct ARKStep
     value_type m_t1 = 1e300;
 };
 
+///@cond
 template<class ContainerType, class SolverType>
 template< class Explicit, class Implicit>
 void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -464,9 +474,10 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     //make sure (t1,u1) is the last call to ex
     ex(t1,u1,m_kE[0]);
 }
+///@endcond
 
 /**
-* @brief Struct for Runge-Kutta fixed-step explicit time-integration
+* @brief Runge-Kutta fixed-step explicit time-integration
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
@@ -555,8 +566,146 @@ struct RungeKutta
     ERKStep<ContainerType> m_erk;
     ContainerType m_delta;
 };
+
+/**
+ * @brief A filter that does nothing
+ */
+struct IdentityFilter
+{
+    /**
+     * @brief copy in to out
+     *
+     * @copydoc hide_ContainerType
+     * @param in (input)
+     * @param out (copied version of in)
+     */
+    template<class ContainerType0, class ContainerType1>
+    void apply( const ContainerType0& in, ContainerType1& out) const{
+        dg::blas1::copy( in, out);
+    }
+
+};
+/**
+* @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
+* \f[
+ \begin{align}
+    u_0 &= u_n \\
+    u_i &= \Lambda\Pi \left(\sum_{j=0}^{i-1}\left[ \alpha_{ij} u_j + \Delta t \beta_{ij} f( t_j, u_j)\right]\right)\\
+    u^{n+1} &= u_s
+ \end{align}
+\f]
+
+where \f$ \Lambda\Pi\f$ is the limiter, \c i=1,...,s and \c s is the number of stages (i.e. the number of times the right hand side is evaluated.
+
+The method is defined by its (explicit) ShuOsherTableau, given by
+the coefficients \c alpha and \c beta,  and \c s is the number
+of stages.
+@note the original reference for the scheme is
+ * <a href="https://doi.org/10.1016/0021-9991(88)90177-5">
+ Chi-Wang Shu, Stanley Osher,
+Efficient implementation of essentially non-oscillatory shock-capturing schemes,
+Journal of Computational Physics,
+Volume 77, Issue 2,
+1988,
+Pages 439-471</a>
+@note This struct can be used to implement the RKDG methods with slope-limiter described in
+<a href ="https://doi.org/10.1023/A:1012873910884">Cockburn, B., Shu, CW. Runge–Kutta Discontinuous Galerkin Methods for Convection-Dominated Problems. Journal of Scientific Computing 16, 173–261 (2001) </a>
+
+You can use one of our predefined methods (only the ones that are marked with "Shu-Osher-Form"):
+@copydoc hide_explicit_butcher_tableaus
+* @ingroup time
+*
+* @note Uses only \c dg::blas1 routines to integrate one step.
+* @copydoc hide_ContainerType
+*/
+template<class ContainerType>
+struct ShuOsher
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    ShuOsher(){}
+    ///@copydoc RungeKutta::construct()
+    ShuOsher( dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable): m_t( tableau), m_u(  m_t.num_stages(), copyable), m_k(m_u), m_temp(copyable)
+        { }
+    ///@copydoc RungeKutta::construct()
+    void construct(dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable){
+        m_t = tableau;
+        m_u.assign(m_t.num_stages(), copyable);
+        m_k.assign(m_t.num_stages(), copyable);
+        m_temp = copyable;
+    }
+    ///@copydoc RungeKutta::copyable()
+    const ContainerType& copyable()const{ return m_u[0 ];}
+
+    /**
+    * @brief Advance one step
+    *
+    * @copydoc hide_rhs
+    * @copydoc hide_limiter
+    * @param limiter the filter or limiter to use
+    * @param rhs right hand side subroutine
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
+    * @param u1 (write only) contains result on output (may alias u0)
+    * @param dt timestep
+    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
+    */
+    template<class RHS, class Limiter>
+    void step( RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+        unsigned s = m_t.num_stages();
+        std::vector<value_type> ts( m_t.num_stages()+1);
+        ts[0] = t0;
+        if( t0 != m_t1 ) //this is the first time we call step
+        {
+            limiter.apply( u0, m_u[0]);
+            rhs(ts[0], m_u[0], m_k[0]); //freshly compute k_0
+        }
+        else
+            dg::blas1::copy(u0, m_u[0]);
+        for( unsigned i=1; i<=s; i++)
+        {
+
+            dg::blas1::axpbypgz( m_t.alpha(i-1,0), m_u[0], dt*m_t.beta(i-1,0), m_k[0], 0., m_temp);
+            ts[i] = m_t.alpha(i-1,0)*ts[0] + dt*m_t.beta(i-1,0);
+            for( unsigned j=1; j<i; j++)
+            {
+                //about the i-1: it is unclear to me how the ShuOsher tableau makes implicit schemes
+                dg::blas1::axpbypgz( m_t.alpha(i-1,j), m_u[j], dt*m_t.beta(i-1,j), m_k[j], 1., m_temp);
+                ts[i] += m_t.alpha(i-1,j)*ts[j] + dt*m_t.beta(i-1,j);
+
+            }
+            if(i!=s)
+            {
+                limiter.apply( m_temp, m_u[i]);
+                rhs(ts[i], m_u[i], m_k[i]);
+            }
+            else{
+                limiter.apply( m_temp, u1);
+                //make sure (t1,u1) is the last call to f
+                rhs(ts[i], u1, m_k[0]);
+            }
+        }
+        m_t1 = t1 = ts[s];
+    }
+    ///@copydoc ERKStep::order
+    unsigned order() const {
+        return m_t.order();
+    }
+    ///@copydoc ERKStep::num_stages()
+    unsigned num_stages() const{
+        return m_t.num_stages();
+    }
+  private:
+    ShuOsherTableau<value_type> m_t;
+    std::vector<ContainerType> m_u, m_k;
+    ContainerType m_temp;
+    value_type m_t1 = 1e300;
+};
+
 /*!
- * @brief Struct for diagonally implicit Runge Kutta time-step with error estimate
+ * @brief diagonally implicit Runge Kutta time-step with error estimate
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
@@ -566,7 +715,7 @@ struct RungeKutta
 \f]
  *
  * So far we did not implement the use of a mass matrix \c M.
- * You can provide your own coefficients or use one of the embedded methods
+ * You can provide your own coefficients or use one of the methods
  * in the following table:
  * @copydoc hide_implicit_butcher_tableaus
  *
@@ -659,6 +808,7 @@ struct DIRKStep
     std::vector<ContainerType> m_kI;
 };
 
+///@cond
 template<class ContainerType, class SolverType>
 template< class RHS>
 void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -749,8 +899,9 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
             }
     }
 }
+///@endcond
 /**
-* @brief Struct for Runge-Kutta fixed-step implicit time-integration
+* @brief Runge-Kutta fixed-step implicit time-integration
 * \f[
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
@@ -837,7 +988,10 @@ struct ImplicitRungeKutta
  * @param N number of steps
  */
 template< class RHS, class ContainerType>
-void stepperRK(ConvertsToButcherTableau<get_value_type<ContainerType>> tableau, RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, unsigned N )
+void stepperRK(ConvertsToButcherTableau<get_value_type<ContainerType>> tableau,
+        RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType&
+        begin, get_value_type<ContainerType> t_end, ContainerType& end,
+        unsigned N )
 {
     using value_type = get_value_type<ContainerType>;
     RungeKutta<ContainerType > rk( tableau, begin);

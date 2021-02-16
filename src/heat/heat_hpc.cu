@@ -32,8 +32,8 @@ int main( int argc, char* argv[])
     }
     else
     {
-        file::file2Json(argv[1], js, file::comments::are_forbidden);
-        file::file2Json(argv[2], gs, file::comments::are_forbidden);
+        dg::file::file2Json(argv[1], js, dg::file::comments::are_forbidden);
+        dg::file::file2Json(argv[2], gs, dg::file::comments::are_forbidden);
     }
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
@@ -58,7 +58,7 @@ int main( int argc, char* argv[])
     //////////////////////////////open nc file//////////////////////////////////
     if (argc == 5)
     {
-        file::NC_Error_Handle errin;
+        dg::file::NC_Error_Handle errin;
         int ncidin;
         errin = nc_open( argv[4], NC_NOWRITE, &ncidin);
         //////////////read in and show inputfile und geomfile////////////
@@ -70,8 +70,8 @@ int main( int argc, char* argv[])
         std::string geomin(length, 'x');
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
         Json::Value js,gs;
-        file::string2Json(inputin, js, file::comments::are_forbidden);
-        file::string2Json(geomin, gs, file::comments::are_forbidden);
+        dg::file::string2Json(inputin, js, dg::file::comments::are_forbidden);
+        dg::file::string2Json(geomin, gs, dg::file::comments::are_forbidden);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
         const heat::Parameters pin(js);
@@ -139,7 +139,7 @@ int main( int argc, char* argv[])
     };
     //////////////////set up netcdf for output/////////////////////////////////////
 
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
     std::string input = js.toStyledString();
@@ -147,11 +147,11 @@ int main( int argc, char* argv[])
     std::string geom = gs.toStyledString();
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
 
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     std::map<std::string, int> id0d;
     for( auto name_value : v0d)
         err = nc_def_var( ncid, name_value.first.data(), NC_DOUBLE, 1, &EtimeID, &id0d[name_value.first]);

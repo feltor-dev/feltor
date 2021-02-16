@@ -101,6 +101,7 @@ struct Explicit
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
+    dg::Variation< Geometry, Matrix, container> gradient; 
 
     dg::Elliptic< Geometry, Matrix, container > lapperpM; 
     std::vector<container> multi_chi;
@@ -131,6 +132,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
+    gradient(g, p.bc_x_phi, g.bcy(), dg::centered), //first N/U then phi BCC
     lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
@@ -210,8 +212,7 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
         if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( p.eps_gamma);
     }
-    poisson.variationRHS(potential, omega);
-    dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2
+    gradient.variation(binv, potential, omega);        // omega = u_E^2
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }

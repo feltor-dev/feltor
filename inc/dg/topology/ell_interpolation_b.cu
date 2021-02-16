@@ -9,7 +9,7 @@ int main(){
 #include <cusp/print.h>
 #include "dg/backend/timer.h"
 #include "xspacelib.h"
-#include "ell_interpolation.h"
+#include "ell_interpolation.cuh"
 #include "interpolation.h"
 
 double sinus( double x, double y) {return sin(x)*sin(y);}

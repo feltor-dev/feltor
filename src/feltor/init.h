@@ -127,6 +127,8 @@ HVec turbulent_bath(const Geometry& grid,
 }
 
 
+//actually we should always invert according to Markus
+//because the dG direct application is supraconvergent
 void init_ni(
     std::array<std::array<DVec,2>,2>& y0,
     Explicit<Geometry, IDMatrix, DMatrix, DVec>& feltor,
@@ -306,7 +308,7 @@ std::map<std::string, std::function< HVec(
     dg::geo::TokamakMagneticField& mag )
 > > source_profiles =
 {
-    {"profile",
+    {"fixed_profile",
         []( bool& fixed_profile, HVec& ne_profile,
         Geometry& grid, const feltor::Parameters& p,
         dg::geo::TokamakMagneticField& mag )
@@ -325,11 +327,11 @@ std::map<std::string, std::function< HVec(
         {
             fixed_profile = false;
             HVec source_profile = detail::profile( grid, p,mag);
-            ne_profile = source_profile;
             dg::blas1::scal( ne_profile, p.nprofamp );
             HVec ntilde = detail::turbulent_bath(grid,p,mag);
             dg::blas1::pointwiseDot( detail::profile_damping(grid,p,mag), ntilde, ntilde);
             dg::blas1::axpby( 1., ntilde, 1., source_profile);
+            ne_profile = source_profile;
             return source_profile;
         }
     },
@@ -342,6 +344,18 @@ std::map<std::string, std::function< HVec(
             ne_profile = dg::construct<HVec>( detail::profile(grid, p,mag));
             dg::blas1::scal( ne_profile, p.nprofamp );
             HVec source_profile = dg::construct<HVec> ( detail::source_damping( grid, p,mag));
+            return source_profile;
+        }
+    },
+    {"turbulence",
+        []( bool& fixed_profile, HVec& ne_profile,
+        Geometry& grid, const feltor::Parameters& p,
+        dg::geo::TokamakMagneticField& mag )
+        {
+            fixed_profile = false;
+            HVec source_profile = detail::turbulent_bath(grid,p,mag);
+            dg::blas1::pointwiseDot( detail::profile_damping(grid,p,mag), source_profile, source_profile);
+            ne_profile = source_profile;
             return source_profile;
         }
     },

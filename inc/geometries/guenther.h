@@ -8,8 +8,6 @@
 
 #include "magnetic_field.h"
 
-//TODO somebody document the functions as in solovev/geometry.h
-
 /*!@file
  *
  * MagneticField objects
@@ -155,7 +153,7 @@ static inline CylindricalFunctorsLvl1 createIpol( double I_0)
  * @param R_0 the major radius
  * @param I_0 the current
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup guenther
  */
 static inline dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
 {

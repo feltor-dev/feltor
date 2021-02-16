@@ -21,7 +21,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-        file::file2Json( argv[1], js, file::comments::are_forbidden);
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     p.display( std::cout);
@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
       std::cout << "Done!\n";
     }
     if (argc==4) {
-        file::NC_Error_Handle errIN;
+        dg::file::NC_Error_Handle errIN;
         int ncidIN;
         errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         ///////////////////read in and show inputfile und geomfile//////////////////
@@ -83,7 +83,7 @@ int main( int argc, char* argv[])
         std::string inputIN(length, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
         Json::Value jsIN;
-        file::string2Json(inputIN, jsIN, file::comments::are_forbidden);
+        dg::file::string2Json(inputIN, jsIN, dg::file::comments::are_forbidden);
 
         const eule::Parameters pIN(  jsIN);
         std::cout << "[input.nc] file parameters" << std::endl;
@@ -127,12 +127,12 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids_field[3], tvarID_field;
-    err = file::define_dimensions(ncid, dim_ids_field, &tvarID_field, grid_out);
+    err = dg::file::define_dimensions(ncid, dim_ids_field, &tvarID_field, grid_out);
     err = nc_enddef(ncid);
     err = nc_redef(ncid);
 
@@ -144,7 +144,7 @@ int main( int argc, char* argv[])
         err = nc_def_var(ncid, varname_fields[i].data(), NC_DOUBLE, 3, dim_ids_field, &dataIDs[i]);
     //energy IDs, used for small time-step diagnostic
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID, couplingID; 
 
     err = nc_def_var(ncid, "energy", NC_DOUBLE, 1, &EtimeID, &energyID);
@@ -169,7 +169,7 @@ int main( int argc, char* argv[])
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
     //dim_ids_probe[1] = 
-    file :: define_dimension(ncid, &dim_ids_probe[1],  grid_probe, "X_probe" );
+    dg::file::define_dimension(ncid, &dim_ids_probe[1],  grid_probe, "X_probe" );
     for(unsigned i = 0; i < varname_probes.size(); i++)
     {
         err = nc_def_var(ncid, varname_probes[i].data(), NC_DOUBLE, 2, dim_ids_probe, &ID_probes[i]);

@@ -146,10 +146,10 @@ int main( int argc, char* argv[])
     }
     ///////////Write file
     int ncid;
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     err = nc_create( "average.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim1d;
-    err = file::define_dimension(  ncid, &dim1d, grid1d, "psi");
+    err = dg::file::define_dimension(  ncid, &dim1d, grid1d, "psi");
     for(auto tp : map1d)
     {
         int vid;

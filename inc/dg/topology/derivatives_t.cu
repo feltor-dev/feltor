@@ -40,7 +40,7 @@ int main()
     Vector sol2[] = {dx2d, dy2d, null2, null2};
     int64_t binary2[] = {4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002};
 
-    exblas::udouble res;
+    dg::exblas::udouble res;
     std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
     {

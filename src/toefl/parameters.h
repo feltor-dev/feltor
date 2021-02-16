@@ -2,7 +2,6 @@
 #include <string>
 #include "dg/algorithm.h"
 #include "json/json.h"
-#include "dg/file/json_utilities.h"
 
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -14,11 +13,8 @@ struct Parameters
     unsigned n_out, Nx_out, Ny_out;
     unsigned itstp;
     unsigned maxout;
-    unsigned stages;
 
-    std::vector<double> eps_pol;
-
-    double eps_gamma, eps_time;
+    double eps_pol, eps_gamma, eps_time;
     double jfactor;
     double tau, kappa, friction, nu;
 
@@ -30,7 +26,7 @@ struct Parameters
     std::string init, equations;
     bool boussinesq;
 
-    Parameters( const Json::Value& js, enum file::error mode = file::error::is_warning ) {
+    Parameters( const Json::Value& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
@@ -41,14 +37,7 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
 
-        stages      = file::get( mode, js, "stages", 3).asUInt();
-        eps_pol.resize(stages);
-        eps_pol[0] = file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
-        for( unsigned i=1;i<stages; i++)
-        {
-            eps_pol[i] = file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
-            eps_pol[i]*=eps_pol[0];
-        }
+        eps_pol = js["eps_pol"].asDouble();
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
         tau = js["tau"].asDouble();
@@ -99,9 +88,8 @@ struct Parameters
             << "    amplitude:    "<<amp<<"\n"
             << "    posX:         "<<posX<<"\n"
             << "    posY:         "<<posY<<"\n";
-        for( unsigned i=1; i<stages; i++)
-            os <<"     Factors for Multigrid "<<i<<" "<<eps_pol[i]<<"\n";
-        os  <<"scale for jump terms:    "<<jfactor<<"\n"
+        os << "Stopping for CG:         "<<eps_pol<<"\n"
+            <<"scale for jump terms:    "<<jfactor<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush
