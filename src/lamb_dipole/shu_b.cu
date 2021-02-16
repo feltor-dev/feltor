@@ -4,7 +4,6 @@
 #include <thrust/host_vector.h>
 
 #include "dg/algorithm.h"
-#include "dg/file/json_utilities.h"
 
 #ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
