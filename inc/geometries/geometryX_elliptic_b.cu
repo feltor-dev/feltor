@@ -12,8 +12,8 @@
 #include "separatrix_orthogonal.h"
 #include "testfunctors.h"
 
-//const char* parameters = "geometry_params_Xpoint_taylor.js";
-const char* parameters = "geometry_params_Xpoint.js";
+//const char* parameters = "geometry_params_Xpoint_taylor.json";
+const char* parameters = "geometry_params_Xpoint.json";
 
 int main(int argc, char**argv)
 {

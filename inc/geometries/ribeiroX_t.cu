@@ -73,8 +73,8 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        //std::ifstream is("geometry_params_Xpoint_taylor.js");
-        std::ifstream is("geometry_params_Xpoint.js");
+        //std::ifstream is("geometry_params_Xpoint_taylor.json");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
