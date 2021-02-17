@@ -355,6 +355,7 @@ struct Explicit
     }
     const Container& lapMperpP (int i)
     {
+        m_lapperpP.set_chi( 1.);
         dg::blas2::gemv( m_lapperpP, m_phi[i], m_temp1);
         return m_temp1;
     }
@@ -1072,7 +1073,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
         // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
         dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
-        m_lapperpP.multiply_sigma( 1., m_temp0, m_phi[0], 1., m_s[0][1]);
+        m_lapperpP.set_chi( m_temp0);
+        m_lapperpP.symv( 1., m_phi[0], 1., m_s[0][1]);
 
         // S_U += - U S_N/N
         dg::blas1::pointwiseDot( -1.,  m_fields[1][0],  m_s[0][0], 0., m_temp0);
