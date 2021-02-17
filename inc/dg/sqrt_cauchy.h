@@ -2,7 +2,6 @@
 #include <boost/math/special_functions.hpp>
 
 #include "blas.h"
-#include "helmholtz.h"
 #include "lgmres.h"
 
 //! M_PI is non-standard ... so MSVC complains
@@ -10,15 +9,16 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+/**
+* @brief Classes for square root Matrix-Vector product computation via the Cauchy integral 
+*/
 namespace dg
 {
 /**
- * @brief Matrix class that represents the operator in the Caucha square root integral formula
- *
+ * @brief Matrix class that represents the operator in the Caucha square root integral formula, in particular the discretization of \f$ (-w^2 I -A) x \f$  where \f$ A\f$ is matrix and w is a scalar and x is a vector.
+ * 
  * @ingroup matrixoperators
  *
- * discretization of \f[ (-w^2 I -A) x \f]
- * where \f[ A\f] is matrix and w is scalar and x is a vector.
  */
 template< class Matrix, class Container>
 struct SqrtCauchyIntOp
@@ -30,7 +30,7 @@ struct SqrtCauchyIntOp
     ///@brief empty object ( no memory allocation)
     SqrtCauchyIntOp() {}
     /**
-     * @brief Construct operator \f[ (-w^2 I -A) \f] in cauchy formula
+     * @brief Construct operator \f$ (-w^2 I -A) \f$ in cauchy formula
      *
      * @param A symmetric or non-symmetric Matrix, e.g.: a not_normed Helmholtz operator or a symmetric or non-symmetric tridiagonal matrix
      * @param copyable a copyable container 
@@ -41,7 +41,7 @@ struct SqrtCauchyIntOp
         construct(A, copyable, multiply_weights);
     }
     /**
-     * @brief Construct operator \f[ (-w^2 I -A) \f] in cauchy formula
+     * @brief Construct operator \f$ (-w^2 I -A) \f$ in cauchy formula
      *
      * @param A symmetric or non-symmetric Matrix, e.g.: a not_normed Helmholtz operator or a symmetric or non-symmetric tridiagonal matrix
      * @param copyable a copyable container 
@@ -74,21 +74,21 @@ struct SqrtCauchyIntOp
         m_weights = m_inv_weights = m_precond;
     }
     /**
-     * @brief Return the weights of the Helmholtz operator
+     * @brief Return the weights
      * 
-     * @return the  weights of the Helmholtz operator
+     * @return the  weights
      */
     const Container& weights()const { return m_weights; }
     /**
-     * @brief Return the inverse weights of the Helmholtz operator
+     * @brief Return the inverse weights
      *
-     * @return the inverse weights of the Helmholtz operator
+     * @return the inverse weights
      */
     const Container& inv_weights()const { return m_inv_weights; }
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
      * 
-     * @return the preconditioner of the Helmholtz operator
+     * @return the preconditioner
      */
     const Container& precond()const { return m_precond; }
     /**
@@ -132,7 +132,7 @@ struct SqrtCauchyIntOp
     /**
      * @brief Compute operator
      *
-     * i.e. \f[ y= W (w^2 I +V A)*x \f] if weights are multiplied or  \f[ y= (w^2 I +A)*x \f] otherwise
+     * i.e. \f$ y= W (w^2 I +V A)*x \f$ if weights are multiplied or  \f$ y= (w^2 I +A)*x \f$ otherwise
      * @param x left-hand-side
      * @param y result
      */ 
@@ -160,9 +160,13 @@ struct TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
 
 
 /**
-    * @brief Compute the square root matrix - vector product via the Cauchy integral
-    * i.e. \f[ \sqrt{A} x=  \frac{- 2 K' \sqrt{m}}{\pi N} A \sum_{j=1}^{N} (w_j^2 I -A)^{-1} cn_j dn_j  x \f]
-    * A is the matrix, x is the vector, w is a scalar m is the smallest eigenvalue of A, K' is the conjuated complete elliptic integral and cn dn are the jacobi function
+ * @brief Compute the square root matrix - vector product via the Cauchy integral \f[ \sqrt{A} x=  \frac{- 2 K' \sqrt{m}}{\pi N} A \sum_{j=1}^{N} (w_j^2 I -A)^{-1} c_j d_j  x \f]
+ * A is the matrix, x is the vector, w is a scalar m is the smallest eigenvalue of A, K' is the conjuated complete  elliptic integral and \f$c_j\f$ and \f$d_j\f$ are the jacobi functions 
+ * 
+ *This class is based on the approach of the paper <a href="https://doi.org/10.1137/070700607" > Computing A alpha log(A), and Related Matrix Functions by Contour Integrals </a>  by N. Hale et al
+ * 
+ * @ingroup matrixfunctionapproximation
+ *
  */
 template<class Matrix, class Container>
 struct SqrtCauchyInt
@@ -175,7 +179,7 @@ struct SqrtCauchyInt
     /**
      * @brief Construct Rhs operator
      *
-     * @param A Helmholtz operator
+     * @param A A symmetric or non-symmetric Matrix
      * @param g The grid to use
      * @param eps Accuarcy for CG solve
      * @param multiply_weights multiply inverse weights in front of matrix A 
@@ -188,7 +192,7 @@ struct SqrtCauchyInt
     /**
      * @brief Construct Rhs operator
      *
-     * @param A Helmholtz operator
+     * @param A A symmetric or non-symmetric Matrix
      * @param g The grid to use
      * @param eps Accuarcy for CG solve
      * @param multiply_weights multiply inverse weights in front of matrix A 
@@ -260,19 +264,19 @@ struct SqrtCauchyInt
         m_op.set_precond(precond);
     }
     /**
-     * @brief Compute rhs term (including inversion of lhs) 
+     * @brief Compute cauchy integral (including inversion) 
      *
-     * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi N} V A \sum_{j=1}^{N} (w^2 I -V A)^{-1} cn dn  x \f]
-     * @param y  is \f[ y\f]
-     * @param b is \f[ b\approx \sqrt{V A} x\f]
+     * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi N} V A \sum_{j=1}^{N} (w_j^2 I -V A)^{-1} c_j d_j  x \f]
+     * @param y is \f$ y\f$
+     * @param b is \f$ b\approx \sqrt{V A} x\f$
      * @note The Jacobi elliptic functions are related to the Mathematica functions via jacobi_cn(k,u ) = JacobiCN_(u,k^2), ... and the complete elliptic integral of the first kind via comp_ellint_1(k) = EllipticK(k^2) 
      */
     void operator()(const Container& x, Container& b, const value_type& minEV, const value_type& maxEV, const unsigned& iter)
     {
         dg::blas1::scal(m_helper3, 0.0);
-        value_type sn=0.;
-        value_type cn=0.;
-        value_type dn=0.;
+        value_type s=0.;
+        value_type c=0.;
+        value_type d=0.;
         value_type w = 0.;
         value_type t=0.;
         value_type sqrtminEV = sqrt(minEV);
@@ -284,30 +288,30 @@ struct SqrtCauchyInt
         for (unsigned j=1; j<iter+1; j++)
         {
             t  = (j-0.5)*Ks/iter; //imaginary part .. 1i missing
-            cn = 1./boost::math::jacobi_cn(sqrt1mk2, t); 
-            sn = boost::math::jacobi_sn(sqrt1mk2, t)*cn;
-            dn = boost::math::jacobi_dn(sqrt1mk2, t)*cn;
-            w = sqrtminEV*sn;
+            c = 1./boost::math::jacobi_cn(sqrt1mk2, t); 
+            s = boost::math::jacobi_sn(sqrt1mk2, t)*c;
+            d = boost::math::jacobi_dn(sqrt1mk2, t)*c;
+            w = sqrtminEV*s;
             if (m_multiply_weights == true) 
-                dg::blas2::symv(cn*dn, m_op.weights(), x, 0.0 , m_helper); //m_helper = cn dn x
+                dg::blas2::symv(c*d, m_op.weights(), x, 0.0 , m_helper); //m_helper = c d x
             else 
-                dg::blas1::axpby(cn*dn, x, 0.0 , m_helper); //m_helper = cn dn x
+                dg::blas1::axpby(c*d, x, 0.0 , m_helper); //m_helper = c d x
             m_op.set_w(w);
             m_temp_ex.extrapolate(t, m_temp);
 
             if (m_symmetric == true) 
             {
-                m_number = m_pcg( m_op, m_temp, m_helper, m_op.inv_weights(), m_op.weights(), m_eps); // m_temp = (w^2 +V A)^(-1) cn dn x
+                m_number = m_pcg( m_op, m_temp, m_helper, m_op.inv_weights(), m_op.weights(), m_eps); // m_temp = (w^2 +V A)^(-1) c d x
                 if(  m_number == m_pcg.get_max()) throw dg::Fail( m_eps);
             }
             else 
                 m_lgmres.solve( m_op, m_temp, m_helper, m_op.inv_weights(), m_op.weights(), m_eps, 1); 
             m_temp_ex.update(t, m_temp);
 
-            dg::blas1::axpby(-fac, m_temp, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) cn dn x
+            dg::blas1::axpby(-fac, m_temp, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) c d x
         }
-        dg::blas2::symv(m_A, m_helper3, b); // - A fac sum (w^2 +V A)^(-1) cn dn x
-        if (m_multiply_weights == true) dg::blas1::pointwiseDot(m_op.inv_weights(),  b, b);  // fac V A (-w^2 I -V A)^(-1) cn dn x
+        dg::blas2::symv(m_A, m_helper3, b); // - A fac sum (w^2 +V A)^(-1) c d x
+        if (m_multiply_weights == true) dg::blas1::pointwiseDot(m_op.inv_weights(),  b, b);  // fac V A (-w^2 I -V A)^(-1) c d x
 
     }
   private:

@@ -4,6 +4,7 @@
 
 #include "adaptive.h"
 #include "lanczos.h"
+#include "helmholtz.h"
 #include "sqrt_cauchy.h"
 #include "sqrt_ode.h"
 
@@ -13,7 +14,10 @@
 
 namespace dg
 {
-///@brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve directly via sqrt ODE solve with adaptive ERK class as timestepper
+/**
+ * @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve directly via sqrt ODE solve with adaptive ERK class as timestepper
+ * @ingroup matrixfunctionapproximation
+*/
 template< class Geometry, class Matrix, class Container>
 struct DirectSqrtODESolve
 {
@@ -45,10 +49,10 @@ struct DirectSqrtODESolve
         m_rhs.set_precond(m_A.precond());
     }
     /**
-     * @brief Compute \f[b \approx \sqrt{A} x  \f] via sqrt ODE solve
+     * @brief Compute \f$b \approx \sqrt{A} x  \f$ via sqrt ODE solve
      *
      * @param x input vector
-     * @param b output vector. Is approximating \f[b \approx \sqrt{A} x  \f]
+     * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \f$
      * @return number of timesteps of sqrt ODE solve
      */    
     unsigned operator()(const Container& x, Container& b)
@@ -70,7 +74,9 @@ struct DirectSqrtODESolve
     value_type m_epsTimerel, m_epsTimeabs;
 };
 
-///@brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve directly via sqrt Cauchy integral solve
+/** @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve directly via sqrt Cauchy integral solve
+ * @ingroup matrixfunctionapproximation
+*/
 template< class Geometry, class Matrix, class Container>
 struct DirectSqrtCauchySolve
 {
@@ -106,10 +112,10 @@ struct DirectSqrtCauchySolve
         m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
     }
     /**
-     * @brief Compute \f[b \approx \sqrt{A} x  \f] via sqrt Cauchy integral solve
+     * @brief Compute \f$b \approx \sqrt{A} x  \f$ via sqrt Cauchy integral solve
      *
      * @param x input vector
-     * @param b output vector. Is approximating \f[b \approx \sqrt{A} x  \f]
+     * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \f$
      * @return number of timesteps of sqrt ODE solve
      */    
     void operator()(const Container& x, Container& b)
@@ -132,9 +138,11 @@ struct DirectSqrtCauchySolve
 };
 
 /*! 
- * @brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
+ * @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
  * 
- * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx b \approx ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
+ * @ingroup matrixfunctionapproximation
+ * 
+ * @note The approximation relies on Projection \f$b \approx \sqrt{A} x \approx b \approx ||x||_M V \sqrt{T} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T} e_1\f$ is computed via the sqrt ODE solve.
  */
 template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 struct KrylovSqrtODESolve
@@ -179,10 +187,10 @@ struct KrylovSqrtODESolve
         m_lanczos.construct(copyable, max_iterations);
     }
     /**
-     * @brief Compute \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f] via sqrt ODE solve.
+     * @brief Compute \f$b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f$ via sqrt ODE solve.
      *
      * @param x input vector
-     * @param b output vector. Is approximating \f[b \approx \sqrt{A} x  \approx  ||x||_M V \sqrt{T} e_1\f]
+     * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \approx  ||x||_M V \sqrt{T} e_1\f$
      * 
      * @return number of time steps in sqrt ODE solve
      */    
@@ -248,9 +256,11 @@ struct KrylovSqrtODESolve
 };
 
 /*! 
- * @brief Shortcut for \f[b \approx \sqrt{A} x  \f] solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly cauchy solve
+ * @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly cauchy solve
  * 
- * @note The approximation relies on Projection \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the Lanczos solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T} e_1\f] is computed via the sqrt ODE solve.
+ * @ingroup matrixfunctionapproximation
+ * 
+ * @note The approximation relies on Projection \f$b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T} e_1\f$ is computed via the sqrt ODE solve.
  */
 template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 struct KrylovSqrtCauchySolve
@@ -298,10 +308,10 @@ struct KrylovSqrtCauchySolve
 #endif //DG_DEBUG
     }
     /**
-     * @brief Compute \f[b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f] via sqrt ODE solve.
+     * @brief Compute \f$b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f$ via sqrt ODE solve.
      *
      * @param x input vector
-     * @param b output vector. Is approximating \f[b \approx \sqrt{A} x  \approx  ||x||_M V \sqrt{T} e_1\f]
+     * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \approx  ||x||_M V \sqrt{T} e_1\f$
      * @param iterCauchy iterations of sum of cauchy integral
      * 
      * @return number of time steps in sqrt ODE solve
@@ -365,9 +375,11 @@ struct KrylovSqrtCauchySolve
 };
 
 /*! 
- * @brief Shortcut for \f[x \approx \sqrt{A}^{-1} b  \f] solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
+ * @brief Shortcut for \f$x \approx \sqrt{A}^{-1} b  \f$ solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper.
+ *
+ *@ingroup matrixfunctionapproximation 
  * 
- * @note The approximation relies on Projection \f[x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the PCG solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T^{-1}} e_1\f] is computed via the sqrt ODE solve.
+ * @note The approximation relies on Projection \f$x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T^{-1}} e_1\f$ is computed via the sqrt ODE solve.
  */
 template<class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 class KrylovSqrtODEinvert
@@ -410,7 +422,7 @@ class KrylovSqrtODEinvert
         m_cgtridiag.construct(copyable, max_iterations);
     }
     /**
-     * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
+     * @brief Solve the system \f$\sqrt{A}*x = b \f$ for x using PCG method and sqrt ODE solve
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
@@ -477,9 +489,11 @@ class KrylovSqrtODEinvert
 
 
 /*! 
- * @brief Shortcut for \f[x \approx \sqrt{A}^{-1} b  \f] solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt cauchy solve
+ * @brief Shortcut for \f$x \approx \sqrt{A}^{-1} b  \f$ solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt cauchy solve
  * 
- * @note The approximation relies on Projection \f[x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the PCG solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T^{-1}} e_1\f] is computed via the sqrt ODE solve.
+ * @ingroup matrixfunctionapproximation
+ * 
+ * @note The approximation relies on Projection \f$x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T^{-1}} e_1\f$ is computed via the sqrt ODE solve.
  */
 template<class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 class KrylovSqrtCauchyinvert
@@ -526,7 +540,7 @@ class KrylovSqrtCauchyinvert
 #endif //DG_DEBUG
     }
     /**
-     * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
+     * @brief Solve the system \f$\sqrt{A}*x = b \f$ for x using PCG method and sqrt ODE solve
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value

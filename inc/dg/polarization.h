@@ -8,7 +8,12 @@
 
 namespace dg
 {
- 
+/**
+ * @brief Various arbitary wavelength polarization charge operators of delta-f (df) and full-f (ff)
+ *
+ * @ingroup matrixoperators
+ * 
+ */
 template <class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
 class PolCharge
 {
@@ -16,17 +21,63 @@ class PolCharge
     using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation)
     PolCharge(){}
-
+    /**
+     * @brief Construct from Grid
+     *
+     * @param alpha alpha of the Helmholtz operator
+     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
+     * @param g The Grid, boundary conditions are taken from here
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
+     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
+     * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
+     */
     PolCharge(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false, std::string mode = "df", bool commute = false)
     {
         construct(alpha, eps_gamma, g,  g.bcx(), g.bcy(), no, dir, jfactor, chi_weight_jump, mode);
     }
-
+    /**
+     * @brief Construct from boundary conditions
+     *
+     * @param alpha alpha of the Helmholtz operator
+     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
+     * @param g The Grid, boundary conditions are taken from here
+    * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
+     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
+     * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
+    */
     PolCharge( value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false, std::string mode = "df", bool commute = false)
     { 
          construct(alpha, eps_gamma, g,  bcx, bcy, no, dir, jfactor, chi_weight_jump, mode);
     }
-
+    /**
+     * @brief Construct from boundary conditions
+     *
+     * @param alpha alpha of the Helmholtz operator
+     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
+     * @param g The Grid, boundary conditions are taken from here
+    * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param no choose \c dg::normed if you want to directly use the object,
+     *  \c dg::not_normed if you want to invert the elliptic equation
+     * @param dir Direction of the right first derivative in x and y
+     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
+     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
+     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
+     * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
+    */
     void construct(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false, std::string mode = "df", bool commute = false)
     {
         m_alpha = alpha;
@@ -72,7 +123,12 @@ class PolCharge
 
         
     }
-    ///@copydoc PolChargeN3d::set_chi(const ContainerType0&)
+    /**
+     * @brief Change \f$\chi\f$ in the elliptic or tensor elliptic operator
+     *
+     * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
+     * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
+     */
     template<class ContainerType0>
     void set_chi( const ContainerType0& sigma)
     {
@@ -84,8 +140,10 @@ class PolCharge
         }
     }
     /**
-     * @copydoc PolChargeN3d::set_chi(const SparseTensor<ContainerType0>&)
-     * @note the 3d parts in \c tau will be ignored
+     * @brief Change \f$\chi\f$ in the elliptic or tensor elliptic operator
+     *
+     * @param tau The new tensor part in \f$\chi\f$ (all elements must be >0)
+     * @tparam ContainerType0 must be usable in \c dg::assign to \c Container
      */
     template<class ContainerType0>
     void set_chi( const SparseTensor<ContainerType0>& tau)
@@ -98,8 +156,10 @@ class PolCharge
         }
     }
     /**
-     * @brief Set the iota in the tensor elliptic operator
-     * @param sigma iota in the tensor elliptic operator
+     * @brief Change \f$\iota\f$ in the tensor elliptic operator
+     *
+     * @param sigma The new scalar part in \f$\chi\f$ (all elements must be >0)
+     * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_iota( const ContainerType0& sigma)

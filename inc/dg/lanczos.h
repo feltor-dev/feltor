@@ -3,13 +3,17 @@
 #include "blas.h"
 #include "functors.h"
 
-
+/**
+* @brief Classes for Krylov space approximations of a Matrix-Vector product
+*/
 
 namespace dg{
    
 
 /**
 * @brief Functor class for computing the inverse of a general tridiagonal matrix 
+* 
+* @ingroup invert
 */
 template< class ContainerType, class DiaMatrix, class CooMatrix>
 class InvTridiag
@@ -27,7 +31,7 @@ class InvTridiag
         Tinv.resize(copyable.size(), copyable.size(),  copyable.size()* copyable.size());
         temp = 0.;
     }
- /**
+    /**
      * @brief Resize inverse tridiagonal matrix and helper vectors
      * 
      * @param new_size new size of square matrix
@@ -128,9 +132,13 @@ class InvTridiag
 };
 
 /**
-* @brief Functor class for the Lanczos method to solve \f[b = Ax\f] or \f[b = S^{-1} A x\f]
-* for b. A is a symmetric and \f[S^{-1}\f] are typically the inverse weights.
+* @brief Functor class for the Lanczos method to approximate \f$b = Ax\f$ or \f$b = M^{-1} A x\f$
+* for b. A is a symmetric and \f$M^{-1}\f$ are typically the inverse weights.
 *
+* @ingroup matrixapproximation
+* 
+* 
+* The M-Lanczos method is based on the paper <a href="https://doi.org/10.1137/100800634"> Novel Numerical Methods for Solving the Time-Space Fractional Diffusion Equation in Two Dimensions</a>  by Q. Yang et al, but adopts a more efficient implementation similar to that in the PCG method. Further also the conventional Lanczos method can be found there and also in text books such as <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * 
 * @note The common lanczos method (and M-Lanczos) method are prone to loss of orthogonality for finite precision. Here, only the basic Paige fix is used. Thus the iterations should be kept as small as possible. Could be fixed via full, partial or selective reorthogonalization strategies, but so far no problems occured due to this.
 */
@@ -188,13 +196,13 @@ class Lanczos
     ///@return the current number of iterations
     unsigned get_iter() const {return m_iter;}
     /**
-     * @brief Solve the system \f[ b= A x \approx || x ||_2 V T e_1\f] using Lanczos method. Useful for tridiagonalization of A (cf return statement).
+     * @brief Solve the system \f$ b= A x \approx || x ||_2 V T e_1\f$ using Lanczos method. Useful for tridiagonalization of A (cf return statement).
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
      * 
-     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \f[ T = V^T A V \f].
+     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \f$ T = V^T A V \f$.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
     std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b)
@@ -256,21 +264,21 @@ class Lanczos
         return m_TVpair;
     }
     /**
-     * @brief Solve the system \f[b= S^{-1} A x \approx || x ||_S V T e_1\f] for b using M-Lanczos (in this case S-Lanczos) method. Useful for the fast computatin of matrix functions of \f[ S^{-1} A\f].
+     * @brief Solve the system \f$b= M^{-1} A x \approx || x ||_M V T e_1\f$ for b using M-Lanczos method. Useful for the fast computatin of matrix functions of \f$ M^{-1} A\f$.
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
-     * @param S the weights 
-     * @param Sinv the inverse of S - the inverse weights
+     * @param M the weights 
+     * @param Minv the inverse of M - the inverse weights
      * @param eps accuracy of residual
      * 
-     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \[f T = V^T A V \f]
+     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \[f T = V^T A V \f$
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& S, SquareNorm2& Sinv, value_type eps)
+    std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& M, SquareNorm2& Minv, value_type eps)
     {
-        value_type xnorm = sqrt(dg::blas2::dot(x, S, x));
+        value_type xnorm = sqrt(dg::blas2::dot(x, M, x));
         value_type residual;
 #ifdef DG_BENCHMARK
         Timer t;
@@ -278,7 +286,7 @@ class Lanczos
 #endif //DG_BENCHMARK
         dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
         value_type betaip = 0;
-        dg::blas2::symv(S, m_vi, m_wi);
+        dg::blas2::symv(M, m_vi, m_wi);
         unsigned counter = 0;
         for( unsigned i=0; i<m_max_iter; i++)
         {  
@@ -294,7 +302,7 @@ class Lanczos
             dg::blas1::axpby(-betaip, m_wim, 1.0, m_wip);    //only -= if i>0, therefore no if (i>0)
             m_T.values(i,1) = dg::blas1::dot(m_wip, m_vi);    
             dg::blas1::axpby(-m_T.values(i,1), m_wi, 1.0, m_wip);     
-            dg::blas2::symv(Sinv,m_wip,m_vip);
+            dg::blas2::symv(Minv,m_wip,m_vip);
             betaip = sqrt(dg::blas1::dot(m_wip, m_vip)); 
             if (betaip == 0) {
 #ifdef DG_DEBUG
@@ -321,7 +329,7 @@ class Lanczos
 #endif //DG_BENCHMARK
                 residual = xnorm*betaip*betaip*abs(m_Tinv.values[i-1]);
 #ifdef DG_DEBUG
-                std::cout << "||r||_S =  " << residual << "  # of iterations = " << i+1 << "\n";
+                std::cout << "||r||_M =  " << residual << "  # of iterations = " << i+1 << "\n";
 #endif //DG_DEBUG
                 if (residual< eps ) {
                     set_iter(i+1); //update iteration number and resize matrix V and T
@@ -357,10 +365,14 @@ class Lanczos
 };
 
 /*! 
- * @brief Shortcut for \f[x \approx \sqrt{A}^{-1} b  \f] solve via exploiting first a Krylov projection achieved by the PCG method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
+ * @brief Class for approximating \f$x \approx A^{-1} b  \f$ solve via exploiting a Krylov projection achieved by the PCG method 
  * 
- * @note The approximation relies on Projection \f[x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f], where \f[T\f] and \f[V\f] is the tridiagonal and orthogonal matrix of the PCG solve and \f[e_1\f] is the normalized unit vector. The vector \f[\sqrt{T^{-1}} e_1\f] is computed via the sqrt ODE solve.
- */
+ * @ingroup matrixapproximation
+ * 
+ * This class is based on the approach of the paper <a href="https://doi.org/10.1016/0377-0427(87)90020-3)" > An iterative solution method for solving f(A)x = b, using Krylov subspace information obtained for the symmetric positive definite matrix A</a> by H. A. Van Der Vorst
+ * 
+ * @note The approximation relies on Projection \f$x = A^{-1} b  \approx  R T^{-1} e_1\f$, where \f$T\f$ and \f$R\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$T^{-1} e_1\f$ can be further processed for matrix function approximation 
+ \f$f(T^{-1}) e_1\f$  */
 template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
 class CGtridiag
 {
@@ -418,24 +430,25 @@ class CGtridiag
     ///@return the current number of iterations
     unsigned get_iter() const {return m_iter;}
     /**
-     * @brief Solve the system \f[\sqrt{A}*x = b \f] for x using PCG method and sqrt ODE solve
+     * @brief Solve the system \f$A*x = b \f$ for x using PCG method 
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
      * @param P The preconditioner to be used
-     * @param S (Inverse) Weights used to compute the norm for the error condition
+     * @param M (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * 
      * @return Number of iterations used to achieve desired precision
-     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.
+     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium. 
+     * Note that the preconditioner must be \f$P = M^{-1} \f$ if the Matrix R and T of the tridiagonalization are further used for computing matrix functions. Then the x vector must be initialized with 0.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-    std::pair<CooMatrix, CooMatrix> operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1)
+    std::pair<CooMatrix, CooMatrix> operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& M, value_type eps = 1e-12, value_type nrmb_correction = 1)
     {
         //Do CG iteration do get R and T matrix
-        value_type nrmb = sqrt( dg::blas2::dot( S, b));
+        value_type nrmb = sqrt( dg::blas2::dot( M, b));
     #ifdef DG_DEBUG
     #ifdef MPI_VERSION
         int rank;
@@ -456,7 +469,7 @@ class CGtridiag
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
         
-        if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) 
+        if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
         {
             set_iter(1);
             return m_TinvRpair;
@@ -487,12 +500,12 @@ class CGtridiag
             if(rank==0)
     #endif //MPI
             {
-                std::cout << "# Absolute r*S*r "<<sqrt( dg::blas2::dot(S,m_r)) <<"\t ";
+                std::cout << "# Absolute r*M*r "<<sqrt( dg::blas2::dot(M,m_r)) <<"\t ";
                 std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(S,m_r) )/nrmb << ")\n";
+                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(M,m_r) )/nrmb << ")\n";
             }
     #endif //DG_DEBUG
-            if( sqrt( dg::blas2::dot( S, m_r)) < eps*(nrmb + nrmb_correction)) 
+            if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
                 //TODO change this criterium  for square root matrix
             {
                 dg::blas2::symv(P, m_r, m_rh);

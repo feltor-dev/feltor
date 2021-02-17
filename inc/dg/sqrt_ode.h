@@ -4,7 +4,9 @@
 #include "cg.h"
 #include "lgmres.h"
 
-
+/**
+* @brief Classes for square root Matrix-Vector product computation via the square root ODE method
+*/
 namespace dg
 {
 /**
@@ -12,8 +14,8 @@ namespace dg
  *
  * @ingroup matrixoperators
  *
- * discretization of \f[ ((t-1) I -t A)*x \f]
- * where \f[ A\f] is matrix and t is the time and x is a vector.
+ * discretization of \f$ ((t-1) I -t A)x \f$
+ * where \f$ A\f$ is matrix and t is the time and x is a vector.
  */
 template< class Matrix, class Container>
 struct SqrtODEOp
@@ -131,7 +133,7 @@ struct SqrtODEOp
     /**
      * @brief Compute square root ode operator and store in output
      *
-     * i.e. \f[ y= W ((t-1) I -t V A)*x \f] if weights are multiplied or \f[ y=  ((t-1) I -t  A)*x \f] otherwise
+     * i.e. \f$ y= W ((t-1) I -t V A)*x \f$ if weights are multiplied or \f$ y=  ((t-1) I -t  A)*x \f$ otherwise
      * @param x left-hand-side
      * @param y result
      */ 
@@ -150,11 +152,22 @@ struct SqrtODEOp
 };
 
 
+template<  class Matrix, class Container>
+struct TensorTraits< SqrtODEOp< Matrix, Container> >
+{
+    using value_type  = dg::get_value_type<Container>;
+    using tensor_category = dg::SelfMadeMatrixTag;
+};
+
 /**
- * @brief Rhs of the square root ODE \f[ \dot{y}= \left[(t-1) I -t A\right]^{-1} *(I - A)/2 * y \f]
- *
- * where \f[ A\f] is the matrix
- * @note Solution of ODE: \f[ y(1) = \sqrt{A} y(0)\f]
+ * @brief Right hand side of the square root ODE \f[ \dot{y}= \left[(t-1) I -t A\right]^{-1} (I - A)/2  y \f]
+ * where \f$ A\f$ is the matrix
+ * 
+ * @ingroup matrixfunctionapproximation
+ * 
+ * This class is based on the approach of the paper <a href="https://doi.org/10.1016/S0024-3795(00)00068-9" > Numerical approximation of the product of the square root of a matrix with a vector</a> by E. J. Allen et al
+ * 
+ * @note Solution of ODE: \f$ y(1) = \sqrt{A} y(0)\f$
  */
 template< class Matrix, class Container>
 struct SqrtODE
@@ -253,11 +266,11 @@ struct SqrtODE
     /**
      * @brief Compute rhs term (including inversion of lhs via cg or lgmres) 
      *
-     * i.e. \f[ yp= ((t-1) I -t V A)^{-1} *(I - V A)/2 * y \f] if weights are multiplied or 
-     * \f[ yp= ((t-1) I -t  A)^{-1} *(I -  A)/2 * y \f] otherwise
-     * @param y  is \f[ y\f]
-     * @param yp is \f[ \dot{y}\f]
-     * @note Solution of ODE: \f[ y(1) = \sqrt{V A} y(0)\f] if weights are multiplied or  \f[ y(1) = \sqrt{A} y(0)\f] otherwise
+     * i.e. \f[ yp= ((t-1) I -t V A)^{-1} (I - V A)/2  y \f] if weights are multiplied or 
+     * \f$ yp= ((t-1) I -t  A)^{-1} (I -  A)/2 * y \f$ otherwise
+     * @param y  is \f$ y\f$
+     * @param yp is \f$ \dot{y}\f$
+     * @note Solution of ODE: \f$ y(1) = \sqrt{V A} y(0)\f$ if weights are multiplied or  \f$ y(1) = \sqrt{A} y(0)\f$ otherwise
      */
     void operator()(value_type t, const Container& y, Container& yp)
     {
@@ -292,11 +305,5 @@ struct SqrtODE
 };
 
 
-template<  class Matrix, class Container>
-struct TensorTraits< SqrtODEOp< Matrix, Container> >
-{
-    using value_type  = dg::get_value_type<Container>;
-    using tensor_category = dg::SelfMadeMatrixTag;
-};
 
 } //namespace dg

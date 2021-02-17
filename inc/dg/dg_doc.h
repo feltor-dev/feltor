@@ -53,12 +53,16 @@
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * @{
  *     @defgroup time Time integrators
- *      \f$ \dot y = f(y,t) \f$
+ *     \f$ \dot y = f(y,t) \f$ 
  *     @{
  *          @defgroup time_utils Utilities for time integration
  *     @}
  *     @defgroup invert Linear and nonlinear solvers
- *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
+ *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$ 
+ *     @defgroup matrixapproximation Matrix approximation
+ *     Numerical methods for approximating a Matrix \f$ A\f$  or Matrix-Vector products \f$ Ax=b \f$ (or \f$ x=A^{-1} b \f$)
+ *     @defgroup matrixfunctionapproximation Matrix-function approximation
+ *     Numerical methods for approximating Matrix-function-Vector products \f$ f(A) x=b\f$
  * @}
  * @defgroup geo Level 3: Topology and Geometry
  * @{
