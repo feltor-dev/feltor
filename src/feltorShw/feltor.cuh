@@ -106,7 +106,6 @@ struct Explicit
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
-    dg::Variation< Geometry, Matrix, container> gradient; 
 
     dg::Elliptic< Geometry, Matrix, container > lapperp; 
     std::vector<container> multi_chi;
@@ -140,7 +139,6 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.invkappa),g)),
     profNi(profne),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
-    gradient(g, p.bc_x_phi, g.bcy(), dg::centered),
     lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
@@ -179,7 +177,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
             std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
             old_psi.update( phi[1]);
         }
-        gradient.variation(binv,potential, omega);         // omega = u_E^2
+        multi_pol[0].variation(binv,potential, omega);         // omega = u_E^2
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi =  Gamma phi - 0.5 u_E^2
     }
     if (p.modelmode==2)
@@ -498,7 +496,7 @@ void Explicit<Grid, Matrix, container>::operator()(double ttt, const std::vector
             S[i]    = 0.5*z[i]*p.tau[i]*dg::blas2::dot( y[i], w2d, y[i]); // N_tilde^2
         }
         mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
-        gradient.variation( phi[0], omega);
+        multi_pol[0].variation( phi[0], omega);
         double Tperp = 0.5*p.mu[1]*dg::blas2::dot( one, w2d, omega);   //= 0.5 mu_i u_E^2
         energy_ = S[0] + S[1]  + Tperp; 
         evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp;

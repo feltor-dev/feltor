@@ -65,7 +65,7 @@ int main( int argc, char* argv[])
     double x2sum=0.;
     double xysum=0.;
     double n=0.;
-    double a=0.;
+    //double a=0.;
     double gamma=0.;
     double b=0.;
     double c=0.;

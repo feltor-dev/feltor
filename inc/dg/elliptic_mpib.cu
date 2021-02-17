@@ -24,13 +24,20 @@ const value_type lx = 2.*M_PI;
 const value_type ly = 2.*M_PI;
 const value_type lz = 2.*M_PI;
 value_type fct(value_type x, value_type y, value_type z){ return sin(x-R_0)*sin(y)*sin(z);}
-value_type derivative( value_type x, value_type y, value_type z){return cos(x-R_0)*sin(y)*sin(z);}
+value_type fctX( value_type x, value_type y, value_type z){return cos(x-R_0)*sin(y)*sin(z);}
+value_type fctY(value_type x, value_type y, value_type z){ return sin(x-R_0)*cos(y)*sin(z);}
+value_type fctZ(value_type x, value_type y, value_type z){ return sin(x-R_0)*sin(y)*cos(z);}
 value_type laplace2d_fct( value_type x, value_type y, value_type z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
 value_type laplace3d_fct( value_type x, value_type y, value_type z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::PER;
 value_type initial( value_type x, value_type y, value_type z) {return sin(0);}
+value_type variation3d( value_type x, value_type y, value_type z) {
+    return (fctX(x,y,z)*fctX(x,y,z)
+        + fctY(x,y,z)*fctY(x,y,z)
+        + fctZ(x,y,z)*fctZ(x,y,z)/x/x)*fct(x,y,z)*fct(x,y,z);
+}
 
 
 int main( int argc, char* argv[])
@@ -65,7 +72,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout<<"Expand right hand side\n";
     const Vector solution = dg::evaluate ( fct, grid);
-    const Vector deriv = dg::evaluate( derivative, grid);
+    const Vector deriv = dg::evaluate( fctX, grid);
     Vector b = dg::evaluate ( laplace3d_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
@@ -89,6 +96,13 @@ int main( int argc, char* argv[])
     normerr = dg::blas2::dot( w3d, error);
     norm = dg::blas2::dot( w3d, deriv);
     if(rank==0)std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
+    if(rank==0)std::cout << "Compute variation in Elliptic               ";
+    const Vector variatio = dg::evaluate ( variation3d, grid);
+    laplace.variation( solution, x, error);
+    dg::blas1::axpby( 1., variatio, -1., error);
+    norm = dg::blas2::dot( w3d, variatio);
+    normerr = dg::blas2::dot( w3d, error);
+    if(rank==0)std::cout <<sqrt( normerr/norm) << "\n";
 
     if(rank==0)std::cout << "TEST SPLIT SOLUTION\n";
     x = dg::evaluate( initial, grid);

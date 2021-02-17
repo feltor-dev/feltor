@@ -122,7 +122,6 @@ int main( int argc, char* argv[])
   std::vector<dg::HVec> npe_h(3, dg::evaluate(dg::zero, g2d));
   //eval field
   dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa(g2d);
-  dg::Variation< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient(g2d);
   //eval particle densities
   const dg::DVec binv( dg::evaluate(dg::LinearX(p.kappa, 1.), g2d));
   dg::DVec chi = dg::evaluate(dg::zero, g2d);
@@ -133,18 +132,18 @@ int main( int argc, char* argv[])
   //calculation variables per species
   double mass_[num_species] = {}, cn[num_species] = {};
   double posX = 0, posY =0 ;
-  double NposX = 0, NposY =0 ; //
+  double NposX = 0;//, NposY =0 ; //
   double posX_init[num_species] = {}, posY_init[num_species] = {};
-  double NposX_init[num_species] = {}, NposY_init[num_species] = {}; //
+  double NposX_init[num_species] = {};//, NposY_init[num_species] = {}; //
   double posX_old[num_species] ={}, posY_old[num_species] = {};
-  double NposX_old[num_species] ={}, NposY_old[num_species] = {};
+  double NposX_old[num_species] ={};//, NposY_old[num_species] = {};
   double posX_max = 0, posY_max = 0;
   double posX_max_old[num_species] = {}, posY_max_old[num_species] = {};
   double posX_max_hs = 0, posY_max_hs = 0;
   double velX[num_species] = {}, velY[num_species] = {};
-  double NvelX[num_species] = {}, NvelY[num_species] = {};
+  double NvelX[num_species] = {};//, NvelY[num_species] = {};
   double velX_old[num_species] = {}, velY_old[num_species] = {};
-  double NvelX_old[num_species] = {}, NvelY_old[num_species] = {};
+  //double NvelX_old[num_species] = {}, NvelY_old[num_species] = {};
   double velX_max = 0, velY_max = 0;
   double velCOM = 0;
   double accX = 0, accY = 0;
@@ -279,20 +278,20 @@ int main( int argc, char* argv[])
       // N*posX/Y, N*velX/Y
       if (i==0)
       { NposX_init[j] = dg::blas2::dot( xvec, w2d, ntilde[j]);
-        NposY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j]);
+        //NposY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j]);
       }
       if (i>0)
       { NposX = dg::blas2::dot( xvec, w2d, ntilde[j])-NposX_init[j];
-        NposY = dg::blas2::dot( yvec, w2d, ntilde[j])-NposY_init[j];
+        //NposY = dg::blas2::dot( yvec, w2d, ntilde[j])-NposY_init[j];
       }
       if (i==0)
-      { NvelX_old[j] = -NposX/deltaT;
-        NvelY_old[j] = -NposY/deltaT;
+      { //NvelX_old[j] = -NposX/deltaT;
+        //NvelY_old[j] = -NposY/deltaT;
         NposX_old[j] = NposX;
-        NposY_old[j] = NposY;
+        //NposY_old[j] = NposY;
       }
       NvelX[j] = (NposX - NposX_old[j])/deltaT;
-      NvelY[j] = (NposY - NposY_old[j])/deltaT;
+      //NvelY[j] = (NposY - NposY_old[j])/deltaT;
 
       // init pos/vel calculations as soon as mass > 1.E-15, otherwise NAN
       if ( mass_[j]>1.E-15 && (reset_flag[j]))
@@ -374,7 +373,7 @@ int main( int argc, char* argv[])
       m[j]++;
     }
     //field
-    gradient.variation(field[0], helper);
+    pol.variation(field[0], helper);
     double energy[5] = {};
     energy[0] = dg::blas2::dot(lnn[0], w2d, npe[0]);
     energy[1] = p.a[1]*p.tau[1]*dg::blas2::dot(npe[1], w2d, lnn[1]);

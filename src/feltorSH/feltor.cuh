@@ -103,7 +103,6 @@ struct Explicit
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
-    dg::Variation< Geometry, Matrix, container> gradient; 
 
     dg::Elliptic<   Geometry, Matrix, container> lapperpM; 
     std::vector<container> multi_chi;
@@ -131,7 +130,6 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     phi( 2, chi),chii(chi),uE2(chi),// (phi,psi), (chi_i), u_ExB
     ype(4,chi), logype(ype), // y+(bgamp+profamp) , log(ype)
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
-    gradient(g, g.bcx(), g.bcy(), dg::centered),
     lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma(    omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
@@ -245,7 +243,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
         }
     }
 
-    gradient.variation(binv, potential, uE2); // (nabla_perp phi)^2
+    multi_pol[0].variation(binv, potential, uE2); // (nabla_perp phi)^2
     dg::blas1::axpby( 1., phi[1], -0.5, uE2,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
