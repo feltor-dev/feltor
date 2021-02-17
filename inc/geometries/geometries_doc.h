@@ -29,6 +29,7 @@
       @defgroup magnetic 3.2 Magnetic field, curvatures and associated functors
       @defgroup profiles 3.3 Penalization, weight and monitor metric functors
       @defgroup fluxfunctions 3.4. Utility functor functionality
+      \f$ h^{ij}\f$
  * @}
  * @defgroup fieldaligned 4. Fieldaligned derivatives
  * \f$ \nabla_\parallel f\f$
