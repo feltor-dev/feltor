@@ -357,7 +357,7 @@ void put_var_double(int ncid, int varid,
 ///@copydoc put_vara_double()
 template<class host_vector>
 void put_vara_double(int ncid, int varid, unsigned slice,
-    dg::aMPITopology3d& grid, dg::MPI_Vector<host_vector>& data,
+    const dg::aMPITopology3d& grid, const dg::MPI_Vector<host_vector>& data,
     bool parallel = false)
 {
     file::NC_Error_Handle err;

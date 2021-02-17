@@ -38,7 +38,7 @@ struct MPI_Vector
     /**
      * @brief construct a vector
      *
-     * calls \c exblas::mpi_reduce_communicator() (collective call)
+     * calls \c dg::exblas::mpi_reduce_communicator() (collective call)
      * @param data internal data copy
      * @param comm MPI communicator (may not be \c MPI_COMM_NULL)
      */
@@ -80,8 +80,18 @@ struct MPI_Vector
      * @return returns MPI_COMM_NULL to processes not part of that group
      */
     MPI_Comm communicator_mod_reduce() const{return m_comm128Reduce;}
+
     /**
-    * @brief Set the communicators with \c exblas::mpi_reduce_communicator
+    * @brief Set the communicators with \c dg::exblas::mpi_reduce_communicator
+    *
+    * The reason why you can't just set the comm and need three parameters is
+    * that generating communicators involves communication, which you might want to
+    * avoid when you do it many times. So you have to call the function as
+    * @code
+    * MPI_Comm comm = MPI_COMM_WORLD, comm_mod, comm_mod_reduce;
+    * dg::exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_mod_reduce);
+    * mpi_vector.set_communicator( comm, comm_mod, comm_mod_reduce);
+    * @endcode
     */
     void set_communicator(MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce){
         m_comm = comm;
