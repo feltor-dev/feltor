@@ -189,7 +189,6 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     multi_iota= multigrid.project( chi);
     multi_elliptic.resize(3);
     multi_tensorelliptic.resize(3);
-    multi_dfpolcharge.resize(3);
     multi_gamma1.resize(3);
     multi_gamma0.resize(3);
     arakawa.construct(grid);
