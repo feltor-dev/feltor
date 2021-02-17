@@ -153,7 +153,7 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX2
     return vec;
 }
 
-///@copydoc pullback(const Functor&,const aRealGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry3d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
 thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX3d<real_type>& g)
