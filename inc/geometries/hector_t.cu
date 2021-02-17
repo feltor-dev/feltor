@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -63,14 +63,14 @@ int main( int argc, char* argv[])
     dg::geo::solovev::Parameters gp(js);
     {const dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";}
-    std::cout << "Type psi_0 and psi_1\n";
+    std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
     gp.display( std::cout);
     dg::Timer t;
-    //solovev::detail::Fpsi fpsi( gp, -10);
-    std::cout << "Constructing conformal grid ... \n";
-    int construction = 0;
+    std::cout << "Type construction method: 0 (conformal), 1 (adaption), 2 (monitor metric)\n";
+    int construction = 2;
+    std::cin >> construction;
     t.tic();
     //![doxygen]
     std::unique_ptr< dg::geo::aGenerator2d > hector;
@@ -78,17 +78,20 @@ int main( int argc, char* argv[])
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if( construction == 0)
     {
+        std::cout << "Constructing conformal grid ... \n";
         hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else if( construction == 1)
     {
+        std::cout << "Constructing weighted grid ... \n";
         dg::geo::CylindricalFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
         hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else
     {
+        std::cout << "Constructing Monitor metric grid ... \n";
         dg::geo::CylindricalSymmTensorLvl1 lc = dg::geo::make_LiseikinCollective(
                 psip, 0.1, 0.001);
         hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
@@ -165,13 +168,20 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     dg::HVec volume = dg::create::volume( g2d);
     dg::HVec ones2d = dg::evaluate( dg::one, g2d);
-    double volumeUV = dg::blas1::dot( vol, ones2d);
+    double volumeUV = dg::blas1::dot( volume, ones2d);
+    std::cout << "volumeUV is "<< volumeUV<<std::endl;
 
     volume = dg::create::volume( dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>*>( hector.get())->internal_grid());
     ones2d = dg::evaluate( dg::one, dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>*>( hector.get())->internal_grid());
-    double volumeZE = dg::blas1::dot( vol, ones2d);
-    std::cout << "volumeUV is "<< volumeUV<<std::endl;
+    double volumeZE = dg::blas1::dot( volume, ones2d);
     std::cout << "volumeZE is "<< volumeZE<<std::endl;
+    auto iris = dg::compose( dg::Iris(psi_0, psi_1), psip.f());
+    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,3, 2e2, 2e2, dg::PER, dg::PER);
+    dg::HVec vec  = dg::evaluate( iris, g2dC);
+    dg::HVec onesC = dg::evaluate( dg::one, g2dC);
+    dg::HVec g2d_weights = dg::create::volume( g2dC);
+    double volumeRZ = dg::blas2::dot( vec, g2d_weights, onesC);
+    std::cout << "volumeRZ is "<< volumeRZ<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeUV - volumeZE)/volumeZE<<std::endl;
     err = nc_close( ncid);
     return 0;

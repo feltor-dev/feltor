@@ -2,6 +2,7 @@
 /*!
  *
  * @defgroup generators_geo 1. Grid generators
+ * \f$( x,\ y,\ \zeta_x,\ \zeta_y,\ \eta_x,\ \eta_y)\f$ \c dg::geo::Hector
  *
  *      All the grids introduced by this extension can be constructed with
  *      generator classes.
