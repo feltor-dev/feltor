@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "dg/algorithm.h"
+#define _FILE_INCLUDED_BY_DG_
 #include "nc_utilities.h"
 
 double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
@@ -28,7 +29,6 @@ int main()
     int ncid;
     dg::file::NC_Error_Handle err;
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
-    //err = nc_create( "test.nc", NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
 
     int dim_ids[4], tvarID;
@@ -63,9 +63,9 @@ int main()
         dg::blas1::scal( dataX, cos( time));
         dg::blas1::scal( dataY, cos( time));
         dg::blas1::scal( dataZ, cos( time));
-        err = nc_put_vara_double( ncid, vectorID[0], start, count, dataX.data());
-        err = nc_put_vara_double( ncid, vectorID[1], start, count, dataY.data());
-        err = nc_put_vara_double( ncid, vectorID[2], start, count, dataZ.data());
+        dg::file::put_vara_double( ncid, vectorID[0], i, g, dataX);
+        dg::file::put_vara_double( ncid, vectorID[1], i, g, dataY);
+        dg::file::put_vara_double( ncid, vectorID[2], i, g, dataZ);
         //write time
         err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     }
