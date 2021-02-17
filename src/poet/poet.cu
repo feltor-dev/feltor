@@ -53,18 +53,16 @@ int main( int argc, char* argv[])
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     
-    ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
-//     ex.gamma1inv_y(y0[0],y0[1]); //no inversion - smaller accuracy!
-    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
-        y0[1] = dg::evaluate( dg::zero, grid);
-    }
+//     ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+    ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
+
 
     //////////////////////////////////////////////////////////////////////
 
 
     dg::Karniadakis< std::vector<DVec> > stepper( y0, y0[0].size(), p.eps_time);
 //     dg::Adaptive<dg::ARKStep<std::vector<DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
-    //dg::Adaptive<dg::ERKStep<std::vector<DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
+//     dg::Adaptive<dg::ERKStep<std::vector<DVec>>> stepper( "Dormand-Prince-7-4-5", y0);
 
     DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -130,9 +128,9 @@ int main( int argc, char* argv[])
             }
             try{ stepper.step( ex, im, time, y0);}
 //             try{
-//                 //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
-//                 stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
-//                 //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+// //                 std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
+// //                 stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-7, 1e-14);
+// //                 stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-7, 1e-14);
 //             }
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

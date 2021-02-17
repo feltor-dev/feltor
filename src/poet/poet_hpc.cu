@@ -102,10 +102,8 @@ int main( int argc, char* argv[])
     /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    exp.gamma1_y(y0[0],y0[1]);
-    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
-        y0[1] = dg::evaluate( dg::zero, grid);
-    }
+//     exp.gamma1_y(y0[0],y0[1]);
+    exp.gamma1inv_y(y0[0],y0[1]);
     //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
     dg::Karniadakis< std::vector<DVec> > karniadakis( y0, y0[0].size(), p.eps_time);

@@ -136,7 +136,7 @@ struct Explicit
 
     container chi, omega, iota, gamma_n, gamma_phi;
     const container binv; //magnetic field
-    container m_fine_binv;
+    container n_old, gamma_n_old, phi_old, gamma_phi_old;
     std::vector<container> phi, dyphi, ype;
     std::vector<container> dyy, lny, lapy;
     
@@ -147,12 +147,10 @@ struct Explicit
     std::vector<dg::TensorElliptic<Geometry, Matrix, container> > multi_tensorelliptic;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1, multi_gamma0;
     
-    std::vector<dg::PolCharge<Geometry, Matrix,  DiaMatrix, CooMatrix, container, dg::DVec> > multi_dfpolcharge;
-    
     dg::KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
     dg::KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
+    
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
-
     dg::Advection<Geometry, Matrix, container> m_adv;
     
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
@@ -178,6 +176,7 @@ template< class Geometry, class M, class DM, class CM, class container>
 Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const Parameters& p ):
     chi( evaluate( dg::zero, grid)), omega(chi), iota(chi), gamma_n(chi), gamma_phi(chi),
     binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
+    n_old(chi),    gamma_n_old(chi), phi_old(chi),    gamma_phi_old(chi),
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy), 
     laplaceM( grid, dg::normed, dg::centered),
@@ -201,7 +200,7 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
     {
         multi_elliptic[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
         multi_tensorelliptic[u].construct( multigrid.grid(u),  dg::not_normed, dg::centered, p.jfactor); //only centered implemented
-        multi_dfpolcharge[u].construct(-p.tau, {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma}, multigrid.grid(u),  grid.bcx(), grid.bcy(), dg::not_normed, dg::centered, p.jfactor, false, "df"); 
+
         
         multi_gamma0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "global-arbpolO2" ) {
@@ -304,8 +303,16 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
         for( unsigned u=0; u<3; u++) multi_elliptic[u].set_chi( multi_chi[u]);
         
         //Compute G^{-1} n_e via LanczosSqrtODE solve
-        sqrtsolve(y[0], gamma_n); //inv weights already multiplied
+        //solve only for the time difference
+        dg::blas1::axpby(1.0, y[0], -1.0, n_old, n_old); //        d_n= y[0] - n_old;
+        sqrtsolve(n_old, gamma_n); //inv weights already multiplied
+        dg::blas1::axpby(1.0, gamma_n, 1.0, gamma_n_old, gamma_n); //        gamma_n = d_gamma_n + gamma_n_old;
+        dg::blas1::copy(y[0], n_old);//        n_old = y[0];
+         dg::blas1::copy(gamma_n, gamma_n_old); //gamma_n_old = gamma_n;
+        //without solving for the time difference
+        //         sqrtsolve(y[0], gamma_n); //inv weights already multiplied
 
+        
         dg::blas1::axpby(1., y[1],  -1., gamma_n, omega);  //- G^{-1} n_e + N_i    
         
         //Solve G^{-1} n_e - N_i = nabla. (chi nabla gamma_phi) for gamma_phi         
@@ -316,7 +323,14 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             throw dg::Fail( eps_pol[0]);
 
         //Compute \phi = G^{-1} \gamma_phi via LanczosSqrtODE solve
-        sqrtsolve(gamma_phi, phi[0]);    //inv weights already multiplied
+        //solve only for the time difference
+        dg::blas1::axpby(1.0, gamma_phi, -1.0, gamma_phi_old, gamma_phi_old); //        
+        sqrtsolve(gamma_phi_old, phi[0]); //inv weights already multiplied
+        dg::blas1::axpby(1.0, phi[0], 1.0, phi_old, phi[0]); //       
+        dg::blas1::copy(gamma_phi, gamma_phi_old);//     
+        dg::blas1::copy(phi[0], phi_old); 
+        //without solving for the time difference
+//         sqrtsolve(gamma_phi, phi[0]);    //inv weights already multiplied
 
     }
     else {
@@ -362,24 +376,12 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
             if( boussinesq)
                 dg::blas1::pointwiseDivide( omega, chi, omega);
 
-//         if (equations == "local-arbpolO2") 
-//         {
-//                         //invert with nested iterations
-//             old_phi.extrapolate(t, phi[0]);
-//             std::vector<unsigned> number = multigrid.direct_solve( multi_dfpolcharge, phi[0], omega, eps_pol);
-//             old_phi.update( t, phi[0]);
-//             if(  number[0] == multigrid.max_iter())
-//                 throw dg::Fail( eps_pol[0]);
-//         }
-//         else
-//         {
-            //invert
-            old_phi.extrapolate(t, phi[0]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_elliptic, phi[0], omega, eps_pol);
-            old_phi.update( t, phi[0]);
-            if(  number[0] == multigrid.max_iter())
-                throw dg::Fail( eps_pol[0]);
-//         }
+        //invert
+        old_phi.extrapolate(t, phi[0]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_elliptic, phi[0], omega, eps_pol);
+        old_phi.update( t, phi[0]);
+        if(  number[0] == multigrid.max_iter())
+            throw dg::Fail( eps_pol[0]);
 
     }
     return phi[0];
