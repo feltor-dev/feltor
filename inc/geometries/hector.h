@@ -233,17 +233,17 @@ struct Hector : public aGenerator2d
     Hector( const CylindricalFunctorsLvl2& psi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
         m_g2d(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        //first construct u_
+        //first construct m_u
         container u = construct_grid_and_u( dg::geo::Constant(1), dg::geo::detail::LaplacePsi(psi), psi0, psi1, X0, Y0, eps_u , verbose);
         construct( u, psi0, psi1, dg::geo::Constant(1.), dg::geo::Constant(0.), dg::geo::Constant(1.), verbose);
         m_conformal=m_orthogonal=true;
-        ////we actually don't need u_ but it makes a good testcase
+        ////we actually don't need m_u but it makes a good testcase
         //container psi__;
         //dg::blas1::transfer(dg::pullback( psi, m_g2d), psi__);
         //dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
         //dg::blas1::plus( u,-psi0);
         //dg::blas1::scal( u, m_c0);
-        //dg::blas1::transfer( u, u_);
+        //dg::blas1::transfer( u, m_u);
     }
 
     /**
@@ -265,18 +265,18 @@ struct Hector : public aGenerator2d
         m_g2d(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         dg::geo::detail::LaplaceAdaptPsi lapAdaPsi( psi, chi);
-        //first construct u_
+        //first construct m_u
         container u = construct_grid_and_u( chi.f(), lapAdaPsi, psi0, psi1, X0, Y0, eps_u , verbose);
         construct( u, psi0, psi1, chi.f(),dg::geo::Constant(0), chi.f(), verbose );
         m_orthogonal=true;
         m_conformal=false;
-        ////we actually don't need u_ but it makes a good testcase
+        ////we actually don't need m_u but it makes a good testcase
         //container psi__;
         //dg::blas1::transfer(dg::pullback( psi, m_g2d), psi__);
         //dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
         //dg::blas1::plus( u,-psi0);
         //dg::blas1::scal( u, m_c0);
-        //dg::blas1::transfer( u, u_);
+        //dg::blas1::transfer( u, m_u);
     }
 
     /**
@@ -298,18 +298,18 @@ struct Hector : public aGenerator2d
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) :
         m_g2d(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        //first construct u_
+        //first construct m_u
         container u = construct_grid_and_u( psi, chi,
                 psi0, psi1, X0, Y0, eps_u , verbose);
         construct( u, psi0, psi1, chi.xx(), chi.xy(), chi.yy(), verbose);
         m_orthogonal=m_conformal=false;
-        ////we actually don't need u_ but it makes a good testcase
+        ////we actually don't need m_u but it makes a good testcase
         //container psi__;
         //dg::blas1::transfer(dg::pullback( psi, m_g2d), psi__);
         //dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
         //dg::blas1::plus( u,-psi0);
         //dg::blas1::scal( u, m_c0);
-        //dg::blas1::transfer( u, u_);
+        //dg::blas1::transfer( u, m_u);
     }
 
 
@@ -356,7 +356,7 @@ struct Hector : public aGenerator2d
         dg::blas2::symv( Q, m_vy, vy);
         ////Test if u1d is u
         //thrust::host_vector<double> u(u1d.size()*v1d.size());
-        //dg::blas2::symv( Q, u_, u);
+        //dg::blas2::symv( Q, m_u, u);
         //dg::HVec u2d(u1d.size()*v1d.size());
         //for( unsigned i=0; i<v1d.size(); i++)
         //    for( unsigned j=0; j<u1d.size(); j++)
