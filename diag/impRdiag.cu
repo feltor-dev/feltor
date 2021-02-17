@@ -263,7 +263,7 @@ int main( int argc, char* argv[])
         pol.set_chi(chi);
         pol.symv(field[0], nphys[j]);
         dg::blas1::axpby( 1., gamma_n, -1., nphys[j]);
-        dg::blas1::transfer(nphys[j], transfer2d);
+        dg::assign(nphys[j], transfer2d);
         err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, transfer2d.data());
       }
       //charge number

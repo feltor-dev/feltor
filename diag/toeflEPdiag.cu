@@ -260,7 +260,7 @@ int main( int argc, char* argv[])
         //dg::IDMatrix interpne(dg::create::interpolation(xcoo,y0coone, g2d)) ;
         //
         //dg::blas2::gemv(interpne,npe[0],helper1d); 
-        //dg::blas1::transfer( helper1d, transfer1d);
+        //dg::assign( helper1d, transfer1d);
         //err_out = nc_put_vara_double( ncid_out, names1dID[0], start1d, count1d, transfer1d.data());    
         
         

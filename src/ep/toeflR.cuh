@@ -183,7 +183,7 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     dg::blas1::plus( chi, debye_); 
     for( unsigned i=0; i<2; i++)
     {
-        dg::blas1::transfer( y[i], omega);
+        dg::assign( y[i], omega);
         dg::blas1::plus( omega, 1.); 
         dg::blas1::scal( omega, z[i]*mu[i]);
         dg::blas1::pointwiseDot( binv, omega, omega); 

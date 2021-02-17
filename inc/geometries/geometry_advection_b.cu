@@ -176,8 +176,8 @@ int main(int argc, char** argv)
     dg::DVec curvX, curvY;
     dg::HVec tempX, tempY;
     dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mag,+1), dg::geo::CurvatureNablaBZ(mag,+1), tempX, tempY, grid);
-    dg::blas1::transfer(  tempX, curvX);
-    dg::blas1::transfer(  tempY, curvY);
+    dg::assign(  tempX, curvX);
+    dg::assign(  tempY, curvY);
     dg::DMatrix dx, dy;
     dg::blas2::transfer( dg::create::dx(grid), dx);
     dg::blas2::transfer( dg::create::dy(grid), dy);
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
 
     CurvatureDirPer curv(mag, psi_0, psi_1);
     dg::DVec curvature;
-    dg::blas1::transfer( dg::pullback(curv, grid), curvature);
+    dg::assign( dg::pullback(curv, grid), curvature);
 
     dg::blas1::axpby( 1., tempx, -1., curvature, tempx);
     result = dg::blas2::dot( vol, tempx);

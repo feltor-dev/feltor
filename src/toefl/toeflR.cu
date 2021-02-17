@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
         //transform field to an equidistant grid
         dvisual = y0[0];
 
-        dg::blas1::transfer( dvisual, hvisual);
+        dg::assign( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -93,7 +93,7 @@ int main( int argc, char* argv[])
         //transform phi
         dvisual = ex.potential()[0];
         dg::blas2::gemv( ex.laplacianM(), dvisual, y1[1]);
-        dg::blas1::transfer( y1[1], hvisual);
+        dg::assign( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

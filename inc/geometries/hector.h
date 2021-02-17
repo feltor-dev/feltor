@@ -190,8 +190,8 @@ void transform(
 {
     u_x.resize( u_zeta.size()), u_y.resize( u_zeta.size());
     thrust::host_vector<double> uh_zeta, uh_eta;
-    dg::blas1::transfer( u_zeta, uh_zeta);
-    dg::blas1::transfer( u_eta, uh_eta);
+    dg::assign( u_zeta, uh_zeta);
+    dg::assign( u_eta, uh_eta);
     dg::SparseTensor<thrust::host_vector<double> > jac = g2d.jacobian();
     dg::tensor::multiply2d( jac.transpose(), uh_zeta, uh_eta, u_x, u_y);
 }
@@ -239,11 +239,11 @@ struct Hector : public aGenerator2d
         m_conformal=m_orthogonal=true;
         ////we actually don't need m_u but it makes a good testcase
         //container psi__;
-        //dg::blas1::transfer(dg::pullback( psi, m_g2d), psi__);
+        //dg::assign(dg::pullback( psi, m_g2d), psi__);
         //dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
         //dg::blas1::plus( u,-psi0);
         //dg::blas1::scal( u, m_c0);
-        //dg::blas1::transfer( u, m_u);
+        //dg::assign( u, m_u);
     }
 
     /**
@@ -272,11 +272,11 @@ struct Hector : public aGenerator2d
         m_conformal=false;
         ////we actually don't need m_u but it makes a good testcase
         //container psi__;
-        //dg::blas1::transfer(dg::pullback( psi, m_g2d), psi__);
+        //dg::assign(dg::pullback( psi, m_g2d), psi__);
         //dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
         //dg::blas1::plus( u,-psi0);
         //dg::blas1::scal( u, m_c0);
-        //dg::blas1::transfer( u, m_u);
+        //dg::assign( u, m_u);
     }
 
     /**
@@ -305,11 +305,11 @@ struct Hector : public aGenerator2d
         m_orthogonal=m_conformal=false;
         ////we actually don't need m_u but it makes a good testcase
         //container psi__;
-        //dg::blas1::transfer(dg::pullback( psi, m_g2d), psi__);
+        //dg::assign(dg::pullback( psi, m_g2d), psi__);
         //dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
         //dg::blas1::plus( u,-psi0);
         //dg::blas1::scal( u, m_c0);
-        //dg::blas1::transfer( u, m_u);
+        //dg::assign( u, m_u);
     }
 
 
@@ -487,7 +487,7 @@ struct Hector : public aGenerator2d
         dg::blas1::pointwiseDot( 1., u_zeta, perp_vol, chi.value(0,0), 0., etaVinv);
         dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
         thrust::host_vector<double> etaVinv_h;
-        dg::blas1::transfer( etaVinv, etaVinv_h);
+        dg::assign( etaVinv, etaVinv_h);
         //now compute v_zeta and v_eta
         container v_zeta(u), v_eta(u);
         dg::blas1::axpby( -1., temp_eta, 0.,v_zeta);

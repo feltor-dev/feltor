@@ -50,6 +50,7 @@ doxygen documentation, READMEs or tex writeups.
  - new polynomial expansion and associated `dg::Horner2d` functor for magnetic flux functions that can in particular approximate any experimental equilibrium
  - new equilibrium, modifier and description fields for tokamak magnetic fields
  - Sign reversal of magnetic field and associated flux functions is now possible
+ - new utility `dg::geo::createAlignmentTensor` and `dg::geo::createProjectionTensor` with respect to the magnetic unit vector
 ### Changed
  - namespace file changed to **dg::file** and exblas changed to **dg::exblas** (for consistency reasons, everything should go into the dg namespace, which in particular reduces the chance for name-clashes to just one, namely 'dg')
  - Moved **variation** member function into **dg::Elliptic** (previously in ArakawaX and Poisson)
@@ -71,7 +72,7 @@ doxygen documentation, READMEs or tex writeups.
  - multistep time-stepper now initialize with Runge-Kutta timesteppers of corresponding order
  - Multigrid nested iteration algorithm now allows accuracies for each stage separately (which can give a significant speed-up)
  - `dg::inverse( bc)` function is now a free-standing function to invert a boundary condition
- - `dg::Elliptic` classes now have `jump_weighting` and `multiply_sigma` member functions
+ - `dg::Elliptic` classes now have `jump_weighting` member function
  - `dg::CG` operator now has a `test-frequency` parameter to control the number of times the error condition is evaluated
  - `dg::Extrapolation` class now has a `derive` member function to interpolate the derivative of the interpolating polynomial
  - Adapt all src and diag projects to changed file and json utilities and the moved variation member
@@ -91,6 +92,7 @@ doxygen documentation, READMEs or tex writeups.
  - remove dg::MemoryTraits and associated dimensionality and memory_category traits in favor of direct host_vector and host_grid typedefs in topology classes
  - old txt input files
  - `dg::geo::DeltaFunction` and `dg::geo::Alpha` for the computation of flux-surface averages no longer needed
+ - dg::blas1::transfer (previously marked deprecated)
 ### Fixed
  - Fix bug: race condition in `dg::blas1::dot` and `dg::blas2::dot` on GPUs that led to hard to reproduce and seemingly unreasonable crashes
  - Fix bug: std namespace in diag/probes.h
@@ -104,6 +106,7 @@ doxygen documentation, READMEs or tex writeups.
  - Fix bug: Fpsi safety-factor works up to the O-point
  - Fix bug: `dg::pushForwardPerp` on functors computed wrong result (only affects `dg::geo::Hector`)
  - Fix bug(s): several bugs in `dg::geo::Hector` which computed wrong grid (happened probably when we changed the grid design to polymorphic)
+ - Fix bug: in perpendicular grid of MPI Curvlinear grid
 
 ## [v5.1]
 ### Added

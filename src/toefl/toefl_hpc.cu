@@ -146,7 +146,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate, transfer, transferD[3]);
     for( int k=0;k<4; k++)
     {
-        dg::blas1::transfer( transferD[k], transferH);
+        dg::assign( transferD[k], transferH);
         dg::file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
     }
     MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
@@ -203,7 +203,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_open(argv[2], NC_WRITE, &ncid);
         for( int k=0;k<4; k++)
         {
-            dg::blas1::transfer( transferD[k], transferH);
+            dg::assign( transferD[k], transferH);
             dg::file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
         }
         MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);

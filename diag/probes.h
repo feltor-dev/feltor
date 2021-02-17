@@ -64,8 +64,8 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
     pol_avg(g, dg::coo2d::y)
 { 
     thrust::host_vector<double> t1, t2;
-    dg::blas1::transfer( x_c, t1);
-    dg::blas1::transfer( y_c, t2);
+    dg::assign( x_c, t1);
+    dg::assign( y_c, t2);
     dg::blas2::transfer( dg::create::interpolation( t1, t2, g, dg::NEU), probe_interp);
     assert(x_coords.size () == y_coords.size());
     std::ofstream of;

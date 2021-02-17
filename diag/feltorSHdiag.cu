@@ -253,7 +253,7 @@ int main( int argc, char* argv[])
         dg::IDMatrix interpne(dg::create::interpolation(xcoo,y0coone, g2d)) ;
         
         dg::blas2::gemv(interpne,npe[0],helper1d); 
-        dg::blas1::transfer( helper1d, transfer1d);
+        dg::assign( helper1d, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[0], start1d, count1d, transfer1d.data());    
         
        //get max position and value(x,y_max) of electron temperature
@@ -268,7 +268,7 @@ int main( int argc, char* argv[])
         dg::IDMatrix interpte(dg::create::interpolation(xcoo,y0coote, g2d)) ;
         
         dg::blas2::gemv(interpte,tpe[0],helper1d); 
-        dg::blas1::transfer( helper1d, transfer1d);
+        dg::assign( helper1d, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[1], start1d, count1d, transfer1d.data());    
         
         
@@ -342,7 +342,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv(polti,phi,helper); 
         dg::blas1::pointwiseDot(helper,helper2,helper);
         dg::blas1::axpby(1.0,helper3,p.mu[1],helper,helper3);
-        dg::blas1::transfer( helper3, transfer2d);
+        dg::assign( helper3, transfer2d);
         err_out = nc_put_vara_double( ncid_out, names2dID[3], start2d, count2d, transfer2d.data());
 
   /*
@@ -361,7 +361,7 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interpti, helper2,helper1d); 
         transfer1d=helper1d;
         err_out = nc_put_vara_double( ncid_out, names1dID[2], start1d, count1d, transfer1d.data());      */
-        dg::blas1::transfer( xcoo, transfer1d);
+        dg::assign( xcoo, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[3],   start1d, count1d,transfer1d.data());       
         
         dg::blas1::transform(npe[0], npe[0], dg::PLUS<double>(-p.bgprofamp - p.nprofileamp));

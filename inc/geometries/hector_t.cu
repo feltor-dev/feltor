@@ -158,7 +158,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::transfer( temp0, X);
+    dg::assign( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::HVec vol = dg::tensor::volume(metric);
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);

@@ -104,11 +104,11 @@ int main(int argc, char**argv)
     double result = dg::blas2::dot( x, vol3d, x);
     std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
 
-    dg::blas1::transfer( error, X );
+    dg::assign( error, X );
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    dg::blas1::transfer( x, X );
+    dg::assign( x, X );
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    dg::blas1::transfer( solution, Y );
+    dg::assign( solution, Y );
     //dg::blas1::axpby( 1., X., -1, Y);
     ncerr = nc_put_var_double( ncid, function2ID, Y.data());
     ncerr = nc_close( ncid);

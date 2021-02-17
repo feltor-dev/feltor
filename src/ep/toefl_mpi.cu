@@ -122,19 +122,19 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         dg::file::put_vara_double( ncid, dataIDs[i], 0, grid_out, transferH);
     }
     //pot
     transfer = test.potential();
     dg::blas2::gemv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     dg::file::put_vara_double( ncid, dataIDs[2], 0, grid_out, transferH );
     //Vor
     transfer = test.potential();
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
     dg::blas2::gemv( interpolate,y1[1], transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     dg::file::put_vara_double( ncid, dataIDs[3], 0, grid_out, transferH );
     if(rank==0)err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     if(rank==0)err = nc_close(ncid);
@@ -191,17 +191,17 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<2; j++)
         {
             dg::blas2::gemv( interpolate, y0[j], transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             dg::file::put_vara_double( ncid, dataIDs[j], i, grid, transferH);
         }
         transfer = test.potential();
         dg::blas2::gemv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         dg::file::put_vara_double( ncid, dataIDs[2], i, grid, transferH );
         transfer = test.potential();
         dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?    
         dg::blas2::gemv( interpolate,y1[1], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         dg::file::put_vara_double( ncid, dataIDs[3], i, grid, transferH );
         if(rank==0)err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         if(rank==0)err = nc_close(ncid);

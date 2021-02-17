@@ -127,20 +127,20 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //pot
     transfer = feltor.potential()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
 
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     //Vor
     transfer = feltor.potential()[0];
     dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
     dg::blas2::symv( interpolate,y1[1], transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     double time = 0;
 
@@ -226,17 +226,17 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = feltor.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         transfer = feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
         dg::blas2::symv( interpolate,y1[1], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
 
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);

@@ -134,7 +134,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
 
-        dg::blas1::transfer(y0[0], hvisual);
+        dg::assign(y0[0], hvisual);
 //         if 
 //         dg::blas1::axpby(1.0,hvisual,
         dg::blas2::gemv( equi, hvisual, visual);
@@ -151,7 +151,7 @@ int main( int argc, char* argv[])
 
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        dg::blas1::transfer(y0[1], hvisual);
+        dg::assign(y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
@@ -170,7 +170,7 @@ int main( int argc, char* argv[])
 //        dvisual=feltor.potential()[0];
 //        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
 //        hvisual = y1[1];
-        dg::blas1::transfer(feltor.potential()[0], hvisual);
+        dg::assign(feltor.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
 
@@ -187,7 +187,7 @@ int main( int argc, char* argv[])
         //transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        dg::blas1::transfer(y1[1], hvisual);
+        dg::assign(y1[1], hvisual);
          //hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );

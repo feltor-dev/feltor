@@ -171,33 +171,33 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i].data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transfer = asela.uparallel()[0];
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     transfer = asela.uparallel()[1];
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     transfer = asela.potential()[0];
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     transfer = asela.aparallel();
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     dg::blas2::gemv( rolkar.laplacianM(), asela.potential()[0], transfer);
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::scal(transferD,-1.0);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[6], start, count, transferH.data() );
     dg::blas2::gemv( rolkar.laplacianM(), asela.aparallel(), transfer);
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[7], start, count, transferH.data() );
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -273,34 +273,34 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<2; j++)
         {
             dg::blas2::gemv( interpolate, y0[j].data(), transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = asela.uparallel()[0];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
         transfer = asela.uparallel()[1];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         transfer = asela.potential()[0];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         transfer = asela.aparallel();
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         dg::blas2::gemv( rolkar.laplacianM(), asela.potential()[0], transfer);
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
         dg::blas1::scal(transferD,-1.0);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[6], start, count, transferH.data() );
         dg::blas2::gemv( rolkar.laplacianM(), asela.aparallel(), transfer);
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[7], start, count, transferH.data() );
         //err = nc_close(ncid); DONT DO IT!
 #ifdef DG_BENCHMARK

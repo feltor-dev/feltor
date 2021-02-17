@@ -132,18 +132,18 @@ int main( int argc, char* argv[])
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid);
     for( unsigned i=0; i<3; i++)
     {   dg::blas2::gemv( interpolate, y0[i], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //Potential
     transfer = toeflI.polarization( y0);
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //Vorticity
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
     dg::blas2::symv( interpolate, y0[1], transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
@@ -201,17 +201,17 @@ int main( int argc, char* argv[])
             err = nc_open(argv[2], NC_WRITE, &ncid);
             for( unsigned j=0; j<3; j++)
             {   dg::blas2::symv( interpolate, y0[j], transferD);
-                dg::blas1::transfer( transferD, transferH);
+                dg::assign( transferD, transferH);
                 err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
             }
             transfer = toeflI.potential()[0];
             dg::blas2::symv( interpolate, transfer, transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
             transfer = toeflI.potential()[0];
             dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?
             dg::blas2::symv( interpolate, y1[1], transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
             err = nc_put_vara_double( ncid, tvarID, start, count, &time);
             err = nc_close(ncid);

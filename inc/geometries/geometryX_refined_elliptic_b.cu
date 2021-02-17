@@ -212,11 +212,11 @@ int main(int argc, char**argv)
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number_di<<"s"<<std::endl;
 
-    dg::blas1::transfer( error_direct, X);
+    dg::assign( error_direct, X);
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    dg::blas1::transfer( x_fine_di, X);
+    dg::assign( x_fine_di, X);
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    dg::blas1::transfer( solutionFINE, Y);
+    dg::assign( solutionFINE, Y);
     //dg::blas1::axpby( 1., X., -1, Y);
     ncerr = nc_put_var_double( ncid, function2ID, Y.data());
     ncerr = nc_close( ncid);

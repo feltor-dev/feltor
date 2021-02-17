@@ -132,7 +132,7 @@ inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_t
  * @copydoc hide_iterations
  * @param source vector to copy
  * @param target (write-only) destination
- * @note in contrast to the (deprecated) \c blas1::transfer functions the \c copy function uses
+ * @note in contrast to the \c dg::assign functions the \c copy function uses
  * the execution policy to determine the implementation and thus works
  * only on types with same execution policy
  * @note catches self-assignment
@@ -611,21 +611,6 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
-///@brief Deprecated: Use \c dg::construct<ContainerType>() instead
-///@attention This function is deprecated! Please replace with \c dg::construct (data transfer between different devices)
-template<class ContainerType, class from_ContainerType>
-inline ContainerType transfer( const from_ContainerType& from)
-{
-    return dg::construct<ContainerType>( from);
-}
-
-///@brief Deprecated: Use \c dg::assign<ContainerType>() instead
-///@attention This function is deprecated! Please replace with either \c dg::blas1::copy (parallel copy between compatible types) or \c dg::assign (data transfer between devices)"
-template<class from_ContainerType, class ContainerType>
-inline void transfer( const from_ContainerType& from, ContainerType& to)
-{
-    dg::assign<from_ContainerType, ContainerType>( from, to);
-}
 ///@}
 }//namespace blas1
 

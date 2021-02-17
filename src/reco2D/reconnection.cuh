@@ -38,7 +38,7 @@ struct Implicit
         p(p),
         LaplacianM_perp  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
-        dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
+        dg::assign( dg::evaluate( dg::zero, g), temp);
     }
         /**
      * @brief Return implicit terms
@@ -231,10 +231,10 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p):
     p(p),  evec(6)
 { 
     ////////////////////////////init temporaries///////////////////
-    dg::blas1::transfer( dg::evaluate( dg::zero, g), chi ); 
-    dg::blas1::transfer( dg::evaluate( dg::zero, g), omega ); 
-    dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
-    dg::blas1::transfer( dg::evaluate( dg::one,  g), one); 
+    dg::assign( dg::evaluate( dg::zero, g), chi ); 
+    dg::assign( dg::evaluate( dg::zero, g), omega ); 
+    dg::assign( dg::evaluate( dg::zero, g), lambda ); 
+    dg::assign( dg::evaluate( dg::one,  g), one); 
     phi.resize(2);apar.resize(2); phi[0] = phi[1] = apar[0]=apar[1] =  chi;
     npe = logn = u = u2 = un =  phi;
     arakawan = arakawau =  phi;
@@ -255,8 +255,8 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p):
         multi_invgamma[u].construct(   multigrid.grid(u), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
     //////////////////////////init weights////////////////////////////
-    dg::blas1::transfer( dg::create::volume(g),     w2d);
-    dg::blas1::transfer( dg::create::inv_volume(g), v2d);
+    dg::assign( dg::create::volume(g),     w2d);
+    dg::assign( dg::create::inv_volume(g), v2d);
 }
 
 
