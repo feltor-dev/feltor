@@ -121,7 +121,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(vol, w2d, vol));
-    if(rank==0)std::cout << "Rel Error of volume form is "<<error<<"\n";
+    if(rank==0)std::cout << "Difference vol - 1/g_xx "<<error<<"\n";
 
     vol = dg::create::volume( g3d);
     dg::MHVec ones3d = dg::evaluate( dg::one, g3d);
