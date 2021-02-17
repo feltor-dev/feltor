@@ -395,6 +395,20 @@ struct FuncDirPer
     double psi0_, psi1_, k_;
     const TokamakMagneticField c_;
 };
+// Variation of FuncDirPer
+struct VariationDirPer
+{
+    VariationDirPer( dg::geo::TokamakMagneticField mag, double psi_0, double psi_1): m_f(mag, psi_0, psi_1,4. ){}
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+
+    double operator()(double R, double Z) const {
+        return m_f.dR( R,Z)*m_f.dR(R,Z) + m_f.dZ(R,Z)*m_f.dZ(R,Z);
+    }
+    private:
+    dg::geo::FuncDirPer m_f;
+};
+
 
 //takes the magnetic field as chi
 struct EllipticDirPerM

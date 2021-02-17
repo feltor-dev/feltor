@@ -71,19 +71,6 @@ struct ArakawaDirPer
     FuncDirPer2 g_;
 };
 
-struct VariationDirPer
-{
-    VariationDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4. ){}
-    double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);}
-
-    double operator()(double R, double Z) const {
-        return f_.dR( R,Z)*f_.dR(R,Z) + f_.dZ(R,Z)*f_.dZ(R,Z);
-    }
-    private:
-    dg::geo::FuncDirPer f_;
-};
-
 struct CurvatureDirPer
 {
     CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c,+1), curvZ(c,+1){}
@@ -121,8 +108,8 @@ int main(int argc, char** argv)
         is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
-    if(rank==0)std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+    if(rank==0)std::cout << "Psi min "<<mag.psip()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     if(rank==0)std::cin >> psi_0>> psi_1;
@@ -136,8 +123,9 @@ int main(int argc, char** argv)
         MPI_Comm planeComm;
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
-    //dg::geo::RibeiroFluxGenerator generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::RibeiroFluxGenerator generator( mag.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::FluxGenerator generator( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::SimpleOrthogonal generator( mag.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(generator, n, Nx, Ny, dg::DIR, dg::PER, planeComm); //2d
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
@@ -145,16 +133,14 @@ int main(int argc, char** argv)
     dg::MDVec vol = dg::create::volume( grid);
     if(rank==0)std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    dg::geo::FuncDirPer left(c, psi_0, psi_1, 4);
-    FuncDirPer2 right( c, psi_0, psi_1);
-    ArakawaDirPer jacobian( c, psi_0, psi_1);
-    VariationDirPer variationLHS(c, psi_0, psi_1);
+    dg::geo::FuncDirPer left(mag, psi_0, psi_1, 4);
+    FuncDirPer2 right( mag, psi_0, psi_1);
+    ArakawaDirPer jacobian( mag, psi_0, psi_1);
 
     const dg::MDVec lhs = dg::pullback( left, grid);
     dg::MDVec jac(lhs);
     const dg::MDVec rhs = dg::pullback( right, grid);
     const dg::MDVec sol = dg::pullback ( jacobian, grid);
-    const dg::MDVec variation = dg::pullback ( variationLHS, grid);
     dg::MDVec eins = dg::evaluate( dg::one, grid);
 
     ///////////////////////////////////////////////////////////////////////
@@ -186,19 +172,12 @@ int main(int argc, char** argv)
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     if(rank==0)std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
-    ///////////////////////////////////////////////////////////////////////
-    if(rank==0)std::cout << "TESTING VARIATION 3D\n";
-    dg::Gradient<Geometry, dg::MDMatrix, dg::MDVec> gradient( grid);
-    gradient.variation( lhs, jac);
-    dg::blas1::axpby( 1., variation, -1., jac);
-    result = dg::blas2::dot( jac, vol, jac);
-    if(rank==0)std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
 
     ////////////////////////////transform curvature components////////
     if(rank==0)std::cout << "TESTING CURVATURE 3D\n";
     dg::MDVec curvX, curvY;
     dg::MHVec tempX, tempY;
-    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(c,+1), dg::geo::CurvatureNablaBZ(c,+1), tempX, tempY, grid);
+    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mag,+1), dg::geo::CurvatureNablaBZ(mag,+1), tempX, tempY, grid);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
     dg::MDMatrix dx, dy;
@@ -211,7 +190,7 @@ int main(int argc, char** argv)
     dg::blas1::pointwiseDot( 1., tempy, curvY, 1.,  tempx);
     norm = dg::blas2::dot( tempx, vol, tempx);
 
-    CurvatureDirPer curv(c, psi_0, psi_1);
+    CurvatureDirPer curv(mag, psi_0, psi_1);
     dg::MDVec curvature;
     dg::blas1::transfer( dg::pullback(curv, grid), curvature);
 
