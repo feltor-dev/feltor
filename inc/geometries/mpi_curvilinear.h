@@ -199,6 +199,9 @@ RealCurvilinearMPIGrid2d<real_type>::RealCurvilinearMPIGrid2d( const RealCurvili
         metric_.values()[i].data().resize(s);
     for( unsigned i=0; i<map_.size(); i++)
         map_[i].data().resize(s);
+    jac_.set_communicator( this->communicator());
+    metric_.set_communicator( this->communicator());
+    map_.set_communicator( this->communicator());
 }
 ///@endcond
 //
