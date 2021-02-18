@@ -1,10 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Only changes in code are reported here, we do not track changes in the
-doxygen documentation, READMEs or tex writeups.
-## [v5.2]
+
+We agreed to updating the master branch on feltor-dev/feltor very seldomnly and only when significant changes merit the effort to brush everything up, document and make
+everyone update their codes as well. We mark those updates with a (pre-)release tag on
+github.
+> Creating a release on github will create an associated archived version
+  on zenodo, so **we reserve releases for when we publish an article**.
+
+We kind of make up our own version numbers right now. A new major version number is often associated with a journal publication, but other than that there is no defined mapping from the amount or kind of change to a version number. 
+[Semantiv versioning](https://semver.org/) might serve as a guideline  but we are
+far away from strictly following it really.
+
+> Only changes in code are reported here, we do not track changes in the
+> doxygen documentation, READMEs or tex writeups.
+
+## [v5.2] More Multistep
 ### Added
  - M100 config file
  - json utility functions `dg::file::get, dg::file::get_idx` in `dg/file/json_utilities.h` which adds a small abstraction layer that gives a user more control over what happens if a variable is not found
@@ -108,7 +119,7 @@ doxygen documentation, READMEs or tex writeups.
  - Fix bug(s): several bugs in `dg::geo::Hector` which computed wrong grid (happened probably when we changed the grid design to polymorphic)
  - Fix bug: in perpendicular grid of MPI Curvlinear grid
 
-## [v5.1]
+## [v5.1] Adaptive Timesteppers
 ### Added
 - dg::Elliptic3d: a three-dimensional version of dg::Elliptic
 - Add 4 parameter symv member to dg::Elliptic class
