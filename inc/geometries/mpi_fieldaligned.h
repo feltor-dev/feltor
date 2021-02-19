@@ -117,7 +117,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     {
         dg::split( global, m_f, *m_g);
         dg::blas1::axpby( scal_left,  m_f[0],                   0., m_left);
-        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()-1], 0., m_left);
+        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()-1], 0., m_right);
         m_bcz = bcz;
     }
 
@@ -419,7 +419,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
 
     //3. apply right boundary conditions in last plane
     unsigned i0=m_Nz-1;
-    if( m_bcz != dg::PER && m_g->z1() == m_g->global().z1())
+    if( m_bcz != dg::PER && m_g->local().z1() == m_g->global().z1())
     {
         if( m_bcz == dg::DIR || m_bcz == dg::NEU_DIR)
             dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
@@ -465,7 +465,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
 
     //3. apply left boundary conditions in first plane
     unsigned i0=0;
-    if( m_bcz != dg::PER && m_g->z0() == m_g->global().z0())
+    if( m_bcz != dg::PER && m_g->local().z0() == m_g->global().z0())
     {
         if( m_bcz == dg::DIR || m_bcz == dg::DIR_NEU)
             dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
