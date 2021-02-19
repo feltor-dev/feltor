@@ -607,7 +607,7 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
             dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
             >::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
+    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 

@@ -8,7 +8,7 @@ namespace dg
 
 
 /**
- * @brief A vector view class, usable in \c dg::blas1 functions
+ * @brief A vector view class, usable in \c dg functions
  *
  * @ingroup view
  * The view class holds a pointer and a size. It does not own the pointer.
@@ -23,7 +23,7 @@ namespace dg
  * you want to use the \c dg::blas1 functions without specializing \c TensorTraits
  * for your own vector class or deep copying data, like the following example demonstrates:
  * @code
-SomeVectorClass vector( 1e6, 20.); //vector of size 1e6, all elements equal 20
+SomeDeviceVectorClass vector( 1e6, 20.); //vector of size 1e6, all elements equal 20
 
 //create a view of a device vector to enable parallel execution
 dg::View<dg::DVec> view( vector.data(), vector.size());
@@ -41,13 +41,13 @@ dg::blas1::copy( 7., view); //elements of vector now equal 7 instead of 20
 template<class ThrustVector >
 struct View
 {
-    using iterator = typename std::conditional<std::is_const<ThrustVector>::value,
+    using iterator = std::conditional_t<std::is_const<ThrustVector>::value,
           typename ThrustVector::const_iterator,
-          typename ThrustVector::iterator>::type;
+          typename ThrustVector::iterator>;
     using const_iterator = typename ThrustVector::const_iterator;
-    using pointer = typename std::conditional<std::is_const<ThrustVector>::value,
+    using pointer = std::conditional_t<std::is_const<ThrustVector>::value,
           typename ThrustVector::const_pointer,
-          typename ThrustVector::pointer>::type;
+          typename ThrustVector::pointer>;
     using const_pointer = typename ThrustVector::const_pointer;
     ///@brief Initialize empty view
     View( void): m_ptr(), m_size(0){}

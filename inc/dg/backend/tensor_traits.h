@@ -28,27 +28,27 @@ template< class Vector, class Enable=void>
 struct TensorTraits;
 
 template<class Vector>
-using get_value_type = typename TensorTraits<typename std::decay<Vector>::type>::value_type;
+using get_value_type = typename TensorTraits<std::decay_t<Vector>>::value_type;
 template<class Vector>
-using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::type >::tensor_category;
+using get_tensor_category = typename TensorTraits< std::decay_t<Vector>>::tensor_category;
 template<class Vector>
-using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
+using get_execution_policy = typename TensorTraits<std::decay_t<Vector>>::execution_policy;
 
 ///@}
 
 ///@cond
 ////////////get element, pointer and data
 template<class T> //T = SharedVector
-using get_pointer_type = typename std::conditional< std::is_const< typename std::remove_reference<T>::type >::value,
-    const get_value_type<T>*, get_value_type<T>* >::type;
+using get_pointer_type = std::conditional_t< std::is_const< std::remove_reference_t<T> >::value,
+    const get_value_type<T>*, get_value_type<T>* >;
 
 template<class T> //T = RecursiveVector
-using get_element_type = typename std::conditional< std::is_const< typename std::remove_reference<T>::type >::value,
-    const typename std::decay<T>::type::value_type&, typename std::decay<T>::type::value_type& >::type;
+using get_element_type = std::conditional_t< std::is_const< std::remove_reference_t<T> >::value,
+    const typename std::decay_t<T>::value_type&, typename std::decay_t<T>::value_type& >;
 
 template<class T>//T = MPIVector
-using get_data_type = typename std::conditional< std::is_const< typename std::remove_reference<T>::type >::value,
-    const typename std::decay<T>::type::container_type&, typename std::decay<T>::type::container_type& >::type;
+using get_data_type = std::conditional_t< std::is_const< std::remove_reference_t<T> >::value,
+    const typename std::decay_t<T>::container_type&, typename std::decay_t<T>::container_type& >;
 
 template<class T>
 inline get_element_type<T> do_get_vector_element( T&& v, unsigned i, RecursiveVectorTag)//-> decltype(v[i]){
@@ -83,19 +83,19 @@ inline T&& do_get_pointer_or_reference( T&& v, AnyScalarTag){
 ///@endcond
 
 //template<class T>
-//inline typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T&&, get_element_type<T> >::type get_vector_element( T&& v, unsigned i )// -> decltype( do_get_vector_element( std::forward<T>(v), i, get_tensor_category<T>()) )
+//inline std::conditional_t<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T&&, get_element_type<T> > get_vector_element( T&& v, unsigned i )// -> decltype( do_get_vector_element( std::forward<T>(v), i, get_tensor_category<T>()) )
 //{
 //    return do_get_vector_element( std::forward<T>(v), i, get_tensor_category<T>());
 //}
 //
 //template<class T>
-//inline typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_data_type<T> >::type get_data( T&& v)//-> decltype(do_get_data( std::forward<T>(v), get_tensor_category<T>() ))
+//inline std::conditional_t<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_data_type<T> > get_data( T&& v)//-> decltype(do_get_data( std::forward<T>(v), get_tensor_category<T>() ))
 //{
 //    return do_get_data( std::forward<T>(v), get_tensor_category<T>());
 //}
 //
 //template<class T>
-//typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_pointer_type<T> >::type get_pointer_or_reference( T&& v )// -> decltype( do_get_pointer_or_reference( std::forward<T>(v), get_tensor_category<T>()))
+//std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_pointer_type<T> > get_pointer_or_reference( T&& v )// -> decltype( do_get_pointer_or_reference( std::forward<T>(v), get_tensor_category<T>()))
 //{
 //    return do_get_pointer_or_reference( std::forward<T>(v), get_tensor_category<T>());
 //}
