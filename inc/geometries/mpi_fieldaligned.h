@@ -102,9 +102,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         m_bcz = bcz;
-        const dg::MPIGrid2d g2d( 0., 1., 0., 1., m_g->global().n(), m_g->global().Nx(), m_g->global().Ny(), m_g->get_perp_comm() );
-        m_left  = dg::evaluate( dg::CONSTANT(left), g2d);
-        m_right = dg::evaluate( dg::CONSTANT(right),g2d);
+        dg::blas1::copy( left, m_left);
+        dg::blas1::copy( right, m_right);
     }
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
@@ -117,8 +116,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
         dg::split( global, m_f, *m_g);
-        dg::blas1::axpby( scal_left, m_f[0],               0., m_left);
-        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()], 0., m_left);
+        dg::blas1::axpby( scal_left,  m_f[0],                   0., m_left);
+        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()-1], 0., m_left);
         m_bcz = bcz;
     }
 

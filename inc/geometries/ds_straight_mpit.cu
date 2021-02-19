@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     if(rank==0)std::cout << "# Test straight field lines and boundaries in z.\n";
     dg::mpi_init3d( dg::DIR, dg::DIR, dg::NEU, n, Nx, Ny, Nz, comm);
     dg::CartesianMPIGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU, comm);
-    dg::CartesianMPIGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR, comm);
+    dg::CartesianMPIGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR, g3d.get_perp_comm());
     if(rank==0)std::cout <<"# You typed\n"
               <<"n:  "<<n<<"\n"
               <<"Nx: "<<Nx<<"\n"
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     ds.set_boundaries( dg::DIR, sin(g3d.z0()),sin(g3d.z1()));
     ds( constfunc, derivative);
     t.toc();
-    std::cout << "Straight:\n";
+    if(rank==0)std::cout << "Straight:\n";
     if(rank==0)std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., constsolution, -1., derivative);
     double norm = dg::blas2::dot( constsolution, w3d, constsolution);

@@ -3,6 +3,7 @@
 #include "grid.h"
 #include "operator.h"
 #include "evaluation.h"
+#include "evaluationX.h"
 #include "dg/functors.h"
 #include "dg/blas1.h"
 
