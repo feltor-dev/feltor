@@ -23,6 +23,19 @@ using DMatrix =  dg::DMatrix;
 using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 using DCooMatrix = cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 
+struct ShearLayer{
+
+    ShearLayer( double rho, double delta, double lx, double ly): m_rho(rho), m_delta(delta), m_lx(lx), m_ly(ly) {}
+    DG_DEVICE
+    double operator()(double x, double y) const{
+    if( x<= m_lx/2.)
+        return m_delta*cos(2.*M_PI*y/m_ly) - 1./m_rho/cosh( (2.*M_PI*x/m_lx-M_PI/2.)/m_rho)/cosh( (2.*M_PI*x/m_lx-M_PI/2.)/m_rho);
+    return m_delta*cos(2.*M_PI*y/m_ly) + 1./m_rho/cosh( (3.*M_PI/2.-2.*M_PI*x/m_lx)/m_rho)/cosh( (3.*M_PI/2.-2.*M_PI*x/m_lx)/m_rho);
+    }
+    private:
+    double m_rho, m_delta, m_lx, m_ly;    
+};
+
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
@@ -50,16 +63,24 @@ int main( int argc, char* argv[])
     poet::Explicit<dg::CartesianGrid2d, DMatrix, DDiaMatrix, DCooMatrix, DVec> ex( grid, p);
     poet::Implicit<dg::CartesianGrid2d, DMatrix, DVec> im( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
-    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     
-//     ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
-    ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
+    //blob initialization
+//     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+//     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+// //     ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+//     ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
+
+    
+    //shear flow
+    ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
+    std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
+    dg::blas1::scal(y0[0], p.amp);
+    ex.invLap_y(y0[0], y1[0]); //phi 
+    dg::blas1::scal(y0[0], 0.);
+    ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
 
 
     //////////////////////////////////////////////////////////////////////
-
-
     dg::Karniadakis< std::vector<DVec> > stepper( y0, y0[0].size(), p.eps_time);
 //     dg::Adaptive<dg::ARKStep<std::vector<DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
 //     dg::Adaptive<dg::ERKStep<std::vector<DVec>>> stepper( "Dormand-Prince-7-4-5", y0);

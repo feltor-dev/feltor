@@ -39,6 +39,20 @@ using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device
 #define MPI_OUT
 #endif //TOEFL_MPI
 
+struct ShearLayer{
+
+    ShearLayer( double rho, double delta, double lx, double ly): m_rho(rho), m_delta(delta), m_lx(lx), m_ly(ly) {}
+    DG_DEVICE
+    double operator()(double x, double y) const{
+    if( x<= m_lx/2.)
+        return m_delta*cos(2.*M_PI*y/m_ly) - 1./m_rho/cosh( (2.*M_PI*x/m_lx-M_PI/2.)/m_rho)/cosh( (2.*M_PI*x/m_lx-M_PI/2.)/m_rho);
+    return m_delta*cos(2.*M_PI*y/m_ly) + 1./m_rho/cosh( (3.*M_PI/2.-2.*M_PI*x/m_lx)/m_rho)/cosh( (3.*M_PI/2.-2.*M_PI*x/m_lx)/m_rho);
+    }
+    private:
+    double m_rho, m_delta, m_lx, m_ly;    
+};
+
+
 int main( int argc, char* argv[])
 {
 #ifdef TOEFL_MPI
@@ -97,17 +111,47 @@ int main( int argc, char* argv[])
         #endif //TOEFL_MPI
     );
     //create RHS
-    poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > exp( grid, p);
+    poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > ex( grid, p);
     poet::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
     /////////////////////create initial vector////////////////////////////////////
-    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-//     exp.gamma1_y(y0[0],y0[1]);
-    exp.gamma1inv_y(y0[0],y0[1]);
+//     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+//     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+// //     ex.gamma1_y(y0[0],y0[1]);
+//     ex.gamma1inv_y(y0[0],y0[1]);
+    
+      ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
+    std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
+    dg::blas1::scal(y0[0], p.amp);
+    ex.invLap_y(y0[0], y1[0]); //phi 
+    dg::blas1::scal(y0[0], 0.);
+    ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);  
+        {
+                size_t start = 0;
+        dg::file::NC_Error_Handle err;
+        int ncid;
+        err = nc_create( "visual.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+        int dim_ids[3], tvarID;
+        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+
+        std::string names[3] = {"ne", "Ni", "phi"};
+        int dataIDs[3];
+        for( unsigned i=0; i<3; i++){
+            err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+
+        dg::HVec transferH(dg::evaluate(dg::zero, grid));
+
+        dg::blas1::transfer( y0[0], transferH);
+        dg::file::put_vara_double( ncid, dataIDs[0], start, grid, transferH);
+        dg::blas1::transfer( y0[1], transferH);
+        dg::file::put_vara_double( ncid, dataIDs[1], start, grid, transferH);
+        dg::blas1::transfer( y1[0], transferH);
+        dg::file::put_vara_double( ncid, dataIDs[2], start, grid, transferH);
+        err = nc_close(ncid); 
+    }
     //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
     dg::Karniadakis< std::vector<DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( exp, imp, time, y0, p.dt);
+    karniadakis.init( ex, imp, time, y0, p.dt);
     y1 = y0;
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
@@ -142,8 +186,8 @@ int main( int argc, char* argv[])
     IDMatrix interpolate = dg::create::interpolation( grid_out, grid);
     dg::blas2::symv( interpolate, y1[0], transferD[0]);
     dg::blas2::symv( interpolate, y1[1], transferD[1]);
-    dg::blas2::symv( interpolate, exp.potential()[0], transferD[2]);
-    dg::blas2::symv( imp.laplacianM(), exp.potential()[0], transfer);
+    dg::blas2::symv( interpolate, ex.potential()[0], transferD[2]);
+    dg::blas2::symv( imp.laplacianM(), ex.potential()[0], transfer);
     dg::blas2::symv( interpolate, transfer, transferD[3]);
     for( int k=0;k<4; k++)
     {
@@ -153,8 +197,8 @@ int main( int argc, char* argv[])
     MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
     MPI_OUT err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
-    const double mass0 = exp.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = exp.energy(), E1 = 0, diff = 0;
+    const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = ex.energy(), E1 = 0, diff = 0;
     dg::Timer t;
     t.tic();
     try
@@ -171,21 +215,21 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            karniadakis.step( exp, imp, time, y1);
+            karniadakis.step( ex, imp, time, y1);
             //store accuracy details
             {
-                MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (exp.mass()-mass0)/mass_blob0<<"\t";
+                MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
                 E0 = E1;
-                E1 = exp.energy();
+                E1 = ex.energy();
                 diff = (E1 - E0)/p.dt;
-                double diss = exp.energy_diffusion( );
+                double diss = ex.energy_diffusion( );
                 MPI_OUT std::cout << "diff: "<< diff<<" diss: "<<diss<<"\t";
                 MPI_OUT std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
             Estart[0] += 1;
             {
                 MPI_OUT err = nc_open(argv[2], NC_WRITE, &ncid);
-                double ener=exp.energy(), mass=exp.mass(), diff=exp.mass_diffusion(), dEdt=exp.energy_diffusion();
+                double ener=ex.energy(), mass=ex.mass(), diff=ex.mass_diffusion(), dEdt=ex.energy_diffusion();
                 MPI_OUT err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
                 MPI_OUT err = nc_put_vara_double( ncid, energyID,   Estart, Ecount, &ener);
                 MPI_OUT err = nc_put_vara_double( ncid, massID,     Estart, Ecount, &mass);
@@ -198,8 +242,8 @@ int main( int argc, char* argv[])
         start = i;
         dg::blas2::symv( interpolate, y1[0], transferD[0]);
         dg::blas2::symv( interpolate, y1[1], transferD[1]);
-        dg::blas2::symv( interpolate, exp.potential()[0], transferD[2]);
-        dg::blas2::symv( imp.laplacianM(), exp.potential()[0], transfer);
+        dg::blas2::symv( interpolate, ex.potential()[0], transferD[2]);
+        dg::blas2::symv( imp.laplacianM(), ex.potential()[0], transfer);
         dg::blas2::symv( interpolate, transfer, transferD[3]);
         MPI_OUT err = nc_open(argv[2], NC_WRITE, &ncid);
         for( int k=0;k<4; k++)
