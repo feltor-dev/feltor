@@ -464,7 +464,7 @@ class KrylovSqrtODEinvert
         m_rhs.set_A(m_Tinv);
 
         //could be replaced by Cauchy sqrt solve
-        unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, 1e-8, 1e-10);
+        unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
         std::cout << "Time iterations  " << time_iter  << "\n";
         dg::blas2::gemv(m_R, m_y, x);  // x =  R T^(-1/2) e_1
 #ifdef DG_BENCHMARK
@@ -573,8 +573,7 @@ class KrylovSqrtCauchyinvert
         //Compute x (with initODE with gemres replacing cg invert)
         m_TinvRpair = m_cgtridiag(m_A, x, m_b, m_A.inv_weights(), m_A.inv_weights(), m_eps, 1.); 
         m_Tinv = m_TinvRpair.first; 
-        m_R    = m_TinvRpair.second;   
-            
+        m_R    = m_TinvRpair.second;               
         
         m_e1.resize(m_cgtridiag.get_iter(), 0);
         m_e1[0] = 1.;
