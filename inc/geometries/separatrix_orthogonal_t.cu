@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     double R_O = gp.R_0, Z_O = 0.;
-    dg::geo::findXpoint( mag.get_psip(), R_O, Z_O);
+    dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
     const double psipmin = mag.psip()(R_O, Z_O);
     std::cout << "Psi min "<<psipmin<<"\n";
     dg::Timer t;
@@ -102,7 +102,7 @@ int main( int argc, char* argv[])
     double psi_0 = -20;
     std::cin >> psi_0;
     std::cout << "Typed "<<psi_0<<"\n";
-    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) 1/4, 1/22 \n";
+    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) 0.25 0.04545454545454545 \n";
     double fx_0=1./4., fy_0=1./22.;
     std::cin >> fx_0>> fy_0;
     std::cout << "Typed "<<fx_0<<" "<<fy_0<<"\n";
