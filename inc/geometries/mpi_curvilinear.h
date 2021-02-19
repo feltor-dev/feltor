@@ -207,7 +207,8 @@ RealCurvilinearMPIGrid2d<real_type>::RealCurvilinearMPIGrid2d( const RealCurvili
         m_metric.values()[i].set_communicator( comm, comm_mod, comm_mod_reduce);
     }
     // we rely on the fact that the 3d grid uses square to compute its metric
-    // so the (2,2) entry is value 3 that we need to set to 1
+    // so the (2,2) entry is value 3 that we need to set to 1 (for the
+    // create::volume function to work properly)
     dg::blas1::copy( 1., m_metric.values()[3]);
     for( unsigned i=0; i<m_map.size(); i++)
     {

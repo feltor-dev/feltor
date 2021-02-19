@@ -23,6 +23,22 @@ namespace dg
 * The integers represent a gather index into a stored array of containers.
 * In this way duplicate entries are stored only once, which helps to
 * avoid unnecessary memory accesses.
+* For example an orthogonal metric is represented as follows
+* \f[
+* \begin{pmatrix}
+* g^{xx} & 0 & 0\\
+* 0 & g^{yy} & 0 \\
+* 0 & 0 & g^{zz}
+* \end{pmatrix}
+* \quad\rightarrow\quad
+* \text{idx} = \begin{pmatrix}
+* 1 & 0 & 0 \\
+* 0 & 2 & 0 \\
+* 0 & 0 & 3
+* \end{pmatrix} \quad \text{values} = \begin{pmatrix}
+* 0 & g^{xx} & g^{yy} & g^{zz}
+* \end{pmatrix}
+* \f]
 * @tparam container must be default constructible and copyable.
 * @ingroup sparsematrix
 */

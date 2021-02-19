@@ -210,6 +210,7 @@ namespace create{
 ///@{
 
 
+//Note that for the volume function to work properly all 2d grids must set the g_22 element to 1!!
 
 /**
  * @brief Create the volume element on the grid (including weights!!)

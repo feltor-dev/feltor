@@ -222,7 +222,8 @@ RealCurvilinearGrid2d<real_type>::RealCurvilinearGrid2d( RealCurvilinearProductG
     m_jac=g.jacobian();
     m_metric=g.metric();
     // we rely on the fact that the 3d grid uses square to compute its metric
-    // so the (2,2) entry is value 3 that we need to set to 1
+    // so the (2,2) entry is value 3 that we need to set to 1 (for the
+    // create::volume function to work properly)
     dg::blas1::copy( 1., m_metric.values()[3]);
     m_map.pop_back();
 }
