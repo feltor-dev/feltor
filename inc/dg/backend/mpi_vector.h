@@ -323,6 +323,8 @@ struct NearestNeighborComm
     {
         MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
 #ifdef _DG_CUDA_UNAWARE_MPI
+    if( std::is_same< get_execution_policy<Vector>, CudaTag>::value ) //could be serial tag
+    {
         unsigned size = buffer_size();
         cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
                     thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]), //src
@@ -331,6 +333,7 @@ struct NearestNeighborComm
         cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
                     thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]), //src
                     size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
+    }
 #endif
     }
     private:
@@ -487,14 +490,17 @@ void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_poi
 {
     unsigned size = buffer_size();
 #ifdef _DG_CUDA_UNAWARE_MPI
-    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
-        sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
-        sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-    sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
-    sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
-    rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
-    rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
+    if( std::is_same< get_execution_policy<V>, CudaTag>::value ) //could be serial tag
+    {
+        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
+            sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
+        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
+            sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
+        sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
+        sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
+        rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
+        rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
+    }
 //This is a mistake if called with a host_vector
 #endif
     MPI_Isend( sb1_ptr, size,

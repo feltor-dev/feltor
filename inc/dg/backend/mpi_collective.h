@@ -108,7 +108,8 @@ void Collective<Index, Device>::scatter( const Device& values, Device& store) co
 {
     //assert( store.size() == store_size() );
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize(); //needs to be called
+    if( std::is_same< get_execution_policy<Device>, CudaTag>::value ) //could be serial tag
+        cudaDeviceSynchronize(); //needs to be called
 #endif //THRUST_DEVICE_SYSTEM
 #ifdef _DG_CUDA_UNAWARE_MPI
     m_values.data() = values;
@@ -138,7 +139,8 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
     //assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize(); //needs to be called
+    if( std::is_same< get_execution_policy<Device>, CudaTag>::value ) //could be serial tag
+        cudaDeviceSynchronize(); //needs to be called
 #endif //THRUST_DEVICE_SYSTEM
 #ifdef _DG_CUDA_UNAWARE_MPI
     m_store.data() = gatherFrom;
