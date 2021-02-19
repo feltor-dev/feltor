@@ -118,6 +118,8 @@ far away from strictly following it really.
  - Fix bug: `dg::pushForwardPerp` on functors computed wrong result (only affects `dg::geo::Hector`)
  - Fix bug(s): several bugs in `dg::geo::Hector` which computed wrong grid (happened probably when we changed the grid design to polymorphic)
  - Fix bug: in perpendicular grid of MPI Curvlinear grid
+ - Fix bug: missing direction initialization in mpi fieldaligned class
+ - Fix bug: non-zero parallel boundary condition in mpi fieldaligned
 
 ## [v5.1] Adaptive Timesteppers
 ### Added
