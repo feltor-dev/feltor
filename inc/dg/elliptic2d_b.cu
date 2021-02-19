@@ -157,8 +157,8 @@ int main()
     pol_forward.variation( 1., chi, x, 0., error);
     dg::blas1::axpby( 1., variatio, -1., error);
     err = dg::blas2::dot( w2d, error);
-    norm = dg::blas2::dot( w2d, variatio);
-    std::cout << " "<<sqrt( err/norm) << "\n";
+    const double norm_var = dg::blas2::dot( w2d, variatio);
+    std::cout << " "<<sqrt( err/norm_var) << "\n";
     }
 
     {

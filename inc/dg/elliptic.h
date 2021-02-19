@@ -17,6 +17,10 @@
   */
 namespace dg
 {
+// Note that there are many tests for this file : elliptic2d_b,
+// elliptic2d_mpib, elliptic_b, elliptic_mpib, ellipticX2d_b
+// And don't forget inc/geometries/elliptic3d_t (testing alignment and
+// projection tensors as Chi)
 
 /**
  * @brief A 2d negative elliptic differential operator \f$ -\nabla \cdot ( \mathbf{\chi}\cdot \nabla ) \f$
