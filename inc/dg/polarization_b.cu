@@ -308,14 +308,11 @@ int main()
 //         std::cout << "abs error " << res.d<<"\t"<<res.i<<std::endl;
 //         std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
 //     }
-// 
 //    
-//     
-//     
     {
         std::cout << "#####ff polarization charge chi initialization test\n";
         //TODO converges very slowly (linearly)
-        dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered, 1.0, false);
+        dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered, 1.0, true);
 
         Container rho_cold = dg::evaluate(rho_ana_FF_cold, grid2d);
         Container phi_cold = dg::evaluate(phi_ana_FF_cold, grid2d);
@@ -323,18 +320,18 @@ int main()
         dg::AndersonAcceleration<Container> acc( x, 10);
 
         polN.set_phi(phi_cold);
-//         dg::blas1::scal(x, 0.0);
-//         dg::blas1::plus(x,1.); //x solution must be positive
+        dg::blas1::scal(x, 0.0);
+        dg::blas1::plus(x, 1.0); //x solution must be positive
 
-            dg::blas1::copy(chi, x); //solution as guess works
-        dg::blas1::scal(x,0.99); //x solution must be positive
+//      dg::blas1::copy(chi, x); //solution as guess works
+//      dg::blas1::scal(x,0.99); //x solution must be positive
 
         double eps = 1e-5;
         double damping = 1e-9;
         unsigned restart = 10;
         std::cout << "Type eps (1e-5), damping (1e-9) and restart (10) \n";
         std::cin >> eps >> damping >> restart;
-        std::cout << "Number of iterations "<< acc.solve( polN, x, rho_cold, w2d, eps, eps*eps, grid2d.size(), damping, restart, true)<<std::endl;
+        std::cout << "Number of iterations " << acc.solve( polN, x, rho_cold, w2d, eps, eps, grid2d.size(), damping, restart, true) << std::endl;
         dg::blas1::axpby( 1., chi, -1., x, error);
 
         res.d = sqrt( dg::blas2::dot( w2d, error));
@@ -355,11 +352,11 @@ int main()
 
         dg::HVec transferH(dg::evaluate(dg::zero, grid2d));
 
-        dg::blas1::transfer( x, transferH);
+        dg::assign( x, transferH);
         dg::file::put_vara_double( ncid, dataIDs[0], start, grid2d, transferH);
-        dg::blas1::transfer( chi, transferH);
+        dg::assign( chi, transferH);
         dg::file::put_vara_double( ncid, dataIDs[1], start, grid2d, transferH);
-        dg::blas1::transfer( error, transferH);
+        dg::assign( error, transferH);
         dg::file::put_vara_double( ncid, dataIDs[2], start, grid2d, transferH);
         err = nc_close(ncid); 
     }

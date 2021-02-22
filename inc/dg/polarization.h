@@ -458,11 +458,8 @@ class PolChargeN
         dg::assign( dg::create::inv_weights(g),   m_precond);
         m_temp = m_phi= m_tempx = m_tempy = m_inv_weights ;
         m_chi=g.metric();
-        m_metric=g.metric();
-        m_vol=dg::tensor::volume(m_chi);
-        dg::tensor::scal( m_chi, m_vol);
+        m_sigma = m_vol = dg::tensor::volume(m_chi);
         dg::assign( dg::create::weights(g), m_weights_wo_vol);
-        dg::assign( dg::evaluate(dg::one, g), m_sigma);
     }
 
     /**
@@ -534,23 +531,7 @@ class PolChargeN
      * @return Whether the weighting of jump terms with chi is enabled. Either true or false.
      */
     bool get_jump_weighting() const {return m_chi_weight_jump;}
-    /**
-     * @brief Compute the total variation integrand
-     *
-     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
-     * in the plane of a 2x1 product space
-     * @param phi function
-     * @param varphi may equal phi, contains result on output
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
-    template<class ContainerType0, class ContainerType1>
-    void variation( const ContainerType0& phi, ContainerType1& varphi)
-    {
-        blas2::symv( m_rightx, phi, m_tempx);
-        blas2::symv( m_righty, phi, m_tempy);
-        tensor::multiply2d( m_metric, m_tempx, m_tempy, varphi, m_temp);
-        blas1::pointwiseDot( 1., varphi, m_tempx, 1., m_temp, m_tempy, 0., varphi);
-    }
+
     /**
      * @brief Compute elliptic term and store in output
      *
@@ -589,22 +570,16 @@ class PolChargeN
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
     {
-        
-//         dg::blas1::pointwiseDivide( x, m_sigma, m_tempx);
+        dg::blas1::pointwiseDot( x, m_vol, m_sigma);
         //update preconditioner
-//         dg::blas1::pointwiseDivide( m_precond, x, m_precond);
+        dg::blas1::pointwiseDivide( m_inv_weights, x, m_precond);
         
-        m_chi = m_metric;
-        dg::tensor::scal( m_chi, m_vol);
-        dg::tensor::scal( m_chi, x);
-//         dg::blas1::copy( x, m_sigma);
-
         //compute gradient
         dg::blas2::gemv( m_rightx, m_phi, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, m_phi, m_tempy); //R_y*f
 
         //multiply with tensor (note the alias)
-        dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
+        dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
 
         //now take divergence
         dg::blas2::symv( m_lefty, m_tempy, m_temp);
@@ -613,10 +588,10 @@ class PolChargeN
         //add jump terms
         if(m_chi_weight_jump)
         {
-            dg::blas2::symv( m_jfactor, m_jumpX, m_phi, 0., m_tempx);
-            dg::blas2::symv( m_jfactor, m_jumpY, m_phi, 0., m_tempy);
-            dg::tensor::multiply2d(m_chi, m_tempx, m_tempy, m_tempx, m_tempy);
-            dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+                dg::blas2::symv( m_jfactor, m_jumpX, m_phi, 0., m_tempx);
+                dg::blas2::symv( m_jfactor, m_jumpY, m_phi, 0., m_tempy);
+                dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
+                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
         } 
         else
         {

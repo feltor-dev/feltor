@@ -45,17 +45,11 @@ int main()
 
 	std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
-<<<<<<< HEAD
     std::cin >> eps >> jfactor;
     bool jump_weight;
     std::cout << "Jump weighting on or off? Type 1 for true or 0 for false: \n";
     std::cin >> jump_weight;
-=======
-    std::cin >> eps >> jfactor;*/
-    bool jump_weight = false;
-    //std::cout << "Jump weighting on or off? Type 1 for true or 0 for false (default): \n";
-    //std::cin >> jump_weight;
->>>>>>> 454cb78db205bad7b5d66645c497ae60063d57ff
+
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
@@ -142,14 +136,9 @@ int main()
     std::cout << "L2 Norm of relative error in derivative is\n "<<std::setprecision(16)<< sqrt( err/norm_der)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
 
-<<<<<<< HEAD
     
 
     
-=======
-    }
-
->>>>>>> 454cb78db205bad7b5d66645c497ae60063d57ff
     {
     std::cout << "Forward Elliptic\n";
     x = temp;
