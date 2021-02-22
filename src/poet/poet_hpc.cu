@@ -140,11 +140,11 @@ int main( int argc, char* argv[])
 
         dg::HVec transferH(dg::evaluate(dg::zero, grid));
 
-        dg::blas1::transfer( y0[0], transferH);
+        dg::assign( y0[0], transferH);
         dg::file::put_vara_double( ncid, dataIDs[0], start, grid, transferH);
-        dg::blas1::transfer( y0[1], transferH);
+        dg::assign( y0[1], transferH);
         dg::file::put_vara_double( ncid, dataIDs[1], start, grid, transferH);
-        dg::blas1::transfer( y1[0], transferH);
+        dg::assign( y1[0], transferH);
         dg::file::put_vara_double( ncid, dataIDs[2], start, grid, transferH);
         err = nc_close(ncid); 
     }
@@ -191,7 +191,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate, transfer, transferD[3]);
     for( int k=0;k<4; k++)
     {
-        dg::blas1::transfer( transferD[k], transferH);
+        dg::assign( transferD[k], transferH);
         dg::file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
     }
     MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
@@ -248,7 +248,7 @@ int main( int argc, char* argv[])
         MPI_OUT err = nc_open(argv[2], NC_WRITE, &ncid);
         for( int k=0;k<4; k++)
         {
-            dg::blas1::transfer( transferD[k], transferH);
+            dg::assign( transferD[k], transferH);
             dg::file::put_vara_double( ncid, dataIDs[k], start, grid_out, transferH);
         }
         MPI_OUT err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);

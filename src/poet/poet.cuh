@@ -131,7 +131,7 @@ struct Explicit
         //ff-Pol term
         if( equations == "ff-lwl" || equations == "ff-O2" || equations == "ff-O4")
         {
-            dg::blas1::transfer( ne, m_chi);
+            dg::assign( ne, m_chi);
             dg::blas1::plus( m_chi, 1.);
             dg::blas1::pointwiseDot( m_binv, m_chi, m_chi); //\chi = n_e
             dg::blas1::pointwiseDot( m_binv, m_chi, m_chi); //\chi *= m_binv^2
@@ -331,7 +331,7 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
     //Compute chi and m_iota for global models
     if( equations == "ff-lwl" || equations == "ff-O2" || equations == "ff-O4")
     {
-        dg::blas1::transfer( y[1], m_chi);
+        dg::assign( y[1], m_chi);
         dg::blas1::plus( m_chi, 1.);
         dg::blas1::pointwiseDot( m_binv, m_chi, m_chi); //\chi = n_i
         dg::blas1::pointwiseDot( m_binv, m_chi, m_chi); //\chi *= m_binv^2
