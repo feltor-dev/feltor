@@ -73,8 +73,8 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        //std::ifstream is("geometry_params_Xpoint_taylor.js");
-        std::ifstream is("geometry_params_Xpoint.js");
+        //std::ifstream is("geometry_params_Xpoint_taylor.json");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -155,11 +155,11 @@ int main( int argc, char* argv[])
 
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    dg::blas1::transfer( temp0, X);
+    dg::assign( temp0, X);
     err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, defID, X.data());
-    dg::blas1::transfer( vol, X);
-    dg::blas1::transfer( g_yy,Y);
+    dg::assign( vol, X);
+    dg::assign( g_yy,Y);
     dg::blas1::pointwiseDot( Y, X, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, volID, X.data());
@@ -170,7 +170,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
     dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    dg::blas1::transfer( g_xx,  temp1);
+    dg::assign( g_xx,  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
     double error = sqrt( dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( temp1, w2d, temp1));
@@ -182,14 +182,14 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::transfer( temp0, X);
+    dg::assign( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     //compare g^xx to volume form
-    dg::blas1::transfer( g_xx, temp0);
+    dg::assign( g_xx, temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(vol, w2d, vol));

@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
         //plot electrons
-        dg::blas1::transfer( y0[0], hvisual);
+        dg::assign( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -116,7 +116,7 @@ int main( int argc, char* argv[])
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
-        dg::blas1::transfer( y0[1], hvisual);
+        dg::assign( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -125,7 +125,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw Potential
-        dg::blas1::transfer( asela.potential()[0], hvisual);
+        dg::assign( asela.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //transform to Vor
         //dvisual=asela.potential()[0];
@@ -141,7 +141,7 @@ int main( int argc, char* argv[])
         //draw Vor
         dvisual=asela.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        dg::blas1::transfer( y1[1], hvisual);
+        dg::assign( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         dg::blas1::scal(visual,-1.0);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
@@ -151,7 +151,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw U_e
-        dg::blas1::transfer( asela.uparallel()[0], hvisual);
+        dg::assign( asela.uparallel()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -159,7 +159,7 @@ int main( int argc, char* argv[])
          render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_i
-        dg::blas1::transfer( asela.uparallel()[1], hvisual);
+        dg::assign( asela.uparallel()[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -167,7 +167,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw a parallel
-        dg::blas1::transfer(asela.aparallel(), hvisual);
+        dg::assign(asela.aparallel(), hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );
         colors.scalemin() = - colors.scalemax();
@@ -177,7 +177,7 @@ int main( int argc, char* argv[])
          //draw j_par
         dvisual=asela.aparallel();
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        dg::blas1::transfer( y1[1], hvisual);
+        dg::assign( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );

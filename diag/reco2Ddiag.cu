@@ -65,7 +65,7 @@ int main( int argc, char* argv[])
     steps-=1;
     imax = steps/p.itstp;
     double deltaT = p.dt*p.itstp;     //define timestep
-    double apar0=0.,gamma=0.,psiX=0.,logpsiX=0.,logpsiXold=0.;
+    double gamma=0.,psiX=0.,logpsiX=0.,logpsiXold=0.;
 
     for( unsigned i=imin; i<=imax; i++)//timestepping
     {
@@ -84,7 +84,6 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interp, apar, aparx0y0);
             
         
-//         apar0=aparx0y0[0];
         dg::blas2::gemv(interp, apareq, apareqx0y0);
             
 //            std::cout << time << " " <<  aparx0y0[0]<< " " << apareqx0y0[0] <<"\n";

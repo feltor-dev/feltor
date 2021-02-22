@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::transfer( temp0, X);
+    dg::assign( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));

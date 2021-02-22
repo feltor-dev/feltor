@@ -101,7 +101,7 @@ struct aRealMPIGeometry3d : public aRealMPITopology3d<real_type>
     }
 };
 
-///@brief a 3d product space MPI Geometry
+///@copydoc aRealProductGeometry3d
 template<class real_type>
 struct aRealProductMPIGeometry3d : public aRealMPIGeometry3d<real_type>
 {

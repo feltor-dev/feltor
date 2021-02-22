@@ -139,7 +139,7 @@
  *          @defgroup binary_operators blas1::evaluate binary operators
  *              Binary subroutines for the dg::blas1::evaluate function
  *
- *          @defgroup variadic_evaluates blas1::evaluate variadic subroutines
+ *          @defgroup variadic_evaluates blas1::evaluate variadic functors
  *              Functors to use in the dg::blas1::evaluate function
  *
  *          @defgroup variadic_subroutines blas1::subroutine subroutines
@@ -190,7 +190,7 @@
   */
   /** @class hide_geometry
   * @tparam Geometry
-  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...).
+  * A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...).
   */
 
   /** @class hide_container_geometry
@@ -206,7 +206,7 @@
 
   /** @class hide_geometry_matrix_container
   * @tparam Geometry
-  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
+  * A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
   * @tparam Matrix
   * A class for which the blas2 functions are callable in connection with the \c Container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
   * The \c Matrix type can be one of:
@@ -222,15 +222,15 @@
   *  - \c dg::MHVec or \c dg::MDVec when \c Geometry is one of the MPI geometries
   */
 
- /** @class hide_symmetric_op
+/** @class hide_symmetric_op
  * @tparam SymmetricOp
- A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
- with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
- need to be callable and return inverse weights and the preconditioner for the conjugate
- gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
- @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
-  and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
-  */
+ * A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
+ * with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
+ * need to be callable and return inverse weights and the preconditioner for the conjugate
+ * gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
+ * @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
+ * and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
+ */
 
 /*! @mainpage Introduction
  *

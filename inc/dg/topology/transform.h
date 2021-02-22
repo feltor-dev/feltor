@@ -8,9 +8,10 @@
 namespace dg
 {
 /**
- * @brief Pull back a function defined in physical coordinates to the curvilinear (computational) coordinate system
+ * @brief \f$ f_i = f( x(\zeta_i, \eta_i), y(\zeta_i, \eta_i))\f$
  *
- * Pullback is equivalent to the following:
+ * Pull back a function defined in physical coordinates to the curvilinear (computational) coordinate system.
+ * The pullback is equivalent to the following:
  *
  * -# generate the list of physical space coordinates (e.g. in 2d \f$ x_i = x(\zeta_i, \eta_i),\ y_i = y(\zeta_i, \eta_i)\f$ for all \c i) using the map member of the grid e.g. aRealGeometry2d::map()
  * -#  evaluate the given function or functor at these coordinates and store the result in the output vector (e.g. in 2d  \f$ v_i = f(x_i,y_i)\f$ for all \c i)
@@ -38,8 +39,11 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry2d
     return vec;
 }
 
-///@copydoc pullback(const Functor&,const aRealGeometry2d&)
-///@ingroup pullback
+/**
+ * @brief \f$ f_i = f( x(\zeta_i, \eta_i, \nu_i), y(\zeta_i, \eta_i, \nu_i), z(\zeta_i,\eta_i,\nu_i))\f$
+ * @copydetails pullback(const Functor&,const aRealGeometry2d&)
+ * @ingroup pullback
+ */
 template< class Functor, class real_type>
 thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry3d<real_type>& g)
 {
@@ -64,8 +68,11 @@ MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aR
     return MPI_Vector<thrust::host_vector<real_type> >( vec, g.communicator());
 }
 
-///@copydoc pullback(const Functor&,const aRealGeometry2d&)
-///@ingroup pullback
+/**
+ * @brief \f$ f_i = f( x(\zeta_i, \eta_i, \nu_i), y(\zeta_i, \eta_i, \nu_i), z(\zeta_i,\eta_i,\nu_i))\f$
+ * @copydetails pullback(const Functor&,const aRealGeometry2d&)
+ * @ingroup pullback
+ */
 template< class Functor, class real_type>
 MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry3d<real_type>& g)
 {
@@ -79,10 +86,12 @@ MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aR
 #endif //MPI_VERSION
 
 /**
- * @brief Push forward a vector from cylindrical or Cartesian to a new coordinate system
+ * @brief \f$ \bar v = J v\f$
  *
- * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
-                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
+ * Push forward a vector from cylindrical or Cartesian to a new coordinate system.
+ * Applies the Jacobian matrix \f$ {\bar v} = J  v\f$:
+ * \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
+       v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
@@ -108,10 +117,12 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
 }
 
 /**
- * @brief Push forward a vector from cylindrical or Cartesian to a new coordinate system
+ * @brief \f$ {\bar v} = J  v\f$
  *
- * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
-                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
+ * Push forward a vector from cylindrical or Cartesian to a new coordinate system.
+ * Applies the Jacobian matrix \f$ {\bar v} = J  v\f$:
+ * \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
+       v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
@@ -142,12 +153,14 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
 }
 
 /**
- * @brief Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system
+ * @brief \f$ \bar \chi = J \chi J^T\f$
  *
- * Computes \f[
- \chi^{xx}(x,y) = x_R x_R \chi^{RR} + 2x_Rx_Z \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
- \chi^{xy}(x,y) = x_R x_R \chi^{RR} + (x_Ry_Z+y_Rx_Z) \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
- \chi^{yy}(x,y) = y_R y_R \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Zy_Z\chi^{ZZ} \\
+ * Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system.
+ * Applies the Jacobian matrix \f$ \bar \chi = J \chi J^T\f$:
+ *\f[
+ \chi^{xx}(x,y) = x_R^2 \chi^{RR} + 2x_Rx_Z \chi^{RZ} + x_Z^2\chi^{ZZ} \\
+ \chi^{xy}(x,y) = x_Ry_R \chi^{RR} + (x_Ry_Z+y_Rx_Z) \chi^{RZ} + x_Zy_Z\chi^{ZZ} \\
+ \chi^{yy}(x,y) = y_R^2 \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Z^2\chi^{ZZ} \\
                \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam FunctorRR Binary or Ternary functor
@@ -183,15 +196,13 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
     chi.idx(2,2)=1;
     chi.values() = values;
     //we do not need 3rd dimension here
-
     container tmp00(jac.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
-    // multiply Chi*t -> tmp
-    dg::tensor::multiply2d( chi, jac.value(0,0), jac.value(1,0), tmp00, tmp10);
-    dg::tensor::multiply2d( chi, jac.value(0,1), jac.value(1,1), tmp01, tmp11);
-    // multiply tT * tmp -> Chi
-    SparseTensor<container> transpose = jac.transpose();
-    dg::tensor::multiply2d( transpose, tmp00, tmp01, chi.values()[2], chi.values()[3]);
-    dg::tensor::multiply2d( transpose, tmp10, tmp11, chi.values()[3], chi.values()[4]);
+    // multiply Chi*J^T -> tmp ( Matrix-Matrix multiplication: "line x column")
+    dg::tensor::multiply2d( chi, jac.value(0,0), jac.value(0,1), tmp00, tmp10);
+    dg::tensor::multiply2d( chi, jac.value(1,0), jac.value(1,1), tmp01, tmp11);
+    // multiply J * tmp -> Chi
+    dg::tensor::multiply2d( jac, tmp00, tmp10, chi.values()[2], chi.values()[3]);
+    dg::tensor::multiply2d( jac, tmp01, tmp11, chi.values()[3], chi.values()[4]);
 }
 
 namespace create{
@@ -199,6 +210,7 @@ namespace create{
 ///@{
 
 
+//Note that for the volume function to work properly all 2d grids must set the g_22 element to 1!!
 
 /**
  * @brief Create the volume element on the grid (including weights!!)

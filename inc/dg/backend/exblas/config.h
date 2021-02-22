@@ -104,7 +104,7 @@ struct ValueTraits<T*>
     using value_type = T;
 };
 template<class U>
-using has_floating_value = typename std::conditional< std::is_floating_point<typename ValueTraits<U>::value_type>::value, std::true_type, std::false_type>::type;
+using has_floating_value = std::conditional_t< std::is_floating_point<typename ValueTraits<U>::value_type>::value, std::true_type, std::false_type>;
 ///@endcond
 
 }//namespace exblas

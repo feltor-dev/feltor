@@ -12,7 +12,7 @@ namespace dg
 
 ///@brief prototypical Shared Vector with Serial Tag
 template<class T>
-struct TensorTraits<thrust::host_vector<T> >//, typename std::enable_if< std::is_arithmetic<T>::value>::type>
+struct TensorTraits<thrust::host_vector<T> >//, std::enable_if_t< std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;
@@ -20,7 +20,7 @@ struct TensorTraits<thrust::host_vector<T> >//, typename std::enable_if< std::is
 };
 //template<class T>
 //struct TensorTraits<thrust::host_vector<T>,
-//    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+//    std::enable_if_t< !std::is_arithmetic<T>::value>>
 //{
 //    using value_type        = get_value_type<T>;
 //    using tensor_category   = RecursiveVectorTag;
@@ -29,7 +29,7 @@ struct TensorTraits<thrust::host_vector<T> >//, typename std::enable_if< std::is
 
 ///@brief prototypical Shared Vector with Cuda or Omp Tag
 template<class T>
-struct TensorTraits<thrust::device_vector<T> >//, typename std::enable_if<std::is_arithmetic<T>::value>::type>
+struct TensorTraits<thrust::device_vector<T> >//, std::enable_if_t<std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;

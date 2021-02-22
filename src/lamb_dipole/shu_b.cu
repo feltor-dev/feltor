@@ -4,7 +4,6 @@
 #include <thrust/host_vector.h>
 
 #include "dg/algorithm.h"
-#include "dg/file/json_utilities.h"
 
 #ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
@@ -138,7 +137,7 @@ int main( int argc, char* argv[])
             dg::blas2::symv( equidistant, y0, visual);
             colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
             //draw and swap buffers
-            dg::blas1::transfer( visual, hvisual);
+            dg::assign( visual, hvisual);
             render.renderQuad( hvisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
             title << "Time "<<time<< " \ttook "<<t.diff()/(double)itstp<<"\t per step";
             glfwSetWindowTitle(w, title.str().c_str());

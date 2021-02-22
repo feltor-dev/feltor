@@ -59,8 +59,8 @@ int main( int argc, char* argv[])
     dg::Grid1d g1dx_f( kxmin, kxmax,1., Nkx,  p.bc_x);
     dg::Grid1d g1dy_f( kymin, kymax,1., Nky,  p.bc_y);
     
-    unsigned i_mode = 0;
-    unsigned j_mode = 1*p.sigma;
+    //unsigned i_mode = 0;
+    //unsigned j_mode = 1*p.sigma;
 
     //2d field netcdf vars of input.nc
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};

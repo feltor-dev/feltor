@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
         title << std::setprecision(2) << std::scientific;
         for( unsigned i=0; i<y0.size(); i++)
         {
-            dg::blas1::transfer( y0[i], hvisual);
+            dg::assign( y0[i], hvisual);
             dg::blas2::gemv( equi, hvisual, visual);
             //compute the color scale
             colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -143,7 +143,7 @@ int main( int argc, char* argv[])
         }
         //transform phi
         dg::blas2::gemv( laplacianM, toeflI.potential()[0], y0[1]);
-        dg::blas1::transfer( y0[1], hvisual);
+        dg::assign( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

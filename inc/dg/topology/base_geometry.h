@@ -161,7 +161,20 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     }
 };
 
-///@brief a 3d product space Geometry
+/**
+ * @brief A 3d product space Geometry \f$ g_{2d} \otimes g_{1d}\f$
+ *
+ * This class represents a product space of a 2d grid (the "perp_grid") and a 1d
+ * grid (the "parallel_grid").
+ * The special feature of the product space is that the metric is simply
+ * \f[ g = \begin{pmatrix}
+ *  (g_{2d}(x,y)) & 0 \\
+ *  0 & g_{1d}(x,y)
+ * \end{pmatrix}
+ * \f]
+ * That is the metric elements do not depend on the third coordinate.
+ * @tparam real_type The value type of the grid
+ */
 template<class real_type>
 struct aRealProductGeometry3d : public aRealGeometry3d<real_type>
 {

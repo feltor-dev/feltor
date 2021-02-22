@@ -38,7 +38,7 @@ struct MPI_Vector
     /**
      * @brief construct a vector
      *
-     * calls \c exblas::mpi_reduce_communicator() (collective call)
+     * calls \c dg::exblas::mpi_reduce_communicator() (collective call)
      * @param data internal data copy
      * @param comm MPI communicator (may not be \c MPI_COMM_NULL)
      */
@@ -80,8 +80,18 @@ struct MPI_Vector
      * @return returns MPI_COMM_NULL to processes not part of that group
      */
     MPI_Comm communicator_mod_reduce() const{return m_comm128Reduce;}
+
     /**
-    * @brief Set the communicators with \c exblas::mpi_reduce_communicator
+    * @brief Set the communicators with \c dg::exblas::mpi_reduce_communicator
+    *
+    * The reason why you can't just set the comm and need three parameters is
+    * that generating communicators involves communication, which you might want to
+    * avoid when you do it many times. So you have to call the function as
+    * @code
+    * MPI_Comm comm = MPI_COMM_WORLD, comm_mod, comm_mod_reduce;
+    * dg::exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_mod_reduce);
+    * mpi_vector.set_communicator( comm, comm_mod, comm_mod_reduce);
+    * @endcode
     */
     void set_communicator(MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce){
         m_comm = comm;
@@ -313,6 +323,8 @@ struct NearestNeighborComm
     {
         MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
 #ifdef _DG_CUDA_UNAWARE_MPI
+    if( std::is_same< get_execution_policy<Vector>, CudaTag>::value ) //could be serial tag
+    {
         unsigned size = buffer_size();
         cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
                     thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]), //src
@@ -321,6 +333,7 @@ struct NearestNeighborComm
         cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
                     thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]), //src
                     size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
+    }
 #endif
     }
     private:
@@ -477,14 +490,17 @@ void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_poi
 {
     unsigned size = buffer_size();
 #ifdef _DG_CUDA_UNAWARE_MPI
-    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
-        sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-    cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
-        sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-    sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
-    sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
-    rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
-    rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
+    if( std::is_same< get_execution_policy<V>, CudaTag>::value ) //could be serial tag
+    {
+        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
+            sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
+        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
+            sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
+        sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
+        sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
+        rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
+        rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
+    }
 //This is a mistake if called with a host_vector
 #endif
     MPI_Isend( sb1_ptr, size,

@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
         dg::blas2::symv( equidistant, y0, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
-        dg::blas1::transfer( visual, hvisual);
+        dg::assign( visual, hvisual);
         render.renderQuad( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
         title << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step";
         glfwSetWindowTitle(w, title.str().c_str());

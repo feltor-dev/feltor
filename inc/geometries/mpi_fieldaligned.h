@@ -29,7 +29,8 @@ void sendForward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) 
     MPI_Status status;
     MPI_Cart_shift( comm, 2, +1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize();//wait until device functions are finished before sending data
+    if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
+        cudaDeviceSynchronize();//wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
     MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
@@ -46,7 +47,8 @@ void sendBackward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm)
     MPI_Status status;
     MPI_Cart_shift( comm, 2, -1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize();//wait until device functions are finished before sending data
+    if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
+        cudaDeviceSynchronize();//wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
     MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
@@ -100,9 +102,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         m_bcz = bcz;
-        const dg::MPIGrid2d g2d( 0., 1., 0., 1., m_g->global().n(), m_g->global().Nx(), m_g->global().Ny(), m_g->get_perp_comm() );
-        m_left  = dg::evaluate( dg::CONSTANT(left), g2d);
-        m_right = dg::evaluate( dg::CONSTANT(right),g2d);
+        dg::blas1::copy( left, m_left);
+        dg::blas1::copy( right, m_right);
     }
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
@@ -115,8 +116,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
         dg::split( global, m_f, *m_g);
-        dg::blas1::axpby( scal_left, m_f[0],               0., m_left);
-        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()], 0., m_left);
+        dg::blas1::axpby( scal_left,  m_f[0],                   0., m_left);
+        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()-1], 0., m_right);
         m_bcz = bcz;
     }
 
@@ -418,7 +419,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
 
     //3. apply right boundary conditions in last plane
     unsigned i0=m_Nz-1;
-    if( m_bcz != dg::PER && m_g->z1() == m_g->global().z1())
+    if( m_bcz != dg::PER && m_g->local().z1() == m_g->global().z1())
     {
         if( m_bcz == dg::DIR || m_bcz == dg::NEU_DIR)
             dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
@@ -464,7 +465,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
 
     //3. apply left boundary conditions in first plane
     unsigned i0=0;
-    if( m_bcz != dg::PER && m_g->z0() == m_g->global().z0())
+    if( m_bcz != dg::PER && m_g->local().z0() == m_g->global().z0())
     {
         if( m_bcz == dg::DIR || m_bcz == dg::DIR_NEU)
             dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);

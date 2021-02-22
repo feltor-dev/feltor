@@ -570,7 +570,7 @@ struct DS
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::direction dir): m_fa(fa)
+DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::direction dir): m_fa(fa), m_dir(dir)
 {
     dg::assign( dg::create::volume(     fa.grid()), m_vol3d);
     dg::assign( dg::create::weights(    fa.grid()), m_weights_wo_vol);

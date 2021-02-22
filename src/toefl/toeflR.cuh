@@ -126,7 +126,6 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa;
-    dg::Variation< Geometry, Matrix, container> gradient;
 
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
@@ -152,7 +151,6 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     pol(     grid, dg::not_normed, dg::centered, p.jfactor),
     laplaceM( grid, dg::normed, dg::centered),
     arakawa( grid),
-    gradient( grid, dg::centered),
     multigrid( grid, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
     w2d( dg::create::volume(grid)), one( dg::evaluate(dg::one, grid)),
@@ -187,7 +185,7 @@ const container& Explicit<G, M, container>::compute_psi( double t, const contain
         }
     }
     //compute (nabla phi)^2
-    gradient.variation(potential, omega);
+    pol.variation(potential, omega);
     //compute psi
     if(equations == "global")
     {
@@ -210,7 +208,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     //compute chi
     if(equations == "global" )
     {
-        dg::blas1::transfer( y[1], chi);
+        dg::assign( y[1], chi);
         dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
@@ -224,7 +222,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     }
     else if(equations == "gravity_global" )
     {
-        dg::blas1::transfer( y[0], chi);
+        dg::assign( y[0], chi);
         dg::blas1::plus( chi, 1.);
         if( !boussinesq)
         {
@@ -236,7 +234,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     }
     else if( equations == "drift_global" )
     {
-        dg::blas1::transfer( y[0], chi);
+        dg::assign( y[0], chi);
         dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2

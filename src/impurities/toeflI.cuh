@@ -120,7 +120,6 @@ private:
     //matrices and solvers
     Helmholtz< Geometry, Matrix, container > gamma1;
     ArakawaX< Geometry, Matrix, container> arakawa; 
-    Gradient< Geometry, Matrix, container> gradient; 
     dg::Elliptic< Geometry, Matrix, container > pol, laplaceM; 
     dg::Invert<container> invert_pol, invert_invgamma;
 
@@ -140,7 +139,6 @@ ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Paramet
     gamma_n( 2, chi),
     gamma1(  grid, -0.5*p.tau[1]),
     arakawa( grid),
-    gradient( grid),
     pol(     grid, not_normed, centered),
     laplaceM( grid, normed, centered),
     invert_pol(      omega, omega.size(), p.eps_pol),
@@ -157,7 +155,7 @@ const container& ToeflI<G, M, container>::compute_psi( const container& potentia
     gamma1.alpha() = -0.5*p.tau[idx]*p.mu[idx];
     invert_invgamma( gamma1, phi[idx], potential);
 
-    gradient.variation(binv,potential, omega); // u_E^2
+    pol.variation(binv,potential, omega); // u_E^2
 
     dg::blas1::axpby( 1., phi[idx], -0.5*p.mu[idx], omega, phi[idx]);   //psi  Gamma phi - 0.5 u_E^2
     return phi[idx];

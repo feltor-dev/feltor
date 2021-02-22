@@ -1,17 +1,28 @@
 # Changelog
 All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Only changes in code are reported here, we do not track changes in the
-doxygen documentation, READMEs or tex writeups.
-## [v5.2]
+
+We agreed to updating the master branch on feltor-dev/feltor very seldomnly and only when significant changes merit the effort to brush everything up, document and make
+everyone update their codes as well. We mark those updates with a (pre-)release tag on
+github.
+> Creating a release on github will create an associated archived version
+  on zenodo, so **we reserve releases for when we publish an article**.
+
+We kind of make up our own version numbers right now. A new major version number is often associated with a journal publication, but other than that there is no defined mapping from the amount or kind of change to a version number. 
+[Semantiv versioning](https://semver.org/) might serve as a guideline  but we are
+far away from strictly following it really.
+
+> Only changes in code are reported here, we do not track changes in the
+> doxygen documentation, READMEs or tex writeups.
+
+## [v5.2] More Multistep
 ### Added
  - M100 config file
  - json utility functions `dg::file::get, dg::file::get_idx` in `dg/file/json_utilities.h` which adds a small abstraction layer that gives a user more control over what happens if a variable is not found
  - json utility functions `dg::file::file2Json`, and `dg::file::string2Json` in json_utilities.h which adds a small abstraction layer that gives a user more control over what happens if an error happens during the parsing of a file
  - "easy output" netcdf utility functions that are particularly useful for MPI output: either write data in parallel or funnel through the master thread
  - new include files `dg/file/file.h`, `dg/file/json_utilities.h` and `dg/exblas/exblas.h`
- - new class `dg::Gradient` (and a `dg::Variation` typedef) for gradient and variation
+ - new class `dg::Gradient` for gradient
  - new class `dg::Advection` for the upwind advection scheme
  - new `dg::blas1::reduce` function for custom reductions
  - new "exchangeable" `dg::x::DVec`, `dg::x::HVec`, ..., `dg::x::CartesianGrid2d`, ..., `dg::x::IHMatrix`, ... typedefs. The idea is that these resolve to either shared memory or mpi distributed memory versions depending on the MPI_VERSION macro. This helps merging shared and mpi programs into single ones.
@@ -38,7 +49,6 @@ doxygen documentation, READMEs or tex writeups.
  - new class `dg::ChebyshevIterations` and `dg::ChebyshevPreconditioner` (for chebyshev iterations)
  - new solvers `dg::LGMRES`, `dg::BICGSTABL`, and d`g::AndersonAcceleration` (courtesy of Aslak Poulsen)
  - new `dg::FixedPointSolver` and `dg::AndersonSolver` for nonlinear problems in time
- - new class Gradient that computes gradients and variations
  - a host of new functors for the evaluate and pullback functions
  - `dg::geo::FluxSurfaceIntegral`, `dg::geo::FluxVolumeIntegral` and `dg::geo::SafetyFactorAverage` classes
  - new implementation: `dg::geo::ds_centered_bc_along_field` and `dg::geo::dss_centered_bc_along_field` that implement boundary condition "Stegmeir" style along the magnetic field lines
@@ -51,15 +61,17 @@ doxygen documentation, READMEs or tex writeups.
  - new polynomial expansion and associated `dg::Horner2d` functor for magnetic flux functions that can in particular approximate any experimental equilibrium
  - new equilibrium, modifier and description fields for tokamak magnetic fields
  - Sign reversal of magnetic field and associated flux functions is now possible
+ - new utility `dg::geo::createAlignmentTensor` and `dg::geo::createProjectionTensor` with respect to the magnetic unit vector
 ### Changed
  - namespace file changed to **dg::file** and exblas changed to **dg::exblas** (for consistency reasons, everything should go into the dg namespace, which in particular reduces the chance for name-clashes to just one, namely 'dg')
- - Moved **variation** member function into new class **dg::Variation** (previously in ArakawaX and Poisson)
+ - Moved **variation** member function into **dg::Elliptic** (previously in ArakawaX and Poisson)
  - **std=c++14** We use the C++-14 standard now (previously 11)
  - vectorclass dependency changed to vectorclass/version1 (previously we used a custom upload on feltor-dev repository)
  - default cuda compute capability bumped to sm-61 (previously sm-35)
  - marconi config now uses jsoncpp module (previously manually installed)
  - `dg::blas1::dot` and `dg::blas2::dot` and corresponding exblas functions now detect NaN and Inf errors
  - `dg::blas1::dot` and `dg::blas2::dot` now both do not accumulate rest of multiplication (inconsistent before)
+ - All blas1 functions that do not read or alias their result vector now overwrite NaN and Inf
  - all our mpi communications on GPUs now fall-back to host2host communication for cuda-unaware mpi-installations
  - swapped input and output parameters in `dg::blas1::evaluate` first subroutine
  - the fast_interpolation and fast_projection functions now can also double / divide the polynomial coefficient consistent with the grids
@@ -71,7 +83,7 @@ doxygen documentation, READMEs or tex writeups.
  - multistep time-stepper now initialize with Runge-Kutta timesteppers of corresponding order
  - Multigrid nested iteration algorithm now allows accuracies for each stage separately (which can give a significant speed-up)
  - `dg::inverse( bc)` function is now a free-standing function to invert a boundary condition
- - `dg::Elliptic` classes now have `jump_weighting` and `multiply_sigma` member functions
+ - `dg::Elliptic` classes now have `jump_weighting` member function
  - `dg::CG` operator now has a `test-frequency` parameter to control the number of times the error condition is evaluated
  - `dg::Extrapolation` class now has a `derive` member function to interpolate the derivative of the interpolating polynomial
  - Adapt all src and diag projects to changed file and json utilities and the moved variation member
@@ -91,6 +103,7 @@ doxygen documentation, READMEs or tex writeups.
  - remove dg::MemoryTraits and associated dimensionality and memory_category traits in favor of direct host_vector and host_grid typedefs in topology classes
  - old txt input files
  - `dg::geo::DeltaFunction` and `dg::geo::Alpha` for the computation of flux-surface averages no longer needed
+ - dg::blas1::transfer (previously marked deprecated)
 ### Fixed
  - Fix bug: race condition in `dg::blas1::dot` and `dg::blas2::dot` on GPUs that led to hard to reproduce and seemingly unreasonable crashes
  - Fix bug: std namespace in diag/probes.h
@@ -102,8 +115,13 @@ doxygen documentation, READMEs or tex writeups.
  - Fix bug: coefficient and initialization in `dg::Extrpolate`
  - Fix bug: Fpsi safety-factor in case nan is encountered still works
  - Fix bug: Fpsi safety-factor works up to the O-point
+ - Fix bug: `dg::pushForwardPerp` on functors computed wrong result (only affects `dg::geo::Hector`)
+ - Fix bug(s): several bugs in `dg::geo::Hector` which computed wrong grid (happened probably when we changed the grid design to polymorphic)
+ - Fix bug: in perpendicular grid of MPI Curvlinear grid
+ - Fix bug: missing direction initialization in mpi fieldaligned class
+ - Fix bug: non-zero parallel boundary condition in mpi fieldaligned
 
-## [v5.1]
+## [v5.1] Adaptive Timesteppers
 ### Added
 - dg::Elliptic3d: a three-dimensional version of dg::Elliptic
 - Add 4 parameter symv member to dg::Elliptic class

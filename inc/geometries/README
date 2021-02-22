@@ -22,17 +22,21 @@
         utilitiesX.h
 
 #magnetic fields
+    make_field.h
     solovev.h
     solovev_parameters.h
+    polynomial.h
+    polynomial_parameters.h
     taylor.h
     guenther.h
     toroidal.h
+    modified.h
 
     #utilities
         testfunctors.h
         fluxfunctions.h
+        adaption.h
     magnetic_field.h
-    adaption.h
 
 #miscellaneous
     ds.h

@@ -34,6 +34,10 @@ namespace dg{
  */
 namespace blas1
 {
+///@cond
+template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
+inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs);
+///@endcond
 
 ///@addtogroup blas1
 ///@{
@@ -43,6 +47,13 @@ namespace blas1
  * where \c i iterates over @b all elements inside the given vectors. The order of iterations is undefined. Scalar arguments to container types are interpreted as vectors with all elements constant. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
  * If the vector sizes do not match, the result is undefined.
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
+ */
+/**
+ * @class hide_naninf
+ * @attention only result vectors that are **write-only** and do not alias
+ * input vectors contain correct results when the result vector contains NaN
+ * or Inf on input. In particular, \c dg::blas1::scal( y, 0 ) does not remove
+ * NaN or Inf from y while \c dg::blas1::copy( 0, y ) does.
  */
 
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
@@ -120,11 +131,12 @@ inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_t
  * explicit pointwise assignment \f$ y_i = x_i\f$
  * @copydoc hide_iterations
  * @param source vector to copy
- * @param target destination
- * @note in contrast to the (deprecated) \c blas1::transfer functions the \c copy function uses
+ * @param target (write-only) destination
+ * @note in contrast to the \c dg::assign functions the \c copy function uses
  * the execution policy to determine the implementation and thus works
  * only on types with same execution policy
  * @note catches self-assignment
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template<class ContainerTypeIn, class ContainerTypeOut>
@@ -144,7 +156,8 @@ dg::DVec two( 100,2);
 dg::blas1::scal( two,  0.5 )); // result[i] = 1.
 @endcode
  * @param alpha Scalar
- * @param x ContainerType x
+ * @param x (read/write) x
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class ContainerType>
@@ -165,7 +178,8 @@ dg::DVec two( 100,2);
 dg::blas1::plus( two,  2. )); // result[i] = 4.
 @endcode
  * @param alpha Scalar
- * @param x ContainerType x
+ * @param x (read/write) x
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class ContainerType>
@@ -188,7 +202,8 @@ dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
  * @param alpha Scalar
  * @param x ContainerType x may alias y
  * @param beta Scalar
- * @param y ContainerType y contains solution on output
+ * @param y (read/write) ContainerType y contains solution on output
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1>
@@ -221,7 +236,8 @@ dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
  * @param beta Scalar
  * @param y ContainerType y may alias result
  * @param gamma Scalar
- * @param z ContainerType contains solution on output
+ * @param z (read/write) ContainerType contains solution on output
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -266,33 +282,35 @@ dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
  * @param x ContainerType x may alias z
  * @param beta Scalar
  * @param y ContainerType y may alias z
- * @param z ContainerType z contains solution on output
+ * @param z (write-only) ContainerType z contains solution on output
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, const ContainerType2& y, ContainerType& z)
 {
-    dg::blas1::axpbypgz( alpha, x,  beta, y, 0., z);
+    dg::blas1::evaluate( z , dg::equals(), dg::PairSum(), alpha, x, beta, y);
 }
 
 /**
-* @brief \f$ y = \alpha x_1 x_2 + \beta y\f$
-*
-* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
-* @copydoc hide_iterations
+ * @brief \f$ y = \alpha x_1 x_2 + \beta y\f$
+ *
+ * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
+ * @copydoc hide_iterations
 
 @code
 dg::DVec two( 100,2), three( 100,3), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, -4., result );
 // result[i] = -12. (2*2*3-4*6)
 @endcode
-* @param alpha scalar
-* @param x1 ContainerType x1
-* @param x2 ContainerType x2 may alias x1
-* @param beta scalar
-* @param y  ContainerType y contains result on output ( may alias x1 or x2)
-* @copydoc hide_ContainerType
-*/
+ * @param alpha scalar
+ * @param x1 ContainerType x1
+ * @param x2 ContainerType x2 may alias x1
+ * @param beta scalar
+ * @param y (read/write)  ContainerType y contains result on output ( may alias x1 or x2)
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ */
 template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y)
 {
@@ -300,6 +318,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         dg::blas1::scal(y, beta);
         return;
     }
+    //not sure this is necessary performance-wise, subroutine does allow aliases
     if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
         dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
@@ -324,13 +343,14 @@ dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
 @endcode
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
-* @param y  ContainerType y contains result on output ( may alias x1 or x2)
+* @param y (write-only) ContainerType y contains result on output ( may alias x1 or x2)
+* @copydoc hide_naninf
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, ContainerType& y)
 {
-    dg::blas1::pointwiseDot( 1., x1, x2, 0., y );
+    dg::blas1::evaluate( y, dg::equals(), dg::PairSum(), x1,x2);
 }
 
 /**
@@ -349,7 +369,8 @@ dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
 * @param x2 ContainerType x2 may alias x1
 * @param x3 ContainerType x3 may alias x1 and/or x2
 * @param beta scalar
-* @param y  ContainerType y contains result on output ( may alias x1,x2 or x3)
+* @param y  (read/write) ContainerType y contains result on output ( may alias x1,x2 or x3)
+* @copydoc hide_naninf
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3>
@@ -378,7 +399,8 @@ dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param beta scalar
-* @param y  ContainerType y contains result on output ( may alias x1 and/or x2)
+* @param y  (read/write) ContainerType y contains result on output ( may alias x1 and/or x2)
+* @copydoc hide_naninf
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -409,13 +431,14 @@ dg::blas1::pointwiseDivide( two,  three, result );
 @endcode
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
-* @param y  ContainerType y contains result on output ( may alias x1 and/or x2)
+* @param y  (write-only) ContainerType y contains result on output ( may alias x1 and/or x2)
+* @copydoc hide_naninf
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2, ContainerType& y)
 {
-    dg::blas1::pointwiseDivide(1., x1, x2, 0.,y );
+    dg::blas1::evaluate( y, dg::equals(), dg::divides(), x1, x2);
 }
 
 /**
@@ -436,8 +459,9 @@ dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
 * @param x2 ContainerType x2
 * @param y2 ContainerType y2
 * @param gamma scalar
-* @param z  ContainerType z contains result on output
+* @param z  (read/write) ContainerType z contains result on output
 * @note all aliases are allowed
+* @copydoc hide_naninf
 * @copydoc hide_ContainerType
 */
 template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
@@ -468,10 +492,11 @@ dg::blas1::transform( two, result, dg::EXP<double>());
 // result[i] = 7.389056... (e^2)
 @endcode
  * @param x ContainerType x may alias y
- * @param y ContainerType y contains result, may alias x
+ * @param y (write-only) ContainerType y contains result, may alias x
  * @param op unary Operator to use on every element
  * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1, class UnaryOp>
@@ -502,6 +527,7 @@ dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
  * @param x0 first input
  * @param xs more input
  * @note all aliases allowed
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  *
  */
@@ -564,6 +590,7 @@ except the scalar product, which is not trivially parallel.
  * @tparam Subroutine a function or functor with an arbitrary number of arguments and no return type; taking a \c value_type argument for each input argument in the call
  * and a <tt> value_type&  </tt> argument for each output argument.
  * \c Subroutine must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
@@ -580,25 +607,10 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
             dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
             >::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
+    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
-///@brief Deprecated: Use \c dg::construct<ContainerType>() instead
-///@attention This function is deprecated! Please replace with \c dg::construct (data transfer between different devices)
-template<class ContainerType, class from_ContainerType>
-inline ContainerType transfer( const from_ContainerType& from)
-{
-    return dg::construct<ContainerType>( from);
-}
-
-///@brief Deprecated: Use \c dg::assign<ContainerType>() instead
-///@attention This function is deprecated! Please replace with either \c dg::blas1::copy (parallel copy between compatible types) or \c dg::assign (data transfer between devices)"
-template<class from_ContainerType, class ContainerType>
-inline void transfer( const from_ContainerType& from, ContainerType& to)
-{
-    dg::assign<from_ContainerType, ContainerType>( from, to);
-}
 ///@}
 }//namespace blas1
 

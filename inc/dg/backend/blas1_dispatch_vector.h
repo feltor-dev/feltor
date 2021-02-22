@@ -161,7 +161,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2
 template< class size_type, class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( RecursiveVectorTag, OmpTag, size_type size, Subroutine f, container&& x, Containers&&... xs)
 {
-    //using inner_container = typename std::decay<container>::type::value_type;
+    //using inner_container = typename std::decay_t<container>::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
         #pragma omp parallel

@@ -27,14 +27,14 @@ struct TensorTraits<std::vector<T>>
  */
 //template<class T, std::size_t N>
 //struct TensorTraits<std::array<T, N>,
-//    typename std::enable_if< std::is_arithmetic<T>::value>::type>
+//    std::enable_if_t< std::is_arithmetic<T>::value>>
 //{
 //    using value_type        = T;
 //    using tensor_category   = StdArrayTag;
 //    using execution_policy  = SerialTag;
 //};
 template<class T, std::size_t N>
-struct TensorTraits<std::array<T, N>>//, typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+struct TensorTraits<std::array<T, N>>//, std::enable_if_t< !std::is_arithmetic<T>::value>>
 {
     using value_type        = get_value_type<T>;
     using tensor_category   = ArrayVectorTag;

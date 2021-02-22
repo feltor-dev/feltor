@@ -55,10 +55,10 @@ std::vector<View<SharedContainer>> split( SharedContainer& in, const aRealTopolo
 #ifdef MPI_VERSION
 
 template<class MPIContainer>
-using get_mpi_view_type = typename
-    std::conditional< std::is_const<MPIContainer>::value,
+using get_mpi_view_type =
+    std::conditional_t< std::is_const<MPIContainer>::value,
     MPI_Vector<View<const typename MPIContainer::container_type>>,
-    MPI_Vector<View<typename MPIContainer::container_type>> >::type;
+    MPI_Vector<View<typename MPIContainer::container_type>> >;
 
 /** @brief MPI Version of split (fast version)
  *

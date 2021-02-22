@@ -12,8 +12,8 @@
 #include "separatrix_orthogonal.h"
 #include "testfunctors.h"
 
-//const char* parameters = "geometry_params_Xpoint_taylor.js";
-const char* parameters = "geometry_params_Xpoint.js";
+//const char* parameters = "geometry_params_Xpoint_taylor.json";
+const char* parameters = "geometry_params_Xpoint.json";
 
 int main(int argc, char**argv)
 {
@@ -149,14 +149,14 @@ int main(int argc, char**argv)
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
-    dg::blas1::transfer( error, X);
+    dg::assign( error, X);
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    dg::blas1::transfer( x, X);
+    dg::assign( x, X);
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    dg::blas1::transfer( solution, Y);
+    dg::assign( solution, Y);
     //dg::blas1::axpby( 1., X., -1, Y);
     ncerr = nc_put_var_double( ncid, function2ID, Y.data());
-    dg::blas1::transfer( chi, X);
+    dg::assign( chi, X);
     ncerr = nc_put_var_double( ncid, divBID, X.data());
     ncerr = nc_close( ncid);
 

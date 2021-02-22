@@ -458,7 +458,7 @@ struct SquareNorm : public aCylindricalFunctor<SquareNorm>
 };
 
 
-/*!@brief \f[ \chi^{ij} = b^ib^j\f]
+/*!@brief \f$ \chi^{ij} = b^ib^j\f$
  *
  * Creates the two times contravariant tensor that,
  * when applied to a covariant vector, creates a vector
@@ -491,7 +491,7 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
     t.values() = chi;
     return t;
 }
-/*!@brief \f[ \chi^{ij} = g^{ij} - b^ib^j\f]
+/*!@brief \f$ h^{ij} = g^{ij} - b^ib^j\f$
  *
  * Creates the two times contravariant tensor that,
  * when applied to a covariant vector, creates a vector
@@ -499,7 +499,7 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
  *
  * @param bhat The (unit) vector field \c b
  * @param g The vector field is pushed unto this grid
- * @return The tensor \c chi living on the coordinate system given by \c g
+ * @return The tensor \c h living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
  */
 template<class Geometry3d>

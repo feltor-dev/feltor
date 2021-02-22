@@ -13,12 +13,12 @@
 //
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
-using value_type = float;
-using Vector = dg::fMDVec;
-using Matrix = dg::fMDMatrix;
-//using value_type = double;
-//using Vector = dg::MDVec;
-//using Matrix = dg::MDMatrix;
+//using value_type = float;
+//using Vector = dg::fMDVec;
+//using Matrix = dg::fMDMatrix;
+using value_type = double;
+using Vector = dg::MDVec;
+using Matrix = dg::MDMatrix;
 
 const value_type lx = M_PI;
 const value_type ly = 2.*M_PI;
@@ -35,7 +35,9 @@ value_type rhs( value_type x, value_type y) { return 2.*sin(x)*sin(y)*(amp*sin(x
 //value_type rhs( value_type x, value_type y) { return 2.*sin( x)*sin(y);}
 //value_type rhs( value_type x, value_type y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 value_type sol(value_type x, value_type y)  { return sin( x)*sin(y);}
-value_type der(value_type x, value_type y)  { return cos( x)*sin(y);}
+value_type derX(value_type x, value_type y)  { return cos( x)*sin(y);}
+value_type derY(value_type x, value_type y)  { return sin( x)*cos(y);}
+value_type vari(value_type x, value_type y)  { return pol(x,y)*pol(x,y)*(derX(x,y)*derX(x,y) + derY(x,y)*derY(x,y));}
 
 
 int main(int argc, char* argv[] )
@@ -48,7 +50,7 @@ int main(int argc, char* argv[] )
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
-    value_type eps = 1e-4;
+    value_type eps = 1e-6;
 
     //if(rank==0)std::cout << "Type epsilon! \n";
     //if(rank==0)std::cin >> eps;
@@ -95,7 +97,8 @@ int main(int argc, char* argv[] )
 
     //compute error
     const Vector solution = dg::evaluate( sol, grid);
-    const Vector derivati = dg::evaluate( der, grid);
+    const Vector derivati = dg::evaluate( derX, grid);
+    const Vector variatio = dg::evaluate( vari, grid);
     Vector error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
@@ -109,6 +112,12 @@ int main(int argc, char* argv[] )
     norm = dg::blas2::dot( w2d, derivati);
     if(rank==0)std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
+    if(rank==0)std::cout << "Compute variation in forward Elliptic      ";
+    multi_pol[0].variation( 1., chi, x, 0., error);
+    dg::blas1::axpby( 1., variatio, -1., error);
+    err = dg::blas2::dot( w2d, error);
+    norm = dg::blas2::dot( w2d, variatio);
+    if(rank==0)std::cout <<sqrt( err/norm) << "\n";
 
     MPI_Finalize();
     return 0;

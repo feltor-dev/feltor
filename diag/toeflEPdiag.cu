@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
     dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( g2d); 
-    dg::Variation< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gradient( g2d); 
+    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol( g2d); 
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -260,7 +260,7 @@ int main( int argc, char* argv[])
         //dg::IDMatrix interpne(dg::create::interpolation(xcoo,y0coone, g2d)) ;
         //
         //dg::blas2::gemv(interpne,npe[0],helper1d); 
-        //dg::blas1::transfer( helper1d, transfer1d);
+        //dg::assign( helper1d, transfer1d);
         //err_out = nc_put_vara_double( ncid_out, names1dID[0], start1d, count1d, transfer1d.data());    
         
         
@@ -279,7 +279,7 @@ int main( int argc, char* argv[])
         double Ue, Ui, Uphi;
         for( unsigned j=0; j<2; j++)
             dg::blas1::transform( npe[j], lnn[j], dg::LN<double>()); 
-        gradient.variation(phi, helper); 
+        pol.variation(phi, helper); 
         Ue = p.z[0]*p.tau[0]*dg::blas2::dot( lnn[0], w2d, npe[0]);
         Ui = p.z[1]*p.tau[1]*dg::blas2::dot( lnn[1], w2d, npe[1]);
         Uphi = 0.5*dg::blas2::dot( npe[1], w2d, helper); 

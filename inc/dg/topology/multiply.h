@@ -112,6 +112,10 @@ struct InverseTensorMultiply3d{
               +t02*DG_FMA(t10, t21, (-t20*t11));
     }
 };
+///@}
+
+///@addtogroup variadic_evaluates
+///@{
 
 /// \f$ y = \lambda\mu v_i T_{ij} w_j \f$
 template<class value_type>
@@ -150,10 +154,6 @@ struct TensorDot3d{
         return lambda*mu*DG_FMA(v0,tmp0 , DG_FMA(v1,tmp1 , v2*tmp2));
     }
 };
-///@}
-
-///@addtogroup variadic_evaluates
-///@{
 
 ///\f$ y = t_{00} t_{11} - t_{10}t_{01} \f$
 template<class value_type>

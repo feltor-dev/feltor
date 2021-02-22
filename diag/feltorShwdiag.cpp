@@ -69,7 +69,6 @@ int main( int argc, char* argv[])
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x_phi, p.bc_y);
-    dg::Variation<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> gradient(g2d, p.bc_x_phi, p.bc_y);
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> pol(g2d,   p.bc_x_phi, p.bc_y, dg::normed, dg::centered);
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> lap(g2d,   p.bc_x, p.bc_y, dg::normed, dg::centered);
     
@@ -252,10 +251,10 @@ int main( int argc, char* argv[])
 		    
                 }
 
-                gradient.variation(phi,temp2);
+                pol.variation(phi,temp2);
                 Tperp = 0.5*dg::blas2::dot( one, w2d, temp2);   // 0.5   u_E^2            
                 polavg(phi,temp);      // <N u_E^2 > 
-                gradient.variation(temp,temp2);
+                pol.variation(temp,temp2);
                 Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 ( D_x <phi> )^2 
                 Tperpratio = Tperpz/Tperp;
                 dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
@@ -321,10 +320,10 @@ int main( int argc, char* argv[])
 		    dg::blas1::transform(navgtilde[i], navgtilde[i], dg::PLUS<>(-1.0));
                 }
                                     
-                gradient.variation(phi,temp2);
+                pol.variation(phi,temp2);
                 Tperp = 0.5*dg::blas2::dot( one, w2d, temp2);   // 0.5   u_E^2            
                 polavg(phi,temp);      // <N u_E^2 > 
-                gradient.variation(temp,temp2);
+                pol.variation(temp,temp2);
                 Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 ( D_x <phi> )^2 
                 Tperpratio = Tperpz/Tperp;
                 dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
