@@ -31,7 +31,16 @@ int main( int argc, char* argv[])
     unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if( dims[2] != 1)
+    {
+        // because of netcdf output
+        if(rank==0) std::cout << "Please do not parallelize in z!\n";
+        MPI_Finalize();
+        return 0;
+    }
     Json::Value js;
     if( argc==1)
     {
@@ -46,7 +55,7 @@ int main( int argc, char* argv[])
     dg::geo::solovev::Parameters gp(js);
     dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     if(rank==0)std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
-    if(rank==0)std::cout << "Type psi_0 and psi_1\n";
+    if(rank==0)std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     if(rank==0)std::cin >> psi_0>> psi_1;
     MPI_Bcast( &psi_0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
