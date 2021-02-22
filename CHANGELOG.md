@@ -8,7 +8,7 @@ github.
 > Creating a release on github will create an associated archived version
   on zenodo, so **we reserve releases for when we publish an article**.
 
-We kind of make up our own version numbers right now. A new major version number is often associated with a journal publication, but other than that there is no defined mapping from the amount or kind of change to a version number. 
+We kind of make up our own version numbers right now. A new major version number is often associated with a journal publication, but other than that there is no defined mapping from the amount or kind of change to a version number.
 [Semantiv versioning](https://semver.org/) might serve as a guideline  but we are
 far away from strictly following it really.
 
@@ -107,10 +107,10 @@ far away from strictly following it really.
 ### Fixed
  - Fix bug: race condition in `dg::blas1::dot` and `dg::blas2::dot` on GPUs that led to hard to reproduce and seemingly unreasonable crashes
  - Fix bug: std namespace in diag/probes.h
- - Fix bug: const in `exblas::cpu::get_element` 
+ - Fix bug: const in `exblas::cpu::get_element`
  - Fix bug: correct  indices in `exblas::cpu::make_vcl_vec8d`
  - Fix bug: infinite creation of MPI communicators in `exblas::mpi_reduce_communicator` . Lead to MPI crashes due to memory overflow.
- - correct capture of cuda-aware mpi, 
+ - Fix bug: correct capture of cuda-aware mpi in configuration
  - Fix bug: test for no-communication in mpi_communicator.h (indicated false positives)
  - Fix bug: coefficient and initialization in `dg::Extrpolate`
  - Fix bug: Fpsi safety-factor in case nan is encountered still works
@@ -119,7 +119,9 @@ far away from strictly following it really.
  - Fix bug(s): several bugs in `dg::geo::Hector` which computed wrong grid (happened probably when we changed the grid design to polymorphic)
  - Fix bug: in perpendicular grid of MPI Curvlinear grid
  - Fix bug: missing direction initialization in mpi fieldaligned class
+ - Fix bug: host mpi code compiled with nvcc
  - Fix bug: non-zero parallel boundary condition in mpi fieldaligned
+ - Fix bug: GPU symv on X-point grids
 
 ## [v5.1] Adaptive Timesteppers
 ### Added
@@ -160,7 +162,7 @@ far away from strictly following it really.
 - default constructor of MPI\_Vector constructs empty communicator instead of MPI\_COMM\_WORLD
 - set\_communicator in MPI\_Vector takes three arguments now to avoid group
   creation
-- Configure cuda-aware mpi test a warning instead of an error
+- cuda-aware mpi no longer a requirement, fall-back to traditional mpi implemented
 - rewrite feltordiag.cu merging ncdiag and filamentdiag
 - Remove container argument from dg::geo::SafetyFactor constructor (Since it always takes Alpha)
 - More general interface for geometries/init.h functors including Nprofile and ZonalFlow (Old Psi functors are now regular functors)
