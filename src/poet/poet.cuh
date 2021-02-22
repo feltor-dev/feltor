@@ -73,13 +73,13 @@ struct Explicit
     void gamma1_y( const container& y, container& yp)
     {
         if (equations == "ff-O2") {
-//             dg::blas1::scal(yp,0.0);
-//             sqrtinvert(yp, y); //produces different solution
+            dg::blas1::scal(yp, 0.0);
+            sqrtinvert(yp, y); //produces different solution
             //via two step approach
-            sqrtsolve(y, m_iota);
-            std::vector<unsigned> number = multigrid.direct_solve( m_multi_g0, yp, m_iota, eps_gamma);
-            if(  number[0] == multigrid.max_iter())
-                throw dg::Fail( eps_gamma);
+//             sqrtsolve(y, m_iota);
+//             std::vector<unsigned> number = multigrid.direct_solve( m_multi_g0, yp, m_iota, eps_gamma);
+//             if(  number[0] == multigrid.max_iter())
+//                 throw dg::Fail( eps_gamma);
         }
         else {
             std::vector<unsigned> number = multigrid.direct_solve( m_multi_g1, yp, y, eps_gamma);
@@ -276,8 +276,8 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
         m_multi_g0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "ff-O2" ) {
             m_multi_g1[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
-            sqrtsolve.construct( m_multi_g1[0], multigrid.grid(0), m_chi,  p.eps_time, 200, 20,  p.eps_gamma);
-            sqrtinvert.construct(m_multi_g1[0], multigrid.grid(0), m_chi,  p.eps_time, 200, 20,  p.eps_gamma);
+            sqrtsolve.construct( m_multi_g1[0], grid, m_chi,  p.eps_time, 200, 20,  p.eps_gamma);
+            sqrtinvert.construct(m_multi_g1[0], grid, m_chi,  p.eps_time, 200, 20,  p.eps_gamma);
         }
         else {
             m_multi_g1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered, p.jfactor);

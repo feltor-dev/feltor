@@ -132,7 +132,7 @@ int main()
 
     
     {
-        std::cout << "Forward Elliptic\n";
+    std::cout << "Forward Elliptic\n";
     x = temp;
     //![invert]
     //create an Elliptic object without volume form (not normed)

@@ -65,11 +65,11 @@ int main( int argc, char* argv[])
     //////////////////create initial vector///////////////////////////////////////
     
     //blob initialization
-//     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-//     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-// //     ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+    ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
 //     ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
-
+    
     
 //     //shear flow
 //     ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
@@ -79,16 +79,16 @@ int main( int argc, char* argv[])
 //     dg::blas1::scal(y0[0], 0.);
 //     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
     
-    //double rotating gaussian
-    dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-    dg::Gaussian g2( (0.5+p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-
-    std::vector<DVec> y0(2, dg::evaluate( g1, grid)); // n_e' = gaussian
-    std::vector<DVec> y1(2, dg::evaluate( g2, grid)); // n_e' = gaussian
-    dg::blas1::axpby(1.0,y0[0],1.0,y1[0],y0[0]);
-    dg::blas1::axpby(10, y0[0], 0.0, y1[1]);
-    ex.invLap_y(y1[1], y1[0]); //phi 
-    ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
+//     //double rotating gaussian
+//     dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+//     dg::Gaussian g2( (0.5+p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+// 
+//     std::vector<DVec> y0(2, dg::evaluate( g1, grid)); // n_e' = gaussian
+//     std::vector<DVec> y1(2, dg::evaluate( g2, grid)); // n_e' = gaussian
+//     dg::blas1::axpby(1.0,y0[0],1.0,y1[0],y0[0]);
+//     dg::blas1::axpby(10, y0[0], 0.0, y1[1]);
+//     ex.invLap_y(y1[1], y1[0]); //phi 
+//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
 
 
     //////////////////////////////////////////////////////////////////////

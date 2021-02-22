@@ -162,8 +162,8 @@ class Lanczos
      * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable, unsigned max_iterations) {
-        m_alpha.assign(max_iterations,0.);
-        m_beta.assign(max_iterations,0.);
+        m_alpha.assign(max_iterations, 0.);
+        m_beta.assign(max_iterations, 0.);
         m_v.assign(max_iterations,copyable);
         m_w.assign(max_iterations,copyable);
         m_vi = m_vip = m_wi = m_wim = m_wip= copyable;
@@ -177,7 +177,7 @@ class Lanczos
         m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_e1.assign(m_max_iter, 0.);
         m_temp.assign(m_max_iter, 0.);
-        m_e1[0]=1.;
+        m_e1[0] = 1.;
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
@@ -189,7 +189,7 @@ class Lanczos
         m_V.resize(m_vi.size(), new_iter, new_iter*m_vi.size()); 
         m_e1.assign(new_iter, 0.);
         m_temp.assign(new_iter, 0.);
-        m_e1[0]=1.;
+        m_e1[0] = 1.;
         m_iter = new_iter;
     }
     ///@brief Get the current  number of iterations
@@ -405,11 +405,12 @@ class CGtridiag
         m_vm.assign(max_iterations,0.);
         m_e1.assign(max_iterations,0.);
         m_y.assign(max_iterations,0.);
-        m_ap = m_p = m_r = m_rh = copyable;
+        m_ap = m_p = m_r = copyable;
         m_max_iter = max_iterations;
+        m_R.resize(m_r.size(), max_iterations, max_iterations*m_r.size());
+        m_Tinv.resize(m_r.size(), max_iterations, max_iterations*m_r.size());
+        m_invtridiag.resize(max_iterations);
         m_iter = max_iterations;
-        m_R.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-        m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
@@ -417,10 +418,10 @@ class CGtridiag
         m_v0.resize(new_iter);
         m_vp.resize(new_iter);
         m_vm.resize(new_iter);
-        m_e1.assign(new_iter,0.);
-        m_e1[0]=1.;
-        m_y.assign(new_iter,0.);
-        m_R.resize(m_rh.size(), new_iter, new_iter*m_rh.size());
+        m_e1.resize(new_iter, 0.);
+        m_e1[0] = 1.;
+        m_y.resize(new_iter,0.);
+        m_R.resize(m_r.size(), new_iter, new_iter*m_r.size());
         m_Tinv.resize(new_iter, new_iter, new_iter*new_iter);
         m_invtridiag.resize(new_iter);
         m_iter = new_iter;
@@ -447,19 +448,18 @@ class CGtridiag
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
     std::pair<CooMatrix, CooMatrix> operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& M, value_type eps = 1e-12, value_type nrmb_correction = 1)
     {
-        //Do CG iteration do get R and T matrix
         value_type nrmb = sqrt( dg::blas2::dot( M, b));
-    #ifdef DG_DEBUG
-    #ifdef MPI_VERSION
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
-    #endif //MPI
+#endif //MPI
         {
         std::cout << "# Norm of b "<<nrmb <<"\n";
         std::cout << "# Residual errors: \n";
         }
-    #endif //DG_DEBUG
+#endif //DG_DEBUG
         if( nrmb == 0)
         {
             dg::blas1::copy( b, x);
@@ -469,68 +469,64 @@ class CGtridiag
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
         
-        if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
+        if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO replace with appropriate criterium
         {
             set_iter(1);
             return m_TinvRpair;
         }
-        dg::blas2::symv( P, m_r, m_p );//<-- compute p_0
-        dg::blas1::copy( m_p, m_rh);
+        dg::blas2::symv( P, m_r, m_p );
+        dg::blas1::copy( m_p, m_ap);
 
-        //note that dot does automatically synchronize
-        value_type nrm2r_old = dg::blas1::dot( m_rh, m_r); //and store the norm of it
+        value_type nrm2r_old = dg::blas1::dot( m_ap, m_r);
         value_type nrm2r_new;
         
         unsigned counter = 0;
         for( unsigned i=0; i<m_max_iter; i++)
         {
-
-            for( unsigned j=0; j<m_rh.size(); j++)
+            for( unsigned j=0; j<m_ap.size(); j++)
             {            
                 m_R.row_indices[counter]    = j;
                 m_R.column_indices[counter] = i; 
-                m_R.values[counter]         = m_rh.data()[j];
+                m_R.values[counter]         = m_ap.data()[j];
                 counter++;
             }
             dg::blas2::symv( A, m_p, m_ap);
             m_alpha = nrm2r_old /dg::blas1::dot( m_p, m_ap);
             dg::blas1::axpby( -m_alpha, m_ap, 1., m_r);
-    #ifdef DG_DEBUG
-    #ifdef MPI_VERSION
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
             if(rank==0)
-    #endif //MPI
+#endif //MPI
             {
                 std::cout << "# Absolute r*M*r "<<sqrt( dg::blas2::dot(M,m_r)) <<"\t ";
                 std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
                 std::cout << "# (Relative "<<sqrt( dg::blas2::dot(M,m_r) )/nrmb << ")\n";
             }
-    #endif //DG_DEBUG
+#endif //DG_DEBUG
             if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
                 //TODO change this criterium  for square root matrix
             {
-                dg::blas2::symv(P, m_r, m_rh);
-                nrm2r_new = dg::blas1::dot( m_rh, m_r);
-                m_vp[i] = -nrm2r_new/nrm2r_old/m_alpha;
-                m_vm[i] = -1./m_alpha;
+                dg::blas2::symv(P, m_r, m_ap);
+                nrm2r_new = dg::blas1::dot( m_ap, m_r);
+                m_vp[i]   = -nrm2r_new/nrm2r_old/m_alpha;
+                m_vm[i]   = -1./m_alpha;
                 m_v0[i+1] = -m_vp[i];
-                m_v0[i] -= m_vm[i];
+                m_v0[i]  -= m_vm[i];
                 set_iter(i+1);
-
                 break;
             }
-            dg::blas2::symv(P, m_r, m_rh);
-            nrm2r_new = dg::blas1::dot( m_rh, m_r);
-            dg::blas1::axpby(1., m_rh, nrm2r_new/nrm2r_old, m_p );
+            dg::blas2::symv(P, m_r, m_ap);
+            nrm2r_new = dg::blas1::dot( m_ap, m_r);
+            dg::blas1::axpby(1., m_ap, nrm2r_new/nrm2r_old, m_p );
                        
-            m_vp[i] = -nrm2r_new/nrm2r_old/m_alpha;
-            m_vm[i] = -1./m_alpha;
+            m_vp[i]   = -nrm2r_new/nrm2r_old/m_alpha;
+            m_vm[i]   = -1./m_alpha;
             m_v0[i+1] = -m_vp[i];
-            m_v0[i] -= m_vm[i];
+            m_v0[i]  -= m_vm[i];
             nrm2r_old=nrm2r_new;
         }
-
         //Compute inverse of tridiagonal matrix
-        m_Tinv = m_invtridiag(m_v0,m_vp,m_vm);
+        m_Tinv = m_invtridiag(m_v0, m_vp, m_vm);
 
         dg::blas2::symv(m_Tinv, m_e1, m_y);  //  T^(-1) e_1   
         dg::blas2::symv(m_R, m_y, x);  // x =  R T^(-1) e_1   
@@ -540,7 +536,7 @@ class CGtridiag
   private:
     value_type m_alpha;
     std::vector<value_type> m_v0, m_vp, m_vm;
-    ContainerType m_r, m_ap, m_p, m_rh;
+    ContainerType m_r, m_ap, m_p;
     SubContainerType m_e1, m_y;
     unsigned m_max_iter, m_iter;
     std::pair<CooMatrix, CooMatrix> m_TinvRpair;

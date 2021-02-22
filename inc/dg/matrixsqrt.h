@@ -457,9 +457,9 @@ class KrylovSqrtODEinvert
         m_Tinv = m_TinvRpair.first; 
         m_R    = m_TinvRpair.second;   
         
-        m_e1.resize(m_cgtridiag.get_iter(), 0);
+        m_e1.resize(m_cgtridiag.get_iter(), 0.);
         m_e1[0] = 1.;
-        m_y.resize( m_cgtridiag.get_iter());
+        m_y.resize( m_cgtridiag.get_iter(), 0.);
         m_rhs.new_size(m_cgtridiag.get_iter()); //resize  vectors in sqrtODE solver
         m_rhs.set_A(m_Tinv);
 
@@ -571,13 +571,13 @@ class KrylovSqrtCauchyinvert
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_TinvRpair = m_cgtridiag(m_A, x, m_b, m_A.inv_weights(), m_A.inv_weights(), m_eps, 1.); 
+        m_TinvRpair = m_cgtridiag(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1.); 
         m_Tinv = m_TinvRpair.first; 
         m_R    = m_TinvRpair.second;               
         
-        m_e1.resize(m_cgtridiag.get_iter(), 0);
+        m_e1.resize(m_cgtridiag.get_iter(), 0.);
         m_e1[0] = 1.;
-        m_y.resize( m_cgtridiag.get_iter());
+        m_y.resize( m_cgtridiag.get_iter(), 0.);
         m_cauchysqrt.new_size(m_cgtridiag.get_iter()); //resize  vectors in sqrtODE solver
         m_cauchysqrt.set_A(m_Tinv);
         
