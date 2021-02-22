@@ -73,13 +73,13 @@ struct Explicit
     void gamma1_y( const container& y, container& yp)
     {
         if (equations == "ff-O2") {
-            dg::blas1::scal(yp, 0.0);
-            sqrtinvert(yp, y); //produces different solution
+//             dg::blas1::scal(yp, 0.0);
+//             sqrtinvert(yp, y); //TODO produces wrong solution - origin of bug?
             //via two step approach
-//             sqrtsolve(y, m_iota);
-//             std::vector<unsigned> number = multigrid.direct_solve( m_multi_g0, yp, m_iota, eps_gamma);
-//             if(  number[0] == multigrid.max_iter())
-//                 throw dg::Fail( eps_gamma);
+            sqrtsolve(y, m_iota);
+            std::vector<unsigned> number = multigrid.direct_solve( m_multi_g0, yp, m_iota, eps_gamma);
+            if(  number[0] == multigrid.max_iter())
+                throw dg::Fail( eps_gamma);
         }
         else {
             std::vector<unsigned> number = multigrid.direct_solve( m_multi_g1, yp, y, eps_gamma);

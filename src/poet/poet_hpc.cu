@@ -114,17 +114,17 @@ int main( int argc, char* argv[])
     poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > ex( grid, p);
     poet::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
     /////////////////////create initial vector////////////////////////////////////
-//     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-//     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-// //     ex.gamma1_y(y0[0],y0[1]);
-//     ex.gamma1inv_y(y0[0],y0[1]);
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+//     ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+    ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
     
-      ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
-    std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
-    dg::blas1::scal(y0[0], p.amp);
-    ex.invLap_y(y0[0], y1[0]); //phi 
-    dg::blas1::scal(y0[0], 0.);
-    ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);  
+//       ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
+//     std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
+//     dg::blas1::scal(y0[0], p.amp);
+//     ex.invLap_y(y0[0], y1[0]); //phi 
+//     dg::blas1::scal(y0[0], 0.);
+//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);  
         {
                 size_t start = 0;
         dg::file::NC_Error_Handle err;

@@ -434,7 +434,7 @@ class CGtridiag
      * @brief Solve the system \f$A*x = b \f$ for x using PCG method 
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
-     * @param x Contains an initial value
+     * @param x Contains the initial value (\f[x!=0\f] if used for tridiagonalization) and the matrix approximation \f[x = A^{-1} b\f] as output
      * @param b The right hand side vector. 
      * @param P The preconditioner to be used
      * @param M (Inverse) Weights used to compute the norm for the error condition
@@ -444,6 +444,8 @@ class CGtridiag
      * @return Number of iterations used to achieve desired precision
      * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium. 
      * Note that the preconditioner must be \f$P = M^{-1} \f$ if the Matrix R and T of the tridiagonalization are further used for computing matrix functions. Then the x vector must be initialized with 0.
+     * 
+     * 
       */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
     std::pair<CooMatrix, CooMatrix> operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& M, value_type eps = 1e-12, value_type nrmb_correction = 1)
@@ -498,13 +500,12 @@ class CGtridiag
             if(rank==0)
 #endif //MPI
             {
-                std::cout << "# Absolute r*M*r "<<sqrt( dg::blas2::dot(M,m_r)) <<"\t ";
+                std::cout << "# Absolute r*M*r "<<sqrt( dg::blas2::dot(M, m_r)) <<"\t ";
                 std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(M,m_r) )/nrmb << ")\n";
+                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(M, m_r) )/nrmb << ")\n";
             }
 #endif //DG_DEBUG
-            if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
-                //TODO change this criterium  for square root matrix
+            if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
             {
                 dg::blas2::symv(P, m_r, m_ap);
                 nrm2r_new = dg::blas1::dot( m_ap, m_r);

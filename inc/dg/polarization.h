@@ -330,7 +330,6 @@ class PolCharge
                     if( m_no == not_normed)
                         dg::blas1::pointwiseDot( alpha, m_temp2, m_ell.weights(), beta, y);   
                     
-                    //TODO not converging ! - reason?
                 }
                 else
                 {
