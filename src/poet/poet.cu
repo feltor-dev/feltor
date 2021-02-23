@@ -13,6 +13,9 @@
 #include "dg/file/json_utilities.h"
 #include "parameters.h"
 
+#include "dg/polarization_init.h"
+#include "dg/andersonacc.h"
+
 /*
    - reads parameters from input.json or any other given file,
    - integrates the ToeflR - functor and
@@ -54,19 +57,31 @@ int main( int argc, char* argv[])
     //////////////////create initial vector///////////////////////////////////////
     
     //blob initialization
-    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-//     ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
-    ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
+//     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+//     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+// //     ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+//     ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
     
     
-//     //shear flow
-//     ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
-//     std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
-//     dg::blas1::scal(y0[0], p.amp);
-//     ex.invLap_y(y0[0], y1[0]); //phi 
-//     dg::blas1::scal(y0[0], 0.);
-//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
+   //shear flow
+    ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
+    std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
+    dg::blas1::scal(y0[0], p.amp);
+    ex.invLap_y(y0[0], y1[0]); //phi 
+    dg::blas1::scal(y0[0], 0.);
+//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
+    //Compute exact Ni with fixed point iteration
+    dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
+    polN.set_phi(y1[0]);
+    dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
+
+    dg::blas1::scal(y0[1], 0.0);
+    dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
+    dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
+
+    acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
+    dg::blas1::plus(y0[1],-1.0);
+    
     
 //     //double rotating gaussian
 //     dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);

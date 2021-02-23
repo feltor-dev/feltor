@@ -4,6 +4,7 @@
 #include "dg/file/file.h"
 
 #include "polarization.h"
+#include "polarization_init.h"
 #include "multigrid.h"
 #include "backend/exceptions.h"
 #include "multistep.h"
@@ -315,33 +316,8 @@ int main()
         std::cout << "#####ff polarization charge chi initialization test\n";
         //TODO converges very slowly, should not converge that slowly ....
 
-
         Container rho_cold = dg::evaluate(rho_ana_FF_cold, grid2d);
         Container phi_cold = dg::evaluate(phi_ana_FF_cold, grid2d);
-
-        
-        
-//         {
-//             dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1.0, false);
-//             polN.set_phi(phi_cold);
-//             
-//             dg::CG <Container> cg( x,  grid2d.size());
-//             double eps = 1e-5;
-//             std::cout << "Type eps (1e-5)\n";
-//             std::cin >> eps;    
-//             dg::blas2::symv(polN.weights(), rho_cold, temp);
-//             dg::blas1::scal(x, 0.0);
-//             dg::blas1::plus(x, 1.0); //x solution must be positive
-//             t.tic();
-//             unsigned number = cg( polN, x, temp, polN.precond(), polN.weights(), eps, 1);
-//             t.toc();
-//             dg::blas1::axpby( 1., chi, -1., x, error);
-//             res.d = sqrt( dg::blas2::dot( w2d, error));
-// 
-//             std::cout << " Time: "<<t.diff() << "\n";
-//             std::cout << "number of iterations:  "<<number<< std::endl;
-//             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
-//         }
 //         {
 //             dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1.0, false);
 //             polN.set_phi(phi_cold);
@@ -369,8 +345,8 @@ int main()
             
             double eps = 1e-5;
             double damping = 1e-9;
-            unsigned restart = 10;
-            std::cout << "Type eps (1e-5), damping (1e-9) and restart (10) \n";
+            unsigned restart = 10000;
+            std::cout << "Type eps (1e-5), damping (1e-9) and restart (10000) \n";
             std::cin >> eps >> damping >> restart;
             dg::AndersonAcceleration<Container> acc( x, restart);
 

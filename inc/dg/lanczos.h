@@ -269,7 +269,11 @@ class Lanczos
 #endif //DG_BENCHMARK
 
         dg::blas2::symv(m_T, m_e1, m_y); //T e_1
+#ifdef MPI_VERSION
         dg::blas2::symv(m_V, m_y, b.data()); // V T e_1
+#else
+        dg::blas2::symv(m_V, m_y, b); // V T e_1
+#endif
         dg::blas1::scal(b, xnorm ); 
         m_TVpair = std::make_pair(m_T,m_V);
         return m_TVpair;
@@ -355,7 +359,11 @@ class Lanczos
 #endif //DG_BENCHMARK
 
         dg::blas2::symv(m_T, m_e1, m_y); //T e_1
+#ifdef MPI_VERSION
         dg::blas2::symv(m_V, m_y, b.data()); // V T e_1
+#else
+        dg::blas2::symv(m_V, m_y, b); // V T e_1
+#endif
         dg::blas1::scal(b, xnorm ); 
         m_TVpair = std::make_pair(m_T,m_V);
         return m_TVpair;
@@ -537,7 +545,12 @@ class CGtridiag
         m_Tinv = m_invtridiag(m_v0, m_vp, m_vm);
 
         dg::blas2::symv(m_Tinv, m_e1, m_y);  //  T^(-1) e_1   
-        dg::blas2::symv(m_R, m_y, x.data());  // x =  R T^(-1) e_1   
+        
+#ifdef MPI_VERSION
+        dg::blas2::symv(m_R, m_y, x.data());  // x =  R T^(-1) e_1  
+#else
+        dg::blas2::symv(m_R, m_y, x);  // x =  R T^(-1) e_1  
+#endif
         m_TinvRpair = std::make_pair(m_Tinv, m_R);
         return m_TinvRpair;
     }
