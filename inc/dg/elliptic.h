@@ -63,7 +63,7 @@ namespace dg
  * @note The inverse of \f$ \sigma\f$ makes a good general purpose preconditioner
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
  * @note Since the pattern arises quite often (because of the ExB velocity \f$ u_E^2\f$ in the ion gyro-centre potential)
- * this class also can compute the variation integrand \f$ \lambda^2\nabla \phi\cdot \chi\cdot\nabla\phi\f$
+ * this class also can compute the variation integrand \f$ \lambda^2\nabla \phi\cdot \tau\cdot\nabla\phi\f$
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
 template <class Geometry, class Matrix, class Container>
@@ -305,8 +305,9 @@ class Elliptic
     }
 
     /**
-     * @brief \f$ \sigma = (\nabla\phi\cdot\chi\cdot\nabla \phi) \f$
+     * @brief \f$ \sigma = (\nabla\phi\cdot\tau\cdot\nabla \phi) \f$
      *
+     * where \f$ \tau \f$ is the tensor part of \f$\chi\f$ that is the (inverse) metric by default
      * @param phi the vector to take the variation of
      * @param sigma (inout) the variation
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
@@ -316,8 +317,9 @@ class Elliptic
         variation(1., 1., phi, 0., sigma);
     }
     /**
-     * @brief \f$ \sigma = \lambda^2(\nabla\phi\cdot\chi\cdot\nabla \phi) \f$
+     * @brief \f$ \sigma = \lambda^2(\nabla\phi\cdot\tau\cdot\nabla \phi) \f$
      *
+     * where \f$ \tau \f$ is the tensor part of \f$\chi\f$ that is the (inverse) metric by default
      * @param lambda input prefactor
      * @param phi the vector to take the variation of
      * @param sigma (out) the variation
@@ -328,8 +330,9 @@ class Elliptic
         variation(1.,lambda, phi, 0., sigma);
     }
     /**
-     * @brief \f$ \sigma = \alpha \lambda^2 (\nabla\phi\cdot\chi\cdot\nabla \phi) + \beta \sigma\f$
+     * @brief \f$ \sigma = \alpha \lambda^2 (\nabla\phi\cdot\tau\cdot\nabla \phi) + \beta \sigma\f$
      *
+     * where \f$ \tau \f$ is the tensor part of \f$\chi\f$ that is the (inverse) metric by default
      * @param alpha scalar input prefactor
      * @param lambda input prefactor
      * @param phi the vector to take the variation of
@@ -413,7 +416,7 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  * @note The inverse of \f$ \sigma\f$ makes a good general purpose preconditioner
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
  * @note Since the pattern arises quite often (because of the ExB velocity \f$ u_E^2\f$ in the ion gyro-centre potential)
- * this class also can compute the variation integrand \f$ \lambda^2\nabla \phi\cdot \chi\cdot\nabla\phi\f$
+ * this class also can compute the variation integrand \f$ \lambda^2\nabla \phi\cdot \tau\cdot\nabla\phi\f$
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
 template <class Geometry, class Matrix, class Container>
