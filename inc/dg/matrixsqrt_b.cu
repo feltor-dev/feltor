@@ -56,8 +56,8 @@ int main()
     dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( grid, alpha, dg::centered); //not_normed
     double epsCG, epsTimerel, epsTimeabs;    
 
-//     std::cout << "Type epsilon for CG (1e-5), and eps_rel (1e-5) and eps_abs (1e-10) for TimeStepper\n";
-//     std::cin >> epsCG >> epsTimerel >> epsTimeabs;
+    std::cout << "Type epsilon for CG (1e-5), and eps_rel (1e-5) and eps_abs (1e-10) for TimeStepper\n";
+    std::cin >> epsCG >> epsTimerel >> epsTimeabs;
     epsCG = 1e-14;
     epsTimerel = 1e-13;
     epsTimeabs = 1e-14;

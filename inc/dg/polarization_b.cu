@@ -1,4 +1,4 @@
-// #define DG_DEBUG
+#define DG_DEBUG
 #include <iostream>
 #include "blas.h"
 #include "dg/file/file.h"
@@ -10,6 +10,8 @@
 #include "cg.h"
 #include "functors.h"
 #include "andersonacc.h"
+#include "lgmres.h"
+#include "bicgstabl.h"
 
 const double tau = 1.;
 const double alpha = -tau;
@@ -21,7 +23,7 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
 
-dg::bc bcx = dg::DIR;
+dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 
 // df
@@ -45,7 +47,7 @@ double phi_ana_FF(double x, double y)  { return (sin(x)*sin(y));}
 
 
 //Full f cold
-double rho_ana_FF_cold( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+double rho_ana_FF_cold( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1.)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 double phi_ana_FF_cold(double x, double y)  { return sin( x)*sin(y);}
 
 using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
@@ -84,7 +86,7 @@ int main()
     
     dg::exblas::udouble res;
 
-//     dg::CG <Container> pcg( x, grid2d.size());
+    dg::CG <Container> pcg( x,  grid2d.size()*grid2d.size());
 //     
 //     const unsigned stages = 3;
 //     dg::MultigridCG2d<dg::CartesianGrid2d, Matrix, Container > multigrid( grid2d, stages);
@@ -311,33 +313,80 @@ int main()
 //    
     {
         std::cout << "#####ff polarization charge chi initialization test\n";
-        //TODO converges very slowly (linearly)
-        dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered, 1.0, true);
+        //TODO converges very slowly, should not converge that slowly ....
+
 
         Container rho_cold = dg::evaluate(rho_ana_FF_cold, grid2d);
         Container phi_cold = dg::evaluate(phi_ana_FF_cold, grid2d);
 
-        dg::AndersonAcceleration<Container> acc( x, 10);
-
-        polN.set_phi(phi_cold);
-        dg::blas1::scal(x, 0.0);
-        dg::blas1::plus(x, 1.0); //x solution must be positive
-
-//      dg::blas1::copy(chi, x); //solution as guess works
-//      dg::blas1::scal(x,0.99); //x solution must be positive
-
-        double eps = 1e-5;
-        double damping = 1e-9;
-        unsigned restart = 10;
-        std::cout << "Type eps (1e-5), damping (1e-9) and restart (10) \n";
-        std::cin >> eps >> damping >> restart;
-        std::cout << "Number of iterations " << acc.solve( polN, x, rho_cold, w2d, eps, eps, grid2d.size(), damping, restart, true) << std::endl;
-        dg::blas1::axpby( 1., chi, -1., x, error);
-
-        res.d = sqrt( dg::blas2::dot( w2d, error));
-
-        std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
         
+        
+//         {
+//             dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1.0, false);
+//             polN.set_phi(phi_cold);
+//             
+//             dg::CG <Container> cg( x,  grid2d.size());
+//             double eps = 1e-5;
+//             std::cout << "Type eps (1e-5)\n";
+//             std::cin >> eps;    
+//             dg::blas2::symv(polN.weights(), rho_cold, temp);
+//             dg::blas1::scal(x, 0.0);
+//             dg::blas1::plus(x, 1.0); //x solution must be positive
+//             t.tic();
+//             unsigned number = cg( polN, x, temp, polN.precond(), polN.weights(), eps, 1);
+//             t.toc();
+//             dg::blas1::axpby( 1., chi, -1., x, error);
+//             res.d = sqrt( dg::blas2::dot( w2d, error));
+// 
+//             std::cout << " Time: "<<t.diff() << "\n";
+//             std::cout << "number of iterations:  "<<number<< std::endl;
+//             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
+//         }
+//         {
+//             dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1.0, false);
+//             polN.set_phi(phi_cold);
+//             
+//             dg::CG <Container> cg( x,  grid2d.size());
+//             double eps = 1e-5;
+//             std::cout << "Type eps (1e-5)\n";
+//             std::cin >> eps;    
+//             dg::blas2::symv(polN.weights(), rho_cold, temp);
+//             dg::blas1::scal(x, 0.0);
+//             dg::blas1::plus(x, 1.0); //x solution must be positive
+//             t.tic();
+//             unsigned number = cg( polN, x, temp, polN.precond(), polN.weights(), eps, 1);
+//             t.toc();
+//             dg::blas1::axpby( 1., chi, -1., x, error);
+//             res.d = sqrt( dg::blas2::dot( w2d, error));
+// 
+//             std::cout << " Time: "<<t.diff() << "\n";
+//             std::cout << "number of iterations:  "<<number<< std::endl;
+//             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
+//         }
+        {
+            dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered, 1.0, false);
+            polN.set_phi(phi_cold);
+            
+            double eps = 1e-5;
+            double damping = 1e-9;
+            unsigned restart = 10;
+            std::cout << "Type eps (1e-5), damping (1e-9) and restart (10) \n";
+            std::cin >> eps >> damping >> restart;
+            dg::AndersonAcceleration<Container> acc( x, restart);
+
+            dg::blas1::scal(x, 0.0);
+            dg::blas1::plus(x, 1.0); //x solution must be positive      
+            t.tic();
+            unsigned number = acc.solve( polN, x, rho_cold, w2d, eps, eps, grid2d.size(), damping, restart, true);
+            t.toc();
+
+            dg::blas1::axpby( 1., chi, -1., x, error);
+            res.d = sqrt( dg::blas2::dot( w2d, error));
+
+            std::cout << " Time: "<<t.diff() << "\n";
+            std::cout << "number of iterations:  "<<number<< std::endl;
+            std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
+        }
         size_t start = 0;
         dg::file::NC_Error_Handle err;
         int ncid;

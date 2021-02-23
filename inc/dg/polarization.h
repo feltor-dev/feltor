@@ -424,7 +424,7 @@ class PolChargeN
     PolChargeN( const Geometry& g, norm no = not_normed,
         direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
         PolChargeN( g, g.bcx(), g.bcy(), no, dir, jfactor, chi_weight_jump)
-    {
+    {        
     }
 
     /**
@@ -444,22 +444,10 @@ class PolChargeN
         norm no = not_normed, direction dir = forward,
         value_type jfactor=1., bool chi_weight_jump = false)
     {
-        m_no=no, m_jfactor=jfactor;
-        m_chi_weight_jump = chi_weight_jump;
-        dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
-        dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
-        dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
-        dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
-        dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
+        m_ell.construct(g, bcx, bcy, no, dir, jfactor, chi_weight_jump );
+        dg::assign(dg::evaluate(dg::zero,g), m_phi);
+        dg::assign(dg::evaluate(dg::one,g), m_temp);
 
-        dg::assign( dg::create::inv_volume(g),    m_inv_weights);
-        dg::assign( dg::create::volume(g),        m_weights);
-        dg::assign( dg::create::inv_weights(g),   m_precond);
-        m_temp = m_phi= m_tempx = m_tempy = m_inv_weights ;
-        m_chi=g.metric();
-        m_sigma = m_vol = dg::tensor::volume(m_chi);
-        dg::assign( dg::create::weights(g), m_weights_wo_vol);
     }
 
     /**
@@ -480,9 +468,6 @@ class PolChargeN
     {
       m_phi = phi;
     }
-
-
-
     /**
      * @brief Return the vector missing in the un-normed symmetric matrix
      *
@@ -490,7 +475,7 @@ class PolChargeN
      * @return inverse volume form including inverse weights
      */
     const Container& inv_weights()const {
-        return m_inv_weights;
+        return m_ell.inv_weights();
     }
     /**
      * @brief Return the vector making the matrix symmetric
@@ -499,7 +484,7 @@ class PolChargeN
      * @return volume form including weights
      */
     const Container& weights()const {
-        return m_weights;
+        return m_ell.weights();
     }
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
@@ -508,30 +493,9 @@ class PolChargeN
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
      * @return the inverse of \f$\chi\f$.
      */
-    const Container& precond()const {
-        return m_precond;
+    const Container& precond()const { 
+        return m_ell.precond();
     }
-    /**
-     * @brief Set the currently used jfactor (\f$ \alpha \f$)
-     * @param new_jfactor The new scale factor for jump terms
-     */
-    void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
-    /**
-     * @brief Get the currently used jfactor (\f$ \alpha \f$)
-     * @return  The current scale factor for jump terms
-     */
-    value_type get_jfactor() const {return m_jfactor;}
-    /**
-     * @brief Set the chi weighting of jump terms
-     * @param jump_weighting Switch for weighting the jump factor with chi. Either true or false.
-     */
-    void set_jump_weighting( bool jump_weighting) {m_chi_weight_jump = jump_weighting;}
-    /**
-     * @brief Get the current state of chi weighted jump terms.
-     * @return Whether the weighting of jump terms with chi is enabled. Either true or false.
-     */
-    bool get_jump_weighting() const {return m_chi_weight_jump;}
-
     /**
      * @brief Compute elliptic term and store in output
      *
@@ -570,59 +534,14 @@ class PolChargeN
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
     {
-        dg::blas1::pointwiseDot( x, m_vol, m_sigma);
-        //update preconditioner
-        dg::blas1::pointwiseDivide( m_inv_weights, x, m_precond);
-        
-        //compute gradient
-        dg::blas2::gemv( m_rightx, m_phi, m_tempx); //R_x*f
-        dg::blas2::gemv( m_righty, m_phi, m_tempy); //R_y*f
-
-        //multiply with tensor (note the alias)
-        dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
-
-        //now take divergence
-        dg::blas2::symv( m_lefty, m_tempy, m_temp);
-        dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
-
-        //add jump terms
-        if(m_chi_weight_jump)
-        {
-                dg::blas2::symv( m_jfactor, m_jumpX, m_phi, 0., m_tempx);
-                dg::blas2::symv( m_jfactor, m_jumpY, m_phi, 0., m_tempy);
-                dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
-                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
-        } 
-        else
-        {
-            dg::blas2::symv( m_jfactor, m_jumpX, m_phi, 1., m_temp);
-            dg::blas2::symv( m_jfactor, m_jumpY, m_phi, 1., m_temp);
-        }
-        
-        if( m_no == normed)
-            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
-        if( m_no == not_normed)//multiply weights without volume
-            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+//         dg::blas1::transform( x, m_temp, dg::ABS<double>());
+        m_ell.set_chi(x);
+        m_ell.symv(alpha, m_phi, beta, y);
     }
 
-
-    /**
-     * @brief Determine if weights are multiplied to make operator symmetric or not
-     *
-     * @param new_norm new setting
-     */
-    void set_norm( dg::norm new_norm) {
-        m_no = new_norm;
-    }
     private:
-    Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
-    Container m_weights, m_inv_weights, m_phi, m_precond, m_weights_wo_vol;
-    Container m_tempx, m_tempy, m_temp;
-    norm m_no;
-    SparseTensor<Container> m_chi, m_metric;
-    Container m_sigma, m_vol;
-    value_type m_jfactor;
-    bool m_chi_weight_jump;
+    dg::Elliptic<Geometry,  Matrix, Container> m_ell;
+    Container m_phi, m_temp;
 };
     
 template< class G, class M, class V>

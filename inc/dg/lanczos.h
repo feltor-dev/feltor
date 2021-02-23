@@ -162,11 +162,7 @@ class Lanczos
      * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable, unsigned max_iterations) {
-        m_alpha.assign(max_iterations, 0.);
-        m_beta.assign(max_iterations, 0.);
-        m_v.assign(max_iterations,copyable);
-        m_w.assign(max_iterations,copyable);
-        m_vi = m_vip = m_wi = m_wim = m_wip= copyable;
+        m_vi = m_vip = m_vim = m_wi = m_wim = m_wip= copyable;
         m_max_iter = max_iterations;
         m_iter = max_iterations;
         m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
@@ -176,7 +172,7 @@ class Lanczos
         m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_e1.assign(m_max_iter, 0.);
-        m_temp.assign(m_max_iter, 0.);
+        m_y.assign(m_max_iter, 0.);
         m_e1[0] = 1.;
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
@@ -188,7 +184,7 @@ class Lanczos
         m_T.diagonal_offsets[2] =  1;
         m_V.resize(m_vi.size(), new_iter, new_iter*m_vi.size()); 
         m_e1.assign(new_iter, 0.);
-        m_temp.assign(new_iter, 0.);
+        m_y.assign(new_iter, 0.);
         m_e1[0] = 1.;
         m_iter = new_iter;
     }
@@ -200,67 +196,82 @@ class Lanczos
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
-     * @param b The right hand side vector. 
+     * @param b The right hand side vector
+     * @param eps accuracy of residual
      * 
      * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \f$ T = V^T A V \f$.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b)
+    std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b, value_type eps )
     {
         get_value_type<ContainerType> xnorm = sqrt(dg::blas1::dot(x, x));
+        value_type residual;
+#ifdef DG_BENCHMARK
+        Timer t;
+        value_type invtime=0.;
+#endif //DG_BENCHMARK
 
-        //Initial vector
-        dg::blas1::axpby(1./xnorm, x, 0.0, m_v[0]); //m_v[1] = x/||x||
-        m_beta[0] = 0.;
-
-        //Algorithm for i=1
-        dg::blas2::symv(A, m_v[0], m_v[1]);  
-        m_alpha[0] = dg::blas1::dot(m_v[1], m_v[0]);      
-        dg::blas1::axpby(-m_alpha[0], m_v[0], 1.0, m_v[1]);            
-        m_beta[1] = sqrt(dg::blas1::dot(m_v[1], m_v[1]));  
-
-        dg::blas1::scal(m_v[1], 1./m_beta[1]);
-        //Algorithm for i>1
-        for( unsigned i=1; i<m_max_iter-1; i++)
-        {
-            dg::blas2::symv(A, m_v[i], m_v[i+1]);                    
-            dg::blas1::axpby(-m_beta[i], m_v[i-1], 1.0, m_v[i+1]);     
-            m_alpha[i] = dg::blas1::dot(m_v[i+1], m_v[i]);            
-            dg::blas1::axpby(-m_alpha[i], m_v[i], 1.0, m_v[i+1]);      
-            m_beta[i+1] = sqrt(dg::blas1::dot(m_v[i+1], m_v[i+1]));     
-    //         if (m_beta[i+1] == 0) break;
-//             std::cout << m_beta[i+1]  << "\n";
-            dg::blas1::scal(m_v[i+1], 1./m_beta[i+1]);  
-            
-        }
-        //Last m_alpha
-        dg::blas2::symv(A, m_v[m_max_iter-1], m_vi);
-
-        dg::blas1::axpby(-m_beta[m_max_iter-1], m_v[m_max_iter-2], 1.0, m_vi); 
-        m_alpha[m_max_iter-1] = dg::blas1::dot(m_vi, m_v[m_max_iter-1]);
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
+        value_type m_betaip = 0.;
         
-        //Fill T and V Matrix
-        unsigned counter = 0;
+        unsigned counter = 0;     
+        //Algorithm for i>1
         for( unsigned i=0; i<m_max_iter; i++)
         {
-            m_T.values(i,0) =  m_beta[i];  // -1 diagonal
-            m_T.values(i,1) =  m_alpha[i];  // 0 diagonal
-            m_T.values(i,2) =  m_beta[i+1];  // +1 diagonal //dia_rows entry works since its outside of matrix
-            
-            for( unsigned j=0; j<m_v[0].size(); j++)
+            for( unsigned j=0; j<m_vi.size(); j++)
             {            
                 m_V.row_indices[counter]    = j;
                 m_V.column_indices[counter] = i; 
-                m_V.values[counter]         = m_v[i][j];
+                m_V.values[counter]         = m_vi.data()[j];
                 counter++;
             }
-        }     
-        
-        //Check implementation: b=||x|| V T e_1 = || x || (m_v[0] m_alpha[01] + m_v[1] beta[1])
-        dg::blas1::axpby(m_alpha[0], m_v[0], m_beta[1], m_v[1], b);
+            m_T.values(i,0) =  m_betaip; // -1 diagonal
+            
+            dg::blas2::symv(A, m_vi, m_vip);                    
+            dg::blas1::axpby(-m_betaip, m_vim, 1.0, m_vip);  // only - if i>0, therefore no if (i>0)  
+            m_T.values(i,1)  = dg::blas1::dot(m_vip, m_vi);            
+            dg::blas1::axpby(-m_T.values(i,1), m_vi, 1.0, m_vip);      
+            m_betaip = sqrt(dg::blas1::dot(m_vip, m_vip));     
+            if (m_betaip == 0) {
+#ifdef DG_DEBUG
+                std::cout << "beta[i+1]=0 encountered\n";
+#endif //DG_DEBUG
+                set_iter(i+1); 
+                break;
+            } 
+            dg::blas1::scal(m_vip, 1./m_betaip);  
+            m_vim = m_vi;
+            m_vi = m_vip;
+            m_T.values(i,2) =  m_betaip;  // +1 diagonal
+            if (i>0) {
+                m_invtridiag.resize(i);
+#ifdef DG_BENCHMARK
+                t.tic();
+#endif //DG_BENCHMARK
+                m_Tinv = m_invtridiag(m_T); //TODO slow -> criterium without inversion ? 
+#ifdef DG_BENCHMARK
+                t.toc();
+                invtime+=t.diff();
+#endif //DG_BENCHMARK
+                residual = xnorm*m_betaip*m_betaip*abs(m_Tinv.values[i-1]);
+#ifdef DG_DEBUG
+                std::cout << "||r||_2 =  " << residual << "  # of iterations = " << i+1 << "\n";
+#endif //DG_DEBUG
+                if (residual< eps ) {
+                    set_iter(i+1); 
+                    break;
+                }
+            }
+            
+        }
+#ifdef DG_BENCHMARK
+        std::cout << get_iter() << " T inversions took " << invtime << "s\n";
+#endif //DG_BENCHMARK
+
+        dg::blas2::symv(m_T, m_e1, m_y); //T e_1
+        dg::blas2::symv(m_V, m_y, b.data()); // V T e_1
         dg::blas1::scal(b, xnorm ); 
-        
-        m_TVpair = std::make_pair(m_T, m_V);
+        m_TVpair = std::make_pair(m_T,m_V);
         return m_TVpair;
     }
     /**
@@ -284,55 +295,57 @@ class Lanczos
         Timer t;
         value_type invtime=0.;
 #endif //DG_BENCHMARK
+        
         dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
-        value_type betaip = 0;
+        value_type m_betaip = 0;
         dg::blas2::symv(M, m_vi, m_wi);
+        
         unsigned counter = 0;
         for( unsigned i=0; i<m_max_iter; i++)
         {  
-            for( unsigned j=0; j<m_v[0].size(); j++)
+            for( unsigned j=0; j<m_vi.size(); j++)
             {            
                 m_V.row_indices[counter]    = j;
                 m_V.column_indices[counter] = i; 
                 m_V.values[counter]         = m_vi.data()[j];
                 counter++;
             }
-            m_T.values(i,0) =  betaip;  // -1 diagonal
+            m_T.values(i,0) =  m_betaip;  // -1 diagonal
             dg::blas2::symv(A, m_vi, m_wip); 
-            dg::blas1::axpby(-betaip, m_wim, 1.0, m_wip);    //only -= if i>0, therefore no if (i>0)
+            dg::blas1::axpby(-m_betaip, m_wim, 1.0, m_wip);    //only - if i>0, therefore no if (i>0)
             m_T.values(i,1) = dg::blas1::dot(m_wip, m_vi);    
             dg::blas1::axpby(-m_T.values(i,1), m_wi, 1.0, m_wip);     
             dg::blas2::symv(Minv,m_wip,m_vip);
-            betaip = sqrt(dg::blas1::dot(m_wip, m_vip)); 
-            if (betaip == 0) {
+            m_betaip = sqrt(dg::blas1::dot(m_wip, m_vip)); 
+            if (m_betaip == 0) {
 #ifdef DG_DEBUG
                 std::cout << "beta[i+1]=0 encountered\n";
 #endif //DG_DEBUG
                 set_iter(i+1); 
                 break;
             } 
-            dg::blas1::scal(m_vip, 1./betaip);     
-            dg::blas1::scal(m_wip, 1./betaip);  
+            dg::blas1::scal(m_vip, 1./m_betaip);     
+            dg::blas1::scal(m_wip, 1./m_betaip);  
             m_vi=m_vip;
             m_wim=m_wi;
             m_wi=m_wip;
-            m_T.values(i,2) =  betaip;  // +1 diagonal
+            m_T.values(i,2) =  m_betaip;  // +1 diagonal
             if (i>0) {
                 m_invtridiag.resize(i);
 #ifdef DG_BENCHMARK
                 t.tic();
 #endif //DG_BENCHMARK
-                m_Tinv = m_invtridiag(m_T); //Compute inverse of T //TODO slow -> criterium without inversion ? 
+                m_Tinv = m_invtridiag(m_T); //TODO slow -> criterium without inversion ? 
 #ifdef DG_BENCHMARK
                 t.toc();
                 invtime+=t.diff();
 #endif //DG_BENCHMARK
-                residual = xnorm*betaip*betaip*abs(m_Tinv.values[i-1]);
+                residual = xnorm*m_betaip*m_betaip*abs(m_Tinv.values[i-1]);
 #ifdef DG_DEBUG
                 std::cout << "||r||_M =  " << residual << "  # of iterations = " << i+1 << "\n";
 #endif //DG_DEBUG
                 if (residual< eps ) {
-                    set_iter(i+1); //update iteration number and resize matrix V and T
+                    set_iter(i+1); 
                     break;
                 }
             }
@@ -341,21 +354,15 @@ class Lanczos
         std::cout << get_iter() << " T inversions took " << invtime << "s\n";
 #endif //DG_BENCHMARK
 
-//         Check implementation: b=||x|| V T e_1 = || x || (m_v[0] m_alpha[01] + m_v[1] m_beta[1])
-//         Note that it depends only on first two vectors and alpha,beta (changes if square root is applied upon T)
-//         dg::blas1::axpby(m_alpha[0], m_v[0], m_beta[1], m_v[1], b); //faster alternative
-
-        dg::blas2::symv(m_T, m_e1, m_temp); //T e_1
-        dg::blas2::symv(m_V, m_temp, b); // V T e_1
+        dg::blas2::symv(m_T, m_e1, m_y); //T e_1
+        dg::blas2::symv(m_V, m_y, b.data()); // V T e_1
         dg::blas1::scal(b, xnorm ); 
         m_TVpair = std::make_pair(m_T,m_V);
         return m_TVpair;
     }
   private:
-    std::vector<value_type> m_alpha, m_beta;
-    std::vector<ContainerType> m_v, m_w;
-    ContainerType  m_vi, m_vip, m_wi, m_wip, m_wim;
-    SubContainerType m_e1, m_temp;
+    ContainerType  m_vi, m_vip, m_vim, m_wi, m_wip, m_wim;
+    SubContainerType m_e1, m_y;
     unsigned m_iter, m_max_iter;
     std::pair<DiaMatrix, CooMatrix> m_TVpair; 
     DiaMatrix m_T;
@@ -530,7 +537,7 @@ class CGtridiag
         m_Tinv = m_invtridiag(m_v0, m_vp, m_vm);
 
         dg::blas2::symv(m_Tinv, m_e1, m_y);  //  T^(-1) e_1   
-        dg::blas2::symv(m_R, m_y, x);  // x =  R T^(-1) e_1   
+        dg::blas2::symv(m_R, m_y, x.data());  // x =  R T^(-1) e_1   
         m_TinvRpair = std::make_pair(m_Tinv, m_R);
         return m_TinvRpair;
     }
