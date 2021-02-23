@@ -6,7 +6,7 @@
 namespace dg
 {
 
-///@addtogroup time
+///@addtogroup time_utils
 ///@{
 /*! @brief Compute \f[ \sqrt{\sum_i x_i^2}\f] using \c dg::blas1::dot
  *
@@ -20,7 +20,23 @@ get_value_type<ContainerType> l2norm( const ContainerType& x)
 {
     return sqrt( dg::blas1::dot( x,x));
 }
-///\f[ h'= h \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f]
+/**
+ * @brief \f[ h'= h \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f]
+ *
+ * PID stands for "Proportional" (the present error), "Integral" (the past error), "Derivative" (the future error). See a good tutorial here https://www.youtube.com/watch?v=UR0hOmjaHp0
+ * The PID controller is a good controller to start with, it does not overshoot
+ * too much, is smooth, has no systematic over- or under-estimation and
+ * converges very quickly to the desired timestep
+ * @tparam value_type
+ * @param dt_old the old (present) timestep
+ * @param eps_0 the error relative to the tolerance of the present timestep
+ * @param eps_1 the error relative to the tolerance of the previous timestep
+ * @param eps_2 the error relative to the tolerance of the second previous timestep
+ * @param embedded_order order of the embedded timestepper
+ * @param order order of the timestepper
+ *
+ * @return the new timestep
+ */
 template<class value_type>
 value_type pid_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
@@ -188,6 +204,13 @@ struct Adaptive
     template<class Explicit, class ErrorNorm = value_type(const container_type&)>
     value_type guess_stepsize( Explicit& ex, value_type t0, const container_type& u0, enum direction dir, ErrorNorm& norm, value_type rtol, value_type atol);
 
+    ///@brief Allow write access to internal stepper
+    ///
+    ///Maybe useful to set options in the stepper
+    stepper_type& stepper() { return m_stepper;}
+    ///@brief Read access to internal stepper
+    const stepper_type& stepper() const { return m_stepper;}
+
     /*!@brief Explicit or Implicit adaptive step
      *
      * @param rhs The right hand side of the equation to integrate
@@ -311,7 +334,7 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize( Explic
  * @param u1 (write only) contains the updated result on output if the step was accepted, otherwise a copy of \c u0 (may alias \c u0)
  * @param dt on input: timestep to try out (see dg::Adaptive::guess_stepsize() for an initial stepsize).
  * On output: stepsize proposed by the controller that can be used to continue the integration in the next step.
- * @param control The control function. Usually \c dg::pid_control is a good choice
+ * @param control The control function. Usually \c dg::pid_control is a good choice. The task of the control function is to compute a new timestep size based on the old timestep size, the order of the method and the past error(s)
  * @param norm The error norm. Usually \c dg::l2norm is a good choice, but for
  * very small vector sizes the time for the binary reproducible dot product might become
  * a performance bottleneck. Then it's time for your own implementation.
@@ -332,7 +355,7 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize( Explic
 
 /*!@class hide_control_error
  *
- * @tparam ControlFunction function or Functor called as dt' = control( dt, eps0, eps1, eps2, order, embedded_order), where all parameters are of type value_type except the last two, which are unsigned
+ * @tparam ControlFunction function or Functor called as dt' = control( dt, eps0, eps1, eps2, order, embedded_order), where all parameters are of type value_type except the last two, which are unsigned.
  * @tparam ErrorNorm function or Functor of type value_type( const ContainerType&)
  */
 

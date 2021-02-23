@@ -12,9 +12,6 @@ with realistic flux surfaces. Used in the paper "Three discontinuous
 Galerkin schemes for the anisotropic heat conduction equation on
 non-aligned grids" Comput. Phys. Commun. 199, 29-39 (2016)
 
-feltor2d::  2d gyrofluid electrodynamic model (the phi symmetric version
-of feltor)
-
 lamb_dipole:: Programs that reproduce results for the paper "A
 conservative discontinuous Galerkin scheme for the 2D incompressible
 Navier-Stokes equations" Comput. Phys. Commun. 185, 2865-2873 (2014) (The

@@ -11,6 +11,8 @@
 
 ///@cond
 namespace dg {
+template<class value_type>
+static inline MPI_Datatype getMPIDataType();
 
 template<class to_ContainerType, class from_ContainerType, class ...Params>
 inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);
@@ -23,7 +25,7 @@ Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...
 {
     Vector1 out;
     out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
-    using container1 = typename std::decay<Vector1>::type::container_type;
+    using container1 = typename std::decay_t<Vector1>::container_type;
     out.data() = dg::construct<container1>( in.data(), std::forward<Params>(ps)...);
     return out;
 }
@@ -86,6 +88,19 @@ inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&
     dg::blas1::subroutine( f,
         do_get_data(std::forward<container>(x), get_tensor_category<container>()),
         do_get_data(std::forward<Containers>(xs), get_tensor_category<Containers>())...);
+}
+
+template<class T, class ContainerType, class BinaryOp>
+inline T doReduce( MPIVectorTag, const ContainerType& x, T init, BinaryOp op)
+{
+    init = dg::blas1::reduce( x.data(), init, op);
+    //now do the MPI reduction
+    int size;
+    MPI_Comm_size( x.communicator(), &size);
+    thrust::host_vector<T> reduction( size);
+    MPI_Allgather( &init, 1, getMPIDataType<T>(), thrust::raw_pointer_cast(reduction.data()), 1, getMPIDataType<T>(), x.communicator());
+    //reduce received data (serial execution)
+    return dg::blas1::reduce( reduction, init, op) ;
 }
 
 } //namespace detail

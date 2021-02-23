@@ -59,19 +59,24 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * This routine computes the scalar product defined by the symmetric positive definite
  * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  *
- * @note Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result.
- * Furthermore, the sum is computed with infinite precision and the result is then rounded
+ * @copydoc hide_code_evaluate2d
+ * @attention if one of the input vectors contains \c Inf or \c NaN or the
+ * product of the input numbers reaches \c Inf or \c Nan then the behaviour
+ * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
+ * dg::ISNSANE in that case
+ * @note Our implementation guarantees **binary reproducible** results up to and excluding the last mantissa bit of the result.
+ * Furthermore, the sum is computed with **infinite precision** and the result is then rounded
  * to the nearest double precision number. Although the products are not computed with
  * infinite precision, the order of multiplication is guaranteed.
- * This is possible with the help of an adapted version of the \c ::exblas library.
- * @copydoc hide_code_evaluate2d
+ * This is possible with the help of an adapted version of the \c dg::exblas library and
+* works for single and double precision.
  *
  * @param x Left input
  * @param m The diagonal Matrix.
  * @param y Right input (may alias \c x)
  * @return Generalized scalar product. If \c x and \c y are vectors of containers and \c m is not, then we sum the results of \c dg::blas2::dot( x[i], m, y[i])
  * @note This routine is always executed synchronously due to the
-    implicit memcpy of the result.
+    implicit memcpy of the result. With mpi the result is broadcasted to all processes. Also note that the behaviour is undefined when one of the containers contains \c nan
  * @tparam MatrixType \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */

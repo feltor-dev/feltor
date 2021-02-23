@@ -72,22 +72,9 @@ struct ArakawaDirPer
     FuncDirPer2 g_;
 };
 
-struct VariationDirPer
-{
-    VariationDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4. ){}
-    double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);}
-
-    double operator()(double R, double Z) const {
-        return f_.dR( R,Z)*f_.dR(R,Z) + f_.dZ(R,Z)*f_.dZ(R,Z);
-    }
-    private:
-    dg::geo::FuncDirPer f_;
-};
-
 struct CurvatureDirPer
 {
-    CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c), curvZ(c){}
+    CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c,+1), curvZ(c,+1){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -103,13 +90,13 @@ struct CurvatureDirPer
 
 int main(int argc, char** argv)
 {
-    std::cout << "Type n, Nx, Ny\n";
+    std::cout << "Type n (5), Nx (8), Ny (80)\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -118,22 +105,21 @@ int main(int argc, char** argv)
         is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
 
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
+    std::cout << "Psi min "<<mag.psip()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
     std::cout << "Psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<std::endl;
     //gp.display( std::cout);
     dg::Timer t;
-    //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing grid ... \n";
     t.tic();
-    //dg::geo::RibeiroFluxGenerator ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::geo::FluxGenerator ribeiro( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::geo::SimpleOrthogonal ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::geo::CurvilinearGrid2d grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
+    //dg::geo::RibeiroFluxGenerator generator( mag.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::FluxGenerator generator( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::SimpleOrthogonal generator( mag.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::CurvilinearGrid2d grid(generator, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     grid.display();
@@ -142,16 +128,11 @@ int main(int argc, char** argv)
     std::cout <<std::fixed<< std::setprecision(6)<<std::endl;
 
 
-    dg::geo::FuncDirPer left(c, psi_0, psi_1, 4);
-    FuncDirPer2 right( c, psi_0, psi_1);
-    ArakawaDirPer jacobian( c, psi_0, psi_1);
-    VariationDirPer variationLHS(c, psi_0, psi_1);
 
-    const dg::DVec lhs = dg::pullback( left, grid);
+    const dg::DVec lhs = dg::pullback( dg::geo::FuncDirPer(mag, psi_0, psi_1, 4), grid);
     dg::DVec jac(lhs);
-    const dg::DVec rhs = dg::pullback( right, grid);
-    const dg::DVec sol = dg::pullback ( jacobian, grid);
-    const dg::DVec variation = dg::pullback ( variationLHS, grid);
+    const dg::DVec rhs = dg::pullback( FuncDirPer2( mag, psi_0, psi_1), grid);
+    const dg::DVec sol = dg::pullback ( ArakawaDirPer( mag, psi_0, psi_1), grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
     ///////////////////////////////////////////////////////////////////////
@@ -173,12 +154,6 @@ int main(int argc, char** argv)
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
-    arakawa.variation( lhs, jac);
-    const double normVar = dg::blas2::dot( vol, variation);
-    //std::cout << "norm of variation "<<normVar<<"\n";
-    dg::blas1::axpby( 1., variation, -1., jac);
-    result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING POISSON\n";
     dg::Poisson<dg::aGeometry2d, dg::DMatrix, dg::DVec> poisson( grid);
@@ -195,18 +170,14 @@ int main(int argc, char** argv)
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
-    poisson.variationRHS( lhs, jac);
-    dg::blas1::axpby( 1., variation, -1., jac);
-    result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
 
     ////////////////////////////transform curvature components////////
     std::cout << "TESTING CURVATURE 3D\n";
     dg::DVec curvX, curvY;
     dg::HVec tempX, tempY;
-    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(c), dg::geo::CurvatureNablaBZ(c), tempX, tempY, grid);
-    dg::blas1::transfer(  tempX, curvX);
-    dg::blas1::transfer(  tempY, curvY);
+    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mag,+1), dg::geo::CurvatureNablaBZ(mag,+1), tempX, tempY, grid);
+    dg::assign(  tempX, curvX);
+    dg::assign(  tempY, curvY);
     dg::DMatrix dx, dy;
     dg::blas2::transfer( dg::create::dx(grid), dx);
     dg::blas2::transfer( dg::create::dy(grid), dy);
@@ -217,9 +188,9 @@ int main(int argc, char** argv)
     dg::blas1::pointwiseDot( 1., tempy, curvY, 1.,  tempx);
     const double normCurv = dg::blas2::dot( tempx, vol, tempx);
 
-    CurvatureDirPer curv(c, psi_0, psi_1);
+    CurvatureDirPer curv(mag, psi_0, psi_1);
     dg::DVec curvature;
-    dg::blas1::transfer( dg::pullback(curv, grid), curvature);
+    dg::assign( dg::pullback(curv, grid), curvature);
 
     dg::blas1::axpby( 1., tempx, -1., curvature, tempx);
     result = dg::blas2::dot( vol, tempx);

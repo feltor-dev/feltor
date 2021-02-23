@@ -20,6 +20,8 @@
 #include "mylibm.cuh"
 //this file has a direct correspondance to cpu code accumulate.h
 
+namespace dg
+{
 namespace exblas
 {
 namespace gpu
@@ -95,6 +97,8 @@ __device__
 static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
     if (x == 0)
         return;
+    //MW: This assert does not help very much in finding out where the nan originates
+    //assert( !std::isnan(x) && "Detected NaN in dot product!!");
 
     int e;
     frexp(x, &e); //extract the exponent of x (lies in -1024;1023 ?)
@@ -104,7 +108,7 @@ static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) {
     double xscaled = ldexp(x, -DIGITS * exp_word);
 
     int i;
-    for (i = iup; xscaled != 0; --i) {
+    for (i = iup; xscaled != 0 && i>=0; --i) { //MW: i>=0 protects agains NaN
         double xrounded = rint(xscaled);
         int64_t xint = (int64_t) xrounded;
         AccumulateWord(accumulator, i, xint, stride);
@@ -211,3 +215,4 @@ static inline double Round( int64_t * accumulator) {
 
 } //namespace gpu
 } //namespace exblas
+} //namespace dg

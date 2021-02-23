@@ -10,7 +10,7 @@
 
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 int main( int argc, char* argv[])
 {
@@ -20,26 +20,19 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
+    ///////////////////read in and show inputfile//////////////////
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile //////////////////
     size_t length;
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
-    err = nc_close(ncid); 
-
-//     std::cout << "input "<<input<<std::endl;    
+    std::string input(length, 'x');
+    err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
+    std::cout << "input "<<input<<std::endl;
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
-//     p.display(std::cout);
+    p.display(std::cout);
     
     //////////////////////////////Grids//////////////////////////////////////
     //input grid
@@ -53,8 +46,6 @@ int main( int argc, char* argv[])
     
     //dg stuff
     dg::HVec phi(dg::evaluate(dg::zero,g2d));
-    //open netcdf files
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
     //set min and max timesteps
     double time = 0.;
     unsigned imin,imax;    
@@ -74,7 +65,7 @@ int main( int argc, char* argv[])
     double x2sum=0.;
     double xysum=0.;
     double n=0.;
-    double a=0.;
+    //double a=0.;
     double gamma=0.;
     double b=0.;
     double c=0.;

@@ -16,7 +16,7 @@ int main(int argc, char * argv[])
     std::cout << "# Test DS on flux grid (No Boundary conditions)!\n";
     Json::Value js;
     if( argc==1) {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else {

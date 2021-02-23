@@ -23,8 +23,12 @@
 #include "solovev.h"
 #include "guenther.h"
 #include "toroidal.h"
+#include "polynomial.h"
+#ifdef BOOST_VERSION
+#include "taylor.h"
+#endif
+#include "make_field.h"
 
-#include "init.h"
 #include "fluxfunctions.h"
 #include "magnetic_field.h"
 #include "adaption.h"

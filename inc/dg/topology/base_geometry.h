@@ -28,14 +28,15 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
         return do_compute_jacobian();
     }
     /**
-    * @brief The Metric tensor of the coordinate system
+    * @brief The (inverse) metric tensor of the coordinate system
     *
-    *  The elements are the contravariant elements (if x,y are the coordinates)
+    *  The elements of the inverse metric tensor are the contravariant elements
+    *  of the metric \f$g\f$. If x,y are the coordinates, then
     \f[
-    g = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
+    g^{-1} = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
     \f]
     * @return symmetric tensor
-    * @note use the dg::tensor functions to compute the volume element from here
+    * @note use the \c dg::tensor::volume2d function to compute the volume element from here
     * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > metric()const {
@@ -103,16 +104,17 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
         return do_compute_jacobian();
     }
     /**
-    * @brief The (contravariant) metric tensor of the coordinate system
+    * @brief The (inverse) metric tensor of the coordinate system
     *
-    *  The elements are the contravariant elements (if x,y,z are the coordinates)
+    *  The elements of the inverse metric tensor are the contravariant elements
+    *  of the metric \f$g\f$. If x,y,z are the coordinates, then
     \f[
-    g = \begin{pmatrix} g^{xx}(x,y,z) & g^{xy}(x,y,z) & g^{zz}(x,y,z)\\
+    g^{-1} = \begin{pmatrix} g^{xx}(x,y,z) & g^{xy}(x,y,z) & g^{zz}(x,y,z)\\
       & g^{yy}(x,y,z) & g^{yz}(x,y,z) \\
       & & g^{zz}(x,y,z)\end{pmatrix}
     \f]
     * @return symmetric tensor
-    * @note use the dg::tensor functions to compute the volume element from here
+    * @note use the \c dg::tensor::volume function to compute the volume element from here
     * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > metric()const {
@@ -159,7 +161,20 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     }
 };
 
-///@brief a 3d product space Geometry
+/**
+ * @brief A 3d product space Geometry \f$ g_{2d} \otimes g_{1d}\f$
+ *
+ * This class represents a product space of a 2d grid (the "perp_grid") and a 1d
+ * grid (the "parallel_grid").
+ * The special feature of the product space is that the metric is simply
+ * \f[ g = \begin{pmatrix}
+ *  (g_{2d}(x,y)) & 0 \\
+ *  0 & g_{1d}(x,y)
+ * \end{pmatrix}
+ * \f]
+ * That is the metric elements do not depend on the third coordinate.
+ * @tparam real_type The value type of the grid
+ */
 template<class real_type>
 struct aRealProductGeometry3d : public aRealGeometry3d<real_type>
 {
@@ -243,6 +258,7 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
 
 /**
  * @brief three-dimensional Grid with Cylindrical metric
+ * @note \c map() returns the identity, i.e. Cylindrical coordinates count as physical coordinates. Evaluate the \c dg::cooRZP2X() functions to transform to a Cartesian coordinate system.
  */
 template<class real_type>
 struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
@@ -283,6 +299,17 @@ using aProductGeometry3d    = dg::aRealProductGeometry3d<double>;
 using CartesianGrid2d       = dg::RealCartesianGrid2d<double>;
 using CartesianGrid3d       = dg::RealCartesianGrid3d<double>;
 using CylindricalGrid3d     = dg::RealCylindricalGrid3d<double>;
+#ifndef MPI_VERSION
+namespace x{
+using aGeometry2d           = aGeometry2d           ;
+using aGeometry3d           = aGeometry3d           ;
+using aProductGeometry3d    = aProductGeometry3d    ;
+using CartesianGrid2d       = CartesianGrid2d       ;
+using CartesianGrid3d       = CartesianGrid3d       ;
+using CylindricalGrid3d     = CylindricalGrid3d     ;
+}//namespace x
+#endif //MPI_VERSION
+
 ///@}
 
 } //namespace dg

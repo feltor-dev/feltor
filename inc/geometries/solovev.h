@@ -10,6 +10,7 @@
 #include "dg/functors.h"
 #include "solovev_parameters.h"
 #include "magnetic_field.h"
+#include "modified.h"
 
 
 /*!@file
@@ -34,10 +35,10 @@ namespace solovev
  * @brief \f[ \hat{\psi}_p  \f]
  *
  * \f[ \hat{\psi}_p(R,Z) =
-      \hat{R}_0\Bigg\{\bar{R}^4/8 + A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
+      \hat{R}_0P_{\psi}\Bigg\{\bar{R}^4/8 + A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
       + \sum_{i=1}^{12} c_i\bar \psi_{pi}(\bar R, \bar Z) \Bigg\}
       =
-      \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
+      \hat{R}_0P_{\psi}\Bigg\{\bar{R}^4/8 + A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
       +c_1+
       c_2 \bar{R}^2 +
       c_3 \left[  \bar{Z}^2-\bar{R}^2  \ln{(\bar{R}   )} \right] +
@@ -64,66 +65,41 @@ struct Psip: public aCylindricalFunctor<Psip>
      *
      * @param gp geometric parameters
      */
-    Psip( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    Psip( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) {}
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
-        Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
-        Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
+        Rn = R/m_R0; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
+        Zn = Z/m_R0; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
         lgRn= log(Rn);
-        return   R_0_*( c_[12]*Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.)  //c_[12] is to make fieldlines straight
-                      + c_[0]  //c_[0] entspricht c_1
-              + c_[1]  *Rn2
-              + c_[2]  *(Zn2 - Rn2 * lgRn )
-              + c_[3]  *(Rn4 - 4.* Rn2*Zn2 )
-              + c_[4]  *(3.* Rn4 * lgRn  -9.*Rn2*Zn2 -12.* Rn2*Zn2 * lgRn + 2.*Zn4)
-              + c_[5]  *(Rn4*Rn2-12.* Rn4*Zn2 +8.* Rn2 *Zn4 )
-              + c_[6]  *(-15.*Rn4*Rn2 * lgRn + 75.* Rn4 *Zn2 + 180.* Rn4*Zn2 * lgRn
+        return   m_R0*m_pp*( Rn4/8.+ m_A * ( 1./2.* Rn2* lgRn-(Rn4)/8.)
+                      + m_c[0]  //m_c[0] entspricht c_1
+              + m_c[1]  *Rn2
+              + m_c[2]  *(Zn2 - Rn2 * lgRn )
+              + m_c[3]  *(Rn4 - 4.* Rn2*Zn2 )
+              + m_c[4]  *(3.* Rn4 * lgRn  -9.*Rn2*Zn2 -12.* Rn2*Zn2 * lgRn + 2.*Zn4)
+              + m_c[5]  *(Rn4*Rn2-12.* Rn4*Zn2 +8.* Rn2 *Zn4 )
+              + m_c[6]  *(-15.*Rn4*Rn2 * lgRn + 75.* Rn4 *Zn2 + 180.* Rn4*Zn2 * lgRn
                          -140.*Rn2*Zn4 - 120.* Rn2*Zn4 *lgRn + 8.* Zn6 )
-              + c_[7]  *Zn
-              + c_[8]  *Rn2*Zn
-                      + c_[9] *(Zn2*Zn - 3.* Rn2*Zn * lgRn)
-              + c_[10] *( 3. * Rn4*Zn - 4. * Rn2*Zn3)
-              + c_[11] *(-45.* Rn4*Zn + 60.* Rn4*Zn* lgRn - 80.* Rn2*Zn3* lgRn + 8. * Zn5)
+              + m_c[7]  *Zn
+              + m_c[8]  *Rn2*Zn
+                      + m_c[9] *(Zn2*Zn - 3.* Rn2*Zn * lgRn)
+              + m_c[10] *( 3. * Rn4*Zn - 4. * Rn2*Zn3)
+              + m_c[11] *(-45.* Rn4*Zn + 60.* Rn4*Zn* lgRn - 80.* Rn2*Zn3* lgRn + 8. * Zn5)
                       );
     }
   private:
-    double psi_horner(double R, double Z) const
-    {
-        //qampl is missing!!
-        const double Rn = R/R_0_, Zn = Z/R_0_;
-        const double lgRn = log(Rn);
-        double a0,a1, b0,b1, d0, d1;
-        a0 = 8.*c_[11]+8*c_[6]*Zn;
-        a1 = 2.*c_[4] +Zn*a0;
-        a0 = c_[9] + Zn*a1;
-        a1 = c_[2] + Zn*a0;
-        a0 = c_[7] + Zn*a1;
-        a1 = c_[0] + Zn*a0; //////
-        b0 = -12.*c_[5] + 75.*c_[6] + 180.*c_[6]*lgRn;
-        b1 = 3.*c_[10] - 45.*c_[11]+60.*c_[11]*lgRn + Zn*b0;
-        b0 = 1./8.-A_/8. + c_[3] + 3.*c_[4]*lgRn + Rn*Rn*(c_[5] - 15.*c_[6]*lgRn)+Zn*b1;
-        b1 = c_[1] + 0.5*A_*lgRn - c_[2]*lgRn + Rn*Rn*b0;
-        b0 = Rn*Rn*b1;//////
-        d0 = 8.*c_[5] - 140.*c_[6]-120.*c_[6]*lgRn;
-        d1 = -4.*c_[10] - 80.*c_[11]*lgRn + Zn*d0;
-        d0 = -4.*c_[3]-9.*c_[4]-12.*c_[4]*lgRn + Zn*d1;
-        d1 = c_[8] - 3.*c_[9]*lgRn + Zn*d0;
-        d0 = Rn*Rn*Zn*d1; /////
-
-        return  R_0_*(a1 + b0 + d0);
-    }
-    double R_0_, A_;
-    std::vector<double> c_;
+    double m_R0, m_A, m_pp;
+    std::vector<double> m_c;
 };
 
 /**
  * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} \f]
  *
  * \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
-      \Bigg\{ 2 c_2 \bar{R} +(\bar{R}^3 )/2+2 c_9 \bar{R}  \bar{Z}
+      P_\psi \Bigg\{ 2 c_2 \bar{R} +(\bar{R}^3 )/2+2 c_9 \bar{R}  \bar{Z}
       +c_4 (4 \bar{R}^3 -8 \bar{R}  \bar{Z}^2)+c_{11}
-      (12 \bar{R}^3  \bar{Z}-8 \bar{R}  \bar{Z}^3
+      (12  \bar{R}^3  \bar{Z}-8 \bar{R}  \bar{Z}^3
       +c_6 (6 \bar{R}^5 -48 \bar{R}^3  \bar{Z}^2+16 \bar{R}  \bar{Z}^4)+c_3 (-\bar{R} -2 \bar{R}  \ln{(\bar{R}   )})+
       A ((\bar{R} )/2-(\bar{R}^3 )/2+\bar{R}  \ln{(\bar{R}   )})
       +c_{10} (-3 \bar{R}  \bar{Z}-6 \bar{R}  \bar{Z} \ln{(\bar{R}   )})+c_5 (3 \bar{R}^3 -30 \bar{R}
@@ -138,32 +114,32 @@ struct Psip: public aCylindricalFunctor<Psip>
 struct PsipR: public aCylindricalFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
-    PsipR( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    PsipR( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) {}
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn3,Rn5,Zn,Zn2,Zn3,Zn4,lgRn;
-        Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;  Rn5 = Rn3*Rn2;
-        Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
+        Rn = R/m_R0; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;  Rn5 = Rn3*Rn2;
+        Zn = Z/m_R0; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
         lgRn= log(Rn);
-        return   (Rn3/2.*c_[12] + (Rn/2. - Rn3/2. + Rn*lgRn)* A_ +
-        2.* Rn* c_[1] + (-Rn - 2.* Rn*lgRn)* c_[2] + (4.*Rn3 - 8.* Rn *Zn2)* c_[3] +
-        (3. *Rn3 - 30.* Rn *Zn2 + 12. *Rn3*lgRn -  24.* Rn *Zn2*lgRn)* c_[4]
-        + (6 *Rn5 - 48 *Rn3 *Zn2 + 16.* Rn *Zn4)*c_[5]
+        return   m_pp*(Rn3/2. + (Rn/2. - Rn3/2. + Rn*lgRn)* m_A +
+        2.* Rn* m_c[1] + (-Rn - 2.* Rn*lgRn)* m_c[2] + (4.*Rn3 - 8.* Rn *Zn2)* m_c[3] +
+        (3. *Rn3 - 30.* Rn *Zn2 + 12. *Rn3*lgRn -  24.* Rn *Zn2*lgRn)* m_c[4]
+        + (6 *Rn5 - 48 *Rn3 *Zn2 + 16.* Rn *Zn4)*m_c[5]
         + (-15. *Rn5 + 480. *Rn3 *Zn2 - 400.* Rn *Zn4 - 90. *Rn5*lgRn +
-            720. *Rn3 *Zn2*lgRn - 240.* Rn *Zn4*lgRn)* c_[6] +
-        2.* Rn *Zn *c_[8] + (-3. *Rn *Zn - 6.* Rn* Zn*lgRn)* c_[9] + (12. *Rn3* Zn - 8.* Rn *Zn3)* c_[10] + (-120. *Rn3* Zn - 80.* Rn *Zn3 + 240. *Rn3* Zn*lgRn -
-            160.* Rn *Zn3*lgRn) *c_[11]
+            720. *Rn3 *Zn2*lgRn - 240.* Rn *Zn4*lgRn)* m_c[6] +
+        2.* Rn *Zn *m_c[8] + (-3. *Rn *Zn - 6.* Rn* Zn*lgRn)* m_c[9] + (12. *Rn3* Zn - 8.* Rn *Zn3)* m_c[10] + (-120. *Rn3* Zn - 80.* Rn *Zn3 + 240. *Rn3* Zn*lgRn -
+            160.* Rn *Zn3*lgRn) *m_c[11]
           );
     }
   private:
-    double R_0_, A_;
-    std::vector<double> c_;
+    double m_R0, m_A, m_pp;
+    std::vector<double> m_c;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
  *
  * \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}=
-     \hat{R}_0^{-1} \Bigg\{ 2 c_2 +(3 \hat{\bar{R}}^2 )/2+2 c_9  \bar{Z}+c_4 (12 \bar{R}^2 -8  \bar{Z}^2)+c_{11}
+     \hat{R}_0^{-1} P_\psi \Bigg\{ 2 c_2 +(3 \hat{\bar{R}}^2 )/2+2 c_9  \bar{Z}+c_4 (12 \bar{R}^2 -8  \bar{Z}^2)+c_{11}
       (36 \bar{R}^2  \bar{Z}-8  \bar{Z}^3)
       +c_6 (30 \bar{R}^4 -144 \bar{R}^2  \bar{Z}^2+16  \bar{Z}^4)+c_3 (-3 -2  \ln{(\bar{R}
       )})+
@@ -179,30 +155,30 @@ struct PsipR: public aCylindricalFunctor<PsipR>
 struct PsipRR: public aCylindricalFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
-    PsipRR( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    PsipRR( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) {}
     double do_compute(double R, double Z) const
     {
        double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
-       Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
-       Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
+       Rn = R/m_R0; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
+       Zn = Z/m_R0; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
        lgRn= log(Rn);
-       return   1./R_0_*( (3.* Rn2)/2.*c_[12] + (3./2. - (3. *Rn2)/2. +lgRn) *A_ +  2.* c_[1] + (-3. - 2.*lgRn)* c_[2] + (12. *Rn2 - 8. *Zn2) *c_[3] +
-         (21. *Rn2 - 54. *Zn2 + 36. *Rn2*lgRn - 24. *Zn2*lgRn)* c_[4]
-         + (30. *Rn4 - 144. *Rn2 *Zn2 + 16.*Zn4)*c_[5] + (-165. *Rn4 + 2160. *Rn2 *Zn2 - 640. *Zn4 - 450. *Rn4*lgRn +
-      2160. *Rn2 *Zn2*lgRn - 240. *Zn4*lgRn)* c_[6] +
-      2.* Zn* c_[8] + (-9. *Zn - 6.* Zn*lgRn) *c_[9]
- +   (36. *Rn2* Zn - 8. *Zn3) *c_[10]
- +   (-120. *Rn2* Zn - 240. *Zn3 + 720. *Rn2* Zn*lgRn - 160. *Zn3*lgRn)* c_[11]);
+       return   m_pp/m_R0*( (3.* Rn2)/2. + (3./2. - (3. *Rn2)/2. +lgRn) *m_A +  2.* m_c[1] + (-3. - 2.*lgRn)* m_c[2] + (12. *Rn2 - 8. *Zn2) *m_c[3] +
+         (21. *Rn2 - 54. *Zn2 + 36. *Rn2*lgRn - 24. *Zn2*lgRn)* m_c[4]
+         + (30. *Rn4 - 144. *Rn2 *Zn2 + 16.*Zn4)*m_c[5] + (-165. *Rn4 + 2160. *Rn2 *Zn2 - 640. *Zn4 - 450. *Rn4*lgRn +
+      2160. *Rn2 *Zn2*lgRn - 240. *Zn4*lgRn)* m_c[6] +
+      2.* Zn* m_c[8] + (-9. *Zn - 6.* Zn*lgRn) *m_c[9]
+ +   (36. *Rn2* Zn - 8. *Zn3) *m_c[10]
+ +   (-120. *Rn2* Zn - 240. *Zn3 + 720. *Rn2* Zn*lgRn - 160. *Zn3*lgRn)* m_c[11]);
     }
   private:
-    double R_0_, A_;
-    std::vector<double> c_;
+    double m_R0, m_A, m_pp;
+    std::vector<double> m_c;
 };
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  *
  * \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}=
-      \Bigg\{c_8 +c_9 \bar{R}^2 +2 c_3  \bar{Z}-8 c_4 \bar{R}^2  \bar{Z}+c_{11}
+      P_\psi \Bigg\{c_8 +c_9 \bar{R}^2 +2 c_3  \bar{Z}-8 c_4 \bar{R}^2  \bar{Z}+c_{11}
       (3 \bar{R}^4 -12 \bar{R}^2  \bar{Z}^2)+c_6 (-24 \bar{R}^4  \bar{Z}+32 \bar{R}^2  \bar{Z}^3)
       +c_{10} (3  \bar{Z}^2-3 \bar{R}^2
       \ln{(\bar{R}   )})+c_5 (-18 \bar{R}^2  \bar{Z}+8  \bar{Z}^3-24 \bar{R}^2  \bar{Z}
@@ -215,35 +191,35 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
 struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZ( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+    PsipZ( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) { }
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,lgRn;
-        Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
-        Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2;
+        Rn = R/m_R0; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
+        Zn = Z/m_R0; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2;
         lgRn= log(Rn);
 
-        return   (2.* Zn* c_[2]
-            -  8. *Rn2* Zn* c_[3] +
-              ((-18.)*Rn2 *Zn + 8. *Zn3 - 24. *Rn2* Zn*lgRn) *c_[4]
-            + ((-24.) *Rn4* Zn + 32. *Rn2 *Zn3)* c_[5]
-            + (150. *Rn4* Zn - 560. *Rn2 *Zn3 + 48. *Zn5 + 360. *Rn4* Zn*lgRn - 480. *Rn2 *Zn3*lgRn)* c_[6]
-            + c_[7]
-            + Rn2 * c_[8]
-            + (3. *Zn2 - 3. *Rn2*lgRn)* c_[9]
-            + (3. *Rn4 - 12. *Rn2 *Zn2) *c_[10]
-            + ((-45.)*Rn4 + 40. *Zn4 + 60. *Rn4*lgRn -  240. *Rn2 *Zn2*lgRn)* c_[11]);
+        return   m_pp*(2.* Zn* m_c[2]
+            -  8. *Rn2* Zn* m_c[3] +
+              ((-18.)*Rn2 *Zn + 8. *Zn3 - 24. *Rn2* Zn*lgRn) *m_c[4]
+            + ((-24.) *Rn4* Zn + 32. *Rn2 *Zn3)* m_c[5]
+            + (150. *Rn4* Zn - 560. *Rn2 *Zn3 + 48. *Zn5 + 360. *Rn4* Zn*lgRn - 480. *Rn2 *Zn3*lgRn)* m_c[6]
+            + m_c[7]
+            + Rn2 * m_c[8]
+            + (3. *Zn2 - 3. *Rn2*lgRn)* m_c[9]
+            + (3. *Rn4 - 12. *Rn2 *Zn2) *m_c[10]
+            + ((-45.)*Rn4 + 40. *Zn4 + 60. *Rn4*lgRn -  240. *Rn2 *Zn2*lgRn)* m_c[11]);
 
     }
   private:
-    double R_0_, A_;
-    std::vector<double> c_;
+    double m_R0, m_A, m_pp;
+    std::vector<double> m_c;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
 
    \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}=
-      \hat{R}_0^{-1} \Bigg\{2 c_3 -8 c_4 \bar{R}^2 +6 c_{10}  \bar{Z}-24 c_{11}
+      \hat{R}_0^{-1} P_\psi \Bigg\{2 c_3 -8 c_4 \bar{R}^2 +6 c_{10}  \bar{Z}-24 c_{11}
       \bar{R}^2  \bar{Z}+c_6 (-24 \bar{R}^4 +96 \bar{R}^2  \bar{Z}^2)
       +c_5 (-18 \bar{R}^2 +24  \bar{Z}^2-24 \bar{R}^2  \ln{(\bar{R}   )})+
       c_{12} (160  \bar{Z}^3-480 \bar{R}^2  \bar{Z} \ln{(\bar{R}   )})
@@ -253,25 +229,25 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
 struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZZ( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+    PsipZZ( Parameters gp): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) { }
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
-        Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
-        Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
+        Rn = R/m_R0; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
+        Zn = Z/m_R0; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
         lgRn= log(Rn);
-        return   1./R_0_*( 2.* c_[2] - 8. *Rn2* c_[3] + (-18. *Rn2 + 24. *Zn2 - 24. *Rn2*lgRn) *c_[4] + (-24.*Rn4 + 96. *Rn2 *Zn2) *c_[5]
-        + (150. *Rn4 - 1680. *Rn2 *Zn2 + 240. *Zn4 + 360. *Rn4*lgRn - 1440. *Rn2 *Zn2*lgRn)* c_[6] + 6.* Zn* c_[9] -  24. *Rn2 *Zn *c_[10] + (160. *Zn3 - 480. *Rn2* Zn*lgRn) *c_[11]);
+        return   m_pp/m_R0*( 2.* m_c[2] - 8. *Rn2* m_c[3] + (-18. *Rn2 + 24. *Zn2 - 24. *Rn2*lgRn) *m_c[4] + (-24.*Rn4 + 96. *Rn2 *Zn2) *m_c[5]
+        + (150. *Rn4 - 1680. *Rn2 *Zn2 + 240. *Zn4 + 360. *Rn4*lgRn - 1440. *Rn2 *Zn2*lgRn)* m_c[6] + 6.* Zn* m_c[9] -  24. *Rn2 *Zn *m_c[10] + (160. *Zn3 - 480. *Rn2* Zn*lgRn) *m_c[11]);
     }
   private:
-    double R_0_, A_;
-    std::vector<double> c_;
+    double m_R0, m_A, m_pp;
+    std::vector<double> m_c;
 };
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f]
 
   \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}=
-        \hat{R}_0^{-1} \Bigg\{2 c_9 \bar{R} -16 c_4 \bar{R}  \bar{Z}+c_{11}
+        \hat{R}_0^{-1} P_\psi \Bigg\{2 c_9 \bar{R} -16 c_4 \bar{R}  \bar{Z}+c_{11}
       (12 \bar{R}^3 -24 \bar{R}  \bar{Z}^2)+c_6 (-96 \bar{R}^3  \bar{Z}+64 \bar{R}  \bar{Z}^3)
       + c_{10} (-3 \bar{R} -6 \bar{R}  \ln{(\bar{R}   )})
       +c_5 (-60 \bar{R}  \bar{Z}-48 \bar{R}  \bar{Z} \ln{(\bar{R}   )})
@@ -283,273 +259,109 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
-    PsipRZ( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+    PsipRZ( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) { }
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn3,Zn,Zn2,Zn3,lgRn;
-        Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;
-        Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn;
+        Rn = R/m_R0; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;
+        Zn = Z/m_R0; Zn2 =Zn*Zn; Zn3 = Zn2*Zn;
         lgRn= log(Rn);
-        return   1./R_0_*(
-              -16.* Rn* Zn* c_[3] + (-60.* Rn* Zn - 48.* Rn* Zn*lgRn)* c_[4] + (-96. *Rn3* Zn + 64.*Rn *Zn3)* c_[5]
-            + (960. *Rn3 *Zn - 1600.* Rn *Zn3 + 1440. *Rn3* Zn*lgRn - 960. *Rn *Zn3*lgRn) *c_[6] +  2.* Rn* c_[8] + (-3.* Rn - 6.* Rn*lgRn)* c_[9]
-            + (12. *Rn3 - 24.* Rn *Zn2) *c_[10] + (-120. *Rn3 - 240. *Rn *Zn2 + 240. *Rn3*lgRn -   480.* Rn *Zn2*lgRn)* c_[11]
+        return   m_pp/m_R0*(
+              -16.* Rn* Zn* m_c[3] + (-60.* Rn* Zn - 48.* Rn* Zn*lgRn)* m_c[4] + (-96. *Rn3* Zn + 64.*Rn *Zn3)* m_c[5]
+            + (960. *Rn3 *Zn - 1600.* Rn *Zn3 + 1440. *Rn3* Zn*lgRn - 960. *Rn *Zn3*lgRn) *m_c[6] +  2.* Rn* m_c[8] + (-3.* Rn - 6.* Rn*lgRn)* m_c[9]
+            + (12. *Rn3 - 24.* Rn *Zn2) *m_c[10] + (-120. *Rn3 - 240. *Rn *Zn2 + 240. *Rn3*lgRn -   480.* Rn *Zn2*lgRn)* m_c[11]
                  );
     }
   private:
-    double R_0_, A_;
-    std::vector<double> c_;
+    double m_R0, m_A, m_pp;
+    std::vector<double> m_c;
 };
 
 /**
  * @brief \f[\hat{I}\f]
 
-    \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f]
+    \f[\hat{I}= P_I \sqrt{-2 A \hat{\psi}_p / \hat{R}_0/P_\psi +1}\f]
  */
 struct Ipol: public aCylindricalFunctor<Ipol>
 {
-    ///@copydoc Psip::Psip()
-    Ipol(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
+    /**
+     * @brief Construct from given geometric parameters
+     *
+     * @param gp geometric parameters (for R_0, A, PP and PI)
+     * @param psip the flux function to use
+     */
+    Ipol( Parameters gp, std::function<double(double,double)> psip ):  m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip) {
+        if( gp.pp == 0.)
+            m_pp = 1.; //safety measure to avoid divide by zero errors
+    }
     double do_compute(double R, double Z) const
     {
-        //sign before A changed to -
-        return qampl_*sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
+        return m_pi*sqrt(-2.*m_A* m_psip(R,Z) /m_R0/m_pp + 1.);
     }
   private:
-    double R_0_, A_,qampl_;
-    Psip psip_;
+    double m_R0, m_A, m_pp, m_pi;
+    std::function<double(double,double)> m_psip;
 };
 /**
  * @brief \f[\hat I_R\f]
  */
 struct IpolR: public aCylindricalFunctor<IpolR>
 {
-    ///@copydoc Psip::Psip()
-    IpolR(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
+    /**
+     * @copydoc Ipol::Ipol()
+     * @param psipR the R-derivative of the flux function to use
+     */
+    IpolR(  Parameters gp, std::function<double(double,double)> psip, std::function<double(double,double)> psipR ):
+        m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip), m_psipR(psipR) {
+        if( gp.pp == 0.)
+            m_pp = 1.; //safety measure to avoid divide by zero errors
+    }
     double do_compute(double R, double Z) const
     {
-        return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.)*(A_*psipR_(R,Z)/R_0_);
+        return -m_pi/sqrt(-2.*m_A* m_psip(R,Z) /m_R0/m_pp + 1.)*(m_A*m_psipR(R,Z)/m_R0/m_pp);
     }
   private:
-    double R_0_, A_,qampl_;
-    Psip psip_;
-    PsipR psipR_;
+    double m_R0, m_A, m_pp, m_pi;
+    std::function<double(double,double)> m_psip, m_psipR;
 };
 /**
  * @brief \f[\hat I_Z\f]
  */
 struct IpolZ: public aCylindricalFunctor<IpolZ>
 {
-    ///@copydoc Psip::Psip()
-    IpolZ(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
+    /**
+     * @copydoc Ipol::Ipol()
+     * @param psipZ the Z-derivative of the flux function to use
+     */
+    IpolZ(  Parameters gp, std::function<double(double,double)> psip, std::function<double(double,double)> psipZ ):
+        m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip), m_psipZ(psipZ) {
+        if( gp.pp == 0.)
+            m_pp = 1.; //safety measure to avoid divide by zero errors
+    }
     double do_compute(double R, double Z) const
     {
-        return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.)*(A_*psipZ_(R,Z)/R_0_);
+        return -m_pi/sqrt(-2.*m_A* m_psip(R,Z) /m_R0/m_pp + 1.)*(m_A*m_psipZ(R,Z)/m_R0/m_pp);
     }
   private:
-    double R_0_, A_,qampl_;
-    Psip psip_;
-    PsipZ psipZ_;
+    double m_R0, m_A, m_pp, m_pi;
+    std::function<double(double,double)> m_psip, m_psipZ;
 };
 
-static inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp)
+static inline dg::geo::CylindricalFunctorsLvl2 createPsip( const Parameters& gp)
 {
     return CylindricalFunctorsLvl2( Psip(gp), PsipR(gp), PsipZ(gp),
         PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
 }
-static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
+static inline dg::geo::CylindricalFunctorsLvl1 createIpol( const Parameters& gp, const CylindricalFunctorsLvl1& psip)
 {
-    return CylindricalFunctorsLvl1( Ipol(gp), IpolR(gp), IpolZ(gp));
+    return CylindricalFunctorsLvl1(
+            solovev::Ipol(gp, psip.f()),
+            solovev::IpolR(gp,psip.f(), psip.dfx()),
+            solovev::IpolZ(gp,psip.f(), psip.dfy()));
 }
 
-static inline dg::geo::TokamakMagneticField createMagField( Parameters gp)
-{
-    return TokamakMagneticField( gp.R_0, createPsip(gp), createIpol(gp));
-}
 ///@}
-
-///@cond
-namespace mod
-{
-
-struct Psip: public aCylindricalFunctor<Psip>
-{
-    Psip( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-
-    }
-    double do_compute(double R, double Z) const
-    {
-        double psip_RZ = psip_(R,Z);
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_RZ ;
-        return  psip_RZ + 0.5*psip_2*cauchy_(R,Z);
-    }
-    private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
-};
-struct PsipR: public aCylindricalFunctor<PsipR>
-{
-    PsipR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
-    double do_compute(double R, double Z) const
-    {
-        double psipR_RZ = psipR_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipR_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_RZ;
-        return psipR_RZ + 0.5*(psip_2R*cauchy_(R,Z) + psip_2*cauchy_.dx(R,Z)  );
-    }
-    private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
-};
-struct PsipZ: public aCylindricalFunctor<PsipZ>
-{
-    PsipZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
-    double do_compute(double R, double Z) const
-    {
-        double psipZ_RZ = psipZ_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipZ_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_RZ;
-        return psipZ_RZ + 0.5*(psip_2Z*cauchy_(R,Z) + psip_2*cauchy_.dy(R,Z));
-    }
-    private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
-};
-
-struct PsipZZ: public aCylindricalFunctor<PsipZZ>
-{
-    PsipZZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
-    double do_compute(double R, double Z) const
-    {
-        double psipZZ_RZ = psipZZ_(R,Z);
-        if( !cauchy_.inside(R, Z)) return psipZZ_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_(R,Z);
-        double psip_2ZZ =  - psipRR_X_ - psipZZ_RZ;
-        return psipZZ_RZ + 0.5*(psip_2ZZ*cauchy_(R,Z) + 2.*cauchy_.dy(R,Z)*psip_2Z +  psip_2*cauchy_.dyy(R,Z));
-    }
-    private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
-};
-struct PsipRR: public aCylindricalFunctor<PsipRR>
-{
-    PsipRR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
-    double do_compute(double R, double Z) const
-    {
-        double psipRR_RZ = psipRR_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipRR_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_(R,Z) ;
-        double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_(R,Z);
-        double psip_2RR =  - psipZZ_X_ - psipRR_RZ;
-        return psipRR_RZ + 0.5*(psip_2RR*cauchy_(R,Z) + 2.*cauchy_.dx(R,Z)*psip_2R +  psip_2*cauchy_.dxx(R,Z));
-    }
-    private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
-};
-struct PsipRZ: public aCylindricalFunctor<PsipRZ>
-{
-    PsipRZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
-        psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
-    {
-        psipZZ_X_ = psipZZ_(R_X, Z_X);
-        psipRZ_X_ = psipRZ_(R_X, Z_X);
-        psipRR_X_ = psipRR_(R_X, Z_X);
-    }
-    double do_compute(double R, double Z) const
-    {
-        double psipRZ_RZ = psipRZ_(R,Z);
-        if( !cauchy_.inside(R,Z)) return psipRZ_RZ;
-        double Rbar = R - R_X, Zbar = Z - Z_X;
-        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z);
-        double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_(R,Z);
-        double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_(R,Z);
-        double psip_2RZ =  - psipRZ_X_ - psipRZ_RZ;
-        return psipRZ_RZ + 0.5*(psip_2RZ*cauchy_(R,Z) + cauchy_.dx(R,Z)*psip_2Z + cauchy_.dy(R,Z)*psip_2R  +  psip_2*cauchy_.dxy(R,Z));
-    }
-    private:
-    double R_X, Z_X;
-    double psipZZ_X_, psipRZ_X_, psipRR_X_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipRZ psipRZ_;
-    solovev::PsipZZ psipZZ_;
-    dg::Cauchy cauchy_;
-};
-
-} //namespace mod
-///@endcond
-
 ///////////////////////////////////////introduce fields into solovev namespace
-
 
 } //namespace solovev
 
@@ -559,11 +371,42 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
  * Based on \c dg::geo::solovev::Psip(gp) and \c dg::geo::solovev::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup solovev
  */
-static inline dg::geo::TokamakMagneticField createSolovevField( dg::geo::solovev::Parameters gp)
+static inline dg::geo::TokamakMagneticField createSolovevField(
+    dg::geo::solovev::Parameters gp)
 {
-    return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));
+    MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
+            equilibrium::solovev, modifier::none, str2description.at( gp.description)};
+    return TokamakMagneticField( gp.R_0, solovev::createPsip(gp),
+        solovev::createIpol(gp, solovev::createPsip(gp)), params);
+}
+/**
+ * @brief Create a modified Solovev Magnetic field
+ *
+ * Based on \c dg::geo::mod::Psip(gp) and
+ * \c dg::geo::solovev::Ipol(gp)
+ * We modify psi above a certain value to a constant using the
+ * \c dg::IPolynomialHeaviside function (an approximation to the integrated Heaviside
+ * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
+ * This subsequently modifies all derivatives of psi and the poloidal
+ * current.
+ * @param gp Solovev parameters
+ * @param psi0 boundary value where psi is modified to a constant psi0
+ * @param alpha radius of the transition region where the modification acts (smaller is quicker)
+ * @param sign determines which side of Psi to dampen (negative or positive, forwarded to \c dg::IPolynomialHeaviside)
+ * @return A magnetic field object
+ * @ingroup solovev
+ */
+static inline dg::geo::TokamakMagneticField createModifiedSolovevField(
+    dg::geo::solovev::Parameters gp, double psi0, double alpha, double sign = -1)
+{
+    MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
+            equilibrium::solovev, modifier::heaviside, str2description.at( gp.description)};
+    return TokamakMagneticField( gp.R_0,
+            mod::createPsip( mod::everywhere, solovev::createPsip(gp), psi0, alpha, sign),
+        solovev::createIpol( gp, mod::createPsip( mod::everywhere, solovev::createPsip(gp), psi0, alpha, sign)),
+        params);
 }
 
 } //namespace geo

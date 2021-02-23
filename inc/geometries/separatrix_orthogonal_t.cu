@@ -16,18 +16,18 @@
 #include "refined_curvilinearX.h"
 #include "curvilinearX.h"
 #include "separatrix_orthogonal.h"
-#include "init.h"
 #include "testfunctors.h"
+#include "fluxfunctions.h"
 
 #include "dg/file/nc_utilities.h"
 
 
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-//typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
+    //in is a 2d vector, out has a second layer on top
     assert( g.Nz() == 2);
     thrust::host_vector<double> out(g.size());
     for( unsigned s=0; s<g.Nz(); s++)
@@ -81,8 +81,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        //std::ifstream is("geometry_params_Xpoint_taylor.js");
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -91,15 +90,21 @@ int main( int argc, char* argv[])
         is >> js;
     }
     //dg::geo::taylor::Parameters gp(js);
+    //dg::geo::TokamakMagneticField mag = dg::geo::createTaylorField(gp);
     dg::geo::solovev::Parameters gp(js);
+    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+    double R_O = gp.R_0, Z_O = 0.;
+    dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
+    const double psipmin = mag.psip()(R_O, Z_O);
+    std::cout << "Psi min "<<psipmin<<"\n";
     dg::Timer t;
     std::cout << "Type psi_0 (-15) \n";
     double psi_0 = -20;
     std::cin >> psi_0;
     std::cout << "Typed "<<psi_0<<"\n";
-    //std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
+    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) 0.25 0.04545454545454545 \n";
     double fx_0=1./4., fy_0=1./22.;
-    //std::cin >> fx_0>> fy_0;
+    std::cin >> fx_0>> fy_0;
     std::cout << "Typed "<<fx_0<<" "<<fy_0<<"\n";
 
     std::cout << "Type add_x and add_y \n";
@@ -109,19 +114,18 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
-    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    double Z_X = -1.1*gp.elongation*gp.a;
+    double RX = gp.R_0-1.1*gp.triangularity*gp.a;
+    double ZX = -1.1*gp.elongation*gp.a;
+    dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+    const double psipX = mag.psip()( RX, ZX);
     //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
-    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
-    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
-    std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
+    //dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( ag.get_psip(), RX, ZX, 100, 100) ;
+    std::cout << "X-point set at "<<RX<<" "<<ZX<<" with Psi_p = "<<psipX<<"\n";
 
-    double R0 = gp.R_0, Z0 = 0;
-    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0, true);
-    //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psi_0, RX,ZX, mag.R0(), 0, 0, true);
+    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psi_0, RX, ZX, mag.R0(), 0, 0, true);
+    //dg::geo::SimpleOrthogonalX generator(mag.get_psip(), psi_0, RX,ZX, mag.R0(), 0,0);
     dg::EquidistXRefinement equi(add_x, add_y, 1,1);
     dg::geo::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::geo::CurvilinearRefinedGridX2d g2d(equi, generator, fx_0, fy_0, n, Nx, Ny,dg::DIR, dg::NEU);
@@ -134,70 +138,74 @@ int main( int argc, char* argv[])
     g1d.display( std::cout);
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
-    int ncid;
-    file::NC_Error_Handle err;
-    err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim3d[3], dim1d[1];
-    err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
-    //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
-    err = file::define_dimension(  ncid, "i", dim1d, g1d);
-    int coordsID[2], defID, volID, divBID, gxxID, gyyID, gxyID;
-    err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &gxyID);
-    err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
-    err = nc_def_var( ncid, "volume", NC_DOUBLE, 3, dim3d, &volID);
-    err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
-    err = nc_def_var( ncid, "num_solution", NC_DOUBLE, 3, dim3d, &gxxID);
-    err = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 3, dim3d, &gyyID);
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
-
-    thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
-    g2d.display();
-    //err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
-    //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
+    std::vector<std::tuple<std::string, dg::HVec, std::string> > map2d;
+    dg::HVec psi_p = dg::pullback( mag.psip(), g2d);
+    map2d.emplace_back( "Psi_p", psi_p, "Poloidal flux function");
+    //test if interpolation onto grid works
+    dg::HVec psip_X(psi_p);
     {
-        X[i] = g2d.map()[0][i];
-        Y[i] = g2d.map()[1][i];
+        double Rmin=gp.R_0-1.2*gp.a;
+        double Zmin=-1.2*gp.a*gp.elongation;
+        double Rmax=gp.R_0+1.2*gp.a;
+        double Zmax=1.2*gp.a*gp.elongation;
+        dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, 3,200,200);
+        std::vector<dg::HVec> coordsX = g2d.map();
+        dg::IHMatrix grid2gX2d = dg::create::interpolation( coordsX[0], coordsX[1], grid2d);
+        dg::HVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
+        dg::blas2::symv( grid2gX2d, psipog2d, psip_X);
     }
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g3d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g3d_periodic).data());
+    map2d.emplace_back( "Psi_p_interpolated", psip_X, "Poloidal flux function");
+    g2d.display();
+    dg::HVec X( g2d.map()[0]), Y(g2d.map()[1]), P = dg::evaluate( dg::zero, g2d);
+    map2d.emplace_back( "xc", X, "X-coordinate Cartesian");
+    map2d.emplace_back( "yc", Y, "Y-coordinate Cartesian");
+    map2d.emplace_back( "zc", P, "Z-coordinate Cartesian");
 
     dg::HVec ones = dg::evaluate( dg::one, g2d);
     dg::HVec temp0( g2d.size()), temp1(temp0);
     dg::HVec w2d = dg::create::weights( g2d);
 
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
-    dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
     dg::HVec vol = dg::tensor::volume(metric);
-    dg::blas1::transfer( vol, X);
-    err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
-    dg::blas1::transfer( g_xx, X);
-    err = nc_put_var_double( ncid, gxxID, periodify(X, g3d_periodic).data());
-    dg::blas1::transfer( g_xy, X);
-    err = nc_put_var_double( ncid, gxyID, periodify(X, g3d_periodic).data());
-    dg::blas1::transfer( g_yy, X);
-    err = nc_put_var_double( ncid, gyyID, periodify(X, g3d_periodic).data());
+    map2d.emplace_back( "volume", vol, "Volume element");
+    map2d.emplace_back( "g_xx", metric.value(0,0), "Metric element");
+    map2d.emplace_back( "g_xy", metric.value(0,1), "Metric element");
+    map2d.emplace_back( "g_yy", metric.value(1,1), "Metric element");
 
-    std::cout << "Construction successful!\n";
-
-    X = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
-    err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
-    X = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50.,1.), g2d);
-    err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
+    X = dg::pullback( dg::geo::FuncDirNeu(mag, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
+    map2d.emplace_back( "FuncDirNeu1", X, "FuncDirNeu");
+    X = dg::pullback( dg::geo::FuncDirNeu(mag, psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    map2d.emplace_back( "FuncDirNeu2", X, "FuncDirNeu");
+    std::cout << "OPEN FILE orthogonalX.nc ...\n";
+    int ncid;
+    dg::file::NC_Error_Handle err;
+    err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    int dim3d[3];
+    err = dg::file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
+    for(auto tp : map2d)
+    {
+        int vid;
+        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
+            dim3d, &vid);
+        err = nc_put_att_text( ncid, vid, "long_name",
+            std::get<2>(tp).size(), std::get<2>(tp).data());
+        err = nc_enddef( ncid);
+        err = nc_put_var_double( ncid, vid, periodify( std::get<1>(tp), g3d_periodic).data());
+        err = nc_redef(ncid);
+    }
     err = nc_close( ncid);
+    std::cout << "FILE orthogonalX.nc CLOSED AND READY TO USE NOW!\n" <<std::endl;
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
-    gp.psipmax = 0., gp.psipmin = psi_0;
-    dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, ZX, 1.2*gp.a*gp.elongation, 1, 5e2, 5e2, dg::PER, dg::PER);
+    double psipmax = 0., psipmin_iris = psi_0;
+    auto iris = dg::compose( dg::Iris( psipmin_iris, psipmax), mag.psip());
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
 
     dg::HVec cutter = dg::pullback( iris, g2d), vol_cut( cutter);
-    dg::geo::ZCutter cut(Z_X);
+    dg::geo::ZCutter cut(ZX);
     dg::HVec zcutter = dg::pullback( cut, g2d);
     w2d = dg::create::weights( g2d);//make weights w/o refined weights
     dg::blas1::pointwiseDot(cutter, w2d, vol_cut);

@@ -21,7 +21,12 @@ namespace dg
  * @note the paramateres given in the constructor are global parameters
  */
 
-
+///@cond
+template<class real_type>
+struct RealMPIGrid2d;
+template<class real_type>
+struct RealMPIGrid3d;
+///@endcond
 
 
 /**
@@ -30,7 +35,7 @@ namespace dg
  * Represents the global grid coordinates and the process topology.
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
  * @note a single cell is never divided across processes.
- * @note although it is abstract objects, are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @attention
  * The access functions \c n() \c Nx() ,... all return the global parameters. If you want to have the local ones call the \c local() function.
  * @ingroup basictopology
@@ -38,9 +43,10 @@ namespace dg
 template<class real_type>
 struct aRealMPITopology2d
 {
-    typedef MPITag memory_category;
-    typedef TwoDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid2d<real_type>;
 
     /**
      * @brief Return global x0
@@ -127,12 +133,6 @@ struct aRealMPITopology2d
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
-    MPI_Comm get_poloidal_comm() const{
-        int remain[] = {false, true};
-        MPI_Comm comm1d;
-        MPI_Cart_sub( comm, remain, &comm1d);
-        return comm1d;
-    }
     /**
      * @brief The Discrete Legendre Transformation
      *
@@ -267,8 +267,8 @@ struct aRealMPITopology2d
     aRealMPITopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), l(g), comm( comm)
     {
-        update_local();
         check_division( Nx, Ny, bcx, bcy);
+        update_local();
     }
     ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
     aRealMPITopology2d(const aRealMPITopology2d& src) = default;
@@ -325,9 +325,10 @@ struct aRealMPITopology2d
 template<class real_type>
 struct aRealMPITopology3d
 {
-    typedef MPITag memory_category;
-    typedef ThreeDimensionalTag dimensionality;
-    typedef real_type value_type;
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid3d<real_type>;
 
     /**
      * @brief Return global x0
@@ -556,8 +557,8 @@ struct aRealMPITopology3d
     aRealMPITopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), l(g), comm( comm)
     {
-        update_local();
         check_division( Nx, Ny, Nz, bcx, bcy, bcz);
+        update_local();
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
     }
@@ -614,7 +615,7 @@ struct aRealMPITopology3d
         unsigned Ny = g.Ny()/dims[1];
         unsigned Nz = g.Nz()/dims[2];
 
-        l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
+        l = RealGrid3d<real_type>(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
     RealGrid3d<real_type> g, l; //global grid
     MPI_Comm comm, planeComm; //just an integer...
@@ -728,24 +729,18 @@ struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
     }
 };
 
-///@cond
-template<class real_type>
-struct MemoryTraits< MPITag, TwoDimensionalTag, real_type> {
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = RealMPIGrid2d<real_type>;
-};
-template<class real_type>
-struct MemoryTraits< MPITag, ThreeDimensionalTag, real_type> {
-    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = RealMPIGrid3d<real_type>;
-};
-///@endcond
 ///@addtogroup gridtypes
 ///@{
 using MPIGrid2d         = dg::RealMPIGrid2d<double>;
 using MPIGrid3d         = dg::RealMPIGrid3d<double>;
 using aMPITopology2d    = dg::aRealMPITopology2d<double>;
 using aMPITopology3d    = dg::aRealMPITopology3d<double>;
+namespace x{
+using Grid2d          = MPIGrid2d      ;
+using Grid3d          = MPIGrid3d      ;
+using aTopology2d     = aMPITopology2d ;
+using aTopology3d     = aMPITopology3d ;
+}//namespace x
 ///@}
 
 }//namespace dg

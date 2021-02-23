@@ -4,16 +4,19 @@
 #include "dg/backend/mpi_init.h"
 #include "dg/backend/transpose.h"
 #include "dg/blas.h"
+#include "dg/blas1.h"
+#include "mpi_weights.h"
 #include "mpi_projection.h"
 #include "mpi_evaluation.h"
+#include "fast_interpolation.h"
 
-
-double shift = 0.2;
-double function( double x, double y){ return sin(2*M_PI*x)*sin(2*M_PI*y);}
+double sine( double x){ return sin(x);}
+double sine( double x, double y){return sin(x)*sin(y);}
+double sine( double x, double y, double z){return sin(x)*sin(y);}
+//Actually this file is a test for fast_interpolation
 
 int main(int argc, char* argv[])
 {
-
     MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -23,93 +26,47 @@ int main(int argc, char* argv[])
         MPI_Finalize();
         return 0;
     }
-    unsigned n, Nx, Ny;
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     std::stringstream ss;
-    ss<< "2 2 3 8 8";
-    mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm, ss);
+    ss<< "2 2 1 3 8 8 8";
+    mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm, ss);
     MPI_Comm_rank( comm, &rank);
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    if(rank==0) std::cout << "Test NON-COMMUNICATING MPI matrix-creation!\n";
-    dg::MPIGrid2d g2d( 0,1,0,1, n,Nx,Ny, comm);
-    dg::MPIGrid2d g2d_half = g2d;
-    g2d_half.multiplyCellNumbers(0.5, 0.5);
-    dg::MIHMatrix direct_p= dg::create::interpolation( g2d, g2d_half);
-    dg::HVec x = dg::evaluate( dg::cooX2d, g2d.local());
-    dg::HVec y = dg::evaluate( dg::cooY2d, g2d.local());
-    dg::IHMatrix global_projection = dg::create::interpolation( x,y, g2d_half.global());
-    dg::MIHMatrix converted_p = dg::convert(global_projection, g2d_half);
 
-    //now compare
-    bool equal_cols=true, equal_rows=true, equal_values=true;
-    for( unsigned i=0; i<direct_p.matrix().values.size(); i++)
-    {
-        if( direct_p.matrix().column_indices[i] - converted_p.matrix().column_indices[i] > 1e-15) equal_cols = false;
-        if( direct_p.matrix().values[i] - converted_p.matrix().values[i] > 1e-15) equal_values = false;
-    }
-    for( unsigned i=0; i<direct_p.matrix().num_rows+1; i++)
-        if( direct_p.matrix().row_offsets[i] - converted_p.matrix().row_offsets[i] > 1e-15) equal_rows = false;
-
-    if( !equal_cols || !equal_rows || !equal_values || direct_p.collective().buffer_size() != 0 || converted_p.collective().buffer_size() != 0 )
-        std::cout << "FAILED from rank "<<rank<<"!\n";
-    else
-        std::cout << "SUCCESS from rank "<<rank<<"!\n";
-
-    MPI_Barrier(comm);
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    if(rank==0) std::cout << "Now test COMMUNICATING MPI matrix-creation!\n";
-    x = dg::evaluate( dg::cooX2d, g2d.local());
-    y = dg::evaluate( dg::cooY2d, g2d.local());
-    for( unsigned i=0; i<x.size(); i++)
-    {
-        x[i] +=shift;
-        y[i] +=shift;
-        g2d.global().shift_topologic( x[i], y[i], x[i], y[i]);
-    }
-    dg::MIHMatrix converted_i = dg::create::interpolation( x,y,g2d);
-    dg::IHMatrix  direct_i = dg::create::interpolation( x,y,g2d.global());
-    dg::MHVec sine = dg::evaluate( function, g2d);
-    dg::MHVec temp(sine);
-    converted_i.symv( sine, temp);
-    dg::HVec global_sine = dg::evaluate( function, g2d.global());
-    dg::HVec g_temp( g2d.local().size());
-    dg::blas2::symv( direct_i, global_sine, g_temp);
-    //now compare
-    bool success = true;
-    for( unsigned i=0; i<temp.size(); i++)
-        if( fabs(temp.data()[i] - g_temp[i]) > 1e-14)
-            success = false;
-    if( !success)
-        std::cout << "FAILED from rank "<<rank<<"!\n";
-    else
-        std::cout << "SUCCESS from rank "<<rank<<"!\n";
-    MPI_Barrier(comm);
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    if(rank==0) std::cout << "Now test TRANSPOSITION!\n";
-    converted_i = dg::transpose( converted_i);
-    converted_i.symv( sine, temp);
-    //Compute global transposition and distribute among processes
-    x = dg::evaluate( dg::cooX2d, g2d.global());
-    y = dg::evaluate( dg::cooY2d, g2d.global());
-    for( unsigned i=0; i<x.size(); i++)
-    {
-        x[i] +=shift;
-        y[i] +=shift;
-        g2d.global().shift_topologic( x[i], y[i], x[i], y[i]);
-    }
-    direct_i = dg::transpose(dg::create::interpolation( x,y,g2d.global()));
-    g_temp.resize( g2d.global().size());
-    dg::blas2::symv( direct_i, global_sine, g_temp);
-    dg::MHVec mpi_g_temp = dg::global2local( g_temp, g2d);
-    //now compare
-    success = true;
-    for( unsigned i=0; i<temp.size(); i++)
-        if( fabs(temp.data()[i] - mpi_g_temp.data()[i]) > 1e-14)
-            success = false;
-    if( !success)
-        std::cout << "FAILED from rank "<<rank<<"!\n";
-    else
-        std::cout << "SUCCESS from rank "<<rank<<"!\n";
+    if(rank==0)std::cout << "TEST 2D and 3D\n";
+    unsigned n_old = 9, n_new = 3, N_old = 40, N_new = 20;
+    if(rank==0)std::cout << "Fine   Grid "<< n_old << " x "<<N_old <<"\n";
+    if(rank==0)std::cout << "Coarse Grid "<< n_new << " x "<<N_new <<"\n";
+    dg::MPIGrid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4, comm);
+    dg::MPIGrid3d g2n (0, M_PI, 0, M_PI, 0,1, n_new, N_new, N_new, 4, comm);
+    dg::MIHMatrix inte2d = dg::create::interpolation( g2n, g2o);
+    dg::MultiMatrix< dg::MHMatrix, dg::MHVec > proj2d = dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new);
+    dg::MultiMatrix< dg::MHMatrix, dg::MHVec > fast_inte2d = dg::create::fast_interpolation( g2n, n_old/n_new, N_old/N_new, N_old/N_new);
+    const dg::MHVec sinO( dg::evaluate( sine, g2o)),
+                                sinN( dg::evaluate( sine, g2n));
+    dg::MHVec w2do = dg::create::weights( g2o);
+    dg::MHVec w2dn = dg::create::weights( g2n);
+    dg::MHVec sinP( sinN), sinI(sinO);
+    dg::blas2::gemv( proj2d, sinO, sinP); //FAST PROJECTION
+    double value0 = sqrt(dg::blas2::dot( sinO, w2do, sinO));
+    if(rank==0)std::cout << "Original vector     "<<value0 << "\n";
+    double value1 = sqrt(dg::blas2::dot( sinP, w2dn, sinP));
+    if(rank==0)std::cout << "Projected vector    "<<value1 << "\n";
+    if(rank==0)std::cout << "Difference in Norms "<<value0-value1 << std::endl;
+    dg::blas1::axpby( 1., sinN, -1., sinP);
+    double value2 = sqrt(dg::blas2::dot( sinP, w2dn, sinP)/dg::blas2::dot(sinN, w2dn, sinN));
+    if(rank==0)std::cout << "Difference between projection and evaluation      "<<value2<<"\n";
+    dg::blas2::gemv( inte2d, sinO, sinP);
+    value1 = sqrt(dg::blas2::dot( sinP, w2dn, sinP));
+    if(rank==0)std::cout << "Interpolated vec    "<<value1 << "\n";
+    value0 = sqrt(dg::blas2::dot( sinO, w2do, sinO));
+    if(rank==0)std::cout << "Difference in Norms "<<value0 - value1 << "\n" << std::endl;
+    dg::blas2::gemv( fast_inte2d, sinN, sinI);
+    value2 = sqrt(dg::blas2::dot( sinI, w2do, sinI));
+    if(rank==0)std::cout << "Fast Interpolated vec "<< value2 << "\n";
+    double value3 = sqrt(dg::blas2::dot( sinN, w2dn, sinN));
+    if(rank==0)std::cout << "Difference in Norms   "<<value2 - value3  << "\n" << std::endl;
 
     MPI_Finalize();
     return 0;

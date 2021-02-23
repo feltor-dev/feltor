@@ -24,8 +24,8 @@ namespace dg
 * @tparam SharedContainer \c TensorTraits exists for this class and the
 *   \c tensor_category derives from \c SharedVectorTag
 */
-template<class SharedContainer>
-void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const aTopology3d& grid)
+template<class SharedContainer, class real_type>
+void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const aRealTopology3d<real_type>& grid)
 {
     assert( out.size() == grid.Nz());
     unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();
@@ -40,11 +40,11 @@ void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const 
 * @tparam SharedContainer \c TensorTraits exists for this class and the
 *   \c tensor_category derives from \c SharedVectorTag
 */
-template<class SharedContainer>
-std::vector<View<SharedContainer>> split( SharedContainer& in, const aTopology3d& grid)
+template<class SharedContainer, class real_type>
+std::vector<View<SharedContainer>> split( SharedContainer& in, const aRealTopology3d<real_type>& grid)
 {
     std::vector<View<SharedContainer>> out;
-    Grid3d l( grid);
+    RealGrid3d<real_type> l( grid);
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
     out.resize( l.Nz());
     for(unsigned i=0; i<l.Nz(); i++)
@@ -55,10 +55,10 @@ std::vector<View<SharedContainer>> split( SharedContainer& in, const aTopology3d
 #ifdef MPI_VERSION
 
 template<class MPIContainer>
-using get_mpi_view_type = typename
-    std::conditional< std::is_const<MPIContainer>::value,
+using get_mpi_view_type =
+    std::conditional_t< std::is_const<MPIContainer>::value,
     MPI_Vector<View<const typename MPIContainer::container_type>>,
-    MPI_Vector<View<typename MPIContainer::container_type>> >::type;
+    MPI_Vector<View<typename MPIContainer::container_type>> >;
 
 /** @brief MPI Version of split (fast version)
  *
@@ -72,12 +72,12 @@ using get_mpi_view_type = typename
  * @param grid provide dimensions in 3rd and first two dimensions
  * @tparam MPIContainer An MPI_Vector of a \c SharedContainer
 */
-template<class MPIContainer>
+template<class MPIContainer, class real_type>
 void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
-    out, const aMPITopology3d& grid)
+    out, const aRealMPITopology3d<real_type>& grid)
 {
     //local size2d
-    Grid3d l = grid.local();
+    RealGrid3d<real_type> l = grid.local();
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
     for(unsigned i=0; i<l.Nz(); i++)
     {
@@ -94,9 +94,9 @@ void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
 * @note two seperately split vectors have congruent (not identical) MPI_Communicators Note here the MPI concept of congruent (same process group, different contexts) vs. identical (same process group, same context) communicators.
 * @tparam MPIContainer An MPI_Vector of a \c SharedContainer
 */
-template< class MPIContainer>
+template< class MPIContainer, class real_type>
 std::vector<get_mpi_view_type<MPIContainer> > split(
-    MPIContainer& in, const aMPITopology3d& grid)
+    MPIContainer& in, const aRealMPITopology3d<real_type>& grid)
 {
     std::vector<get_mpi_view_type<MPIContainer>> out;
     int result;
@@ -105,7 +105,7 @@ std::vector<get_mpi_view_type<MPIContainer> > split(
     MPI_Comm planeComm = grid.get_perp_comm(), comm_mod, comm_mod_reduce;
     exblas::mpi_reduce_communicator( planeComm, &comm_mod, &comm_mod_reduce);
     //local size2d
-    Grid3d l = grid.local();
+    RealGrid3d<real_type> l = grid.local();
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
     out.resize( l.Nz());
     for(unsigned i=0; i<l.Nz(); i++)

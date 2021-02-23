@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "dg/blas1.h"
-#include "file/nc_utilities.h"
+#include "dg/file/nc_utilities.h"
 
 
 //This program reads in two netcdf files and tries to compare the fields 
@@ -22,7 +22,7 @@ int main( int argc, char** argv)
     }
     std::cout << "Compare "<<argv[1]<<" with "<<argv[2]<<"\n";
     //////////////////////////////open nc files//////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid1, ncid2;
     err = nc_open( argv[1], NC_NOWRITE, &ncid1);
     err = nc_open( argv[2], NC_NOWRITE, &ncid2);
@@ -37,9 +37,9 @@ int main( int argc, char** argv)
     err = nc_inq_dimid( ncid1, "y", &dimIDs1[1]);
     err = nc_inq_dimid( ncid2, "y", &dimIDs2[1]);
     try{ err = nc_inq_dimid( ncid1, "z", &dimIDs1[2]);}
-    catch( file::NC_Error) { numDims1=2; }
+    catch( dg::file::NC_Error&) { numDims1=2; }
     try{ err = nc_inq_dimid( ncid2, "z", &dimIDs2[2]);}
-    catch( file::NC_Error) { numDims2=2; }
+    catch( dg::file::NC_Error&) { numDims2=2; }
     if( numDims1 != numDims2)
     {
         std::cerr << "Files not of same dimensionality!!\n";
@@ -67,13 +67,13 @@ int main( int argc, char** argv)
         err = nc_inq_varid(ncid1, "electrons", &dataID1);
         err = nc_inq_varid(ncid2, "electrons", &dataID2);
     }
-    catch( file::NC_Error)
+    catch( dg::file::NC_Error&)
     {
         try{
             err = nc_inq_varid(ncid1, "T", &dataID1);
             err = nc_inq_varid(ncid2, "T", &dataID2);
         }
-        catch( file::NC_Error)
+        catch( dg::file::NC_Error&)
         {
             std::cerr <<"Neither electrons nor T found!\n";
             return -1;

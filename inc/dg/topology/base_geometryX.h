@@ -40,10 +40,10 @@ struct aRealGeometryX2d : public aRealTopologyX2d<real_type>
     aRealGeometryX2d& operator=( const aRealGeometryX2d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
-        return SparseTensor<thrust::host_vector<real_type> >();
+        return SparseTensor<thrust::host_vector<real_type> >(*this);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const {
-        return SparseTensor<thrust::host_vector<real_type> >();
+        return SparseTensor<thrust::host_vector<real_type> >(*this);
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{
         std::vector<thrust::host_vector<real_type> > map(2);
@@ -153,7 +153,7 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX2
     return vec;
 }
 
-///@copydoc pullback(const Functor&,const aRealGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry3d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
 thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX3d<real_type>& g)

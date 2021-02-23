@@ -20,7 +20,7 @@ namespace dg
 ///@{
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
+    std::enable_if_t< std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = CuspVectorTag;
@@ -28,7 +28,7 @@ struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
 };
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
+    std::enable_if_t< std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = CuspVectorTag;

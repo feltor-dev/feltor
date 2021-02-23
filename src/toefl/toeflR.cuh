@@ -185,11 +185,10 @@ const container& Explicit<G, M, container>::compute_psi( double t, const contain
         }
     }
     //compute (nabla phi)^2
-    arakawa.variation(potential, omega);
+    pol.variation(potential, omega);
     //compute psi
     if(equations == "global")
     {
-
         dg::blas1::pointwiseDot( -0.5, binv, binv, omega, 1., phi[1]);
     }
     else if ( equations == "drift_global")
@@ -209,7 +208,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     //compute chi
     if(equations == "global" )
     {
-        dg::blas1::transfer( y[1], chi);
+        dg::assign( y[1], chi);
         dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
@@ -223,7 +222,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     }
     else if(equations == "gravity_global" )
     {
-        dg::blas1::transfer( y[0], chi);
+        dg::assign( y[0], chi);
         dg::blas1::plus( chi, 1.);
         if( !boussinesq)
         {
@@ -235,7 +234,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     }
     else if( equations == "drift_global" )
     {
-        dg::blas1::transfer( y[0], chi);
+        dg::assign( y[0], chi);
         dg::blas1::plus( chi, 1.);
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2

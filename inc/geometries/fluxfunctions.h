@@ -8,6 +8,8 @@ namespace dg
 namespace geo
 {
 
+///@addtogroup fluxfunctions
+///@{
 /*! @brief Inject both 2d and 3d \c operator() to a 2d functor
  *
  * The purpose of this class is to extend any 2d Functor to a
@@ -17,7 +19,6 @@ namespace geo
  * to implement this class).
  * @note If you want to write a functor that is both 2d and 3d directly,
  * it is easier to derive from \c aCylindricalFunctor
- * @ingroup fluxfunctions
  * @sa this class is an alternative to \c aCylindricalFunctor and
  * \c aCylindricalFunctor can be converted to this class
  */
@@ -47,7 +48,6 @@ struct RealCylindricalFunctor
 };
 
 ///Most of the times we use \c double
-/// @ingroup fluxfunctions
 using CylindricalFunctor = RealCylindricalFunctor<double>;
 
 /**
@@ -58,7 +58,6 @@ using CylindricalFunctor = RealCylindricalFunctor<double>;
 * where the 3d functor trivially redirects to the 2d version.
 * This behaviour is injected into all classes that derive from this class
 * via the Curiously Recurring Template Pattern (CRTP).
-* @ingroup fluxfunctions
 * @sa \c aCylindricalFunctor
 * @sa An alternative is \c RealCylindricalFunctor
 * @tparam Derived Interface: <tt> double do_compute(double,double) const</tt>
@@ -112,7 +111,6 @@ struct aCylindricalFunctor
 /**
  * @brief The constant functor
  * \f[ f(x,y) = c\f]
-* @ingroup fluxfunctions
  */
 struct Constant: public aCylindricalFunctor<Constant>
 {
@@ -121,12 +119,67 @@ struct Constant: public aCylindricalFunctor<Constant>
     private:
     double c_;
 };
+/**
+ * @brief <tt> (double Z_X)</tt>
+ \f[ f(R,Z)= \begin{cases}
+ 1 \text{ if } Z > Z_X \\
+ 0 \text{ else }
+ \end{cases}
+ \f]
+ */
+struct ZCutter : public aCylindricalFunctor<ZCutter>
+{
+    ZCutter(double ZX): Z_X(ZX){}
+    double do_compute(double R, double Z) const {
+        if( Z > Z_X)
+            return 1;
+        return 0;
+    }
+    private:
+    double Z_X;
+};
+
+/**
+ * @brief This function uses the dg::Grid2d::shift member to extend another function beyond the grid boundaries
+ * @sa dg::geo::periodify
+ */
+struct Periodify : public aCylindricalFunctor<Periodify>
+{
+    /**
+     * @brief Construct from grid
+     *
+     * @param functor the functor to periodify
+     * @param g The grid provides the shift member
+     */
+    Periodify( CylindricalFunctor functor, dg::Grid2d g): m_g( g), m_f(functor) {}
+    /**
+     * @brief provide 2d grid boundaries by hand
+     *
+     * @param functor the functor to periodify
+     * @param R0 left boundary in R
+     * @param R1 right boundary in R
+     * @param Z0 lower boundary in Z
+     * @param Z1 upper boundary in Z
+     * @param bcx boundary condition in x (determines how function is periodified)
+     * @param bcy boundary condition in y (determines how function is periodified)
+     */
+    Periodify( CylindricalFunctor functor, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy): m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor) {}
+    double do_compute( double R, double Z) const
+    {
+        bool negative = false;
+        m_g.shift( negative, R, Z);
+        if( negative) return -m_f(R,Z);
+        return m_f( R, Z);
+    }
+    private:
+    dg::Grid2d m_g;
+    CylindricalFunctor m_f;
+};
 
 /**
 * @brief This struct bundles a function and its first derivatives
 *
 * @snippet hector_t.cu doxygen
-* @ingroup fluxfunctions
 */
 struct CylindricalFunctorsLvl1
 {
@@ -158,11 +211,12 @@ struct CylindricalFunctorsLvl1
     private:
     std::array<CylindricalFunctor,3> p_;
 };
+
+
 /**
 * @brief This struct bundles a function and its first and second derivatives
 *
 * @snippet hector_t.cu doxygen
-* @ingroup fluxfunctions
 */
 struct CylindricalFunctorsLvl2
 {
@@ -204,9 +258,97 @@ struct CylindricalFunctorsLvl2
     CylindricalFunctorsLvl1 f0,f1;
 };
 
+
+/**
+ * @brief This function finds critical points of psi (any point with vanishing gradient, including the X-point or O-point) via Newton iteration applied to the gradient of psi
+ *
+ * Newton iteration applied to \f$ \nabla \psi (\vec x) = 0 \f$ reads
+ * \f[ \vec x_{i+1} = \vec x_i - H^{-1} \nabla \psi (\vec x_i)\f]
+ * where H is the Hessian matrix.
+ * The inverse of the Hessian matrix is computed analytically
+ * @param psi \f$ \psi(R,Z)\f$
+ * @param RC start value on input, critical point on output
+ * @param ZC start value on input, critical point on output
+ * @return 0 if no critical point or Hessian (determinant) is zero,
+ * 1 if local minimum,
+ * 2 if local maximum,
+ * 3 if saddle point
+ * @ingroup misc_geo
+ */
+static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+{
+    std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
+    X[0] = RC, X[1] = ZC;
+    double eps = 1e10, eps_old= 2e10;
+    unsigned counter = 0; //safety measure to avoid deadlock
+    double psipRZ = psi.dfxy()(X[0], X[1]);
+    double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+    double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+    double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+    while( (eps < eps_old || eps > 1e-7) && eps > 1e-10 && counter < 100)
+    {
+        //newton iteration
+        XN[0] = X[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
+        XN[1] = X[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
+        XN.swap(X);
+        eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
+        X_OLD = X; eps_old= eps;
+        psipRZ = psi.dfxy()(X[0], X[1]);
+        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+        psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        counter++;
+    }
+    if ( counter >= 100 || std::isnan( Dinv) )
+        return 0;
+    RC = X[0], ZC = X[1];
+    if( Dinv > 0 &&  psipRR > 0)
+        return 1; //local minimum
+    if( Dinv > 0 &&  psipRR < 0)
+        return 2; //local maximum
+    //if( Dinv < 0)
+    return 3; //saddle point
+}
+
+/**
+ * @brief This function finds O-points of psi
+ *
+ * Same as \c findCriticalPoint except that this function throws if it does
+ * not find a local minimum or a local maximum
+ * @param psi \f$ \psi(R,Z)\f$
+ * @param RC start value on input, O-point on output
+ * @param ZC start value on input, O-point on output
+ * @return 1 if local minimum, 2 if local maximum,
+ * @ingroup misc_geo
+ */
+static inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+{
+    int point = findCriticalPoint( psi, RC, ZC);
+    if( point == 3 || point == 0 )
+        throw dg::Error(dg::Message(_ping_)<<"There is no O-point near "<<RC<<" "<<ZC);
+    return point;
+}
+
+/**
+ * @brief This function finds X-points of psi
+ *
+ * Same as \c findCriticalPoint except that this function throws if it does
+ * not find a saddle point
+ * @param psi \f$ \psi(R,Z)\f$
+ * @param RC start value on input, X-point on output
+ * @param ZC start value on input, X-point on output
+ * @ingroup misc_geo
+ */
+static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+{
+    int point = findCriticalPoint( psi, RC, ZC);
+    if( point != 3)
+        throw dg::Error(dg::Message(_ping_)<<"There is no X-point near "<<RC<<" "<<ZC);
+}
+
+
 /// A symmetric 2d tensor field and its divergence
 ///@snippet hector_t.cu doxygen
-///@ingroup fluxfunctions
 struct CylindricalSymmTensorLvl1
 {
     /**
@@ -258,7 +400,6 @@ struct CylindricalSymmTensorLvl1
 
 /// A vector field with three components that depend only on the first two coordinates
 ///@snippet ds_t.cu doxygen
-///@ingroup fluxfunctions
 struct CylindricalVectorLvl0
 {
     CylindricalVectorLvl0(){}
@@ -284,7 +425,40 @@ struct CylindricalVectorLvl0
     std::array<CylindricalFunctor,3> p_;
 };
 
-/*!@brief \f[ \chi^{ij} = b^ib^j\f]
+/**
+ * @brief Return scalar product of two vector fields \f$ v_0w_0 + v_1w_1 + v_2w_2\f$
+ */
+struct ScalarProduct : public aCylindricalFunctor<ScalarProduct>
+{
+    ScalarProduct( CylindricalVectorLvl0 v, CylindricalVectorLvl0 w) : m_v(v), m_w(w){}
+    double do_compute( double R, double Z) const
+    {
+        return m_v.x()(R,Z)*m_w.x()(R,Z)
+             + m_v.y()(R,Z)*m_w.y()(R,Z)
+             + m_v.z()(R,Z)*m_w.z()(R,Z);
+    }
+  private:
+    CylindricalVectorLvl0 m_v, m_w;
+};
+
+/**
+ * @brief Return norm of scalar product of two vector fields \f$ \sqrt{v_0w_0 + v_1w_1 + v_2w_2}\f$
+ *
+ * short for \c dg::compose( sqrt, ScalarProduct( v,w))
+ */
+struct SquareNorm : public aCylindricalFunctor<SquareNorm>
+{
+    SquareNorm( CylindricalVectorLvl0 v, CylindricalVectorLvl0 w) : m_s(v, w){}
+    double do_compute( double R, double Z) const
+    {
+        return sqrt(m_s(R,Z));
+    }
+  private:
+    ScalarProduct m_s;
+};
+
+
+/*!@brief \f$ \chi^{ij} = b^ib^j\f$
  *
  * Creates the two times contravariant tensor that,
  * when applied to a covariant vector, creates a vector
@@ -294,7 +468,6 @@ struct CylindricalVectorLvl0
  * @param g The vector field is pushed unto this grid
  * @return The tensor \c chi living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
- * @ingroup fluxfunctions
  */
 template<class Geometry3d>
 dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
@@ -318,7 +491,7 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
     t.values() = chi;
     return t;
 }
-/*!@brief \f[ \chi^{ij} = g^{ij} - b^ib^j\f]
+/*!@brief \f$ h^{ij} = g^{ij} - b^ib^j\f$
  *
  * Creates the two times contravariant tensor that,
  * when applied to a covariant vector, creates a vector
@@ -326,9 +499,8 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
  *
  * @param bhat The (unit) vector field \c b
  * @param g The vector field is pushed unto this grid
- * @return The tensor \c chi living on the coordinate system given by \c g
+ * @return The tensor \c h living on the coordinate system given by \c g
  * @tparam Geometry3d A three-dimensional geometry
- * @ingroup fluxfunctions
  */
 template<class Geometry3d>
 dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor(

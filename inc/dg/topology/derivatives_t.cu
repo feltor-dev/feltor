@@ -4,18 +4,19 @@
 #include "derivatives.h"
 #include "evaluation.h"
 
-double zero( double x, double y) { return 0;}
-double sine( double x, double y) { return sin(x)*sin(y);}
-double cosx( double x, double y) { return cos(x)*sin(y);}
-double cosy( double x, double y) { return cos(y)*sin(x);}
-double zero( double x, double y, double z) { return 0;}
-double sine( double x, double y, double z) { return sin(x)*sin(y)*sin(z);}
-double cosx( double x, double y, double z) { return cos(x)*sin(y)*sin(z);}
-double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
-double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
+using Matrix = dg::DMatrix;
+using Vector = dg::DVec;
+using value_t = double;
 
-typedef dg::DMatrix Matrix;
-typedef dg::DVec Vector;
+value_t zero( value_t x, value_t y) { return 0;}
+value_t sine( value_t x, value_t y) { return sin(x)*sin(y);}
+value_t cosx( value_t x, value_t y) { return cos(x)*sin(y);}
+value_t cosy( value_t x, value_t y) { return cos(y)*sin(x);}
+value_t zero( value_t x, value_t y, value_t z) { return 0;}
+value_t sine( value_t x, value_t y, value_t z) { return sin(x)*sin(y)*sin(z);}
+value_t cosx( value_t x, value_t y, value_t z) { return cos(x)*sin(y)*sin(z);}
+value_t cosy( value_t x, value_t y, value_t z) { return cos(y)*sin(x)*sin(z);}
+value_t cosz( value_t x, value_t y, value_t z) { return cos(z)*sin(x)*sin(y);}
 
 int main()
 {
@@ -24,7 +25,7 @@ int main()
     unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
     std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
     dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
-    dg::Grid2d g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
+    dg::RealGrid2d<value_t> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 
     Matrix dx2 = dg::create::dx( g2d, dg::forward);
@@ -39,17 +40,17 @@ int main()
     Vector sol2[] = {dx2d, dy2d, null2, null2};
     int64_t binary2[] = {4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002};
 
-    exblas::udouble res;
+    dg::exblas::udouble res;
     std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
     {
         Vector error = sol2[i];
         dg::blas2::symv( -1., m2[i], f2d, 1., error);
         dg::blas1::pointwiseDot( error, error, error);
-        double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
+        value_t norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
         std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary2[i]<<"\n";
     }
-    dg::Grid3d g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
+    dg::RealGrid3d<value_t> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);
@@ -71,7 +72,7 @@ int main()
     {
         Vector error = sol3[i];
         dg::blas2::symv( -1., m3[i], f3d, 1., error);
-        double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
+        value_t norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
     }
     std::cout << "\nFINISHED! Continue with arakawa_t.cu !\n\n";

@@ -20,3 +20,9 @@ src/feltor/doc/
 *.eps
 *.swp
 *.txt
+*.pdf
+*.aux
+*.log
+*.png
+*.pvsm
+*.bak

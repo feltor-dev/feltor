@@ -8,7 +8,7 @@
 #include <iterator>
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 
 int main( int argc, char* argv[])
@@ -19,7 +19,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     //nc defs
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     int dataIDs[14];
     std::string names[14] = {"Rx","Guynx","Tnx","A","Rfn","difffauy1","difffauy2","Sfauy",
@@ -35,12 +35,8 @@ int main( int argc, char* argv[])
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
         Json::Value js;
-        Json::CharReaderBuilder parser;
-        parser["collectComments"] = false;
-        std::string errs;
-        std::stringstream ss(input);
-        parseFromStream( parser, ss, &js, &errs); //read input without comments
-        const eule::Parameters p(js);   
+        dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
+        const eule::Parameters p(js);
         
         dg::Grid1d g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);
 	size_t count1d[2]  = {1, g1d.n()*g1d.N()};

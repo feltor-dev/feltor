@@ -194,7 +194,6 @@ struct Ribeiro : public aGenerator2d
     /**
      * @brief Construct a near-conformal grid generator
      *
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
      * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary
      * @param psi_1 second boundary

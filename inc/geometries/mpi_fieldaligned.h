@@ -29,7 +29,8 @@ void sendForward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) 
     MPI_Status status;
     MPI_Cart_shift( comm, 2, +1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize();//wait until device functions are finished before sending data
+    if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
+        cudaDeviceSynchronize();//wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
     MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
@@ -46,7 +47,8 @@ void sendBackward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm)
     MPI_Status status;
     MPI_Cart_shift( comm, 2, -1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize();//wait until device functions are finished before sending data
+    if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
+        cudaDeviceSynchronize();//wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
     MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
@@ -100,9 +102,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         m_bcz = bcz;
-        const dg::MPIGrid2d g2d( 0., 1., 0., 1., m_g->global().n(), m_g->global().Nx(), m_g->global().Ny(), m_g->get_perp_comm() );
-        m_left  = dg::evaluate( dg::CONSTANT(left), g2d);
-        m_right = dg::evaluate( dg::CONSTANT(right),g2d);
+        dg::blas1::copy( left, m_left);
+        dg::blas1::copy( right, m_right);
     }
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
@@ -115,8 +116,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
         dg::split( global, m_f, *m_g);
-        dg::blas1::axpby( scal_left, m_f[0],               0., m_left);
-        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()], 0., m_left);
+        dg::blas1::axpby( scal_left,  m_f[0],                   0., m_left);
+        dg::blas1::axpby( scal_right, m_f[m_g->local().Nz()-1], 0., m_right);
         m_bcz = bcz;
     }
 
@@ -131,22 +132,35 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 
     void operator()(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
 
-    const MPI_Vector<LocalContainer>& hm_inv()const {
-        return m_hm_inv;
+    const MPI_Vector<LocalContainer>& hm()const {
+        return m_hm;
     }
-    const MPI_Vector<LocalContainer>& hp_inv()const {
-        return m_hp_inv;
+    const MPI_Vector<LocalContainer>& hp()const {
+        return m_hp;
     }
-    const MPI_Vector<LocalContainer>& h0_inv()const {
-        return m_h0_inv;
+    const MPI_Vector<LocalContainer>& hbm()const {
+        return m_hbm;
+    }
+    const MPI_Vector<LocalContainer>& hbp()const {
+        return m_hbp;
+    }
+    const MPI_Vector<LocalContainer>& bbm()const {
+        return m_bbm;
+    }
+    const MPI_Vector<LocalContainer>& bbo()const {
+        return m_bbo;
+    }
+    const MPI_Vector<LocalContainer>& bbp()const {
+        return m_bbp;
     }
     const ProductMPIGeometry& grid() const{return *m_g;}
   private:
     void ePlus( enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     void eMinus(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     MPIDistMat<LocalIMatrix, CommunicatorXY> m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
-    MPI_Vector<LocalContainer> m_h0_inv, m_hm_inv, m_hp_inv; //3d size
-    MPI_Vector<LocalContainer> m_hm, m_hp; //2d size
+    MPI_Vector<LocalContainer> m_hm, m_hp, m_hbm, m_hbp; //3d size
+    MPI_Vector<LocalContainer> m_bbm, m_bbp, m_bbo; //3d size masks
+    MPI_Vector<LocalContainer> m_hm2d, m_hp2d; //2d size
     MPI_Vector<LocalContainer> m_left, m_right; //2d size
     MPI_Vector<LocalContainer> m_limiter; //2d size
     MPI_Vector<LocalContainer> m_ghostM, m_ghostP; //2d size
@@ -156,6 +170,19 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
     unsigned m_coords2, m_sizeZ; //number of processes in z
+#ifdef _DG_CUDA_UNAWARE_MPI
+    //we need to manually send data through the host
+    thrust::host_vector<double> m_send_buffer, m_recv_buffer; //2d size
+#endif
+    template<class MPIGeometry>
+    void assign3dfrom2d( const thrust::host_vector<double>& in2d, MPI_Vector<LocalContainer>& out, const MPIGeometry& grid)
+    {
+        dg::split( out, m_temp, grid); //3d vector
+        LocalContainer tmp2d;
+        dg::assign( in2d, tmp2d);
+        for( unsigned i=0; i<m_Nz; i++)
+            dg::blas1::copy( tmp2d, m_temp[i].data());
+    }
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
@@ -184,6 +211,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
     dg::assign( dg::evaluate(zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
+#ifdef _DG_CUDA_UNAWARE_MPI
+    m_recv_buffer = m_send_buffer = m_ghostP.data();
+#endif
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
     dg::Timer t;
@@ -202,7 +232,10 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if(rank==0) std::cout << "# DS: High order grid gen   took: "<<t.diff()<<"\n";
     t.tic();
 #endif
-    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic, grid_coarse->local(), yp_coarse, ym_coarse, deltaPhi, eps);
+    thrust::host_vector<bool> in_boxp, in_boxm;
+    thrust::host_vector<double> hbp, hbm;
+    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic, grid_coarse->local(),
+            yp_coarse, ym_coarse, hbp, hbm, in_boxp, in_boxm, deltaPhi, eps);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse->local());  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine.local())); ym = yp;
     for( int i=0; i<2; i++)
@@ -248,23 +281,37 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if(rank==0) std::cout << "# DS: Conversion            took: "<<t.diff()<<"\n";
 #endif
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
-    dg::assign( dg::evaluate( dg::zero, grid), m_h0_inv);
-    m_hp_inv = m_hm_inv = m_h0_inv;
-    dg::assign( dg::evaluate( dg::zero, *grid_coarse), m_hp);
-    m_hm = m_hp;
-    dg::assign( yp_coarse[2], m_hp.data()); //2d vector
-    m_temp = dg::split( m_hp_inv, grid); //3d vector
-    m_f = dg::split( (const MPI_Vector<LocalContainer>&)m_hp_inv, grid);
-    for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::copy( m_hp, m_temp[i]);
-    dg::assign( ym_coarse[2], m_hm.data()); //2d vector
-    dg::split( m_hm_inv, m_temp, grid); //3d vector
-    for( unsigned i=0; i<m_Nz; i++)
-        dg::blas1::copy( m_hm, m_temp[i]);
-    dg::blas1::axpby( 1., m_hp_inv, -1., m_hm_inv, m_h0_inv);//hm is negative
-    dg::blas1::pointwiseDivide( -1., m_hm_inv, m_hm_inv);
-    dg::blas1::pointwiseDivide(  1., m_hp_inv, m_hp_inv);
-    dg::blas1::pointwiseDivide(  1., m_h0_inv, m_h0_inv);
+    dg::assign( dg::evaluate( dg::zero, grid), m_hm);
+    m_temp = dg::split( m_hm, grid); //3d vector
+    m_f = dg::split( (const MPI_Vector<LocalContainer>&)m_hm, grid);
+    m_hbp = m_hbm = m_hp = m_hm;
+    dg::assign( dg::evaluate( dg::zero, *grid_coarse), m_hp2d);
+    dg::assign( yp_coarse[2], m_hp2d.data()); //2d vector
+    dg::assign( dg::evaluate( dg::zero, *grid_coarse), m_hm2d);
+    dg::assign( ym_coarse[2], m_hm2d.data()); //2d vector
+    assign3dfrom2d( hbp, m_hbp, grid);
+    assign3dfrom2d( hbm, m_hbm, grid);
+    assign3dfrom2d( yp_coarse[2], m_hp, grid);
+    assign3dfrom2d( ym_coarse[2], m_hm, grid);
+    dg::blas1::scal( m_hm2d, -1.);
+    dg::blas1::scal( m_hbm, -1.);
+    dg::blas1::scal( m_hm, -1.);
+    ///%%%%%%%%%%%%%%%%%%%%create mask vectors %%%%%%%%%%%%%%%%%%%//
+    thrust::host_vector<double> bbm( in_boxp.size(),0.), bbo(bbm), bbp(bbm);
+    for( unsigned i=0; i<in_boxp.size(); i++)
+    {
+        if( !in_boxp[i] && !in_boxm[i])
+            bbo[i] = 1.;
+        else if( !in_boxp[i] && in_boxm[i])
+            bbp[i] = 1.;
+        else if( in_boxp[i] && !in_boxm[i])
+            bbm[i] = 1.;
+        // else all are 0
+    }
+    m_bbm = m_bbo = m_bbp = m_hm;
+    assign3dfrom2d( bbm, m_bbm, grid);
+    assign3dfrom2d( bbo, m_bbo, grid);
+    assign3dfrom2d( bbp, m_bbp, grid);
 }
 
 template<class G, class M, class C, class container>
@@ -293,9 +340,11 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
             unsigned rep = r*globalNz + i0;
             for(unsigned k=0; k<rep; k++)
             {
-                dg::blas2::symv( m_plus, tempP, temp);
+                //!!! The value of f at the plus plane is I^- of the current plane
+                dg::blas2::symv( m_minus, tempP, temp);
                 temp.swap( tempP);
-                dg::blas2::symv( m_minus, tempM, temp);
+                //!!! The value of f at the minus plane is I^+ of the current plane
+                dg::blas2::symv( m_plus, tempM, temp);
                 temp.swap( tempM);
             }
             dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );
@@ -358,19 +407,25 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
     if( m_sizeZ != 1)
     {
         unsigned i0 = m_Nz-1;
+#ifdef _DG_CUDA_UNAWARE_MPI
+        thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_send_buffer.begin());
+        detail::sendBackward( m_send_buffer, m_recv_buffer, m_g->communicator());
+        thrust::copy( m_recv_buffer.cbegin(), m_recv_buffer.cend(), m_temp[i0].data().begin());
+#else
         detail::sendBackward( m_temp[i0].data(), m_ghostM.data(), m_g->communicator());
         dg::blas1::copy( m_ghostM, m_temp[i0]);
+#endif //_DG_CUDA_UNAWARE_MPI
     }
 
     //3. apply right boundary conditions in last plane
     unsigned i0=m_Nz-1;
-    if( m_bcz != dg::PER && m_g->z1() == m_g->global().z1())
+    if( m_bcz != dg::PER && m_g->local().z1() == m_g->global().z1())
     {
         if( m_bcz == dg::DIR || m_bcz == dg::NEU_DIR)
             dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
         if( m_bcz == dg::NEU || m_bcz == dg::DIR_NEU)
         {
-            dg::blas1::pointwiseDot( m_right, m_hp, m_ghostP);
+            dg::blas1::pointwiseDot( m_right, m_hp2d, m_ghostP);
             dg::blas1::axpby( 1., m_ghostP, 1., m_f[i0], m_ghostP);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
@@ -398,19 +453,25 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     if( m_sizeZ != 1)
     {
         unsigned i0 = 0;
+#ifdef _DG_CUDA_UNAWARE_MPI
+        thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_send_buffer.begin());
+        detail::sendForward( m_send_buffer, m_recv_buffer, m_g->communicator());
+        thrust::copy( m_recv_buffer.cbegin(), m_recv_buffer.cend(), m_temp[i0].data().begin());
+#else
         detail::sendForward( m_temp[i0].data(), m_ghostP.data(), m_g->communicator());
         dg::blas1::copy( m_ghostP, m_temp[i0]);
+#endif //_DG_CUDA_UNAWARE_MPI
     }
 
     //3. apply left boundary conditions in first plane
     unsigned i0=0;
-    if( m_bcz != dg::PER && m_g->z0() == m_g->global().z0())
+    if( m_bcz != dg::PER && m_g->local().z0() == m_g->global().z0())
     {
         if( m_bcz == dg::DIR || m_bcz == dg::DIR_NEU)
             dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
         if( m_bcz == dg::NEU || m_bcz == dg::NEU_DIR)
         {
-            dg::blas1::pointwiseDot( m_left, m_hm, m_ghostM);
+            dg::blas1::pointwiseDot( m_left, m_hm2d, m_ghostM);
             dg::blas1::axpby( -1., m_ghostM, 1., m_f[i0], m_ghostM);
         }
         //interlay ghostcells with periodic cells: L*g + (1-L)*fme

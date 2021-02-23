@@ -56,11 +56,7 @@ struct Implicit
 template< class Geometry, class Matrix, class container>
 struct Explicit
 {
-    //typedef std::vector<container> Vector;
     using value_type = dg::get_value_type<container>;
-    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     Explicit( const Geometry& g, eule::Parameters p);
 
@@ -101,7 +97,6 @@ struct Explicit
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
-
     dg::Elliptic< Geometry, Matrix, container > lapperpM; 
     std::vector<container> multi_chi;
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
@@ -210,8 +205,7 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
         if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( p.eps_gamma);
     }
-    poisson.variationRHS(potential, omega);
-    dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2
+    multi_pol[0].variation(binv, potential, omega);        // omega = u_E^2
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }

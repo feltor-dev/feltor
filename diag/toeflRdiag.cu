@@ -7,17 +7,12 @@
 
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "toefl/parameters.h"
-// #include "probes.h"
-
-double X( double x, double y) {return x;}
-double Y( double x, double y) {return y;}
 
 struct Heaviside2d
 {
     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
-//     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
     double operator()(double x, double y)const
     {
@@ -62,32 +57,26 @@ int main( int argc, char* argv[])
 //     std::ofstream os( argv[2]);
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
-    //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
+    ///////////////////read in and show inputfile//////////////////
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile und geomfile//////////////////
     size_t length;
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
+    std::string input(length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
-    
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const Parameters p(js);
     p.display(std::cout);
-    err = nc_close( ncid);
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
     dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( g2d); 
+    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol( g2d); 
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -132,7 +121,7 @@ int main( int argc, char* argv[])
     //size_t start1d[2]  = {0, 0};    
     //1d netcdf output file    
 
-    file::NC_Error_Handle err_out;
+    dg::file::NC_Error_Handle err_out;
     const size_t number_of_names = 17;
     int ncid_out;
     int namescomID[number_of_names],tvarID1d;
@@ -146,9 +135,9 @@ int main( int argc, char* argv[])
     
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out = nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-    //err_out = file::define_dimensions( ncid_out, dim_ids2d, &tvarID1d, g2d);
-    err_out = file::define_limited_time( ncid_out, "time", p.maxout+1, &dim_ids2d[0], &tvarID1d);
-    //err_out = file::define_time( ncid_out, "ptime", &timeID, &timevarID);
+    //err_out = dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarID1d, g2d);
+    err_out = dg::file::define_limited_time( ncid_out, "time", p.maxout+1, &dim_ids2d[0], &tvarID1d);
+    //err_out = dg::file::define_time( ncid_out, "ptime", &timeID, &timevarID);
     for( unsigned i=0; i<number_of_names; i++){
         err_out = nc_def_var( ncid_out, namescom[i].data(),  NC_DOUBLE, 1, &dim_ids2d[0], &namescomID[i]);
     }   
@@ -169,7 +158,7 @@ int main( int argc, char* argv[])
     double posX_max = 0.0,posY_max = 0.0,posX_max_old = 0.0,posY_max_old = 0.0,velX_max=0.0, velY_max=0.0,posX_max_hs=0.0,posY_max_hs=0.0,velCOM=0.0;
     double compactness_ne=0.0;
     //-----------------Start timestepping
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);   
+    //////////////////////////////open nc file//////////////////////////////////
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
     for( unsigned i=0; i<=p.maxout; i++)
     {
@@ -266,7 +255,7 @@ int main( int argc, char* argv[])
         //dg::IDMatrix interpne(dg::create::interpolation(xcoo,y0coone, g2d)) ;
         //
         //dg::blas2::gemv(interpne,npe[0],helper1d); 
-        //dg::blas1::transfer( helper1d, transfer1d);
+        //dg::assign( helper1d, transfer1d);
         //err_out = nc_put_vara_double( ncid_out, names1dID[0], start1d, count1d, transfer1d.data());    
         
         
@@ -285,7 +274,7 @@ int main( int argc, char* argv[])
         double Ue, Ui, Uphi;
         for( unsigned j=0; j<2; j++)
             dg::blas1::transform( npe[j], lnn[j], dg::LN<double>()); 
-        arakawa.variation(phi, helper); 
+        pol.variation(phi, helper);
         if(p.equations == "global" || p.equations == "ralf_global")
         {
             Ue = dg::blas2::dot( lnn[0], w2d, npe[0]);

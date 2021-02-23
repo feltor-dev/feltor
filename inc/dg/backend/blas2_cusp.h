@@ -36,7 +36,7 @@ inline void doSymv_cusp_dispatch( Matrix&& m,
                     cusp::csr_format,
                     OmpTag)
 {
-    typedef typename std::decay<Matrix>::type::index_type index_type;
+    typedef typename std::decay_t<Matrix>::index_type index_type;
     using value_type = get_value_type<Container1>;
     const value_type* RESTRICT val_ptr = thrust::raw_pointer_cast( &m.values[0]);
     const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
@@ -81,7 +81,7 @@ inline void doSymv( Matrix&& m,
     static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
     static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value, "Execution policies must be equal!");
-    typedef typename std::decay<Matrix>::type::value_type value_type;
+    typedef typename std::decay_t<Matrix>::value_type value_type;
     static_assert( std::is_same< get_value_type<Vector1>, value_type >::value,
         "Value types must be equal"
     );
@@ -94,7 +94,7 @@ inline void doSymv( Matrix&& m,
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
     doSymv_cusp_dispatch( std::forward<Matrix>(m),x,y,
-            typename std::decay<Matrix>::type::format(),
+            typename std::decay_t<Matrix>::format(),
             get_execution_policy<Vector1>());
 }
 template< class Matrix, class Vector1, class Vector2>
@@ -110,7 +110,7 @@ inline void doSymv( Matrix&& m,
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
-    using inner_container = typename std::decay<Vector1>::type::value_type;
+    using inner_container = typename std::decay_t<Vector1>::value_type;
     for ( unsigned i=0; i<x.size(); i++)
         doSymv( std::forward<Matrix>(m), x[i], y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
 }

@@ -7,7 +7,7 @@
 
 #include "dg/algorithm.h"
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorShw/parameters.h"
 // #include "probes.h"
 
@@ -21,25 +21,19 @@ int main( int argc, char* argv[])
 //     std::ofstream os( argv[2]);
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
-    //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
+    ///////////////////read in and show inputfile//////////////////
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile und geomfile//////////////////
     size_t length;
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
+    std::string input(length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
-    
     std::cout << "input "<<input<<std::endl;
-    
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
-    const eule::Parameters p(js);   
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
+    const eule::Parameters p(js);
+    p.display(std::cout);
     ///////////////////////////////////////////////////////////////////////////
     
     //Grids
@@ -86,7 +80,7 @@ int main( int argc, char* argv[])
     std::string names[4] = {"electrons", "ions",  "potential","vor"}; 
     int dataIDs[4]; 
     //1d profiles
-    file::NC_Error_Handle err_out;
+    dg::file::NC_Error_Handle err_out;
     int ncid_out,dataIDs1d[33], tvarIDout;
     //Rfx = -\partial_x\overbar{\overbar{\delta} u_x \overbar{\delta} u_y } = -\partial_x R_favre
     //A   = -\overbar{u_x} \partial_x \overbar{u_y} 
@@ -104,7 +98,7 @@ int main( int argc, char* argv[])
     size_t start1d[2]  = {0, 0};    
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
+    err_out= dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
      int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
     for( unsigned i=0; i<33; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
@@ -117,7 +111,7 @@ int main( int argc, char* argv[])
     unsigned imin,imax;
     imin= 0;
     time = imin*p.itstp;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);
+    //////////////////////////////open nc file//////////////////////////////////
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
 
     unsigned num_probes = 5;
@@ -154,7 +148,7 @@ int main( int argc, char* argv[])
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
     int timeID, timevarID;
-    err_out = file::define_time( ncid_out, "ptime", &timeID, &timevarID);
+    err_out = dg::file::define_time( ncid_out, "ptime", &timeID, &timevarID);
     for( unsigned i=0; i<num_probes; i++){
         std::stringstream ss1,ss2,ss3;
         ss1<<"Ne_p"<<i;
@@ -257,10 +251,10 @@ int main( int argc, char* argv[])
 		    
                 }
 
-                poisson.variationRHS(phi,temp2);
+                pol.variation(phi,temp2);
                 Tperp = 0.5*dg::blas2::dot( one, w2d, temp2);   // 0.5   u_E^2            
                 polavg(phi,temp);      // <N u_E^2 > 
-                poisson.variationRHS(temp,temp2);
+                pol.variation(temp,temp2);
                 Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 ( D_x <phi> )^2 
                 Tperpratio = Tperpz/Tperp;
                 dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
@@ -326,10 +320,10 @@ int main( int argc, char* argv[])
 		    dg::blas1::transform(navgtilde[i], navgtilde[i], dg::PLUS<>(-1.0));
                 }
                                     
-                poisson.variationRHS(phi,temp2);
+                pol.variation(phi,temp2);
                 Tperp = 0.5*dg::blas2::dot( one, w2d, temp2);   // 0.5   u_E^2            
                 polavg(phi,temp);      // <N u_E^2 > 
-                poisson.variationRHS(temp,temp2);
+                pol.variation(temp,temp2);
                 Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 ( D_x <phi> )^2 
                 Tperpratio = Tperpz/Tperp;
                 dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 

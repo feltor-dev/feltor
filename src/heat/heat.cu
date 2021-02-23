@@ -9,6 +9,7 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 #include "dg/algorithm.h"
+#include "dg/file/json_utilities.h"
 #include "dg/geometries/geometries.h"
 
 #include "parameters.h"
@@ -21,17 +22,13 @@ int main( int argc, char* argv[])
     Json::Value js, gs;
     if( argc == 1)
     {
-        std::ifstream is("input.json");
-        std::ifstream ks("geometry_params.js");
-        is >> js;
-        ks >> gs;
+        dg::file::file2Json("input/default.json", js, dg::file::comments::are_discarded);
+        dg::file::file2Json("geometry/geometry_params.json", gs, dg::file::comments::are_discarded);
     }
     else if( argc == 3)
     {
-        std::ifstream is(argv[1]);
-        std::ifstream ks(argv[2]);
-        is >> js;
-        ks >> gs;
+        dg::file::file2Json(argv[1], js, dg::file::comments::are_forbidden);
+        dg::file::file2Json(argv[2], gs, dg::file::comments::are_forbidden);
     }
     else
     {
@@ -56,9 +53,7 @@ int main( int argc, char* argv[])
     std::cout << "Initialize implicit" << std::endl;
     heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
     /////////glfw initialisation ////////////////////////////////////////
-    std::ifstream is( "window_params.js");
-    is >> js;
-    is.close();
+    dg::file::file2Json("window_params.json", js, dg::file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     //////////////////////////////////////////////////////////////////////

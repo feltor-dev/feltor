@@ -1,13 +1,13 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <limits.h>  // UINT_MAX is needed in cusp (v0.5.1) but limits.h is not included
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
 
 #include "dg/algorithm.h"
-#include "geometries/geometries.h"
+#include "dg/geometries/geometries.h"
+#include "dg/file/json_utilities.h"
 
 #ifdef OPENGL_WINDOW
 #include "draw/host_window.h"
@@ -98,15 +98,9 @@ int main(int argc, char* argv[])
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
     if( argc == 1)
-    {
-        std::ifstream is("input.json");
-        is >> js;
-    }
+        dg::file::file2Json( "input.json", js, dg::file::comments::are_discarded);
     else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded);
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
@@ -207,7 +201,7 @@ int main(int argc, char* argv[])
         dg::blas2::symv( equidistant, y0, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
-        dg::blas1::transfer( visual, hvisual);
+        dg::assign( visual, hvisual);
         render.renderQuad( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
         title << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step";
         glfwSetWindowTitle(w, title.str().c_str());

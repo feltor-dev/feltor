@@ -1,7 +1,7 @@
 #error Documentation only
 /*! @namespace dg
  * @brief This is the namespace for all functions and
- * classes defined and used by the discontinuous Galerkin solvers.
+ * classes defined and used by the discontinuous Galerkin library.
  */
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
@@ -13,26 +13,32 @@
  *         time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
+ *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
+ *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
+ *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
+ *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
+ *              \f$ v^i = T^{ij} w_j\f$
+ *
  *              Although a tensor needs a topology to be well-defined mathematically,
  *              we do not need a grid to perform basic operations computationally.
  *              This is why the tensor operations can appear already in Level 1
  *              of this library.
  *     @}
  *     @defgroup typedefs Useful Typedefs
- *          Useful type definitions for easy programming
  *     @defgroup sparsematrix Sparse matrix formats
  *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
+ *
  *             In this section the blas functions are implemented for the MPI+X
  *             hardware architectures, where X is e.g. CPU, GPU, accelerator
  *             cards...
@@ -42,24 +48,28 @@
  *             the chapter \ref mpi_backend in the introduction for more
  *             details.
  *     @defgroup dispatch The tag dispatch system
- *           Please read the chapter \ref dispatch in the introduction.
+ *           Implementation details of \ref dispatch
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
- * These algorithms make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
- *     @defgroup invert Matrix inversion
- *     @defgroup root Root finding
+ *      \f$ \dot y = f(y,t) \f$
+ *     @{
+ *          @defgroup time_utils Utilities for time integration
+ *     @}
+ *     @defgroup invert Linear and nonlinear solvers
+ *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
  * @}
  * @defgroup geo Level 3: Topology and Geometry
  * @{
  *     @defgroup grid Topological grids and operations
  *
- *     Objects that store topological information (which point is neighbour of
- *     which other point) about the grid.
+ *          Objects that store topological information (which point is neighbour of
+ *          which other point) about the grid.
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
+ *          \f$ f_i = f(x_i) \f$
  *
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -70,12 +80,15 @@
  *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *             in (x1, y1).
  *         @defgroup highlevel create weights
+ *
  *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives
+ *           \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
+ *          \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
@@ -86,29 +99,50 @@
  *     @{
  *         @defgroup basicgeometry Geometry base classes
  *         @defgroup pullback pullback and pushforward
+ *          \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
+ *           \f$ \sqrt{g} \f$
  *         @defgroup generators Grid Generator classes
- *            The classes to perform field line integration for DS and averaging classes
  *     @}
  *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
- * These routines make use of both the basic operations as well as the interfaces defined in the Geometry section.
+ *      These routines make use of both the basic operations as well as the
+ *      interfaces defined in the Geometry section.
  * @{
- *     @defgroup arakawa Discretization of Poisson bracket
- *     @defgroup matrixoperators Elliptic and Helmholtz operators
- *     @defgroup multigrid Advanced matrix inversion
+ *     @defgroup arakawa Advection terms
+ *          \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
+ *     @defgroup matrixoperators Matrix operators
+ *     Gradient \f$ \chi\cdot\nabla f\f$, Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
+ *     @defgroup multigrid Multigrid matrix inversion
+ *     \f$ A x = b\f$
  * @}
  * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
- *     @defgroup functions Functions and Functors
+ *          t.tic() and T.toc()
+ *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
+ *     @{
+ *          @defgroup basics Simple
+ *              For the dg::evaluate and dg::blas1::evaluate functions
  *
- *         The functions are useful mainly in the constructor of Operator objects.
- *         The functors are useful for either vector transformations or
- *         as init functions in the evaluate routines.
+ *          @defgroup functions A large collection
+ *              For the dg::evaluate and dg::blas1::evaluate functions
+ *
+ *          @defgroup composition Composition of two or more functors
+ *
+ *          @defgroup binary_operators blas1::evaluate binary operators
+ *              Binary subroutines for the dg::blas1::evaluate function
+ *
+ *          @defgroup variadic_evaluates blas1::evaluate variadic functors
+ *              Functors to use in the dg::blas1::evaluate function
+ *
+ *          @defgroup variadic_subroutines blas1::subroutine subroutines
+ *              Functors to use in the dg::blas1::subroutine functions
+ *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
+ *
  *         Low level helper routines.
  * @}
  *
@@ -152,7 +186,7 @@
   */
   /** @class hide_geometry
   * @tparam Geometry
-  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...).
+  * A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...).
   */
 
   /** @class hide_container_geometry
@@ -168,7 +202,7 @@
 
   /** @class hide_geometry_matrix_container
   * @tparam Geometry
-  A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
+  * A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
   * @tparam Matrix
   * A class for which the blas2 functions are callable in connection with the \c Container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
   * The \c Matrix type can be one of:
@@ -184,15 +218,15 @@
   *  - \c dg::MHVec or \c dg::MDVec when \c Geometry is one of the MPI geometries
   */
 
- /** @class hide_symmetric_op
+/** @class hide_symmetric_op
  * @tparam SymmetricOp
- A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
- with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
- need to be callable and return inverse weights and the preconditioner for the conjugate
- gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
- @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
-  and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
-  */
+ * A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
+ * with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
+ * need to be callable and return inverse weights and the preconditioner for the conjugate
+ * gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
+ * @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
+ * and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
+ */
 
 /*! @mainpage Introduction
  *
@@ -269,82 +303,6 @@
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
  *
- * @subsection dispatch_examples Examples
- *
- * Let us assume that we have two vectors \f$ v\f$ and \f$ w\f$. In a shared
- memory code these will be declared as
- @code
- dg::DVec v, w;
- // initialize v and w with some meaningful values
- @endcode
- In an MPI implementation we would simply write \c dg::MDVec instead of \c dg::DVec.
- Let us now assume that we want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
- with the \c dg::blas1::subroutine. The first step is to write a Functor that
- implements this expression
- @code
- struct Expression{
-    DG_DEVICE
-    void operator() ( double& v, double w){
-       v = v*v + w;
-    }
- };
- @endcode
- Note that we used the Marco \ref DG_DEVICE to enable this code on GPUs.
- The next step is just to apply our struct to the vectors we have.
- @code
- dg::blas1::subroutine( Expression(), v, w);
- @endcode
-
- Now, we want to use an additional parameter in our expresion. Let's assume we have
- @code
- double parameter = 3.;
- @endcode
- and we want to compute \f$ v_i \leftarrow p v_i^2 + w_i\f$. We now have two
- possibilities. We can add a private variable in \c Expression and use it in the
- implementation of the paranthesis operator
- @code
- struct Expression{
-    Expression( double param):m_param(param){}
-    DG_DEVICE
-    void operator() ( double& v, double w)const{
-        v = m_param*v*v + w;
-    }
-    private:
-    double m_param;
- };
- dg::blas1::subroutine( Expression(parameter), v, w);
- @endcode
- The other possibility is to extend the paranthesis operator in \c Expression and call \c dg::blas1::subroutine with a scalar
- @code
- struct Expression{
-    DG_DEVICE
-    void operator() ( double& v, double w, double param){
-        v = param*v*v + w;
-    }
- };
- dg::blas1::subroutine( Expression(), v, w, parameter);
- @endcode
- The result (and runtime) is the same in both cases. However, the second is more versatile,
- when we use recursion. Consider that \f$ v,\ w\f$ and \f$ p\f$ are now arrays, declared as
- @code
- std::array<dg::DVec, 3> array_v, array_w;
- std::array<double,3> array_parameter;
- // initialize array_v, array_w and array_parameter meaningfully
- @endcode
- We now want to compute the expression \f$ v_{ij} \leftarrow p_i v_{ij}^2 + w_{ij}\f$,
- where \c i runs from 0 to 2 and \c j runs over all elements in the shared vectors
- <tt> array_v[i] </tt> and <tt> array_w[i] </tt>.
- In this case we just call
- @code
- dg::blas1::subroutine( Expression(), array_v, array_w, array_parameter);
- @endcode
- and use the fact that <tt> std::array </tt> has the \c dg::RecursiveVectorTag.
-
- In order to compute the sum \f$ \sum_{i=0}^2 p_i\f$ we can use
- @code
- double sum = dg::blas1::dot( 1, array_parameter);
- @endcode
-
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
 @subsection mpi_vector MPI Vectors and the blas functions

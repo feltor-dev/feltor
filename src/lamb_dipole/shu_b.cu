@@ -1,139 +1,352 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <limits.h>  // UINT_MAX is needed in cusp (v0.5.1) but limits.h is not included
-#include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
 #include "dg/algorithm.h"
 
+#ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
+#endif
+#include "dg/file/file.h"
 
+#include "init.h"
+#include "diag.h"
 #include "shu.cuh"
-#include "parameters.h"
 
-double delta =0.05;
-double rho =M_PI/15.;
-double shearLayer(double x, double y){
-    if( y<= M_PI)
-        return delta*cos(x) - 1./rho/cosh( (y-M_PI/2.)/rho)/cosh( (y-M_PI/2.)/rho);
-    return delta*cos(x) + 1./rho/cosh( (3.*M_PI/2.-y)/rho)/cosh( (3.*M_PI/2.-y)/rho);
-}
-
-using namespace std;
-using namespace dg;
 
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
+    enum dg::file::error mode = dg::file::error::is_throw;
     if( argc == 1)
-    {
-        std::ifstream is("input/default.json");
-        is >> js;
-    }
-    else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
     else
-    {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
-        return -1;
-    }
-    const Parameters p( js);
-    p.display( std::cout);
-    /////////////////////////////////////////////////////////////////
-    Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    DVec w2d( create::weights(grid));
-    /////////////////////////////////////////////////////////////////
-    std::stringstream title;
-    GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
-    draw::RenderHostData render( 1,1);
-    ////////////////////////////////////////////////////////////
+        dg::file::file2Json( argv[1], js);
+    std::cout << js <<std::endl;
 
-    dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    dg::HVec omega;
-    if( p.initial == "lamb")
-        omega = dg::evaluate ( lamb, grid);
-    else if ( p.initial == "shear")
-        omega = dg::evaluate ( shearLayer, grid);
+    /////////////////////////////////////////////////////////////////
+    dg::CartesianGrid2d grid = shu::createGrid( js, mode);
+    dg::DVec w2d( dg::create::weights(grid));
+    /////////////////////////////////////////////////////////////////
 
-    DVec stencil = evaluate( one, grid);
-    DVec y0( omega ), y1( y0);
-    //subtract mean mass 
-    if( p.bc_x == dg::PER && p.bc_y == dg::PER)
+    std::string initial = dg::file::get( mode, js, "init", "type", "lamb").asString();
+    dg::HVec omega = shu::initial_conditions.at( initial)(js, mode, grid);
+
+    dg::DVec y0( omega ), y1( y0);
+    //subtract mean mass
+    if( grid.bcx() == dg::PER && grid.bcy() == dg::PER)
     {
-        double meanMass = dg::blas2::dot( y0, w2d, stencil)/(double)(p.lx*p.ly);
-        dg::blas1::axpby( -meanMass, stencil, 1., y0);
+        double meanMass = dg::blas1::dot( y0, w2d)/(double)(grid.lx()*grid.ly());
+        dg::blas1::axpby( -meanMass, 1., 1., y0);
     }
     //make solver and stepper
-    Shu<DMatrix, DVec> shu( grid, p.eps);
-    Diffusion<DMatrix, DVec> diffusion( grid, p.D);
-    Karniadakis< DVec > karniadakis( y0, y0.size(), p.eps_time);
+    shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>
+        shu( grid, js, mode);
+    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, js, mode);
+    if( "mms" == initial)
+    {
+        double sigma = dg::file::get( mode, js, "init", "sigma", 0.2).asDouble();
+        double velocity = dg::file::get( mode, js, "init", "velocity", 0.1).asDouble();
+        shu.set_mms_source( sigma, velocity, grid.ly());
+    }
 
-    Timer t;
+    double time = 0;
+    shu::Variables var = {shu, grid, y0, time, w2d, 0., mode, js};
+    dg::Timer t;
     t.tic();
     shu( 0., y0, y1);
     t.toc();
-    cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
-    double vorticity = blas2::dot( stencil , w2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
-    double energy =    0.5*blas2::dot( y0, w2d, shu.potential()) ;
-    
-    std::cout << "Total energy:     "<<energy<<"\n";
-    std::cout << "Total enstrophy:  "<<enstrophy<<"\n";
-    std::cout << "Total vorticity:  "<<vorticity<<"\n";
-
-    double time = 0;
-    ////////////////////////////////glfw//////////////////////////////
-    //create visualisation vectors
-    DVec visual( grid.size());
-    HVec hvisual( grid.size());
-    //transform vector to an equidistant grid
-    dg::IDMatrix equidistant = dg::create::backscatter( grid );
-    draw::ColorMapRedBlueExt colors( 1.);
-    karniadakis.init( shu, diffusion, time, y0, p.dt);
-    //cout << "Press any key to start!\n";
-    //double x; 
-    //cin >> x;
-    while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
+    var.duration = t.diff();
+    for( auto record : shu::diagnostics1d_list)
     {
-        dg::blas2::symv( equidistant, y0, visual);
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
-        //draw and swap buffers
-        dg::blas1::transfer( visual, hvisual);
-        render.renderQuad( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
-        title << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step";
-        glfwSetWindowTitle(w, title.str().c_str());
-        title.str("");
-        glfwPollEvents();
-        glfwSwapBuffers(w);
-        //step 
-        t.tic();
-        for( unsigned i=0; i<p.itstp; i++)
-        {
-            karniadakis.step( shu, diffusion, time, y0 );
-        }
-        t.toc();
-        //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
-        time += p.itstp*p.dt;
-
+        double result = record.function( var);
+        std::cout  << "Diagnostics "<<record.name<<" "<<result<<"\n";
     }
-    glfwTerminate();
+
+    /// ////////////// Initialize timestepper ///////////////////////
+    std::string stepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
+    std::string regularization = dg::file::get( mode, js, "regularization", "type", "moddal").asString();
+    dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
+    dg::IdentityFilter id;
+    bool apply_filter = true;
+    dg::ImExMultistep<dg::DVec> imex;
+    dg::ShuOsher<dg::DVec> shu_osher;
+    dg::FilteredExplicitMultistep<dg::DVec> multistep;
+    if( regularization == "modal")
+    {
+        double alpha = dg::file::get( mode, js, "regularization", "alpha", 36).asDouble();
+        double order = dg::file::get( mode, js, "regularization", "order", 8).asDouble();
+        double eta_c = dg::file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
+        filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
+    }
+    else
+        apply_filter = false;
+
+    double dt = dg::file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
+    if( "ImExMultistep" == stepper)
+    {
+        if( regularization != "viscosity")
+        {
+            throw dg::Error(dg::Message(_ping_)<<"Error: ImExMultistep only works with viscosity regularization! Exit now!");
+
+            return -1;
+        }
+        double eps_time = dg::file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
+        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
+        imex.construct( tableau, y0, y0.size(), eps_time);
+        imex.init( shu, diffusion, time, y0, dt);
+    }
+    else if( "Shu-Osher" == stepper)
+    {
+        shu_osher.construct( "SSPRK-3-3", y0);
+    }
+    else if( "FilteredExplicitMultistep" == stepper)
+    {
+        multistep.construct( "eBDF-3-3", y0);
+        if( apply_filter)
+            multistep.init( shu, filter, time, y0, dt);
+        else
+            multistep.init( shu, id, time, y0, dt);
+    }
+    else
+    {
+        throw dg::Error(dg::Message(_ping_)<<"Error! Timestepper not recognized!\n");
+
+        return -1;
+    }
+    unsigned maxout = dg::file::get( mode, js, "output", "maxout", 100).asUInt();
+    unsigned itstp = dg::file::get( mode, js, "output", "itstp", 5).asUInt();
+    std::string output = dg::file::get( mode, js, "output", "type", "glfw").asString();
+#ifndef WITHOUT_GLFW
+    if( "glfw" == output)
+    {
+        ////////////////////////////////glfw//////////////////////////////
+        //create visualisation vectors
+        dg::DVec visual( grid.size());
+        dg::HVec hvisual( grid.size());
+        //transform vector to an equidistant grid
+        std::stringstream title;
+        GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
+        draw::RenderHostData render( 1,1);
+        draw::ColorMapRedBlueExt colors( 1.);
+        dg::IDMatrix equidistant = dg::create::backscatter( grid );
+        while (!glfwWindowShouldClose(w) && time < maxout*itstp*dt)
+        {
+            dg::blas2::symv( equidistant, y0, visual);
+            colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
+            //draw and swap buffers
+            dg::assign( visual, hvisual);
+            render.renderQuad( hvisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+            title << "Time "<<time<< " \ttook "<<t.diff()/(double)itstp<<"\t per step";
+            glfwSetWindowTitle(w, title.str().c_str());
+            title.str("");
+            glfwPollEvents();
+            glfwSwapBuffers(w);
+            //step
+            t.tic();
+            try{
+                for( unsigned j=0; j<itstp; j++)
+                {
+                    if( "ImExMultistep" == stepper)
+                        imex.step( shu, diffusion, time, y0);
+                    else if ( "FilteredExplicitMultistep" == stepper)
+                    {
+                        if( apply_filter)
+                            multistep.step( shu, filter, time, y0);
+                        else
+                            multistep.step( shu, id, time, y0);
+                    }
+                    else if ( "Shu-Osher" == stepper)
+                    {
+                        if( apply_filter)
+                            shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                        else
+                            shu_osher.step( shu, id, time, y0, time, y0, dt);
+                    }
+                }
+            } catch( dg::Fail& fail) {
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                return -1;
+            }
+            t.toc();
+            var.duration = t.diff()/(double)itstp;
+        }
+        glfwTerminate();
+    }
+#endif //WITHOUT_GLFW
+    if( "netcdf" == output)
+    {
+        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string outputfile;
+        if( argc == 1 || argc == 2)
+            outputfile = "shu.nc";
+        else
+            outputfile = argv[2];
+        /// //////////////////////set up netcdf/////////////////////////////////////
+        dg::file::NC_Error_Handle err;
+        int ncid=-1;
+        try{
+            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+        }catch( std::exception& e)
+        {
+            std::cerr << "ERROR creating file "<<outputfile<<std::endl;
+            std::cerr << e.what()<<std::endl;
+           return -1;
+        }
+        /// Set global attributes
+        std::map<std::string, std::string> att;
+        att["title"] = "Output file of feltor/src/lamb_dipole/shu_b.cu";
+        att["Conventions"] = "CF-1.7";
+        ///Get local time and begin file history
+        auto ttt = std::time(nullptr);
+        auto tm = *std::localtime(&ttt);
+
+        std::ostringstream oss;
+        ///time string  + program-name + args
+        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        for( int i=0; i<argc; i++) oss << " "<<argv[i];
+        att["history"] = oss.str();
+        att["comment"] = "Find more info in feltor/src/lamb_dipole/shu.tex";
+        att["source"] = "FELTOR";
+        att["references"] = "https://github.com/feltor-dev/feltor";
+        att["inputfile"] = inputfile;
+        for( auto pair : att)
+            err = nc_put_att_text( ncid, NC_GLOBAL,
+                pair.first.data(), pair.second.size(), pair.second.data());
+
+        int dim_ids[3], tvarID;
+        std::map<std::string, int> id1d, id3d;
+        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid,
+                {"time", "y", "x"});
+
+        //Create field IDs
+        for( auto& record : shu::diagnostics2d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id3d[name] = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+                    &id3d.at(name));
+            err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
+        for( auto& record : shu::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id1d[name] = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                &id1d.at(name));
+            err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
+        // Output static vars
+        dg::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::HVec resultH( resultD);
+        for( auto& record : shu::diagnostics2d_static_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            int staticID = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
+                &staticID);
+            err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
+                long_name.data());
+            err = nc_enddef(ncid);
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::file::put_var_double( ncid, staticID, grid, resultH);
+            err = nc_redef(ncid);
+        }
+        err = nc_enddef(ncid);
+        size_t start[3] = {0, 0, 0};
+        size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+        ///////////////////////////////////first output/////////////////////////
+        for( auto& record : shu::diagnostics2d_list)
+        {
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
+        }
+        for( auto& record : shu::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
+        }
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        ///////////////////////////////////timeloop/////////////////////////
+        unsigned step=0;
+        try{
+        for( unsigned i=1; i<=maxout; i++)
+        {
+
+            dg::Timer ti;
+            ti.tic();
+            for( unsigned j=0; j<itstp; j++)
+            {
+                if( "ImExMultistep" == stepper)
+                    imex.step( shu, diffusion, time, y0);
+                else if ( "FilteredExplicitMultistep" == stepper)
+                {
+                    if( apply_filter)
+                        multistep.step( shu, filter, time, y0);
+                    else
+                        multistep.step( shu, id, time, y0);
+                }
+                else if ( "Shu-Osher" == stepper)
+                {
+                    if( apply_filter)
+                        shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                    else
+                        shu_osher.step( shu, id, time, y0, time, y0, dt);
+                }
+            }
+            step+=itstp;
+            ti.toc();
+            var.duration = ti.diff() / (double) itstp;
+            //output all fields
+            start[0] = i;
+            for( auto& record : shu::diagnostics2d_list)
+            {
+                record.function( resultD, var);
+                dg::assign( resultD, resultH);
+                dg::file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
+            }
+            for( auto& record : shu::diagnostics1d_list)
+            {
+                double result = record.function( var);
+                nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
+            }
+            err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+            std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time;
+            std::cout << "\n\t Average time for one step: "<<var.duration<<"s\n\n"<<std::flush;
+        }
+        }
+        catch( dg::Fail& fail) {
+            std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+            std::cerr << "Does Simulation respect CFL condition?\n";
+            err = nc_close(ncid);
+            return -1;
+        }
+        err = nc_close(ncid);
+    }
+    if( !("netcdf" == output) && !("glfw" == output))
+    {
+        throw dg::Error(dg::Message(_ping_)<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!");
+
+        return -1;
+    }
     ////////////////////////////////////////////////////////////////////
-    cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
-    cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, y0) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
+    std::cout << "Time "<<time<<std::endl;
+    for( auto record : shu::diagnostics1d_list)
+    {
+        double result = record.function( var);
+        std::cout  << "Diagnostics "<<record.name<<" "<<result<<"\n";
+    }
 
-    //blas1::axpby( 1., y0, -1, sol);
-    //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;
-
-    //cout << "Press any key to quit!\n";
-    //cin >> x;
     return 0;
 
 }

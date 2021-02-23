@@ -38,7 +38,7 @@ struct Implicit
         p(p),
         LaplacianM_perp  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
-        dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
+        dg::assign( dg::evaluate( dg::zero, g), temp);
     }
         /**
      * @brief Return implicit terms
@@ -223,7 +223,7 @@ struct Asela
 template<class Grid, class IMatrix, class Matrix, class container>
 Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p): 
     //////////the arakawa operators ////////////////////////////////////////
-    arakawa(g, g.bcx(), g.bcy()), 
+    arakawa(g, g.bcx(), g.bcy()),
     //////////the elliptic and Helmholtz operators//////////////////////////
     lapperp (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     multigrid( g, 3),
@@ -231,10 +231,10 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p):
     p(p),  evec(6)
 { 
     ////////////////////////////init temporaries///////////////////
-    dg::blas1::transfer( dg::evaluate( dg::zero, g), chi ); 
-    dg::blas1::transfer( dg::evaluate( dg::zero, g), omega ); 
-    dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
-    dg::blas1::transfer( dg::evaluate( dg::one,  g), one); 
+    dg::assign( dg::evaluate( dg::zero, g), chi ); 
+    dg::assign( dg::evaluate( dg::zero, g), omega ); 
+    dg::assign( dg::evaluate( dg::zero, g), lambda ); 
+    dg::assign( dg::evaluate( dg::one,  g), one); 
     phi.resize(2);apar.resize(2); phi[0] = phi[1] = apar[0]=apar[1] =  chi;
     npe = logn = u = u2 = un =  phi;
     arakawan = arakawau =  phi;
@@ -255,8 +255,8 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p):
         multi_invgamma[u].construct(   multigrid.grid(u), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
     //////////////////////////init weights////////////////////////////
-    dg::blas1::transfer( dg::create::volume(g),     w2d);
-    dg::blas1::transfer( dg::create::inv_volume(g), v2d);
+    dg::assign( dg::create::volume(g),     w2d);
+    dg::assign( dg::create::inv_volume(g), v2d);
 }
 
 
@@ -346,7 +346,7 @@ container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& p
         if(  number[0] == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma); 
     }
-    arakawa.variation(potential, omega); 
+    multi_pol[0].variation(potential, omega); 
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
     return phi[1];  
 }
@@ -452,7 +452,7 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( double time,  cons
     }
     mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w2d, omega);   // Tperp = 0.5 mu_i N_i u_E^2
-    arakawa.variation( apar[0], omega); // |nabla_\perp Aparallel|^2 
+    multi_pol[0].variation( apar[0], omega); // |nabla_\perp Aparallel|^2 
     double Uapar = 0.5*p.beta*dg::blas2::dot( one, w2d, omega); // Uapar = 0.5 beta |nabla_\perp Aparallel|^2
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1]; evec[5] = Uapar;

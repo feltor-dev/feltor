@@ -19,6 +19,8 @@
 
 #include "config.h"
 
+namespace dg
+{
 namespace exblas{
 namespace cpu{
 
@@ -86,6 +88,7 @@ static inline int biased_exponent(double x)
     return e;
 }
 
+//MW: if x is a NaN this thing still returns a number??
 static inline double myldexp(double x, int e)
 {
     // Scale x by e
@@ -215,5 +218,6 @@ inline static bool horizontal_or( const double & a){
 
 }//namespace cpu
 }//namespace exblas
+} // namespace dg
 
 #endif

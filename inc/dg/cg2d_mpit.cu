@@ -55,7 +55,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv(  A, x, Ax);
     dg::blas1::axpby( 1.,Ax,-1.,resi);
 
-    exblas::udouble res;
+    dg::exblas::udouble res;
     res.d = sqrt(dg::blas2::dot( w2d, x));
     if(rank==0)std::cout << "L2 Norm of x0 is              " << res.d<<"\t"<<res.i << std::endl;
     res.d = sqrt(dg::blas2::dot(w2d , solution));

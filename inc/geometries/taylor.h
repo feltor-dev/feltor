@@ -301,10 +301,6 @@ static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
     return CylindricalFunctorsLvl1( Ipol(gp), IpolR(gp), IpolZ(gp));
 }
-static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
-{
-    return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
-}
 
 ///@}
 
@@ -315,12 +311,14 @@ static inline dg::geo::TokamakMagneticField createMagField( solovev::Parameters 
  * Based on \c dg::geo::taylor::Psip(gp) and \c dg::geo::taylor::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
- * @ingroup geom
+ * @ingroup taylor
  * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
 static inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {
-    return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
+    MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
+            equilibrium::solovev, modifier::none, str2description.at( gp.description)};
+    return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp), params);
 }
 } //namespace geo
 

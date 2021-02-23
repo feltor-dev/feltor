@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "dg/algorithm.h"
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "impurities/parameters.h"
 
 struct Heaviside2d
@@ -26,28 +26,27 @@ private:
 };
 
 int main( int argc, char* argv[])
-{ if( argc != 3)   // lazy check: command line parameters
-  { std::cerr << "Usage: "<< argv[0] <<" [input.nc] [output.nc]\n";
-    return -1;
-  }
-  std::cout << argv[1] << " -> " << argv[2]<<std::endl;
-  ////////process parameter from .nc datafile////////
-  file::NC_Error_Handle err_in;
-  int ncid_in;
-  err_in = nc_open(argv[1], NC_NOWRITE, &ncid_in);
-  //read & print parameter string
-  size_t length;
-  err_in = nc_inq_attlen(ncid_in, NC_GLOBAL, "inputfile", &length);
-  std::string input(length, 'x');
-  err_in = nc_get_att_text(ncid_in, NC_GLOBAL, "inputfile", &input[0]);
-  std::cout << "input "<< input << std::endl;
-  //parse: parameter string--json-->p.xxx
+{
+    if( argc != 3)   // lazy check: command line parameters
+    {
+        std::cerr << "Usage: "<< argv[0] <<" [input.nc] [output.nc]\n";
+        return -1;
+    }
+    std::cout << argv[1] << " -> " << argv[2]<<std::endl;
+    ////////process parameter from .nc datafile////////
+    dg::file::NC_Error_Handle err_in;
+    int ncid_in;
+    err_in = nc_open(argv[1], NC_NOWRITE, &ncid_in);
+    //read & print parameter string
+    size_t length;
+    err_in = nc_inq_attlen(ncid_in, NC_GLOBAL, "inputfile", &length);
+    std::string input(length, 'x');
+    err_in = nc_get_att_text(ncid_in, NC_GLOBAL, "inputfile", &input[0]);
+    std::cout << "input "<< input << std::endl;
+    //parse: parameter string--json-->p.xxx
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
+
   const imp::Parameters p(js);
   p.display(std::cout);
   // dimensions
@@ -133,18 +132,18 @@ int main( int argc, char* argv[])
   //calculation variables per species
   double mass_[num_species] = {}, cn[num_species] = {};
   double posX = 0, posY =0 ;
-  double NposX = 0, NposY =0 ; //
+  double NposX = 0;//, NposY =0 ; //
   double posX_init[num_species] = {}, posY_init[num_species] = {};
-  double NposX_init[num_species] = {}, NposY_init[num_species] = {}; //
+  double NposX_init[num_species] = {};//, NposY_init[num_species] = {}; //
   double posX_old[num_species] ={}, posY_old[num_species] = {};
-  double NposX_old[num_species] ={}, NposY_old[num_species] = {};
+  double NposX_old[num_species] ={};//, NposY_old[num_species] = {};
   double posX_max = 0, posY_max = 0;
   double posX_max_old[num_species] = {}, posY_max_old[num_species] = {};
   double posX_max_hs = 0, posY_max_hs = 0;
   double velX[num_species] = {}, velY[num_species] = {};
-  double NvelX[num_species] = {}, NvelY[num_species] = {};
+  double NvelX[num_species] = {};//, NvelY[num_species] = {};
   double velX_old[num_species] = {}, velY_old[num_species] = {};
-  double NvelX_old[num_species] = {}, NvelY_old[num_species] = {};
+  //double NvelX_old[num_species] = {}, NvelY_old[num_species] = {};
   double velX_max = 0, velY_max = 0;
   double velCOM = 0;
   double accX = 0, accY = 0;
@@ -164,14 +163,14 @@ int main( int argc, char* argv[])
   int cache_size = (transfer2d.capacity()*sizeof(transfer2d[0])+sizeof(transfer2d))*nelems;
   int cache_nelems = nelems;
   double cache_preemption = 0.9;
-  file::NC_Error_Handle err_out;
+  dg::file::NC_Error_Handle err_out;
   int ncid_out, dim_t_x_y_id[3], tvar_id, etvar_w_id, etdim_w_id;
   err_out = nc_create(argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
   err_out = nc_put_att_text(ncid_out, NC_GLOBAL, "inputfile",
                             input.size(), input.data());
-  err_out = file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout+1,
+  err_out = dg::file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout+1,
                                     &tvar_id, g2d);
-  err_out = file::define_limited_time(ncid_out, "etime", num_etime,
+  err_out = dg::file::define_limited_time(ncid_out, "etime", num_etime,
                                       &etdim_w_id, &etvar_w_id);
   int k = 0;
   for (unsigned i = 0; i < num_species; i++)
@@ -264,7 +263,7 @@ int main( int argc, char* argv[])
         pol.set_chi(chi);
         pol.symv(field[0], nphys[j]);
         dg::blas1::axpby( 1., gamma_n, -1., nphys[j]);
-        dg::blas1::transfer(nphys[j], transfer2d);
+        dg::assign(nphys[j], transfer2d);
         err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, transfer2d.data());
       }
       //charge number
@@ -279,20 +278,20 @@ int main( int argc, char* argv[])
       // N*posX/Y, N*velX/Y
       if (i==0)
       { NposX_init[j] = dg::blas2::dot( xvec, w2d, ntilde[j]);
-        NposY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j]);
+        //NposY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j]);
       }
       if (i>0)
       { NposX = dg::blas2::dot( xvec, w2d, ntilde[j])-NposX_init[j];
-        NposY = dg::blas2::dot( yvec, w2d, ntilde[j])-NposY_init[j];
+        //NposY = dg::blas2::dot( yvec, w2d, ntilde[j])-NposY_init[j];
       }
       if (i==0)
-      { NvelX_old[j] = -NposX/deltaT;
-        NvelY_old[j] = -NposY/deltaT;
+      { //NvelX_old[j] = -NposX/deltaT;
+        //NvelY_old[j] = -NposY/deltaT;
         NposX_old[j] = NposX;
-        NposY_old[j] = NposY;
+        //NposY_old[j] = NposY;
       }
       NvelX[j] = (NposX - NposX_old[j])/deltaT;
-      NvelY[j] = (NposY - NposY_old[j])/deltaT;
+      //NvelY[j] = (NposY - NposY_old[j])/deltaT;
 
       // init pos/vel calculations as soon as mass > 1.E-15, otherwise NAN
       if ( mass_[j]>1.E-15 && (reset_flag[j]))
@@ -374,7 +373,7 @@ int main( int argc, char* argv[])
       m[j]++;
     }
     //field
-    arakawa.variation(field[0], helper);
+    pol.variation(field[0], helper);
     double energy[5] = {};
     energy[0] = dg::blas2::dot(lnn[0], w2d, npe[0]);
     energy[1] = p.a[1]*p.tau[1]*dg::blas2::dot(npe[1], w2d, lnn[1]);

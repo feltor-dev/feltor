@@ -94,78 +94,40 @@ struct TestFunctionPsi2
     TokamakMagneticField c_;
 };
 
-// sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
-struct TestFunctionSin{
-    TestFunctionSin( const TokamakMagneticField& c){
+// (cos(M_PI*(R-R_0))+1)*(cos(M_PI*Z/2.)+1)*sin(phi);
+struct TestFunctionDirNeu{
+    TestFunctionDirNeu( const TokamakMagneticField& c){
         R_0 = c.R0();
     }
     double operator()(double R, double Z, double phi)const{
-        return sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+        return (cos(M_PI*(R-R_0))+1.)*(cos(M_PI*Z)+1.)*sin(phi);
     }
     double dR(double R, double Z, double phi)const{
-        return M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+        return -M_PI*sin(M_PI*(R-R_0))*(cos(M_PI*Z)+1.)*sin(phi);
     }
     double dZ(double R, double Z, double phi)const{
-        return M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+        return -M_PI*(cos(M_PI*(R-R_0))+1.)*sin(M_PI*Z)*sin(phi);
     }
     double dP(double R, double Z, double phi)const{
-        return sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+        return (cos(M_PI*(R-R_0))+1.)*(cos(M_PI*Z)+1.)*cos(phi);
     }
     double dRR(double R, double Z, double phi)const{
-        return -M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+        return -M_PI*M_PI*cos(M_PI*(R-R_0))*(cos(M_PI*Z)+1.)*sin(phi);
     }
     double dZZ(double R, double Z, double phi)const{
-        return -M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+        return -M_PI*M_PI*(cos(M_PI*(R-R_0))+1.)*cos(M_PI*Z)*sin(phi);
     }
     double dPP(double R, double Z, double phi)const{
-        return -sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
+        return -(cos(M_PI*(R-R_0))+1.)*(cos(M_PI*Z)+1.)*sin(phi);
     }
     double dRZ(double R, double Z, double phi)const{
-        return M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
+        return M_PI*M_PI*sin(M_PI*(R-R_0))*sin(M_PI*Z)*sin(phi);
     }
     double dRP(double R, double Z, double phi)const{
-        return M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+        return -M_PI*sin(M_PI*(R-R_0))*(cos(M_PI*Z)+1.)*cos(phi);
     }
     double dZP(double R, double Z, double phi)const{
-        return M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
-    }
-    private:
-    double R_0;
-};
-// cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
-struct TestFunctionCos{
-    TestFunctionCos( const TokamakMagneticField& c){
-        R_0 = c.R0();
-    }
-    double operator()(double R, double Z, double phi)const{
-        return cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
-    }
-    double dR(double R, double Z, double phi)const{
-        return -M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
-    }
-    double dZ(double R, double Z, double phi)const{
-        return -M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
-    }
-    double dP(double R, double Z, double phi)const{
-        return cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
-    }
-    double dRR(double R, double Z, double phi)const{
-        return -M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
-    }
-    double dZZ(double R, double Z, double phi)const{
-        return -M_PI*M_PI/4.*cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
-    }
-    double dPP(double R, double Z, double phi)const{
-        return -cos(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*sin(phi);
-    }
-    double dRZ(double R, double Z, double phi)const{
-        return M_PI*M_PI/4.*sin(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*sin(phi);
-    }
-    double dRP(double R, double Z, double phi)const{
-        return -M_PI/2.*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2.)*cos(phi);
-    }
-    double dZP(double R, double Z, double phi)const{
-        return -M_PI/2.*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2.)*cos(phi);
+        return -M_PI*(cos(M_PI*(R-R_0))+1.)*sin(M_PI*Z)*cos(phi);
     }
     private:
     double R_0;
@@ -433,6 +395,20 @@ struct FuncDirPer
     double psi0_, psi1_, k_;
     const TokamakMagneticField c_;
 };
+// Variation of FuncDirPer
+struct VariationDirPer
+{
+    VariationDirPer( dg::geo::TokamakMagneticField mag, double psi_0, double psi_1): m_f(mag, psi_0, psi_1,4. ){}
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+
+    double operator()(double R, double Z) const {
+        return m_f.dR( R,Z)*m_f.dR(R,Z) + m_f.dZ(R,Z)*m_f.dZ(R,Z);
+    }
+    private:
+    dg::geo::FuncDirPer m_f;
+};
+
 
 //takes the magnetic field as chi
 struct EllipticDirPerM

@@ -1,10 +1,10 @@
 #include <iostream>
 #include <string>
 #include <mpi.h>
-#include <netcdf_par.h>
 #include <cmath>
 
 #include "dg/algorithm.h"
+#define _FILE_INCLUDED_BY_DG_
 #include "nc_utilities.h"
 
 double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
@@ -21,53 +21,44 @@ int main(int argc, char* argv[])
     double Tmax=2.*M_PI;
     double NT = 10;
     double dt = Tmax/NT;
-    dg::Grid1d gx( 0, 2.*M_PI, 3, 10);
-    dg::Grid1d gy( 0, 2.*M_PI, 3, 10);
-    dg::Grid1d gz( 0, 2.*M_PI, 1, 20);
-    dg::Grid3d g( gx, gy, gz);
+    double x0 = 0., x1 = 2.*M_PI;
+    MPI_Comm comm;
+    std::stringstream ss;
+    ss<< "2 1 2";
+    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
+    dg::MPIGrid3d grid( x0,x1,x0,x1,x0,x1,3,10,10,20, comm);
     std::string hello = "Hello world\n";
-    thrust::host_vector<double> data = dg::evaluate( function, g);
+    dg::MPI_Vector<thrust::host_vector<double>> data = dg::evaluate( function, grid);
 
     //create NetCDF File
-    int ncid;
-    file::NC_Error_Handle err;
-    MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( "testmpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, MPI_COMM_WORLD, info, &ncid);
-    err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
+    int ncid=0;
+    dg::file::NC_Error_Handle err;
+    if(rank==0)err = nc_create( "testmpi.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    if(rank==0)err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
 
     int dimids[4], tvarID;
-    err = file::define_dimensions( ncid, dimids, &tvarID, g);
+    if(rank==0)err = dg::file::define_dimensions( ncid, dimids, &tvarID, grid);
     int dataID;
-    err = nc_def_var( ncid, "data", NC_DOUBLE, 4, dimids, &dataID);
+    if(rank==0)err = nc_def_var( ncid, "data", NC_DOUBLE, 4, dimids, &dataID);
 
     /* Write metadata to file. */
-    err = nc_enddef(ncid);
+    if(rank==0)err = nc_enddef(ncid);
 
-    //err = nc_enddef( ncid);
-    size_t start[4] = {0, rank*g.Nz()/size, 0, 0};
-    size_t count[4] = {1, g.Nz()/size, g.Ny()*g.n(), g.Nx()*g.n()};
-    if( rank==0) std::cout<< "Write from "<< start[0]<< " "<<start[1]<<" "<<start[2]<<" "<<start[3]<<std::endl;
-    if( rank==0) std::cout<< "Number of elements "<<count[0]<< " "<<count[1]<<" "<<count[2]<<" "<<count[3]<<std::endl;
-    err = nc_var_par_access(ncid, dataID , NC_COLLECTIVE);
-    err = nc_var_par_access(ncid, tvarID , NC_COLLECTIVE);
     size_t Tcount=1, Tstart=0;
     double time = 0;
     //err = nc_close(ncid);
     for(unsigned i=0; i<=NT; i++)
     {
         if(rank==0)std::cout<<"Write timestep "<<i<<"\n";
-        //err = nc_open_par( "testmpi.nc", NC_WRITE|NC_MPIIO, MPI_COMM_WORLD, info, &ncid); //doesn't work I don't know why
         time = i*dt;
         Tstart = i;
-        data = dg::evaluate( function, g);
+        data = dg::evaluate( function, grid);
         dg::blas1::scal( data, cos( time));
-        start[0] = i;
         //write dataset (one timeslice)
-        err = nc_put_vara_double( ncid, dataID, start, count, data.data() + start[1]*count[2]*count[3]);
-        err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
-        //err = nc_close(ncid);
+        dg::file::put_vara_double( ncid, dataID, i, grid, data, false);
+        if(rank==0)err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     }
-    err = nc_close(ncid);
+    if(rank==0)err = nc_close(ncid);
     MPI_Finalize();
     return 0;
 }

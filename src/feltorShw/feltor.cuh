@@ -58,11 +58,7 @@ struct Implicit
 template< class Geometry, class Matrix, class container >
 struct Explicit
 {
-    //typedef std::vector<container> Vector;
     using value_type = dg::get_value_type<container>;
-    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     Explicit( const Geometry& g, eule::Parameters p);
 
@@ -177,8 +173,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
             std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
             old_psi.update( phi[1]);
         }
-        poisson.variationRHS(potential, omega); 
-        dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2
+        multi_pol[0].variation(binv,potential, omega);         // omega = u_E^2
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi =  Gamma phi - 0.5 u_E^2
     }
     if (p.modelmode==2)
@@ -497,7 +492,7 @@ void Explicit<Grid, Matrix, container>::operator()(double ttt, const std::vector
             S[i]    = 0.5*z[i]*p.tau[i]*dg::blas2::dot( y[i], w2d, y[i]); // N_tilde^2
         }
         mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
-        poisson.variationRHS(phi[0], omega);
+        multi_pol[0].variation( phi[0], omega);
         double Tperp = 0.5*p.mu[1]*dg::blas2::dot( one, w2d, omega);   //= 0.5 mu_i u_E^2
         energy_ = S[0] + S[1]  + Tperp; 
         evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp;

@@ -10,7 +10,7 @@ namespace dg
 
 ///@brief Recognize arithmetic types as scalars
 template<class T>
-struct TensorTraits<T, typename std::enable_if< std::is_arithmetic<T>::value>::type>
+struct TensorTraits<T, std::enable_if_t< std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = ScalarTag;

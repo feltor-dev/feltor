@@ -11,7 +11,6 @@
 #include "guenther.h"
 #include "solovev.h"
 #include "simple_orthogonal.h"
-#include "init.h"
 #include "testfunctors.h"
 #include "curvilinear.h"
 
@@ -48,7 +47,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint.json");
         is >> js;
     }
     else
@@ -75,13 +74,13 @@ int main( int argc, char* argv[])
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     err = nc_create( "orthogonal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
-    err = file::define_dimensions(  ncid, dim3d, g2d_periodic);
+    err = dg::file::define_dimensions(  ncid, dim3d, g2d_periodic);
     int coordsID[2], onesID, defID, confID,volID,divBID;
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
+    err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim3d, &coordsID[1]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &defID);
@@ -125,7 +124,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::transfer( temp0, X);
+    dg::assign( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
@@ -163,9 +162,10 @@ int main( int argc, char* argv[])
     vol = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
-    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
-    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::geo::Iris iris( psip.f(), gp.psipmin, gp.psipmax);
+    double psipmax, psipmin;
+    if( psi_0 < psi_1) psipmax = psi_1, psipmin = psi_0;
+    else               psipmax = psi_0, psipmin = psi_1;
+    auto iris = dg::compose( dg::Iris(psipmin, psipmax), psip.f());
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
 
     dg::HVec vec  = dg::evaluate( iris, g2dC);

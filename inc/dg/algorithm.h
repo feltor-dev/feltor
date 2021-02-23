@@ -18,6 +18,8 @@
 #include "blas.h"
 #include "helmholtz.h"
 #include "cg.h"
+#include "bicgstabl.h"
+#include "lgmres.h"
 #include "functors.h"
 #include "multistep.h"
 #include "elliptic.h"
@@ -26,7 +28,9 @@
 #include "multigrid.h"
 #include "refined_elliptic.h"
 #include "arakawa.h"
+#include "advection.h"
 #include "poisson.h"
+#include "simpsons.h"
 #include "topology/average.h"
 #ifdef MPI_VERSION
 #include "topology/average_mpi.h"

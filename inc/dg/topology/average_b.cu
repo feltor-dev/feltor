@@ -17,8 +17,10 @@ int main()
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::Average<dg::HVec> pol(g, dg::coo2d::y);
-    dg::Average<dg::DVec> pol_device(g, dg::coo2d::y);
+    dg::Average<dg::HVec> pol(g, dg::coo2d::y, "simple");
+    dg::Average<dg::DVec> pol_device(g, dg::coo2d::y, "simple");
+    dg::Average<dg::HVec> pol_ex(g, dg::coo2d::y, "exact");
+    dg::Average<dg::DVec> pol_device_ex(g, dg::coo2d::y, "exact");
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
@@ -29,14 +31,24 @@ int main()
     dg::DVec w2d_device( w2d);
     t.tic();
     for( unsigned i=0; i<100; i++)
+        pol_ex( vector, vector_y);
+    t.toc();
+    std::cout << "Assembly of average (exact)  vector on host took:      "<<t.diff()/100.<<"s\n";
+    t.tic();
+    for( unsigned i=0; i<100; i++)
+        pol_device_ex( dvector, dvector_y);
+    t.toc();
+    std::cout << "Assembly of average (exact)  vector on device took:    "<<t.diff()/100.<<"s\n";
+    t.tic();
+    for( unsigned i=0; i<100; i++)
         pol( vector, vector_y);
     t.toc();
-    std::cout << "Assembly of average vector on host took:      "<<t.diff()/100.<<"s\n";
+    std::cout << "Assembly of average (simple) vector on host took:      "<<t.diff()/100.<<"s\n";
     t.tic();
     for( unsigned i=0; i<100; i++)
         pol_device( dvector, dvector_y);
     t.toc();
-    std::cout << "Assembly of average vector on device took:    "<<t.diff()/100.<<"s\n";
+    std::cout << "Assembly of average (simple) vector on device took:    "<<t.diff()/100.<<"s\n";
     dg::blas1::axpby( 1., solution, -1., vector_y, vector);
     std::cout << "Result of integration on host is:     "<<dg::blas1::dot( vector, w2d)<<std::endl; //should be zero
     dg::blas1::axpby( 1., dsolution, -1., dvector_y, dvector);

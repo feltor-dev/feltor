@@ -12,21 +12,44 @@
 #include "topology/mpi_weights.h"
 #include "topology/fast_interpolation.h"
 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
-double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
-double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
+//using value_type = float;
+//using Vector     = dg::fMDVec;
+//using Matrix     = dg::fMDMatrix;
+using value_type = double;
+using Vector     = dg::MDVec;
+using Matrix     = dg::MDMatrix;
+
+using ArrayVec   = std::array<Vector, 3>;
+
+const value_type lx = 2.*M_PI;
+const value_type ly = 2.*M_PI;
+value_type left( value_type x, value_type y, value_type z) {return sin(x)*cos(y)*z;}
+value_type right( value_type x, value_type y, value_type z) {return cos(x)*sin(y)*z;}
+
 struct Expression{
    DG_DEVICE
-   void operator() ( double& u, double v, double w, double param){
+   void operator() ( value_type& u, value_type v, value_type w, value_type param){
        u = param*u*v + w;
    }
 };
-
-using value_type= double;
-using Vector    = dg::MDVec;
-using Matrix    = dg::MDMatrix;
-using ArrayVec  = std::array<Vector, 3>;
+struct test_routine{
+    test_routine( value_type mu, value_type alpha):m_mu(mu), m_alpha(alpha){}
+    DG_DEVICE
+    void operator()( value_type g11, value_type g12, value_type g22, value_type in1, value_type in2, value_type& out1, value_type& out2){
+        out1 = (g11)*(in1) + (g12)*(in2) + m_mu;
+        out2 = (g12)*(in1) + (g22)*(in2) + m_alpha;
+    }
+private:
+    value_type m_mu, m_alpha;
+};
+struct test_inplace{
+    DG_DEVICE
+    void operator()( value_type g11, value_type g12, value_type g22, value_type& inout1, value_type& inout2){
+        value_type t = g11*inout1 + g12*inout2;
+        inout2 = g12*inout1 + g22*inout2;
+        inout1 = t;
+    }
+};
 
 int main( int argc, char* argv[])
 {
@@ -49,8 +72,8 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "    npz: # of processes in z (must divide Nz and total # of processes!\n";
     dg::mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
 
-    dg::MPIGrid3d grid( 0., lx, 0, ly,0., ly, n, Nx, Ny, Nz, comm);
-    dg::MPIGrid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
+    dg::RealMPIGrid3d<value_type> grid( 0., lx, 0, ly,0., ly, n, Nx, Ny, Nz, comm);
+    dg::RealMPIGrid3d<value_type> grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d;
     dg::assign( dg::create::weights(grid), w2d);
     dg::Timer t;
@@ -58,15 +81,15 @@ int main( int argc, char* argv[])
     ArrayVec x;
     dg::assign( dg::evaluate( left, grid), x);
     t.toc();
-    double gbytes=(double)x.size()*grid.size()*sizeof(double)/1e9;
+    value_type gbytes=(value_type)x.size()*grid.size()*sizeof(value_type)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     dg::MultiMatrix<Matrix, ArrayVec> inter, project;
-    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
-    dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
+    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 1,2,2), inter);
+    dg::blas2::transfer(dg::create::fast_projection( grid, 1,2,2), project);
 
     int multi=100;
     if(rank==0)std::cout<<"\nNo communication\n";
-    ArrayVec y(x), z(x), u(x), v(x);
+    ArrayVec y(x), z(x), u(x), v(x), w(x), h(x);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpby( 1., y, -1., x);
@@ -98,12 +121,22 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
     //Test new evaluate
-    std::array<double, 3> array_p{ 1,2,3};
+    std::array<value_type, 3> array_p{ 1,2,3};
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::subroutine( Expression(), u, v, x, array_p);
     t.toc();
-    if(rank==0)std::cout<<"SUBroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    if(rank==0)std::cout<<"Subroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::subroutine( test_routine(2.,4.), x, y, z, u, v, w, h);
+    t.toc();
+    if(rank==0)std::cout<<"Subroutine ( G Cdot x = y)       "<<t.diff()/multi<<"s\t"<<9*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::subroutine( test_inplace(), x, y, z, u, v);
+    t.toc();
+    if(rank==0)std::cout<<"Subroutine ( G Cdot x = x)       "<<t.diff()/multi<<"s\t"<<7*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
     if(rank==0)std::cout<<"\nLocal communication\n";
     Matrix M;
@@ -193,6 +226,22 @@ int main( int argc, char* argv[])
         norm += dg::blas2::dot( x, w2d, y);
     t.toc();
     if(rank==0)std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
+    if(rank==0)std::cout << "\nUse of std::rotate and swap calls ( should not take any time)\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::rotate( x.rbegin(), x.rbegin()+1, x.rend()); //calls free swap functions
+    t.toc();
+    if(rank==0)std::cout<<"Rotation        took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::swap( x[0], y[0]); //does not call free swap functions but uses move assignments which is just as fast
+    t.toc();
+    if(rank==0)std::cout<<"std::swap       took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        std::iter_swap( x.begin(), x.end()); //calls free swap functions
+    t.toc();
+    if(rank==0)std::cout<<"Swap            took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
 
     MPI_Finalize();
     return 0;

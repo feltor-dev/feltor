@@ -17,6 +17,8 @@
 #define EXSUM_FPE_HPP_
 #include "accumulate.h"
 
+namespace dg
+{
 namespace exblas
 {
 namespace cpu
@@ -269,4 +271,5 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
 
 }//namespace cpu
 }//namespace exblas
+} //namespace dg
 #endif // EXSUM_FPE_HPP_

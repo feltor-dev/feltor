@@ -6,18 +6,11 @@
 // #define DG_DEBUG
 
 #include "draw/host_window.h"
+#include "dg/file/json_utilities.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
 #include "../diag/probes.h"
-
-
-
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the Explicit - functor and 
-   - directly visualizes results on the screen using parameters in window_params.txt
-*/
 
 
 int main( int argc, char* argv[])
@@ -25,15 +18,9 @@ int main( int argc, char* argv[])
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
     if( argc == 1)
-    {
-        std::ifstream is("input.json");
-        is >> js;
-    }
+        dg::file::file2Json("input.json", js, dg::file::comments::are_discarded);
     else if( argc == 2)
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+        dg::file::file2Json(argv[1], js, dg::file::comments::are_discarded);
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
@@ -43,9 +30,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
-    std::ifstream is( "window_params.js");
-    is >> js;
-    is.close();
+    dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
     draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////
@@ -121,7 +106,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
 
-        dg::blas1::transfer( y0[0], hvisual);
+        dg::assign( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
 //         colors.scalemin() = -colors.scalemax();        
@@ -136,7 +121,7 @@ int main( int argc, char* argv[])
 
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        dg::blas1::transfer( y0[1], hvisual);
+        dg::assign( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
@@ -155,7 +140,7 @@ int main( int argc, char* argv[])
 //        dvisual=feltor.potential()[0];
 //        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
 //        hvisual = y1[1];
-         dg::blas1::transfer( feltor.potential()[0], hvisual);
+         dg::assign( feltor.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
 
@@ -172,7 +157,7 @@ int main( int argc, char* argv[])
         //transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        dg::blas1::transfer( y1[1], hvisual);
+        dg::assign( y1[1], hvisual);
          //hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );

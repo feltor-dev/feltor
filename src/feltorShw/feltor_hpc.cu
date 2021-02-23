@@ -4,26 +4,16 @@
 #include <sstream>
 #include <cmath>
 // #define DG_DEBUG
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
 
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-*/
-
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3 && argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
@@ -31,10 +21,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     p.display( std::cout);
@@ -111,18 +98,17 @@ int main( int argc, char* argv[])
       }
     }
     if (argc==4) {
-        file::NC_Error_Handle errIN;
+        dg::file::NC_Error_Handle errIN;
         int ncidIN;
         errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
         ///////////////////read in and show inputfile und geomfile//////////////////
-        size_t lengthIN;
-        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-        std::string inputIN( lengthIN, 'x');
-        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-        
+        size_t length;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
+        std::string inputIN(length, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
         Json::Value jsIN;
-        std::stringstream is(inputIN);
-        parseFromStream( parser, is, &jsIN, &errs); //read input without comments
+        dg::file::string2Json(inputIN, jsIN, dg::file::comments::are_forbidden);
+
         const eule::Parameters pIN(  jsIN);    
         std::cout << "[input.nc] file parameters" << std::endl;
         pIN.display( std::cout);       
@@ -152,11 +138,11 @@ int main( int argc, char* argv[])
         dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
         errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
         dg::blas2::gemv( interpolateIN, transferINH,temp);
-        dg::blas1::transfer(temp,y0[0]);
+        dg::assign(temp, y0[0]);
         errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
         errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
         dg::blas2::gemv( interpolateIN, transferINH,temp);
-        dg::blas1::transfer(temp,y0[1]);      
+        dg::assign(temp,y0[1]);      
         errIN = nc_close(ncidIN);
     }
 
@@ -164,12 +150,12 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids_field[3], tvarID_field;
-    err = file::define_dimensions(ncid, dim_ids_field, &tvarID_field, grid_out);
+    err = dg::file::define_dimensions(ncid, dim_ids_field, &tvarID_field, grid_out);
     err = nc_enddef(ncid);
     err = nc_redef(ncid);
 
@@ -181,7 +167,7 @@ int main( int argc, char* argv[])
         err = nc_def_var(ncid, varname_fields[i].data(), NC_DOUBLE, 3, dim_ids_field, &dataIDs[i]);
     //energy IDs, used for small time-step diagnostic
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID, couplingID,radtransID; 
 
     err = nc_def_var(ncid, "energy", NC_DOUBLE, 1, &EtimeID, &energyID);
@@ -207,7 +193,7 @@ int main( int argc, char* argv[])
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
     //dim_ids_probe[1] = 
-    file :: define_dimension(ncid, "X_probe", &dim_ids_probe[1], dg::evaluate(dg::LinearX(1.0, 0), grid_probe).data(), 8);
+    dg::file::define_dimension(ncid,  &dim_ids_probe[1], grid_probe, "X_probe");
     for(unsigned i = 0; i < varname_probes.size(); i++)
     {
         err = nc_def_var(ncid, varname_probes[i].data(), NC_DOUBLE, 2, dim_ids_probe, &ID_probes[i]);
@@ -225,20 +211,20 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
-        dg::blas1::transfer( transferD, transferH); //transfer to host
+        dg::assign( transferD, transferH); //transfer to host
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //pot
     transfer = feltor.potential()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH); //transfer to host
+    dg::assign( transferD, transferH); //transfer to host
 
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     //Vor
     transfer = feltor.potential()[0];
     dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
     dg::blas2::symv( interpolate,y1[1], transferD);
-    dg::blas1::transfer( transferD, transferH); //transfer to host
+    dg::assign( transferD, transferH); //transfer to host
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
 
 
@@ -327,17 +313,17 @@ int main( int argc, char* argv[])
         for(unsigned j = 0; j < 2; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
-            dg::blas1::transfer( transferD, transferH); //transfer to host
+            dg::assign( transferD, transferH); //transfer to host
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = feltor.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH); //transfer to host
+        dg::assign( transferD, transferH); //transfer to host
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
         transfer = feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
         dg::blas2::symv( interpolate,y1[1], transferD);
-        dg::blas1::transfer( transferD, transferH); //transfer to host
+        dg::assign( transferD, transferH); //transfer to host
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data());
 
         err = nc_put_vara_double(ncid, tvarID_field, start, count, &time);

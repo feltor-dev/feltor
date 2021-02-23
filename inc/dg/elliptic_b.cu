@@ -19,13 +19,20 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
 double fct(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
+double fctX( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
+double fctY(double x, double y, double z){ return sin(x-R_0)*cos(y)*sin(z);}
+double fctZ(double x, double y, double z){ return sin(x-R_0)*sin(y)*cos(z);}
 double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
 double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::PER;
 double initial( double x, double y, double z) {return sin(0);}
+double variation3d( double x, double y, double z) {
+    return (fctX(x,y,z)*fctX(x,y,z)
+        + fctY(x,y,z)*fctY(x,y,z)
+        + fctZ(x,y,z)*fctZ(x,y,z)/x/x)*fct(x,y,z)*fct(x,y,z);
+}
 
 
 int main()
@@ -37,6 +44,9 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
+    bool jump_weight;
+    std::cout << "Jump weighting on or off? Type 1 for true or 0 for false (default): \n";
+    std::cin >> jump_weight;
     std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
     //std::cout << "Create Laplacian\n";
     //! [invert]
@@ -46,6 +56,8 @@ int main()
     dg::DVec x = dg::evaluate( initial, grid);
 
     dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+
+    laplace.set_jump_weighting(jump_weight);
 
     dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
 
@@ -67,16 +79,24 @@ int main()
 
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     norm = sqrt(normerr/norm); res.d = norm;
     std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
-    const dg::DVec deriv = dg::evaluate( derivative, grid);
+    const dg::DVec deriv = dg::evaluate( fctX, grid);
     dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error);
     norm = dg::blas2::dot( w3d, deriv);
     std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
+    std::cout << "Compute variation in Elliptic               ";
+    const dg::DVec variatio = dg::evaluate ( variation3d, grid);
+    laplace.variation( solution, x, error);
+    dg::blas1::axpby( 1., variatio, -1., error);
+    norm = dg::blas2::dot( w3d, variatio);
+    normerr = dg::blas2::dot( w3d, error);
+    std::cout <<sqrt( normerr/norm) << "\n";
+
 
     std::cout << "TEST SPLIT SOLUTION\n";
     x = dg::evaluate( initial, grid);

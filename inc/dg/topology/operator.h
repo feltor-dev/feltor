@@ -50,7 +50,7 @@ class Operator
      * @param last
      */
     template< class InputIterator>
-    Operator( InputIterator first, InputIterator last, typename std::enable_if<!std::is_integral<InputIterator>::value>::type* = 0): data_(first, last)
+    Operator( InputIterator first, InputIterator last, std::enable_if_t<!std::is_integral<InputIterator>::value>* = 0): data_(first, last)
     {
         unsigned n = std::distance( first, last);
         n_ = (unsigned)sqrt( (value_type)n);
@@ -612,6 +612,29 @@ Operator<real_type> lilj( unsigned n)
         for( unsigned j=0; j<n; j++)
             if( ((i+j)%2) == 0)
                 op( i,j) = 1.;
+    return op;
+}
+
+/**
+ * @brief Create the N-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
+template<class real_type>
+Operator<real_type> ninj( unsigned n)
+{
+    Operator<real_type> op( n, 0.);
+    for( int i=0; i<(int)n; i++)
+        for( int j=0; j<(int)n; j++)
+        {
+            if( i == j+1)
+                op( i,j) = 2./(2*i+1)/(2*j+1);
+            if( i == j-1)
+                op( i,j) = -2./(2*i+1)/(2*j+1);
+        }
+    op(0,0) = 2;
     return op;
 }
 

@@ -5,13 +5,7 @@
 #include "toeflI.cuh"
 #include "parameters.h"
 
-#include "file/nc_utilities.h"
-
-/*
-   - reads parameters from input.txt or any other given file,
-   - integrates the ToeflR - functor and
-   - writes outputs to a given outputfile using netcdf4.
-*/
+#include "dg/file/file.h"
 
 int main( int argc, char* argv[])
 {
@@ -26,10 +20,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else
-    {
-        std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs); //read input without comments
-    }
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     std::cout << js<<std::endl;
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
@@ -106,7 +97,7 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, time, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
@@ -115,7 +106,7 @@ int main( int argc, char* argv[])
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
     //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     //field IDs
     std::string names[5] = {"electrons", "ions", "impurities", "potential", "vorticity"};
     int dataIDs[5];
@@ -123,7 +114,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
@@ -141,18 +132,18 @@ int main( int argc, char* argv[])
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid);
     for( unsigned i=0; i<3; i++)
     {   dg::blas2::gemv( interpolate, y0[i], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //Potential
     transfer = toeflI.polarization( y0);
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //Vorticity
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
     dg::blas2::symv( interpolate, y0[1], transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
@@ -210,17 +201,17 @@ int main( int argc, char* argv[])
             err = nc_open(argv[2], NC_WRITE, &ncid);
             for( unsigned j=0; j<3; j++)
             {   dg::blas2::symv( interpolate, y0[j], transferD);
-                dg::blas1::transfer( transferD, transferH);
+                dg::assign( transferD, transferH);
                 err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
             }
             transfer = toeflI.potential()[0];
             dg::blas2::symv( interpolate, transfer, transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
             transfer = toeflI.potential()[0];
             dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?
             dg::blas2::symv( interpolate, y1[1], transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
             err = nc_put_vara_double( ncid, tvarID, start, count, &time);
             err = nc_close(ncid);

@@ -144,11 +144,11 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
     chi( evaluate( dg::zero, grid)), omega(chi),
     binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
     gamma_n(chi), potential_(chi), psi( 2, chi), dypsi( psi), ype(psi),
-    dyy(2,chi), lny( dyy), lapy(dyy), 
-    pol(     grid, dg::not_normed, dg::centered), 
+    dyy(2,chi), lny( dyy), lapy(dyy),
+    pol(     grid, dg::not_normed, dg::centered),
     laplaceM( grid, dg::normed, dg::centered),
     gamma1(  grid, 0., dg::centered),
-    arakawa( grid), 
+    arakawa( grid),
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
@@ -169,9 +169,7 @@ void ToeflR<G, M, container>::compute_psi( const container& phi)
         if(  number == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
 
-        arakawa.variation(phi, omega); //needed also in local energy theorem
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::pointwiseDot( binv, omega, omega);
+        pol.variation(binv, phi, omega); //needed also in local energy theorem
         dg::blas1::axpby( 1., psi[i], -0.5*mu[i], omega, psi[i]);   //psi  Gamma phi - 0.5 u_E^2
     }
 }
@@ -185,7 +183,7 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     dg::blas1::plus( chi, debye_); 
     for( unsigned i=0; i<2; i++)
     {
-        dg::blas1::transfer( y[i], omega);
+        dg::assign( y[i], omega);
         dg::blas1::plus( omega, 1.); 
         dg::blas1::scal( omega, z[i]*mu[i]);
         dg::blas1::pointwiseDot( binv, omega, omega); 
@@ -233,7 +231,7 @@ void ToeflR<G, M, container>::operator()(double t, const std::vector<container>&
         double Ue = z[0]*tau[0]*dg::blas2::dot( lny[0], w2d, ype[0]);
         double Up = z[1]*tau[1]*dg::blas2::dot( lny[1], w2d, ype[1]);
         double Uphi = 0.5*dg::blas2::dot( ype[0], w2d, omega) + 0.5*dg::blas2::dot( ype[1], w2d, omega); 
-        arakawa.variation(potential_, omega); 
+        pol.variation(potential_, omega); 
         double UE = debye_*dg::blas2::dot( one, w2d, omega);
         energy_ = Ue + Up + Uphi + UE;
         //std::cout << "Ue "<<Ue<< "Up "<<Up<< "Uphi "<<Uphi<< "UE "<<UE<<"\n";

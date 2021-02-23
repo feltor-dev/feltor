@@ -6,10 +6,10 @@
 #include <sstream>
 
 #include "dg/algorithm.h"
-#include "geometries/geometries.h"
+#include "dg/geometries/geometries.h"
 
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 #include "feltorSH/parameters.h"
 // #include "probes.h"
 
@@ -44,25 +44,19 @@ int main( int argc, char* argv[])
 //     std::ofstream os( argv[2]);
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
-    //////////////////////////////open nc file//////////////////////////////////
-    file::NC_Error_Handle err;
+    ///////////////////read in and show inputfile//////////////////
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    ///////////////////read in and show inputfile und geomfile//////////////////
     size_t length;
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
+    std::string input(length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
-    
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
-    std::stringstream ss(input);
-    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
-    p.display();
+    p.display(std::cout);
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
@@ -111,7 +105,7 @@ int main( int argc, char* argv[])
     size_t start1d[2]  = {0, 0};    
     //1d netcdf output file    
 
-    file::NC_Error_Handle err_out;
+    dg::file::NC_Error_Handle err_out;
     int ncid_out;
     int namescomID[12],names1dID[4],names2dID[4],tvarID1d,timeID,timevarID;
     int dim_ids2d[3];
@@ -121,13 +115,13 @@ int main( int argc, char* argv[])
     
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out = nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err_out = file::define_dimensions( ncid_out, dim_ids2d, &tvarID1d, g2d);
+    err_out = dg::file::define_dimensions( ncid_out, dim_ids2d, &tvarID1d, g2d);
     err_out = nc_close(ncid_out); 
     
     
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
     err_out = nc_redef(ncid_out);
-    err_out = file::define_time( ncid_out, "ptime", &timeID, &timevarID);
+    err_out = dg::file::define_time( ncid_out, "ptime", &timeID, &timevarID);
     for( unsigned i=0; i<12; i++){
         err_out = nc_def_var( ncid_out, namescom[i].data(),  NC_DOUBLE, 1, dim_ids2d, &namescomID[i]);
     }   
@@ -158,8 +152,7 @@ int main( int argc, char* argv[])
     Heaviside2d heavi(2.0* p.sigma);
     double normalize = 1.;
     dg::DVec heavy;
-    //open netcdf files
-    err = nc_open( argv[1], NC_NOWRITE, &ncid);   
+    //////////////////////////////open nc file//////////////////////////////////
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
     unsigned position = 0;
     double posX_max = 0.0,posY_max = 0.0,posX_max_old = 0.0,posY_max_old = 0.0,velX_max=0.0, velY_max=0.0,posX_max_hs=0.0,posY_max_hs=0.0,velCOM=0.0;
@@ -260,7 +253,7 @@ int main( int argc, char* argv[])
         dg::IDMatrix interpne(dg::create::interpolation(xcoo,y0coone, g2d)) ;
         
         dg::blas2::gemv(interpne,npe[0],helper1d); 
-        dg::blas1::transfer( helper1d, transfer1d);
+        dg::assign( helper1d, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[0], start1d, count1d, transfer1d.data());    
         
        //get max position and value(x,y_max) of electron temperature
@@ -275,7 +268,7 @@ int main( int argc, char* argv[])
         dg::IDMatrix interpte(dg::create::interpolation(xcoo,y0coote, g2d)) ;
         
         dg::blas2::gemv(interpte,tpe[0],helper1d); 
-        dg::blas1::transfer( helper1d, transfer1d);
+        dg::assign( helper1d, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[1], start1d, count1d, transfer1d.data());    
         
         
@@ -349,7 +342,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv(polti,phi,helper); 
         dg::blas1::pointwiseDot(helper,helper2,helper);
         dg::blas1::axpby(1.0,helper3,p.mu[1],helper,helper3);
-        dg::blas1::transfer( helper3, transfer2d);
+        dg::assign( helper3, transfer2d);
         err_out = nc_put_vara_double( ncid_out, names2dID[3], start2d, count2d, transfer2d.data());
 
   /*
@@ -368,7 +361,7 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interpti, helper2,helper1d); 
         transfer1d=helper1d;
         err_out = nc_put_vara_double( ncid_out, names1dID[2], start1d, count1d, transfer1d.data());      */
-        dg::blas1::transfer( xcoo, transfer1d);
+        dg::assign( xcoo, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[3],   start1d, count1d,transfer1d.data());       
         
         dg::blas1::transform(npe[0], npe[0], dg::PLUS<double>(-p.bgprofamp - p.nprofileamp));

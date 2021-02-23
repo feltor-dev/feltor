@@ -2,31 +2,39 @@
 /*!
  *
  * @defgroup generators_geo 1. Grid generators
+ * \f$( x,\ y,\ \zeta_x,\ \zeta_y,\ \eta_x,\ \eta_y)\f$ \c dg::geo::Hector
  *
-      All the grids introduced by this extension can be constructed with
-      generator classes.
+ *      All the grids introduced by this extension can be constructed with
+ *      generator classes.
  * @defgroup grids 2. New geometric grids
- * @defgroup fluxfunctions 3. New functors based on the magnetic field geometry
+ * @defgroup geom_functors 3. New functors surrounding the magnetic field geometry
+ *  \f$ f(R,Z,\varphi)\f$
 
- All functors in this section model two or three-dimensional functions, i.e. they all overload the operator() like \c aCylindricalFunctor
+        All functors in this section model two or three-dimensional functions, i.e.
+        they all overload the operator() like \c aCylindricalFunctor
  * @{
-      @defgroup geom 3.1 New flux functions and derivatives
+      @defgroup geom 3.1 Creating a flux function
+      \f$\psi_p(R,Z)\f$ dg::geo::createMagneticField
       @{
-        @defgroup solovev The solovev magnetic field
-        @defgroup taylor The Taylor state magnetic field
-        @defgroup guenther The Guenther magnetic field
-        @defgroup toroidal The Purely Toroidal magnetic field
-        @defgroup circular The Circular magnetic field
+        @defgroup solovev The solovev expansion
+        @defgroup polynomial The polynomial expansion
+        @defgroup taylor The Taylor state expansion
+        @defgroup guenther The Guenther expansion
+        @defgroup toroidal The Purely Toroidal expansion
+        @defgroup circular The Circular expansion
+        @defgroup mod  Modification of any expansion
+        \f$ H(\psi_p(R,Z))\f$, dg::geo::createModifiedField
+        @defgroup wall Wall and Sheath
       @}
-      @defgroup magnetic 3.2 Magnetic field and associated functors
-      @defgroup profiles 3.3 Profile functors based on flux functions
+      @defgroup magnetic 3.2 Magnetic field, curvatures and associated functors
+      @defgroup profiles 3.3 Penalization, weight and monitor metric functors
+      @defgroup fluxfunctions 3.4. Utility functor functionality
+      \f$ h^{ij}\f$
  * @}
  * @defgroup fieldaligned 4. Fieldaligned derivatives
+ * \f$ \nabla_\parallel f\f$
  * @defgroup misc_geo 5. Miscellaneous additions
- *
- * Objects that are used to define and integrate the magnetic field lines.
- * All objects can be used in the \c evaluation and \c pullback functions.
- *
+ * \f$ q(\psi_p)\f$ and \f$ \nabla \psi_p ( R_X, Z_X) = 0\f$
  */
 /*! @mainpage
  * This extension adds new features to the FELTOR core dg library.

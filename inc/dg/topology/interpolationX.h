@@ -137,19 +137,34 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
 }//namespace create
 
 /**
- * @brief Interpolate a single point
+ * @brief Interpolate a vector on a single point on a 2d Grid
  *
+ * @param sp Indicate whether the elements of the vector
+ * v are in xspace or lspace
+ *  (choose dg::xspace if you don't know what is going on here,
+ *      It is faster to interpolate in dg::lspace so consider
+ *      transforming v using dg::forward_transform( )
+ *      if you do it very many times)
+ * @param v The vector to interpolate in dg::xspace, or dg::lspace s.a. dg::forward_transform( )
  * @param x X-coordinate of interpolation point
  * @param y Y-coordinate of interpolation point
- * @param v The vector to interpolate in LSPACE
  * @param g The Grid on which to operate
+ * @copydoc hide_bcx_doc
+ * @param bcy analogous to \c bcx, applies to y direction
  *
+ * @ingroup interpolation
  * @return interpolated point
+ * @note \c g.contains(x,y) must return true
  */
 template<class real_type>
-real_type interpolate( real_type x, real_type y,  const thrust::host_vector<real_type>& v, const aRealTopologyX2d<real_type>& g )
+real_type interpolate(
+    dg::space sp,
+    const thrust::host_vector<real_type>& v,
+    real_type x, real_type y,
+    const aRealTopologyX2d<real_type>& g,
+    dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU )
 {
-    return interpolate( x,y,v,g.grid());
+    return interpolate( sp, v, x, y, g.grid(), bcx, bcy);
 }
 
 } //namespace dg

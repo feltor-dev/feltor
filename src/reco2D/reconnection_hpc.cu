@@ -5,22 +5,13 @@
 #include <cmath>
 
 
-#include "file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "reconnection.cuh"
-
-/*
-   - reads parameters from input.txt or any other given file, 
-   - Initializes and integrates Asela and 
-   - writes outputs to a given outputfile using netcdf 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-
-*/
 
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc != 3)
     {
@@ -28,10 +19,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     else 
-    {
-        std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
-    }
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
     const asela::Parameters p( js);
     p.display( std::cout);
     std::string input = js.toStyledString();
@@ -99,12 +87,12 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( asela, rolkar, 0., y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     
     //field IDs
     std::string names[8] = {"electrons", "ions", "Ue", "Ui", "potential","Aparallel","Vor","Jparallel"}; 
@@ -113,7 +101,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
     //energy IDs
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = dg::file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, energyIDs[6], dissID, alignedID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
@@ -138,35 +126,35 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::symv( interpolate, y0[i], transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transfer = asela.uparallel()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     transfer = asela.uparallel()[1];
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     transfer = asela.potential()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     transfer = asela.aparallel();
     dg::blas2::symv( interpolate, transfer, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     transfer = asela.potential()[0];
     dg::blas2::symv( interpolate, transfer, helperD);
     dg::blas2::symv( rolkar.laplacianM(), helperD, transferD);
     dg::blas1::scal(transferD,-1.0);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[6], start, count, transferH.data() );
     transfer = asela.aparallel();
     dg::blas2::symv( interpolate, transfer, helperD);
     dg::blas2::symv( rolkar.laplacianM(), helperD, transferD);
-    dg::blas1::transfer( transferD, transferH);
+    dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[7], start, count, transferH.data() );
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -245,35 +233,35 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<2; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
-            dg::blas1::transfer( transferD, transferH);
+            dg::assign( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = asela.uparallel()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
         transfer = asela.uparallel()[1];
         dg::blas2::symv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         transfer = asela.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         transfer = asela.aparallel();
         dg::blas2::symv( interpolate, transfer, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
         transfer = asela.potential()[0];
         dg::blas2::symv( interpolate, transfer, helperD);
         dg::blas2::symv( rolkar.laplacianM(), helperD, transferD);
         dg::blas1::scal(transferD,-1.0);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[6], start, count, transferH.data() );
         transfer = asela.aparallel();
         dg::blas2::symv( interpolate, transfer, helperD);
         dg::blas2::symv( rolkar.laplacianM(), helperD, transferD);
-        dg::blas1::transfer( transferD, transferH);
+        dg::assign( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[7], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);

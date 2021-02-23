@@ -12,8 +12,8 @@
 #include "separatrix_orthogonal.h"
 #include "testfunctors.h"
 
-//const char* parameters = "geometry_params_Xpoint_taylor.js";
-const char* parameters = "geometry_params_Xpoint.js";
+//const char* parameters = "geometry_params_Xpoint_taylor.json";
+const char* parameters = "geometry_params_Xpoint.json";
 
 int main(int argc, char**argv)
 {
@@ -72,13 +72,13 @@ int main(int argc, char**argv)
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
-    file::NC_Error_Handle ncerr;
+    dg::file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
+    ncerr = dg::file::define_dimensions(  ncid, dim2d, g2d.grid());
     int coordsID[2], psiID, functionID, function2ID, divBID;
-    ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
+    ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
+    ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
     ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
     ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
     ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
@@ -141,22 +141,22 @@ int main(int argc, char**argv)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0., 0., (dg::HVec)gxx, g2d);
-    double hyX = dg::interpolate( 0., 0., (dg::HVec)gyy, g2d);
+    double hxX = dg::interpolate( dg::xspace, (dg::HVec)gxx, 0., 0., g2d);
+    double hyX = dg::interpolate( dg::xspace, (dg::HVec)gyy, 0., 0., g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
-    dg::blas1::transfer( error, X);
+    dg::assign( error, X);
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    dg::blas1::transfer( x, X);
+    dg::assign( x, X);
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    dg::blas1::transfer( solution, Y);
+    dg::assign( solution, Y);
     //dg::blas1::axpby( 1., X., -1, Y);
     ncerr = nc_put_var_double( ncid, function2ID, Y.data());
-    dg::blas1::transfer( chi, X);
+    dg::assign( chi, X);
     ncerr = nc_put_var_double( ncid, divBID, X.data());
     ncerr = nc_close( ncid);
 

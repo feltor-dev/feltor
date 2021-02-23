@@ -5,6 +5,7 @@
 #include <thrust/host_vector.h>
 #include "dg/backend/config.h"
 #include "grid.h"
+#include "operator.h"
 
 /*! @file
   @brief Function discretization routines
@@ -43,7 +44,6 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
 ///@{
 
 
-
 /**
  * @brief Evaluate a 1d function on grid coordinates
  *
@@ -55,7 +55,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  * .
  * @copydoc hide_code_evaluate1d
  * @tparam UnaryOp Model of Unary Function \c real_type \c f(real_type)
- * @param f The function to evaluate
+ * @param f The function to evaluate, see @ref functions for a host of predefined functors to evaluate
  * @param g The grid that defines the computational space on which to evaluate f
  *
  * @return The output vector \c v as a host vector
@@ -92,7 +92,7 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
  *.
  * @copydoc hide_code_evaluate2d
  * @copydoc hide_binary
- * @param f The function to evaluate: f = f(x,y)
+ * @param f The function to evaluate: f = f(x,y), see @ref functions for a host of predefined functors to evaluate
  * @param g The 2d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector
@@ -136,7 +136,7 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  *.
  * @copydoc hide_code_evaluate3d
  * @copydoc hide_ternary
- * @param f The function to evaluate: f = f(x,y,z)
+ * @param f The function to evaluate: f = f(x,y,z), see @ref functions for a host of predefined functors to evaluate
  * @param g The 3d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector
@@ -169,6 +169,70 @@ template<class real_type>
 thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aRealTopology3d<real_type>& g)
 {
     return evaluate<real_type(real_type, real_type, real_type)>( *f, g);
+};
+///@endcond
+/////////////////////////////////////INTEGRATE/////////////////
+
+/*!@brief Indefinite integral of a function on a grid
+ * \f[ F_h(x) = \int_a^x f_h(x') dx' \f]
+ *
+ * This function computes the indefinite integral of a given input
+ * @param in Host vector discretized on g
+ * @param g The grid
+ * @return integral of in on the grid g
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ */
+template<class real_type>
+thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& in, const RealGrid1d<real_type>& g)
+{
+    double h = g.h();
+    unsigned n = g.n();
+    thrust::host_vector<real_type> out(g.size(), 0.);
+    dg::Operator<real_type> forward = g.dlt().forward();
+    dg::Operator<real_type> backward = g.dlt().backward();
+    dg::Operator<real_type> ninj = create::ninj<real_type>( n );
+    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    t *= h/2.;
+    ninj = backward*t*ninj*forward;
+    real_type constant = 0.;
+
+    for( unsigned i=0; i<g.N(); i++)
+    {
+        for( unsigned k=0; k<n; k++)
+        {
+            for( unsigned l=0; l<n; l++)
+                out[ i*n + k] += ninj(k,l)*in[ i*n + l];
+            out[ i*n + k] += constant;
+        }
+        for( unsigned l=0; l<n; l++)
+            constant += h*forward(0,l)*in[i*n+l];
+    }
+    return out;
+}
+
+
+/*!@brief Indefinite integral of a function on a grid
+ * \f[ F_h(x) = \int_a^x f_h(x') dx' \f]
+ *
+ * This function first evaluates f on the given grid and then computes
+ *  and returns its indefinite integral
+ * @param f The function to evaluate and then integrate
+ * @param g The grid
+ * @return integral of f on the grid g
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ */
+template< class UnaryOp,class real_type>
+thrust::host_vector<real_type> integrate( UnaryOp f, const RealGrid1d<real_type>& g)
+{
+    thrust::host_vector<real_type> vector = evaluate( f, g);
+    return integrate<real_type>(vector, g);
+}
+///@cond
+template<class real_type>
+thrust::host_vector<real_type> integrate( real_type (f)(real_type), const RealGrid1d<real_type>& g)
+{
+    thrust::host_vector<real_type> vector = evaluate( f, g);
+    return integrate<real_type>(vector, g);
 };
 ///@endcond
 

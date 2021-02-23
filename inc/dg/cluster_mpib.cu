@@ -12,7 +12,7 @@
 
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
-const double lz = 1.;
+double lz = 1.;
 
 dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
@@ -78,6 +78,11 @@ int main(int argc, char* argv[])
 
 
     dg::CartesianMPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
+    periods[0] = false, periods[1] = false;
+    MPI_Comm commEll;
+    MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
+    if( Nz > 2) lz = 2.*M_PI;
+    dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
     dg::Timer t;
     Vector w3d, lhs, rhs, jac, x, y, z;
     try{
@@ -169,13 +174,9 @@ int main(int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi<<std::flush;
     //The Elliptic scheme
-    periods[0] = false, periods[1] = false;
-    MPI_Comm commEll;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
-    exblas::udouble res;
+    dg::exblas::udouble res;
     if( !(Nz > 2))
     {
-        dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
         const Vector ellw3d = dg::create::volume(gridEll);
         const Vector ellv3d = dg::create::inv_volume(gridEll);
         dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
@@ -196,7 +197,6 @@ int main(int argc, char* argv[])
     else
     {
         //Elliptic3d
-        dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0., 2.*M_PI, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
         const Vector ellw3d = dg::create::volume(gridEll);
         const Vector ellv3d = dg::create::inv_volume(gridEll);
         dg::Elliptic3d<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);

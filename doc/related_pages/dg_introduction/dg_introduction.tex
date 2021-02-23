@@ -9,7 +9,8 @@
 \author{M.~Wiesenberger}
 
 \section{ Introduction to discontinuous Galerkin methods} \label{sec:discretization}
-This writeup is based on Reference~\cite{WiesenbergerPhD}. 
+This writeup is based on Reference~\cite{WiesenbergerPhD}. A useful book to consult
+is Reference~\cite{NodalDG}.
 
 In recent years, discontinuous Galerkin (dG) methods have been investigated 
 as an excellent alternative to finite difference and finite volume schemes 
@@ -30,10 +31,10 @@ In contrast, dG methods allow discontinuities across cell boundaries, which adds
 For the discretization of second derivatives we discuss the so-called local discontinuous Galerkin (LDG) method~\cite{Cockburn1998}.
 The LDG method and its advantages can also be used for the discretization of 
 elliptic equations (including Poisson's equation). 
-Reference~\cite{Arnold2001} highlights the relation 
+Reference~\cite{Arnold2002} highlights the relation 
 of the method to interior penalty and other alternative methods. 
 A superconvergence result for the 
-LDG approach was proven on Cartesian grids~\cite{Cockburn2001},
+LDG approach was proven on Cartesian grids~\cite{Cockburn2002},
 where the order of convergence is $1/2$ better than on arbitrary meshes.
 Reference~\cite{Yadav2013} later showed a similar result for general, nonlinear elliptic equations.
 
@@ -54,7 +55,7 @@ First, let us consider the one-dimensional case.
 For simplicity and ease of implementation we choose an equidistant grid with $N$ cells $C_n = [x_{n-1/2},x_{n+1/2}]$ of size $h$;
 with this choice we are able to construct basis functions of $P(C_n)$, the space of 
 polynomials of degree at most $P-1$ on $C_n$, by using orthogonal Legendre polynomials\footnote{ Often, in the literature the order of the polynomials is denoted by $k$.
-Pay attention, that we use the number of polynomial coefficients $P$ instead. We have $P=k+1$}. 
+Pay attention, that we use the number of polynomial coefficients $P$ instead. We have $P=k+1$}.
 The Legendre polynomials can be recursively defined on $[-1,1]$ by setting
 $p_0(x) = 1$, $p_1(x) = x$ and (see e.g.~\cite{AS})
 \begin{align}
@@ -62,8 +63,8 @@ $p_0(x) = 1$, $p_1(x) = x$ and (see e.g.~\cite{AS})
     \label{eq:recursion}
 \end{align}
 The so constructed Legendre polynomials are orthogonal on $[-1,1]$.
-We write 
-$x^a_j$ and $w_j$, $j=0,\dots,P-1$ denoting the abscissas and weights of 
+We write
+$x^a_j$ and $w_j$, $j=0,\dots,P-1$ denoting the abscissas and weights of
 the Gauss--Legendre quadrature on the interval $[-1,1]$. Then we note that for $k,l=0, \dots, P-1$
 \begin{align}
     \int_{-1}^1 p_k(x)p_l(x) \dx = \sum_{j=0}^{P-1} w_jp_k (x^a_j)p_l(x^a_j) = \frac{2}{2k+1}\delta_{kl}, 
@@ -71,18 +72,22 @@ the Gauss--Legendre quadrature on the interval $[-1,1]$. Then we note that for $
 \end{align}
  since Gauss--Legendre quadrature is exact for polynomials of degree at most $2P-1$.
 
-The discrete completeness relation can then be written as 
+The discrete completeness relation can then be written as
 \begin{align}
     \sum_{k=0}^{P-1} \frac{2k+1}{2}w_j p_k(x^a_i)p_k(x^a_j) = \delta_{ij}.
     \label{eq:completeness}
 \end{align}
 Given a real function $f:[-1,1]\rightarrow \mathbb{R}$ we define $f_j:=f(x^a_j)$ and
 \begin{align} \label{eq:ex2}
-    \bar f^k := \frac{2k+1}{2}\sum_{j=0}^{P-1}w_j p_k(x^a_j) f_j 
+    \bar f^k := \frac{2k+1}{2}\sum_{j=0}^{P-1}w_j p_k(x^a_j) f_j
 \end{align}
-Now let us define the forward transformation matrix by $F^{kj}:=\frac{2k+1}{2}w_jp_k(x^a_j)$ and 
-the backward transformation matrix by $B_{kj}:= p_j(x^a_k)$. Then, 
-using Eq.~\eqref{eq:ex2}, we get
+Now let us define the forward transformation matrix by $F^{kj}:=\frac{2k+1}{2}w_jp_k(x^a_j)$ and
+the backward transformation matrix by $B_{kj}:= p_j(x^a_k)$.
+\begin{tcolorbox}[title=Note]
+Reference~\cite{NodalDG} identifies $B$ as the Vandermonde matrix and further denotes $f_i$ as the \textbf{nodal} representation and $\bar f^k$ as the \textbf{modal} representation of $f(x)$.
+\end{tcolorbox}
+
+Then, using Eq.~\eqref{eq:ex2}, we get
 \begin{subequations}
 \begin{align}
     \bar f^k = \sum_{j=0}^{P-1}F^{kj}f_j \\
@@ -104,8 +109,8 @@ $f_{nj} := f(x^a_{nj})$ and note that
 \end{subequations}
 where $f_{nj}$ are the elements of $\vec f$,
  $\Eins\in\mathbb{R}^{N\times N}$ is the identity matrix and $F,B\in\mathbb{R}^{P\times P}$. Furthermore, we use
-$\otimes$ to denote the Kronecker product which is bilinear and associative. 
-The discontinuous Galerkin expansion $f_h$ of a function $f$ in the interval $[a,b]$ can 
+$\otimes$ to denote the Kronecker product which is bilinear and associative.
+The discontinuous Galerkin expansion $f_h$ of a function $f$ in the interval $[a,b]$ can
 then readily be given as
 \begin{align}
     f_h(x) = \sum_{n=1}^N \sum_{k=0}^{P-1} \bar f^{nk} p_{nk}(x),
@@ -119,7 +124,7 @@ where
     \end{cases}
     \label{}
 \end{align}
-As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\ref{fig:discretization}. 
+As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\ref{fig:discretization}.
 \begin{figure}[htpb]
     \includegraphics[width= 0.9\textwidth]{discretization.pdf}
     \caption{ 
@@ -128,9 +133,9 @@ As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\r
     }
     \label{fig:discretization}
 \end{figure}
-Already with a very low resolution of $P=3$ and $N=5$ 
+Already with a very low resolution of $P=3$ and $N=5$
 we get an acceptable function approximation. We clearly see the discontinuities
-at the cell boundaries. 
+at the cell boundaries.
 
 The use of Legendre polynomials yields a natural approximation of the integrals of $f$
 via Gauss--Legendre quadrature
@@ -144,11 +149,11 @@ via Gauss--Legendre quadrature
 \end{align}
 \label{eq:gausslegendre}
 \end{subequations}
-With these formulas we have a simple, accurate, and fast 
-method to evaluate integrals. This is applied, for example, to compute
+With these formulas we have a simple, accurate, and fast
+method to evaluate integrals on the entire domain. This is applied, for example, to compute
 errors in the $L_2$-norm.
 
-We now define some useful quantities that simplify our notation (note that $i,j=0,\dots,P-1$) 
+We now define some useful quantities that simplify our notation (note that $i,j=0,\dots,P-1$)
 \begin{subequations}
     \begin{align}
         S_{ij} &:= \int_{-h/2}^{h/2} p_i\left(\frac{2}{h} x\right)p_j\left(\frac{2}{h} x\right) \dx = \frac{h}{2i+1}\delta_{ij} \\%=: s_i \delta_{ij}\\ 
@@ -206,7 +211,42 @@ matrices is simplified to a large extent.
 %\end{align}
 %
 
+\subsection{Indefinite Integrals}\label{sec:integrals}
+The approximation of an indefinite integral $\int_a^x f_h(x')\dx'$ is a bit more involved since the integration
+boundary $x$ does not need to coincide with a cell boundary.
+First, integrating the Legendre differential equation
+$\frac{\d}{\dx}\left[ (1-x^2) \frac{\d}{\dx}p_j(x) \right] + j(j+1)p_j(x) = 0$
+and with the help of Eq.~\eqref{eq:recursion} and a second recursion for Legendre-Polynomials
+$(x^2-1) \d p_j(x)/\dx = jxp_j(x) - j p_{j-1}(x)$
+we compute
+\begin{align}
+\int_{-1}^{x} p_0(x')\dx' = p_1(x)+p_0(x) \quad \int_{-1}^{x} p_j(x') \dx'  = \frac{ p_{j+1}(x) - p_{j-1}(x)}{2j+1}\quad \forall\ j>0
+\end{align}
+Notice that the integral of a polynomial of order $P$ yields a polynomial of order $P+1$.
+The projection integral onto a base polynomial $p_i(x)$ yields
+\begin{align}
+ N_{00} &:= \int_{-1}^{1} p_0(x) \int_{-1}^{x} p_0(x') \dx' \dx = 2\quad
+ %N_{i0} := \int_{-1}^{1} p_i(x) \int_{-1}^{x} p_0(x') \dx' \dx = \frac{2}{2i+1}\delta_{i1}\quad
+ \nonumber\\
+ N_{ij} &:= \int_{-1}^{1} p_i(x) \int_{-1}^{x} p_j(x') \dx' \dx
+= \frac{2}{(2i+1)(2j+1)}\left[\delta_{i(j+1)}-\delta_{i(j-1)}\right] \quad i,j\neq 0,0
+\end{align}
 
+Our idea is to split the integral $F_h(x) = \int_a^x f_h(x')\dx'$ into two parts:
+\begin{align}
+F_h(x):=\int_a^x f_h(x') \dx' = \int_a^{x_{n-1/2}} f_h(x')\dx' + \int_{x_{n-1/2}}^x f_h(x') \dx'
+\end{align}
+where $n$ is the cell number such that $x_{n-1/2}\leq x < x_{n+1/2}$.
+Inserting $f_h(x) = \bar f_{nj} p_{nj}(x)$ and projecting onto a base polynomial $p_{ni}(x)$ yields
+\begin{align}
+\bar F_{nk} := T_{ki}\int_{x_{n-1/2}}^{x_{n+1/2}} p_{ni}(x) \int_a^x f_h(x') \dx'\dx
+= \delta_{k0} \sum_{m=1}^{n-1} h\bar f_{m0} + \frac{h^2}{4}T_{ki}N_{ij} \bar f_{nj}
+\end{align}
+where we choose the proper normalization $h^2/4$ due to the double integrals in $N_{ij}$.
+Notice that if $f_h(x)$ is discretized using $P$ polynomial coefficients $F_h(x)$ would in
+principle need $P+1$ coefficients to be the exact integral.
+However, we usually truncate the coefficients at $P$ to match the order of the discretization.
+Numerical tests show that the corresponding truncation error is extremely small.
 
 \subsection{ Discretization of first derivatives} \label{sec:firstderivatives}
 From here on we write
@@ -387,12 +427,12 @@ As a first step we rewrite Eq.~\eqref{eq:elliptic} into two first order differen
 \end{align}
 \end{subequations}
 %Our plan is to now simply use a forward discretization\footnote{
-%The choice of forward discretizing the first equation is arbitrary. A backward discretization 
-%works equally well} for the first equation 
-Our plan is to simply use one of the discretizations developed in the last 
-section for the first equation~\eqref{eq:polarisationa} 
-and its negative adjoint for the third equation~\eqref{eq:polarisationc}. 
-Recall that the adjoint of a square matrix $A$ is defined by the scalar product, i.e. 
+%The choice of forward discretizing the first equation is arbitrary. A backward discretization
+%works equally well} for the first equation
+Our plan is to simply use one of the discretizations developed in the last
+section for the first equation~\eqref{eq:polarisationa}
+and its negative adjoint for the third equation~\eqref{eq:polarisationc}.
+Recall that the adjoint of a square matrix $A$ is defined by the scalar product, i.e.
 \begin{align}
     \vec f^\mathrm{T} (\Eins\otimes W)\circ A\vec g = 
     \vec g^\mathrm{T} (A^\mathrm{T}\circ(1\otimes W)) \vec f =:     \vec g^\mathrm{T} (\Eins\otimes W) A^\dagger \vec f. \nonumber
@@ -404,9 +444,9 @@ From here we immediately get the relation
     \label{eq:adjoint}
 \end{align}
 There is a close connection between symmetric, $A=A^\mathrm{T}$, and self-adjoint, $A=A^\dagger$, matrices.
-If and only if the matrix $A$ is symmetric, then $(\Eins\otimes V)\circ A$ is self-adjoint. Of course, we have $(AB)^\dagger = B^\dagger A^\dagger$ and $(A^\dagger)^\dagger = A$. 
+If and only if the matrix $A$ is symmetric, then $(\Eins\otimes V)\circ A$ is self-adjoint. Of course, we have $(AB)^\dagger = B^\dagger A^\dagger$ and $(A^\dagger)^\dagger = A$.
 
-The function product in Eq.~\eqref{eq:polarisationb} is computed pointwisely on the Gaussian abscissas. 
+The function product in Eq.~\eqref{eq:polarisationb} is computed pointwisely on the Gaussian abscissas.
 \begin{align}
     \vec j' &= (\Eins\otimes V)\circ D_x \vec \phi, \nonumber \\
     \vec j &= \vec \chi \vec j', \nonumber\\
@@ -414,11 +454,11 @@ The function product in Eq.~\eqref{eq:polarisationb} is computed pointwisely on 
     \label{eq:naive}
 \end{align}
 where $D_x$ is either $D_x^+$, $D_x^-$, or $D_x^0$ with the correct boundary terms.
-Note, that~\cite{Cockburn2001} originally only proposed to use the forward or backward discretization for $D_x$. 
+Note, that~\cite{Cockburn2002} originally only proposed to use the forward or backward discretization for $D_x$.
 Equation~\eqref{eq:naive} is indeed a self-adjoint
 discretization for the second derivative. However, it turns out that 
 Eq.~\eqref{eq:naive} is inconsistent for given $\rho(x)$. The solution does not converge. 
-This problem is solved according to~\cite{Cockburn2001} by adding a jump term
+This problem is solved according to~\cite{Cockburn2002} by adding a jump term
 to the flux of $j$: 
 \begin{align}
     \hat j(x_{n+1/2}) \rightarrow \hat j(x_{n+1/2}) + [\phi(x_{n+1/2})],
@@ -443,7 +483,7 @@ for periodic boundaries. Again we give the correct boundary terms for Dirichlet
 and Neumann boundary conditions in Table~\ref{tab:jump_terms}.
 \input{jump_terms.tex}
 Note that $J$ is symmetric, thus the overall discretization remains self-adjoint. Indeed, with $D_x = D_x^+$ Eq.~\eqref{eq:discreteelliptic} recovers
-the discretization proposed by~\cite{Cockburn2001}. 
+the discretization proposed by~\cite{Cockburn2002}. 
 In addition, we remark that the centered discretization in Eq.~\eqref{eq:discreteelliptic} is symmetric with respect to an inversion of the coordinate system $x\rightarrow -x$ even for double Dirichlet or Neumann boundaries, while the forward and backward discretization is not. 
 
 We note again that the generalization to two or more dimensions is straightforward
@@ -491,63 +531,58 @@ To the knowledge of the author this superconvergence has not yet been observed b
 
 \section{Interpolation and Projection}
 Eq.~\eqref{eq:dgexpansion} provides a natural way to interpolate any
-dg expanded function $f_h(x)$ on any point in the interval $[a,b]$. 
-The interpolation has the same order $P$ as the expansion and 
+dg expanded function $f_h(x)$ on any point in the interval $[a,b]$.
+The interpolation has the same order $P$ as the expansion and
 can be formulated as a matrix vector multiplication
 \begin{align}
 f_h(x_0) = \sum_{n=1}^N\sum_{k=0}^{P-1} p_{nk}(x_0) \bar f^{nk} =: \sum_{n=1}^N\sum_{k=0}^{P-1}I_{nk} \bar f^{nk}
 \label{eq:basic_interpolation}
 \end{align}
-where the sparse interpolation matrix $I$ has as many rows as there are 
-points to interpolate. $I$ has $P^d$ entries per line, where $d$ is the dimensionality of the grid. 
+where the sparse interpolation matrix $I$ has as many rows as there are
+points to interpolate. $I$ has $P^d$ entries per line, where $d$ is the dimensionality of the grid.
 
 
 \subsection{Interpolation and Projection}
 A special case emerges when the list of points to interpolate is made up
-by the Gaussian abscissas of another grid. 
+by the Gaussian abscissas of another grid.
 Suppose we want to divide each cell $C_n$ of the original grid into $M$ equidistant subcells.
 We use the letter $c$ to denote the coarse grid and the letter $f$ to denote
-the fine grid. 
-For ease of discussion we assume that the number of polynomial coefficients
-in the fine and the coarse grid are the same. 
-We denote $q_{ml}(x)$ the polynomials on the fine grid and $y^P_{mj}$ the 
-corresponding Gaussian abscissas. 
+the fine grid.
+We denote $q_{ml}(x)$ the polynomials on the fine grid and $x^F_{mj}$ the
+corresponding Gaussian abscissas.
 If a vector $\vec f$ is given on the coarse grid, we can simply interpolate
 it onto the fine grid analogous to Eq.~\eqref{eq:basic_interpolation} via
-\begin{subequations}
 \begin{align}
-  f^F_{mj} &= f_h(y^P_{mj}) = p_{nk}(y^P_{mj})F^{ki} f^C_{ni} \\
-  f^F_{mj} &=: {Q_{mj}}^{ni} f^C_{ni}
+  f^F_{mj} = f_h(x^F_{mj}) = p_{nk}(x^F_{mj})F^{ki} f^C_{ni}  =: {Q_{mj}}^{ni} f^C_{ni}
   \label{eq:interpolation}
 \end{align}
-\end{subequations}
 where we denote the special interpolation matrix with $Q$ and implicitly assume the sum of repeated indices.
-No information is lost in this process if the cells $C_n$ are divided by an 
-integer number $M$ and the number of polynomials is the same, i.e. 
-$f^F$ and $f^C$ represent exactly the same expansion $f_h(x)$. 
+No information is lost in this process if the cells $C_n$ are divided by an
+integer number $M$ and the number of polynomials is the same, i.e.
+$f^F$ and $f^C$ represent exactly the same expansion $f_h(x)$.
 \begin{align}
   f^C(x) = \bar f_C^{nk}p_{nk}(x) = f^F(x) = \bar f_F^{ml}q_{ml}(x) 
   \label{eq:no_loss}
 \end{align}
 
-Vice versa, given a expansion $f^F(x)$ on the fine grid, we can the projection integrals from the fine grid to the coarse grid. 
+Vice versa, given an expansion $f^F(x)$ on the fine grid, we can compute the projection integrals from the fine grid to the coarse grid.
 It can be shown that
 \begin{align}
-  \bar f_C^{nk} &:= T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks}  W_m^{ij}p_{ns}(y_{mj}) f^F_{mi} \\
+  \bar f_C^{nk} &:= T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks}  W_m^{ij}p_{ns}(x_{mj}) f^F_{mi} \\
   f^C_{nt} &= B_{tk}\bar f_C^{nk} = V^c_{tk}  {{(Q^T)}^{nk}}_{mj}W_m^{ji} f^F_{mi} =: {P_{nt}}^{mi} f^F_{mi}
   %\bar f_C^{nk} = T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks} \bar f_F^{ml} \int \dx q_{ml}(x)p_{ns}(x) \\
   %= T_C^{ks} F^{lo}f^F_{mo} \int \dx q_{ml}(x)p_{ns}(x)  \\
-  %= T_C^{ks} F^{lo}f^F_{mo} W_F^{ij}q_{ml}(y_{mi})p_{ns}(y_{mj})  \\
-  %= T_C^{ks} F^{lo}f^F_{mo} W_m^{ij}B_{il}p_{ns}(y_{mj})  \\
-  %= T_C^{ks} f^F_{mi} W_m^{ij}p_{ns}(y_{mj})  \\
-  %f^C_{nt} = B_{tk}\bar f_C^{nk} = B_{tk} T_C^{ks} W_m^{ij} p_{ns}(y_{mj}) f^F_{mi}\\
-  %= V^c_{tk} F^{sk} W_m^{ij} p_{ns}(y_{mj}) f^F_{mi}\\
+  %= T_C^{ks} F^{lo}f^F_{mo} W_F^{ij}q_{ml}(x_{mi})p_{ns}(x_{mj})  \\
+  %= T_C^{ks} F^{lo}f^F_{mo} W_m^{ij}B_{il}p_{ns}(x_{mj})  \\
+  %= T_C^{ks} f^F_{mi} W_m^{ij}p_{ns}(x_{mj})  \\
+  %f^C_{nt} = B_{tk}\bar f_C^{nk} = B_{tk} T_C^{ks} W_m^{ij} p_{ns}(x_{mj}) f^F_{mi}\\
+  %= V^c_{tk} F^{sk} W_m^{ij} p_{ns}(x_{mj}) f^F_{mi}\\
   %= V^c_{tk}  {Q_{mj}}^{nk}W_m^{ji} f^F_{mi}\\
   %= V^c_{tk}  {{(Q^T)}^{nk}}_{mj}W_m^{ji} f^F_{mi}\\
   %=: {P_{nt}}^{mi} f^F_{mi}
   \label{eq:basic_projection}
 \end{align}
-from where we directly conclude that 
+from where we directly conclude that
 \begin{align}
   P = Q^\dagger = V^C Q^T W_F
   \label{eq:projection_adjoint}
@@ -583,6 +618,71 @@ If the least common grid reduces to either grid (a) or (b) the
 transformation matrix reduces to either $P_{a2b}$ or $Q_{a2b}$ as expected.
 
 
+\section{Spectral and modal filtering techniques}
+It is well known from Godunov's theorem that linear high order schemes for hyperbolic (advection) problems
+are prone to oscillations. Discontinuous Galerkin methods are no different in that regard
+especially the higher order ones and if the numerical flux $f=nu$ is computed via pointwise multiplication
+of the nodal representations of $n$ and $u$ via $f_{ni} = n_{ni} u_{ni}$~\cite{NodalDG}.
+This is due to aliasing effects. Recall that pointwise multiplication is different from
+actually multiplying the two polynomials $n_h$ and $u_h$ and projecting the result back onto the
+lower polynomial space. The problem is also known in pure spectral methods like
+Fourier representations.
+
+In finite difference and Fourier codes what is often done is adding so-called hyperdiffusion
+(or \textbf{spectral viscosity}) to stabilize a purely hyperbolic system.
+\begin{align}
+    \partial_t n + \partial_x( nu) = \nu (-1)^{s+1}\partial_x^{2s} n
+\end{align}
+Since Fourier modes are Eigenfunctions of the Laplace operator this equation reads in Fourier space (disregaring the convection term)
+\begin{align}
+    \partial_t n_k = -\nu k^{2s} n_k
+\end{align}
+which when discretized in time using the Euler method reads
+\begin{align}
+    n_k^{n+1} = (1-\nu\Delta t k^{2s}) n_k^{n}
+\end{align}
+Here we see that the damping of modes is highest for large wave-numbers and leaves small wave-numbers intact.
+This can be read in a more general setting as applying a low-pass filter $\sigma(k)$ to the solution that acts on large wavenumbers
+\begin{align}
+    n_k^{n+1} = \sigma(k) n_k^{n}
+\end{align}
+where often $\sigma(k) = \exp( - \nu \Delta t k^{2s})$ is proposed. The above Euler discretization is
+then obtained by Taylor-expanding the exponential
+(an implicit Euler is obtained with the Pade approximation of the expontential).
+
+It is now possible to also discretise the hyperdiffusion directly in a dG framework, however, this
+has downsides regarding the performance since the Laplace operator is much more expensive than a
+simple pointwise multiplication as done in Fourier codes and its solution likely needs to be done implicitly
+in order to preserve the time-step restrictions.
+
+The better solution in a dG framework is to apply \textbf{modal filtering} and is motivated in much the same
+way as the spectral viscosity above.
+First we consider that the Legendre polynomials satisfy a Sturm-Liouville type differential equation.
+\begin{align}
+    \frac{d}{\d x} \left[ (1-x^2) \frac{ d }{d x} \right]p_n(x) = -n(n+1) p_n(x) \quad x \in [-1,1]
+\end{align}
+This means that the Legendre polynomials are Eigenfunctions of the Sturm-Liouville operator. If we write
+\begin{align}
+    \partial_t n = \nu (-1)^{s+1}\left[\frac{d}{\d x}  m(x) \frac{ d }{d x} \right]^s  n
+\end{align}
+where $m(x)$ is $(1-x^2)$ properly scaled onto each discrete cell, and use a dG approach to discretize this equation we get for each mode
+\begin{align}
+    \partial_t n_k = -\nu (k(k+1))^s  n_k
+\end{align}
+or in a time-discreized way
+\begin{align}
+    n_k^{n+1} = (1-\nu \Delta t (k(k+1))^s ) n_k^n
+\end{align}
+which is entirely analogous to the derivation above.
+In the same way we can read this as applying a filter function to the Legendre modes.
+\begin{align}
+    n_k^{n+1} = \sigma(k) n_k^n
+\end{align}
+with $\sigma(k) = \exp( - \nu \Delta t (k(k+1))^s)$.
+Note that the modal filter, as the spectral filter, does not inhibit oscillations from happening (it is not shock-capturing) but it dampens grid-scale oscillations
+and can stabilize the system.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \bibliography{../references}
 %..................................................................
 \end{document}
