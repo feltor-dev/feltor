@@ -170,12 +170,14 @@ We initialize
 \subsubsection{Rotating Gaussian}
 \begin{align}
     n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
-    \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= \delta \hspace{1mm} n
+    \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= \delta \hspace{1mm} (n-1)
 \end{align}
 where \(\delta\) is a parameter for the rotation
 Thus we have
 \begin{align}
-  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E
+  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E = \dots \\
+  \partial_x \phi &= \dots \\
+   \partial_y \phi &= \dots
 \end{align}
 
 the ion gyro-center density follows from the respective polarization equation.

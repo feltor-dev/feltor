@@ -69,19 +69,19 @@ int main( int argc, char* argv[])
     dg::blas1::scal(y0[0], p.amp);
     ex.invLap_y(y0[0], y1[0]); //phi 
     dg::blas1::scal(y0[0], 0.);
-//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
+    ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
     //Compute exact Ni with fixed point iteration
-    dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
-    polN.set_phi(y1[0]);
-    dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
-
-    dg::blas1::scal(y0[1], 0.0);
-    dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
-    dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
-
-    acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
-    dg::blas1::plus(y0[1],-1.0);
-    
+//     dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
+//     polN.set_phi(y1[0]);
+//     dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
+// 
+//     dg::blas1::scal(y0[1], 0.0);
+//     dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
+//     dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
+// 
+//     acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
+//     dg::blas1::plus(y0[1],-1.0);
+//     
     
 //     //double rotating gaussian
 //     dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
