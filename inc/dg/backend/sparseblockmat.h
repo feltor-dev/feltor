@@ -23,7 +23,20 @@ of nonrecurrent blocks is small.
 The indices and blocks are those of a one-dimensional problem. When we want
 to apply the matrix to a multidimensional vector we can multiply it by
 Kronecker deltas of the form
-\f[  1\otimes M \otimes 1\f]
+\f[ M = \begin{pmatrix}
+B & C &   &   &   & \\
+A & B & C &   &   & \\
+  & A & B & C &   & \\
+  &   & A & B & C & \\
+  &   &   &...&   &
+  \end{pmatrix}\rightarrow
+\text{data} = ( A, B, C, 0)\quad \text{cols_idx} = ( 0,0,1,0,1,2,1,2,3,2,3,4,...)
+\quad \text{data_idx} = ( 3,1,2,0,1,2,0,1,2,0,1,2,...)\f]
+where \f$A,\ B,\ C,\ 0\f$ are \f$n\times n\f$ block matrices. The 0 is used
+for padding in order to keep the number of elements per line constant as 3
+(in this example \c blocks_per_line=3, \c num_different_blocks=4).
+The matrix M has \c num_rows rows and \c num_cols columns of blocks.
+\f[  1_\mathrm{left}\otimes M \otimes 1_\mathrm{right}\f]
 where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix.
 */
@@ -90,7 +103,7 @@ struct EllSparseBlockMat
     thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
     thrust::host_vector<int> cols_idx; //!< is of size num_rows*num_blocks_per_line and contains the column indices % n into the vector
     thrust::host_vector<int> data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number
-    thrust::host_vector<int> right_range; //!< range
+    thrust::host_vector<int> right_range; //!< range, [0,right_size] per default (can be used to apply the matrix to only part of the right rows
     int num_rows; //!< number of block rows, each row contains blocks
     int num_cols; //!< number of block columns
     int blocks_per_line; //!< number of blocks in each line
@@ -112,10 +125,24 @@ struct EllSparseBlockMat
 * The clue is that instead of a values array we use an index array with
 indices into a data array that contains the actual blocks. This safes storage if the number
 of nonrecurrent blocks is small.
+\f[
+M = \begin{pmatrix}
+A &   &  B&  & & \\
+  & C &   &  & & \\
+  &   &   &  & & \\
+  & A &   &  & B & C
+\end{pmatrix}
+\rightarrow
+\text{data}=(A,B,C)\quad \text{rows_idx} = ( 0,0,1,3,3,3)
+\quad\text{cols_idx} = (0,2,1,1,4,5)
+\f]
+where \f$A,\ B,\ C,\ 0\f$ are \f$n\times n\f$ block matrices.
+The matrix M in this example has \c num_rows=4, \c num_cols=6, \c num_entries=6.
+
 The indices and blocks are those of a one-dimensional problem. When we want
 to apply the matrix to a multidimensional vector we can multiply it by
 Kronecker deltas of the form
-\f[  1\otimes M \otimes 1\f]
+\f[  1_\mathrm{left}\otimes M \otimes 1_\mathrm{right}\f]
 where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix.
 @note This matrix type is used for the computation of boundary points in

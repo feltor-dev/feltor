@@ -41,6 +41,7 @@ int main()
     std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
     // test the examples in the documentation
     // dg::blas1::subroutine( []__host__ __device__(double& v){ v+=1.;}, dvec1);
+    dg::blas1::plus( dvec1, 1);
     std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
     dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);

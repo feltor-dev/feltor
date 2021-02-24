@@ -59,7 +59,7 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
     if(rank==0)std::cout << "2d error is               "<<(integral2d-sol2d)<<"\n\n";
     float integralf2d = dg::blas1::dot( wf2d, funcf2d); res.d = integralf2d;
-    if(rank==0)std::cout << "2D integral (float)       "<<std::setw(6)<<integralf2d <<"\t" << res.i - 4525606114229747712<< "\n";
+    if(rank==0)std::cout << "2D integral (float)       "<<std::setw(6)<<integralf2d <<"\n";
     float solf2d = 0.;
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<solf2d<<std::endl;
     if(rank==0)std::cout << "2d error (float)          "<<(integralf2d-solf2d)<<"\n\n";

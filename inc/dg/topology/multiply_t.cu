@@ -31,7 +31,7 @@ int main()
     std::cout << "Begin T\n"; print(t);
     dg::tensor::scal(t,mu);
     std::cout<< "Scale with 5 \n";print(t);
-    dg::tensor::scal(t,1);
+    dg::tensor::scal(t,1.);
     std::cout << "Scale with empty element \n";print(t);
     dg::tensor::scal(t,1./5.);
     std::cout << "Scale with 1/5 \n";print(t);

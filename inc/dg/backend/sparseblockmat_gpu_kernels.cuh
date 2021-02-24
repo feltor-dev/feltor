@@ -26,7 +26,9 @@ template<class value_type>
             i = (rrn)%num_rows,
             k = (rr)%n,
             j=right_range[0]+row%right_;
-        y[row]*= beta;
+        int idx = ((s*num_rows+i)*n+k)*right_size+j;
+        //idx != row ( if right_range[0] != 0)
+        y[idx]*= beta;
         for( int d=0; d<blocks_per_line; d++)
         {
             value_type temp=0;
@@ -34,7 +36,7 @@ template<class value_type>
             int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
             for( int q=0; q<n; q++) //multiplication-loop
                 temp =fma( data[ B+q], x[(J+q)*right_size+j], temp);
-            y[row] = fma( alpha, temp, y[row]);
+            y[idx]=fma( alpha, temp, y[idx]);
         }
     }
 
@@ -88,9 +90,11 @@ template<class value_type, size_t n, size_t blocks_per_line>
                 for( int q=0; q<n; q++) //multiplication-loop
                     temp[d] = fma( data[ B+q], x[(J+q)*right_size+j], temp[d]);
             }
-            y[row]*= beta;
+            int idx = ((s*num_rows+i)*n+k)*right_size+j;
+            //idx != row ( if right_range[0] != 0)
+            y[idx]*= beta;
             for( int d=0; d<blocks_per_line; d++)
-                y[row] = fma( alpha, temp[d], y[row]);
+                y[idx] = fma( alpha, temp[d], y[idx]);
         }
     }
 }

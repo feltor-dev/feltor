@@ -24,7 +24,16 @@ int main(int argc, char**argv)
     unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if( dims[2] != 1)
+    {
+        // because of netcdf output
+        if(rank==0) std::cout << "Please do not parallelize in z!\n";
+        MPI_Finalize();
+        return 0;
+    }
     Json::Value js;
     if( argc==1)
     {
