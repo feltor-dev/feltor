@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <vector>
 
-#ifdef TOEFL_MPI
+#ifdef POET_MPI
 #include <mpi.h>
 #endif //FELTOR_MPI
 
@@ -14,7 +14,7 @@
 #include "poet.cuh"
 #include "parameters.h"
 
-#ifdef TOEFL_MPI
+#ifdef POET_MPI
 using HVec = dg::MHVec;
 using DVec = dg::MDVec;
 using HMatrix = dg::MHMatrix;
@@ -25,7 +25,7 @@ using Geometry = dg::CartesianMPIGrid2d;
 using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 #define MPI_OUT if(rank==0)
-#else //TOEFL_MPI
+#else //POET_MPI
 using HVec = dg::HVec;
 using DVec = dg::DVec;
 using HMatrix = dg::HMatrix;
@@ -36,13 +36,13 @@ using Geometry = dg::CartesianGrid2d;
 using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 using DCooMatrix =  cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 #define MPI_OUT
-#endif //TOEFL_MPI
+#endif //POET_MPI
 
 
 
 int main( int argc, char* argv[])
 {
-#ifdef TOEFL_MPI
+#ifdef POET_MPI
     ////////////////////////////////setup MPI///////////////////////////////
     int provided;
     MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-#endif//TOEFL_MPI
+#endif//POET_MPI
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
     if( argc != 3)
@@ -88,14 +88,14 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////set up computations///////////////////////////
     Geometry grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y
-        #ifdef TOEFL_MPI
+        #ifdef POET_MPI
         , comm
-        #endif //TOEFL_MPI
+        #endif //POET_MPI
     );
     Geometry grid_out( 0, p.lx, 0, p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y
-        #ifdef TOEFL_MPI
+        #ifdef POET_MPI
         , comm
-        #endif //TOEFL_MPI
+        #endif //POET_MPI
     );
     //create RHS
     poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > ex( grid, p);
@@ -112,29 +112,29 @@ int main( int argc, char* argv[])
 //     ex.invLap_y(y0[0], y1[0]); //phi 
 //     dg::blas1::scal(y0[0], 0.);
 //     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);  
-        {
-                size_t start = 0;
-        dg::file::NC_Error_Handle err;
-        int ncid;
-        err = nc_create( "visual.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-        int dim_ids[3], tvarID;
-        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
-
-        std::string names[3] = {"ne", "Ni", "phi"};
-        int dataIDs[3];
-        for( unsigned i=0; i<3; i++){
-            err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
-
-        dg::HVec transferH(dg::evaluate(dg::zero, grid));
-
-        dg::assign( y0[0], transferH);
-        dg::file::put_vara_double( ncid, dataIDs[0], start, grid, transferH);
-        dg::assign( y0[1], transferH);
-        dg::file::put_vara_double( ncid, dataIDs[1], start, grid, transferH);
-        dg::assign( y1[0], transferH);
-        dg::file::put_vara_double( ncid, dataIDs[2], start, grid, transferH);
-        err = nc_close(ncid); 
-    }
+//         {
+//                 size_t start = 0;
+//         dg::file::NC_Error_Handle err;
+//         int ncid;
+//         err = nc_create( "visual.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+//         int dim_ids[3], tvarID;
+//         err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+// 
+//         std::string names[3] = {"ne", "Ni", "phi"};
+//         int dataIDs[3];
+//         for( unsigned i=0; i<3; i++){
+//             err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+// 
+//         dg::HVec transferH(dg::evaluate(dg::zero, grid));
+// 
+//         dg::assign( y0[0], transferH);
+//         dg::file::put_vara_double( ncid, dataIDs[0], start, grid, transferH);
+//         dg::assign( y0[1], transferH);
+//         dg::file::put_vara_double( ncid, dataIDs[1], start, grid, transferH);
+//         dg::assign( y1[0], transferH);
+//         dg::file::put_vara_double( ncid, dataIDs[2], start, grid, transferH);
+//         err = nc_close(ncid); 
+//     }
     //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
     dg::Karniadakis< std::vector<DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
@@ -260,9 +260,9 @@ int main( int argc, char* argv[])
     MPI_OUT std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     MPI_OUT std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     MPI_OUT std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-#ifdef TOEFL_MPI
+#ifdef POET_MPI
     MPI_Finalize();
-#endif //TOEFL_MPI
+#endif //POET_MPI
 
     return 0;
 
