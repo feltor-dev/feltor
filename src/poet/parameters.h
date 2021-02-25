@@ -15,6 +15,8 @@ struct Parameters
     unsigned itstp;
     unsigned maxout;
     unsigned stages;
+    unsigned maxiter_sqrt;
+    unsigned maxiter_cauchy;
 
     std::vector<double> eps_pol;
 
@@ -28,7 +30,6 @@ struct Parameters
     dg::bc bc_x, bc_y;
 
     std::string init, equations;
-    bool boussinesq;
 
     Parameters(const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
         n  = js["n"].asUInt();
@@ -51,6 +52,8 @@ struct Parameters
         }
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
+        maxiter_sqrt = js["maxiter_sqrt"].asUInt();
+        maxiter_cauchy = js["maxiter_cauchy"].asUInt();
         tau = js["tau"].asDouble();
         kappa = js["curvature"].asDouble();
         nu = js["nu_perp"].asDouble();
@@ -64,7 +67,6 @@ struct Parameters
         bc_y = dg::str2bc(js["bc_y"].asString());
         init = "blob";
         equations = js.get("equations", "global").asString();
-        boussinesq = js.get("boussinesq", false).asBool();
         jfactor = js.get("jfactor", 1.).asDouble();
     }
 
@@ -75,8 +77,7 @@ struct Parameters
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
         os << "Equation parameters are: \n"
-            <<"    "<<equations<<"\n"
-            <<"    boussinesq  "<<boussinesq<<"\n";
+            <<"    "<<equations<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
@@ -91,7 +92,9 @@ struct Parameters
             <<"    dt = "<<dt<<"\n"
             <<"    n_out  = "<<n_out<<"\n"
             <<"    Nx_out = "<<Nx_out<<"\n"
-            <<"    Ny_out = "<<Ny_out<<"\n";
+            <<"    Ny_out = "<<Ny_out<<"\n"
+            <<"    maxiter_sqrt = "<<maxiter_sqrt<<"\n"
+            <<"    maxiter_cauchy = "<<maxiter_cauchy<<"\n";
         os  <<"Blob parameters are: \n"
             << "    width:        "<<sigma<<"\n"
             << "    amplitude:    "<<amp<<"\n"

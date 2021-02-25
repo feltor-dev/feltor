@@ -55,34 +55,38 @@ int main( int argc, char* argv[])
     poet::Explicit<dg::CartesianGrid2d, DMatrix, DDiaMatrix, DCooMatrix, DVec> ex( grid, p);
     poet::Implicit<dg::CartesianGrid2d, DMatrix, DVec> im( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
-    
-    //blob initialization
-//     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-//     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-// //     ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
-//     ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
-    
-    
-   //shear flow
-    ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
-    std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
-    dg::blas1::scal(y0[0], p.amp);
-    ex.invLap_y(y0[0], y1[0]); //phi 
-    dg::blas1::scal(y0[0], 0.);
-    ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
-    //Compute exact Ni with fixed point iteration
-//     dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
-//     polN.set_phi(y1[0]);
-//     dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
-// 
-//     dg::blas1::scal(y0[1], 0.0);
-//     dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
-//     dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
-// 
-//     acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
-//     dg::blas1::plus(y0[1],-1.0);
-//     
-    
+    std::vector<DVec> y0(2, dg::evaluate( dg::zero, grid)), y1(y0); // n_e' = gaussian
+
+    if (p.init == "blob")
+    {
+        dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
+        y0[0] = dg::evaluate(g, grid);
+        ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
+
+    //     ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+    }
+    else if (p.init == "shearlayer")
+    {
+        ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
+        std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
+        dg::blas1::scal(y0[0], p.amp);
+        ex.invLap_y(y0[0], y1[0]); //phi 
+        dg::blas1::scal(y0[0], 0.);
+        ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
+        //Compute exact Ni with fixed point iteration
+    //     dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
+    //     polN.set_phi(y1[0]);
+    //     dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
+    // 
+    //     dg::blas1::scal(y0[1], 0.0);
+    //     dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
+    //     dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
+    // 
+    //     acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
+    //     dg::blas1::plus(y0[1],-1.0);
+    }
+    else if (p.init == "rot_blob")
+    {
 //     //double rotating gaussian
 //     dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian g2( (0.5+p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
@@ -93,6 +97,9 @@ int main( int argc, char* argv[])
 //     dg::blas1::axpby(10, y0[0], 0.0, y1[1]);
 //     ex.invLap_y(y1[1], y1[0]); //phi 
 //     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
+    }
+
+
 
 
     //////////////////////////////////////////////////////////////////////

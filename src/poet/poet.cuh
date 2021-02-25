@@ -276,8 +276,8 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
         m_multi_g0[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
         if( equations == "ff-O2" ) {
             m_multi_g1[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
-            sqrtsolve.construct( m_multi_g1[0], grid, m_chi,  p.eps_time, 200, 20,  p.eps_gamma);
-            sqrtinvert.construct(m_multi_g1[0], grid, m_chi,  p.eps_time, 200, 20,  p.eps_gamma);
+            sqrtsolve.construct( m_multi_g1[0], grid, m_chi,  p.eps_time, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma);
+            sqrtinvert.construct(m_multi_g1[0], grid, m_chi,  p.eps_time, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma);
         }
         else {
             m_multi_g1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered, p.jfactor);

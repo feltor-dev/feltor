@@ -98,8 +98,12 @@ int main( int argc, char* argv[])
         #endif //POET_MPI
     );
     //create RHS
+    MPI_OUT std::cout << "Creating explicit and implicit part" <<std::endl;
     poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > ex( grid, p);
+    MPI_OUT std::cout << "Create explicit" <<std::endl;
     poet::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
+    MPI_OUT std::cout << "Create implicit" <<std::endl;
+
     /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
