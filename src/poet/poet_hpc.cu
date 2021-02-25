@@ -98,52 +98,70 @@ int main( int argc, char* argv[])
         #endif //POET_MPI
     );
     //create RHS
-    MPI_OUT std::cout << "Creating explicit and implicit part" <<std::endl;
+    MPI_OUT std::cout << "Creating explicit and implicit part..." <<std::endl;
     poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > ex( grid, p);
-    MPI_OUT std::cout << "Create explicit" <<std::endl;
-    poet::Implicit< Geometry, DMatrix, DVec > imp( grid, p.nu);
-    MPI_OUT std::cout << "Create implicit" <<std::endl;
+    MPI_OUT std::cout << "Created explicit" <<std::endl;
+    poet::Implicit< Geometry, DMatrix, DVec > im( grid, p.nu);
+    MPI_OUT std::cout << "Created implicit" <<std::endl;
 
     /////////////////////create initial vector////////////////////////////////////
-    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-    std::vector<DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-//     ex.gamma1_y(y0[1],y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
-    ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
     
-//       ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
-//     std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
-//     dg::blas1::scal(y0[0], p.amp);
-//     ex.invLap_y(y0[0], y1[0]); //phi 
-//     dg::blas1::scal(y0[0], 0.);
-//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);  
-//         {
-//                 size_t start = 0;
-//         dg::file::NC_Error_Handle err;
-//         int ncid;
-//         err = nc_create( "visual.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-//         int dim_ids[3], tvarID;
-//         err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    std::vector<DVec> y0(2, dg::evaluate( dg::zero, grid)), y1(y0); // n_e' = gaussian
+    MPI_OUT std::cout << "Initializing vectors..." <<std::endl;
+
+    if (p.init == "blob")
+    {
+        dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
+        y0[0] = dg::evaluate(g, grid);
+        ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
+        // y0[1] = dg::evaluate(g, grid);
+         //     ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+    }
+    else if (p.init == "shearlayer")
+    {
+        ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
+        std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
+        dg::blas1::scal(y0[0], p.amp);
+        ex.invLap_y(y0[0], y1[0]); //phi 
+        dg::blas1::scal(y0[0], 0.);
+        ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
+        //Compute exact Ni with fixed point iteration
+    //     dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
+    //     polN.set_phi(y1[0]);
+    //     dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
+    // 
+    //     dg::blas1::scal(y0[1], 0.0);
+    //     dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
+    //     dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
+    // 
+    //     acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
+    //     dg::blas1::plus(y0[1],-1.0);
+    }
+    else if (p.init == "rot_blob")
+    {
+//     //double rotating gaussian
+//     dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+//     dg::Gaussian g2( (0.5+p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
 // 
-//         std::string names[3] = {"ne", "Ni", "phi"};
-//         int dataIDs[3];
-//         for( unsigned i=0; i<3; i++){
-//             err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
-// 
-//         dg::HVec transferH(dg::evaluate(dg::zero, grid));
-// 
-//         dg::assign( y0[0], transferH);
-//         dg::file::put_vara_double( ncid, dataIDs[0], start, grid, transferH);
-//         dg::assign( y0[1], transferH);
-//         dg::file::put_vara_double( ncid, dataIDs[1], start, grid, transferH);
-//         dg::assign( y1[0], transferH);
-//         dg::file::put_vara_double( ncid, dataIDs[2], start, grid, transferH);
-//         err = nc_close(ncid); 
-//     }
+//     std::vector<DVec> y0(2, dg::evaluate( g1, grid)); // n_e' = gaussian
+//     std::vector<DVec> y1(2, dg::evaluate( g2, grid)); // n_e' = gaussian
+//     dg::blas1::axpby(1.0,y0[0],1.0,y1[0],y0[0]);
+//     dg::blas1::axpby(10, y0[0], 0.0, y1[1]);
+//     ex.invLap_y(y1[1], y1[0]); //phi 
+//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
+    }
+    MPI_OUT std::cout << "Vectors initialized" <<std::endl;
+
+    
+    
     //////////////////initialisation of timekarniadakis and first step///////////////////
+    MPI_OUT std::cout << "Initializing timestepper" <<std::endl;
     double time = 0;
     dg::Karniadakis< std::vector<DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( ex, imp, time, y0, p.dt);
+    karniadakis.init( ex, im, time, y0, p.dt);
     y1 = y0;
+    MPI_OUT std::cout << "Timestepper initialized" <<std::endl;
+
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
     int ncid;
@@ -178,7 +196,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate, y1[0], transferD[0]);
     dg::blas2::symv( interpolate, y1[1], transferD[1]);
     dg::blas2::symv( interpolate, ex.potential()[0], transferD[2]);
-    dg::blas2::symv( imp.laplacianM(), ex.potential()[0], transfer);
+    dg::blas2::symv( im.laplacianM(), ex.potential()[0], transfer);
     dg::blas2::symv( interpolate, transfer, transferD[3]);
     for( int k=0;k<4; k++)
     {
@@ -206,7 +224,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            karniadakis.step( ex, imp, time, y1);
+            karniadakis.step( ex, im, time, y1);
             //store accuracy details
             {
                 MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
@@ -234,7 +252,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( interpolate, y1[0], transferD[0]);
         dg::blas2::symv( interpolate, y1[1], transferD[1]);
         dg::blas2::symv( interpolate, ex.potential()[0], transferD[2]);
-        dg::blas2::symv( imp.laplacianM(), ex.potential()[0], transfer);
+        dg::blas2::symv( im.laplacianM(), ex.potential()[0], transfer);
         dg::blas2::symv( interpolate, transfer, transferD[3]);
         MPI_OUT err = nc_open(argv[2], NC_WRITE, &ncid);
         for( int k=0;k<4; k++)
