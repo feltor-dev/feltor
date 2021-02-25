@@ -25,5 +25,4 @@
     "equations": "global", 
     "boussinesq": false, 
     "friction": 0  
-
 }

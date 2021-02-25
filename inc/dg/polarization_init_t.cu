@@ -22,10 +22,7 @@ const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 
-
 double amp = 0.9;
-
-
 double phi_ana( double x, double y) { return sin(x)*sin(y); } 
 double dxphi_ana( double x, double y) { return cos(x)*sin(y); }
 double dyphi_ana( double x, double y) { return sin(x)*cos(y); } 
@@ -106,30 +103,30 @@ int main()
 //             std::cout << "number of iterations:  "<<number<< std::endl;
 //             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
 //         }
-        {
-            dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1, false);
-            polN.set_phi(phi);
-            polN.set_dxphi(dxphi);
-            polN.set_dyphi(dyphi);
-            polN.set_lapphi(lapphi);
-            
-            dg::CG <Container> pcg( x,  grid2d.size()*100);
-            double eps = 1e-5;
-            std::cout << "Type eps (1e-5)\n";
-            std::cin >> eps;    
-            dg::blas2::symv(polN.weights(), rho, temp);
-            dg::blas1::scal(x, 0.0);
-            dg::blas1::plus(x, 1.0); //x solution must be positive
-            t.tic();
-            unsigned number = pcg( polN, x, temp, polN.precond(), polN.weights(), eps, 1);
-            t.toc();
-            dg::blas1::axpby( 1., chi, -1., x, error);
-            res.d = sqrt( dg::blas2::dot( w2d, error));
-
-            std::cout << " Time: "<<t.diff() << "\n";
-            std::cout << "number of iterations:  "<<number<< std::endl;
-            std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
-        }
+//         {
+//             dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1, false);
+//             polN.set_phi(phi);
+//             polN.set_dxphi(dxphi);
+//             polN.set_dyphi(dyphi);
+//             polN.set_lapphi(lapphi);
+//             
+//             dg::CG <Container> pcg( x,  grid2d.size()*100);
+//             double eps = 1e-5;
+//             std::cout << "Type eps (1e-5)\n";
+//             std::cin >> eps;    
+//             dg::blas2::symv(polN.weights(), rho, temp);
+//             dg::blas1::scal(x, 0.0);
+//             dg::blas1::plus(x, 1.0); //x solution must be positive
+//             t.tic();
+//             unsigned number = pcg( polN, x, temp, polN.precond(), polN.weights(), eps, 1);
+//             t.toc();
+//             dg::blas1::axpby( 1., chi, -1., x, error);
+//             res.d = sqrt( dg::blas2::dot( w2d, error));
+// 
+//             std::cout << " Time: "<<t.diff() << "\n";
+//             std::cout << "number of iterations:  "<<number<< std::endl;
+//             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
+//         }
         {
             dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container > polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered, 1.0, false);
             polN.set_phi(phi);
@@ -158,7 +155,7 @@ int main()
             std::cout << "number of iterations:  "<<number<< std::endl;
             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
         }
-        
+//         
                     //Plot into netcdf file
         size_t start = 0;
         dg::file::NC_Error_Handle err;

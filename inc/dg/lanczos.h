@@ -19,7 +19,6 @@ template< class ContainerType, class DiaMatrix, class CooMatrix>
 class InvTridiag
 {
   public:
-    using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     InvTridiag(){}
@@ -146,7 +145,6 @@ template< class ContainerType, class SubContainerType, class DiaMatrix, class Co
 class Lanczos
 {
   public:
-    using container_type = ContainerType;
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     Lanczos(){}
@@ -165,6 +163,7 @@ class Lanczos
         m_vi = m_vip = m_vim = m_wi = m_wim = m_wip= copyable;
         m_max_iter = max_iterations;
         m_iter = max_iterations;
+        //sub matrix and vector
         m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
         m_T.diagonal_offsets[0] = -1;
         m_T.diagonal_offsets[1] =  0;
@@ -174,6 +173,7 @@ class Lanczos
         m_e1.assign(m_max_iter, 0.);
         m_y.assign(m_max_iter, 0.);
         m_e1[0] = 1.;
+
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
@@ -204,6 +204,8 @@ class Lanczos
     template< class MatrixType, class ContainerType0, class ContainerType1>
     std::pair<DiaMatrix, CooMatrix> operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b, value_type eps )
     {
+        std::cout << "5\n";
+
         get_value_type<ContainerType> xnorm = sqrt(dg::blas1::dot(x, x));
         value_type residual;
 #ifdef DG_BENCHMARK
@@ -392,7 +394,6 @@ template< class ContainerType, class SubContainerType, class DiaMatrix, class Co
 class CGtridiag
 {
   public:
-    using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     CGtridiag(){}

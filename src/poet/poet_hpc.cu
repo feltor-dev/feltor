@@ -1,4 +1,3 @@
-// #define DG_DEBUG
 #define SILENT
 
 #include <iostream>
