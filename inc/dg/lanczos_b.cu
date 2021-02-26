@@ -79,20 +79,20 @@ int main()
         std::cout << "# Relative error between b=||x||_2 V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";   
 
     
-        std::cout << "\nComputing with M-Lanczos method \n";
-        x = dg::evaluate( lhs, grid);
-        dg::blas2::symv(A, x, helper);
-        dg::blas2::symv( v2d, helper, bsymv); //normalize operator
-        bexac = dg::evaluate( rhs, grid);
-        t.tic();
-        TVpair = lanczos(A, x, b, w2d, v2d, eps); 
-        t.toc();
-        T = TVpair.first; 
-        V = TVpair.second;
-        //Compute error with Method 1
-        std::cout << "# of Lanczos Iterations: "<< lanczos.get_iter() <<" | time: "<< t.diff()<<"s \n";
-        dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
-        std::cout << "# Relative error between b=||x||_M V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";  
+//         std::cout << "\nComputing with M-Lanczos method \n";
+//         x = dg::evaluate( lhs, grid);
+//         dg::blas2::symv(A, x, helper);
+//         dg::blas2::symv( v2d, helper, bsymv); //normalize operator
+//         bexac = dg::evaluate( rhs, grid);
+//         t.tic();
+//         TVpair = lanczos(A, x, b, w2d, v2d, eps); 
+//         t.toc();
+//         T = TVpair.first; 
+//         V = TVpair.second;
+//         //Compute error with Method 1
+//         std::cout << "# of Lanczos Iterations: "<< lanczos.get_iter() <<" | time: "<< t.diff()<<"s \n";
+//         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
+//         std::cout << "# Relative error between b=||x||_M V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";  
     } 
 //     {
 //         std::cout << "\nComputing with CG method \n";
