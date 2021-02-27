@@ -174,7 +174,6 @@ struct KrylovSqrtODESolve
         m_epsTimeabs = epsTimeabs;
         m_max_iter = max_iterations;
         m_eps = eps;
-        m_xnorm = 0.;
         m_e1.assign(max_iterations, 0.);
         m_e1[0] = 1.;
         m_y.assign(max_iterations, 1.);
@@ -182,7 +181,6 @@ struct KrylovSqrtODESolve
         m_T.diagonal_offsets[0] = -1;
         m_T.diagonal_offsets[1] =  0;
         m_T.diagonal_offsets[2] =  1;
-        m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_rhs.construct(m_T, m_e1, epsCG, true, false);
         m_lanczos.construct(copyable, max_iterations);
     }
@@ -201,15 +199,13 @@ struct KrylovSqrtODESolve
         dg::Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        m_xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
-        if( m_xnorm == 0)
+        value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
+        if( xnorm == 0)
         {
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
-        m_T = m_TVpair.first; 
-        m_V = m_TVpair.second;   
+        m_T  = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
         m_e1.resize(m_lanczos.get_iter(), 0.);
         m_e1[0] = 1.;
         m_y.resize( m_lanczos.get_iter());
@@ -218,13 +214,8 @@ struct KrylovSqrtODESolve
         m_rhs.set_A(m_T); //set T in sqrtODE 
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
-#ifdef MPI_VERSION
-        dg::blas2::symv(m_V, m_y, m_b);
-        b.data()  = m_b;
-#else //ifndef MPI_VERSION
-        dg::blas2::symv(m_V, m_y, b);
-#endif //MPI_VERSION
-        dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1    
+
+        m_lanczos.normMxVy(m_A, m_T, m_A.weights(), m_A.inv_weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -243,7 +234,7 @@ struct KrylovSqrtODESolve
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
-    value_type m_epsCG,m_epsTimerel, m_epsTimeabs, m_xnorm, m_eps;
+    value_type m_epsCG,m_epsTimerel, m_epsTimeabs,  m_eps;
     SubContainer m_e1, m_y;
 #ifdef MPI_VERSION
     SubContainer m_b;
@@ -251,8 +242,6 @@ struct KrylovSqrtODESolve
     dg::SqrtODE<DiaMatrix, SubContainer> m_rhs;  
     dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix > m_lanczos;
     DiaMatrix m_T; 
-    CooMatrix m_V;
-    std::pair<DiaMatrix, CooMatrix> m_TVpair;     
 };
 
 /*! 
@@ -289,7 +278,6 @@ struct KrylovSqrtCauchySolve
         m_max_iter = max_iterations;
         m_eps = eps;
         m_iterCauchy = iterCauchy;
-        m_xnorm = 0.;
         m_e1.assign(max_iterations, 0.);
         m_e1[0] = 1.;
         m_y.assign(max_iterations, 1.);
@@ -297,7 +285,6 @@ struct KrylovSqrtCauchySolve
         m_T.diagonal_offsets[0] = -1;
         m_T.diagonal_offsets[1] =  0;
         m_T.diagonal_offsets[2] =  1;
-        m_V.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_cauchysqrt.construct(m_T, m_e1, epsCG, false, true);
         m_lanczos.construct(copyable, max_iterations);
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
@@ -323,16 +310,14 @@ struct KrylovSqrtCauchySolve
         dg::Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        m_xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
-        if( m_xnorm == 0)
+        value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
+        if( xnorm == 0)
         {
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_TVpair = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
+        m_T = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
         //TODO for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
-        m_T = m_TVpair.first; 
-        m_V = m_TVpair.second;   
         m_e1.resize(m_lanczos.get_iter(), 0.);
         m_e1[0] = 1.;
         m_y.resize(m_lanczos.get_iter());        
@@ -340,13 +325,7 @@ struct KrylovSqrtCauchySolve
         m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
         m_cauchysqrt.set_A(m_T);         //set T in cauchy
         m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
-#ifdef MPI_VERSION
-        dg::blas2::symv(m_V, m_y, m_b);
-        b.data()  = m_b;
-#else //ifndef MPI_VERSION
-        dg::blas2::symv(m_V, m_y, b);
-#endif //MPI_VERSION           
-        dg::blas1::scal(b, m_xnorm);             // b = ||x|| V T^(1/2) e_1    
+        m_lanczos.normMxVy(m_A, m_T, m_A.weights(), m_A.inv_weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -365,11 +344,9 @@ struct KrylovSqrtCauchySolve
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter, m_iterCauchy;
-    value_type m_eps, m_xnorm, m_EVmin, m_EVmax;
+    value_type m_eps, m_EVmin, m_EVmax;
     SubContainer m_e1, m_y, m_b;
     DiaMatrix m_T; 
-    CooMatrix m_V;
-    std::pair<DiaMatrix, CooMatrix> m_TVpair; 
     dg::SqrtCauchyInt<DiaMatrix, SubContainer> m_cauchysqrt;  
     dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix> m_lanczos;
 };

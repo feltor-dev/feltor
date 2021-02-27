@@ -20,16 +20,16 @@ const double n = 4.;
 double lhs( double x, double y) {return sin(m*x)*sin(n*y);}
 double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
-// using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
-// using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
-// using Matrix = dg::DMatrix;
-// using Container = dg::DVec;
-// using SubContainer = dg::HVec;
-using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
-using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
+using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
-using SubContainer = dg::DVec;
+using SubContainer = dg::HVec;
+// using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
+// using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+// using Matrix = dg::DMatrix;
+// using Container = dg::DVec;
+// using SubContainer = dg::DVec;
 int main()
 {
     dg::Timer t;
@@ -61,15 +61,11 @@ int main()
         std::cout << "Creation of Lanczos  took "<< t.diff()<<"s   \n";
 
         DiaMatrix T; 
-        CooMatrix V;
-        std::pair<DiaMatrix, CooMatrix> TVpair; 
         
         t.tic();
-        TVpair = lanczos(A, x, b, eps); 
+        T = lanczos(A, x, b, eps); 
         dg::blas2::symv( v2d, b, b);     //normalize
         t.toc();
-        T = TVpair.first; 
-        V = TVpair.second;
         
         //Compute error with method 1
         dg::blas2::symv(A, x, helper);
@@ -79,20 +75,18 @@ int main()
         std::cout << "# Relative error between b=||x||_2 V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";   
 
     
-//         std::cout << "\nComputing with M-Lanczos method \n";
-//         x = dg::evaluate( lhs, grid);
-//         dg::blas2::symv(A, x, helper);
-//         dg::blas2::symv( v2d, helper, bsymv); //normalize operator
-//         bexac = dg::evaluate( rhs, grid);
-//         t.tic();
-//         TVpair = lanczos(A, x, b, w2d, v2d, eps); 
-//         t.toc();
-//         T = TVpair.first; 
-//         V = TVpair.second;
-//         //Compute error with Method 1
-//         std::cout << "# of Lanczos Iterations: "<< lanczos.get_iter() <<" | time: "<< t.diff()<<"s \n";
-//         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
-//         std::cout << "# Relative error between b=||x||_M V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";  
+        std::cout << "\nComputing with M-Lanczos method \n";
+        x = dg::evaluate( lhs, grid);
+        dg::blas2::symv(A, x, helper);
+        dg::blas2::symv( v2d, helper, bsymv); //normalize operator
+        bexac = dg::evaluate( rhs, grid);
+        t.tic();
+        T= lanczos(A, x, b, w2d, v2d, eps); 
+        t.toc();
+        //Compute error with Method 1
+        std::cout << "# of Lanczos Iterations: "<< lanczos.get_iter() <<" | time: "<< t.diff()<<"s \n";
+        dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
+        std::cout << "# Relative error between b=||x||_M V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";  
     } 
 //     {
 //         std::cout << "\nComputing with CG method \n";
