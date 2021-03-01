@@ -36,9 +36,9 @@ int main()
     std::vector<value_type> c(size,1.);
     for (unsigned i=0;i<size; i++)
     {
-        a[i] = (1.+i);
-        b[i] = 1./(1.+i);
-        c[i] = (1.+i)+1./(1.+i);
+        a[i] = (1.+0.1*i);
+        b[i] = 1./(1.+0.1*i);
+        c[i] = (1.+0.1*i)+1./(1.+0.1*i);
     }
     std::cout << "#Constructing and filling containers\n";
     const Container d(size,1.);
@@ -137,8 +137,6 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
     std::cout <<  "#Invtridiag with vectors took: "<< t.diff()<<"s \n";
     std::cout <<  "#Relative error to lGMRES: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_sol,x_sol)) << "\n";
-// cusp::print(T);
-// cusp::print(Tinv);
     t.tic();
     Tinv = invtridiag(T);
     t.toc();

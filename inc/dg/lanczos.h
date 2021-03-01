@@ -144,8 +144,9 @@ class Lanczos
 {
   public:
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory> ;
+    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
     using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     Lanczos(){}
     ///@copydoc construct()
@@ -165,10 +166,6 @@ class Lanczos
         m_max_iter = max_iterations;
         m_iter = max_iterations;
         //sub matrix and vector
-        m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
-        m_T.diagonal_offsets[0] = -1;
-        m_T.diagonal_offsets[1] =  0;
-        m_T.diagonal_offsets[2] =  1;
         m_TH.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
         m_TH.diagonal_offsets[0] = -1;
         m_TH.diagonal_offsets[1] =  0;
@@ -181,10 +178,6 @@ class Lanczos
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
     void set_iter( unsigned new_iter) {
-        m_T.resize(new_iter, new_iter, 3*new_iter-2, 3, m_max_iter);
-        m_T.diagonal_offsets[0] = -1;
-        m_T.diagonal_offsets[1] =  0;
-        m_T.diagonal_offsets[2] =  1;
         m_TH.resize(new_iter, new_iter, 3*new_iter-2, 3, m_max_iter);
         m_TH.diagonal_offsets[0] = -1;
         m_TH.diagonal_offsets[1] =  0;
@@ -228,8 +221,8 @@ class Lanczos
     /** @brief compute b = |x|_M V y from a given tridiagonal matrix T 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param T Tridiagonal matrix (cusp::dia_matrix format)
-     * @param M the weights 
      * @param Minv the inverse of M - the inverse weights
+     * @param M the weights 
      * @param y a vector e.g y= T e_1 or y= f(T) e_1
      * @param x Contains an initial value of lanczos method
      * @param b The right hand side vector (output)
@@ -237,7 +230,7 @@ class Lanczos
      * @param iter size of tridiagonal matrix
      */
     template< class MatrixType, class DiaMatrixType, class SquareNorm1, class SquareNorm2, class ContainerType0, class ContainerType1,class ContainerType2>
-    void normMxVy( MatrixType& A, DiaMatrixType& T, SquareNorm1& M, SquareNorm2& Minv, ContainerType0& y, ContainerType1& b, ContainerType2& x, value_type xnorm,  unsigned iter)
+    void normMxVy( MatrixType& A, DiaMatrixType& T, SquareNorm1& Minv, SquareNorm2& M,  ContainerType0& y, ContainerType1& b, ContainerType2& x, value_type xnorm,  unsigned iter)
     {
         dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
         dg::blas2::symv(M, m_vi, m_wi);
@@ -303,16 +296,16 @@ class Lanczos
             m_TH.values(i,2) = betaip;  // +1 diagonal
 
             if (i>0) {
-                m_invtridiagH.resize(i);
 #ifdef DG_BENCHMARK
                 t.tic();
-#endif //DG_BENCHMARK
+#endif //DG_BENCHMARK                
+                m_invtridiagH.resize(i);
                 m_TinvH = m_invtridiagH(m_TH); //TODO slow -> criterium without inversion ? 
 #ifdef DG_BENCHMARK
                 t.toc();
                 invtime+=t.diff();
 #endif //DG_BENCHMARK
-                residual = xnorm*betaip*betaip*abs(m_TinvH.values[i-1]);
+                residual = xnorm*betaip*abs(m_TinvH.values[i-1]);
 #ifdef DG_DEBUG
                 std::cout << "||r||_2 =  " << residual << "  # of iterations = " << i+1 << "\n";
 #endif //DG_DEBUG
@@ -336,14 +329,14 @@ class Lanczos
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. 
-     * @param M the weights 
      * @param Minv the inverse of M - the inverse weights
+     * @param M the weights 
      * @param eps accuracy of residual
      * 
      * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \[f T = V^T A V \f$
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    DiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& M, SquareNorm2& Minv, value_type eps)
+    DiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& Minv, SquareNorm2& M,  value_type eps)
     {
         value_type xnorm = sqrt(dg::blas2::dot(x, M, x));
         value_type residual;
@@ -382,16 +375,16 @@ class Lanczos
             m_wi  = m_wip;
             m_TH.values(i,2) =  betaip;  // +1 diagonal
             if (i>0) {
-                m_invtridiagH.resize(i);
 #ifdef DG_BENCHMARK
                 t.tic();
 #endif //DG_BENCHMARK
+                m_invtridiagH.resize(i);
                 m_TinvH = m_invtridiagH(m_TH); //TODO slow -> criterium without inversion ? 
 #ifdef DG_BENCHMARK
                 t.toc();
                 invtime+=t.diff();
 #endif //DG_BENCHMARK
-                residual = xnorm*betaip*betaip*abs(m_TinvH.values[i-1]);
+                residual = xnorm*betaip*abs(m_TinvH.values[i-1]);
 #ifdef DG_DEBUG
                 std::cout << "||r||_M =  " << residual << "  # of iterations = " << i+1 << "\n";
 #endif //DG_DEBUG
@@ -411,15 +404,15 @@ class Lanczos
     }
   private:
     ContainerType  m_vi, m_vip, m_vim, m_wi, m_wip, m_wim;
-    std::vector<dg::HVec> m_vH;
+    std::vector<HVec> m_vH;
     std::vector<ContainerType> m_v;
-    dg::HVec m_viH;
+    HVec m_viH;
     HDiaMatrix m_TH;
     HCooMatrix m_TinvH;
     SubContainerType m_e1, m_y, m_b;
     unsigned m_iter, m_max_iter;
     DiaMatrix m_T;  
-    InvTridiag<dg::HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;
+    InvTridiag<HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;
 };
 
 /*! 
@@ -432,14 +425,17 @@ class Lanczos
  * @note The approximation relies on Projection \f$x = A^{-1} b  \approx  R T^{-1} e_1\f$, where \f$T\f$ and \f$R\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$T^{-1} e_1\f$ can be further processed for matrix function approximation 
  \f$f(T^{-1}) e_1\f$  */
 template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
-class CGtridiag
+class MCG
 {
   public:
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
+    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
+    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
-    CGtridiag(){}
+    MCG(){}
     ///@copydoc construct()
-    CGtridiag( const ContainerType& copyable, unsigned max_iterations)
+    MCG( const ContainerType& copyable, unsigned max_iterations)
     {
           construct(copyable, max_iterations);
     }
@@ -457,29 +453,36 @@ class CGtridiag
      */
     void construct( const ContainerType& copyable, unsigned max_iterations)
     {
-        m_v0.assign(max_iterations,0.);
-        m_vp.assign(max_iterations,0.);
-        m_vm.assign(max_iterations,0.);
+
         m_e1.assign(max_iterations,0.);
         m_y.assign(max_iterations,0.);
         m_ap = m_p = m_r = copyable;
         m_max_iter = max_iterations;
-        m_R.resize(m_r.size(), max_iterations, max_iterations*m_r.size());
-        m_Tinv.resize(m_r.size(), max_iterations, max_iterations*m_r.size());
+//         m_R.resize(m_r.size(), max_iterations, max_iterations*m_r.size());
+        //sub matrix and vector
+        m_TH.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
+        m_TH.diagonal_offsets[0] = -1;
+        m_TH.diagonal_offsets[1] =  0;
+        m_TH.diagonal_offsets[2] =  1;
+              
+//         m_Tinv.resize(m_r.size(), max_iterations, max_iterations*m_r.size());
         m_invtridiag.resize(max_iterations);
         m_iter = max_iterations;
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
     void set_iter( unsigned new_iter) {
-        m_v0.resize(new_iter);
-        m_vp.resize(new_iter);
-        m_vm.resize(new_iter);
+
         m_e1.resize(new_iter, 0.);
         m_e1[0] = 1.;
         m_y.resize(new_iter,0.);
-        m_R.resize(m_r.size(), new_iter, new_iter*m_r.size());
-        m_Tinv.resize(new_iter, new_iter, new_iter*new_iter);
+//         m_R.resize(m_r.size(), new_iter, new_iter*m_r.size());
+
+        m_TH.resize(new_iter, new_iter, 3*new_iter-2, 3, m_max_iter);
+        m_TH.diagonal_offsets[0] = -1;
+        m_TH.diagonal_offsets[1] =  0;
+        m_TH.diagonal_offsets[2] =  1;
+//         m_Tinv.resize(new_iter, new_iter, new_iter*new_iter);
         m_invtridiag.resize(new_iter);
         m_iter = new_iter;
 
@@ -487,25 +490,54 @@ class CGtridiag
     ///@brief Get the current  number of iterations
     ///@return the current number of iterations
     unsigned get_iter() const {return m_iter;}
+    /** @brief Compte x = R y
+     * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
+     * @param T T non-symmetric tridiagonal Matrix from MCG tridiagonalization     
+     * @param Minv The inverse weights
+     * @param M Weights used to compute the norm for the error condition
+     * @param y vector of with v.size() = iter. Typically \f$ T^(-1) e_1 \f$ or \f$ f(T^(-1)) e_1 \f$ 
+     * @param x Contains the initial value (\f$x!=0\f$ if used for tridiagonalization) and the matrix approximation \f$x = A^{-1} b\f$ as output
+     * @param b The right hand side vector. 
+     * @param iter number of iterations (size of T)
+     */
+    template< class MatrixType, class DiaMatrixType, class SquareNorm1, class SquareNorm2, class ContainerType0, class ContainerType1, class ContainerType2>
+    void Ry( MatrixType& A, DiaMatrixType& T,  SquareNorm1& Minv, SquareNorm2& M, ContainerType0& y, ContainerType1& x, ContainerType2& b,  unsigned iter)
+    {
+        dg::blas2::symv( A, x, m_r);
+        dg::blas1::axpby( 1., b, -1., m_r);
+
+        dg::blas2::symv( Minv, m_r, m_p );
+        dg::blas1::copy( m_p, m_ap);
+        dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
+
+        for ( unsigned i=0; i<iter; i++)
+        {
+            dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute b= R y
+            dg::blas2::symv( A, m_p, m_ap);
+            dg::blas1::axpby( 1./T.values(i,0) , m_ap, 1., m_r);
+            dg::blas2::symv(Minv, m_r, m_ap);
+            dg::blas1::axpby(1., m_ap, T.values(i,2)/T.values(i,0) , m_p );
+        }
+    }
     /**
      * @brief Solve the system \f$A*x = b \f$ for x using PCG method 
      * 
      * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
-     * @param x Contains the initial value (\f[x!=0\f] if used for tridiagonalization) and the matrix approximation \f[x = A^{-1} b\f] as output
+     * @param x Contains the initial value (\f$x!=0\f$ if used for tridiagonalization) and the matrix approximation \f$x = A^{-1} b\f$ as output
      * @param b The right hand side vector. 
-     * @param P The preconditioner to be used
+     * @param Minv The preconditioner to be used
      * @param M (Inverse) Weights used to compute the norm for the error condition
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * 
      * @return Number of iterations used to achieve desired precision
-     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium. 
-     * Note that the preconditioner must be \f$P = M^{-1} \f$ if the Matrix R and T of the tridiagonalization are further used for computing matrix functions. Then the x vector must be initialized with 0.
+     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium or any other matrix function. 
+     * Note that the method is similar to the PCG method with  preconditioner \f$P = M^{-1} \f$. The Matrix R and T of the tridiagonalization are further used for computing matrix functions. The x vector must be initialized with 0 if used for tridiagonalization.
      * 
      * 
       */
-    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-    std::pair<CooMatrix, CooMatrix> operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& M, value_type eps = 1e-12, value_type nrmb_correction = 1)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
+    DiaMatrix operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, SquareNorm1& Minv, SquareNorm2& M, value_type eps = 1e-12, value_type nrmb_correction = 1)
     {
         value_type nrmb = sqrt( dg::blas2::dot( M, b));
 #ifdef DG_DEBUG
@@ -523,7 +555,7 @@ class CGtridiag
         {
             dg::blas1::copy( b, x);
             set_iter(1);
-            return m_TinvRpair;
+            return m_T;
         }
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
@@ -531,24 +563,16 @@ class CGtridiag
         if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO replace with appropriate criterium
         {
             set_iter(1);
-            return m_TinvRpair;
+            return m_T;
         }
-        dg::blas2::symv( P, m_r, m_p );
+        dg::blas2::symv( Minv, m_r, m_p );
         dg::blas1::copy( m_p, m_ap);
 
         value_type nrm2r_old = dg::blas1::dot( m_ap, m_r);
         value_type nrm2r_new;
         
-        unsigned counter = 0;
         for( unsigned i=0; i<m_max_iter; i++)
         {
-            for( unsigned j=0; j<m_ap.size(); j++)
-            {            
-                m_R.row_indices[counter]    = j;
-                m_R.column_indices[counter] = i; 
-                m_R.values[counter]         = m_ap.data()[j];
-                counter++;
-            }
             dg::blas2::symv( A, m_p, m_ap);
             m_alpha = nrm2r_old /dg::blas1::dot( m_p, m_ap);
             dg::blas1::axpby( -m_alpha, m_ap, 1., m_r);
@@ -564,46 +588,39 @@ class CGtridiag
 #endif //DG_DEBUG
             if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
             {
-                dg::blas2::symv(P, m_r, m_ap);
+                dg::blas2::symv(Minv, m_r, m_ap);
                 nrm2r_new = dg::blas1::dot( m_ap, m_r);
-                m_vp[i]   = -nrm2r_new/nrm2r_old/m_alpha;
-                m_vm[i]   = -1./m_alpha;
-                m_v0[i+1] = -m_vp[i];
-                m_v0[i]  -= m_vm[i];
+                m_TH.values(i,2)   = -nrm2r_new/nrm2r_old/m_alpha;
+                m_TH.values(i,0)   = -1./m_alpha;
+                m_TH.values(i+1,1) = -m_TH.values(i,2);
+                m_TH.values(i,1)  -= m_TH.values(i,0);
                 set_iter(i+1);
                 break;
             }
-            dg::blas2::symv(P, m_r, m_ap);
+            dg::blas2::symv(Minv, m_r, m_ap);
             nrm2r_new = dg::blas1::dot( m_ap, m_r);
             dg::blas1::axpby(1., m_ap, nrm2r_new/nrm2r_old, m_p );
                        
-            m_vp[i]   = -nrm2r_new/nrm2r_old/m_alpha;
-            m_vm[i]   = -1./m_alpha;
-            m_v0[i+1] = -m_vp[i];
-            m_v0[i]  -= m_vm[i];
+            m_TH.values(i,2)   = -nrm2r_new/nrm2r_old/m_alpha;
+            m_TH.values(i,0)   = -1./m_alpha;
+            m_TH.values(i+1,1) = -m_TH.values(i,2);
+            m_TH.values(i,1)  -= m_TH.values(i,0);
             nrm2r_old=nrm2r_new;
         }
         //Compute inverse of tridiagonal matrix
-        m_Tinv = m_invtridiag(m_v0, m_vp, m_vm);
-
-        dg::blas2::symv(m_Tinv, m_e1, m_y);  //  T^(-1) e_1   
-        
-#ifdef MPI_VERSION
-        dg::blas2::symv(m_R, m_y, x.data());  // x =  R T^(-1) e_1  
-#else
-        dg::blas2::symv(m_R, m_y, x);  // x =  R T^(-1) e_1  
-#endif
-        m_TinvRpair = std::make_pair(m_Tinv, m_R);
-        return m_TinvRpair;
+        m_T = m_TH;
+        CooMatrix Tinv = m_invtridiag(m_T);
+        dg::blas2::symv(Tinv, m_e1, m_y);  //  T^(-1) e_1   
+        Ry(A, m_T, Minv, M, m_y, x, b,  get_iter());  // x =  R T^(-1) e_1  
+        return m_T;
     }
   private:
     value_type m_alpha;
-    std::vector<value_type> m_v0, m_vp, m_vm;
     ContainerType m_r, m_ap, m_p;
     SubContainerType m_e1, m_y;
     unsigned m_max_iter, m_iter;
-    std::pair<CooMatrix, CooMatrix> m_TinvRpair;
-    CooMatrix m_R, m_Tinv;      
+    HDiaMatrix m_TH;
+    DiaMatrix m_T;
     dg::InvTridiag<SubContainerType, DiaMatrix, CooMatrix> m_invtridiag;
 };
 

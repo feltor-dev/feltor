@@ -205,7 +205,7 @@ struct KrylovSqrtODESolve
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_T  = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
+        m_T  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps); 
         m_e1.resize(m_lanczos.get_iter(), 0.);
         m_e1[0] = 1.;
         m_y.resize( m_lanczos.get_iter());
@@ -215,7 +215,7 @@ struct KrylovSqrtODESolve
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
 
-        m_lanczos.normMxVy(m_A, m_T, m_A.weights(), m_A.inv_weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
+        m_lanczos.normMxVy(m_A, m_T, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -316,7 +316,7 @@ struct KrylovSqrtCauchySolve
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_T = m_lanczos(m_A, x, b, m_A.weights(), m_A.inv_weights(), m_eps); 
+        m_T = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps); 
         //TODO for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
         m_e1.resize(m_lanczos.get_iter(), 0.);
         m_e1[0] = 1.;
@@ -325,7 +325,7 @@ struct KrylovSqrtCauchySolve
         m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
         m_cauchysqrt.set_A(m_T);         //set T in cauchy
         m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
-        m_lanczos.normMxVy(m_A, m_T, m_A.weights(), m_A.inv_weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());
+        m_lanczos.normMxVy(m_A, m_T, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION

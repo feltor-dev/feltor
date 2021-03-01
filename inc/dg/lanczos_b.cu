@@ -20,16 +20,16 @@ const double n = 4.;
 double lhs( double x, double y) {return sin(m*x)*sin(n*y);}
 double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
-using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
-using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
-using Matrix = dg::DMatrix;
-using Container = dg::DVec;
-using SubContainer = dg::HVec;
-// using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
-// using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+// using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
+// using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 // using Matrix = dg::DMatrix;
 // using Container = dg::DVec;
-// using SubContainer = dg::DVec;
+// using SubContainer = dg::HVec;
+using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
+using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+using Matrix = dg::DMatrix;
+using Container = dg::DVec;
+using SubContainer = dg::DVec;
 int main()
 {
     dg::Timer t;
@@ -81,33 +81,32 @@ int main()
         dg::blas2::symv( v2d, helper, bsymv); //normalize operator
         bexac = dg::evaluate( rhs, grid);
         t.tic();
-        T= lanczos(A, x, b, w2d, v2d, eps); 
+        T= lanczos(A, x, b, v2d, w2d, eps); 
         t.toc();
         //Compute error with Method 1
         std::cout << "# of Lanczos Iterations: "<< lanczos.get_iter() <<" | time: "<< t.diff()<<"s \n";
         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
         std::cout << "# Relative error between b=||x||_M V^T T e_1 and b: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";  
     } 
-//     {
-//         std::cout << "\nComputing with CG method \n";
-//         CooMatrix R, Tinv;
-//         std::pair<CooMatrix, CooMatrix> TinvRpair;    
-//         t.tic();
-//         dg::CGtridiag<Container, SubContainer, DiaMatrix, CooMatrix> cgtridiag(x, max_iter);
-//         t.toc();
-//         std::cout << "Creation of CG took "<< t.diff()<<"s   \n";
-//         dg::blas1::scal(x, 0.0); //initialize with zero
-//         dg::blas2::symv(w2d, bexac, b); //multiply weights
-//         t.tic();
-//         TinvRpair = cgtridiag(A, x, b, v2d, w2d, eps, 1.); 
-//         t.toc();
-//         Tinv = TinvRpair.first; 
-//         R    = TinvRpair.second;
-// 
-//         dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
-//         std::cout << "# of CG Iterations: "<< cgtridiag.get_iter() <<" | time: "<< t.diff()<<"s \n";   
-//         std::cout << "# Relative error between x= R T^{-1} e_1 and x: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
-//     }
+    {
+        std::cout << "\nComputing with CG method \n";
+        CooMatrix R, Tinv;
+        std::pair<CooMatrix, CooMatrix> TinvRpair;    
+        t.tic();
+        dg::MCG<Container, SubContainer, DiaMatrix, CooMatrix> mcg(x, max_iter);
+        t.toc();
+        std::cout << "Creation of CG took "<< t.diff()<<"s   \n";
+        dg::blas1::scal(x, 0.0); //initialize with zero
+        dg::blas2::symv(w2d, bexac, b); //multiply weights
+        DiaMatrix T; 
+        t.tic();
+        T = mcg(A, x, b, v2d, w2d, eps, 1.); 
+        t.toc();
+
+        dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
+        std::cout << "# of CG Iterations: "<< mcg.get_iter() <<" | time: "<< t.diff()<<"s \n";   
+        std::cout << "# Relative error between x= R T^{-1} e_1 and x: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
+    }
 
     
     return 0;
