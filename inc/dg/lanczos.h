@@ -102,24 +102,22 @@ class InvTridiag
             }
         }
         //Compute inverse tridiagonal matrix elements
-        unsigned counter = 0;
         for( unsigned j=0; j<vector_size; j++)
         {   
             for( unsigned i=0; i<vector_size; i++)
             {   
-                Tinv.row_indices[counter]    = j;
-                Tinv.column_indices[counter] = i; 
+                Tinv.row_indices[i*vector_size+j]    = i;
+                Tinv.column_indices[i*vector_size+j] = j; 
                 if (i<=j) {
                     temp = std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>());
-                    Tinv.values[counter] =temp*sign(i+j) * theta[i] * phi[j+1]/theta[vector_size];
+                    Tinv.values[i*vector_size+j] =temp*sign(i+j) * theta[i] * phi[j+1]/theta[vector_size];
 
                 }   
                 else // if (i>j)
                 {
                     temp = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>());
-                    Tinv.values[counter] =temp*sign(i+j) * theta[j] * phi[i+1]/theta[vector_size];
+                    Tinv.values[i*vector_size+j] =temp*sign(i+j) * theta[j] * phi[i+1]/theta[vector_size];
                 }
-                counter++;
             }
         }
         return Tinv;
