@@ -1,4 +1,3 @@
-// #undef DG_BENCHMARK
 #define DG_DEBUG
 
 #include <iostream>
@@ -63,7 +62,7 @@ int main()
         DiaMatrix T; 
         
         t.tic();
-        T = lanczos(A, x, b, eps); 
+        T = lanczos(A, x, b, eps, true); 
         dg::blas2::symv( v2d, b, b);     //normalize
         t.toc();
         
@@ -81,7 +80,7 @@ int main()
         dg::blas2::symv( v2d, helper, bsymv); //normalize operator
         bexac = dg::evaluate( rhs, grid);
         t.tic();
-        T= lanczos(A, x, b, v2d, w2d, eps); 
+        T= lanczos(A, x, b, v2d, w2d, eps, true); 
         t.toc();
         //Compute error with Method 1
         std::cout << "# of Lanczos Iterations: "<< lanczos.get_iter() <<" | time: "<< t.diff()<<"s \n";
@@ -100,7 +99,7 @@ int main()
         dg::blas2::symv(w2d, bexac, b); //multiply weights
         DiaMatrix T; 
         t.tic();
-        T = mcg(A, x, b, v2d, w2d, eps, 1.); 
+        T = mcg(A, x, b, v2d, w2d, eps, 1., true); 
         t.toc();
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
