@@ -23,17 +23,9 @@ double lhs( double x, double y){ return sin(x*m)*sin(y*n);}
 double rhsHelmholtz( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(x*m)*sin(y*n);}
 double rhsHelmholtzsqrt( double x, double y){ return sqrt(1.-(m*m+n*n)*alpha)*sin(x*m)*sin(y*n);}
 
-using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
-using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
-using SubContainer = dg::DVec;
-
-// using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
-// using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
-// using Matrix = dg::HMatrix;
-// using Container = dg::HVec;
-// using SubContainer = dg::HVec;
 
 int main()
 {
@@ -61,7 +53,7 @@ int main()
     epsCG = 1e-14;
     epsTimerel = 1e-13;
     epsTimeabs = 1e-14;
-    int counter = 0;
+    unsigned counter = 0;
     double erel = 0;
     unsigned iter = 1;
     unsigned iterCauchy = 1;
@@ -76,68 +68,80 @@ int main()
     
     dg::Invert<Container> invert( x, grid.size(), epsCG);
 
-//   
 //     ////////////////////////Direct Cauchy integral solve
-//     {
-//         std::cout << "#Cauchy \n";
-//         dg::DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, grid, epsCG, iterCauchy);
-// 
-//         t.tic();
-//         directsqrtcauchysolve(b, bs);
-//         t.toc();   
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//         std::cout << "   Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"\n";    
-//     //     solve for x=\sqrt{A}^{-1} b'
-//         t.tic();
-//         invert(A,x,bs);
-//         t.toc();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//         std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";    
-//     }
-//     //////////////////////Direct sqrt ODE solve
-//     {
-//         std::cout << "#ODE\n";
-//         dg::DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
-//         t.tic();
-//         counter = directsqrtodesolve(b, bs);
-//         t.toc();
-// 
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//         std::cout  << "   Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
-//     //     solve for x=\sqrt{A}^{-1} b'
-//         t.tic();
-//         invert(A,x,bs);
-//         t.toc();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//         std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";  
-//     }
-    
-    //////////////////Krylov solve via Lanczos method and Cauchy solve
     {
-        std::cout << "#Lanczos + Cauchy \n";
-        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter, iterCauchy, eps);
+        std::cout << "\n#Cauchy \n";
+        dg::DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, grid, epsCG, iterCauchy);
+
         t.tic();
-        krylovsqrtcauchysolve(b, bs); 
-        t.toc();
+        counter = directsqrtcauchysolve(b, bs);
+        t.toc();   
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-        std::cout << " Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"\n";
-    //     solve for x=\sqrt{A}^{-1} b'
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<counter << "\n"; 
+
+        std::cout << "\n#Cauchy + CG \n";
         t.tic();
-        invert(A,x,bs);
+        unsigned number = invert(A,x,bs);
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-        std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";   
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<number << "\n";   
+    }
+    //////////////////////Direct sqrt ODE solve
+    {
+        std::cout << "\n#ODE\n";
+        dg::DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, grid, epsCG, epsTimerel, epsTimeabs);
+        t.tic();
+        counter = directsqrtodesolve(b, bs);
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<counter << "\n"; 
+        
+        std::cout << "\n#ODE + CG\n";
+        t.tic();
+        unsigned number = invert(A,x,bs);
+        t.toc();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<number << "\n";       }
+    
+    //////////////////Krylov solve via Lanczos method and Cauchy solve
+    {
+        std::cout << "\n#MLanczos + Cauchy \n";
+        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter, iterCauchy, eps);
+        t.tic();
+        counter = krylovsqrtcauchysolve(b, bs); 
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<counter << "\n"; 
+
+        std::cout << "\n#MLanczos + Cauchy + CG\n";
+        t.tic();
+        unsigned number = invert(A,x,bs);
+        t.toc();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<number << "\n";   
     }
     
     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     {
-        std::cout << "#Lanczos + ODE \n";  
+        std::cout << "\n#M-Lanczos + ODE \n";  
         dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
         b = dg::evaluate(rhsHelmholtzsqrt, grid);
         t.tic();
@@ -145,21 +149,23 @@ int main()
         t.toc();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-        std::cout  << " Time: "<<t.diff()<<"s  Relative b error: "<<erel <<"  Time steps: "<<std::setw(3)<<counter << "\n"; 
-    //     solve for x=\sqrt{A}^{-1} b'
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<counter << "\n"; 
+        
+        std::cout << "\n#M-Lanczos + ODE + CG\n";
         t.tic();
-        invert(A,x,bs);
+        unsigned number = invert(A,x,bs);
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-        std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n"; 
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<number << "\n"; 
     }
-
-    
     //sqrt invert schemes
-
     {
-        std::cout << "#CG + Cauchy\n";
+        std::cout << "\n#M-CG + Cauchy\n";
         dg::blas1::scal(x, 0.0);  //must be initialized with zero
         dg::KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix,  Container> krylovsqrtcauchyinvert(A, grid, x,  epsCG, iter, iterCauchy, eps);
         t.tic();
@@ -167,18 +173,22 @@ int main()
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-        std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"  Iterations: "<<std::setw(3)<<counter << "\n"; 
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<counter << "\n"; 
     }
     {
-        std::cout << "#CG + ODE\n";
-        dg::blas1::scal(x,0.0); //must be initialized with zero
+        std::cout << "\n#M-CG + ODE\n";
+        dg::blas1::scal(x, 0.0); //must be initialized with zero
         dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
         t.tic();
         counter = krylovsqrtodeinvert( x, b_exac);
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-        std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"  Iterations: "<<std::setw(3)<<counter << "\n"; 
+        std::cout << "time: "<<t.diff()<<"s \n"; 
+        std::cout << "error: "<<erel  << "\n"; 
+        std::cout << "iterations: "<<std::setw(3)<<counter << "\n"; 
     }
 
 

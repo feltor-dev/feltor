@@ -118,7 +118,7 @@ struct DirectSqrtCauchySolve
      * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \f$
      * @return number of timesteps of sqrt ODE solve
      */    
-    void operator()(const Container& x, Container& b)
+    unsigned operator()(const Container& x, Container& b)
     {
 #ifdef DG_BENCHMARK
         dg::Timer t;
@@ -129,6 +129,7 @@ struct DirectSqrtCauchySolve
         t.toc();
         std::cout << "# b = sqrt(A) x took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
+        return m_iterCauchy;
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
@@ -457,7 +458,7 @@ class KrylovSqrtODEinvert
         m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations and " << time_iter << "time iterations took "<<t.diff()<<"s\n";
+        std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations and " << time_iter << " time iterations took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
         m_mcg.set_iter(m_max_iter);
         return time_iter;

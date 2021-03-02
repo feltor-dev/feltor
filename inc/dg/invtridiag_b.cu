@@ -17,9 +17,9 @@
 
 using value_type = double;
 // using memory_type = cusp::host_memory;
-// using SubContainer = dg::HVec;
+// using Container = dg::HVec;
 using memory_type = cusp::device_memory;
-using SubContainer = dg::DVec;
+using Container = dg::DVec;
 using CooMatrix =  cusp::coo_matrix<int, value_type, memory_type>;
 using DiaMatrix =  cusp::dia_matrix<int, value_type, memory_type>;
 int main()
@@ -39,20 +39,20 @@ int main()
         c[i] = 3.+ (1.+i)+1./(1.+i);
     }
     std::cout << "#Constructing and filling containers\n";
-    const SubContainer d(size,1.);
-    SubContainer x(size,0.), x_sol(x), err(x);
+    const Container d(size,1.);
+    Container x(size,0.), x_sol(x), err(x);
     std::cout << "#Constructing Matrix inversion and linear solvers\n";
     value_type eps= 1e-14;
     t.tic();
-    dg::CG <SubContainer> pcg( x,  size*size);
+    dg::CG <Container> pcg( x,  size*size);
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();
-    dg::LGMRES <SubContainer> lgmres( x, 1000, 50, 100*size);
+    dg::LGMRES <Container> lgmres( x, 1000, 50, 100*size);
     t.toc();
     std::cout << "#Construction of LGMRES took "<< t.diff()<<"s \n";
     t.tic();
-    dg::InvTridiag<SubContainer, DiaMatrix, CooMatrix> invtridiag(a);
+    dg::InvTridiag<Container, DiaMatrix, CooMatrix> invtridiag(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion routine took "<< t.diff()<<"s \n";
     
