@@ -2,6 +2,7 @@
 #include "blas.h"
 #include "functors.h"
 #include "backend/timer.h"
+#include <cusp/transpose.h>
 
 /**
 * @brief Classes for Krylov space approximations of a Matrix-Vector product
@@ -22,14 +23,29 @@ class InvTridiag
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     InvTridiag(){}
-    //Constructor
-    InvTridiag(const std::vector<value_type>& copyable) 
+    /**
+     * @brief Construct from vector
+     * 
+     * @param copyable vector
+     */
+    InvTridiag(const ContainerType& copyable) 
     {
         m_size = copyable.size();
-        phi.assign(m_size+1,0.);
-        theta.assign(m_size+1,0.);
-        Tinv.resize(m_size, m_size,  m_size* m_size);
-        temp = 0.;
+        m_phi.assign(m_size+1,0.);
+        m_theta.assign(m_size+1,0.);
+        m_Tinv.resize(m_size, m_size,  m_size* m_size);
+    }
+    /**
+     * @brief Construct from size of vector
+     * 
+     * @param size size of vector
+     */
+    InvTridiag(unsigned size) 
+    {
+        m_size = size;
+        m_phi.assign(m_size+1,0.);
+        m_theta.assign(m_size+1,0.);
+        m_Tinv.resize(m_size, m_size,  m_size* m_size);
     }
     /**
      * @brief Resize inverse tridiagonal matrix and helper vectors
@@ -38,49 +54,42 @@ class InvTridiag
     */
     void resize(unsigned new_size) {
         m_size = new_size;
-        phi.resize(new_size+1);
-        theta.resize(new_size+1);
-        Tinv.resize(new_size, new_size, new_size*new_size);
+        m_phi.resize(m_size+1,0.);
+        m_theta.resize(m_size+1,0.);
+        m_Tinv.resize(m_size, m_size,  m_size* m_size);
     }
-
+   /**
+     * @brief Compute the sign function 
+     * 
+     * @param i an unsigned integer parameter
+     * 
+     * @return returns the sign function \f$ (-1)^i\f$
+     */
     int sign(unsigned i)
     {  
         if (i%2==0) return 1;
         else return -1;
     }
- /**
+    /**
      * @brief Compute the inverse of a tridiagonal matrix T
      * 
      * @param T tridiagonal matrix
      * 
      * @return the inverse of the tridiagonal matrix (coordinate format)
-     */
+     **/
     CooMatrix operator()(const DiaMatrix& T)
     {
-        ContainerType alpha(m_size,0.);
-        ContainerType beta(m_size,0.);
-        ContainerType gamma(m_size,0.);
+        ContainerType alpha(m_size, 0.);
+        ContainerType beta(m_size, 0.);
+        ContainerType gamma(m_size, 0.);
         for(unsigned i = 0; i<m_size; i++)
         {
             alpha[i] = T.values(i,1);    // 0 diagonal
             beta[i]  = T.values(i,2)  ;  // +1 diagonal //dia_rows entry works since its outside of matrix
             gamma[i] = T.values(i+1,0);  // -1 diagonal            
         }
-        Tinv = this->operator()(alpha, beta, gamma);
-        return Tinv;
+        return this->operator()(alpha, beta, gamma);
     }
-//     value_type theta_func(unsigned i, const ContainerType& a, const ContainerType& b,  const ContainerType& c)
-//     {
-//         if (i==0) return 1.;
-//         else if (i==1) return a[0];
-//         else a[i-1] * theta_func(i-1, a,b,c) - b[i-2] * c[i-2] * theta_func(i-2, a,b,c);
-//     }
-//     value_type phi_func(unsigned i, const ContainerType& a, const ContainerType& b,  const ContainerType& c)
-//     {
-//         if (i==m_size) return 1.;
-//         else if (i==m_size - 1) return a[m_size-1];
-//         else a[i]  * phi_func(i+1, a,b,c)  - b[i]  * c[i]  * phi_func(i+2, a,b,c);
-//     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
      * 
@@ -95,71 +104,46 @@ class InvTridiag
         unsigned is=0;
         for( unsigned i = 0; i<m_size+1; i++)
         {   
-            is = (theta.size() - 1) - i;
+            is = m_size - i;
             if (i==0) 
             {   
-                theta[0] = 1.; 
-                phi[is]  = 1.;
+                m_theta[0] = 1.; 
+                m_phi[is]  = 1.;
             }
             else if (i==1) 
             {
-                theta[1] = a[0]; 
-                phi[is]  = a[is];
+                m_theta[1] = a[0]; 
+                m_phi[is]  = a[is];
             }
             else
             {
-                theta[i] = a[i-1] * theta[i-1] - b[i-2] * c[i-2] * theta[i-2];
-                phi[is]  = a[is]  * phi[is+1]  - b[is]  * c[is]  * phi[is+2];
+                m_theta[i] = a[i-1] * m_theta[i-1] - b[i-2] * c[i-2] * m_theta[i-2];
+                m_phi[is]  = a[is]  * m_phi[is+1]  - b[is]  * c[is]  * m_phi[is+2];
             }
-//             std::cout << theta[i] << " " << phi[is] << "\n";
-//             std::cout << theta_func(i, a,b,c) << " " << phi_func(is, a,b,c) << "\n";
         }
+        
         //Compute inverse tridiagonal matrix elements
         for( unsigned j=0; j<m_size; j++)
         {   
             for( unsigned i=0; i<m_size; i++)
             {   
-                Tinv.row_indices[i*m_size+j]    = i;
-                Tinv.column_indices[i*m_size+j] = j; 
+                m_Tinv.row_indices[i*m_size+j]    = i;
+                m_Tinv.column_indices[i*m_size+j] = j; 
                 if (i<=j) {
-                    temp = std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>());
-                    Tinv.values[i*m_size+j] =temp*sign(i+j) * theta[i] * phi[j+1]/theta[m_size];
+                    m_Tinv.values[i*m_size+j] =std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>())*sign(i+j) * m_theta[i] * m_phi[j+1]/m_theta[m_size];
 
                 }   
                 else // if (i>j)
                 {
-                    temp = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>());
-                    Tinv.values[i*m_size+j] =temp*sign(i+j) * theta[j] * phi[i+1]/theta[m_size];
+                    m_Tinv.values[i*m_size+j] = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>())*sign(i+j) * m_theta[j] * m_phi[i+1]/m_theta[m_size];
                 }
             }
         }
-//         //Compute inverse tridiagonal matrix elements
-//         for( unsigned j=0; j<m_size; j++)
-//         {   
-//                 std::cout << theta_func(j, a,b,c) << "  " << phi_func(j, a,b,c) << "\n";
-// 
-//             for( unsigned i=0; i<m_size; i++)
-//             {   
-//                 Tinv.row_indices[i*m_size+j]    = i;
-//                 Tinv.column_indices[i*m_size+j] = j; 
-//                 if (i<=j) {
-//                     temp = std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>());
-//                     Tinv.values[i*m_size+j] =temp*sign(i+j) * theta_func(i, a,b,c) * phi_func(j+1, a,b,c)/theta_func(m_size, a,b,c);
-// 
-//                 }   
-//                 else // if (i>j)
-//                 {
-//                     temp = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>());
-//                     Tinv.values[i*m_size+j] =temp*sign(i+j) * theta_func(j, a,b,c) * phi_func(i+1, a,b,c)/theta_func(m_size, a,b,c);
-//                 }
-//             }
-//         }
-        return Tinv;
+        return m_Tinv;
     }
   private:
-    std::vector<value_type> phi, theta;
-    CooMatrix Tinv;    
-    value_type temp;
+    ContainerType m_phi, m_theta;
+    CooMatrix m_Tinv;
     unsigned m_size;
 };
 
@@ -174,7 +158,7 @@ class InvTridiag
 * 
 * @note The common lanczos method (and M-Lanczos) method are prone to loss of orthogonality for finite precision. Here, only the basic Paige fix is used. Thus the iterations should be kept as small as possible. Could be fixed via full, partial or selective reorthogonalization strategies, but so far no problems occured due to this.
 */
-template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
+template< class ContainerType >
 class Lanczos
 {
   public:
@@ -204,7 +188,6 @@ class Lanczos
         m_TH.diagonal_offsets[0] = -1;
         m_TH.diagonal_offsets[1] =  0;
         m_TH.diagonal_offsets[2] =  1;
-        m_TinvH.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
     }
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
@@ -287,16 +270,14 @@ class Lanczos
      * @param compute_b Specify if \f$b = || x ||_2 V T e_1 \f$ should be computed or if only T should be computed
      * 
      * @return returns the tridiagonal matrix T. Note that  \f$ T = V^T A V \f$.
+     * 
+     * @note So far only ordinary convergence criterium (residuum) of Lanczos method is used, in particular for \f$ A x  = b \f$. If used for matrix function computation \f$ f( A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    DiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b, value_type eps, bool compute_b = false)
+    HDiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b, value_type eps, bool compute_b = false)
     {
         value_type xnorm = sqrt(dg::blas1::dot(x, x));
         value_type residual;
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        value_type invtime=0.;
-#endif //DG_BENCHMARK
 
         dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         value_type betaip = 0.;
@@ -322,16 +303,9 @@ class Lanczos
             m_v = m_vp;
             m_TH.values(i,2) = betaip;  // +1 diagonal
 
-            if (i>0) {
-#ifdef DG_BENCHMARK
-                t.tic();
-#endif //DG_BENCHMARK                
+            if (i>0) {         
                 m_invtridiagH.resize(i);
-                m_TinvH = m_invtridiagH(m_TH); //TODO slow -> criterium without inversion ? 
-#ifdef DG_BENCHMARK
-                t.toc();
-                invtime+=t.diff();
-#endif //DG_BENCHMARK
+                m_TinvH = m_invtridiagH(m_TH); 
                 residual = xnorm*betaip*abs(m_TinvH.values[i-1]);
 #ifdef DG_DEBUG
                 std::cout << "||r||_2 =  " << residual << "  # of iterations = " << i+1 << "\n";
@@ -342,18 +316,16 @@ class Lanczos
                 }
             }
         }
-#ifdef DG_BENCHMARK
-        std::cout << get_iter() << " T inversions took " << invtime << "s\n";
-#endif //DG_BENCHMARK
-        m_T = m_TH;
         if (compute_b == true)
         {
-            SubContainerType e1(get_iter(), 0.), y(e1);
-            e1[0] = 1.;
-            dg::blas2::symv (m_T, e1, y); //y= T e_1
-            norm2xVy(A, m_T, y, b, x, xnorm, get_iter()); //b= |x| V T e_1 
+            HVec e1H(get_iter(), 0.), yH(e1H);
+            e1H[0] = 1.;
+            dg::blas2::symv (m_TH, e1H, yH); //y= T e_1
+            ContainerType y(get_iter(),0.);
+            dg::assign(yH, y);
+            norm2xVy(A, m_TH, y, b, x, xnorm, get_iter()); //b= |x| V T e_1 
         }
-        return m_T;
+        return m_TH;
     }
     /**
      * @brief Solve the system \f$b= M^{-1} A x \approx || x ||_M V T e_1\f$ for b using M-Lanczos method. Useful for the fast computatin of matrix functions of \f$ M^{-1} A\f$.
@@ -365,18 +337,16 @@ class Lanczos
      * @param M the weights 
      * @param eps accuracy of residual
      * @param compute_b Specify if \f$b = || x ||_M  V T e_1 \f$ should be computed or if only T should be computed
-     * @return returns the tridiagonal matrix T and orthonormal basis vectors contained in the matrix V matrix. Note that  \[f T = V^T A V \f$
+     * 
+     * @return returns the tridiagonal matrix T. Note that  \[f T = V^T A V \f$
+     * 
+     * @note So far only ordinary convergence criterium (residuum) of Lanczos method is used, in particular for \f$ M^{-1} A x  = b \f$. If used for matrix function computation \f$ f(M^{-1} A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    DiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& Minv, SquareNorm2& M,  value_type eps, bool compute_b = false)
+    HDiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& Minv, SquareNorm2& M,  value_type eps, bool compute_b = false)
     {
         value_type xnorm = sqrt(dg::blas2::dot(x, M, x));
         value_type residual;
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        value_type invtime=0.;
-
-#endif //DG_BENCHMARK
         
         dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         value_type betaip = 0.;
@@ -407,15 +377,8 @@ class Lanczos
             m_w  = m_wp;
             m_TH.values(i,2) =  betaip;  // +1 diagonal
             if (i>0) {
-#ifdef DG_BENCHMARK
-                t.tic();
-#endif //DG_BENCHMARK
                 m_invtridiagH.resize(i);
-                m_TinvH = m_invtridiagH(m_TH); //TODO slow -> criterium without inversion ? 
-#ifdef DG_BENCHMARK
-                t.toc();
-                invtime+=t.diff();
-#endif //DG_BENCHMARK
+                m_TinvH = m_invtridiagH(m_TH); 
                 residual = xnorm*betaip*abs(m_TinvH.values[i-1]);
 #ifdef DG_DEBUG
                 std::cout << "||r||_M =  " << residual << "  # of iterations = " << i+1 << "\n";
@@ -426,25 +389,22 @@ class Lanczos
                 }
             }
         }
-#ifdef DG_BENCHMARK
-        std::cout << get_iter() << " T inversions took " << invtime << "s\n";
-#endif //DG_BENCHMARK
-        m_T = m_TH;
         if (compute_b == true)
         {
-            SubContainerType e1(get_iter(), 0.), y(e1);
-            e1[0] = 1.;
-            dg::blas2::symv(m_T, e1, y); //T e_1
-            normMxVy(A, m_T, Minv, M, y, b, x, xnorm, get_iter()); //b= |x| V T e_1 
+            HVec e1H(get_iter(), 0.), yH(e1H);
+            e1H[0] = 1.;
+            dg::blas2::symv (m_TH, e1H, yH); //y= T e_1
+            ContainerType y(get_iter(),0.);
+            dg::assign(yH, y); //transfer to device
+            normMxVy(A, m_TH, Minv, M, y, b, x, xnorm, get_iter()); //b= |x| V T e_1 
         }
-        return m_T;
+        return m_TH;
     }
   private:
     ContainerType  m_v, m_vp, m_w, m_wp, m_wm;
     HDiaMatrix m_TH;
     HCooMatrix m_TinvH;
     unsigned m_iter, m_max_iter;
-    DiaMatrix m_T;  
     InvTridiag<HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;
 };
 
@@ -457,7 +417,7 @@ class Lanczos
  * 
  * @note The approximation relies on Projection \f$x = A^{-1} b  \approx  R T^{-1} e_1\f$, where \f$T\f$ and \f$R\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$T^{-1} e_1\f$ can be further processed for matrix function approximation 
  \f$f(T^{-1}) e_1\f$  */
-template< class ContainerType, class SubContainerType, class DiaMatrix, class CooMatrix>
+template< class ContainerType>
 class MCG
 {
   public:
@@ -529,10 +489,11 @@ class MCG
         for ( unsigned i=0; i<iter; i++)
         {
             dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute b= R y
+            
             dg::blas2::symv( A, m_p, m_ap);
-            dg::blas1::axpby( 1./T.values(i,0) , m_ap, 1., m_r);
+            dg::blas1::axpby( 1./T.values(i,0), m_ap, 1., m_r);
             dg::blas2::symv(Minv, m_r, m_ap);
-            dg::blas1::axpby(1., m_ap, T.values(i,2)/T.values(i,0) , m_p );
+            dg::blas1::axpby(1., m_ap, T.values(i,2)/T.values(i,0), m_p );
         }
     }
     /**
@@ -547,13 +508,13 @@ class MCG
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * @param compute_x Specify if \f$x = R T^{-1} e_1 \f$ should be computed or if only T should be computed 
      * @return Number of iterations used to achieve desired precision
-     * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium or any other matrix function. 
+     * @note So far only ordinary convergence criterium of CG method, in particular for \f$ M^{-1} A x  = b \f$. If used for matrix function computation \f$ f(M^{-1} A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium. 
      * Note that the method is similar to the PCG method with  preconditioner \f$P = M^{-1} \f$. The Matrix R and T of the tridiagonalization are further used for computing matrix functions. The x vector must be initialized with 0 if used for tridiagonalization.
      * 
      * 
       */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    DiaMatrix operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, SquareNorm1& Minv, SquareNorm2& M, value_type eps = 1e-12, value_type nrmb_correction = 1, bool compute_x = false)
+    HDiaMatrix operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, SquareNorm1& Minv, SquareNorm2& M, value_type eps = 1e-12, value_type nrmb_correction = 1, bool compute_x = false)
     {
         value_type nrmb = sqrt( dg::blas2::dot( M, b));
 #ifdef DG_DEBUG
@@ -571,7 +532,7 @@ class MCG
         {
             dg::blas1::copy( b, x);
             set_iter(1);
-            return m_T;
+            return m_TH;
         }
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
@@ -579,7 +540,7 @@ class MCG
         if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO replace with appropriate criterium
         {
             set_iter(1);
-            return m_T;
+            return m_TH;
         }
         dg::blas2::symv( Minv, m_r, m_p );
         dg::blas1::copy( m_p, m_ap);
@@ -609,7 +570,7 @@ class MCG
                 m_TH.values(i,2)   = -nrm2r_new/nrm2r_old/alpha;
                 m_TH.values(i,0)   = -1./alpha;
                 m_TH.values(i+1,1) = -m_TH.values(i,2);
-                m_TH.values(i,1)  -= m_TH.values(i,0);
+                m_TH.values(i,1)  -=  m_TH.values(i,0);
                 set_iter(i+1);
                 break;
             }
@@ -620,28 +581,27 @@ class MCG
             m_TH.values(i,2)   = -nrm2r_new/nrm2r_old/alpha;
             m_TH.values(i,0)   = -1./alpha;
             m_TH.values(i+1,1) = -m_TH.values(i,2);
-            m_TH.values(i,1)  -= m_TH.values(i,0);
+            m_TH.values(i,1)  -=  m_TH.values(i,0);
             nrm2r_old=nrm2r_new;
         }
         //Compute inverse of tridiagonal matrix
-        m_T = m_TH;
         if (compute_x == true)
         {
-            SubContainerType e1(get_iter(), 0.), y(e1);
-            e1[0] = 1.;
-            dg::InvTridiag<SubContainerType, DiaMatrix, CooMatrix> invtridiag;
-            invtridiag.resize(get_iter());
-            CooMatrix Tinv = invtridiag(m_T);
-            dg::blas2::symv(Tinv, e1, y);  // m_y= T^(-1) e_1   
-            Ry(A, m_T, Minv, M, y, x, b,  get_iter());  // x =  R T^(-1) e_1  
+            HVec e1H(get_iter(), 0.), yH(e1H);
+            e1H[0] = 1.;
+            dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> invtridiag(yH);
+            HCooMatrix TinvH = invtridiag(m_TH); //Compute on Host!
+            dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1   
+            ContainerType y(get_iter(), 0.);
+            dg::assign(yH, y); //transfer to device
+            Ry(A, m_TH, Minv, M, y, x, b,  get_iter());  // x =  R T^(-1) e_1  
         }
-        return m_T;
+        return m_TH;
     }
   private:
     ContainerType m_r, m_ap, m_p;
     unsigned m_max_iter, m_iter;
     HDiaMatrix m_TH;
-    DiaMatrix m_T;
 };
 
 } //namespace dg

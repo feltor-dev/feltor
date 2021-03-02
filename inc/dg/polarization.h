@@ -14,7 +14,7 @@ namespace dg
  * @ingroup matrixoperators
  * 
  */
-template <class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
+template <class Geometry, class Matrix, class Container>
 class PolCharge
 {
     public:
@@ -375,7 +375,7 @@ class PolCharge
     
     std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma, m_multi_gamma_PER;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
-    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> m_sqrtG0inv, m_sqrtG0inv_PER;    
+    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, Container> m_sqrtG0inv, m_sqrtG0inv_PER;    
     Container m_temp, m_temp2;
     norm m_no;
     value_type  m_alpha;
@@ -388,8 +388,8 @@ class PolCharge
 };
     
 ///@cond
-template< class G, class M, class DM, class CM, class V, class SV>
-struct TensorTraits< PolCharge<G, M, DM, CM, V, SV> >
+template< class G, class M, class V>
+struct TensorTraits< PolCharge<G, M, V> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

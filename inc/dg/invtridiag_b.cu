@@ -16,45 +16,43 @@
 #include "lgmres.h"
 
 using value_type = double;
-using memory_type = cusp::host_memory;
+// using memory_type = cusp::host_memory;
+// using SubContainer = dg::HVec;
+using memory_type = cusp::device_memory;
+using SubContainer = dg::DVec;
 using CooMatrix =  cusp::coo_matrix<int, value_type, memory_type>;
 using DiaMatrix =  cusp::dia_matrix<int, value_type, memory_type>;
-using Container = dg::HVec;
 int main()
 {
     dg::Timer t;
     unsigned size = 50;
     std::cout << "#Specify size of vectors (50)\n";
     std::cin >> size;
-    //vectors of the tridiagonal matrix
-//     std::vector<value_type> a = {1.98242, 4.45423, 5.31867, 7.48144, 7.11534};
-//     std::vector<value_type> b = {-0.00710891, -0.054661, -0.0554193, -0.0172191, -0.297645};
-//     std::vector<value_type> c = {-1.98242, -4.44712, -5.26401, -7.42602, -7.09812}; 
     std::cout << "#Constructing and filling vectors\n";
     std::vector<value_type> a(size,1.);
     std::vector<value_type> b(size,1.);
     std::vector<value_type> c(size,1.);
     for (unsigned i=0;i<size; i++)
     {
-        a[i] = (1.+0.01*i);
-        b[i] = 1./(1.+0.01*i);
-        c[i] = (1.+0.01*i)+1./(1.+0.01*i);
+        a[i] = 3.+(1.+i);
+        b[i] = 3.+ 1./(1.+i);
+        c[i] = 3.+ (1.+i)+1./(1.+i);
     }
     std::cout << "#Constructing and filling containers\n";
-    const Container d(size,1.);
-    Container x(size,0.), x_sol(x), err(x);
+    const SubContainer d(size,1.);
+    SubContainer x(size,0.), x_sol(x), err(x);
     std::cout << "#Constructing Matrix inversion and linear solvers\n";
     value_type eps= 1e-14;
     t.tic();
-    dg::CG <Container> pcg( x,  size*size);
+    dg::CG <SubContainer> pcg( x,  size*size);
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();
-    dg::LGMRES <Container> lgmres( x, 1000, 50, 100*size);
+    dg::LGMRES <SubContainer> lgmres( x, 1000, 50, 100*size);
     t.toc();
     std::cout << "#Construction of LGMRES took "<< t.diff()<<"s \n";
     t.tic();
-    dg::InvTridiag<Container, DiaMatrix, CooMatrix> invtridiag(a);
+    dg::InvTridiag<SubContainer, DiaMatrix, CooMatrix> invtridiag(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion routine took "<< t.diff()<<"s \n";
     
@@ -80,25 +78,10 @@ int main()
     }
     T.values(size-1,1) =  a[size-1];
     Tsym.values(size-1,1) =  a[size-1];
-//     std::cout << "T matrix\n";
-//     cusp::print(T);
-//     std::cout << "Tsym matrix\n";
-//     cusp::print(Tsym);
     
-    //Create and fill Inverse of tridiagonal matrix (the solution)
+    //Create Inverse of tridiagonal matrix
     CooMatrix Tinv, Tsyminv;
-//     cusp::array2d<value_type ,memory_type> H(size,size), error(size,size,0.);
-//     H(0,0) = 0.505249;  H(1,0) = 0.000814795;  H(2,0) =  8.4358e-6;     H(3,0) = 6.26392e-8;     H(4,0) =  1.51587e-10;
-//     H(0,1) = 0.227217;  H(1,1) = 0.227217;     H(2,1) =  0.00235244;    H(3,1) = 0.0000174678;   H(4,1) =  4.22721e-8;
-//     H(0,2) = 0.19139;   H(1,2) = 0.19139;      H(2,2) =  0.19139;       H(3,2) = 0.00142115;     H(4,2) =  3.43918e-6;
-//     H(0,3) = 0.134988;  H(1,3) = 0.134988;     H(2,3) =  0.134988;      H(3,3) = 0.134988;       H(4,3) =  0.000326671;
-//     H(0,4) = 0.140882;  H(1,4) = 0.140882;     H(2,4) =  0.140882;      H(3,4) = 0.140882;       H(4,4) = 0.140882;
-//     CooMatrix Tinv_sol, Tinv_error;
-//     cusp::convert(H,Tinv_sol);
-//     cusp::convert(error,Tinv_error);
     
-    
-
     std::cout << "####Compute inverse of symmetric tridiagonal matrix\n";
     dg::blas1::scal(x_sol, 0.);
     t.tic();

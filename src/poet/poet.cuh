@@ -222,8 +222,8 @@ struct Explicit
     std::vector<dg::TensorElliptic<Geometry, Matrix, container> > m_multi_tensorelliptic;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > m_multi_g1, m_multi_g0;
     
-    dg::KrylovSqrtCauchySolve< Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtsolve;
-    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, DiaMatrix, CooMatrix, container, dg::DVec> sqrtinvert;
+    dg::KrylovSqrtCauchySolve< Geometry, Matrix, container> sqrtsolve;
+    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, container> sqrtinvert;
     
     dg::Advection<Geometry, Matrix, container> m_adv;
     

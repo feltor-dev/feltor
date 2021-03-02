@@ -51,11 +51,9 @@ double phi_ana_FF(double x, double y)  { return (sin(x)*sin(y));}
 double rho_ana_FF_cold( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1.)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 double phi_ana_FF_cold(double x, double y)  { return sin( x)*sin(y);}
 
-using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
-using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
-using SubContainer = dg::DVec;
 
 int main()
 {
@@ -95,7 +93,7 @@ int main()
     //df polarization charge with nested inversions
     {
         std::cout << "#####df polarization charge with nested inversion (commute = false)\n";            
-        dg::PolCharge< dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer > pol_df;
+        dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_df;
         pol_df.construct(alpha, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1., true, "df");        
         pol_df.set_commute(false);
         dg::blas1::scal(x,0.0); 
@@ -183,7 +181,7 @@ int main()
 //     //ff polarization charge of order 2 with nested inversions //TODO not converging
 //     {
 //         std::cout << "#####ff polarization charge with nested inversion (commute = false)\n";
-//         dg::PolCharge< dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer > pol_ff;        
+//         dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_ff;        
 //         pol_ff.construct(alpha, {eps_gamma}, grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1., false, "ff");        
 //         pol_ff.set_commute(false);
 //         pol_ff.set_chi(chi);
@@ -226,7 +224,7 @@ int main()
         lapperp.set_chi( chi);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv_per(  grid2d, dg::PER, grid2d.bcy(), alpha ,dg::centered);
-        dg::KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> sqrtsolve, sqrtsolve_per;
+        dg::KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, Container> sqrtsolve, sqrtsolve_per;
         sqrtsolve.construct( gamma0inv, grid2d, chi,  1e-10, 200, 20,  eps_gamma);
         sqrtsolve_per.construct( gamma0inv_per, grid2d, chi,  1e-10, 200, 20,  eps_gamma);
         
@@ -255,7 +253,7 @@ int main()
     //ff polarization charge of order 4 with nested inversions (Note: converges for eps_gamma <=  machine precision and if BC fo outer helmholtz are changed to PER, )
 //     {        
 //         std::cout << "#####ff polarization charge of order 4 with nested inversions  (commute = false)\n";   
-//         dg::PolCharge<dg::CartesianGrid2d, Matrix,  DiaMatrix, CooMatrix, Container, SubContainer> pol_ffO4;
+//         dg::PolCharge<dg::CartesianGrid2d, Matrix, Container> pol_ffO4;
 //         pol_ffO4.construct(beta, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(),  dg::not_normed, dg::centered, 1., false, "ffO4");
 //         pol_ffO4.set_chi(chi);
 //         pol_ffO4.set_iota(chi);

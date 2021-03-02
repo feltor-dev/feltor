@@ -144,11 +144,13 @@ struct DirectSqrtCauchySolve
  * 
  * @note The approximation relies on Projection \f$b \approx \sqrt{A} x \approx b \approx ||x||_M V \sqrt{T} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T} e_1\f$ is computed via the sqrt ODE solve.
  */
-template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
+template< class Geometry, class Matrix, class Container>
 struct KrylovSqrtODESolve
 {
    public:
     using value_type = dg::get_value_type<Container>;
+    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using HVec = dg::HVec;
     ///@brief empty object ( no memory allocation)
     KrylovSqrtODESolve() {}
     /**
@@ -174,14 +176,15 @@ struct KrylovSqrtODESolve
         m_epsTimeabs = epsTimeabs;
         m_max_iter = max_iterations;
         m_eps = eps;
-        m_e1.assign(max_iterations, 0.);
-        m_e1[0] = 1.;
+        m_e1H.assign(max_iterations, 0.);
+        m_e1H[0] = 1.;
+        m_yH.assign(max_iterations, 1.);
         m_y.assign(max_iterations, 1.);
-        m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
-        m_T.diagonal_offsets[0] = -1;
-        m_T.diagonal_offsets[1] =  0;
-        m_T.diagonal_offsets[2] =  1;
-        m_rhs.construct(m_T, m_e1, epsCG, true, false);
+        m_TH.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
+        m_TH.diagonal_offsets[0] = -1;
+        m_TH.diagonal_offsets[1] =  0;
+        m_TH.diagonal_offsets[2] =  1;
+        m_sqrtodeH.construct(m_TH, m_e1H, epsCG, true, false);
         m_lanczos.construct(copyable, max_iterations);
     }
     /**
@@ -205,17 +208,18 @@ struct KrylovSqrtODESolve
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_T  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps, false); 
-        m_e1.resize(m_lanczos.get_iter(), 0.);
-        m_e1[0] = 1.;
-        m_y.resize( m_lanczos.get_iter());
+        m_TH  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps, false); 
+        m_e1H.resize(m_lanczos.get_iter(), 0.);
+        m_e1H[0] = 1.;
+        m_yH.resize( m_lanczos.get_iter());
         
-        m_rhs.new_size(m_lanczos.get_iter()); //resize  vectors in sqrtODE
-        m_rhs.set_A(m_T); //set T in sqrtODE 
+        m_sqrtodeH.new_size(m_lanczos.get_iter()); //resize  vectors in sqrtODE
+        m_sqrtodeH.set_A(m_TH); //set T in sqrtODE 
 
-        unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
+        unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
 
-        m_lanczos.normMxVy(m_A, m_T, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
+        dg::assign(m_yH, m_y); //transfer to device
+        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -234,14 +238,12 @@ struct KrylovSqrtODESolve
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
-    value_type m_epsCG,m_epsTimerel, m_epsTimeabs,  m_eps;
-    SubContainer m_e1, m_y;
-#ifdef MPI_VERSION
-    SubContainer m_b;
-#endif
-    dg::SqrtODE<DiaMatrix, SubContainer> m_rhs;  
-    dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix > m_lanczos;
-    DiaMatrix m_T; 
+    value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps;
+    HVec m_e1H, m_yH;
+    Container m_y;
+    dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;  
+    dg::Lanczos< Container > m_lanczos;
+    HDiaMatrix m_TH; 
 };
 
 /*! 
@@ -251,11 +253,13 @@ struct KrylovSqrtODESolve
  * 
  * @note The approximation relies on Projection \f$b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T} e_1\f$ is computed via the sqrt ODE solve.
  */
-template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
+template< class Geometry, class Matrix, class Container>
 struct KrylovSqrtCauchySolve
 {
    public:
     using value_type = dg::get_value_type<Container>;
+    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using HVec = dg::HVec;
     ///@brief empty object ( no memory allocation)
     KrylovSqrtCauchySolve() {}
     /**
@@ -278,14 +282,15 @@ struct KrylovSqrtCauchySolve
         m_max_iter = max_iterations;
         m_eps = eps;
         m_iterCauchy = iterCauchy;
-        m_e1.assign(max_iterations, 0.);
-        m_e1[0] = 1.;
+        m_e1H.assign(max_iterations, 0.);
+        m_e1H[0] = 1.;
+        m_yH.assign(max_iterations, 1.);
         m_y.assign(max_iterations, 1.);
-        m_T.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
-        m_T.diagonal_offsets[0] = -1;
-        m_T.diagonal_offsets[1] =  0;
-        m_T.diagonal_offsets[2] =  1;
-        m_cauchysqrt.construct(m_T, m_e1, epsCG, false, true);
+        m_TH.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
+        m_TH.diagonal_offsets[0] = -1;
+        m_TH.diagonal_offsets[1] =  0;
+        m_TH.diagonal_offsets[2] =  1;
+        m_cauchysqrtH.construct(m_TH, m_e1H, epsCG, false, true);
         m_lanczos.construct(copyable, max_iterations);
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0); //EVs of Helmholtz
@@ -316,16 +321,17 @@ struct KrylovSqrtCauchySolve
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_T = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false); 
+        m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false); 
         //TODO for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
-        m_e1.resize(m_lanczos.get_iter(), 0.);
-        m_e1[0] = 1.;
-        m_y.resize(m_lanczos.get_iter());        
+        m_e1H.resize(m_lanczos.get_iter(), 0.);
+        m_e1H[0] = 1.;
+        m_yH.resize(m_lanczos.get_iter());        
 
-        m_cauchysqrt.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
-        m_cauchysqrt.set_A(m_T);         //set T in cauchy
-        m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
-        m_lanczos.normMxVy(m_A, m_T, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());
+        m_cauchysqrtH.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
+        m_cauchysqrtH.set_A(m_TH);         //set T in cauchy
+        m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
+        dg::assign(m_yH, m_y);
+        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -345,10 +351,11 @@ struct KrylovSqrtCauchySolve
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter, m_iterCauchy;
     value_type m_eps, m_EVmin, m_EVmax;
-    SubContainer m_e1, m_y, m_b;
-    DiaMatrix m_T; 
-    dg::SqrtCauchyInt<DiaMatrix, SubContainer> m_cauchysqrt;  
-    dg::Lanczos< Container, SubContainer, DiaMatrix, CooMatrix> m_lanczos;
+    HVec m_e1H, m_yH;
+    Container m_y;
+    HDiaMatrix m_TH; 
+    dg::SqrtCauchyInt<HDiaMatrix, HVec> m_cauchysqrtH;  
+    dg::Lanczos< Container> m_lanczos;
 };
 
 /*! 
@@ -358,11 +365,14 @@ struct KrylovSqrtCauchySolve
  * 
  * @note The approximation relies on Projection \f$x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T^{-1}} e_1\f$ is computed via the sqrt ODE solve.
  */
-template<class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
+template<class Geometry, class Matrix, class Container>
 class KrylovSqrtODEinvert
 {
   public:
     using value_type = dg::get_value_type<Container>; //!< value type of the ContainerType class
+    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
+    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     KrylovSqrtODEinvert(){}
     ///@copydoc construct()
@@ -390,11 +400,12 @@ class KrylovSqrtODEinvert
         m_max_iter = max_iterations;
         m_b = copyable;
         m_eps = eps;
-        m_e1.assign(max_iterations, 0.);
-        m_e1[0] = 1.;
+        m_e1H.assign(max_iterations, 0.);
+        m_e1H[0] = 1.;
+        m_yH.assign(max_iterations, 1.);
         m_y.assign(max_iterations, 1.);
-        m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-        m_rhs.construct(m_Tinv, m_e1, epsCG, false, false);
+        m_TinvH.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_sqrtodeH.construct(m_TinvH, m_e1H, epsCG, false, false);
         m_mcg.construct(copyable, max_iterations);
     }
     /**
@@ -429,20 +440,21 @@ class KrylovSqrtODEinvert
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_T = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
+        m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
 
-        m_invtridiag.resize(m_mcg.get_iter());
-        m_Tinv = m_invtridiag(m_T);
+        m_invtridiagH.resize(m_mcg.get_iter());
+        m_TinvH = m_invtridiagH(m_TH);
         
-        m_e1.resize(m_mcg.get_iter(), 0.);
-        m_e1[0] = 1.;
-        m_y.resize( m_mcg.get_iter(), 0.);
-        m_rhs.new_size(m_mcg.get_iter()); //resize  vectors in sqrtODE solver
-        m_rhs.set_A(m_Tinv);
+        m_e1H.resize(m_mcg.get_iter(), 0.);
+        m_e1H[0] = 1.;
+        m_yH.resize( m_mcg.get_iter(), 0.);
+        m_sqrtodeH.new_size(m_mcg.get_iter()); //resize  vectors in sqrtODE solver
+        m_sqrtodeH.set_A(m_TinvH);
 
         //could be replaced by Cauchy sqrt solve
-        unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., m_e1, 1., m_y, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-        m_mcg.Ry(m_A, m_T, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
+        unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
+        dg::assign(m_yH, m_y); //transfer to device
+        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations and " << time_iter << "time iterations took "<<t.diff()<<"s\n";
@@ -454,13 +466,13 @@ class KrylovSqrtODEinvert
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
     value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps;
-    Container m_b;
-    SubContainer m_e1, m_y;
-    dg::SqrtODE<DiaMatrix, SubContainer> m_rhs;  
-    dg::InvTridiag<SubContainer, DiaMatrix, CooMatrix> m_invtridiag;
-    dg::MCG< Container, SubContainer, DiaMatrix, CooMatrix > m_mcg;
-    CooMatrix m_Tinv;
-    DiaMatrix m_T;
+    Container m_b, m_y;
+    HVec m_e1H, m_yH;
+    dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;  
+    dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;
+    dg::MCG< Container> m_mcg;
+    HCooMatrix m_TinvH;
+    HDiaMatrix m_TH;
 };
 
 
@@ -472,11 +484,14 @@ class KrylovSqrtODEinvert
  * 
  * @note The approximation relies on Projection \f$x = \sqrt{A}^{-1} b  \approx  R \sqrt{T^{-1}} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T^{-1}} e_1\f$ is computed via the sqrt ODE solve.
  */
-template<class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class Container, class SubContainer>
+template<class Geometry, class Matrix, class Container>
 class KrylovSqrtCauchyinvert
 {
   public:
     using value_type = dg::get_value_type<Container>; //!< value type of the ContainerType class
+    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
+    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
+    using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     KrylovSqrtCauchyinvert(){}
     ///@copydoc construct()
@@ -502,11 +517,12 @@ class KrylovSqrtCauchyinvert
         m_iterCauchy = iterCauchy;
         m_eps = eps;
         m_b = copyable;
-        m_e1.assign(max_iterations, 0.);
-        m_e1[0] = 1.;
+        m_e1H.assign(max_iterations, 0.);
+        m_e1H[0] = 1.;
+        m_yH.assign(max_iterations, 1.);
         m_y.assign(max_iterations, 1.);
-        m_Tinv.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
-        m_cauchysqrt.construct(m_Tinv, m_e1, epsCG, false, false);
+        m_TinvH.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
+        m_cauchysqrtH.construct(m_TinvH, m_e1H, epsCG, false, false);
         m_mcg.construct(copyable, max_iterations);
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmax = 1./(1.-A.alpha()*hxhy*(1.0 + 1.0)); //EVs of inverse Helmholtz
@@ -547,19 +563,20 @@ class KrylovSqrtCauchyinvert
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_T = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
+        m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
 
-        m_invtridiag.resize(m_mcg.get_iter());
-        m_Tinv = m_invtridiag(m_T); 
+        m_invtridiagH.resize(m_mcg.get_iter());
+        m_TinvH = m_invtridiagH(m_TH); 
         
-        m_e1.resize(m_mcg.get_iter(), 0.);
-        m_e1[0] = 1.;
-        m_y.resize( m_mcg.get_iter(), 0.);
-        m_cauchysqrt.new_size(m_mcg.get_iter()); //resize  vectors in sqrtODE solver
-        m_cauchysqrt.set_A(m_Tinv);
+        m_e1H.resize(m_mcg.get_iter(), 0.);
+        m_e1H[0] = 1.;
+        m_yH.resize( m_mcg.get_iter(), 0.);
+        m_cauchysqrtH.new_size(m_mcg.get_iter()); //resize  vectors in sqrtODE solver
+        m_cauchysqrtH.set_A(m_TinvH);
         
-        m_cauchysqrt(m_e1, m_y, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated
-        m_mcg.Ry(m_A, m_T, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1  
+        m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated
+        dg::assign(m_yH, m_y);
+        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1  
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations took "<<t.diff()<<"s\n";
@@ -571,13 +588,13 @@ class KrylovSqrtCauchyinvert
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter, m_iterCauchy;
     value_type m_epsCG,  m_eps, m_EVmin, m_EVmax;
-    Container m_b;
-    SubContainer m_e1, m_y;
-    dg::SqrtCauchyInt<DiaMatrix, SubContainer> m_cauchysqrt; 
-    dg::InvTridiag<SubContainer, DiaMatrix, CooMatrix> m_invtridiag;
-    dg::MCG< Container, SubContainer, DiaMatrix, CooMatrix > m_mcg;
-    CooMatrix  m_Tinv;     
-    DiaMatrix m_T;
+    Container m_b, m_y;
+    HVec m_e1H, m_yH;
+    dg::SqrtCauchyInt<HDiaMatrix, HVec> m_cauchysqrtH; 
+    dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;
+    dg::MCG< Container > m_mcg;
+    HCooMatrix  m_TinvH;     
+    HDiaMatrix m_TH;
 };
 
 } //namespace dg

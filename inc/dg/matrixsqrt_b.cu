@@ -116,10 +116,10 @@ int main()
 //         std::cout << "   Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n";  
 //     }
     
-    ////////////////////Krylov solve via Lanczos method and Cauchy solve
+    //////////////////Krylov solve via Lanczos method and Cauchy solve
     {
         std::cout << "#Lanczos + Cauchy \n";
-        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter, iterCauchy, eps);
+        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, grid, x,  epsCG, iter, iterCauchy, eps);
         t.tic();
         krylovsqrtcauchysolve(b, bs); 
         t.toc();
@@ -138,7 +138,7 @@ int main()
     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     {
         std::cout << "#Lanczos + ODE \n";  
-        dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
+        dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodesolve(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
         b = dg::evaluate(rhsHelmholtzsqrt, grid);
         t.tic();
         counter = krylovsqrtodesolve(b, bs); //overwrites b
@@ -154,14 +154,14 @@ int main()
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
         std::cout << " Time: "<<t.diff()<<"s  Relative x error: "<<erel <<"\n"; 
     }
-// 
-//     
+
+    
     //sqrt invert schemes
 
     {
         std::cout << "#CG + Cauchy\n";
         dg::blas1::scal(x, 0.0);  //must be initialized with zero
-        dg::KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtcauchyinvert(A, grid, x,  epsCG, iter, iterCauchy, eps);
+        dg::KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix,  Container> krylovsqrtcauchyinvert(A, grid, x,  epsCG, iter, iterCauchy, eps);
         t.tic();
         counter = krylovsqrtcauchyinvert( x, b_exac);
         t.toc();
@@ -172,7 +172,7 @@ int main()
     {
         std::cout << "#CG + ODE\n";
         dg::blas1::scal(x,0.0); //must be initialized with zero
-        dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, DiaMatrix, CooMatrix, Container, SubContainer> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
+        dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTimerel, epsTimeabs, iter, eps);
         t.tic();
         counter = krylovsqrtodeinvert( x, b_exac);
         t.toc();
