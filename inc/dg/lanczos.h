@@ -25,9 +25,10 @@ class InvTridiag
     //Constructor
     InvTridiag(const std::vector<value_type>& copyable) 
     {
-        phi.assign(copyable.size()+1,0.);
-        theta.assign(copyable.size()+1,0.);
-        Tinv.resize(copyable.size(), copyable.size(),  copyable.size()* copyable.size());
+        m_size = copyable.size();
+        phi.assign(m_size+1,0.);
+        theta.assign(m_size+1,0.);
+        Tinv.resize(m_size, m_size,  m_size* m_size);
         temp = 0.;
     }
     /**
@@ -36,6 +37,7 @@ class InvTridiag
      * @param new_size new size of square matrix
     */
     void resize(unsigned new_size) {
+        m_size = new_size;
         phi.resize(new_size+1);
         theta.resize(new_size+1);
         Tinv.resize(new_size, new_size, new_size*new_size);
@@ -55,10 +57,10 @@ class InvTridiag
      */
     CooMatrix operator()(const DiaMatrix& T)
     {
-        ContainerType alpha(theta.size()-1,0.);
-        ContainerType beta(theta.size()-1,0.);
-        ContainerType gamma(theta.size()-1,0.);
-        for(unsigned i = 0; i<theta.size()-1; i++)
+        ContainerType alpha(m_size,0.);
+        ContainerType beta(m_size,0.);
+        ContainerType gamma(m_size,0.);
+        for(unsigned i = 0; i<m_size; i++)
         {
             alpha[i] = T.values(i,1);    // 0 diagonal
             beta[i]  = T.values(i,2)  ;  // +1 diagonal //dia_rows entry works since its outside of matrix
@@ -67,6 +69,18 @@ class InvTridiag
         Tinv = this->operator()(alpha, beta, gamma);
         return Tinv;
     }
+//     value_type theta_func(unsigned i, const ContainerType& a, const ContainerType& b,  const ContainerType& c)
+//     {
+//         if (i==0) return 1.;
+//         else if (i==1) return a[0];
+//         else a[i-1] * theta_func(i-1, a,b,c) - b[i-2] * c[i-2] * theta_func(i-2, a,b,c);
+//     }
+//     value_type phi_func(unsigned i, const ContainerType& a, const ContainerType& b,  const ContainerType& c)
+//     {
+//         if (i==m_size) return 1.;
+//         else if (i==m_size - 1) return a[m_size-1];
+//         else a[i]  * phi_func(i+1, a,b,c)  - b[i]  * c[i]  * phi_func(i+2, a,b,c);
+//     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
      * 
@@ -76,13 +90,10 @@ class InvTridiag
      * 
      * @return the inverse of the tridiagonal matrix (coordinate format)
      */
-    template<class ContainerType0>
-    CooMatrix operator()(const ContainerType0& a, const ContainerType0& b,  const ContainerType0& c)
+    CooMatrix operator()(const ContainerType& a, const ContainerType& b,  const ContainerType& c)
     {
-        //Compute theta and phi
         unsigned is=0;
-        unsigned vector_size = a.size();
-        for( unsigned i = 0; i<theta.size(); i++)
+        for( unsigned i = 0; i<m_size+1; i++)
         {   
             is = (theta.size() - 1) - i;
             if (i==0) 
@@ -100,32 +111,56 @@ class InvTridiag
                 theta[i] = a[i-1] * theta[i-1] - b[i-2] * c[i-2] * theta[i-2];
                 phi[is]  = a[is]  * phi[is+1]  - b[is]  * c[is]  * phi[is+2];
             }
+//             std::cout << theta[i] << " " << phi[is] << "\n";
+//             std::cout << theta_func(i, a,b,c) << " " << phi_func(is, a,b,c) << "\n";
         }
         //Compute inverse tridiagonal matrix elements
-        for( unsigned j=0; j<vector_size; j++)
+        for( unsigned j=0; j<m_size; j++)
         {   
-            for( unsigned i=0; i<vector_size; i++)
+            for( unsigned i=0; i<m_size; i++)
             {   
-                Tinv.row_indices[i*vector_size+j]    = i;
-                Tinv.column_indices[i*vector_size+j] = j; 
+                Tinv.row_indices[i*m_size+j]    = i;
+                Tinv.column_indices[i*m_size+j] = j; 
                 if (i<=j) {
                     temp = std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>());
-                    Tinv.values[i*vector_size+j] =temp*sign(i+j) * theta[i] * phi[j+1]/theta[vector_size];
+                    Tinv.values[i*m_size+j] =temp*sign(i+j) * theta[i] * phi[j+1]/theta[m_size];
 
                 }   
                 else // if (i>j)
                 {
                     temp = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>());
-                    Tinv.values[i*vector_size+j] =temp*sign(i+j) * theta[j] * phi[i+1]/theta[vector_size];
+                    Tinv.values[i*m_size+j] =temp*sign(i+j) * theta[j] * phi[i+1]/theta[m_size];
                 }
             }
         }
+//         //Compute inverse tridiagonal matrix elements
+//         for( unsigned j=0; j<m_size; j++)
+//         {   
+//                 std::cout << theta_func(j, a,b,c) << "  " << phi_func(j, a,b,c) << "\n";
+// 
+//             for( unsigned i=0; i<m_size; i++)
+//             {   
+//                 Tinv.row_indices[i*m_size+j]    = i;
+//                 Tinv.column_indices[i*m_size+j] = j; 
+//                 if (i<=j) {
+//                     temp = std::accumulate(std::next(b.begin(),i), std::next(b.begin(),j), 1., std::multiplies<value_type>());
+//                     Tinv.values[i*m_size+j] =temp*sign(i+j) * theta_func(i, a,b,c) * phi_func(j+1, a,b,c)/theta_func(m_size, a,b,c);
+// 
+//                 }   
+//                 else // if (i>j)
+//                 {
+//                     temp = std::accumulate(std::next(c.begin(),j), std::next(c.begin(),i), 1., std::multiplies<value_type>());
+//                     Tinv.values[i*m_size+j] =temp*sign(i+j) * theta_func(j, a,b,c) * phi_func(i+1, a,b,c)/theta_func(m_size, a,b,c);
+//                 }
+//             }
+//         }
         return Tinv;
     }
   private:
     std::vector<value_type> phi, theta;
     CooMatrix Tinv;    
     value_type temp;
+    unsigned m_size;
 };
 
 /**
@@ -161,7 +196,7 @@ class Lanczos
      * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const ContainerType& copyable, unsigned max_iterations) {
-        m_vi = m_vip = m_wi = m_wim = m_wip = copyable;
+        m_v = m_vp = m_w = m_wm = m_wp = copyable;
         m_max_iter = max_iterations;
         m_iter = max_iterations;
         //sub matrix and vector
@@ -196,18 +231,17 @@ class Lanczos
     template< class MatrixType, class DiaMatrixType, class ContainerType0, class ContainerType1,class ContainerType2>
     void norm2xVy( MatrixType& A, DiaMatrixType& T, ContainerType0& y, ContainerType1& b, ContainerType2& x, value_type xnorm,  unsigned iter)
     {
-        dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         dg::blas1::scal(b, 0.);
         for ( unsigned i=0; i<iter; i++)
         {
-            dg::blas1::axpby( y[i], m_vi, 1., b); //Compute b= V y
+            dg::blas1::axpby( y[i], m_v, 1., b); //Compute b= V y
 
-            dg::blas2::symv( A, m_vi, m_vip);                    
-            dg::blas1::axpby(-T.values(i,0), m_wim, 1.0, m_vip);  
-            dg::blas1::axpby(-T.values(i,1), m_vi, 1.0, m_vip);  
-            dg::blas1::scal(m_vip, 1./T.values(i,2));  
-            m_wim = m_vi;
-            m_vi = m_vip;
+            dg::blas2::symv( A, m_v, m_vp);                    
+            dg::blas1::axpbypgz(-T.values(i,0), m_wm, -T.values(i,1), m_v, 1.0, m_vp);  
+            dg::blas1::scal(m_vp, 1./T.values(i,2));  
+            m_wm = m_v;
+            m_v = m_vp;
         }
         dg::blas1::scal(b, xnorm ); 
     }
@@ -225,22 +259,21 @@ class Lanczos
     template< class MatrixType, class DiaMatrixType, class SquareNorm1, class SquareNorm2, class ContainerType0, class ContainerType1,class ContainerType2>
     void normMxVy( MatrixType& A, DiaMatrixType& T, SquareNorm1& Minv, SquareNorm2& M,  ContainerType0& y, ContainerType1& b, ContainerType2& x, value_type xnorm,  unsigned iter)
     {
-        dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
-        dg::blas2::symv(M, m_vi, m_wi);
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
+        dg::blas2::symv(M, m_v, m_w);
         dg::blas1::scal(b, 0.);
         for( unsigned i=0; i<iter; i++)
         {
-            dg::blas1::axpby( y[i], m_vi, 1., b); //Compute b= V y
+            dg::blas1::axpby( y[i], m_v, 1., b); //Compute b= V y
 
-            dg::blas2::symv(A, m_vi, m_wip); 
-            dg::blas1::axpby(-T.values(i,0), m_wim, 1.0, m_wip);    //only - if i>0, therefore no if (i>0)
-            dg::blas1::axpby(-T.values(i,1), m_wi, 1.0, m_wip);
-            dg::blas2::symv(Minv,m_wip,m_vip);
-            dg::blas1::scal(m_vip, 1./T.values(i,2));
-            dg::blas1::scal(m_wip, 1./T.values(i,2));
-            m_vi  = m_vip;
-            m_wim = m_wi;
-            m_wi  = m_wip;
+            dg::blas2::symv(A, m_v, m_wp); 
+            dg::blas1::axpbypgz(-T.values(i,0), m_wm, -T.values(i,1), m_w,  1.0, m_wp);
+            dg::blas2::symv(Minv, m_wp, m_vp);
+            dg::blas1::scal(m_vp, 1./T.values(i,2));
+            dg::blas1::scal(m_wp, 1./T.values(i,2));
+            m_v  = m_vp;
+            m_wm = m_w;
+            m_w  = m_wp;
         }
         dg::blas1::scal(b, xnorm );
     }
@@ -265,18 +298,18 @@ class Lanczos
         value_type invtime=0.;
 #endif //DG_BENCHMARK
 
-        dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         value_type betaip = 0.;
         value_type alphai = 0.;
         for( unsigned i=0; i<m_max_iter; i++)
         {
             m_TH.values(i,0) =  betaip; // -1 diagonal            
-            dg::blas2::symv(A, m_vi, m_vip);                    
-            dg::blas1::axpby(-betaip, m_wim, 1.0, m_vip);  // only - if i>0, therefore no if (i>0)  
-            alphai  = dg::blas1::dot(m_vip, m_vi);
+            dg::blas2::symv(A, m_v, m_vp);                    
+            dg::blas1::axpby(-betaip, m_wm, 1.0, m_vp);  // only - if i>0, therefore no if (i>0)  
+            alphai  = dg::blas1::dot(m_vp, m_v);
             m_TH.values(i,1) = alphai;
-            dg::blas1::axpby(-alphai, m_vi, 1.0, m_vip);      
-            betaip = sqrt(dg::blas1::dot(m_vip, m_vip));     
+            dg::blas1::axpby(-alphai, m_v, 1.0, m_vp);      
+            betaip = sqrt(dg::blas1::dot(m_vp, m_vp));     
             if (betaip == 0) {
 #ifdef DG_DEBUG
                 std::cout << "beta["<<i+1 <<"]=0 encountered\n";
@@ -284,9 +317,9 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             } 
-            dg::blas1::scal(m_vip, 1./betaip);  
-            m_wim = m_vi; //swap instead?
-            m_vi = m_vip;
+            dg::blas1::scal(m_vp, 1./betaip);  
+            m_wm = m_v; //swap instead? wim stands for vim here
+            m_v = m_vp;
             m_TH.values(i,2) = betaip;  // +1 diagonal
 
             if (i>0) {
@@ -345,21 +378,21 @@ class Lanczos
 
 #endif //DG_BENCHMARK
         
-        dg::blas1::axpby(1./xnorm, x, 0.0, m_vi); //m_v[1] = x/||x||
+        dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         value_type betaip = 0.;
         value_type alphai = 0.;
-        dg::blas2::symv(M, m_vi, m_wi);
+        dg::blas2::symv(M, m_v, m_w);
         
         for( unsigned i=0; i<m_max_iter; i++)
         { 
             m_TH.values(i,0) =  betaip;  // -1 diagonal
-            dg::blas2::symv(A, m_vi, m_wip); 
-            dg::blas1::axpby(-betaip, m_wim, 1.0, m_wip);    //only - if i>0, therefore no if (i>0)
-            alphai = dg::blas1::dot(m_wip, m_vi);  
+            dg::blas2::symv(A, m_v, m_wp); 
+            dg::blas1::axpby(-betaip, m_wm, 1.0, m_wp);    //only - if i>0, therefore no if (i>0)
+            alphai = dg::blas1::dot(m_wp, m_v);  
             m_TH.values(i,1) = alphai;
-            dg::blas1::axpby(-alphai, m_wi, 1.0, m_wip);     
-            dg::blas2::symv(Minv,m_wip,m_vip);
-            betaip = sqrt(dg::blas1::dot(m_wip, m_vip)); 
+            dg::blas1::axpby(-alphai, m_w, 1.0, m_wp);     
+            dg::blas2::symv(Minv,m_wp,m_vp);
+            betaip = sqrt(dg::blas1::dot(m_wp, m_vp)); 
             if (betaip == 0) {
 #ifdef DG_DEBUG
                 std::cout << "beta["<<i+1 <<"]=0 encountered\n";
@@ -367,11 +400,11 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             } 
-            dg::blas1::scal(m_vip, 1./betaip);     
-            dg::blas1::scal(m_wip, 1./betaip);  
-            m_vi  = m_vip;
-            m_wim = m_wi;
-            m_wi  = m_wip;
+            dg::blas1::scal(m_vp, 1./betaip);     
+            dg::blas1::scal(m_wp, 1./betaip);  
+            m_v  = m_vp;
+            m_wm = m_w;
+            m_w  = m_wp;
             m_TH.values(i,2) =  betaip;  // +1 diagonal
             if (i>0) {
 #ifdef DG_BENCHMARK
@@ -407,7 +440,7 @@ class Lanczos
         return m_T;
     }
   private:
-    ContainerType  m_vi, m_vip, m_wi, m_wip, m_wim;
+    ContainerType  m_v, m_vp, m_w, m_wp, m_wm;
     HDiaMatrix m_TH;
     HCooMatrix m_TinvH;
     unsigned m_iter, m_max_iter;

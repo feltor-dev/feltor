@@ -62,8 +62,8 @@ int main( int argc, char* argv[])
         dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
         y0[0] = dg::evaluate(g, grid);
         ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
-        // y0[1] = dg::evaluate(g, grid);
-         //     ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
+//         y0[1] = dg::evaluate(g, grid);
+//              ex.gamma1_y(y0[1], y0[0]); //always invert Gamma operator for initialization -> higher accuracy!
     }
     else if (p.init == "shearlayer")
     {

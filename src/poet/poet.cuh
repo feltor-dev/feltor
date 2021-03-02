@@ -75,7 +75,7 @@ struct Explicit
         if (equations == "ff-O2") {
 //             dg::blas1::scal(yp, 0.0);
 //             sqrtinvert(yp, y); //TODO produces wrong solution - origin of bug?
-            //via two step approach
+//             via two step approach
             sqrtsolve(y, m_iota);
             std::vector<unsigned> number = multigrid.direct_solve( m_multi_g0, yp, m_iota, eps_gamma);
             if(  number[0] == multigrid.max_iter())

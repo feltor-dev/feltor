@@ -36,9 +36,9 @@ int main()
     std::vector<value_type> c(size,1.);
     for (unsigned i=0;i<size; i++)
     {
-        a[i] = (1.+0.1*i);
-        b[i] = 1./(1.+0.1*i);
-        c[i] = (1.+0.1*i)+1./(1.+0.1*i);
+        a[i] = (1.+0.01*i);
+        b[i] = 1./(1.+0.01*i);
+        c[i] = (1.+0.01*i)+1./(1.+0.01*i);
     }
     std::cout << "#Constructing and filling containers\n";
     const Container d(size,1.);
@@ -50,7 +50,7 @@ int main()
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();
-    dg::LGMRES <Container> lgmres( x, 30, 3, 1000*size);
+    dg::LGMRES <Container> lgmres( x, 1000, 50, 100*size);
     t.toc();
     std::cout << "#Construction of LGMRES took "<< t.diff()<<"s \n";
     t.tic();
@@ -125,6 +125,7 @@ int main()
     
 
     std::cout << "####Compute inverse of non-symmetric tridiagonal matrix\n";
+    dg::blas1::scal(x_sol, 0.);
     t.tic();
     number = lgmres.solve( T, x_sol, d , d, d, eps, 1);    
     t.toc();

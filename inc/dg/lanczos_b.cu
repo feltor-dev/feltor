@@ -1,5 +1,4 @@
-#define DG_DEBUG
-
+// #define DG_DEBUG
 #include <iostream>
 #include <iomanip>
 #include "backend/timer.h"
@@ -19,16 +18,16 @@ const double n = 4.;
 double lhs( double x, double y) {return sin(m*x)*sin(n*y);}
 double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
-// using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
-// using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
-// using Matrix = dg::DMatrix;
-// using Container = dg::DVec;
-// using SubContainer = dg::HVec;
-using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
-using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+using DiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
+using CooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
-using SubContainer = dg::DVec;
+using SubContainer = dg::HVec;
+// using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
+// using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
+// using Matrix = dg::DMatrix;
+// using Container = dg::DVec;
+// using SubContainer = dg::DVec;
 int main()
 {
     dg::Timer t;
