@@ -369,7 +369,7 @@ We also write down the expressions resulting from the forward and backward fluxe
     \end{pmatrix}
     \label{eq:dxplus}
 \end{align}
-and 
+and
 \begin{align}
     \bar D^-_{x,per} = \begin{pmatrix}
 		(M+L) & 0      &    &   & -LR \\
@@ -380,19 +380,29 @@ and
     \end{pmatrix}.
     \label{eq:dxminus}
 \end{align}
-Note that for $P=1$ we recover the familiar finite difference approximations of the first derivative. 
+Note that for $P=1$ we recover the familiar finite difference approximations of the first derivative.
 \input{boundary_terms.tex}
 Finally we note the boundary terms for homogeneous Dirichlet and Neumann boundaries
-in Table~\eqref{tab:boundary_terms} noticing that only the 
+in Table~\eqref{tab:boundary_terms} noticing that only the
 corner entries of the matrices change.
+
+Also note that the centered derivative can be viewed as the average of forward
+and backward derivative
+\begin{align}
+    D^0_{x} = \frac{1}{2}\left( D^+_x + D^-_x\right)
+\end{align}
+This is true for any of the above displayed boundary conditions (periodic,
+Dirichlet and Neumann) and can be shown directly from Eqs.~\eqref{eq:dxcentered},
+\eqref{eq:dxplus}, \eqref{eq:dxminus}, Table~\eqref{tab:boundary_terms}
+and Eq.~\eqref{eq:legendre_derivative}.
 
 In our notation the local character of the dG method is apparent.
 To compute the derivative in one cell we only use values of neighboring
 cells. Therefore, the method is well suited for parallelization which we
 will exploit in our implementation.
 
-The generalization to higher dimensions is immediate.  
-All the 
+The generalization to higher dimensions is immediate.
+All the
 matrices derived above can readily be extended via the appropriate Kronecker products.
 The space complexity of 
 the matrices derived is $\mathcal{O}(P^2 N)$ in one and $\mathcal{O}(P^3N^2)$ in two dimensions.
