@@ -1,0 +1,164 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../../doc/related_pages/header.tex}
+\input{../../doc/related_pages/newcommands.tex}
+
+\renewcommand{\ne}{\ensuremath{n }}
+\newcommand{\Ni}{\ensuremath{N}}
+\newcommand{\ue}{\ensuremath{u_\parallel}}
+\newcommand{\Ui}{\ensuremath{U_\parallel}}
+\newcommand{\Apar}{\ensuremath{A_\parallel}}
+\newcommand{\neref}{\ensuremath{n_0}}
+\newcommand{\Teref}{\ensuremath{T_{e0}}} %\rhoN
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{Collisionless Reconnection}
+\author{ M.~Held and M.~Wiesenberger}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\section{Equations}
+%tearing instability <-> reconnection
+Collisionless reconnection was studied in~\cite{stanier15}, gyro-fluid and gyro-kinetic studies~\cite{comisso13,zacharias14}. drift fluid-kinetic model~\cite{loureiro13}.
+Our reduced model is based on a recent formulation of a full-F gyro-fluid model~\cite{Madsen2013}.
+It consists of the first two moment equations for electrons and ions
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+ - \left[\phi, \ne\right]
++ \left[\Apar,\ne \ue  \right]
+\\
+%%%
+\label{firstgyromom}
+\frac{\partial}{\partial t} \Ni =&
+ - \left[\psi, \Ni\right]
++ \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+      -  \left[ \psi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
+    +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
+      - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+      -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
+     +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
+      + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
+\end{align}
+which are coupled by polarisation and induction
+\begin{align}
+ \ne - \Gamma_1 \Ni &= \vec{\nabla}\cdot\left(\frac{\Ni }{  \Ni} \vec{\nabla}_\perp \phi\right) \\
+ \frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  \ne \ue - \Gamma_1 (\Ni \Ui)
+\end{align}
+with gyro-averaged parallel electromagnetic vector potential, generalized electric potential and gyro-averaging operator
+\begin{align}
+ \psi &:= \Gamma_1 \phi - u_E^2 /2  \\
+  \Gamma_1 &:= (1-\frac{\tau_i}{2} \vec{\nabla}_\perp^2 )^{-1} 
+\end{align}
+and ion gyro-radius, vacuum permeability and ion gyrofrequency
+\begin{align}
+  \rho_{i}     &:= \frac{\sqrt{T_{i} m_i}}{e B} \\
+  \mu_0 &:= 1/(\epsilon_0 c^2) \\
+  \Omega_i &:= e B / m_i
+\end{align}
+After exploiting the gyro-Bohm normalisation, our model is controlled by the dimensionless parameters. These
+are the
+\begin{align}
+ \mu   &:=  \frac{m}{Z m_i} \\ 
+ \tau  &:=  \frac{T}{ Z T_i}\\
+ \beta_{e0} &:=  \frac{\mu_0 \neref \Teref }{ B_0^2 }
+\end{align}
+These parameters are related to the conventional MHD normalisation (e.g.~\cite{comisso13,zacharias14}) according to
+\begin{align}
+ \hat{d}_i &= \frac{\hat{\rho}_{s}}{\sqrt{\beta_{e0}}} \\
+ \hat{d}_e &= \hat{d}_i \sqrt{|\mu_e|} \\
+ \hat{\rho}_{i} &:= \frac{ \hat{\rho}_{s}}{\sqrt{\tau}}\\
+ \hat{\rho}_{s} &:= \frac{\rho_{s}}{L}
+\end{align}
+Here, \(\hat{d}_i:=d_i/L=c/(\omega_{p,i} L)\) is the normalised ion skin depth, \(\hat{d}_e:=d_e/L=c/(\omega_{p,e} L)\) is the normalised electron skin depth, 
+\(\hat{\rho}_{i}:=\rho_i/L\) is the normalised ion gyro-radius and \(\hat{\rho}_{s}\) is the normalised length scale.
+\\
+
+\section{Reconnection rate}
+ A consistent definition of the reconnection rate is not trivial~\cite{comisso16}. 
+ We adopt a similar definiton as in Ref.~\cite{comisso13}
+\begin{align}
+ Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
+ \gamma&:= d \ln{(Q_X)}/dt
+\end{align}
+\section{Energy}
+The inherent energy of our system is:
+\begin{align}
+ \mathcal{E} := \int dV \big[&
+                    \ne \ln{(\ne)}
+                  + \tau_i \Ni \ln{( \Ni)}
+                  \nonumber \\
+                 &- \frac{1}{2} \mu_e \ne \ue^2
+                  + \frac{1}{2} \Ni \Ui^2
+                  \nonumber \\
+                 &+\frac{1}{2} \Ni u_E^2
+                  + \frac{|\nabla_\perp \Apar|^2}{2 \beta}
+                  \big]
+\end{align}
+
+\section{Initial condition:}
+The initial parallel magnetic vector potential consists of a equilbrium part and 
+a fluctuating part in the periodic y-direction
+\begin{align}
+ \Apar = A_{\parallel,eq} + \tilde{A}_\parallel
+\end{align}
+which are given by
+\begin{align}
+ A_{\parallel,eq}   &:=  A_0 / \cosh{( 4  \pi x / L_x )}^2\\
+ \tilde{A}_\parallel&:=A_1\cos{(2 \pi y/L_y)} 
+\end{align}
+The remaining fields are initially 
+\begin{align}
+ \Ni&=\ne=\neref \\
+ \phi &= 0 \\
+  \Ui&=0 \\
+  \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
+\end{align}
+
+\subsection{Initialization}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
+    \label{}
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+We initialize 
+\begin{align}
+    N = \Gamma_1^{-1} n \quad \phi = 0 \\
+    \rho = \phi = 0
+    \label{}
+\end{align}
+\subsection{Diagnostics}
+\begin{align}
+    M(t) = \int n-1 \\
+    \Lambda_n = \nu \int \Delta n  \\
+    ...
+    \label{}
+\end{align}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid
+\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+\ExB advection & Arakawa & s.a. \cite{Einkemmer2014} \\
+curvature terms & direct & flux conserving \\
+time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+\bottomrule
+\end{longtable}
+
+%..................................................................
+\bibliography{../../doc/related_pages/references}
+\end{document}

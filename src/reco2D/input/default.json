@@ -6,7 +6,7 @@
     "n"  : 3,   //(# of x,y-polynomials)
     "Nx" : 100,  //(grid points in x)
     "Ny" : 100,  //(grid points in y)
-    "dt" : 2.0,//(time step in units c_s/rho_s)
+    "dt" : 20.0,//(time step in units c_s/rho_s)
     //-------------------------------Output parameters--------------------
     "n_out" : 3,    //(# of x-y polynomials in output)
     "Nx_out" : 100,  //(# grid points in output field)
@@ -31,6 +31,6 @@
     "mY"        : 1,  //y-mode number
     //-------------------------------Sim Setup-----------------------------
     "lxhalf"  : 80,   //(in units rho_s)   
-    "lyhalf"  : 80,   //(in units rho_s)
+    "lyhalf"  : 80   //(in units rho_s)
 }
 //@ ------------------------------------------------------------
