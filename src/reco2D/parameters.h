@@ -17,7 +17,8 @@ struct Parameters
     unsigned Nx_out;  //!< \# of cells in x-direction in output file
     unsigned Ny_out; //!< \# of cells in y-direction in output file
     double lxhalf, lyhalf;
-    double eps_pol;  //!< accuracy of polarization
+    unsigned stages;
+    std::vector<double> eps_pol;  //!< accuracy of polarization
     double jfactor; //jump factor € [1,0.01]
     double eps_maxwell; //!< accuracy of induction equation
     double eps_gamma; //!< accuracy of gamma operator
@@ -34,7 +35,7 @@ struct Parameters
     double mY; //!< perpendicular position relative to box height
     unsigned init;
 
-    Parameters( const Json::Value& js) {
+    Parameters( const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
         Ny      = js["Ny"].asUInt();
@@ -46,7 +47,14 @@ struct Parameters
 
         lxhalf = js["lxhalf"].asDouble();
         lyhalf = js["lyhalf"].asDouble();
-        eps_pol     = js["eps_pol"].asDouble();
+        stages      = dg::file::get( mode, js, "stages", 3).asUInt();
+        eps_pol.resize(stages);
+        eps_pol[0] = dg::file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
+        for( unsigned i=1;i<stages; i++)
+        {
+            eps_pol[i] = dg::file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
+            eps_pol[i]*=eps_pol[0];
+        }
         jfactor     = js["jumpfactor"].asDouble();
         eps_maxwell = js["eps_maxwell"].asDouble();
         eps_gamma   = js["eps_gamma"].asDouble();

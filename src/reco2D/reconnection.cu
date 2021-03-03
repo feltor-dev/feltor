@@ -12,7 +12,7 @@
 #include "draw/host_window.h"
 #endif // WITHOUT_GLFW
 
-#include "dg/file/json_utilities.h"
+#include "dg/file/file.h"
 
 #include "reconnection.h"
 #include "init.h"
@@ -99,18 +99,19 @@ int main( int argc, char* argv[])
         #endif //ASELA_MPI
         );
     DG_RANK0 std::cout << "Constructing Explicit...\n";
-    asela::Asela<dg::x::CartesianGrid2d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> asela( grid, p);
+    asela::Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> asela( grid, p);
     DG_RANK0 std::cout << "Done!\n";
 
     /// //////////////////The initial field///////////////////////////////////////////
     double time = 0.;
-    std::array<std::array<DVec,2>,2> y0;
+    std::array<std::array<dg::x::DVec,2>,2> y0;
     if( argc == 4)
     {
+        std::string initial = dg::file::get( mode, js, "init", "type", "harris").asString();
         try{
-            y0 = feltor::initial_conditions.at(p.initne)( asela, grid, p );
+            y0 = asela::initial_conditions.at(initial)( asela, grid, p );
         }catch ( std::out_of_range& error){
-            MPI_OUT std::cerr << "Warning: initne parameter '"<<p.initne<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
+            DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
 #ifdef ASELA_MPI
             MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //ASELA_MPI
@@ -151,10 +152,10 @@ int main( int argc, char* argv[])
         dg::IDMatrix equidistant = dg::create::backscatter( grid );
         // the things to plot:
         std::map<std::string, const dg::DVec* > v2d;
-        v2d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
-        v2d["Ue / "]   = &asela.velocity(0), v4d["Ui / "]   = &asela.velocity(1);
-        v2d["Phi / "] = &asela.potential(0); v4d["Apar / "] = &asela.aparallel(0);
-        v2d["Vor / "] = &asela.potential(0); v4d["j / "]    = &asela.aparallel(0);
+        v2d["ne-1 / "] = &y0[0][0],  v2d["ni-1 / "] = &y0[0][1];
+        v2d["Ue / "]   = &asela.velocity(0), v2d["Ui / "]   = &asela.velocity(1);
+        v2d["Phi / "] = &asela.potential(0); v2d["Apar / "] = &asela.aparallel(0);
+        v2d["Vor / "] = &asela.potential(0); v2d["j / "]    = &asela.aparallel(0);
 
         while ( !glfwWindowShouldClose( w ))
         {
@@ -162,7 +163,7 @@ int main( int argc, char* argv[])
             {
                 if( pair.first == "Vor / " || pair.first == "j / ")
                 {
-                    dg::blas2::symv( asela.laplacianM(), *pair.second, temp);
+                    asela.compute_lapM( 1., *pair.second, 0., temp);
                     dg::blas2::gemv( equidistant, temp, visual);
                 }
                 else
@@ -199,7 +200,7 @@ int main( int argc, char* argv[])
             }
             ti.toc();
             std::cout << "\n\t Step "<<step;
-            std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n";
+            std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n";
         }
         glfwTerminate();
     }
@@ -266,7 +267,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        for( auto& record : shu::diagnostics2d_list)
+        for( auto& record : asela::diagnostics2d_list)
         {
             std::string name = record.name + "_1d";
             std::string long_name = record.long_name + " (Volume integrated)";
@@ -295,13 +296,13 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name),
                     &start, &count, &result);
         }
-        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
+        DG_RANK0 err = nc_close( ncid);
         ///////////////////////////////////timeloop/////////////////////////
-        unsigned step=0;
         for( unsigned i=1; i<=maxout; i++)
         {
             dg::Timer ti;
-            ti.tic()
+            ti.tic();
             for( unsigned j=0; j<itstp; j++)
             {
                 try{ multistep.step( asela, time, y0);}
@@ -321,7 +322,7 @@ int main( int argc, char* argv[])
             //output all fields
             ti.tic();
             start = i;
-            DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
+            DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
             for( auto& record : asela::diagnostics2d_list)
             {
@@ -336,7 +337,6 @@ int main( int argc, char* argv[])
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
         }
-        DG_RANK0 err = nc_close(ncid);
     }
     if( !("netcdf" == output) && !("glfw" == output))
     {
@@ -353,7 +353,7 @@ int main( int argc, char* argv[])
     double second = t.diff() - hour*3600 - minute*60;
     DG_RANK0 std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     DG_RANK0 std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-    DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    DG_RANK0 std::cout <<"which is         \t"<<t.diff()/itstp/maxout<<"s/step\n";
 #ifdef ASELA_MPI
     MPI_Finalize();
 #endif //ASELA_MPI
