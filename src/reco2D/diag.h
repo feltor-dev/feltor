@@ -4,6 +4,22 @@
 
 namespace asela
 {
+namespace routines
+{
+//unfortunately we cannot use device lambdas inside a list of lambdas
+struct RadialEnergyDiff
+{
+    RadialEnergyDiff( double mu, double tau, double z):m_mu(mu), m_tau(tau), m_z(z){}
+
+    double DG_DEVICE operator() ( double n, double u, double P,
+        double diffN, double diffU){
+        return m_z*(m_tau*(1.+log(n))+P+0.5*m_mu*u*u)*diffN + m_z*m_mu*n*u*diffU;
+    }
+    private:
+    double m_mu, m_tau, m_z;
+};
+
+}
 
 struct Variables{
     asela::Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f;
@@ -121,12 +137,8 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( 1., v.f.density(0), -1., 1., v.tmp[0]);
             v.f.compute_diff( v.tmp[0], 0., v.tmp[0]);
             v.f.compute_diff( v.f.velocity(0), 0., v.tmp[1]);
-            double mue = v.p.mu[0];
             dg::blas1::evaluate( result, dg::equals(),
-                [mue]DG_DEVICE ( double ne, double ue, double P,
-                    double diffN, double diffU){
-                    return (1.+log(ne)-P-0.5*mue*ue*ue)*diffN - mue*ne*ue*diffU;
-                },
+                routines::RadialEnergyDiff( v.p.mu[0], v.p.tau[0], -1),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
@@ -138,12 +150,8 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::axpby( 1., v.f.density(1), -1., 1., v.tmp[0]);
             v.f.compute_diff( v.tmp[0], 0., v.tmp[0]);
             v.f.compute_diff( v.f.velocity(1), 0., v.tmp[1]);
-            double taui = v.p.tau[1];
             dg::blas1::evaluate( result, dg::equals(),
-                [taui]DG_DEVICE ( double Ni, double Ui, double P,
-                double diffN, double diffU){
-                    return (taui*(1.+log(Ni))+P-0.5*Ui*Ui)*diffN + Ni*Ui*diffU;
-                },
+                routines::RadialEnergyDiff( v.p.mu[1], v.p.tau[1], 1),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
             );

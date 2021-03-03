@@ -105,21 +105,18 @@ int main( int argc, char* argv[])
     /// //////////////////The initial field///////////////////////////////////////////
     double time = 0.;
     std::array<std::array<dg::x::DVec,2>,2> y0;
-    if( argc == 4)
-    {
-        std::string initial = dg::file::get( mode, js, "init", "type", "harris").asString();
-        try{
-            y0 = asela::initial_conditions.at(initial)( asela, grid, p );
-        }catch ( std::out_of_range& error){
-            DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
+    std::string initial = dg::file::get( mode, js, "init", "type", "harris").asString();
+    try{
+        y0 = asela::initial_conditions.at(initial)( asela, grid, p, js, mode );
+    }catch ( std::out_of_range& error){
+        DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
 #ifdef ASELA_MPI
-            MPI_Abort(MPI_COMM_WORLD, -1);
+        MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //ASELA_MPI
-            return -1;
-        }
+        return -1;
     }
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
-    std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
+    std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "TVB-3-3").asString();
     dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep( tableau, y0);
     unsigned step = 0;
     multistep.init( asela, time, y0, p.dt);
@@ -247,7 +244,10 @@ int main( int argc, char* argv[])
 
         int dim_ids[3], tvarID;
         std::map<std::string, int> id1d, id3d;
-        dg::x::CartesianGrid2d grid_out( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n_out, p.Nx_out, p.Ny_out, dg::DIR, dg::PER
+        unsigned n_out     = dg::file::get( mode, js, "output", "n", 3).asUInt();
+        unsigned Nx_out    = dg::file::get( mode, js, "output", "Nx", 48).asUInt();
+        unsigned Ny_out    = dg::file::get( mode, js, "output", "Ny", 48).asUInt();
+        dg::x::CartesianGrid2d grid_out( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf, n_out, Nx_out, Ny_out, dg::DIR, dg::PER
             #ifdef ASELA_MPI
             , comm
             #endif //ASELA_MPI

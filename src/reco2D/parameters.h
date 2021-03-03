@@ -13,65 +13,53 @@ struct Parameters
     unsigned Ny; //!< \# of cells in y -direction
 
     double dt;  //!< timestep
-    unsigned n_out;  //!< \# of polynomial coefficients in output file
-    unsigned Nx_out;  //!< \# of cells in x-direction in output file
-    unsigned Ny_out; //!< \# of cells in y-direction in output file
     double lxhalf, lyhalf;
     unsigned stages;
     std::vector<double> eps_pol;  //!< accuracy of polarization
     double jfactor; //jump factor € [1,0.01]
     double eps_maxwell; //!< accuracy of induction equation
     double eps_gamma; //!< accuracy of gamma operator
-    double eps_time;//!< accuracy of implicit timestep
-    double eps_hat;//!< 1
+    std::string direction_diff, direction_ell;
+    std::string advection;
 
     double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
     double tau[2]; //!< tau[0] = -1, tau[1] = tau_i
     double beta; //!< plasma beta
 
     double nu_perp;  //!< perpendicular diffusion
-    double amp0;
-    double amp1;
-    double mY; //!< perpendicular position relative to box height
-    unsigned init;
 
     Parameters( const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
-        n       = js["n"].asUInt();
-        Nx      = js["Nx"].asUInt();
-        Ny      = js["Ny"].asUInt();
-        dt      = js["dt"].asDouble();
-        n_out   = js["n_out"].asUInt();
-        Nx_out  = js["Nx_out"].asUInt();
-        Ny_out  = js["Ny_out"].asUInt();
+        n       = dg::file::get( mode, js, "grid", "n", 3).asUInt();
+        Nx      = dg::file::get( mode, js, "grid", "Nx", 48).asUInt();
+        Ny      = dg::file::get( mode, js, "grid", "Ny", 48).asUInt();
+        lxhalf  = dg::file::get( mode, js, "grid", "lxhalf", 80).asDouble();
+        lyhalf  = dg::file::get( mode, js, "grid", "lyhalf", 80).asDouble();
 
+        dt      = dg::file::get( mode, js, "timestepper", "dt", 20).asDouble();
 
-        lxhalf = js["lxhalf"].asDouble();
-        lyhalf = js["lyhalf"].asDouble();
-        stages      = dg::file::get( mode, js, "stages", 3).asUInt();
+        advection = dg::file::get( mode, js, "advection", "type", "arakawa").asString();
+
+        stages      = dg::file::get( mode, js, "elliptic", "stages", 3).asUInt();
         eps_pol.resize(stages);
-        eps_pol[0] = dg::file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
+        eps_pol[0] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", 0, 1e-6).asDouble();
         for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = dg::file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
+            eps_pol[i] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", i, 1).asDouble();
             eps_pol[i]*=eps_pol[0];
         }
-        jfactor     = js["jumpfactor"].asDouble();
-        eps_maxwell = js["eps_maxwell"].asDouble();
-        eps_gamma   = js["eps_gamma"].asDouble();
-        eps_time    = js["eps_time"].asDouble();
-        eps_hat     = 1.;
+        jfactor     = dg::file::get( mode, js, "elliptic", "jumpfactor", 1).asDouble();
+        direction_ell = dg::file::get( mode, js, "elliptic", "direction", "forward").asString();
+        eps_maxwell = dg::file::get( mode, js, "elliptic", "eps_maxwell", 1e-7).asDouble();
+        eps_gamma   = dg::file::get( mode, js, "elliptic", "eps_gamma", 1e-10).asDouble();
 
-        mu[0]       = js["mu"].asDouble();
-        mu[1]       = +1.;
-        tau[0]      = -1.;
-        tau[1]      = js["tau"].asDouble();
-        beta        = js["beta"].asDouble();
-        nu_perp     = js["nu_perp"].asDouble();
+        mu[0]    = dg::file::get( mode, js, "physical", "mu", -0.000544617 ).asDouble();
+        mu[1]    = +1.;
+        tau[0]   = -1.;
+        tau[1]   = dg::file::get( mode, js, "physical", "tau",  0.0 ).asDouble();
+        beta     = dg::file::get( mode, js, "physical", "beta", 1e-4).asDouble();
+        nu_perp  = dg::file::get( mode, js, "regularization", "nu_perp", 1e-4).asDouble();
+        direction_diff = dg::file::get( mode, js, "regularization", "direction", "centered").asString();
 
-        amp0         = js["amplitude0"].asDouble();
-        amp1         = js["amplitude1"].asDouble();
-        mY          = js["mY"].asDouble();
-        init        = js["initmode"].asUInt();
 
     }
 };
