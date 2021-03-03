@@ -31,27 +31,31 @@ It consists of the first two moment equations for electrons and ions
 \frac{\partial}{\partial t} \ne =&
  - \left[\phi, \ne\right]
 + \left[\Apar,\ne \ue  \right]
+-\nu_\perp \Delta_\perp^2\ne
 \\
 %%%
 \label{firstgyromom}
 \frac{\partial}{\partial t} \Ni =&
  - \left[\psi, \Ni\right]
 + \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
+-\nu_\perp \Delta_\perp^2\Ni
  \\
  %%%
 \frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
       -  \left[ \psi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
     +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
       - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
+    -\nu_\perp \Delta_\perp^2\ue
       \\
       \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
       -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
      +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
       + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
+    -\nu_\perp \Delta_\perp^2\Ui
 \end{align}
 which are coupled by polarisation and induction
 \begin{align}
- \ne - \Gamma_1 \Ni &= \vec{\nabla}\cdot\left(\frac{\Ni }{  \Ni} \vec{\nabla}_\perp \phi\right) \\
+ \ne - \Gamma_1 \Ni &= \vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
  \frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  \ne \ue - \Gamma_1 (\Ni \Ui)
 \end{align}
 with gyro-averaged parallel electromagnetic vector potential, generalized electric potential and gyro-averaging operator
@@ -83,17 +87,40 @@ Here, \(\hat{d}_i:=d_i/L=c/(\omega_{p,i} L)\) is the normalised ion skin depth, 
 \(\hat{\rho}_{i}:=\rho_i/L\) is the normalised ion gyro-radius and \(\hat{\rho}_{s}\) is the normalised length scale.
 \\
 
-\section{Reconnection rate}
- A consistent definition of the reconnection rate is not trivial~\cite{comisso16}. 
- We adopt a similar definiton as in Ref.~\cite{comisso13}
+
+\section{Initial and boundary conditions}
+The boundary conditions for all variables are Dirichlet in $x$.
+The $y$-direction is periodic.
+
+We initialize
 \begin{align}
- Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
- \gamma&:= d \ln{(Q_X)}/dt
+ \Ni&=\ne=\neref \\
+ \phi &= 0 \\
+  \Ui&=0 \\
+  \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
 \end{align}
-\section{Energy}
-The inherent energy of our system is:
+where we can choose $A_\parallel$.
+\subsection{Harris sheet}
+The initial parallel magnetic vector potential is
 \begin{align}
- \mathcal{E} := \int dV \big[&
+    \Apar =\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 \pi y/L_y)}\right) \cos( \pi x /L_x)
+\end{align}
+\subsection{Island}
+The initial parallel magnetic vector potential is
+\begin{align}
+    \Apar =\left[ \frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2 \pi y/L_y)}\right] \cos( \pi x /L_x)
+\end{align}
+with $\varepsilon = 0.2$.
+
+\section{Invariants}
+The mass density and diffusions are
+\begin{align}
+    \mathcal M &= n-1 \\
+     \Lambda_n &= -\nu_\perp \Delta_\perp^2 n  \\
+\end{align}
+The inherent energy density of our system is:
+\begin{align}
+ \mathcal{E} := &
                     \ne \ln{(\ne)}
                   + \tau_i \Ni \ln{( \Ni)}
                   \nonumber \\
@@ -102,49 +129,28 @@ The inherent energy of our system is:
                   \nonumber \\
                  &+\frac{1}{2} \Ni u_E^2
                   + \frac{|\nabla_\perp \Apar|^2}{2 \beta}
-                  \big]
+\end{align}
+The energy diffusion is
+\begin{align}
+    \Lambda_\mathcal{E} :=  &\left( (1+\ln \ne) + \frac{1}{2} z_e \mu_e \ue^2 - \phi \right) (-\nu_\perp \Delta_\perp^2 \ne)
+    \nonumber\\
+    &+ \left( \tau_i ( 1+\ln \Ni) + \frac{1}{2} \Ui^2 + \psi_i\right)(-\nu_\perp \Delta_\perp^2 \Ni)
+    \nonumber\\
+    &+ z_e\mu_e \ue\ne (-\nu_\perp \Delta_\perp^2 \ue)
+    \nonumber\\
+    &+ \Ui\Ni (-\nu_\perp \Delta_\perp^2 \Ui)
 \end{align}
 
-\section{Initial condition:}
-The initial parallel magnetic vector potential consists of a equilbrium part and 
-a fluctuating part in the periodic y-direction
+\section{Reconnection rate}
+ A consistent definition of the reconnection rate is not trivial~\cite{comisso16}.
+ We adopt a similar definiton as in Ref.~\cite{comisso13}
 \begin{align}
- \Apar = A_{\parallel,eq} + \tilde{A}_\parallel
+ Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
+ \gamma&:= \frac{\d \ln{(Q_X)}}{\d t}
 \end{align}
-which are given by
-\begin{align}
- A_{\parallel,eq}   &:=  A_0 / \cosh{( 4  \pi x / L_x )}^2\\
- \tilde{A}_\parallel&:=A_1\cos{(2 \pi y/L_y)} 
-\end{align}
-The remaining fields are initially 
-\begin{align}
- \Ni&=\ne=\neref \\
- \phi &= 0 \\
-  \Ui&=0 \\
-  \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
-\end{align}
+where $\vec{x}_X = [0,0]$.
+This can be easily evaluated in post-processing using a python script.
 
-\subsection{Initialization}
-Initialization of $n$ is a Gaussian 
-\begin{align}
-    n(x,y) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
-    \label{}
-\end{align}
-where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
-radius of the blob.
-We initialize 
-\begin{align}
-    N = \Gamma_1^{-1} n \quad \phi = 0 \\
-    \rho = \phi = 0
-    \label{}
-\end{align}
-\subsection{Diagnostics}
-\begin{align}
-    M(t) = \int n-1 \\
-    \Lambda_n = \nu \int \Delta n  \\
-    ...
-    \label{}
-\end{align}
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
 \rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
