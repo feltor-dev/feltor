@@ -67,9 +67,10 @@ int main( int argc, char* argv[])
 
     /// ////////////// Initialize timestepper ///////////////////////
     std::string stepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
+    std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
     std::string regularization = dg::file::get( mode, js, "regularization", "type", "moddal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
-    dg::IdentityFilter id;
+    dg::IdentityFilter identity;
     bool apply_filter = true;
     dg::ImExMultistep<dg::DVec> imex;
     dg::ShuOsher<dg::DVec> shu_osher;
@@ -94,21 +95,20 @@ int main( int argc, char* argv[])
             return -1;
         }
         double eps_time = dg::file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
-        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
         imex.construct( tableau, y0, y0.size(), eps_time);
         imex.init( shu, diffusion, time, y0, dt);
     }
     else if( "Shu-Osher" == stepper)
     {
-        shu_osher.construct( "SSPRK-3-3", y0);
+        shu_osher.construct( tableau, y0);
     }
     else if( "FilteredExplicitMultistep" == stepper)
     {
-        multistep.construct( "eBDF-3-3", y0);
+        multistep.construct( tableau, y0);
         if( apply_filter)
             multistep.init( shu, filter, time, y0, dt);
         else
-            multistep.init( shu, id, time, y0, dt);
+            multistep.init( shu, identity, time, y0, dt);
     }
     else
     {
@@ -156,14 +156,14 @@ int main( int argc, char* argv[])
                         if( apply_filter)
                             multistep.step( shu, filter, time, y0);
                         else
-                            multistep.step( shu, id, time, y0);
+                            multistep.step( shu, identity, time, y0);
                     }
                     else if ( "Shu-Osher" == stepper)
                     {
                         if( apply_filter)
                             shu_osher.step( shu, filter, time, y0, time, y0, dt);
                         else
-                            shu_osher.step( shu, id, time, y0, time, y0, dt);
+                            shu_osher.step( shu, identity, time, y0, time, y0, dt);
                     }
                 }
             } catch( dg::Fail& fail) {
@@ -294,14 +294,14 @@ int main( int argc, char* argv[])
                     if( apply_filter)
                         multistep.step( shu, filter, time, y0);
                     else
-                        multistep.step( shu, id, time, y0);
+                        multistep.step( shu, identity, time, y0);
                 }
                 else if ( "Shu-Osher" == stepper)
                 {
                     if( apply_filter)
                         shu_osher.step( shu, filter, time, y0, time, y0, dt);
                     else
-                        shu_osher.step( shu, id, time, y0, time, y0, dt);
+                        shu_osher.step( shu, identity, time, y0, time, y0, dt);
                 }
             }
             step+=itstp;
@@ -335,8 +335,7 @@ int main( int argc, char* argv[])
     }
     if( !("netcdf" == output) && !("glfw" == output))
     {
-        throw dg::Error(dg::Message(_ping_)<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!");
-
+        std::cerr<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!";
         return -1;
     }
     ////////////////////////////////////////////////////////////////////
