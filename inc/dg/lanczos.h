@@ -1,8 +1,10 @@
 #pragma once
 #include "blas.h"
 #include "functors.h"
+#include <cusp/print.h>
 #include "backend/timer.h"
-#include <cusp/transpose.h>
+#include "lgmres.h"
+
 
 /**
 * @brief Classes for Krylov space approximations of a Matrix-Vector product
@@ -123,9 +125,9 @@ class InvTridiag
         }
         
         //Compute inverse tridiagonal matrix elements
-        for( unsigned j=0; j<m_size; j++)
+        for( unsigned i=0; i<m_size; i++) //row index
         {   
-            for( unsigned i=0; i<m_size; i++)
+            for( unsigned j=0; j<m_size; j++) //column index
             {   
                 m_Tinv.row_indices[i*m_size+j]    = i;
                 m_Tinv.column_indices[i*m_size+j] = j; 
@@ -198,6 +200,7 @@ class Lanczos
         m_TH.diagonal_offsets[2] =  1;
         m_iter = new_iter;
     }
+    
     ///@brief Get the current  number of iterations
     ///@return the current number of iterations
     unsigned get_iter() const {return m_iter;}
@@ -303,18 +306,17 @@ class Lanczos
             m_v = m_vp;
             m_TH.values(i,2) = betaip;  // +1 diagonal
 
-            if (i>0) {         
-                m_invtridiagH.resize(i);
-                m_TinvH = m_invtridiagH(m_TH); 
-                residual = xnorm*betaip*abs(m_TinvH.values[i-1]);
+            m_invtridiagH.resize(i+1);
+            m_TinvH = m_invtridiagH(m_TH);
+            residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of TinvH
 #ifdef DG_DEBUG
-                std::cout << "||r||_2 =  " << residual << "  # of iterations = " << i+1 << "\n";
+            std::cout << "# ||r||_2 =  " << residual << " at i = " << i << "\n";
 #endif //DG_DEBUG
-                if (residual< eps ) {
-                    set_iter(i+1); 
-                    break;
-                }
+            if (residual< eps ) {
+                set_iter(i+1); 
+                break;
             }
+
         }
         if (compute_b == true)
         {
@@ -376,18 +378,18 @@ class Lanczos
             m_wm = m_w;
             m_w  = m_wp;
             m_TH.values(i,2) =  betaip;  // +1 diagonal
-            if (i>0) {
-                m_invtridiagH.resize(i);
-                m_TinvH = m_invtridiagH(m_TH); 
-                residual = xnorm*betaip*abs(m_TinvH.values[i-1]);
+
+            m_invtridiagH.resize(i+1);
+            m_TinvH = m_invtridiagH(m_TH); 
+            residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of m_TinvH
 #ifdef DG_DEBUG
-                std::cout << "||r||_M =  " << residual << "  # of iterations = " << i+1 << "\n";
+            std::cout << "# ||r||_M =  " << residual << "  at i = " << i << "\n";
 #endif //DG_DEBUG
-                if (residual< eps ) {
-                    set_iter(i+1); 
-                    break;
-                }
+            if (residual< eps ) {
+                set_iter(i+1); 
+                break;
             }
+
         }
         if (compute_b == true)
         {
@@ -479,21 +481,23 @@ class MCG
     template< class MatrixType, class DiaMatrixType, class SquareNorm1, class SquareNorm2, class ContainerType0, class ContainerType1, class ContainerType2>
     void Ry( MatrixType& A, DiaMatrixType& T,  SquareNorm1& Minv, SquareNorm2& M, ContainerType0& y, ContainerType1& x, ContainerType2& b,  unsigned iter)
     {
+        dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
+
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
 
         dg::blas2::symv( Minv, m_r, m_p );
         dg::blas1::copy( m_p, m_ap);
-        dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
 
         for ( unsigned i=0; i<iter; i++)
         {
             dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute b= R y
             
             dg::blas2::symv( A, m_p, m_ap);
-            dg::blas1::axpby( 1./T.values(i,0), m_ap, 1., m_r);
+            dg::blas1::axpby( 1./T.values(i+1,0), m_ap, 1., m_r);
             dg::blas2::symv(Minv, m_r, m_ap);
-            dg::blas1::axpby(1., m_ap, T.values(i,2)/T.values(i,0), m_p );
+            dg::blas1::axpby(1., m_ap, T.values(i,2)/T.values(i+1,0), m_p );
+//             std::cout << T.values(i+1,0) << "   "<< T.values(i,1) << "   "<< T.values(i,2) << "\n";
         }
     }
     /**
@@ -543,15 +547,14 @@ class MCG
             return m_TH;
         }
         dg::blas2::symv( Minv, m_r, m_p );
-        dg::blas1::copy( m_p, m_ap);
 
-        value_type nrm2r_old = dg::blas1::dot( m_ap, m_r);
-        value_type nrm2r_new;
-        value_type alpha;
+        value_type nrmzr_old = dg::blas1::dot( m_p, m_r);
+        value_type alpha, beta, nrmzr_new;
+//         m_TH.values(0,0)=0.; //outside matrix
         for( unsigned i=0; i<m_max_iter; i++)
         {
             dg::blas2::symv( A, m_p, m_ap);
-            alpha = nrm2r_old /dg::blas1::dot( m_p, m_ap);
+            alpha = nrmzr_old /dg::blas1::dot( m_p, m_ap);
             dg::blas1::axpby( -alpha, m_ap, 1., m_r);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
@@ -566,31 +569,36 @@ class MCG
             if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
             {
                 dg::blas2::symv(Minv, m_r, m_ap);
-                nrm2r_new = dg::blas1::dot( m_ap, m_r);
-                m_TH.values(i,2)   = -nrm2r_new/nrm2r_old/alpha;
-                m_TH.values(i,0)   = -1./alpha;
-                m_TH.values(i+1,1) = -m_TH.values(i,2);
-                m_TH.values(i,1)  -=  m_TH.values(i,0);
+                nrmzr_new = dg::blas1::dot( m_ap, m_r);
+                beta = nrmzr_new/nrmzr_old;
+                m_TH.values(i,2)   = -beta/alpha;
+                m_TH.values(i+1,0) = -1./alpha; //first value is outside matrix
+                m_TH.values(i,1)   =  1./alpha;
+                if (i>0) m_TH.values(i,1) -= m_TH.values(i-1,2);
+
                 set_iter(i+1);
                 break;
             }
             dg::blas2::symv(Minv, m_r, m_ap);
-            nrm2r_new = dg::blas1::dot( m_ap, m_r);
-            dg::blas1::axpby(1., m_ap, nrm2r_new/nrm2r_old, m_p );
-                       
-            m_TH.values(i,2)   = -nrm2r_new/nrm2r_old/alpha;
-            m_TH.values(i,0)   = -1./alpha;
-            m_TH.values(i+1,1) = -m_TH.values(i,2);
-            m_TH.values(i,1)  -=  m_TH.values(i,0);
-            nrm2r_old=nrm2r_new;
+            nrmzr_new = dg::blas1::dot( m_ap, m_r);
+            beta = nrmzr_new/nrmzr_old;
+            dg::blas1::axpby(1., m_ap, nrmzr_new/nrmzr_old, m_p );
+            m_TH.values(i,2)   = -beta/alpha;
+            m_TH.values(i+1,0) = -1./alpha;
+            m_TH.values(i,1)   =  1./alpha;
+            if (i>0) m_TH.values(i,1) -= m_TH.values(i-1,2);
+            nrmzr_old=nrmzr_new;
         }
+//         m_TH.values(get_iter()-1,2) =0.; //outside matrix
+        
+        
         //Compute inverse of tridiagonal matrix
         if (compute_x == true)
         {
             HVec e1H(get_iter(), 0.), yH(e1H);
             e1H[0] = 1.;
             dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> invtridiag(yH);
-            HCooMatrix TinvH = invtridiag(m_TH); //Compute on Host!
+            HCooMatrix TinvH = invtridiag(m_TH); //Compute on Host!            
             dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1   
             ContainerType y(get_iter(), 0.);
             dg::assign(yH, y); //transfer to device

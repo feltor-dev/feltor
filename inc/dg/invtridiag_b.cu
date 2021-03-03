@@ -16,12 +16,10 @@
 #include "lgmres.h"
 
 using value_type = double;
-// using memory_type = cusp::host_memory;
-// using Container = dg::HVec;
-using memory_type = cusp::device_memory;
-using Container = dg::DVec;
-using CooMatrix =  cusp::coo_matrix<int, value_type, memory_type>;
-using DiaMatrix =  cusp::dia_matrix<int, value_type, memory_type>;
+using memory_type = cusp::host_memory;
+using CooMatrix =  cusp::coo_matrix<int, double, memory_type>;
+using DiaMatrix =  cusp::dia_matrix<int, double, memory_type>;
+using Container = dg::HVec;
 int main()
 {
     dg::Timer t;
