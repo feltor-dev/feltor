@@ -39,14 +39,13 @@ struct DirectSqrtODESolve
      */
     DirectSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG, value_type epsTimerel, value_type epsTimeabs)
     { 
-        m_A = A;
         Container temp = dg::evaluate(dg::zero,g);
-        m_rhs.construct(A, temp, epsCG, true, true);
+        m_sqrtode.construct(A, temp, epsCG, true, true);
         m_epsTimerel = epsTimerel;
         m_epsTimeabs = epsTimeabs;
-        m_rhs.set_weights(m_A.weights());
-        m_rhs.set_inv_weights(m_A.inv_weights());
-        m_rhs.set_precond(m_A.precond());
+        m_sqrtode.set_weights(A.weights());
+        m_sqrtode.set_inv_weights(A.inv_weights());
+        m_sqrtode.set_precond(A.precond());
     }
     /**
      * @brief Compute \f$b \approx \sqrt{A} x  \f$ via sqrt ODE solve
@@ -61,7 +60,7 @@ struct DirectSqrtODESolve
         dg::Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        unsigned counter =  dg::integrateERK( "Dormand-Prince-7-4-5", m_rhs, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
+        unsigned counter =  dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtode, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "# b = sqrt(A) x took \t"<<t.diff()<<"s\n";
@@ -69,8 +68,7 @@ struct DirectSqrtODESolve
         return counter;
     }
   private:
-    dg::Helmholtz<Geometry,  Matrix, Container> m_A;
-    dg::SqrtODE<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_rhs;  
+    dg::SqrtODE<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_sqrtode;  
     value_type m_epsTimerel, m_epsTimeabs;
 };
 
@@ -100,13 +98,12 @@ struct DirectSqrtCauchySolve
     }
     void construct(const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG, unsigned iterCauchy)
     {
-        m_A = A;
         Container temp = dg::evaluate(dg::zero,g);
         m_iterCauchy = iterCauchy;
-        m_cauchysqrtint.construct(m_A, temp, epsCG, true, true);
-        m_cauchysqrtint.set_weights(m_A.weights());
-        m_cauchysqrtint.set_inv_weights(m_A.inv_weights());
-        m_cauchysqrtint.set_precond(m_A.precond());
+        m_cauchysqrtint.construct(A, temp, epsCG, true, true);
+        m_cauchysqrtint.set_weights(A.weights());
+        m_cauchysqrtint.set_inv_weights(A.inv_weights());
+        m_cauchysqrtint.set_precond(A.precond());
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1+1);
         m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
@@ -132,7 +129,6 @@ struct DirectSqrtCauchySolve
         return m_iterCauchy;
     }
   private:
-    dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_iterCauchy;
     dg::SqrtCauchyInt<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_cauchysqrtint;
     value_type m_EVmin,m_EVmax;
