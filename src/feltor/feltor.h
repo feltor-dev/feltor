@@ -125,7 +125,6 @@ struct Explicit
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }
-    const Container& detg() const { return m_detg;}
     //volume with dG weights
     const Container& vol3d() const { return m_lapperpN.weights();}
     const Container& weights() const { return m_lapperpN.weights();}
@@ -144,7 +143,7 @@ struct Explicit
         dg::blas2::gemv( m_lapperpU, m_apar, m_temp1);
         return m_temp1;
     }
-    /////////////////////////DIAGNOSTICS END////////////////////////////////
+    /// //////////////////////DIAGNOSTICS END////////////////////////////////
     void compute_diffusive_lapMperpN( const Container& density, Container& temp0, Container& result ){
         // compute the negative diffusion contribution -Lambda N
         // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
@@ -222,7 +221,6 @@ struct Explicit
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
     Container m_source, m_profne, m_forcing, m_U_sheath, m_masked;
-    Container m_detg;
 
     Container m_apar;
     std::array<Container,2> m_phi;
@@ -341,10 +339,10 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
-    m_detg = dg::tensor::volume( metric);
-    dg::blas1::pointwiseDivide( m_binv, m_detg, m_temp0); //1/B/m_detg
+    Container detg = dg::tensor::volume( metric);
+    dg::blas1::pointwiseDivide( m_binv, detg, m_temp0); //1/B/detg
     for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/m_detg/B
+        dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
     m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
     m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
