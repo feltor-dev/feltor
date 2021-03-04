@@ -102,7 +102,7 @@ Asela<Grid, Matrix, Container>::Asela( const Grid& g, Parameters p):
     for( unsigned u=0; u<3; u++)
     {
         m_multi_pol[u].construct(      m_multigrid.grid(u), dg::not_normed, dg::centered, m_p.jfactor);
-        m_multi_maxwell[u].construct(  m_multigrid.grid(u), 1., dg::centered);
+        m_multi_maxwell[u].construct(  m_multigrid.grid(u), -1., dg::centered);
         m_multi_invgamma[u].construct( m_multigrid.grid(u), -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
     }
 }
