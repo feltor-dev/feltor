@@ -118,7 +118,7 @@ The initial conditions are set in the file \texttt{feltor/src/reco2D/init.h}.
 
 We initialize
 \begin{align}
- \Ni&=\ne=\neref \\
+ \Ni&=\ne=1 \\
  \phi &= 0 \\
   \Ui&=0 \\
   \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
@@ -127,7 +127,7 @@ where we can choose $A_\parallel$.
 \subsection{Harris sheet}
 The initial parallel magnetic vector potential is
 \begin{align}
-    \Apar =\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 m_y\pi y/L_y)}\right) \cos( \pi x /L_x)
+    \Apar =\beta\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 m_y\pi y/L_y)}\right) \cos( \pi x /L_x)
 \end{align}
 The harris sheet initial condition can be chosen with the following parameters in the input file
 \begin{longtable}{llll}
@@ -135,15 +135,16 @@ The harris sheet initial condition can be chosen with the following parameters i
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & harris & This choice necessitates the following parameters \\
-\qquad amplitude0  & float &  1e-5    &  harris amplitude \\
+\qquad amplitude0  & float &  0.1     &  harris amplitude \\
 \qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
 \qquad my          & float &  1       &  perturbation wave number in y\\
 \bottomrule
 \end{longtable}
+We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
 \subsection{Island}
 The initial parallel magnetic vector potential is
 \begin{align}
-    \Apar =\left[ \frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2m_y \pi y/L_y)}\right] \cos( \pi x /L_x)
+    \Apar =\beta \left[ A_0\frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2m_y \pi y/L_y)}\right] \cos( \pi x /L_x)
 \end{align}
 with $\varepsilon = 0.2$.
 The island initial condition can be chosen with the following parameters in the input file
@@ -152,10 +153,12 @@ The island initial condition can be chosen with the following parameters in the 
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & island & This choice necessitates the following parameters \\
+\qquad amplitude0  & float &  0.1     &  island amplitude \\
 \qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
 \qquad my          & float &  1       &  perturbation wave number in y\\
 \bottomrule
 \end{longtable}
+We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
 
 \section{Invariants}
 The mass density and diffusions are

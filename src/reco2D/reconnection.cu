@@ -293,7 +293,7 @@ int main( int argc, char* argv[])
             dg::blas2::gemv( projection, resultH, transferH);
             dg::file::put_vara_double( ncid, id3d.at(record.name), start,
                     grid_out, transferH);
-            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name),
+            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"),
                     &start, &count, &result);
         }
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
@@ -331,7 +331,7 @@ int main( int argc, char* argv[])
                 dg::assign( resultD, resultH);
                 dg::blas2::gemv( projection, resultH, transferH);
                 dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
-                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
+                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
             }
             DG_RANK0 err = nc_close( ncid);
             ti.toc();
