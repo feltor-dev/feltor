@@ -73,8 +73,6 @@ struct Explicit
     void gamma1_y( const container& y, container& yp)
     {
         if (equations == "ff-O2") {
-//             dg::blas1::scal(yp, 0.0);
-//             sqrtinvert(yp, y); //TODO produces wrong solution - origin of bug?
 //             via two step approach
             sqrtsolve(y, m_iota);
             std::vector<unsigned> number = multigrid.direct_solve( m_multi_g0, yp, m_iota, eps_gamma);
@@ -223,7 +221,6 @@ struct Explicit
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > m_multi_g1, m_multi_g0;
     
     dg::KrylovSqrtCauchySolve< Geometry, Matrix, container> sqrtsolve;
-    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, container> sqrtinvert;
     
     dg::Advection<Geometry, Matrix, container> m_adv;
     
@@ -232,7 +229,6 @@ struct Explicit
     std::vector<container> m_multi_chi, m_multi_iota;
     
     Matrix m_centered[2];
- 
     
     const container w2d,m_v2d, one;
     const std::vector<double> eps_pol;
@@ -241,8 +237,6 @@ struct Explicit
     const std::string equations;
 
     double mass_, energy_, diff_, ediff_;
-
-
 };
 
 template< class Geometry, class M, class container>
@@ -277,7 +271,6 @@ Explicit< Geometry, M,  container>::Explicit( const Geometry& grid, const Parame
         if( equations == "ff-O2" ) {
             m_multi_g1[u].construct( multigrid.grid(u), -p.tau, dg::centered, p.jfactor);
             sqrtsolve.construct( m_multi_g1[0], grid, m_chi,  p.eps_time, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma);
-            sqrtinvert.construct(m_multi_g1[0], grid, m_chi,  p.eps_time, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma);
         }
         else {
             m_multi_g1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered, p.jfactor);

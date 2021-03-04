@@ -258,7 +258,7 @@ Ny\_out & integer &100& - &\# grid points in y in output fields \\
 itstp  & integer &2  & - &   steps between outputs \\
 maxout & integer &100& - &      \# outputs excluding first \\
 eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
-eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
+eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (should be slightly smaller than eps\_pol) \\
 eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
 curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
 tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\

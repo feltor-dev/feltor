@@ -183,6 +183,16 @@ struct KrylovSqrtODESolve
         m_TH.diagonal_offsets[2] =  1;
         m_sqrtodeH.construct(m_TH, m_e1H, epsCG, true, false);
         m_lanczos.construct(copyable, max_iterations);
+        m_EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0); //EVs of Helmholtz
+        value_type max_weights =   dg::blas1::reduce(m_A.weights(), 0., dg::AbsMax<double>() );
+        value_type min_weights =  -dg::blas1::reduce(m_A.weights(), max_weights, dg::AbsMin<double>() );
+        m_kappa = sqrt(max_weights/min_weights); //condition number 
+#ifdef DG_DEBUG
+        std::cout << "min(EV) = "<<m_EVmin <<"\n";
+        std::cout << "min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
+        std::cout << "kappa   = "<<m_kappa <<"\n";
+        std::cout << "res_fac = "<<m_kappa*sqrt(m_EVmin)<< "\n";
+#endif //DG_DEBUG
     }
     /**
      * @brief Compute \f$b \approx \sqrt{A} x \approx  ||x||_M V \sqrt{T} e_1\f$ via sqrt ODE solve.
@@ -205,7 +215,7 @@ struct KrylovSqrtODESolve
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_TH  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps, false); 
+        m_TH  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps, false, m_kappa*sqrt(m_EVmin)); 
         m_e1H.resize(m_lanczos.get_iter(), 0.);
         m_e1H[0] = 1.;
         m_yH.resize( m_lanczos.get_iter());
@@ -235,7 +245,7 @@ struct KrylovSqrtODESolve
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
-    value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps;
+    value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps, m_EVmin, m_kappa;
     HVec m_e1H, m_yH;
     Container m_y;
     dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;  
@@ -292,8 +302,14 @@ struct KrylovSqrtCauchySolve
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0); //EVs of Helmholtz
         m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); //EVs of Helmholtz
+        value_type max_weights =   dg::blas1::reduce(m_A.weights(), 0., dg::AbsMax<double>() );
+        value_type min_weights =  -dg::blas1::reduce(m_A.weights(), max_weights, dg::AbsMin<double>() );
+        m_kappa = sqrt(max_weights/min_weights); //condition number 
 #ifdef DG_DEBUG
-        std::cout << "min EV = "<<m_EVmin <<"  max EV = "<<m_EVmax << "\n";
+        std::cout << "min(EV) = "<<m_EVmin <<"  max(EV) = "<<m_EVmax << "\n";
+        std::cout << "min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
+        std::cout << "kappa   = "<<m_kappa <<"\n";
+        std::cout << "res_fac = "<<m_kappa*sqrt(m_EVmin)<< "\n";
 #endif //DG_DEBUG
     }
     /**
@@ -318,7 +334,8 @@ struct KrylovSqrtCauchySolve
             dg::blas1::copy( x,b);
             return 0;
         }
-        m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false); 
+        
+        m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin)); 
         //TODO for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
         m_e1H.resize(m_lanczos.get_iter(), 0.);
         m_e1H[0] = 1.;
@@ -347,7 +364,7 @@ struct KrylovSqrtCauchySolve
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter, m_iterCauchy;
-    value_type m_eps, m_EVmin, m_EVmax;
+    value_type m_eps, m_EVmin, m_EVmax, m_kappa;
     HVec m_e1H, m_yH;
     Container m_y;
     HDiaMatrix m_TH; 

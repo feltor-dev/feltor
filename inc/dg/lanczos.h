@@ -270,13 +270,14 @@ class Lanczos
      * @param b The right hand side vector
      * @param eps accuracy of residual
      * @param compute_b Specify if \f$b = || x ||_2 V T e_1 \f$ should be computed or if only T should be computed
+     * @param res_fac factor that is multiplied to the norm of the residual. Used to account for specific matrix function and operator in the convergence criterium
      * 
      * @return returns the tridiagonal matrix T. Note that  \f$ T = V^T A V \f$.
      * 
      * @note So far only ordinary convergence criterium (residuum) of Lanczos method is used, in particular for \f$ A x  = b \f$. If used for matrix function computation \f$ f( A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    HDiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b, value_type eps, bool compute_b = false)
+    HDiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b, value_type eps, bool compute_b = false, value_type res_fac = 1.)
     {
         value_type xnorm = sqrt(dg::blas1::dot(x, x));
         value_type residual;
@@ -311,7 +312,7 @@ class Lanczos
 #ifdef DG_DEBUG
             std::cout << "# ||r||_2 =  " << residual << " at i = " << i << "\n";
 #endif //DG_DEBUG
-            if (residual< eps ) {
+            if (res_fac*residual< eps ) {
                 set_iter(i+1); 
                 break;
             }
@@ -338,13 +339,14 @@ class Lanczos
      * @param M the weights 
      * @param eps accuracy of residual
      * @param compute_b Specify if \f$b = || x ||_M  V T e_1 \f$ should be computed or if only T should be computed
+     * @param res_fac factor that is multiplied to the norm of the residual. Used to account for specific matrix function and operator in the convergence criterium
      * 
      * @return returns the tridiagonal matrix T. Note that  \[f T = V^T A V \f$
      * 
      * @note So far only ordinary convergence criterium (residuum) of Lanczos method is used, in particular for \f$ M^{-1} A x  = b \f$. If used for matrix function computation \f$ f(M^{-1} A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    HDiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& Minv, SquareNorm2& M,  value_type eps, bool compute_b = false)
+    HDiaMatrix operator()( MatrixType& A, const ContainerType0& x, ContainerType1& b,  SquareNorm1& Minv, SquareNorm2& M,  value_type eps, bool compute_b = false, value_type res_fac = 1.)
     {
         value_type xnorm = sqrt(dg::blas2::dot(x, M, x));
         value_type residual;
@@ -384,7 +386,7 @@ class Lanczos
 #ifdef DG_DEBUG
             std::cout << "# ||r||_M =  " << residual << "  at i = " << i << "\n";
 #endif //DG_DEBUG
-            if (residual< eps ) {
+            if (res_fac*residual < eps ) {
                 set_iter(i+1); 
                 break;
             }
@@ -508,6 +510,8 @@ class MCG
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * @param compute_x Specify if \f$x = R T^{-1} e_1 \f$ should be computed or if only T should be computed 
+     * @param res_fac factor that is multiplied to the norm of the residual. Used to account for specific matrix function and operator in the convergence criterium
+     * 
      * @return Number of iterations used to achieve desired precision
      * @note So far only ordinary convergence criterium of CG method, in particular for \f$ M^{-1} A x  = b \f$. If used for matrix function computation \f$ f(M^{-1} A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium. 
      * Note that the method is similar to the PCG method with  preconditioner \f$P = M^{-1} \f$. The Matrix R and T of the tridiagonalization are further used for computing matrix functions. The x vector must be initialized with 0 if used for tridiagonalization.
@@ -515,7 +519,7 @@ class MCG
      * 
       */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm1, class SquareNorm2>
-    HDiaMatrix operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, SquareNorm1& Minv, SquareNorm2& M, value_type eps = 1e-12, value_type nrmb_correction = 1, bool compute_x = false)
+    HDiaMatrix operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, SquareNorm1& Minv, SquareNorm2& M, value_type eps = 1e-12, value_type nrmb_correction = 1, bool compute_x = false, value_type res_fac = 1.)
     {
         value_type nrmb = sqrt( dg::blas2::dot( M, b));
 #ifdef DG_DEBUG
@@ -538,7 +542,7 @@ class MCG
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
         
-        if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO replace with appropriate criterium
+        if( res_fac*sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
         {
             set_iter(1);
             return m_TH;
@@ -563,7 +567,7 @@ class MCG
                 std::cout << "# (Relative "<<sqrt( dg::blas2::dot(M, m_r) )/nrmb << ")\n";
             }
 #endif //DG_DEBUG
-            if( sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) //TODO change this criterium  for square root matrix
+            if( res_fac*sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
             {
                 dg::blas2::symv(Minv, m_r, m_ap);
                 nrmzr_new = dg::blas1::dot( m_ap, m_r);
@@ -578,7 +582,7 @@ class MCG
             dg::blas2::symv(Minv, m_r, m_ap);
             nrmzr_new = dg::blas1::dot( m_ap, m_r);
             beta = nrmzr_new/nrmzr_old;
-            dg::blas1::axpby(1., m_ap, nrmzr_new/nrmzr_old, m_p );
+            dg::blas1::axpby(1., m_ap, beta, m_p );
             m_TH.values(i,2)   = -beta/alpha;
             m_TH.values(i,1)   =  1./alpha;
             if (i!= m_max_iter -1) m_TH.values(i+1,0) = -m_TH.values(i,1);

@@ -209,7 +209,7 @@ struct SqrtCauchyInt
         m_number = 0;
         m_op.construct(m_A, m_helper, m_multiply_weights);
         if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size);
-        else m_lgmres.construct( m_helper, 30, 10, 10*m_size*m_size);
+        else m_lgmres.construct( m_helper, 300, 100, 10*m_size*m_size);
         m_temp_ex.set_max(1, copyable);
     }
     /**
@@ -222,7 +222,7 @@ struct SqrtCauchyInt
         m_temp.resize(new_max);
         m_helper3.resize(new_max);
         if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max);
-        else m_lgmres.construct( m_helper, 30, 10, 10*new_max*new_max);
+        else m_lgmres.construct( m_helper, 300, 100, 10*new_max*new_max);
         m_op.new_size(new_max);
         m_temp_ex.set_max(1, m_temp);
         m_size = new_max;
