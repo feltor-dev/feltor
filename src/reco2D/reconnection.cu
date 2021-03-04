@@ -116,10 +116,37 @@ int main( int argc, char* argv[])
         return -1;
     }
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
-    std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "TVB-3-3").asString();
-    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep( tableau, y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
+    dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
+    double rtol = 0., atol = 0., dt = 0.;
+
     unsigned step = 0;
-    multistep.init( asela, time, y0, p.dt);
+    if( p.timestepper == "multistep")
+    {
+        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "TVB-3-3").asString();
+        multistep.construct( tableau, y0);
+        dt = dg::file::get( mode, js, "timestepper", "dt", 20).asDouble();
+        multistep.init( asela, time, y0, dt);
+    }
+    else if (p.timestepper == "adaptive")
+    {
+        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "Tsitouras09-7-4-5").asString();
+        adapt.construct( tableau, y0);
+        rtol = dg::file::get( mode, js, "timestepper", "rtol", 1e-7).asDouble();
+        atol = dg::file::get( mode, js, "timestepper", "rtol", 1e-10).asDouble();
+        dt = 1e-3; //that should be a small enough initial guess
+    }
+    else
+    {
+        DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
+#ifdef ASELA_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //ASELA_MPI
+        return -1;
+    }
+
+
+
     DG_RANK0 std::cout << "Done!\n";
 
 
@@ -188,7 +215,11 @@ int main( int argc, char* argv[])
             ti.tic();
             for( unsigned i=0; i<itstp; i++)
             {
-                try{ multistep.step( asela, time, y0);}
+                try{
+                if( p.timestepper == "adaptive")
+                    adapt.step( asela, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                if( p.timestepper == "multistep")
+                    multistep.step( asela, time, y0);}
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                     std::cerr << "Does Simulation respect CFL condition?\n";

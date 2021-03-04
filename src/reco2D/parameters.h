@@ -12,7 +12,6 @@ struct Parameters
     unsigned Nx; //!< \# of cells in x -direction
     unsigned Ny; //!< \# of cells in y -direction
 
-    double dt;  //!< timestep
     double lxhalf, lyhalf;
     unsigned stages;
     std::vector<double> eps_pol;  //!< accuracy of polarization
@@ -20,7 +19,7 @@ struct Parameters
     double eps_maxwell; //!< accuracy of induction equation
     double eps_gamma; //!< accuracy of gamma operator
     std::string direction_diff, direction_ell;
-    std::string advection;
+    std::string advection, timestepper;
 
     double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
     double tau[2]; //!< tau[0] = -1, tau[1] = tau_i
@@ -35,7 +34,7 @@ struct Parameters
         lxhalf  = dg::file::get( mode, js, "grid", "lxhalf", 80).asDouble();
         lyhalf  = dg::file::get( mode, js, "grid", "lyhalf", 80).asDouble();
 
-        dt      = dg::file::get( mode, js, "timestepper", "dt", 20).asDouble();
+        timestepper = dg::file::get( mode, js, "timestepper", "type", "multistep").asString();
 
         advection = dg::file::get( mode, js, "advection", "type", "arakawa").asString();
 

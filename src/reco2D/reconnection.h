@@ -76,7 +76,7 @@ Asela<Grid, Matrix, Container>::Asela( const Grid& g, Parameters p):
     m_dyC ( dg::create::dy( g, dg::centered)),
     m_arakawa(g, g.bcx(), g.bcy()),
     //////////the elliptic and Helmholtz operators//////////////////////////
-    m_lapMperp ( g, dg::normed, dg::centered),
+    m_lapMperp ( g, dg::normed, dg::str2direction(p.direction_diff)),
     m_multigrid( g, 3),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( 2, dg::evaluate( dg::zero, g)),
@@ -101,9 +101,9 @@ Asela<Grid, Matrix, Container>::Asela( const Grid& g, Parameters p):
     m_multi_invgamma.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        m_multi_pol[u].construct(      m_multigrid.grid(u), dg::not_normed, dg::centered, m_p.jfactor);
-        m_multi_maxwell[u].construct(  m_multigrid.grid(u), -1., dg::centered);
-        m_multi_invgamma[u].construct( m_multigrid.grid(u), -0.5*m_p.tau[1]*m_p.mu[1], dg::centered);
+        m_multi_pol[u].construct(      m_multigrid.grid(u), dg::not_normed, dg::str2direction(m_p.direction_ell), m_p.jfactor);
+        m_multi_maxwell[u].construct(  m_multigrid.grid(u), -1., dg::str2direction(m_p.direction_ell));
+        m_multi_invgamma[u].construct( m_multigrid.grid(u), -0.5*m_p.tau[1]*m_p.mu[1], dg::str2direction(m_p.direction_ell));
     }
 }
 

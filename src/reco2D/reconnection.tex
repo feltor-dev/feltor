@@ -47,7 +47,7 @@ axis on the command line.
 
 \section{Equations}
 %tearing instability <-> reconnection
-Collisionless reconnection was studied in~\cite{stanier15}, gyro-fluid and gyro-kinetic studies~\cite{comisso13,zacharias14}. drift fluid-kinetic model~\cite{loureiro13}.
+Collisionless reconnection was studied in~\cite{Stanier2015}, gyro-fluid and gyro-kinetic studies~\cite{Comisso2013,Zacharias2014}.
 Our reduced model is based on a recent formulation of a full-F gyro-fluid model~\cite{Madsen2013}.
 It consists of the first two moment equations for electrons and ions
 \begin{align}
@@ -192,8 +192,8 @@ The energy diffusion is
 \end{align}
 
 \section{Reconnection rate}
- A consistent definition of the reconnection rate is not trivial~\cite{comisso16}.
- We adopt a similar definiton as in Ref.~\cite{comisso13}
+ A consistent definition of the reconnection rate is not trivial~\cite{Comisso2016}.
+ We adopt a similar definiton as in Ref.~\cite{Comisso2013}
 \begin{align}
  Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
  \gamma&:= \frac{\d \ln{(Q_X)}}{\d t}
@@ -217,14 +217,26 @@ grid & dict & & \\
 \bottomrule
 \end{longtable}
 \subsection{Timestepper}
-The time stepper is an explicit multistep method where you can chose the
+The time stepper can be an explicit multistep method where you can chose the
 tableau to use
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 timestepper & dict & & \\
+\qquad type     & string & multistep & Choose an explicit multistep method \\
 \qquad tableau  & string & TVB-3-3  & The multistep tableau \\
 \qquad dt & float & 20 & The timestep \\
+\bottomrule
+\end{longtable}
+The second option is an adaptive explicit embedded Runge-Kutta scheme
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+timestepper & dict & & \\
+\qquad type     & string & adaptive & Choose an explicit adaptive RK scheme \\
+\qquad tableau  & string & Tsitouras09-7-4-5  & The embedded RK tableau \\
+\qquad rtol & float & 1e-7 & The relative tolerance in the timestep \\
+\qquad atol & float & 1e-10 & The absolute tolerance in the timestep \\
 \bottomrule
 \end{longtable}
 \subsection{Advection scheme}
@@ -339,11 +351,6 @@ X\_1d            & Dataset & 1 (time) & 1d volume integrals $\int \dV X$ \\
 The output fields X are determined in the file \texttt{feltor/src/reco2D/diag.h}.
 
 %..................................................................
-\bibliography{../../doc/related_pages/references}
+\bibliography{../../doc/related_pages/references, references}
 %..................................................................
-
-
-
-%..................................................................
-\bibliography{../../doc/related_pages/references}
 \end{document}
