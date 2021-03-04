@@ -100,7 +100,7 @@ int main( int argc, char* argv[])
     );
     //create RHS
     MPI_OUT std::cout << "Creating explicit and implicit part..." <<std::endl;
-    poet::Explicit< Geometry, DMatrix, DDiaMatrix, DCooMatrix, DVec > ex( grid, p);
+    poet::Explicit< Geometry, DMatrix, DVec > ex( grid, p);
     MPI_OUT std::cout << "Created explicit" <<std::endl;
     poet::Implicit< Geometry, DMatrix, DVec > im( grid, p.nu);
     MPI_OUT std::cout << "Created implicit" <<std::endl;

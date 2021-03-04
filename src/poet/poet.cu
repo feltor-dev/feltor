@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS
-    poet::Explicit<dg::CartesianGrid2d, DMatrix, DDiaMatrix, DCooMatrix, DVec> ex( grid, p);
+    poet::Explicit<dg::CartesianGrid2d, DMatrix, DVec> ex( grid, p);
     poet::Implicit<dg::CartesianGrid2d, DMatrix, DVec> im( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
     std::vector<DVec> y0(2, dg::evaluate( dg::zero, grid)), y1(y0); // n_e' = gaussian

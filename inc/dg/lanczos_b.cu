@@ -20,12 +20,6 @@ double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
-using memory_type = cusp::device_memory;
-using SubContainer = dg::DVec;
-// using memory_type = cusp::host_memory;
-// using SubContainer = dg::HVec;
-using DiaMatrix = cusp::dia_matrix<int, double, memory_type>;
-using CooMatrix = cusp::coo_matrix<int, double, memory_type>;
 using HDiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
 using HCooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 

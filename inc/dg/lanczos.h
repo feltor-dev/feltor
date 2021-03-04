@@ -1,10 +1,9 @@
 #pragma once
 #include "blas.h"
 #include "functors.h"
-#include <cusp/print.h>
 #include "backend/timer.h"
-#include "lgmres.h"
-
+#include <cusp/dia_matrix.h>
+#include <cusp/coo_matrix.h>
 
 /**
 * @brief Classes for Krylov space approximations of a Matrix-Vector product
@@ -497,7 +496,6 @@ class MCG
             dg::blas1::axpby( 1./T.values(i+1,0), m_ap, 1., m_r);
             dg::blas2::symv(Minv, m_r, m_ap);
             dg::blas1::axpby(1., m_ap, T.values(i,2)/T.values(i+1,0), m_p );
-//             std::cout << T.values(i+1,0) << "   "<< T.values(i,1) << "   "<< T.values(i,2) << "\n";
         }
     }
     /**
@@ -572,10 +570,9 @@ class MCG
                 nrmzr_new = dg::blas1::dot( m_ap, m_r);
                 beta = nrmzr_new/nrmzr_old;
                 m_TH.values(i,2)   = -beta/alpha;
-                m_TH.values(i+1,0) = -1./alpha; //first value is outside matrix
                 m_TH.values(i,1)   =  1./alpha;
+                m_TH.values(i+1,0) = -m_TH.values(i,1); //first value is outside matrix
                 if (i>0) m_TH.values(i,1) -= m_TH.values(i-1,2);
-
                 set_iter(i+1);
                 break;
             }
@@ -584,13 +581,12 @@ class MCG
             beta = nrmzr_new/nrmzr_old;
             dg::blas1::axpby(1., m_ap, nrmzr_new/nrmzr_old, m_p );
             m_TH.values(i,2)   = -beta/alpha;
-            m_TH.values(i+1,0) = -1./alpha;
             m_TH.values(i,1)   =  1./alpha;
+            if (i!= m_max_iter -1) m_TH.values(i+1,0) = -m_TH.values(i,1);
             if (i>0) m_TH.values(i,1) -= m_TH.values(i-1,2);
             nrmzr_old=nrmzr_new;
+
         }
-//         m_TH.values(get_iter()-1,2) =0.; //outside matrix
-        
         
         //Compute inverse of tridiagonal matrix
         if (compute_x == true)

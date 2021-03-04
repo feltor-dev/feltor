@@ -39,7 +39,7 @@ struct Implicit
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
-template< class Geometry, class Matrix, class DiaMatrix, class CooMatrix, class container >
+template< class Geometry, class Matrix, class container >
 struct Explicit
 {
     /**
@@ -245,8 +245,8 @@ struct Explicit
 
 };
 
-template< class Geometry, class M, class DM, class CM, class container>
-Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const Parameters& p ):
+template< class Geometry, class M, class container>
+Explicit< Geometry, M,  container>::Explicit( const Geometry& grid, const Parameters& p ):
     m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_g_phi(m_chi),
     m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
     m_n_old(m_chi),    m_gamma_n_old(m_chi), m_phi_old(m_chi),    m_gamma_m_phi_old(m_chi),
@@ -286,8 +286,8 @@ Explicit< Geometry, M, DM, CM, container>::Explicit( const Geometry& grid, const
 
 }
 
-template< class G,  class M, class DM, class CM, class container>
-const container& Explicit<G,  M, DM, CM, container>::compute_psi( double t, const container& potential)
+template< class G,  class M, class container>
+const container& Explicit<G,  M,  container>::compute_psi( double t, const container& potential)
 {
     if( equations == "ff-O4" )
     {     
@@ -325,8 +325,8 @@ const container& Explicit<G,  M, DM, CM, container>::compute_psi( double t, cons
 }
 
 //computes and modifies expy!!
-template<class G,  class M, class DM, class CM, class container>
-const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, const std::vector<container>& y)
+template<class G,  class M,  class container>
+const container& Explicit<G,  M, container>::polarisation( double t, const std::vector<container>& y)
 {
     //Compute chi and m_iota for global models
     if( equations == "ff-lwl" || equations == "ff-O2" || equations == "ff-O4")
@@ -428,8 +428,8 @@ const container& Explicit<G,  M, DM, CM, container>::polarisation( double t, con
     return phi[0];
 }
 
-template< class G,  class M, class DM, class CM, class container>
-void Explicit<G,  M, DM, CM, container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
+template< class G,  class M,  class container>
+void Explicit<G,  M,  container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1 
