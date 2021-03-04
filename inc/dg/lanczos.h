@@ -301,11 +301,7 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             } 
-            dg::blas1::scal(m_vp, 1./betaip);  
-            m_wm = m_v; //swap instead? wim stands for vim here
-            m_v = m_vp;
             m_TH.values(i,2) = betaip;  // +1 diagonal
-
             m_invtridiagH.resize(i+1);
             m_TinvH = m_invtridiagH(m_TH);
             residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of TinvH
@@ -316,16 +312,16 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             }
-
+            dg::blas1::scal(m_vp, 1./betaip);  
+            m_wm = m_v; //swap instead? wim stands for vim here
+            m_v = m_vp;
         }
         if (compute_b == true)
         {
             HVec e1H(get_iter(), 0.), yH(e1H);
             e1H[0] = 1.;
             dg::blas2::symv (m_TH, e1H, yH); //y= T e_1
-            ContainerType y(get_iter(),0.);
-            dg::assign(yH, y);
-            norm2xVy(A, m_TH, y, b, x, xnorm, get_iter()); //b= |x| V T e_1 
+            norm2xVy(A, m_TH, yH, b, x, xnorm, get_iter()); //b= |x| V T e_1 
         }
         return m_TH;
     }
@@ -373,13 +369,7 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             } 
-            dg::blas1::scal(m_vp, 1./betaip);     
-            dg::blas1::scal(m_wp, 1./betaip);  
-            m_v  = m_vp;
-            m_wm = m_w;
-            m_w  = m_wp;
             m_TH.values(i,2) =  betaip;  // +1 diagonal
-
             m_invtridiagH.resize(i+1);
             m_TinvH = m_invtridiagH(m_TH); 
             residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of m_TinvH
@@ -390,15 +380,19 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             }
+            dg::blas1::scal(m_vp, 1./betaip);     
+            dg::blas1::scal(m_wp, 1./betaip);  
+            m_v  = m_vp;
+            m_wm = m_w;
+            m_w  = m_wp;
+            
         }
         if (compute_b == true)
         {
             HVec e1H(get_iter(), 0.), yH(e1H);
             e1H[0] = 1.;
             dg::blas2::symv (m_TH, e1H, yH); //y= T e_1
-            ContainerType y(get_iter(),0.);
-            dg::assign(yH, y); //transfer to device
-            normMxVy(A, m_TH, Minv, M, y, b, x, xnorm, get_iter()); //b= |x| V T e_1 
+            normMxVy(A, m_TH, Minv, M, yH, b, x, xnorm, get_iter()); //b= |x| V T e_1 
         }
         return m_TH;
     }

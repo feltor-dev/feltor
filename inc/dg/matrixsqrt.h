@@ -176,13 +176,13 @@ struct KrylovSqrtODESolve
         m_e1H.assign(max_iterations, 0.);
         m_e1H[0] = 1.;
         m_yH.assign(max_iterations, 1.);
-        m_y.assign(max_iterations, 1.);
         m_TH.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
         m_TH.diagonal_offsets[0] = -1;
         m_TH.diagonal_offsets[1] =  0;
         m_TH.diagonal_offsets[2] =  1;
         m_sqrtodeH.construct(m_TH, m_e1H, epsCG, true, false);
         m_lanczos.construct(copyable, max_iterations);
+        value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0); //EVs of Helmholtz
         value_type max_weights =   dg::blas1::reduce(m_A.weights(), 0., dg::AbsMax<double>() );
         value_type min_weights =  -dg::blas1::reduce(m_A.weights(), max_weights, dg::AbsMin<double>() );
@@ -225,8 +225,7 @@ struct KrylovSqrtODESolve
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
 
-        dg::assign(m_yH, m_y); //transfer to device
-        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
+        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -247,7 +246,6 @@ struct KrylovSqrtODESolve
     unsigned m_max_iter;
     value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps, m_EVmin, m_kappa;
     HVec m_e1H, m_yH;
-    Container m_y;
     dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;  
     dg::Lanczos< Container > m_lanczos;
     HDiaMatrix m_TH; 
@@ -292,7 +290,6 @@ struct KrylovSqrtCauchySolve
         m_e1H.assign(max_iterations, 0.);
         m_e1H[0] = 1.;
         m_yH.assign(max_iterations, 1.);
-        m_y.assign(max_iterations, 1.);
         m_TH.resize(max_iterations, max_iterations, 3*max_iterations-2, 3);
         m_TH.diagonal_offsets[0] = -1;
         m_TH.diagonal_offsets[1] =  0;
@@ -344,8 +341,7 @@ struct KrylovSqrtCauchySolve
         m_cauchysqrtH.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
         m_cauchysqrtH.set_A(m_TH);         //set T in cauchy
         m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
-        dg::assign(m_yH, m_y);
-        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_y,  b, x, xnorm, m_lanczos.get_iter());
+        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, m_lanczos.get_iter());
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -366,7 +362,6 @@ struct KrylovSqrtCauchySolve
     unsigned m_max_iter, m_iterCauchy;
     value_type m_eps, m_EVmin, m_EVmax, m_kappa;
     HVec m_e1H, m_yH;
-    Container m_y;
     HDiaMatrix m_TH; 
     dg::SqrtCauchyInt<HDiaMatrix, HVec> m_cauchysqrtH;  
     dg::Lanczos< Container> m_lanczos;
@@ -417,7 +412,6 @@ class KrylovSqrtODEinvert
         m_e1H.assign(max_iterations, 0.);
         m_e1H[0] = 1.;
         m_yH.assign(max_iterations, 1.);
-        m_y.assign(max_iterations, 1.);
         m_TinvH.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_sqrtodeH.construct(m_TinvH, m_e1H, epsCG, false, false);
         m_mcg.construct(copyable, max_iterations);
@@ -467,8 +461,7 @@ class KrylovSqrtODEinvert
 
         //could be replaced by Cauchy sqrt solve
         unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-        dg::assign(m_yH, m_y); //transfer to device
-        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
+        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations and " << time_iter << " time iterations took "<<t.diff()<<"s\n";
@@ -480,7 +473,7 @@ class KrylovSqrtODEinvert
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter;
     value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps;
-    Container m_b, m_y;
+    Container m_b;
     HVec m_e1H, m_yH;
     dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;  
     dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;
@@ -534,7 +527,6 @@ class KrylovSqrtCauchyinvert
         m_e1H.assign(max_iterations, 0.);
         m_e1H[0] = 1.;
         m_yH.assign(max_iterations, 1.);
-        m_y.assign(max_iterations, 1.);
         m_TinvH.resize(copyable.size(), max_iterations, max_iterations*copyable.size());
         m_cauchysqrtH.construct(m_TinvH, m_e1H, epsCG, false, false);
         m_mcg.construct(copyable, max_iterations);
@@ -589,8 +581,7 @@ class KrylovSqrtCauchyinvert
         m_cauchysqrtH.set_A(m_TinvH);
         
         m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated
-        dg::assign(m_yH, m_y);
-        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_y, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1  
+        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1  
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations took "<<t.diff()<<"s\n";
@@ -602,7 +593,7 @@ class KrylovSqrtCauchyinvert
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
     unsigned m_max_iter, m_iterCauchy;
     value_type m_epsCG,  m_eps, m_EVmin, m_EVmax;
-    Container m_b, m_y;
+    Container m_b;
     HVec m_e1H, m_yH;
     dg::SqrtCauchyInt<HDiaMatrix, HVec> m_cauchysqrtH; 
     dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> m_invtridiagH;

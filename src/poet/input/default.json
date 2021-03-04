@@ -24,7 +24,7 @@
     "tau"  : 4.0,        
     "nu_perp"  :1e-3, 
     "init": "blob",
-    "amplitude"  :0.1,
+    "amplitude"  :1.,
     "sigma"  : 5,     
     "posX"  : 0.5,     
     "posY"  : 0.5    

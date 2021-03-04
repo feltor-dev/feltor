@@ -38,7 +38,7 @@ int main()
     const Container w2d = dg::create::weights( grid);
     const Container v2d = dg::create::inv_weights( grid);
         
-    Container x = dg::evaluate( lhs, grid), b(x), zero(x), one(x), bsymv(x), error(x),  helper(x), xexac(x);
+    Container x = dg::evaluate( lhs, grid), b(x), zero(x), one(x), error(x),  helper(x), xexac(x);
     Container bexac = dg::evaluate( rhs, grid);
     dg::blas1::scal(zero, 0.0);
     one = dg::evaluate(dg::one, grid);
@@ -58,9 +58,6 @@ int main()
         dg::blas2::symv( v2d, b, b);     //normalize
         t.toc();
         
-        //Compute error with method 1
-        dg::blas2::symv( A, x, helper);
-        dg::blas2::symv( v2d, helper, bsymv); //normalize operator
         std::cout << "iterations: "<< lanczos.get_iter() << "\n";
         std::cout << "time: "<< t.diff()<<"s \n";
         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
@@ -69,13 +66,9 @@ int main()
 
         std::cout << "\n# Computing with M-Lanczos method \n";
         x = dg::evaluate( lhs, grid);
-        dg::blas2::symv( A, x, helper);
-        dg::blas2::symv( v2d, helper, bsymv); //normalize operator
-        bexac = dg::evaluate( rhs, grid);
         t.tic();
         T = lanczos(A, x, b, v2d, w2d, eps, true); 
         t.toc();
-        //Compute error with Method 1
         std::cout << "iterations: "<< lanczos.get_iter() << "\n";
         std::cout << "time: "<< t.diff()<<"s \n";
         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
