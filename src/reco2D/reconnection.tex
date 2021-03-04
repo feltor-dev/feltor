@@ -8,6 +8,7 @@
 \newcommand{\ue}{\ensuremath{u_\parallel}}
 \newcommand{\Ui}{\ensuremath{U_\parallel}}
 \newcommand{\Apar}{\ensuremath{A_\parallel}}
+\newcommand{\bperp}{\ensuremath{ \vec b_\perp}}
 \newcommand{\neref}{\ensuremath{n_0}}
 \newcommand{\Teref}{\ensuremath{T_{e0}}} %\rhoN
 
@@ -78,9 +79,10 @@ It consists of the first two moment equations for electrons and ions
 \end{align}
 which are coupled by polarisation and induction
 \begin{align}
- \ne - \Gamma_1 \Ni &= \vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
- \frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  \ne \ue - \Gamma_1 (\Ni \Ui)
+ -\ne + \Gamma_1 \Ni &= -\vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
+ -\frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  -\ne \ue + \Gamma_1 (\Ni \Ui)
 \end{align}
+where the signs are such that the elliptic operators are positive definite and
 with gyro-averaged parallel electromagnetic vector potential, generalized electric potential and gyro-averaging operator
 \begin{align}
  \psi &:= \Gamma_1 \phi - u_E^2 /2  \\
@@ -238,6 +240,36 @@ advection & dict & & \\
 \qquad type & string & upwind  & The upwind scheme \\
 \bottomrule
 \end{longtable}
+For the upwind scheme we first rewrite the equations in terms of
+$\vec u_E := \zhat \times \nabla\phi = [-\partial_y \phi,\ \partial_x \phi]$ and
+$\bperp := \nabla \Apar \times \zhat = [\partial_y \Apar,\ -\partial_x \Apar]$. We use
+that $\nc \vec u_E = \nc \bperp =0$
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+- ( \vec u_E + \ue \bperp)\cn \ne - \ne \bperp \cn  \ue
+-\nu_\perp \Delta_\perp^2\ne
+\\
+%%%
+\frac{\partial}{\partial t} \Ni =&
+- ( \vec u_E^i + \Ui \bperp^i)\cn \Ni - \Ni \bperp^i\cn  \Ui
+-\nu_\perp \Delta_\perp^2\Ni
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+-  (\vec u_E + \ue \bperp ) \cn \ue
++ \frac{1}{\mu_e} \bperp \cn \ln \ne
+- \frac{1}{\mu_e} \bperp \cn \phi
+    -\nu_\perp \Delta_\perp^2\ue
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+    - (\vec u_E^i + \Ui \bperp^i ) \cn \Ui
+    - \tau_i \bperp^i \cn \ln \Ni
+    - \bperp^i \cn \psi
+    - \nu_\perp \Delta_\perp^2\Ui
+\end{align}
+where the $i$ index signifies that $\vec u_E$ respectively $\bperp$ are to
+be evaluated using the ion potentials $\psi$ and $\Apar$.
 \subsection{Regularization}
 In order to prevent shocks and regularize the advection scheme
 we implement an artificial viscosity of order 2.

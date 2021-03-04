@@ -203,23 +203,94 @@ void Asela<Geometry, Matrix, Container>::compute_apar(
 template<class G, class M, class Container>
 void Asela<G, M, Container>::compute_perp( double time, const std::array<std::array<Container,2>,2>& y, std::array<std::array<Container,2>,2>& yp)
 {
-    //Compute using Arakawa brackets
-    for( unsigned i=0; i<2; i++)
+    if( m_p.advection == "arakawa")
     {
-        //ExB dynamics
-        m_arakawa( y[0][i], m_phi[i], yp[0][i]);                 //[N,phi]_RZ
-        m_arakawa( y[1][i], m_phi[i], yp[1][i]);                 //[w,phi]_RZ
+        //Compute using Arakawa brackets
+        for( unsigned i=0; i<2; i++)
+        {
+            //ExB dynamics
+            m_arakawa( y[0][i], m_phi[i], yp[0][i]);                 //[N,phi]_RZ
+            m_arakawa( y[1][i], m_phi[i], yp[1][i]);                 //[w,phi]_RZ
 
-        // Density equation
-        dg::blas1::pointwiseDot( 1., m_n[i], m_u[i], 0., m_temp0);
-        m_arakawa( 1., m_apar[i], m_temp0,   1., yp[0][i]); // [Apar, UN]_RZ
+            // Density equation
+            dg::blas1::pointwiseDot( 1., m_n[i], m_u[i], 0., m_temp0);
+            m_arakawa( 1., m_apar[i], m_temp0,   1., yp[0][i]); // [Apar, UN]_RZ
 
-        // Velocity Equation
-        dg::blas1::transform( m_n[i], m_temp0, dg::LN<double>());
-        m_arakawa( m_p.tau[i]/m_p.mu[i], m_apar[i], m_temp0, 1., yp[1][i]);  // + tau/mu [Apar,logN]_RZ
-        dg::blas1::pointwiseDot( 1., m_u[i], m_u[i], 0., m_temp0);
-        m_arakawa( 0.5, m_apar[i], m_temp0,   1., yp[1][i]);                       // +0.5[Apar,U^2]_RZ
+            // Velocity Equation
+            dg::blas1::transform( m_n[i], m_temp0, dg::LN<double>());
+            m_arakawa( m_p.tau[i]/m_p.mu[i], m_apar[i], m_temp0, 1., yp[1][i]);  // + tau/mu [Apar,logN]_RZ
+            dg::blas1::pointwiseDot( 1., m_u[i], m_u[i], 0., m_temp0);
+            m_arakawa( 0.5, m_apar[i], m_temp0,   1., yp[1][i]);                       // +0.5[Apar,U^2]_RZ
+        }
     }
+    else if ( m_p.advection == "upwind")
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            //First compute forward and backward derivatives for upwind scheme
+            dg::blas2::symv( m_dxF, y[0][i], m_dFN[i][0]);
+            dg::blas2::symv( m_dyF, y[0][i], m_dFN[i][1]);
+            dg::blas2::symv( m_dxB, y[0][i], m_dBN[i][0]);
+            dg::blas2::symv( m_dyB, y[0][i], m_dBN[i][1]);
+            dg::blas2::symv( m_dxF, m_u[i], m_dFU[i][0]);
+            dg::blas2::symv( m_dyF, m_u[i], m_dFU[i][1]);
+            dg::blas2::symv( m_dxB, m_u[i], m_dBU[i][0]);
+            dg::blas2::symv( m_dyB, m_u[i], m_dBU[i][1]);
+            double mu = m_p.mu[i], tau = m_p.tau[i], beta = m_p.beta;
+            dg::blas1::subroutine( [mu, tau, beta] DG_DEVICE (
+                    double N, double d0FN, double d1FN,
+                              double d0BN, double d1BN,
+                    double U, double d0FU, double d1FU,
+                              double d0BU, double d1BU,
+                              double d0P, double d1P,
+                    double A, double d0A, double d1A,
+                    double& dtN, double& dtU
+                )
+                {
+                    dtN = dtU = 0;
+                    // upwind scheme
+                    double v0 = -d1P;
+                    double v1 =  d0P;
+                    if( beta != 0)
+                    {
+                        v0 +=   U * d1A;
+                        v1 += - U * d0A;
+                        //Q: doesn't U in U b_perp create a nonlinearity
+                        //in velocity equation that may create shocks?
+                        //A: since advection is in perp direction it should not give
+                        //shocks. LeVeque argues that for smooth solutions the
+                        //upwind discretization should be fine but is wrong for shocks
+                    }
+                    dtN += ( v0 > 0 ) ? -v0*d0BN : -v0*d0FN;
+                    dtN += ( v1 > 0 ) ? -v1*d1BN : -v1*d1FN;
+                    dtU += ( v0 > 0 ) ? -v0*d0BU : -v0*d0FU;
+                    dtU += ( v1 > 0 ) ? -v1*d1BU : -v1*d1FU;
+
+                    if( beta != 0)
+                    {
+                        double UA = ( (d0FU+d0BU)*d1A-(d1FU+d1BU)*d0A) / 2.;
+                        dtN +=  -N * UA ; // N div U bperp
+                        double NA = ( (d0FN+d0BN)*d1A-(d1FN+d1BN)*d0A) / 2.;
+                        double PA = ( d0P*d1A-d1P*d0A);
+                        dtU +=  -1./mu *  PA
+                                -tau/mu *  NA / N;
+                    }
+                },
+                //species depdendent
+                m_n[i], m_dFN[i][0], m_dFN[i][1],
+                        m_dBN[i][0], m_dBN[i][1],
+                m_u[i], m_dFU[i][0], m_dFU[i][1],
+                        m_dBU[i][0], m_dBU[i][1],
+                        m_dP[i][0], m_dP[i][1],
+                //induction
+                m_apar[i], m_dA[i][0], m_dA[i][1],
+                //magnetic parameters
+                yp[0][i], yp[1][i]
+            );
+        }
+    }
+    else
+        throw dg::Error(dg::Message(_ping_)<<"Error: Unrecognized advection option: '"<<m_p.advection<<"'! Exit now!");
 }
 
 template<class Geometry, class Matrix, class Container>

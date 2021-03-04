@@ -161,6 +161,8 @@ int main( int argc, char* argv[])
                 if( pair.first == "Vor / " || pair.first == "j / ")
                 {
                     asela.compute_lapM( 1., *pair.second, 0., temp);
+                    if( pair.first == "j / ")
+                        dg::blas1::scal( temp, 1./p.beta);
                     dg::blas2::gemv( equidistant, temp, visual);
                 }
                 else
