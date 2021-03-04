@@ -1,18 +1,13 @@
-#define DG_DEBUG
 #include <iostream>
 #include "blas.h"
 #include "dg/file/file.h"
 
 #include "polarization.h"
-#include "polarization_init.h"
 #include "multigrid.h"
 #include "backend/exceptions.h"
 #include "multistep.h"
 #include "cg.h"
 #include "functors.h"
-#include "andersonacc.h"
-#include "lgmres.h"
-#include "bicgstabl.h"
 
 const double tau = 1.;
 const double alpha = -tau;
@@ -25,7 +20,7 @@ const double ly = 2.*M_PI;
 
 
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::DIR;
+dg::bc bcy = dg::PER;
 
 // df
 double phi_ana_df( double x,double y){ return sin(m*x)*sin(n*y);}

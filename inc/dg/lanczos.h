@@ -388,7 +388,6 @@ class Lanczos
                 set_iter(i+1); 
                 break;
             }
-
         }
         if (compute_b == true)
         {

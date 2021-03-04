@@ -106,8 +106,8 @@ class PolCharge
             m_multi_gamma_PER.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
             m_multi_gamma_PER[0].construct( g, dg::PER, bcy, m_alpha, dir, jfactor);
-            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-10, g.size(), 20, eps_gamma[0]);
-            m_sqrtG0inv_PER.construct(m_multi_gamma_PER[0], g,  m_temp,  1e-10, g.size(), 20, eps_gamma[0]);
+            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, g.size(), 20, eps_gamma[0]);
+            m_sqrtG0inv_PER.construct(m_multi_gamma_PER[0], g,  m_temp,  1e-14, g.size(), 20, eps_gamma[0]);
         }
         if (m_mode == "ffO4")
         {

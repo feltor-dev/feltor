@@ -2,8 +2,6 @@
 #include <iostream>
 #include <iomanip>
 #include "backend/timer.h"
-#include <cusp/dia_matrix.h>
-#include <cusp/coo_matrix.h>
 #include "lanczos.h"
 #include "helmholtz.h"
 
