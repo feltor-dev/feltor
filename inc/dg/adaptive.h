@@ -182,6 +182,7 @@ struct Adaptive
      * @tparam StepperParams Type of parameters (deduced by the compiler)
      * @note The workspace for Adaptive is constructed from the \c copyable member
      * of Stepper
+     * @note If you do not provide any parameters this will be the default constructor, doing nothing
      */
     template<class ...StepperParams>
     Adaptive(StepperParams&& ...ps): m_stepper(std::forward<StepperParams>(ps)...),
@@ -189,6 +190,18 @@ struct Adaptive
     {
         dg::blas1::copy( 1., m_next);
         m_size = dg::blas1::dot( m_next, 1.);
+    }
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct(Params&& ...ps)
+    {
+        //construct and swap
+        *this = Adaptive(  std::forward<Params>(ps)...);
     }
     /*!@brief Guess an initial stepsize
      *

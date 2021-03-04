@@ -130,7 +130,7 @@ struct ImExMultistep
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_u[0];}
+    const ContainerType& copyable()const{ return m_tmp;}
 
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_solver;}
@@ -329,7 +329,7 @@ struct FilteredImplicitMultistep
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_u[0];}
+    const ContainerType& copyable()const{ return m_tmp;}
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_solver;}
     ///Read access to the internal solver for the implicit part
@@ -552,7 +552,8 @@ struct FilteredExplicitMultistep
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    FilteredExplicitMultistep(){}
+    FilteredExplicitMultistep(){ m_u.resize(1); //this makes the copyable function work
+    }
 
     /**
      * @brief Reserve memory for the integration

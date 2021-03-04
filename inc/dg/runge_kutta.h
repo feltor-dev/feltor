@@ -61,7 +61,7 @@ struct ERKStep
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    ERKStep(){
+    ERKStep(){ m_k.resize(1); //this makes the copyable function work
     }
     ///@copydoc RungeKutta::construct()
     ERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
@@ -345,7 +345,7 @@ struct ARKStep
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_kE[0];}
+    const ContainerType& copyable()const{ return m_rhs;}
 
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_solver;}
@@ -636,7 +636,7 @@ struct ShuOsher
         m_temp = copyable;
     }
     ///@copydoc RungeKutta::copyable()
-    const ContainerType& copyable()const{ return m_u[0 ];}
+    const ContainerType& copyable()const{ return m_temp;}
 
     /**
     * @brief Advance one step
@@ -766,7 +766,7 @@ struct DIRKStep
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_kI[0];}
+    const ContainerType& copyable()const{ return m_rhs;}
 
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_solver;}
