@@ -1,4 +1,6 @@
 #pragma once
+// #undef BOOST_MATH_MAX_SERIES_ITERATION_POLICY
+// #define BOOST_MATH_MAX_SERIES_ITERATION_POLICY 1000000000    
 #include <boost/math/special_functions.hpp>
 
 #include "blas.h"
@@ -8,6 +10,7 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
 
 /**
 * @brief Classes for square root Matrix-Vector product computation via the Cauchy integral 
@@ -277,13 +280,12 @@ struct SqrtCauchyInt
         value_type s=0.;
         value_type c=0.;
         value_type d=0.;
-        value_type w = 0.;
+        value_type w=0.;
         value_type t=0.;
         value_type sqrtminEV = sqrt(minEV);
         const value_type k2 = minEV/maxEV;
         const value_type sqrt1mk2 = sqrt(1.-k2);
         const value_type Ks=boost::math::ellint_1(sqrt1mk2 );
-
         const value_type fac = -2.* Ks*sqrtminEV/(M_PI*iter);
         for (unsigned j=1; j<iter+1; j++)
         {
