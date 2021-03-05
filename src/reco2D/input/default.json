@@ -2,16 +2,16 @@
     "grid":
     {
         "n"  : 3,
-        "Nx" : 100,
-        "Ny" : 100,
-        "lxhalf"  : 80,
-        "lyhalf"  : 80
+        "Nx" : 48,
+        "Ny" : 96,
+        "lxhalf"  : 10,
+        "lyhalf"  : 20
     },
     "timestepper":
     {
         "type": "adaptive",
         "tableau": "Tsitouras09-7-4-5",
-        "rtol": 1e-11,
+        "rtol": 1e-10,
         "atol": 1e-12
     },
     //"timestepper":
@@ -39,9 +39,9 @@
     {
         "type" : "multigrid",
         "stages": 3,
-        "eps_pol" : [1e-11,1.0,1.0],
-        "eps_maxwell": 1e-11, //( stop for induction equ.) 
-        "eps_gamma"  : 1e-11, //( stop for Gamma operator) 
+        "eps_pol" : [1e-10,2.0,2.0],
+        "eps_maxwell": 1e-10, //( stop for induction equ.) 
+        "eps_gamma"  : 1e-10, //( stop for Gamma operator) 
         "direction" : "centered",
         "jumpfactor" : 1
     },
@@ -62,7 +62,7 @@
     {
         "type"       : "harris",
         "amplitude0" : 1e-1,
-        "amplitude1" : 1e-3,
+        "amplitude1" : -1e-3,
         "my"         : 1
     }
     //"init":
