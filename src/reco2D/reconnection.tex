@@ -1,0 +1,314 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../../doc/related_pages/header.tex}
+\input{../../doc/related_pages/newcommands.tex}
+
+\renewcommand{\ne}{\ensuremath{n }}
+\newcommand{\Ni}{\ensuremath{N}}
+\newcommand{\ue}{\ensuremath{u_\parallel}}
+\newcommand{\Ui}{\ensuremath{U_\parallel}}
+\newcommand{\Apar}{\ensuremath{A_\parallel}}
+\newcommand{\neref}{\ensuremath{n_0}}
+\newcommand{\Teref}{\ensuremath{T_{e0}}} %\rhoN
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{Collisionless Reconnection}
+\author{ M.~Held and M.~Wiesenberger}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\section{Compilation and Usage}
+Input file format: json\\
+Output file format: NetCDF-4\\
+File path: \texttt{feltor/src/reco2D/}
+\begin{verbatim}
+make reconnection device = <omp gpu>
+make reconnection_hpc device = <omp gpu>
+make reconnection_mpi device = <omp gpu>
+\end{verbatim}
+\texttt{reconnection} depends on both GLFW3 and NETCDF, while
+\texttt{reconnection\_hpc} and \texttt{reconnection\_mpi} avoids the GLFW3 dependency and only operate with ``netcdf'' output.
+Run with
+\begin{verbatim}
+path/to/feltor/src/reco2D/reconnection(_hpc) input.json <output.nc>
+\end{verbatim}
+The output file is only needed if you chose ``netcdf'' in the output field
+of the input file.
+\begin{verbatim}
+echo 2 2 | mpirun -n 4 path/to/feltor/src/reco2D/reconnection_mpi input.json output.nc
+\end{verbatim}
+For the mpi program you need to provide the distribution of processes along each
+axis on the command line.
+
+\section{Equations}
+%tearing instability <-> reconnection
+Collisionless reconnection was studied in~\cite{stanier15}, gyro-fluid and gyro-kinetic studies~\cite{comisso13,zacharias14}. drift fluid-kinetic model~\cite{loureiro13}.
+Our reduced model is based on a recent formulation of a full-F gyro-fluid model~\cite{Madsen2013}.
+It consists of the first two moment equations for electrons and ions
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+ - \left[\phi, \ne\right]
++ \left[\Apar,\ne \ue  \right]
+-\nu_\perp \Delta_\perp^2\ne
+\\
+%%%
+\label{firstgyromom}
+\frac{\partial}{\partial t} \Ni =&
+ - \left[\psi, \Ni\right]
++ \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
+-\nu_\perp \Delta_\perp^2\Ni
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+      -  \left[ \psi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
+    +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
+      - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
+    -\nu_\perp \Delta_\perp^2\ue
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+      -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
+     +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
+      + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
+    -\nu_\perp \Delta_\perp^2\Ui
+\end{align}
+which are coupled by polarisation and induction
+\begin{align}
+ \ne - \Gamma_1 \Ni &= \vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
+ \frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  \ne \ue - \Gamma_1 (\Ni \Ui)
+\end{align}
+with gyro-averaged parallel electromagnetic vector potential, generalized electric potential and gyro-averaging operator
+\begin{align}
+ \psi &:= \Gamma_1 \phi - u_E^2 /2  \\
+  \Gamma_1 &:= (1-\frac{\tau_i}{2} \vec{\nabla}_\perp^2 )^{-1}
+\end{align}
+and ion gyro-radius, vacuum permeability and ion gyrofrequency
+\begin{align}
+  \rho_{i}   := \frac{\sqrt{T_{i} m_i}}{e B} \quad
+  \mu_0 := 1/(\epsilon_0 c^2) \quad
+  \Omega_i := e B / m_i
+\end{align}
+After exploiting the gyro-Bohm normalisation, our model is controlled by the dimensionless parameters. These
+are the
+\begin{align}
+ \mu   :=  \frac{m}{Z m_i} \quad
+ \tau  :=  \frac{T}{ Z T_i}\quad
+ \beta_{e0} :=  \frac{\mu_0 \neref \Teref }{ B_0^2 }
+\end{align}
+
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+physical &  dict &   & Parameters for initialization \\
+\qquad mu      & float & -0.000544617 & the electron to ion mass ratio $\mu_e$ \\
+\qquad tau  & float &  0    &  electron to ion temperature $\tau_i$ \\
+\qquad beta  & float &  1e-3    &  plasma beta $\beta$ \\
+\bottomrule
+\end{longtable}
+
+\section{Initial and boundary conditions}
+The boundary conditions for all variables are Dirichlet in $x$.
+The $y$-direction is periodic.
+
+The initial conditions are set in the file \texttt{feltor/src/reco2D/init.h}.
+
+We initialize
+\begin{align}
+ \Ni&=\ne=\neref \\
+ \phi &= 0 \\
+  \Ui&=0 \\
+  \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
+\end{align}
+where we can choose $A_\parallel$.
+\subsection{Harris sheet}
+The initial parallel magnetic vector potential is
+\begin{align}
+    \Apar =\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 m_y\pi y/L_y)}\right) \cos( \pi x /L_x)
+\end{align}
+The harris sheet initial condition can be chosen with the following parameters in the input file
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+init &  dict &   & Parameters for initialization \\
+\qquad type      & string & harris & This choice necessitates the following parameters \\
+\qquad amplitude0  & float &  1e-5    &  harris amplitude \\
+\qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
+\qquad my          & float &  1       &  perturbation wave number in y\\
+\bottomrule
+\end{longtable}
+\subsection{Island}
+The initial parallel magnetic vector potential is
+\begin{align}
+    \Apar =\left[ \frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2m_y \pi y/L_y)}\right] \cos( \pi x /L_x)
+\end{align}
+with $\varepsilon = 0.2$.
+The island initial condition can be chosen with the following parameters in the input file
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+init &  dict &   & Parameters for initialization \\
+\qquad type      & string & island & This choice necessitates the following parameters \\
+\qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
+\qquad my          & float &  1       &  perturbation wave number in y\\
+\bottomrule
+\end{longtable}
+
+\section{Invariants}
+The mass density and diffusions are
+\begin{align}
+    \mathcal M &= n-1 \\
+     \Lambda_n &= -\nu_\perp \Delta_\perp^2 n  \\
+\end{align}
+The inherent energy density of our system is:
+\begin{align}
+ \mathcal{E} := &
+                    \ne \ln{(\ne)}
+                  + \tau_i \Ni \ln{( \Ni)}
+                  \nonumber \\
+                 &- \frac{1}{2} \mu_e \ne \ue^2
+                  + \frac{1}{2} \Ni \Ui^2
+                  \nonumber \\
+                 &+\frac{1}{2} \Ni u_E^2
+                  + \frac{|\nabla_\perp \Apar|^2}{2 \beta}
+\end{align}
+The energy diffusion is
+\begin{align}
+    \Lambda_\mathcal{E} :=  &\left( (1+\ln \ne) + \frac{1}{2} z_e \mu_e \ue^2 - \phi \right) (-\nu_\perp \Delta_\perp^2 \ne)
+    \nonumber\\
+    &+ \left( \tau_i ( 1+\ln \Ni) + \frac{1}{2} \Ui^2 + \psi_i\right)(-\nu_\perp \Delta_\perp^2 \Ni)
+    \nonumber\\
+    &+ z_e\mu_e \ue\ne (-\nu_\perp \Delta_\perp^2 \ue)
+    \nonumber\\
+    &+ \Ui\Ni (-\nu_\perp \Delta_\perp^2 \Ui)
+\end{align}
+
+\section{Reconnection rate}
+ A consistent definition of the reconnection rate is not trivial~\cite{comisso16}.
+ We adopt a similar definiton as in Ref.~\cite{comisso13}
+\begin{align}
+ Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
+ \gamma&:= \frac{\d \ln{(Q_X)}}{\d t}
+\end{align}
+where $\vec{x}_X = [0,0]$.
+This can be easily evaluated in post-processing using a python script.
+
+\section{Numerical methods}
+
+\subsection{Spatial grid}
+The spatial grid is a two-dimensional Cartesian product-grid $[-L_x/2, L_x/2]\times [-L_y/2, L_y/2]$ adaptable with the following parameters
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+grid & dict & & \\
+\qquad n  & integer & 3  & The number of polynomial coefficients \\
+\qquad Nx & integer & 48 & Number of cells in x \\
+\qquad Ny & integer & 48 & Number of cells in y \\
+\qquad lxhalf & float& 80 & Half box length in x \\
+\qquad lyhalf & float& 80 & Half box length in y \\
+\bottomrule
+\end{longtable}
+\subsection{Timestepper}
+The time stepper is an explicit multistep method where you can chose the
+tableau to use
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+timestepper & dict & & \\
+\qquad tableau  & string & TVB-3-3  & The multistep tableau \\
+\qquad dt & float & 20 & The timestep \\
+\bottomrule
+\end{longtable}
+\subsection{Advection scheme}
+We implemented the advection in terms of Arakawa brackets
+(note that this should only be used in connection with artificial diffusion)
+or in terms of an upwind scheme.
+This can be selected in the input file via
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+advection & dict & & \\
+\qquad type & string & arakawa & The Arakawa bracket scheme \\
+\qquad type & string & upwind  & The upwind scheme \\
+\bottomrule
+\end{longtable}
+\subsection{Regularization}
+In order to prevent shocks and regularize the advection scheme
+we implement an artificial viscosity of order 2.
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+regularization & dict & & \\
+\qquad direction & string & centered & The direction of the Laplacian \\
+\qquad nu\_perp & float & 1e-6  &  The strength of the diffusion \\
+\bottomrule
+\end{longtable}
+Simply set the diffusion to 0 if you do not want any regularization.
+
+\subsection{Elliptic solvers}
+In order to solve the elliptic equations we chose a multigrid scheme (nested
+iterations). The accuaracies for the polarization equation can be chosen for
+each stage separately, while for the Helmholtz type equations (The gamma
+operators and the Ampere equation) only one accuracy can be set:
+\begin{longtable}{lllp{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+elliptic & dict & & \\
+\qquad stages & integer & 3  &  The number of stages (3 is almost always a good value)\\
+\qquad eps\_pol    & float[stages] & [1e-6,10,10] & Accuracy requirement on each stage of the multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
+\qquad eps\_gamma    & float & 1e-10 & Accuracy requirement of Gamma operators on density \\
+\qquad eps\_maxwell    & float & 1e-7 & Accuracy requirement of Ampere equation\\
+\qquad direction & string & forward & Direction of Laplacian in polarization, Gamma and Ampere equation\\
+\qquad jumpfactor & float & 1 & Jump factor of Laplacian in polarization, Gamma and Ampere equation\\
+\bottomrule
+\end{longtable}
+
+%..................................................................
+\section{Output}
+Our program can either write results directly to screen using the glfw library
+or write results to disc using netcdf.
+This can be controlled via
+\begin{longtable}{lllp{9cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+output & dict & & \\
+\qquad type & string & glfw  &  For glfw output none of the following parameters are needed except the itstp paramter\\
+\qquad type & string & netcdf  & For this choice the program expects a file name on input, the default is ``reconnection.nc'' \\
+\qquad itstp  & integer& 4 & The number of steps between outputs of 2d fields \\
+\qquad maxout  & integer& 500 & The total number of field outputs. The endtime is T=itstp*maxout*dt \\
+\qquad n  & integer & 3  & The number of polynomial coefficients in the output file\\
+\qquad Nx & integer & 48 & Number of cells in x in the output file \\
+\qquad Ny & integer & 48 & Number of cells in y in the output file \\
+\bottomrule
+\end{longtable}
+The number of points in the output file can be lower (or higher) than the number of
+grid points used for the calculation. The points will be interpolated from the
+computational grid.
+\subsection{Netcdf file}
+Output file format: netcdf-4/hdf5
+
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile        & text attribute & 1 & verbose input file as a string \\
+time             & Coord. Var. & 1 (time) & time at which fields are written \\
+x                & Coord. Var. & 1 (x) & x-coordinate  \\
+y                & Coord. Var. & 1 (y) & y-coordinate \\
+X                & Dataset & 3 (time, y, x) & 2d outputs \\
+X\_1d            & Dataset & 1 (time) & 1d volume integrals $\int \dV X$ \\
+\bottomrule
+\end{longtable}
+The output fields X are determined in the file \texttt{feltor/src/reco2D/diag.h}.
+
+%..................................................................
+\bibliography{../../doc/related_pages/references}
+%..................................................................
+
+
+
+%..................................................................
+\bibliography{../../doc/related_pages/references}
+\end{document}

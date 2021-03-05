@@ -56,6 +56,7 @@ DG_DEVICE void operator()( T1 x, T2& y) const
 
 ///@addtogroup variadic_evaluates
 ///@{
+
 ///\f$ y = x_1/x_2 \f$
 struct divides
 {

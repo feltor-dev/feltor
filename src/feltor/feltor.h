@@ -14,226 +14,6 @@
 namespace feltor
 {
 
-namespace routines{
-struct ComputePerpDrifts{
-    ComputePerpDrifts( double mu, double tau):
-        m_mu(mu), m_tau(tau){}
-    DG_DEVICE
-    void operator()(
-            double N, double d0N, double d1N, double d2N,
-            double U, double d0U, double d1U, double d2U,
-            double d0P, double d1P, double d2P,
-            double b_0,         double b_1,         double b_2,
-            double curv0,       double curv1,       double curv2,
-            double curvKappa0,  double curvKappa1,  double curvKappa2,
-            double divCurvKappa,
-            double& dtN, double& dtU
-        )
-    {
-        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
-        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
-        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
-        double KU = curv0*d0U+curv1*d1U+curv2*d2U;
-        double KN = curv0*d0N+curv1*d1N+curv2*d2N;
-        double KP = curv0*d0P+curv1*d1P+curv2*d2P;
-        double PN = b_0*( d1P*d2N-d2P*d1N)+
-                    b_1*( d2P*d0N-d0P*d2N)+
-                    b_2*( d0P*d1N-d1P*d0N);//ExB drift
-        double PU = b_0*( d1P*d2U-d2P*d1U)+
-                    b_1*( d2P*d0U-d0P*d2U)+
-                    b_2*( d0P*d1U-d1P*d0U);//ExB drift
-        dtN =   -PN
-                -N * KP
-                -m_tau * KN
-                -m_mu * U * U * KappaN
-                -2. * m_mu * N * U * KappaU
-                -m_mu * N * U * U * divCurvKappa;
-        dtU =   -PU
-                -U*KappaP
-                -m_tau * KU
-                -m_tau * U * divCurvKappa
-                -(2. * m_tau + m_mu * U * U)*KappaU
-                - 2. * m_tau * U * KappaN / N;
-    }
-    DG_DEVICE
-    void operator()(
-            double N, double d0N, double d1N, double d2N,
-            double U, double d0U, double d1U, double d2U,
-            double d0P, double d1P, double d2P,
-            double A,       double d0A, double d1A, double d2A,
-            double b_0,         double b_1,         double b_2,
-            double curv0,       double curv1,       double curv2,
-            double curvKappa0,  double curvKappa1,  double curvKappa2,
-            double divCurvKappa,
-            double& dtN, double& dtU
-        )
-    {
-        //first compute the regular dynamics
-        this->operator()( N,  d0N,  d1N,  d2N,
-             U,        d0U,  d1U,  d2U,
-             d0P,  d1P,  d2P,
-             b_0,          b_1,          b_2,
-             curv0,        curv1,        curv2,
-             curvKappa0,   curvKappa1,   curvKappa2,
-             divCurvKappa,
-             dtN, dtU);
-        //now add the additional terms from modified parallel derivative
-        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
-        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
-        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
-
-        double KnablaBA = (curv0-curvKappa0)*d0A
-                         +(curv1-curvKappa1)*d1A
-                         +(curv2-curvKappa2)*d2A;
-        double UA = b_0*( d1U*d2A-d2U*d1A)+
-                    b_1*( d2U*d0A-d0U*d2A)+
-                    b_2*( d0U*d1A-d1U*d0A);
-        double NA = b_0*( d1N*d2A-d2N*d1A)+
-                    b_1*( d2N*d0A-d0N*d2A)+
-                    b_2*( d0N*d1A-d1N*d0A);
-        double PA = b_0*( d1P*d2A-d2P*d1A)+
-                    b_1*( d2P*d0A-d0P*d2A)+
-                    b_2*( d0P*d1A-d1P*d0A);
-        dtN +=  -( A*N*KappaU + A*U*KappaN + N*UA + U*NA)
-                -N*U*( A*divCurvKappa - KnablaBA);
-        dtU +=  -1./m_mu*( A*KappaP + PA)
-                -1.*U*( A*KappaU + UA)
-                -1.*m_tau/m_mu/N*(A*KappaN + NA);
-
-
-    }
-    private:
-    double m_mu, m_tau;
-};
-struct ComputePerpConservative{
-    ComputePerpConservative( double mu, double tau):
-        m_mu(mu), m_tau(tau){}
-    DG_DEVICE
-    void operator()(
-            double N, double d0N, double d1N, double d2N,
-            double U, double d0U, double d1U, double d2U,
-            double d0P, double d1P, double d2P,
-            double b_0,         double b_1,         double b_2,
-            double curv0,       double curv1,       double curv2,
-            double curvKappa0,  double curvKappa1,  double curvKappa2,
-            double divCurvKappa, double detg,
-            double& dtNx, double& dtNy, double& dtNz, double& dtU
-        )
-    {
-        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
-        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
-        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
-        double KU = curv0*d0U+curv1*d1U+curv2*d2U;
-        double PU = b_0*( d1P*d2U-d2P*d1U)+
-                    b_1*( d2P*d0U-d0P*d2U)+
-                    b_2*( d0P*d1U-d1P*d0U);//ExB drift
-        //sqrt(g) times the flux
-        dtNx =  -detg*N*( b_1*d2P - b_2*d1P + m_tau * curv0 + m_mu * U * U * curvKappa0);
-        dtNy =  -detg*N*( b_2*d0P - b_0*d2P + m_tau * curv1 + m_mu * U * U * curvKappa2);
-        dtNz =  -detg*N*( b_0*d1P - b_1*d0P + m_tau * curv2 + m_mu * U * U * curvKappa2);
-        dtU =   -PU
-                -U*KappaP
-                -m_tau * KU
-                -m_tau * U * divCurvKappa
-                -(2. * m_tau + m_mu * U * U)*KappaU
-                - 2. * m_tau * U * KappaN / N;
-    }
-    DG_DEVICE
-    void operator()(
-            double N, double d0N, double d1N, double d2N,
-            double U, double d0U, double d1U, double d2U,
-            double d0P, double d1P, double d2P,
-            double A,       double d0A, double d1A, double d2A,
-            double b_0,         double b_1,         double b_2,
-            double curv0,       double curv1,       double curv2,
-            double curvKappa0,  double curvKappa1,  double curvKappa2,
-            double divCurvKappa, double detg,
-            double& dtNx, double& dtNy, double& dtNz, double& dtU
-        )
-    {
-        //first compute the regular dynamics
-        this->operator()( N,  d0N,  d1N,  d2N,
-             U,        d0U,  d1U,  d2U,
-             d0P,  d1P,  d2P,
-             b_0,          b_1,          b_2,
-             curv0,        curv1,        curv2,
-             curvKappa0,   curvKappa1,   curvKappa2,
-             divCurvKappa, detg,
-             dtNx, dtNy, dtNz, dtU);
-        //now add the additional terms from modified parallel derivative
-        double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
-        double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
-        double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
-
-        double UA = b_0*( d1U*d2A-d2U*d1A)+
-                    b_1*( d2U*d0A-d0U*d2A)+
-                    b_2*( d0U*d1A-d1U*d0A);
-        double NA = b_0*( d1N*d2A-d2N*d1A)+
-                    b_1*( d2N*d0A-d0N*d2A)+
-                    b_2*( d0N*d1A-d1N*d0A);
-        double PA = b_0*( d1P*d2A-d2P*d1A)+
-                    b_1*( d2P*d0A-d0P*d2A)+
-                    b_2*( d0P*d1A-d1P*d0A);
-        dtNx +=  -detg*N*U*( -b_1*d2A + b_2*d1A + A * curvKappa0);
-        dtNy +=  -detg*N*U*( -b_2*d0A + b_0*d2A + A * curvKappa2);
-        dtNz +=  -detg*N*U*( -b_0*d1A + b_1*d0A + A * curvKappa2);
-        dtU +=  -1./m_mu*( A*KappaP + PA)
-                -1.*U*( A*KappaU + UA)
-                -1.*m_tau/m_mu/N*(A*KappaN + NA);
-    }
-    private:
-    double m_mu, m_tau;
-};
-struct ComputeChi{
-    DG_DEVICE
-    void operator() ( double& chi, double tilde_Ni, double binv,
-    double mu_i) const{
-        chi = mu_i*(tilde_Ni+1.)*binv*binv;
-    }
-};
-//struct ComputeLogN{
-//    DG_DEVICE
-//    void operator()( double tilde_n, double& npe, double& logn) const{
-//        npe =  tilde_n + 1.;
-//        logn =  log(npe);
-//    }
-//};
-struct ComputeSource{
-    DG_DEVICE
-    void operator()( double& result, double tilde_n, double profne,
-        double source, double omega_source) const{
-        result = omega_source*source*(profne - tilde_n);
-    }
-};
-struct ComputeDensityBC{
-    DG_DEVICE
-        double operator()( double nminus, double nplus, double sheathDotDirection)
-    {
-        if ( sheathDotDirection > 0 )
-            return nminus*sheathDotDirection;
-        else
-            return -nplus*sheathDotDirection;
-    }
-};
-//Resistivity (consistent density dependency,
-//parallel momentum conserving, quadratic current energy conservation dependency)
-struct AddResistivity{
-    AddResistivity( double eta, std::array<double,2> mu): m_eta(eta){
-        m_mu[0] = mu[0], m_mu[1] = mu[1];
-    }
-    DG_DEVICE
-    void operator()( double ne, double ni, double ue,
-        double ui, double& dtUe, double& dtUi) const{
-        double current = (ne)*(ui-ue);
-        dtUe += -m_eta/m_mu[0] * current;
-        dtUi += -m_eta/m_mu[1] * (ne)/(ni) * current;
-    }
-    private:
-    double m_eta;
-    double m_mu[2];
-};
-}//namespace routines
-
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
@@ -288,10 +68,10 @@ struct Explicit
         return m_apar;
     }
     const std::array<Container, 3> & gradN (int i) const {
-        return m_dN[i];
+        return m_dFN[i];
     }
     const std::array<Container, 3> & gradU (int i) const {
-        return m_dU[i];
+        return m_dFU[i];
     }
     const std::array<Container, 3> & gradP (int i) const {
         return m_dP[i];
@@ -323,8 +103,8 @@ struct Explicit
         // MW: don't like this function, if we need more gradients we might
         // want a more flexible solution
         // grad S_ne and grad S_ni
-        dg::blas2::symv( m_dx_N, m_s[0][i], gradS[0]);
-        dg::blas2::symv( m_dy_N, m_s[0][i], gradS[1]);
+        dg::blas2::symv( m_dxF_N, m_s[0][i], gradS[0]);
+        dg::blas2::symv( m_dyF_N, m_s[0][i], gradS[1]);
         if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
     void compute_dot_induction( Container& tmp) const {
@@ -345,7 +125,6 @@ struct Explicit
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }
-    const Container& detg() const { return m_detg;}
     //volume with dG weights
     const Container& vol3d() const { return m_lapperpN.weights();}
     const Container& weights() const { return m_lapperpN.weights();}
@@ -364,7 +143,7 @@ struct Explicit
         dg::blas2::gemv( m_lapperpU, m_apar, m_temp1);
         return m_temp1;
     }
-    /////////////////////////DIAGNOSTICS END////////////////////////////////
+    /// //////////////////////DIAGNOSTICS END////////////////////////////////
     void compute_diffusive_lapMperpN( const Container& density, Container& temp0, Container& result ){
         // compute the negative diffusion contribution -Lambda N
         // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
@@ -413,7 +192,6 @@ struct Explicit
         dg::blas1::plus( m_masked, +1);
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
-  private:
     void compute_phi( double t, const std::array<Container,2>& y);
     void compute_psi( double t);
     void compute_perp( double t,
@@ -424,6 +202,7 @@ struct Explicit
         const std::array<std::array<Container,2>,2>& y,
         const std::array<std::array<Container,2>,2>& fields,
         std::array<std::array<Container,2>,2>& yp);
+  private:
     void construct_mag( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);
     void construct_bhat( const Geometry&, feltor::Parameters,
@@ -442,19 +221,19 @@ struct Explicit
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
     Container m_source, m_profne, m_forcing, m_U_sheath, m_masked;
-    Container m_detg;
 
     Container m_apar;
     std::array<Container,2> m_phi;
     std::array<Container,2> m_plusN, m_minusN, m_plusU, m_minusU, m_plusP, m_minusP;
     std::array<Container,3> m_dA;
-    std::array<std::array<Container,3>,2> m_dP, m_dN, m_dU;
+    std::array<std::array<Container,3>,2> m_dP, m_dFN, m_dBN, m_dFU, m_dBU;
     std::array<std::array<Container,2>,2> m_fields, m_s; //fields, sources
 
     std::vector<Container> m_multi_chi;
 
     //matrices and solvers
-    Matrix m_dx_N, m_dx_U, m_dx_P, m_dy_N, m_dy_U, m_dy_P, m_dz;
+    Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
+    Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_P, m_dy_A, m_dz;
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa;//_P, m_fa_N, m_fa_U;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
@@ -560,10 +339,10 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
-    m_detg = dg::tensor::volume( metric);
-    dg::blas1::pointwiseDivide( m_binv, m_detg, m_temp0); //1/B/m_detg
+    Container detg = dg::tensor::volume( metric);
+    dg::blas1::pointwiseDivide( m_binv, detg, m_temp0); //1/B/detg
     for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/m_detg/B
+        dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
     m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
     m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
@@ -628,12 +407,18 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_Z( dg::pullback( dg::cooY3d, g)),
     m_P( dg::pullback( dg::cooZ3d, g)),
 #endif //DG_MANUFACTURED
-    m_dx_N( dg::create::dx( g, p.bcxN) ),
-    m_dx_U( dg::create::dx( g, p.bcxU) ),
-    m_dx_P( dg::create::dx( g, p.bcxP) ),
-    m_dy_N( dg::create::dy( g, p.bcyN) ),
-    m_dy_U( dg::create::dy( g, p.bcyU) ),
-    m_dy_P( dg::create::dy( g, p.bcyP) ),
+    m_dxF_N( dg::create::dx( g, p.bcxN, dg::forward) ),
+    m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
+    m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
+    m_dxB_U( dg::create::dx( g, p.bcxU, dg::backward) ),
+    m_dx_P(  dg::create::dx( g, p.bcxP, dg::centered) ),
+    m_dx_A(  dg::create::dx( g, p.bcxU, dg::centered) ),
+    m_dyF_N( dg::create::dy( g, p.bcyN, dg::forward) ),
+    m_dyB_N( dg::create::dy( g, p.bcyN, dg::backward) ),
+    m_dyF_U( dg::create::dy( g, p.bcyU, dg::forward) ),
+    m_dyB_U( dg::create::dy( g, p.bcyU, dg::backward) ),
+    m_dy_P(  dg::create::dy( g, p.bcyP, dg::centered) ),
+    m_dy_A(  dg::create::dy( g, p.bcyU, dg::centered) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
@@ -650,7 +435,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_plusN = m_minusN = m_minusU = m_plusU = m_minusP = m_plusP = m_phi;
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
-    m_dN = m_dU = m_dP;
+    m_dFN = m_dBN = m_dFU = m_dBU = m_dP;
     m_fields[0] = m_fields[1] = m_phi;
     m_s = m_fields;
 
@@ -714,7 +499,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     //y[0]:= n_e - 1
     //y[1]:= N_i - 1
     //----------Compute and set chi----------------------------//
-    dg::blas1::subroutine( routines::ComputeChi(),
+    dg::blas1::subroutine(
+        [] DG_DEVICE ( double& chi, double tilde_Ni, double binv,
+        double mu_i) {
+            chi = mu_i*(tilde_Ni+1.)*binv*binv;
+        },
         m_temp0, y[1], m_binv, m_p.mu[1]);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
@@ -836,8 +625,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
         m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Compute Derivatives----------------------------//
-    dg::blas2::symv( m_dx_U, m_apar, m_dA[0]);
-    dg::blas2::symv( m_dy_U, m_apar, m_dA[1]);
+    dg::blas2::symv( m_dx_A, m_apar, m_dA[0]);
+    dg::blas2::symv( m_dy_A, m_apar, m_dA[1]);
     if(!m_p.symmetric) dg::blas2::symv( m_dz, m_apar, m_dA[2]);
 
     //----------Compute Velocities-----------------------------//
@@ -859,47 +648,109 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
     for( unsigned i=0; i<2; i++)
     {
         ////////////////////perpendicular dynamics////////////////////////
-        dg::blas2::symv( m_dx_N, y[0][i], m_dN[i][0]);
-        dg::blas2::symv( m_dy_N, y[0][i], m_dN[i][1]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, y[0][i], m_dN[i][2]);
-        dg::blas2::symv( m_dx_U, fields[1][i], m_dU[i][0]);
-        dg::blas2::symv( m_dy_U, fields[1][i], m_dU[i][1]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dU[i][2]);
-        if( m_p.beta == 0){
-            dg::blas1::subroutine( routines::ComputePerpConservative(
-                m_p.mu[i], m_p.tau[i]),
-                //species depdendent
-                fields[0][i], m_dN[i][0], m_dN[i][1], m_dN[i][2],
-                fields[1][i], m_dU[i][0], m_dU[i][1], m_dU[i][2],
-                m_dP[i][0], m_dP[i][1], m_dP[i][2],
-                //magnetic parameters
-                m_b[0], m_b[1], m_b[2],
-                m_curv[0], m_curv[1], m_curv[2],
-                m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-                m_divCurvKappa, m_detg, m_temp0, m_temp1, m_temp2, yp[1][i]
-            );
-        }
-        if( m_p.beta != 0){
-            dg::blas1::subroutine( routines::ComputePerpConservative(
-                m_p.mu[i], m_p.tau[i]),
-                //species depdendent
-                fields[0][i], m_dN[i][0], m_dN[i][1], m_dN[i][2],
-                fields[1][i], m_dU[i][0], m_dU[i][1], m_dU[i][2],
-                m_dP[i][0], m_dP[i][1], m_dP[i][2],
-                //induction
-                m_apar, m_dA[0], m_dA[1], m_dA[2],
-                //magnetic parameters
-                m_b[0], m_b[1], m_b[2],
-                m_curv[0], m_curv[1], m_curv[2],
-                m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-                m_divCurvKappa, m_detg, m_temp0, m_temp1, m_temp2, yp[1][i]
-            );
-        }
-        //compute divergence of density flux
-        dg::blas2::symv( 1., m_dx_N, m_temp0, 0., yp[0][i]);
-        dg::blas2::symv( 1., m_dy_N, m_temp1, 1., yp[0][i]);
-        if(!m_p.symmetric)dg::blas2::symv( 1., m_dz, m_temp2, 1., yp[0][i]);
-        dg::blas1::pointwiseDivide( yp[0][i], m_detg, yp[0][i]);
+        //First compute forward and backward derivatives for upwind scheme
+        dg::blas2::symv( m_dxF_N, y[0][i], m_dFN[i][0]);
+        dg::blas2::symv( m_dyF_N, y[0][i], m_dFN[i][1]);
+        dg::blas2::symv( m_dxB_N, y[0][i], m_dBN[i][0]);
+        dg::blas2::symv( m_dyB_N, y[0][i], m_dBN[i][1]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, y[0][i], m_dFN[i][2]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, y[0][i], m_dBN[i][2]);
+        dg::blas2::symv( m_dxF_U, fields[1][i], m_dFU[i][0]);
+        dg::blas2::symv( m_dyF_U, fields[1][i], m_dFU[i][1]);
+        dg::blas2::symv( m_dxB_U, fields[1][i], m_dBU[i][0]);
+        dg::blas2::symv( m_dyB_U, fields[1][i], m_dBU[i][1]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dFU[i][2]);
+        if(!m_p.symmetric) dg::blas2::symv( m_dz, fields[1][i], m_dBU[i][2]);
+        double mu = m_p.mu[i], tau = m_p.tau[i], beta = m_p.beta;
+        dg::blas1::subroutine( [mu, tau, beta] DG_DEVICE (
+                double N, double d0FN, double d1FN, double d2FN,
+                          double d0BN, double d1BN, double d2BN,
+                double U, double d0FU, double d1FU, double d2FU,
+                          double d0BU, double d1BU, double d2BU,
+                          double d0P, double d1P, double d2P,
+                double A, double d0A, double d1A, double d2A,
+                double b_0,         double b_1,         double b_2,
+                double curv0,       double curv1,       double curv2,
+                double curvKappa0,  double curvKappa1,  double curvKappa2,
+                double divCurvKappa,
+                double& dtN, double& dtU
+            )
+            {
+                dtN = dtU = 0;
+                // density - upwind scheme
+                double v0 = (b_1*d2P - b_2*d1P) + mu*curv0 + mu*U*U*curvKappa0;
+                double v1 = (b_2*d0P - b_0*d2P) + mu*curv1 + mu*U*U*curvKappa1;
+                double v2 = (b_0*d1P - b_1*d0P) + mu*curv2 + mu*U*U*curvKappa2;
+                if( beta != 0)
+                {
+                    v0 += U * ( A * curvKappa0 + ( d1A*b_2 - d2A*b_1));
+                    v1 += U * ( A * curvKappa1 + ( d2A*b_0 - d0A*b_2));
+                    v2 += U * ( A * curvKappa2 + ( d0A*b_1 - d1A*b_0));
+                    //Q: doesn't U in U^2K_kappa and U b_perp create nonlinearity
+                    //in velocity equation that may create shocks?
+                    //A: since advection is in perp direction it should not give
+                    //shocks. LeVeque argues that for smooth solutions the
+                    //upwind discretization should be fine but is wrong for shocks
+                }
+                dtN += ( v0 > 0 ) ? -v0*d0BN : -v0*d0FN;
+                dtN += ( v1 > 0 ) ? -v1*d1BN : -v1*d1FN;
+                dtN += ( v2 > 0 ) ? -v2*d2BN : -v2*d2FN;
+                // velocity - upwind scheme
+                v0 += 2.*tau*curvKappa0;
+                v1 += 2.*tau*curvKappa1;
+                v2 += 2.*tau*curvKappa2;
+                dtU += ( v0 > 0 ) ? -v0*d0BU : -v0*d0FU;
+                dtU += ( v1 > 0 ) ? -v1*d1BU : -v1*d1FU;
+                dtU += ( v2 > 0 ) ? -v2*d2BU : -v2*d2FU;
+
+                // use centered derivatives
+                double KappaU = ( curvKappa0*(d0FU+d0BU)+curvKappa1*(d1FU+d1BU)
+                        +curvKappa2*(d2FU+d2BU) ) / 2.;
+                double KappaN = ( curvKappa0*(d0FN+d0BN)+curvKappa1*(d1FN+d1BN)
+                        +curvKappa2*(d2FN+d2BN) ) / 2.;
+                double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
+                double KP = curv0*d0P+curv1*d1P+curv2*d2P;
+
+                dtN +=  - N * KP
+                        - mu * N * U * U * divCurvKappa
+                        - 2. * mu * N * U * KappaU;
+                dtU +=  - 2. * tau * U * KappaN / N
+                        - tau * U * divCurvKappa
+                        - U * KappaP;
+                if( beta != 0)
+                {
+                    double KnablaBA = (curv0-curvKappa0)*d0A
+                                     +(curv1-curvKappa1)*d1A
+                                     +(curv2-curvKappa2)*d2A;
+                    double UA = b_0*( (d1FU+d1BU)*d2A-(d2FU+d2BU)*d1A) / 2. +
+                                b_1*( (d2FU+d2BU)*d0A-(d0FU+d0BU)*d2A) / 2. +
+                                b_2*( (d0FU+d0BU)*d1A-(d1FU+d1BU)*d0A) / 2.;
+                    double NA = b_0*( (d1FN+d1BN)*d2A-(d2FN+d2BN)*d1A) / 2. +
+                                b_1*( (d2FN+d2BN)*d0A-(d0FN+d0BN)*d2A) / 2. +
+                                b_2*( (d0FN+d0BN)*d1A-(d1FN+d1BN)*d0A) / 2.;
+                    double PA = b_0*( d1P*d2A-d2P*d1A)+
+                                b_1*( d2P*d0A-d0P*d2A)+
+                                b_2*( d0P*d1A-d1P*d0A);
+                    dtN +=  -N*( A*KappaU + UA + U*( A*divCurvKappa - KnablaBA));
+                    dtU +=  -U * ( A*KappaU + UA)
+                            -1./mu * ( A*KappaP + PA)
+                            -tau/mu * ( A*KappaN + NA) / N;
+                }
+            },
+            //species depdendent
+            fields[0][i], m_dFN[i][0], m_dFN[i][1], m_dFN[i][2],
+                          m_dBN[i][0], m_dBN[i][1], m_dBN[i][2],
+            fields[1][i], m_dFU[i][0], m_dFU[i][1], m_dFU[i][2],
+                          m_dBU[i][0], m_dBU[i][1], m_dBU[i][2],
+                          m_dP[i][0], m_dP[i][1], m_dP[i][2],
+            //induction
+            m_apar, m_dA[0], m_dA[1], m_dA[2],
+            //magnetic parameters
+            m_b[0], m_b[1], m_b[2],
+            m_curv[0], m_curv[1], m_curv[2],
+            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
+            m_divCurvKappa, yp[0][i], yp[1][i]
+        );
     }
 }
 
@@ -1054,7 +905,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                     m_fields[1][i],  1., yp[1][i]);
         }
         //------------------Add Resistivity--------------------------//
-        dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+        double eta = m_p.eta, mu0 = m_p.mu[0], mu1 = m_p.mu[1];
+        dg::blas1::subroutine( [eta,mu0,mu1] DG_DEVICE ( double ne, double ni,
+                double ue, double ui, double& dtUe, double& dtUi){
+                    double current = (ne)*(ui-ue);
+                    dtUe += -eta/mu0 * current;
+                    dtUi += -eta/mu1 * (ne)/(ni) * current;
+                },
             m_fields[0][0], m_fields[0][1],
             m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
 #endif
@@ -1064,8 +921,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     if( m_omega_source != 0 )
     {
         if( m_fixed_profile )
-            dg::blas1::subroutine( routines::ComputeSource(), m_s[0][0], y[0][0],
-                m_profne, m_source, m_omega_source);
+            dg::blas1::subroutine(
+                [] DG_DEVICE ( double& result, double tilde_n, double profne,
+                    double source, double omega_source){
+                    result = omega_source*source*(profne - tilde_n);
+                    },
+                m_s[0][0], y[0][0], m_profne, m_source, m_omega_source);
         else
             dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
         //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
@@ -1095,13 +956,21 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     {
         //density
         //Here, we need to find out where "downstream" is
+        auto computeDensityBC = [] DG_DEVICE
+            ( double nminus, double nplus, double sheathDotDirection)
+            {
+                if ( sheathDotDirection > 0 )
+                    return nminus*sheathDotDirection;
+                else
+                    return -nplus*sheathDotDirection;
+            };
         for( unsigned i=0; i<2; i++)
         {
             if( m_reversed_field) //bphi negative (exchange + and -)
-                dg::blas1::evaluate( m_temp0, dg::equals(), routines::ComputeDensityBC(),
+                dg::blas1::evaluate( m_temp0, dg::equals(), computeDensityBC,
                     m_plusN[i], m_minusN[i], m_U_sheath);
             else
-                dg::blas1::evaluate( m_temp0, dg::equals(), routines::ComputeDensityBC(),
+                dg::blas1::evaluate( m_temp0, dg::equals(), computeDensityBC,
                     m_minusN[i], m_plusN[i], m_U_sheath);
             dg::blas1::axpby( m_sheath_forcing, m_temp0, 1.,  yp[0][i]);
         }

@@ -225,7 +225,14 @@ struct ImplicitVelocity
                         m_fields[1][i],  0., wp[i]);
             }
             //------------------Add Resistivity--------------------------//
-            dg::blas1::subroutine( routines::AddResistivity( m_p.eta, m_p.mu),
+            double eta = m_p.eta, mu0 = m_p.mu[0], mu1 = m_p.mu[1];
+            dg::blas1::subroutine(
+                [eta,mu0,mu1] DG_DEVICE ( double ne, double ni,
+                    double ue, double ui, double& dtUe, double& dtUi){
+                        double current = (ne)*(ui-ue);
+                        dtUe += -eta/mu0 * current;
+                        dtUi += -eta/mu1 * (ne)/(ni) * current;
+                    },
                 m_fields[0][0], m_fields[0][1],
                 m_fields[1][0], m_fields[1][1], wp[0], wp[1]);
             dg::blas1::pointwiseDot( m_masked, wp[0], wp[0]);
