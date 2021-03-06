@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
     std::array<std::array<dg::x::DVec,2>,2> y0;
     std::string initial = dg::file::get( mode, js, "init", "type", "harris").asString();
     try{
-        y0 = asela::initial_conditions.at(initial)( asela, grid, p, js, mode );
+        y0 = asela::initial_conditions(initial, asela, grid, p, mode, js );
     }catch ( std::out_of_range& error){
         DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
 #ifdef ASELA_MPI
@@ -135,6 +135,8 @@ int main( int argc, char* argv[])
         rtol = dg::file::get( mode, js, "timestepper", "rtol", 1e-7).asDouble();
         atol = dg::file::get( mode, js, "timestepper", "rtol", 1e-10).asDouble();
         dt = 1e-3; //that should be a small enough initial guess
+        std::array<std::array<dg::x::DVec,2>,2> y1 = y0;
+        asela( time, y0, y1); //compute one step for first output
     }
     else
     {
@@ -216,10 +218,11 @@ int main( int argc, char* argv[])
             for( unsigned i=0; i<itstp; i++)
             {
                 try{
-                if( p.timestepper == "adaptive")
-                    adapt.step( asela, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
-                if( p.timestepper == "multistep")
-                    multistep.step( asela, time, y0);}
+                    if( p.timestepper == "adaptive")
+                        adapt.step( asela, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                    if( p.timestepper == "multistep")
+                        multistep.step( asela, time, y0);
+                }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                     std::cerr << "Does Simulation respect CFL condition?\n";
@@ -338,7 +341,12 @@ int main( int argc, char* argv[])
             ti.tic();
             for( unsigned j=0; j<itstp; j++)
             {
-                try{ multistep.step( asela, time, y0);}
+                try{
+                    if( p.timestepper == "adaptive")
+                        adapt.step( asela, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                    if( p.timestepper == "multistep")
+                        multistep.step( asela, time, y0);
+                }
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
                     DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;

@@ -138,7 +138,7 @@ The harris sheet initial condition can be chosen with the following parameters i
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & harris & This choice necessitates the following parameters \\
 \qquad amplitude0  & float &  0.1     &  harris amplitude \\
-\qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
+\qquad amplitude1  & float &  1e-3    &  perturbation amplitude (making this negative will shift the perturbation by an angle $\pi$) \\
 \qquad my          & float &  1       &  perturbation wave number in y\\
 \bottomrule
 \end{longtable}
@@ -156,7 +156,7 @@ The island initial condition can be chosen with the following parameters in the 
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & island & This choice necessitates the following parameters \\
 \qquad amplitude0  & float &  0.1     &  island amplitude \\
-\qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
+\qquad amplitude1  & float &  1e-3    &  perturbation amplitude (making this negative will shift the perturbation by an angle $\pi$) \\
 \qquad my          & float &  1       &  perturbation wave number in y\\
 \bottomrule
 \end{longtable}
