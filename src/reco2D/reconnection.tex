@@ -165,9 +165,11 @@ We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
 \section{Invariants}
 The mass density and diffusions are
 \begin{align}
-    \mathcal M &= n-1 \\
-     \Lambda_n &= -\nu_\perp \Delta_\perp^2 n  \\
+    \mathcal M &= \ne \\
+    \vec j_n &= \ne \vec u_E + \ne\ue\bperp \\
+     \Lambda_n &= -\nu_\perp \Delta_\perp^2 \ne  \\
 \end{align}
+
 The inherent energy density of our system is:
 \begin{align}
  \mathcal{E} := &
@@ -180,8 +182,12 @@ The inherent energy density of our system is:
                  &+\frac{1}{2} \Ni u_E^2
                   + \frac{|\nabla_\perp \Apar|^2}{2 \beta}
 \end{align}
-The energy diffusion is
+The energy current density and diffusion are
 \begin{align}
+  \vec j_{\mathcal E} =& \sum_s z\left[
+  \left(\tau \ln N + \frac{1}{2}\mu U_\parallel^2 + \psi \right)N\left(
+  \vec u_E +U_\parallel\bperp  \right) + \tau NU_\parallel \bperp\right]
+  , \\
     \Lambda_\mathcal{E} :=  &\left( (1+\ln \ne) + \frac{1}{2} z_e \mu_e \ue^2 - \phi \right) (-\nu_\perp \Delta_\perp^2 \ne)
     \nonumber\\
     &+ \left( \tau_i ( 1+\ln \Ni) + \frac{1}{2} \Ui^2 + \psi_i\right)(-\nu_\perp \Delta_\perp^2 \Ni)
@@ -190,6 +196,13 @@ The energy diffusion is
     \nonumber\\
     &+ \Ui\Ni (-\nu_\perp \Delta_\perp^2 \Ui)
 \end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric and magnetic potentials and we sum over all species.
+
+With our choice of boundary conditions both the mass as well as the energy flux
+vanishes on the boundary. In the absence of artificial viscosity the volume integrated
+mass and energy density are thus exact invariants of the system.
 
 \section{Reconnection rate}
  A consistent definition of the reconnection rate is not trivial~\cite{Comisso2016}.
