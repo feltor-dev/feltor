@@ -135,8 +135,6 @@ int main( int argc, char* argv[])
         rtol = dg::file::get( mode, js, "timestepper", "rtol", 1e-7).asDouble();
         atol = dg::file::get( mode, js, "timestepper", "rtol", 1e-10).asDouble();
         dt = 1e-3; //that should be a small enough initial guess
-        std::array<std::array<dg::x::DVec,2>,2> y1 = y0;
-        asela( time, y0, y1); //compute one step for first output
     }
     else
     {
@@ -155,6 +153,13 @@ int main( int argc, char* argv[])
     /// ////////////Init diagnostics ////////////////////
     asela::Variables var = {asela, p, y0[0]};
     dg::Timer t;
+    t.tic();
+    {
+        std::array<std::array<dg::x::DVec,2>,2> y1 = y0;
+        asela( 0., y0, y1);
+    }
+    t.toc();
+    var.duration = t.diff();
     t.tic();
 
     DG_RANK0 std::cout << "Begin computation \n";
@@ -313,6 +318,16 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
+        for( auto& record : asela::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id1d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                &id1d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
         err = nc_enddef(ncid);
         size_t start = {0};
         size_t count = {1};
@@ -331,6 +346,11 @@ int main( int argc, char* argv[])
                     grid_out, transferH);
             DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"),
                     &start, &count, &result);
+        }
+        for( auto& record : asela::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
         }
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
         DG_RANK0 err = nc_close( ncid);
@@ -357,8 +377,9 @@ int main( int argc, char* argv[])
                 }
             }
             ti.toc();
+            var.duration = ti.diff() / (double) itstp;
             step+=itstp;
-            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time;
+            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time << " with current timestep "<<dt;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n"<<std::flush;
             //output all fields
             ti.tic();
@@ -373,6 +394,11 @@ int main( int argc, char* argv[])
                 dg::blas2::gemv( projection, resultH, transferH);
                 dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
                 DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
+            }
+            for( auto& record : asela::diagnostics1d_list)
+            {
+                double result = record.function( var);
+                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
             DG_RANK0 err = nc_close( ncid);
             ti.toc();

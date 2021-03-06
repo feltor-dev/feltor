@@ -23,6 +23,7 @@ struct Asela
     const std::array<Container,2>& gradP( int i) const { return m_dP[i];}
     const std::array<Container,2>& gradA( int i) const { return m_dA[i];}
     const dg::Elliptic<Geometry, Matrix, Container>& laplacianM() const{return m_lapMperp;}
+    const Geometry& grid() const {return m_multigrid.grid(0);}
     /// ////////////////DIAGNOSTICS END//////////////////////////////
 
     void compute_psi( double time);

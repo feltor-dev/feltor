@@ -25,6 +25,13 @@ struct Variables{
     asela::Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f;
     asela::Parameters p;
     std::array<dg::x::DVec,2> tmp;
+    double duration;
+};
+
+struct Record1d{
+    std::string name;
+    std::string long_name;
+    std::function<double( Variables&)> function;
 };
 
 struct Record{
@@ -157,5 +164,19 @@ std::vector<Record> diagnostics2d_list = {
             );
         }
     }
+};
+
+std::vector<Record1d> diagnostics1d_list = {
+    {"apar00", "Aparallel interpolated at 0,0",
+        []( Variables& v ) {
+            dg::HVec apar = dg::construct<dg::HVec>( v.f.aparallel(0));
+            return dg::interpolate( dg::xspace, apar, 0.,0., v.f.grid());
+        }
+    },
+    {"time_per_step", "Computation time per step",
+        []( Variables& v ) {
+            return v.duration;
+        }
+    },
 };
 }//namespace asela
