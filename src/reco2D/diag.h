@@ -42,12 +42,12 @@ struct Record{
 
 std::vector<Record> diagnostics2d_static_list = {
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( dg::DVec& result, Variables& v ) {
+        []( dg::x::DVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.f.grid());
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( dg::DVec& result, Variables& v ) {
+        []( dg::x::DVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooY2d, v.f.grid());
         }
     }
@@ -180,12 +180,14 @@ std::vector<Record> diagnostics2d_list = {
 };
 
 std::vector<Record1d> diagnostics1d_list = {
-    {"apar00", "Aparallel interpolated at 0,0",
-        []( Variables& v ) {
-            dg::HVec apar = dg::construct<dg::HVec>( v.f.aparallel(0));
-            return dg::interpolate( dg::xspace, apar, 0.,0., v.f.grid());
-        }
-    },
+    //This does unfortunately not work for MPI because we don't have an
+    //implementation of interpolate available for MPI
+    //{"apar00", "Aparallel interpolated at 0,0",
+    //    []( Variables& v ) {
+    //        dg::x::HVec apar = dg::construct<dg::x::HVec>( v.f.aparallel(0));
+    //        return dg::interpolate( dg::xspace, apar, 0.,0., v.f.grid());
+    //    }
+    //},
     {"time_per_step", "Computation time per step",
         []( Variables& v ) {
             return v.duration;
