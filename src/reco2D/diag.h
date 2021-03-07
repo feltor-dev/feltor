@@ -40,6 +40,19 @@ struct Record{
     std::function<void( dg::x::DVec&, Variables&)> function;
 };
 
+std::vector<Record> diagnostics2d_static_list = {
+    { "xc", "x-coordinate in Cartesian coordinate system",
+        []( dg::DVec& result, Variables& v ) {
+            result = dg::evaluate( dg::cooX2d, v.f.grid());
+        }
+    },
+    { "yc", "y-coordinate in Cartesian coordinate system",
+        []( dg::DVec& result, Variables& v ) {
+            result = dg::evaluate( dg::cooY2d, v.f.grid());
+        }
+    }
+};
+
 std::vector<Record> diagnostics2d_list = {
     {"electrons", "Electron density",
         []( dg::x::DVec& result, Variables& v ) {

@@ -328,14 +328,30 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
                 long_name.data());
         }
-        err = nc_enddef(ncid);
-        size_t start = {0};
-        size_t count = {1};
-        ///////////////////////////////////first output/////////////////////////
         dg::x::DVec volume = dg::create::volume( grid);
         dg::x::DVec resultD = volume;
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
+        for( auto& record : asela::diagnostics2d_static_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            int staticID = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
+                &staticID);
+            DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
+                long_name.data());
+            DG_RANK0 err = nc_enddef(ncid);
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::blas2::gemv( projection, resultH, transferH);
+            dg::file::put_var_double( ncid, staticID, grid_out, transferH);
+            DG_RANK0 err = nc_redef(ncid);
+        }
+        DG_RANK0 err = nc_enddef(ncid);
+        size_t start = {0};
+        size_t count = {1};
+        ///////////////////////////////////first output/////////////////////////
         for( auto& record : asela::diagnostics2d_list)
         {
             record.function( resultD, var);

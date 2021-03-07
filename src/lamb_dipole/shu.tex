@@ -345,12 +345,14 @@ inputfile  &             text attribute & 1 & verbose input file as a string \\
 time                     & Coord. Var. & 1 (time) & time at which fields are written \\
 x                        & Coord. Var. & 1 (x) & x-coordinate  \\
 y                        & Coord. Var. & 1 (y) & y-coordinate \\
+xc                       & Dataset & 2 (y,x) & Cartesian x-coordinate  \\
+yc                       & Dataset & 2 (y,x) & Cartesian y-coordinate \\
 vorticity                & Dataset & 3 (time, y, x) & electon density $n$ \\
 potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
 vorticity\_1d            & Dataset & 1 (time) & Vorticity integral $V$  \\
 enstrophy\_1d            & Dataset & 1 (time) & Enstropy integral $\Omega$  \\
 energy\_1d               & Dataset & 1 (time) & Total energy integral computed using $E = \int_D \phi\omega \dA$ \\
-time\_per\_step          & Dataset & 1 (time) & Average time for one output \\
+time\_per\_step          & Dataset & 1 (time) & Average computation time for one step \\
 error                    & Dataset & 1 (time) & Relative error to analytical solution if available, 0 else \\
 \bottomrule
 \end{longtable}

@@ -125,7 +125,7 @@ We initialize
   \Ui&=0 \\
   \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
 \end{align}
-where we can choose $A_\parallel$.
+where we can choose $\Apar$.
 \subsection{Harris sheet}
 The initial parallel magnetic vector potential is
 \begin{align}
@@ -161,6 +161,8 @@ init &  dict &   & Parameters for initialization \\
 \bottomrule
 \end{longtable}
 We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
+(The island simulation takes approximately a factor 5 times smaller timestep than
+the harris simulation).
 
 \section{Invariants}
 The mass density and diffusions are
@@ -357,8 +359,12 @@ inputfile        & text attribute & 1 & verbose input file as a string \\
 time             & Coord. Var. & 1 (time) & time at which fields are written \\
 x                & Coord. Var. & 1 (x) & x-coordinate  \\
 y                & Coord. Var. & 1 (y) & y-coordinate \\
+xc               & Dataset & 2 (y,x) & Cartesian x-coordinate  \\
+yc               & Dataset & 2 (y,x) & Cartesian y-coordinate \\
 X                & Dataset & 3 (time, y, x) & 2d outputs \\
 X\_1d            & Dataset & 1 (time) & 1d volume integrals $\int \dV X$ \\
+apar00           & Dataset & 1 (time) & $\Apar( \vec x_X,t)$ \\
+time\_per\_step  & Dataset & 1 (time) & Average computation time for one step \\
 \bottomrule
 \end{longtable}
 The output fields X are determined in the file \texttt{feltor/src/reco2D/diag.h}.
