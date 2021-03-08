@@ -102,7 +102,8 @@ std::vector<Record> diagnostics2d_list = {
     /// ------------------- Mass   terms ------------------------//
     {"lneperp", "Perpendicular electron diffusion",
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diff( v.f.density(0), 0., result);
+            dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+            v.f.compute_diff( v.tmp[0], 0., result);
         }
     },
     /// ------------------- Energy terms ------------------------//
