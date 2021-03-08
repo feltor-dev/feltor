@@ -62,6 +62,6 @@
     //{
     //    "type"      : "island",
     //    "amplitude1" : 1e-5,
-    //    "mY"        : 1,  //y-mode number
+    //    "my"        : 1,  //y-mode number
     //}
 }

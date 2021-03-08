@@ -27,9 +27,9 @@ std::map<std::string, std::function< std::array<std::array<dg::x::DVec,2>,2>(
             const dg::x::CartesianGrid2d& grid, const asela::Parameters& p,
             const Json::Value& js, enum dg::file::error mode)
         {
-            double amp0 = dg::file::get( mode, js, "init", "amplitude0", 1e-5).asDouble();
+            double amp0 = dg::file::get( mode, js, "init", "amplitude0", 1e-1).asDouble();
             double amp1 = dg::file::get( mode, js, "init", "amplitude1", 1e-5).asDouble();
-            double mY  = dg::file::get( mode, js, "init", "my", 1e-5).asDouble();
+            double mY  = dg::file::get( mode, js, "init", "my", 1).asDouble();
             std::array<std::array<dg::x::DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] =
                 dg::construct<dg::x::DVec>(dg::evaluate( dg::zero, grid));
@@ -38,6 +38,7 @@ std::map<std::string, std::function< std::array<std::array<dg::x::DVec,2>,2>(
             dg::x::DVec apar = dg::evaluate( [=](double x, double y){ return
                 cos(kxp*x)*( amp0/cosh(kx*x)/cosh(kx*x) - amp1*cos( ky*y));
                 }, grid);
+            //cos 
             f.compute_lapM( -1./p.beta, apar, 0., y0[1][0]);
             dg::blas1::axpby(1., y0[1][0], 1./p.mu[0], apar, y0[1][0]);
             // if we include Gamma A again we must take care here
@@ -51,7 +52,7 @@ std::map<std::string, std::function< std::array<std::array<dg::x::DVec,2>,2>(
             const Json::Value& js, enum dg::file::error mode)
         {
             double amp1 = dg::file::get( mode, js, "init", "amplitude1", 1e-5).asDouble();
-            double mY  = dg::file::get( mode, js, "init", "my", 1e-5).asDouble();
+            double mY  = dg::file::get( mode, js, "init", "my", 1).asDouble();
             std::array<std::array<dg::x::DVec,2>,2> y0;
             y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] =
                 dg::construct<dg::x::DVec>(dg::evaluate( dg::zero, grid));
