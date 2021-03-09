@@ -30,12 +30,12 @@ struct Asela
     void compute_phi( double time, const std::array<Container,2>& n);
     void compute_apar( double time, const std::array<Container,2>& n, std::array<Container,2>& u);
     void compute_perp( double time, const std::array<std::array<Container,2>,2>& y, std::array<std::array<Container,2>,2>& yp);
-    void compute_diff( const Container& nme, double beta, Container& result)
+    void compute_diff( double alpha, const Container& nme, double beta, Container& result)
     {
         if( m_p.nu_perp != 0)
         {
             dg::blas2::gemv( m_lapMperp, nme, m_temp0);
-            dg::blas2::gemv( -m_p.nu_perp, m_lapMperp, m_temp0, beta, result);
+            dg::blas2::gemv( -alpha*m_p.nu_perp, m_lapMperp, m_temp0, beta, result);
         }
         else
             dg::blas1::scal( result, beta);
@@ -244,7 +244,7 @@ void Asela<G, M, Container>::compute_perp( double time, const std::array<std::ar
                     double U, double d0FU, double d1FU,
                               double d0BU, double d1BU,
                               double d0P, double d1P,
-                    double A, double d0A, double d1A,
+                              double d0A, double d1A,
                     double& dtN, double& dtU
                 )
                 {
@@ -283,8 +283,7 @@ void Asela<G, M, Container>::compute_perp( double time, const std::array<std::ar
                 m_u[i], m_dFU[i][0], m_dFU[i][1],
                         m_dBU[i][0], m_dBU[i][1],
                         m_dP[i][0], m_dP[i][1],
-                //induction
-                m_apar[i], m_dA[i][0], m_dA[i][1],
+                        m_dA[i][0], m_dA[i][1],
                 //magnetic parameters
                 yp[0][i], yp[1][i]
             );
@@ -324,8 +323,13 @@ void Asela<Geometry, Matrix, Container>::operator()( double time,  const std::ar
     // Add diffusion
     for( unsigned i=0; i<2; i++)
     {
-        compute_diff( y[0][i], 1., yp[0][i]);
-        compute_diff(  m_u[i], 1., yp[1][i]);
+        compute_diff( 1., y[0][i], 1., yp[0][i]);
+        if( m_p.viscosity == "velocity-viscosity")
+            compute_diff(  1., m_u[i], 1., yp[1][i]);
+        else if ( m_p.viscosity == "canonical-viscosity")
+            compute_diff(  1., y[1][i], 1., yp[1][i]);
+        else
+            throw dg::Error(dg::Message(_ping_)<<"Error: Unrecognized viscosity type: '"<<m_p.viscosity<<"'! Exit now!");
     }
 
     t.toc();

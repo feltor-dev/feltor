@@ -19,7 +19,7 @@ struct Parameters
     double eps_maxwell; //!< accuracy of induction equation
     double eps_gamma; //!< accuracy of gamma operator
     std::string direction_diff, direction_ell;
-    std::string advection, timestepper;
+    std::string advection, timestepper, viscosity;
 
     double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
     double tau[2]; //!< tau[0] = -1, tau[1] = tau_i
@@ -56,7 +56,8 @@ struct Parameters
         tau[0]   = -1.;
         tau[1]   = dg::file::get( mode, js, "physical", "tau",  0.0 ).asDouble();
         beta     = dg::file::get( mode, js, "physical", "beta", 1e-4).asDouble();
-        nu_perp  = dg::file::get( mode, js, "regularization", "nu_perp", 1e-4).asDouble();
+        viscosity = dg::file::get( mode, js, "regularization", "type", "velocity-viscosity").asString();
+        nu_perp   = dg::file::get( mode, js, "regularization", "nu_perp", 1e-4).asDouble();
         direction_diff = dg::file::get( mode, js, "regularization", "direction", "centered").asString();
 
 
