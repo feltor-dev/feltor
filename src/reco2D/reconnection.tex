@@ -216,8 +216,8 @@ mass and energy density are thus exact invariants of the system.
  A consistent definition of the reconnection rate is not trivial~\cite{Comisso2016}.
  We adopt a similar definiton as in Ref.~\cite{Comisso2013}
 \begin{align}
- Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
- \gamma&:= \frac{\d \ln{(Q_X)}}{\d t}
+    Q_X&:= \Apar(\vec{x}_X,t) - \Apar( \vec{x}_X,0) \\
+ \gamma&:= \frac{1}{Q_X}\frac{\d Q_X}{\d t} = \frac{\d \ln{|Q_X|}}{\d t}
 \end{align}
 where $\vec{x}_X = [0,0]$.
 This can be easily evaluated in post-processing using a python script.
