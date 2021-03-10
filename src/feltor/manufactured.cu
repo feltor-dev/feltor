@@ -29,7 +29,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     const feltor::Parameters p( js, dg::file::error::is_throw);
-    p.display( std::cout);
+    std::cout << js <<std::endl;
     const double R_0 = 10;
     const double I_0 = 20; //q factor at r=1 is I_0/R_0
     const double a  = 1; //small radius
