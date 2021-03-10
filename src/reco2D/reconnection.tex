@@ -55,27 +55,23 @@ It consists of the first two moment equations for electrons and ions
 \frac{\partial}{\partial t} \ne =&
  - \left[\phi, \ne\right]
 + \left[\Apar,\ne \ue  \right]
--\nu_\perp \Delta_\perp^2\ne
 \\
 %%%
 \label{firstgyromom}
 \frac{\partial}{\partial t} \Ni =&
  - \left[\psi, \Ni\right]
 + \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
--\nu_\perp \Delta_\perp^2\Ni
  \\
  %%%
 \frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
       -  \left[ \psi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
     +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
       - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
-    -\nu_\perp \Delta_\perp^2\ue
       \\
       \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
       -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
      +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
       + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
-    -\nu_\perp \Delta_\perp^2\Ui
 \end{align}
 which are coupled by polarisation and induction
 \begin{align}
@@ -169,8 +165,12 @@ The mass density and diffusions are
 \begin{align}
     \mathcal M &= \ne \\
     \vec j_n &= \ne \vec u_E + \ne\ue\bperp \\
-     \Lambda_n &= -\nu_\perp \Delta_\perp^2 \ne  \\
+     \Lambda_n &= -\nu_\perp \Delta_\perp^2 \ne
 \end{align}
+\begin{tcolorbox}[title=Note]
+    We already incorporate the artificial diffusion terms defined in
+    Section~\ref{sec:regularization}
+\end{tcolorbox}
 
 The inherent energy density of our system is:
 \begin{align}
@@ -197,6 +197,7 @@ The energy current density and diffusion are
     &+ z_e\mu_e \ue\ne (-\nu_\perp \Delta_\perp^2 \ue)
     \nonumber\\
     &+ \Ui\Ni (-\nu_\perp \Delta_\perp^2 \Ui)
+    \label{eq:energy_diffusion}
 \end{align}
 where in the energy flux $\vec j_{\mathcal E}$
 we neglect terms  containing time derivatives
@@ -205,13 +206,18 @@ of the eletric and magnetic potentials and we sum over all species.
 With our choice of boundary conditions both the mass as well as the energy flux
 vanishes on the boundary. In the absence of artificial viscosity the volume integrated
 mass and energy density are thus exact invariants of the system.
+\begin{tcolorbox}[title=Note]
+    For the canonical-viscosity scheme the viscosity terms in the last two
+    terms of Eq.~\eqref{eq:energy_diffusion} change to the canonical velocity.
+\end{tcolorbox}
+
 
 \section{Reconnection rate}
  A consistent definition of the reconnection rate is not trivial~\cite{Comisso2016}.
  We adopt a similar definiton as in Ref.~\cite{Comisso2013}
 \begin{align}
- Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
- \gamma&:= \frac{\d \ln{(Q_X)}}{\d t}
+    Q_X&:= \Apar(\vec{x}_X,t) - \Apar( \vec{x}_X,0) \\
+ \gamma&:= \frac{1}{Q_X}\frac{\d Q_X}{\d t} = \frac{\d \ln{|Q_X|}}{\d t}
 \end{align}
 where $\vec{x}_X = [0,0]$.
 This can be easily evaluated in post-processing using a python script.
@@ -275,40 +281,72 @@ that $\nc \vec u_E = \nc \bperp =0$
 %%%
 \frac{\partial}{\partial t} \ne =&
 - ( \vec u_E + \ue \bperp)\cn \ne - \ne \bperp \cn  \ue
--\nu_\perp \Delta_\perp^2\ne
 \\
 %%%
 \frac{\partial}{\partial t} \Ni =&
 - ( \vec u_E^i + \Ui \bperp^i)\cn \Ni - \Ni \bperp^i\cn  \Ui
--\nu_\perp \Delta_\perp^2\Ni
  \\
  %%%
 \frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
 -  (\vec u_E + \ue \bperp ) \cn \ue
 + \frac{1}{\mu_e} \bperp \cn \ln \ne
 - \frac{1}{\mu_e} \bperp \cn \phi
-    -\nu_\perp \Delta_\perp^2\ue
       \\
       \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
     - (\vec u_E^i + \Ui \bperp^i ) \cn \Ui
     - \tau_i \bperp^i \cn \ln \Ni
     - \bperp^i \cn \psi
-    - \nu_\perp \Delta_\perp^2\Ui
 \end{align}
 where the $i$ index signifies that $\vec u_E$ respectively $\bperp$ are to
 be evaluated using the ion potentials $\psi$ and $\Apar$.
-\subsection{Regularization}
+\begin{tcolorbox}[title=Note]
+    We also tried to use the conservative upwind scheme, where the density equation
+    is discretized in divergence form together with an interpolated multiplication
+    scheme. This however was completely unstable for the harris sheet.
+\end{tcolorbox}
+\subsection{Regularization} \label{sec:regularization}
 In order to prevent shocks and regularize the advection scheme
 we implement an artificial viscosity of order 2.
+\begin{align}
+%%%
+    \frac{\partial}{\partial t} \ne =& \ldots -\nu_\perp \Delta_\perp^2 \ne
+\\
+%%%
+\frac{\partial}{\partial t} \Ni =& \ldots -\nu_\perp \Delta_\perp^2 \Ni
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+\ldots -\nu_\perp \Delta_\perp^2 \ue
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =& \ldots -\nu_\perp \Delta_\perp^2 \Ui
+\end{align}
+Regularly we apply the artificial viscosity to the parallel velocities. However,
+we can also apply it to the canonical velocity:
+\begin{align}
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+\ldots -\nu_\perp \Delta_\perp^2 \left( \ue+ \frac{1}{\mu_e} \Apar \right)
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =& \ldots -\nu_\perp \Delta_\perp^2 \left( \Ui+ \Gamma_1 \Apar  \right)
+\end{align}
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 regularization & dict & & \\
+\qquad type & string & velocity-viscosity & Apply viscosity on density and parallel velocity \\
+\qquad type & string & canonical-viscosity & Apply viscosity on density and parallel canonical velocity \\
 \qquad direction & string & centered & The direction of the Laplacian \\
 \qquad nu\_perp & float & 1e-6  &  The strength of the diffusion \\
 \bottomrule
 \end{longtable}
 Simply set the diffusion to 0 if you do not want any regularization.
+\begin{tcolorbox}[title=Note]
+    If you set nu\_perp too large the timestep in the explicit timestepper will
+    have to be very small due to the restrictive CFL condition. At the same
+    time in our experience having to make the timestep smaller due to viscosity
+    is a clear warning that nu\_perp is too large for the chosen resolution.
+    Chose nu\_perp as large as you can without decreasing the timestep.
+\end{tcolorbox}
 
 \subsection{Elliptic solvers}
 In order to solve the elliptic equations we chose a multigrid scheme (nested

@@ -102,7 +102,8 @@ std::vector<Record> diagnostics2d_list = {
     /// ------------------- Mass   terms ------------------------//
     {"lneperp", "Perpendicular electron diffusion",
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diff( v.f.density(0), 0., result);
+            dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+            v.f.compute_diff( 1., v.tmp[0], 0., result);
         }
     },
     /// ------------------- Energy terms ------------------------//
@@ -155,8 +156,10 @@ std::vector<Record> diagnostics2d_list = {
     {"leeperp", "Perpendicular electron energy dissipation",
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::axpby( 1., v.f.density(0), -1., 1., v.tmp[0]);
-            v.f.compute_diff( v.tmp[0], 0., v.tmp[0]);
-            v.f.compute_diff( v.f.velocity(0), 0., v.tmp[1]);
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
+            v.f.compute_diff( 1., v.f.velocity(0), 0., v.tmp[1]);
+            if ( v.p.viscosity == "canonical-viscosity")
+                v.f.compute_diff( 1./v.p.mu[0], v.f.aparallel(0), 1., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyDiff( v.p.mu[0], v.p.tau[0], -1),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
@@ -168,8 +171,10 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::scal( result, -v.p.nu_perp);
             dg::blas1::axpby( 1., v.f.density(1), -1., 1., v.tmp[0]);
-            v.f.compute_diff( v.tmp[0], 0., v.tmp[0]);
-            v.f.compute_diff( v.f.velocity(1), 0., v.tmp[1]);
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
+            v.f.compute_diff( 1., v.f.velocity(1), 0., v.tmp[1]);
+            if ( v.p.viscosity == "canonical-viscosity")
+                v.f.compute_diff( 1./v.p.mu[1], v.f.aparallel(1), 1., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyDiff( v.p.mu[1], v.p.tau[1], 1),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),

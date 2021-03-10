@@ -53,7 +53,7 @@
     },
     "regularization":
     {
-        "type" : "viscosity",
+        "type" : "velocity-viscosity",
         "order": 2,
         "direction": "centered",
         "nu_perp": 0.0e-7
