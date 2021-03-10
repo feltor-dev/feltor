@@ -4,9 +4,9 @@
 #include <sstream>
 #include <cmath>
 
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
 #include <mpi.h>
-#endif //ASELA_MPI
+#endif //WITH_MPI
 
 #ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
@@ -18,66 +18,16 @@
 #include "init.h"
 #include "diag.h"
 
-#ifdef MPI_VERSION
-#define DG_RANK0 if(rank==0)
-#else
-#define DG_RANK0
-#endif
-
-
 int main( int argc, char* argv[])
 {
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
     ////////////////////////////////setup MPI///////////////////////////////
-#ifdef _OPENMP
-    int provided;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-    assert( provided >= MPI_THREAD_FUNNELED && "Threaded MPI lib required!\n");
-#else
-    MPI_Init(&argc, &argv);
-#endif
-    int periods[2] = {false, true}; //non-, periodic
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int num_devices=0;
-    cudaGetDeviceCount(&num_devices);
-    if(num_devices==0){
-        std::cerr << "No CUDA capable devices found"<<std::endl;
-        MPI_Abort(MPI_COMM_WORLD, -1);
-        return -1;
-    }
-    int device = rank % num_devices; //assume # of gpus/node is fixed
-    std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
-    cudaSetDevice( device);
-#endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int np[2];
-    if(rank==0)
-    {
-        int num_threads = 1;
-#ifdef _OPENMP
-        num_threads = omp_get_max_threads( );
-#endif //omp
-        std::cin>> np[0] >> np[1];
-        std::cout << "# Computing with "
-                  << np[0]<<" x "<<np[1]<<" processes x "
-                  << num_threads<<" threads = "
-                  <<size*num_threads<<" total"<<std::endl;
-;
-        if( size != np[0]*np[1])
-        {
-            std::cerr << "ERROR: Process partition needs to match total number of processes!"<<std::endl;
-#ifdef ASELA_MPI
-            MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //ASELA_MPI
-            return -1;
-        }
-    }
-    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    dg::mpi_init( argc, argv);
     MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-#endif //ASELA_MPI
+    dg::mpi_init2d( dg::DIR, dg::PER, comm, std::cin, true);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
 
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
@@ -94,9 +44,9 @@ int main( int argc, char* argv[])
     //Make grid
 
     dg::x::CartesianGrid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, dg::DIR, dg::PER
-        #ifdef ASELA_MPI
+        #ifdef WITH_MPI
         , comm
-        #endif //ASELA_MPI
+        #endif //WITH_MPI
         );
     DG_RANK0 std::cout << "Constructing Explicit...\n";
     asela::Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> asela( grid, p);
@@ -110,9 +60,9 @@ int main( int argc, char* argv[])
         y0 = asela::initial_conditions(initial, asela, grid, p, mode, js );
     }catch ( std::out_of_range& error){
         DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
         MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //ASELA_MPI
+#endif //WITH_MPI
         return -1;
     }
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
@@ -139,9 +89,9 @@ int main( int argc, char* argv[])
     else
     {
         DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
         MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //ASELA_MPI
+#endif //WITH_MPI
         return -1;
     }
 
@@ -289,9 +239,9 @@ int main( int argc, char* argv[])
         unsigned Nx_out    = dg::file::get( mode, js, "output", "Nx", 48).asUInt();
         unsigned Ny_out    = dg::file::get( mode, js, "output", "Ny", 48).asUInt();
         dg::x::CartesianGrid2d grid_out( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf, n_out, Nx_out, Ny_out, dg::DIR, dg::PER
-            #ifdef ASELA_MPI
+            #ifdef WITH_MPI
             , comm
-            #endif //ASELA_MPI
+            #endif //WITH_MPI
             );
         dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
         err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out,
@@ -386,9 +336,9 @@ int main( int argc, char* argv[])
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
                     DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
                     MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //ASELA_MPI
+#endif //WITH_MPI
                     return -1;
                 }
             }
@@ -424,9 +374,9 @@ int main( int argc, char* argv[])
     if( !("netcdf" == output) && !("glfw" == output))
     {
         DG_RANK0 std::cerr <<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!";
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
         MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //ASELA_MPI
+#endif //WITH_MPI
         return -1;
     }
     ////////////////////////////////////////////////////////////////////
@@ -437,9 +387,9 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     DG_RANK0 std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     DG_RANK0 std::cout <<"which is         \t"<<t.diff()/itstp/maxout<<"s/step\n";
-#ifdef ASELA_MPI
+#ifdef WITH_MPI
     MPI_Finalize();
-#endif //ASELA_MPI
+#endif //WITH_MPI
     return 0;
 
 }
