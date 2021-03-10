@@ -16,6 +16,34 @@ namespace dg
 {
 
 /**
+ * @brief Convencience shortcut: Calls MPI_Init or MPI_Init_thread
+ *
+ * Shortcut for
+ * @code
+#ifdef _OPENMP
+    int provided, error;
+    error = MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    assert( error == MPI_SUCCESS && "Threaded MPI lib required!\n");
+#else
+    MPI_Init(&argc, &argv);
+#endif
+ * @endcode
+ * @param argc command line argument number
+ * @param argv command line arguments
+ * @ingroup misc
+ */
+static inline void mpi_init( int argc, char* argv[])
+{
+#ifdef _OPENMP
+    int provided, error;
+    error = MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    assert( error == MPI_SUCCESS && "Threaded MPI lib required!\n");
+#else
+    MPI_Init(&argc, &argv);
+#endif
+}
+
+/**
 * @brief Read in number of processses and create Cartesian MPI communicator
 *
 * Also sets the GPU a process should use via \c rank\% num_devices_per_node if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -28,35 +56,49 @@ namespace dg
 */
 static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
-    int periods[2] = {false,false};
-    if( bcx == dg::PER) periods[0] = true;
-    if( bcy == dg::PER) periods[1] = true;
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if(rank==0)std::cout << "# MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
+    if(rank==0 && verbose)std::cout << "# MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
+    int periods[2] = {false,false};
+    if( bcx == dg::PER) periods[0] = true;
+    if( bcy == dg::PER) periods[1] = true;
     int np[2];
     if( rank == 0)
     {
+        int num_threads = 1;
+#ifdef _OPENMP
+        num_threads = omp_get_max_threads( );
+#endif //omp
         if(verbose)std::cout << "# Type npx and npy\n";
         is >> np[0] >> np[1];
-        if(verbose)std::cout<< "# Computing with "<<np[0] <<" x "<<np[1]<<" = "<<size<<" processes! "<<std::endl;
-        assert( size == np[0]*np[1]);
+        if(verbose)std::cout << "# Computing with "
+                  << np[0]<<" x "<<np[1]<<" processes x "
+                  << num_threads<<" threads = "
+                  <<size*num_threads<<" total"<<std::endl;
+        if( size != np[0]*np[1])
+        {
+            std::cerr << "ERROR: Process partition needs to match total number of processes!"<<std::endl;
+            MPI_Abort(MPI_COMM_WORLD, -1);
+            exit(-1);
+        }
     }
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     int num_devices=0;
     cudaGetDeviceCount(&num_devices);
     if(num_devices == 0)
     {
         std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
-        return;
+        MPI_Abort(MPI_COMM_WORLD, -1);
+        exit(-1);
     }
     int device = rank % num_devices; //assume # of gpus/node is fixed
     if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
     cudaSetDevice( device);
-#endif//cuda
+#endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
 * @brief Read in number of processes and broadcast to process group
@@ -119,20 +161,32 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx
 */
 static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
     int periods[3] = {false,false, false};
     if( bcx == dg::PER) periods[0] = true;
     if( bcy == dg::PER) periods[1] = true;
     if( bcz == dg::PER) periods[2] = true;
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
     int np[3];
     if( rank == 0)
     {
-        if(verbose)std::cout << "# Type npx and npy and npz\n";
+        int num_threads = 1;
+#ifdef _OPENMP
+        num_threads = omp_get_max_threads( );
+#endif //omp
+        if(verbose) std::cout << "# Type npx and npy and npz\n";
         is >> np[0] >> np[1]>>np[2];
-        if(verbose)std::cout<< "# Computing with "<<np[0] <<" x "<<np[1]<<" x "<<np[2]<<" = "<<size<<" processses! "<<std::endl;
-        assert( size == np[0]*np[1]*np[2]);
+        if(verbose) std::cout << "# Computing with "
+                  << np[0]<<" x "<<np[1]<<" x "<<np[2] << " processes x "
+                  << num_threads<<" threads = "
+                  <<size*num_threads<<" total"<<std::endl;
+        if( size != np[0]*np[1]*np[2])
+        {
+            std::cerr << "ERROR: Process partition needs to match total number of processes!"<<std::endl;
+            MPI_Abort(MPI_COMM_WORLD, -1);
+            exit(-1);
+        }
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
@@ -142,12 +196,13 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
     if(num_devices == 0)
     {
         std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
-        return;
+        MPI_Abort(MPI_COMM_WORLD, -1);
+        exit(-1);
     }
     int device = rank % num_devices; //assume # of gpus/node is fixed
     if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
     cudaSetDevice( device);
-#endif//cuda
+#endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
 * @brief Read in number of processes and broadcast to process group
