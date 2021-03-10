@@ -21,18 +21,23 @@ using Container = dg::DVec;
 using HDiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
 using HCooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 
-int main()
+int main(int argc, char * argv[])
 {
     dg::Timer t;
     unsigned n, Nx, Ny;
     std::cout << "# Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
+    std::cout <<"# You typed\n"
+              <<"n:  "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<std::endl;
     unsigned max_iter;
-    std::cout << "# of max_iterations\n"; 
-    std::cin >> max_iter;
-    std::cout << "# Type in eps\n";
+    std::cout << "# Type in max_iter and eps\n"; 
     double eps = 1e-6; 
-    std::cin >> eps;
+    std::cin >> max_iter>> eps;
+    std::cout <<"# You typed\n"
+              <<"max_iter:  "<<max_iter<<"\n"
+              <<"eps: "<<eps <<std::endl;  
     dg::CartesianGrid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy);
     
     const Container w2d = dg::create::weights( grid);
@@ -51,37 +56,37 @@ int main()
         std::cout << "# Lanczos creation took "<< t.diff()<<"s   \n";
 
         HDiaMatrix T; 
-        std::cout << "# Computing with Lanczos method \n";
+        std::cout << "Lanczos:\n";
        
         t.tic();
         T = lanczos( A, x, b, eps, true); 
         dg::blas2::symv( v2d, b, b);     //normalize
         t.toc();
         
-        std::cout << "iterations: "<< lanczos.get_iter() << "\n";
-        std::cout << "time: "<< t.diff()<<"s \n";
+        std::cout << "    iter: "<< lanczos.get_iter() << "\n";
+        std::cout << "    time: "<< t.diff()<<"s \n";
         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
-        std::cout << "# Relative error between b=||x||_2 V^T T e_1 and b: \n";   
-        std::cout << "error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";   
+        std::cout << "    # Relative error between b=||x||_2 V^T T e_1 and b: \n";   
+        std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";   
 
-        std::cout << "\n# Computing with M-Lanczos method \n";
+        std::cout << "\nM-Lanczos:\n";
         x = dg::evaluate( lhs, grid);
         t.tic();
         T = lanczos(A, x, b, v2d, w2d, eps, true); 
         t.toc();
-        std::cout << "iterations: "<< lanczos.get_iter() << "\n";
-        std::cout << "time: "<< t.diff()<<"s \n";
+        std::cout << "    iter: "<< lanczos.get_iter() << "\n";
+        std::cout << "    time: "<< t.diff()<<"s \n";
         dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
-        std::cout << "# Relative error between b=||x||_M V^T T e_1 and b: \n";  
-        std::cout << "error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";   
+        std::cout << "    # Relative error between b=||x||_M V^T T e_1 and b: \n";  
+        std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, bexac)) << " \n";   
 
     } 
     {
-        std::cout << "\n# Computing with MCG method \n";
+        std::cout << "\nM-CG: \n";
         t.tic();
         dg::MCG<Container> mcg(x, max_iter);
         t.toc();
-        std::cout << "# MCG creation took "<< t.diff()<<"s   \n";
+        std::cout << "#    M-CG creation took "<< t.diff()<<"s   \n";
         dg::blas1::scal(x, 0.0); //initialize with zero
         dg::blas2::symv(w2d, bexac, b); //multiply weights
         t.tic();
@@ -89,10 +94,10 @@ int main()
         t.toc();
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
-        std::cout << "iterations: "<< mcg.get_iter() << "\n";
-        std::cout << "time: "<< t.diff()<<"s \n";
-        std::cout << "# Relative error between x= R T^{-1} e_1 and x: \n";
-        std::cout << "error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
+        std::cout << "    iter: "<< mcg.get_iter() << "\n";
+        std::cout << "    time: "<< t.diff()<<"s \n";
+        std::cout << "    # Relative error between x= R T^{-1} e_1 and x: \n";
+        std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
     }
 
     

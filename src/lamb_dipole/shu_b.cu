@@ -32,7 +32,14 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////
 
     std::string initial = dg::file::get( mode, js, "init", "type", "lamb").asString();
-    dg::HVec omega = shu::initial_conditions.at( initial)(js, mode, grid);
+    dg::HVec omega;
+    try{
+        omega = shu::initial_conditions( initial, js, mode, grid);
+    }
+    catch ( std::out_of_range& e) {
+        std::cerr << "Initial condition '"<<initial<<"' not recognized! Exit!\n";
+        return -1;
+    }
 
     dg::DVec y0( omega ), y1( y0);
     //subtract mean mass

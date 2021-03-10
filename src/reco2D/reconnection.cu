@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
     std::array<std::array<dg::x::DVec,2>,2> y0;
     std::string initial = dg::file::get( mode, js, "init", "type", "harris").asString();
     try{
-        y0 = asela::initial_conditions.at(initial)( asela, grid, p, js, mode );
+        y0 = asela::initial_conditions(initial, asela, grid, p, mode, js );
     }catch ( std::out_of_range& error){
         DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
 #ifdef ASELA_MPI
@@ -116,16 +116,50 @@ int main( int argc, char* argv[])
         return -1;
     }
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
-    std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "TVB-3-3").asString();
-    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep( tableau, y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
+    dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
+    double rtol = 0., atol = 0., dt = 0.;
+
     unsigned step = 0;
-    multistep.init( asela, time, y0, p.dt);
+    if( p.timestepper == "multistep")
+    {
+        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "TVB-3-3").asString();
+        multistep.construct( tableau, y0);
+        dt = dg::file::get( mode, js, "timestepper", "dt", 20).asDouble();
+        multistep.init( asela, time, y0, dt);
+    }
+    else if (p.timestepper == "adaptive")
+    {
+        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "Tsitouras09-7-4-5").asString();
+        adapt.construct( tableau, y0);
+        rtol = dg::file::get( mode, js, "timestepper", "rtol", 1e-7).asDouble();
+        atol = dg::file::get( mode, js, "timestepper", "rtol", 1e-10).asDouble();
+        dt = 1e-3; //that should be a small enough initial guess
+    }
+    else
+    {
+        DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
+#ifdef ASELA_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //ASELA_MPI
+        return -1;
+    }
+
+
+
     DG_RANK0 std::cout << "Done!\n";
 
 
     /// ////////////Init diagnostics ////////////////////
     asela::Variables var = {asela, p, y0[0]};
     dg::Timer t;
+    t.tic();
+    {
+        std::array<std::array<dg::x::DVec,2>,2> y1 = y0;
+        asela( 0., y0, y1);
+    }
+    t.toc();
+    var.duration = t.diff();
     t.tic();
 
     DG_RANK0 std::cout << "Begin computation \n";
@@ -161,6 +195,8 @@ int main( int argc, char* argv[])
                 if( pair.first == "Vor / " || pair.first == "j / ")
                 {
                     asela.compute_lapM( 1., *pair.second, 0., temp);
+                    if( pair.first == "j / ")
+                        dg::blas1::scal( temp, 1./p.beta);
                     dg::blas2::gemv( equidistant, temp, visual);
                 }
                 else
@@ -186,7 +222,12 @@ int main( int argc, char* argv[])
             ti.tic();
             for( unsigned i=0; i<itstp; i++)
             {
-                try{ multistep.step( asela, time, y0);}
+                try{
+                    if( p.timestepper == "adaptive")
+                        adapt.step( asela, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                    if( p.timestepper == "multistep")
+                        multistep.step( asela, time, y0);
+                }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                     std::cerr << "Does Simulation respect CFL condition?\n";
@@ -277,14 +318,40 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        err = nc_enddef(ncid);
-        size_t start = {0};
-        size_t count = {1};
-        ///////////////////////////////////first output/////////////////////////
+        for( auto& record : asela::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id1d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                &id1d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
         dg::x::DVec volume = dg::create::volume( grid);
         dg::x::DVec resultD = volume;
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
+        for( auto& record : asela::diagnostics2d_static_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            int staticID = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
+                &staticID);
+            DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
+                long_name.data());
+            DG_RANK0 err = nc_enddef(ncid);
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::blas2::gemv( projection, resultH, transferH);
+            dg::file::put_var_double( ncid, staticID, grid_out, transferH);
+            DG_RANK0 err = nc_redef(ncid);
+        }
+        DG_RANK0 err = nc_enddef(ncid);
+        size_t start = {0};
+        size_t count = {1};
+        ///////////////////////////////////first output/////////////////////////
         for( auto& record : asela::diagnostics2d_list)
         {
             record.function( resultD, var);
@@ -293,8 +360,13 @@ int main( int argc, char* argv[])
             dg::blas2::gemv( projection, resultH, transferH);
             dg::file::put_vara_double( ncid, id3d.at(record.name), start,
                     grid_out, transferH);
-            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name),
+            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"),
                     &start, &count, &result);
+        }
+        for( auto& record : asela::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
         }
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
         DG_RANK0 err = nc_close( ncid);
@@ -305,7 +377,12 @@ int main( int argc, char* argv[])
             ti.tic();
             for( unsigned j=0; j<itstp; j++)
             {
-                try{ multistep.step( asela, time, y0);}
+                try{
+                    if( p.timestepper == "adaptive")
+                        adapt.step( asela, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                    if( p.timestepper == "multistep")
+                        multistep.step( asela, time, y0);
+                }
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
                     DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
@@ -316,8 +393,9 @@ int main( int argc, char* argv[])
                 }
             }
             ti.toc();
+            var.duration = ti.diff() / (double) itstp;
             step+=itstp;
-            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time;
+            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time << " with current timestep "<<dt;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n"<<std::flush;
             //output all fields
             ti.tic();
@@ -331,6 +409,11 @@ int main( int argc, char* argv[])
                 dg::assign( resultD, resultH);
                 dg::blas2::gemv( projection, resultH, transferH);
                 dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
+                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
+            }
+            for( auto& record : asela::diagnostics1d_list)
+            {
+                double result = record.function( var);
                 DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
             DG_RANK0 err = nc_close( ncid);

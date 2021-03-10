@@ -234,7 +234,9 @@ struct KrylovSqrtODESolve
         if(rank==0)
 #endif //MPI
         {
-            std::cout << "# b = sqrt(A) x with " << m_lanczos.get_iter()  << " iterations took "<<t.diff()<<"s\n";
+            std::cout << "# b = sqrt(A) x info \n" 
+                  << "    iter: " << m_lanczos.get_iter()  << "\n"
+                  << "    time: " << t.diff()<<"s"<<std::endl;
         }
 #endif //DG_BENCHMARK
         //reset max iterations if () operator is called again
@@ -350,7 +352,9 @@ struct KrylovSqrtCauchySolve
         if(rank==0)
 #endif // MPI_VERSION
         {
-            std::cout << "# b = sqrt(A) x with " << m_lanczos.get_iter()  << " iterations took "<<t.diff()<<"s\n";
+            std::cout << "# b = sqrt(A) x info \n" 
+                  << "    iter: " << m_lanczos.get_iter()  << "\n"
+                  << "    time: " << t.diff()<<"s"<<"\n";
         }
 #endif //DG_BENCHMARK
         //reset max iterations if () operator is called again
@@ -464,7 +468,9 @@ class KrylovSqrtODEinvert
         m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations and " << time_iter << " time iterations took "<<t.diff()<<"s\n";
+        std::cout << "# x = sqrt(A)^(-1) b info: \n"
+                  << "    iter: " << m_mcg.get_iter()  << "\n"
+                  << "    time: " << t.diff()<<"s"<< std::endl;
 #endif //DG_BENCHMARK
         m_mcg.set_iter(m_max_iter);
         return time_iter;
@@ -584,7 +590,9 @@ class KrylovSqrtCauchyinvert
         m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1  
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "# x = sqrt(A)^(-1) b with " << m_mcg.get_iter()  << " iterations took "<<t.diff()<<"s\n";
+        std::cout << "# x = sqrt(A)^(-1) b info: \n"
+                  << "    iter: " << m_mcg.get_iter()  << "\n"
+                  << "    time: " << t.diff()<<"s"<<std::endl;
 #endif //DG_BENCHMARK
         m_mcg.set_iter(m_max_iter);
         return m_iterCauchy;

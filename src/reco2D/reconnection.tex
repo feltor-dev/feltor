@@ -8,6 +8,7 @@
 \newcommand{\ue}{\ensuremath{u_\parallel}}
 \newcommand{\Ui}{\ensuremath{U_\parallel}}
 \newcommand{\Apar}{\ensuremath{A_\parallel}}
+\newcommand{\bperp}{\ensuremath{ \vec b_\perp}}
 \newcommand{\neref}{\ensuremath{n_0}}
 \newcommand{\Teref}{\ensuremath{T_{e0}}} %\rhoN
 
@@ -46,7 +47,7 @@ axis on the command line.
 
 \section{Equations}
 %tearing instability <-> reconnection
-Collisionless reconnection was studied in~\cite{stanier15}, gyro-fluid and gyro-kinetic studies~\cite{comisso13,zacharias14}. drift fluid-kinetic model~\cite{loureiro13}.
+Collisionless reconnection was studied in~\cite{Stanier2015}, gyro-fluid and gyro-kinetic studies~\cite{Comisso2013,Zacharias2014}.
 Our reduced model is based on a recent formulation of a full-F gyro-fluid model~\cite{Madsen2013}.
 It consists of the first two moment equations for electrons and ions
 \begin{align}
@@ -78,9 +79,10 @@ It consists of the first two moment equations for electrons and ions
 \end{align}
 which are coupled by polarisation and induction
 \begin{align}
- \ne - \Gamma_1 \Ni &= \vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
- \frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  \ne \ue - \Gamma_1 (\Ni \Ui)
+ -\ne + \Gamma_1 \Ni &= -\vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
+ -\frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  -\ne \ue + \Gamma_1 (\Ni \Ui)
 \end{align}
+where the signs are such that the elliptic operators are positive definite and
 with gyro-averaged parallel electromagnetic vector potential, generalized electric potential and gyro-averaging operator
 \begin{align}
  \psi &:= \Gamma_1 \phi - u_E^2 /2  \\
@@ -118,16 +120,16 @@ The initial conditions are set in the file \texttt{feltor/src/reco2D/init.h}.
 
 We initialize
 \begin{align}
- \Ni&=\ne=\neref \\
+ \Ni&=\ne=1 \\
  \phi &= 0 \\
   \Ui&=0 \\
   \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
 \end{align}
-where we can choose $A_\parallel$.
+where we can choose $\Apar$.
 \subsection{Harris sheet}
 The initial parallel magnetic vector potential is
 \begin{align}
-    \Apar =\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 m_y\pi y/L_y)}\right) \cos( \pi x /L_x)
+    \Apar =\beta\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 m_y\pi y/L_y)}\right) \cos( \pi x /L_x)
 \end{align}
 The harris sheet initial condition can be chosen with the following parameters in the input file
 \begin{longtable}{llll}
@@ -135,15 +137,16 @@ The harris sheet initial condition can be chosen with the following parameters i
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & harris & This choice necessitates the following parameters \\
-\qquad amplitude0  & float &  1e-5    &  harris amplitude \\
-\qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
+\qquad amplitude0  & float &  0.1     &  harris amplitude \\
+\qquad amplitude1  & float &  1e-3    &  perturbation amplitude (making this negative will shift the perturbation by an angle $\pi$) \\
 \qquad my          & float &  1       &  perturbation wave number in y\\
 \bottomrule
 \end{longtable}
+We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
 \subsection{Island}
 The initial parallel magnetic vector potential is
 \begin{align}
-    \Apar =\left[ \frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2m_y \pi y/L_y)}\right] \cos( \pi x /L_x)
+    \Apar =\beta \left[ A_0\frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2m_y \pi y/L_y)}\right] \cos( \pi x /L_x)
 \end{align}
 with $\varepsilon = 0.2$.
 The island initial condition can be chosen with the following parameters in the input file
@@ -152,17 +155,23 @@ The island initial condition can be chosen with the following parameters in the 
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 init &  dict &   & Parameters for initialization \\
 \qquad type      & string & island & This choice necessitates the following parameters \\
-\qquad amplitude1  & float &  1e-5    &  perturbation amplitude \\
+\qquad amplitude0  & float &  0.1     &  island amplitude \\
+\qquad amplitude1  & float &  1e-3    &  perturbation amplitude (making this negative will shift the perturbation by an angle $\pi$) \\
 \qquad my          & float &  1       &  perturbation wave number in y\\
 \bottomrule
 \end{longtable}
+We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
+(The island simulation takes approximately a factor 5 times smaller timestep than
+the harris simulation).
 
 \section{Invariants}
 The mass density and diffusions are
 \begin{align}
-    \mathcal M &= n-1 \\
-     \Lambda_n &= -\nu_\perp \Delta_\perp^2 n  \\
+    \mathcal M &= \ne \\
+    \vec j_n &= \ne \vec u_E + \ne\ue\bperp \\
+     \Lambda_n &= -\nu_\perp \Delta_\perp^2 \ne  \\
 \end{align}
+
 The inherent energy density of our system is:
 \begin{align}
  \mathcal{E} := &
@@ -175,8 +184,12 @@ The inherent energy density of our system is:
                  &+\frac{1}{2} \Ni u_E^2
                   + \frac{|\nabla_\perp \Apar|^2}{2 \beta}
 \end{align}
-The energy diffusion is
+The energy current density and diffusion are
 \begin{align}
+  \vec j_{\mathcal E} =& \sum_s z\left[
+  \left(\tau \ln N + \frac{1}{2}\mu U_\parallel^2 + \psi \right)N\left(
+  \vec u_E +U_\parallel\bperp  \right) + \tau NU_\parallel \bperp\right]
+  , \\
     \Lambda_\mathcal{E} :=  &\left( (1+\ln \ne) + \frac{1}{2} z_e \mu_e \ue^2 - \phi \right) (-\nu_\perp \Delta_\perp^2 \ne)
     \nonumber\\
     &+ \left( \tau_i ( 1+\ln \Ni) + \frac{1}{2} \Ui^2 + \psi_i\right)(-\nu_\perp \Delta_\perp^2 \Ni)
@@ -185,10 +198,17 @@ The energy diffusion is
     \nonumber\\
     &+ \Ui\Ni (-\nu_\perp \Delta_\perp^2 \Ui)
 \end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric and magnetic potentials and we sum over all species.
+
+With our choice of boundary conditions both the mass as well as the energy flux
+vanishes on the boundary. In the absence of artificial viscosity the volume integrated
+mass and energy density are thus exact invariants of the system.
 
 \section{Reconnection rate}
- A consistent definition of the reconnection rate is not trivial~\cite{comisso16}.
- We adopt a similar definiton as in Ref.~\cite{comisso13}
+ A consistent definition of the reconnection rate is not trivial~\cite{Comisso2016}.
+ We adopt a similar definiton as in Ref.~\cite{Comisso2013}
 \begin{align}
  Q_X&:=|  \Apar(\vec{x}_X, 0)-\Apar(\vec{x}_X,t) | \\
  \gamma&:= \frac{\d \ln{(Q_X)}}{\d t}
@@ -212,14 +232,26 @@ grid & dict & & \\
 \bottomrule
 \end{longtable}
 \subsection{Timestepper}
-The time stepper is an explicit multistep method where you can chose the
+The time stepper can be an explicit multistep method where you can chose the
 tableau to use
 \begin{longtable}{llll}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
 timestepper & dict & & \\
+\qquad type     & string & multistep & Choose an explicit multistep method \\
 \qquad tableau  & string & TVB-3-3  & The multistep tableau \\
 \qquad dt & float & 20 & The timestep \\
+\bottomrule
+\end{longtable}
+The second option is an adaptive explicit embedded Runge-Kutta scheme
+\begin{longtable}{llll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
+timestepper & dict & & \\
+\qquad type     & string & adaptive & Choose an explicit adaptive RK scheme \\
+\qquad tableau  & string & Tsitouras09-7-4-5  & The embedded RK tableau \\
+\qquad rtol & float & 1e-7 & The relative tolerance in the timestep \\
+\qquad atol & float & 1e-10 & The absolute tolerance in the timestep \\
 \bottomrule
 \end{longtable}
 \subsection{Advection scheme}
@@ -235,6 +267,36 @@ advection & dict & & \\
 \qquad type & string & upwind  & The upwind scheme \\
 \bottomrule
 \end{longtable}
+For the upwind scheme we first rewrite the equations in terms of
+$\vec u_E := \zhat \times \nabla\phi = [-\partial_y \phi,\ \partial_x \phi]$ and
+$\bperp := \nabla \Apar \times \zhat = [\partial_y \Apar,\ -\partial_x \Apar]$. We use
+that $\nc \vec u_E = \nc \bperp =0$
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+- ( \vec u_E + \ue \bperp)\cn \ne - \ne \bperp \cn  \ue
+-\nu_\perp \Delta_\perp^2\ne
+\\
+%%%
+\frac{\partial}{\partial t} \Ni =&
+- ( \vec u_E^i + \Ui \bperp^i)\cn \Ni - \Ni \bperp^i\cn  \Ui
+-\nu_\perp \Delta_\perp^2\Ni
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+-  (\vec u_E + \ue \bperp ) \cn \ue
++ \frac{1}{\mu_e} \bperp \cn \ln \ne
+- \frac{1}{\mu_e} \bperp \cn \phi
+    -\nu_\perp \Delta_\perp^2\ue
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+    - (\vec u_E^i + \Ui \bperp^i ) \cn \Ui
+    - \tau_i \bperp^i \cn \ln \Ni
+    - \bperp^i \cn \psi
+    - \nu_\perp \Delta_\perp^2\Ui
+\end{align}
+where the $i$ index signifies that $\vec u_E$ respectively $\bperp$ are to
+be evaluated using the ion potentials $\psi$ and $\Apar$.
 \subsection{Regularization}
 In order to prevent shocks and regularize the advection scheme
 we implement an artificial viscosity of order 2.
@@ -297,18 +359,16 @@ inputfile        & text attribute & 1 & verbose input file as a string \\
 time             & Coord. Var. & 1 (time) & time at which fields are written \\
 x                & Coord. Var. & 1 (x) & x-coordinate  \\
 y                & Coord. Var. & 1 (y) & y-coordinate \\
+xc               & Dataset & 2 (y,x) & Cartesian x-coordinate  \\
+yc               & Dataset & 2 (y,x) & Cartesian y-coordinate \\
 X                & Dataset & 3 (time, y, x) & 2d outputs \\
 X\_1d            & Dataset & 1 (time) & 1d volume integrals $\int \dV X$ \\
+time\_per\_step  & Dataset & 1 (time) & Average computation time for one step \\
 \bottomrule
 \end{longtable}
 The output fields X are determined in the file \texttt{feltor/src/reco2D/diag.h}.
 
 %..................................................................
-\bibliography{../../doc/related_pages/references}
+\bibliography{../../doc/related_pages/references, references}
 %..................................................................
-
-
-
-%..................................................................
-\bibliography{../../doc/related_pages/references}
 \end{document}

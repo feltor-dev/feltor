@@ -732,8 +732,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
                                 b_1*( d2P*d0A-d0P*d2A)+
                                 b_2*( d0P*d1A-d1P*d0A);
                     dtN +=  -N*( A*KappaU + UA + U*( A*divCurvKappa - KnablaBA));
-                    dtU +=  -U * ( A*KappaU + UA)
-                            -1./mu * ( A*KappaP + PA)
+                    dtU +=  -1./mu * ( A*KappaP + PA)
                             -tau/mu * ( A*KappaN + NA) / N;
                 }
             },

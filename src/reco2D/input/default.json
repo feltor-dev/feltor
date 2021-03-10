@@ -2,28 +2,35 @@
     "grid":
     {
         "n"  : 3,
-        "Nx" : 100,
-        "Ny" : 100,
-        "lxhalf"  : 80,
-        "lyhalf"  : 80
+        "Nx" : 48,
+        "Ny" : 96,
+        "lxhalf"  : 10,
+        "lyhalf"  : 20
     },
     "timestepper":
     {
-        "type": "ExplicitMultistep",
-        "tableau": "TVB-3-3",
-        "dt" : 2.0e+0
+        "type": "adaptive",
+        "tableau": "Tsitouras09-7-4-5",
+        "rtol": 1e-10,
+        "atol": 1e-12
     },
+    //"timestepper":
+    //{
+    //    "type": "multistep",
+    //    "tableau": "TVB-3-3",
+    //    "dt" : 3.0e+2
+    //},
     "advection":
     {
-        "type": "arakawa"
-        //"type": "upwind"
+        //"type": "arakawa"
+        "type": "upwind"
     },
     "output":
     {
         "type": "glfw",
         //"type": "netcdf",
-        "itstp"   : 4,
-        "maxout"  : 6000,
+        "itstp"   : 20,
+        "maxout"  : 400,
         "n" : 3,
         "Nx" : 100,
         "Ny" : 100
@@ -32,15 +39,15 @@
     {
         "type" : "multigrid",
         "stages": 3,
-        "eps_pol" : [1e-6,10.0,10.0],
-        "eps_maxwell": 1e-7, //( stop for induction equ.) 
-        "eps_gamma"  : 1e-10, //( stop for Gamma operator) 
-        "direction" : "forward",
+        "eps_pol" : [1e-8,2.0,2.0],
+        "eps_maxwell": 1e-8, //( stop for induction equ.) 
+        "eps_gamma"  : 1e-8, //( stop for Gamma operator) 
+        "direction" : "centered",
         "jumpfactor" : 1
     },
     "physical":
     {
-        "mu"   : -0.000544617, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
+        "mu"   : -0.000181372, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
         "tau"  : 0,      //T_i/T_e
         "beta" : 1e-3   //Plasma beta 
     },
@@ -49,13 +56,13 @@
         "type" : "viscosity",
         "order": 2,
         "direction": "centered",
-        "nu_perp": 1.0e-6
+        "nu_perp": 0.0e-7
     },
     "init":
     {
         "type"       : "harris",
         "amplitude0" : 1e-1,
-        "amplitude1" : 1e-5,
+        "amplitude1" : -1e-3,
         "my"         : 1
     }
     //"init":

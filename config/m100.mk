@@ -7,7 +7,7 @@ CFLAGS=-Wall -std=c++14 -DWITHOUT_VCL -mcpu=power9 # -mavx -mfma #flags for CC
 OPT=-O3 # optimization flags for host code
 NVCC=nvcc #CUDA compiler
 NVCCARCH=-arch sm_70 -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppress=initialization_not_reachable" #nvcc gpu compute capability
-NVCCFLAGS= -std=c++14 -Xcompiler "-mcpu=power9 -Wall"# -mavx -mfma" #flags for NVCC
+NVCCFLAGS= -std=c++14 -Xcompiler "-mcpu=power9 -Wall" --extended-lambda# -mavx -mfma" #flags for NVCC
 
 INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC) -I$(JSONCPP_INC)
 JSONLIB=-L$(JSONCPP_LIB) -ljsoncpp # json library for input parameters
