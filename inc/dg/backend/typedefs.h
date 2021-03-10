@@ -111,4 +111,11 @@ using fDMatrix = fDMatrix;
 ///@}
 }//namespace dg
 
+////CONVENIENCE MACRO////////
+#ifdef MPI_VERSION
+#define DG_RANK0 if(rank==0)
+#else //MPI_VERSION
+#define DG_RANK0
+#endif //MPI_VERSION
+
 #endif//_DG_TYPEDEFS_CUH_
