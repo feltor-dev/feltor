@@ -182,6 +182,9 @@ struct MultigridCG2d
      * accuracy is used at all stages.
      * @return the number of iterations in each of the stages beginning with the finest grid
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
+     * @note the convergence test on the coarse grids is only evaluated every
+     * 10th iteration. This effectively saves one dot product per iteration.
+     * The dot product is the main performance bottleneck on the coarse grids.
     */
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps)
