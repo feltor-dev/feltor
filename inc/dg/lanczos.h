@@ -313,6 +313,7 @@ class Lanczos
                 break;
             }
             dg::blas1::scal(m_vp, 1./betaip);  
+
             m_wm = m_v; //swap instead? wim stands for vim here
             m_v = m_vp;
         }
@@ -382,6 +383,7 @@ class Lanczos
             }
             dg::blas1::scal(m_vp, 1./betaip);     
             dg::blas1::scal(m_wp, 1./betaip);  
+
             m_v  = m_vp;
             m_wm = m_w;
             m_w  = m_wp;

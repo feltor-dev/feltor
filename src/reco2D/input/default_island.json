@@ -1,11 +1,11 @@
 {
     "grid":
     {
-        "n"  : 3,
+        "n"  : 5,
         "Nx" : 48,
-        "Ny" : 96,
-        "lxhalf"  : 40,
-        "lyhalf"  : 40
+        "Ny" : 48,
+        "lxhalf"  : 80,
+        "lyhalf"  : 80
     },
     "timestepper":
     {
@@ -29,8 +29,8 @@
     {
         "type": "glfw",
         //"type": "netcdf",
-        "itstp"   : 20,
-        "maxout"  : 400,
+        "itstp"   : 4,
+        "maxout"  : 6,
         "n" : 3,
         "Nx" : 100,
         "Ny" : 100
@@ -39,9 +39,9 @@
     {
         "type" : "multigrid",
         "stages": 3,
-        "eps_pol" : [1e-8,2.0,2.0],
-        "eps_maxwell": 1e-8, //( stop for induction equ.) 
-        "eps_gamma"  : 1e-8, //( stop for Gamma operator) 
+        "eps_pol" : [1e-10,2.0,2.0],
+        "eps_maxwell": 1e-10, //( stop for induction equ.) 
+        "eps_gamma"  : 1e-10, //( stop for Gamma operator) 
         "direction" : "centered",
         "jumpfactor" : 1
     },
@@ -53,16 +53,16 @@
     },
     "regularization":
     {
-        "type" : "viscosity",
+        "type" : "velocity-viscosity",
         "order": 2,
         "direction": "centered",
-        "nu_perp": 1.0e-10
+        "nu_perp": 0.0e-7
     },
     "init":
     {
-        "type"      : "island",
+        "type"       : "island",
         "amplitude0" : 1e-1,
-        "amplitude1" : 1e-5,
-        "my"        : 1  //y-mode number
+        "amplitude1" : -1e-3,
+        "my"         : 1
     }
 }

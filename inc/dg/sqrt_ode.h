@@ -5,7 +5,7 @@
 #include "lgmres.h"
 
 /**
-* @brief Classes for square root Matrix-Vector product computation via the square root ODE method
+* @brief Classes for Matrix function-Vector product computation via the ODE method
 */
 namespace dg
 {
@@ -302,6 +302,132 @@ struct SqrtODE
     dg::CG<Container> m_pcg;  
     dg::LGMRES<Container> m_lgmres;
     dg::Extrapolation<Container> m_yp_ex;
+};
+
+
+/**
+ * @brief Right hand side of the exponential ODE \f[ \dot{y}= A y \f]
+ * where \f$ A\f$ is the matrix
+ * 
+ * @ingroup matrixfunctionapproximation
+ * 
+ * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$
+ */
+template< class Matrix, class Container>
+struct ExpODE
+{
+  public:
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = dg::get_value_type<Container>;
+    ExpODE() {};
+
+    /**
+     * @brief Construct ExpOde 
+     *
+     * @param A matrix
+     */
+    ExpODE( const Matrix& A)
+    {
+        construct(A);
+    }
+    /**
+     * @brief Construct SqrtOde operator
+     *
+     * @param A matrix
+     */
+    void construct(const Matrix& A) 
+    {
+        m_A = A;
+    }
+    /**
+     * @brief Set matrix A
+     *
+     * @param A matrix
+     */
+    void set_A( const Matrix& A) { 
+         m_A = A; 
+    }  
+    /**
+     * @brief Compute rhs term  \f$ yp= A y \f$ 
+     * @param y  is \f$ y\f$
+     * @param yp is \f[ \dot{y} \f]
+     * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$ otherwise
+     */
+    void operator()(value_type t, const Container& y, Container& yp)
+    {
+        dg::blas2::symv(m_A, y, yp);
+    }
+  private:
+    Matrix m_A;
+};
+
+
+
+/**
+ * @brief Right hand side of the (zeroth order) modified Bessel function ODE, rewritten as a system of coupled first order ODEs:
+ * \f[ \dot{z_0}= z_1 \f]
+ * \f[ \dot{z_0}= A^2 z_0 - t^{-1} z_1 \f]
+ * where \f$ A\f$ is the matrix and \f[z=(y,\dot{y})\f]
+ * 
+ * @ingroup matrixfunctionapproximation
+ * 
+ * @note Solution of ODE: \f$ y(1) = I_0(A) y(0)\f$
+ */
+template< class Matrix, class Container>
+struct BesselI0ODE
+{
+  public:
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = dg::get_value_type<Container>;
+    BesselI0ODE() {};
+
+    /**
+     * @brief Construct ExpOde 
+     *
+     * @param A matrix
+     */
+    BesselI0ODE( const Matrix& A)
+    {
+        construct(A);
+    }
+    /**
+     * @brief Construct BesselI0 ode
+     *
+     * @param A matrix
+     */
+    void construct(const Matrix& A) 
+    {
+        m_A = A;
+    }
+    /**
+     * @brief Set matrix A
+     *
+     * @param A matrix
+     */
+    void set_A( const Matrix& A) { 
+         m_A = A; 
+    }  
+    /**
+     * @brief Compute rhs term  
+     * \f[ \dot{z_0}= z_1 \f]
+     * \f[ \dot{z_1}= A^2 z_0 - t^{-1} z_1 \f] 
+     * @param z  is \f[ z = (y, \dot{y}) \f]
+     * @param zp is \f[ \dot{z} \f]
+     * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$ for initial condition \f$ z(0) = (y(0),0)^T \f$
+     */
+    void operator()(value_type t, const std::vector<Container, 2>& z, std::vector<Container, 2>& zp)
+    {
+        dg::blas2::symv(m_A, z[0], zp[0]);
+        dg::blas2::symv(m_A, zp[0], zp[1]);
+        dg::blas1::axpby(-1./t, z[1], 1.0, zp[1]);
+        
+        dg::blas1::copy(z[0],zp[0]);
+
+    }
+  private:
+    Matrix m_A;
 };
 
 
