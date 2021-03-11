@@ -23,39 +23,39 @@ int main()
             std::cerr << "**Throw**\n";
         dg::file::WrappedJsonValue ws( js, mode);
         try{
-            std::string hello = ws.get_string( "hell", "default");
+            std::string hello = ws[ "hell"].asString( "default");
             std::cerr << "Hello "<<hello<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            int idx0 = ws.get( "array").get_int( 2, 0);
+            int idx0 = ws[ "array"][2].asInt(0);
             std::cerr << "array 0 "<<idx0<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            int idx0 = ws.get_int( "hello", 0);
+            int idx0 = ws["hello"].asInt(0);
             std::cerr << "array 0 "<<idx0<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            int idx1 = ws.get( "arr").get_int( 1, 0);
+            int idx1 = ws[ "arr"][1].asInt( 0);
             std::cerr << "array 1 "<<idx1<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            double hi = ws.get( "neted").get_double( "hi", 0);
+            double hi = ws[ "neted"]["hi"].asDouble( 0);
             std::cerr << "hi "<<hi<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            bool test = ws.get( "nested").get_bool( "bol", true);
+            bool test = ws[ "nested"]["bol"].asBool( true);
             std::cerr << "bool "<<test<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            unsigned uint = ws.get("nested").get("another_net").get_unsigned("number",0);
+            unsigned uint = ws["nested"]["another_net"]["number"].asUInt(0);
             std::cerr << "number "<<uint<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            unsigned uint = ws.get("hello").get("another_net").get_unsigned("number",0);
+            unsigned uint = ws["hello"]["another_net"]["number"].asUInt(0);
             std::cerr << "number "<<uint<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            unsigned uint = ws.get(0).get(2).get_unsigned("number",0);
+            unsigned uint = ws[0][2]["number"].asUInt(0);
             std::cerr << "number "<<uint<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
     }
@@ -63,17 +63,17 @@ int main()
     {
         std::cout << "Test correct access:\n";
         dg::file::WrappedJsonValue ws( js);
-        std::string hello = ws.get_string( "hello", "");
+        std::string hello = ws["hello"].asString();
         assert( hello == "world");
-        int idx0 = ws.get( "array").get_int( 0, 0);
+        int idx0 = ws[ "array"][0].asInt(0);
         assert( idx0 == 42);
-        int idx1 = ws.get( "array").get_int( 1, 0);
+        int idx1 = ws["array"][1].asInt();
         assert( idx1 == 73);
-        double hi = ws.get( "nested").get_double( "hi", 0);
+        double hi = ws[ "nested"][ "hi"].asDouble();
         assert( hi == 38);
-        bool test = ws.get( "nested").get_bool( "bool", true);
+        bool test = ws[ "nested"]["bool"].asBool(true);
         assert( test == true);
-        unsigned uint = ws.get("nested").get("another_nest").get_unsigned("number",0);
+        unsigned uint = ws["nested"]["another_nest"]["number"].asUInt(0);
         assert( uint == 7);
         std::cout << "TEST PASSED!\n";
     }

@@ -72,56 +72,24 @@ struct WrappedJsonValue
     WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_silent) {}
     WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
     WrappedJsonValue(Json::Value js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
-    WrappedJsonValue get( std::string key) const{
+    WrappedJsonValue operator[](std::string key) const{
         std::string access = m_access_str + "\""+key+"\": ";
         std::stringstream message;
+        if( !m_js.isObject( ))
+        {
+            message <<"*** Key error: "<<access<<" not found.";
+            raise_error( message.str(), "empty object ");
+            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
+        }
         if( !m_js.isMember(key))
         {
             message <<"*** Key error: "<<access<<" not found.";
             raise_error( message.str(), "empty object ");
             return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
         }
-        else if( !m_js[key].isObject( ) && !m_js[key].isArray())
-        {
-            message <<"*** Key error: "<<access<<" is neither object nor array. Nested access not possible!";
-            raise_error( message.str(), "empty object ");
-            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
-        }
-        else
-            return WrappedJsonValue(m_js[key], m_mode, access);
+        return WrappedJsonValue(m_js[key], m_mode, access);
     }
-    double get_double( std::string key, double value) const{
-        WrappedJsonValue ws = get<double>(key, value);
-        if( ws.m_js.isDouble())
-            return ws.m_js.asDouble();
-        return type_error<double>( ws, value, "Double");
-    }
-    unsigned get_unsigned( std::string key, unsigned value) const{
-        WrappedJsonValue ws = get<unsigned>(key, value);
-        if( ws.m_js.isUInt())
-            return ws.m_js.asUInt();
-        return type_error<unsigned>( ws, value, "Unsigned");
-    }
-    int get_int( std::string key, int value) const{
-        WrappedJsonValue ws = get<int>(key, value);
-        if( ws.m_js.isInt())
-            return ws.m_js.asInt();
-        return type_error<int>( ws, value, "Int");
-    }
-    bool get_bool( std::string key, bool value) const{
-        WrappedJsonValue ws = get<bool>(key, value);
-        if( ws.m_js.isBool())
-            return ws.m_js.asBool();
-        return type_error<bool>( ws, value, "Bool");
-    }
-    std::string get_string( std::string key, std::string value) const{
-        //return m_js["hhaha"].asString(); //does not throw
-        WrappedJsonValue ws = get<std::string>(key, value);
-        if( ws.m_js.isString())
-            return ws.m_js.asString();
-        return type_error<std::string>( ws, value, "String");
-    }
-    WrappedJsonValue get( unsigned idx) const{
+    WrappedJsonValue operator[]( unsigned idx) const{
         std::string access = m_access_str + "["+std::to_string(idx)+"] ";
         std::stringstream message;
         if( !m_js.isArray() || !m_js.isValidIndex(idx))
@@ -131,85 +99,44 @@ struct WrappedJsonValue
             else
                 message <<"*** Key error: "<<access<<" is not a valid Index.";
             raise_error( message.str(), "empty array ");
-            return WrappedJsonValue( Json::ValueType::arrayValue, m_mode, access);
-        }
-        else if( !m_js[idx].isObject() && !m_js[idx].isArray())
-        {
-            message <<"*** Key error: "<<access<<" is neither object nor array. Nested access not possible!";
-            raise_error( message.str(), "empty array ");
             return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
         }
         return WrappedJsonValue(m_js[idx], m_mode, access);
     }
-    double get_double( unsigned idx, double value) const{
-        WrappedJsonValue ws = get_idx<double>(idx, value);
-        if( ws.m_js.isDouble())
-            return ws.m_js.asDouble();
-        return type_error<double>( ws, value, "Double");
+    double asDouble( double value = 0) const{
+        if( m_js.isDouble())
+            return m_js.asDouble();
+        return type_error<double>( value, "a Double");
     }
-    unsigned get_unsigned( unsigned idx, unsigned value) const{
-        WrappedJsonValue ws = get_idx<unsigned>(idx, value);
-        if( ws.m_js.isUInt())
-            return ws.m_js.asUInt();
-        return type_error<unsigned>( ws, value, "Unsigned");
+    unsigned asUInt( unsigned value = 0) const{
+        if( m_js.isUInt())
+            return m_js.asUInt();
+        return type_error<unsigned>( value, "an Unsigned");
     }
-    int get_int( unsigned idx, int value) const{
-        WrappedJsonValue ws = get_idx<int>(idx, value);
-        if( ws.m_js.isInt())
-            return ws.m_js.asInt();
-        return type_error<int>( ws, value, "Int");
+    int asInt( int value = 0) const{
+        if( m_js.isInt())
+            return m_js.asInt();
+        return type_error<int>( value, "an Int");
     }
-    bool get_bool( unsigned idx, bool value) const{
-        WrappedJsonValue ws = get_idx<bool>(idx, value);
-        if( ws.m_js.isBool())
-            return ws.m_js.asBool();
-        return type_error<bool>( ws, value, "Bool");
+    bool asBool( bool value = false) const{
+        if( m_js.isBool())
+            return m_js.asBool();
+        return type_error<bool>( value, "a Bool");
     }
-    std::string get_string( unsigned idx, std::string value) const{
-        WrappedJsonValue ws = get_idx<std::string>(idx, value);
-        if( ws.m_js.isString())
-            return ws.m_js.asString();
-        return type_error<std::string>( ws, value, "String");
+    std::string asString( std::string value = "") const{
+        //return m_js["hhaha"].asString(); //does not throw
+        if( m_js.isString())
+            return m_js.asString();
+        return type_error<std::string>( value, "a String");
     }
-    const Json::Value& get_json( ) const{ return m_js;}
+    const Json::Value& asJson( ) const{ return m_js;}
     private:
     template<class T>
-    WrappedJsonValue get( std::string key, T value) const{
-        std::string access = m_access_str + "\""+key+"\": ";
-        if( !m_js.isMember(key))
-        {
-            std::stringstream message, default_str;
-            message <<"*** "<<access<<" not found.";
-            default_str << "value "<<value;
-            raise_error( message.str(), default_str.str());
-            return WrappedJsonValue( value, m_mode, access);
-        }
-        else
-            return WrappedJsonValue(m_js[key], m_mode, access);
-    }
-    template<class T>
-    WrappedJsonValue get_idx( unsigned idx, T value) const{
-        std::string access = m_access_str + "["+std::to_string(idx)+"] ";
-        if( m_js.isArray() && m_js.isValidIndex(idx))
-            return WrappedJsonValue(m_js[idx], m_mode, access);
-        else
-        {
-            std::stringstream message, default_str;
-            default_str << "value "<<value;
-            if( !m_js.isArray())
-                message <<"*** Key error: "<<m_access_str<<" is not an Array.";
-            else
-                message <<"*** Key error: "<<access<<" is not a valid Index.";
-            raise_error( message.str(), default_str.str());
-            return WrappedJsonValue( value, m_mode, access);
-        }
-    }
-    template<class T>
-    T type_error( const WrappedJsonValue& ws, T value, std::string type) const
+    T type_error( T value, std::string type) const
     {
         std::stringstream message, default_str;
         default_str << "value "<<value;
-        message <<"*** Type error: "<<ws.m_access_str<<" is not a "<<type<<".";
+        message <<"*** Type error: "<<m_access_str<<" "<<m_js<<" is not "<<type<<".";
         raise_error( message.str(), default_str.str());
         return value;
     }
