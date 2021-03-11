@@ -335,7 +335,6 @@ struct KrylovSqrtCauchySolve
         }
         
         m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin)); 
-        //TODO for a more rigorous eps multiply with sqrt(max_val(m_A.weights())/min_val(m_A.weights()))*sqrt(m_EVmin)
         m_e1H.resize(m_lanczos.get_iter(), 0.);
         m_e1H[0] = 1.;
         m_yH.resize(m_lanczos.get_iter());        

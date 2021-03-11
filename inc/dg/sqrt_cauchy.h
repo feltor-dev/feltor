@@ -166,7 +166,7 @@ struct TensorTraits< SqrtCauchyIntOp< Matrix, Container> >
  * @brief Compute the square root matrix - vector product via the Cauchy integral \f[ \sqrt{A} x=  \frac{- 2 K' \sqrt{m}}{\pi N} A \sum_{j=1}^{N} (w_j^2 I -A)^{-1} c_j d_j  x \f]
  * A is the matrix, x is the vector, w is a scalar m is the smallest eigenvalue of A, K' is the conjuated complete  elliptic integral and \f$c_j\f$ and \f$d_j\f$ are the jacobi functions 
  * 
- *This class is based on the approach of the paper <a href="https://doi.org/10.1137/070700607" > Computing A alpha log(A), and Related Matrix Functions by Contour Integrals </a>  by N. Hale et al
+ *This class is based on the approach (method 3) of the paper <a href="https://doi.org/10.1137/070700607" > Computing A alpha log(A), and Related Matrix Functions by Contour Integrals </a>  by N. Hale et al
  * 
  * @ingroup matrixfunctionapproximation
  *
@@ -211,7 +211,7 @@ struct SqrtCauchyInt
         m_size = m_helper.size();
         m_number = 0;
         m_op.construct(m_A, m_helper, m_multiply_weights);
-        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size);
+        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size+1);
         else m_lgmres.construct( m_helper, 300, 100, 10*m_size*m_size);
         m_temp_ex.set_max(1, copyable);
     }
@@ -224,7 +224,7 @@ struct SqrtCauchyInt
         m_helper.resize(new_max);
         m_temp.resize(new_max);
         m_helper3.resize(new_max);
-        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max);
+        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max+1);
         else m_lgmres.construct( m_helper, 300, 100, 10*new_max*new_max);
         m_op.new_size(new_max);
         m_temp_ex.set_max(1, m_temp);
@@ -286,7 +286,7 @@ struct SqrtCauchyInt
         const value_type k2 = minEV/maxEV;
         const value_type sqrt1mk2 = sqrt(1.-k2);
         const value_type Ks=boost::math::ellint_1(sqrt1mk2 );
-        const value_type fac = -2.* Ks*sqrtminEV/(M_PI*iter);
+        const value_type fac = 2.* Ks*sqrtminEV/(M_PI*iter);
         for (unsigned j=1; j<iter+1; j++)
         {
             t  = (j-0.5)*Ks/iter; //imaginary part .. 1i missing
@@ -310,7 +310,7 @@ struct SqrtCauchyInt
                 m_lgmres.solve( m_op, m_temp, m_helper, m_op.inv_weights(), m_op.weights(), m_eps, 1); 
             m_temp_ex.update(t, m_temp);
 
-            dg::blas1::axpby(-fac, m_temp, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) c d x
+            dg::blas1::axpby(fac, m_temp, 1.0, m_helper3); // m_helper3 += -fac  (w^2 +V A)^(-1) c d x
         }
         dg::blas2::symv(m_A, m_helper3, b); // - A fac sum (w^2 +V A)^(-1) c d x
         if (m_multiply_weights == true) dg::blas1::pointwiseDot(m_op.inv_weights(),  b, b);  // fac V A (-w^2 I -V A)^(-1) c d x

@@ -42,7 +42,7 @@ int main()
     std::cout << "#Constructing Matrix inversion and linear solvers\n";
     value_type eps= 1e-14;
     t.tic();
-    dg::CG <Container> pcg( x,  size*size);
+    dg::CG <Container> pcg( x,  size*size+1);
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();

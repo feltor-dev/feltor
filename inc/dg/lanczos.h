@@ -308,7 +308,7 @@ class Lanczos
 #ifdef DG_DEBUG
             std::cout << "# ||r||_2 =  " << residual << " at i = " << i << "\n";
 #endif //DG_DEBUG
-            if (res_fac*residual< eps ) {
+            if (res_fac*residual< eps ) { 
                 set_iter(i+1); 
                 break;
             }
@@ -377,7 +377,7 @@ class Lanczos
 #ifdef DG_DEBUG
             std::cout << "# ||r||_M =  " << residual << "  at i = " << i << "\n";
 #endif //DG_DEBUG
-            if (res_fac*residual < eps ) {
+            if (res_fac*residual < eps ) { 
                 set_iter(i+1); 
                 break;
             }

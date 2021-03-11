@@ -210,7 +210,7 @@ struct SqrtODE
         m_size = m_helper.size();
         m_number = 0;
         m_lhs.construct(m_A, m_helper, multiply_weights);
-        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size);
+        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size+1);
         else m_lgmres.construct( m_helper, 30, 10, 100*m_size*m_size);
         m_yp_ex.set_max(3, copyable);
     }
@@ -221,7 +221,7 @@ struct SqrtODE
      */
      void new_size( unsigned new_max) { 
         m_helper.resize(new_max);
-        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max);
+        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max+1);
         else m_lgmres.construct( m_helper, 30, 10, 100*new_max*new_max);
         m_lhs.new_size(new_max);
         m_yp_ex.set_max(3, m_helper);
@@ -417,7 +417,7 @@ struct BesselI0ODE
      * @param zp is \f[ \dot{z} \f]
      * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$ for initial condition \f$ z(0) = (y(0),0)^T \f$
      */
-    void operator()(value_type t, const std::vector<Container, 2>& z, std::vector<Container, 2>& zp)
+    void operator()(value_type t, const std::array<Container,2>& z, std::array<Container,2>& zp)
     {
         dg::blas2::symv(m_A, z[0], zp[0]);
         dg::blas2::symv(m_A, zp[0], zp[1]);

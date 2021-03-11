@@ -1,4 +1,5 @@
 #define SILENT
+// #define DG_DEBUG
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -22,8 +23,6 @@
 */
 using DVec = dg::DVec;
 using DMatrix =  dg::DMatrix;
-using DDiaMatrix =  cusp::dia_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
-using DCooMatrix = cusp::coo_matrix<int, dg::get_value_type<DVec>, cusp::device_memory>;
 
 
 
@@ -99,7 +98,7 @@ int main( int argc, char* argv[])
     }
 
     //////////////////////////////////////////////////////////////////////
-    dg::Karniadakis< std::vector<DVec> > stepper( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep<std::vector<DVec>> stepper( "ImEx-TVB-3-3", y0, y0[0].size(), p.eps_time);
 //     dg::Adaptive<dg::ARKStep<std::vector<DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
 //     dg::Adaptive<dg::ERKStep<std::vector<DVec>>> stepper( "Dormand-Prince-7-4-5", y0);
 
