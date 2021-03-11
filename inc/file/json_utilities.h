@@ -39,9 +39,196 @@ enum class comments{
     are_forbidden //!< Treat comments as invalid Json
 };
 
+/**
+ * @brief Access to Json values with error handling
+ *
+ * The purpose of this class is to wrap the
+ * access to a Json::Value with guards that raise exceptions or display
+ * warnings in case a key is misspelled, missing or has the wrong type.
+ * A large part of this is the composition of a good error message.
+ *
+ * In a typical project we rarely want to write Json values and rather only
+ * need to read and parse input files into the proper types. To increase user
+ * friendliness we also typically want to display a meaningful error message in
+ * case an input key is misspelled or missing. Jsoncpp by default silently
+ * generates a new key in case it is not present which in our scenario is an
+ * invitation for stupid mistakes.
+ * @code
+Json::Value js;
+dg::file::file2Json( "test.json", js);
+dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
+try{
+    std::string hello = ws.get_string( "hello", "");
+    int idx0 = ws.get( "array" ).get_int( 0, 0);
+} catch ( std::exception& e){
+    std::cerr << "Error in file test.json\n";
+    std::cerr << e.what()<<std::endl;
+}
+ * @endcode
+ */
+struct WrappedJsonValue
+{
+    WrappedJsonValue() : m_js(0), m_mode( error::is_silent){}
+    WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_silent) {}
+    WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
+    WrappedJsonValue(Json::Value js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
+    WrappedJsonValue get( std::string key) const{
+        std::string access = m_access_str + "\""+key+"\": ";
+        std::stringstream message;
+        if( !m_js.isMember(key))
+        {
+            message <<"*** Key error: "<<access<<" not found.";
+            raise_error( message.str(), "empty object ");
+            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
+        }
+        else if( !m_js[key].isObject( ) && !m_js[key].isArray())
+        {
+            message <<"*** Key error: "<<access<<" is neither object nor array. Nested access not possible!";
+            raise_error( message.str(), "empty object ");
+            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
+        }
+        else
+            return WrappedJsonValue(m_js[key], m_mode, access);
+    }
+    double get_double( std::string key, double value) const{
+        WrappedJsonValue ws = get<double>(key, value);
+        if( ws.m_js.isDouble())
+            return ws.m_js.asDouble();
+        return type_error<double>( ws, value, "Double");
+    }
+    unsigned get_unsigned( std::string key, unsigned value) const{
+        WrappedJsonValue ws = get<unsigned>(key, value);
+        if( ws.m_js.isUInt())
+            return ws.m_js.asUInt();
+        return type_error<unsigned>( ws, value, "Unsigned");
+    }
+    int get_int( std::string key, int value) const{
+        WrappedJsonValue ws = get<int>(key, value);
+        if( ws.m_js.isInt())
+            return ws.m_js.asInt();
+        return type_error<int>( ws, value, "Int");
+    }
+    bool get_bool( std::string key, bool value) const{
+        WrappedJsonValue ws = get<bool>(key, value);
+        if( ws.m_js.isBool())
+            return ws.m_js.asBool();
+        return type_error<bool>( ws, value, "Bool");
+    }
+    std::string get_string( std::string key, std::string value) const{
+        //return m_js["hhaha"].asString(); //does not throw
+        WrappedJsonValue ws = get<std::string>(key, value);
+        if( ws.m_js.isString())
+            return ws.m_js.asString();
+        return type_error<std::string>( ws, value, "String");
+    }
+    WrappedJsonValue get( unsigned idx) const{
+        std::string access = m_access_str + "["+std::to_string(idx)+"] ";
+        std::stringstream message;
+        if( !m_js.isArray() || !m_js.isValidIndex(idx))
+        {
+            if( !m_js.isArray())
+                message <<"*** Key error: "<<m_access_str<<" is not an Array.";
+            else
+                message <<"*** Key error: "<<access<<" is not a valid Index.";
+            raise_error( message.str(), "empty array ");
+            return WrappedJsonValue( Json::ValueType::arrayValue, m_mode, access);
+        }
+        else if( !m_js[idx].isObject() && !m_js[idx].isArray())
+        {
+            message <<"*** Key error: "<<access<<" is neither object nor array. Nested access not possible!";
+            raise_error( message.str(), "empty array ");
+            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
+        }
+        return WrappedJsonValue(m_js[idx], m_mode, access);
+    }
+    double get_double( unsigned idx, double value) const{
+        WrappedJsonValue ws = get_idx<double>(idx, value);
+        if( ws.m_js.isDouble())
+            return ws.m_js.asDouble();
+        return type_error<double>( ws, value, "Double");
+    }
+    unsigned get_unsigned( unsigned idx, unsigned value) const{
+        WrappedJsonValue ws = get_idx<unsigned>(idx, value);
+        if( ws.m_js.isUInt())
+            return ws.m_js.asUInt();
+        return type_error<unsigned>( ws, value, "Unsigned");
+    }
+    int get_int( unsigned idx, int value) const{
+        WrappedJsonValue ws = get_idx<int>(idx, value);
+        if( ws.m_js.isInt())
+            return ws.m_js.asInt();
+        return type_error<int>( ws, value, "Int");
+    }
+    bool get_bool( unsigned idx, bool value) const{
+        WrappedJsonValue ws = get_idx<bool>(idx, value);
+        if( ws.m_js.isBool())
+            return ws.m_js.asBool();
+        return type_error<bool>( ws, value, "Bool");
+    }
+    std::string get_string( unsigned idx, std::string value) const{
+        WrappedJsonValue ws = get_idx<std::string>(idx, value);
+        if( ws.m_js.isString())
+            return ws.m_js.asString();
+        return type_error<std::string>( ws, value, "String");
+    }
+    const Json::Value& get_json( ) const{ return m_js;}
+    private:
+    template<class T>
+    WrappedJsonValue get( std::string key, T value) const{
+        std::string access = m_access_str + "\""+key+"\": ";
+        if( !m_js.isMember(key))
+        {
+            std::stringstream message, default_str;
+            message <<"*** "<<access<<" not found.";
+            default_str << "value "<<value;
+            raise_error( message.str(), default_str.str());
+            return WrappedJsonValue( value, m_mode, access);
+        }
+        else
+            return WrappedJsonValue(m_js[key], m_mode, access);
+    }
+    template<class T>
+    WrappedJsonValue get_idx( unsigned idx, T value) const{
+        std::string access = m_access_str + "["+std::to_string(idx)+"] ";
+        if( m_js.isArray() && m_js.isValidIndex(idx))
+            return WrappedJsonValue(m_js[idx], m_mode, access);
+        else
+        {
+            std::stringstream message, default_str;
+            default_str << "value "<<value;
+            if( !m_js.isArray())
+                message <<"*** Key error: "<<m_access_str<<" is not an Array.";
+            else
+                message <<"*** Key error: "<<access<<" is not a valid Index.";
+            raise_error( message.str(), default_str.str());
+            return WrappedJsonValue( value, m_mode, access);
+        }
+    }
+    template<class T>
+    T type_error( const WrappedJsonValue& ws, T value, std::string type) const
+    {
+        std::stringstream message, default_str;
+        default_str << "value "<<value;
+        message <<"*** Type error: "<<ws.m_access_str<<" is not a "<<type<<".";
+        raise_error( message.str(), default_str.str());
+        return value;
+    }
+    void raise_error( std::string message, std::string default_str) const
+    {
+        if( error::is_throw == m_mode)
+            throw std::runtime_error( message);
+        else if ( error::is_warning == m_mode)
+            std::cerr <<"WARNING "<< message<<" Using default "<<default_str<<"\n";
+        else
+            ;
+    }
+    Json::Value m_js;
+    error m_mode;
+    std::string m_access_str = "";
+};
 
 /**
- * @brief Wrapper around Json::Value::get function that handles missing keys
+ * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
  *
  * @tparam T value type
  * @param err determines what to do when a key is missing
@@ -71,7 +258,7 @@ Json::Value get( enum error err, const Json::Value& js, std::string key, T value
 }
 
 /**
- * @brief Wrapper around Json::Value::get function that handles missing keys
+ * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
  *
  * @tparam T value type
  * @param err determines what to do when a key or index is missing
@@ -116,7 +303,7 @@ Json::Value get_idx( enum error err, const Json::Value& js, std::string key, uns
     }
 }
 /**
- * @brief Wrapper around Json::Value::get function that handles missing keys
+ * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
  *
  * @tparam T value type
  * @param err determines what to do when a key is missing
@@ -161,7 +348,7 @@ Json::Value get( enum error err, const Json::Value& js, std::string key, std::st
     }
 }
 /**
- * @brief Wrapper around Json::Value::get function that handles missing keys
+ * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
  *
  * @tparam T value type
  * @param err determines what to do when a key or index is missing
@@ -223,7 +410,7 @@ Json::Value get_idx( enum error err, const Json::Value& js, std::string key, std
 }
 
 /**
- * @brief Convenience wrapper to open a file and parse it into a Json::Value
+ * @brief DEPRECATED Convenience wrapper to open a file and parse it into a Json::Value
  *
  * @note included in \c json_utilities.h
  * @param filename Name of the JSON file to parse
@@ -275,7 +462,7 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
     }
 }
 /**
- * @brief Convenience wrapper to parse a string into a Json::Value
+ * @brief DEPRECATED Convenience wrapper to parse a string into a Json::Value
  *
  * Parse a string into a Json Value
  * @attention This function will throw a \c std::runtime_error with the Json error string on any error that occurs on parsing.
