@@ -40,17 +40,16 @@ enum class comments{
 };
 
 /**
- * @brief Access to Json values with error handling
+ * @brief Wrapped Access to Json values with error handling
  *
  * The purpose of this class is to wrap the
  * access to a Json::Value with guards that raise exceptions or display
- * warnings in case a key is misspelled, missing or has the wrong type.
- * A large part of this is the composition of a good error message.
+ * warnings in case an error occurs, for example when a key is misspelled,
+ * missing or has the wrong type.
+ * The goal is the composition of a good error message that helps a user
+ * quickly debug the input (file).
  *
- * In a typical project we rarely want to write Json values and rather only
- * need to read and parse input files into the proper types. To increase user
- * friendliness we also typically want to display a meaningful error message in
- * case an input key is misspelled or missing. Jsoncpp by default silently
+ * The Wrapper is necessary because Jsoncpp by default silently
  * generates a new key in case it is not present which in our scenario is an
  * invitation for stupid mistakes.
  *
@@ -60,22 +59,52 @@ Json::Value js;
 dg::file::file2Json( "test.json", js);
 dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
 try{
-    std::string hello = ws.get( "hello", "");
-    int idx0 = ws[ "array" ][0].asInt();
+    std::string hello = ws.get( "hello", "").asString();
+    // the following access will throw
+    int idx0 = ws[ "array" ][out_of_bounds_index].asInt();
 } catch ( std::exception& e){
     std::cerr << "Error in file test.json\n";
+    //the what string knows that the out of bounds error occured in the array
+    //called "array"
     std::cerr << e.what()<<std::endl;
 }
+ * @endcode
+ * A feature of the class is that it keeps track of how a value is called.
+ * For example
+ * @code
+void some_function( dg::file::WrappedJsonValue ws)
+{
+    int value = ws[ "some_non_existent_key"].asUInt();
+}
+
+dg::file::WrappedJsonValue js;
+try{
+    some_function( js["nested"]);
+} catch ( std::exception& e){ std::cerr << e.what()<<std::endl; }
+//The what string knows that "some_non_existent_key" is expected to be
+//contained in the "nested" key.
  * @endcode
  */
 struct WrappedJsonValue
 {
+    ///Default constructor
     WrappedJsonValue() : m_js(0), m_mode( error::is_silent){}
+    ///@brief By default the error mode is \c error::is_throw
+    ///@param js The Json value that will be guarded
     WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_throw) {}
+    ///@brief Construct with Json value and error mode
+    ///@param js The Json value that will be guarded
+    ///@param mode The error mode
     WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
+    ///@brief Change the error mode
+    ///@param mode The new error mode
     void set_mode( error new_mode){
         m_mode = new_mode;
     }
+    ///Read access to the raw Json value
+    const Json::Value& asJson( ) const{ return m_js;}
+
+    ////////////Members imitating the original Json::Value///////////////
     WrappedJsonValue operator[](std::string key) const{
         return get( key, Json::ValueType::objectValue, "empty object ");
     }
@@ -118,7 +147,6 @@ struct WrappedJsonValue
             return m_js.asString();
         return type_error<std::string>( value, "a String");
     }
-    const Json::Value& asJson( ) const{ return m_js;}
     private:
     WrappedJsonValue(Json::Value js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
     WrappedJsonValue get( std::string key, const Json::Value& value, std::string default_str) const
@@ -139,10 +167,13 @@ struct WrappedJsonValue
         if( !m_js.isArray() || !m_js.isValidIndex(idx))
         {
             std::stringstream message;
-            if( !m_js.isArray())
-                message <<"*** Key error: "<<m_access_str<<" is not an Array.";
+            //if( !m_js.isArray())
+            //    message <<"*** Key error: "<<m_access_str<<" is not an Array.";
+            //else
+            if( m_access_str.empty())
+                message <<"*** Index error: Index "<<idx<<" not present.";
             else
-                message <<"*** Key error: "<<access<<" is not a valid Index.";
+                message <<"*** Index error: Index "<<idx<<" not present in "<<m_access_str<<".";
             raise_error( message.str(), default_str);
             return WrappedJsonValue( value, m_mode, access);
         }
@@ -185,20 +216,8 @@ struct WrappedJsonValue
 template<class T>
 Json::Value get( enum error err, const Json::Value& js, std::string key, T value)
 {
-    if( js.isMember(key))
-        return js[key];
-    else
-    {
-        std::stringstream message;
-        message <<"*** "<<key<<" not found.";
-        if( error::is_throw == err)
-            throw std::runtime_error( message.str());
-        else if ( error::is_warning == err)
-            std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-        else
-            ;
-        return value;
-    }
+    WrappedJsonValue ws( js, err);
+    return ws.get( key, value);
 }
 
 /**
@@ -216,35 +235,8 @@ Json::Value get( enum error err, const Json::Value& js, std::string key, T value
 template<class T>
 Json::Value get_idx( enum error err, const Json::Value& js, std::string key, unsigned idx, T value)
 {
-    if( js.isMember(key))
-    {
-        if( js[key].isArray() && js[key].isValidIndex(idx))
-            return js[key][idx];
-        else
-        {
-            std::stringstream message;
-            message << "*** Index "<<idx<<" not present in "<<key;
-            if( error::is_throw == err)
-                throw std::runtime_error( message.str());
-            else if (error::is_warning == err)
-                std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-            else
-                ;
-            return value;
-        }
-    }
-    else
-    {
-        std::stringstream message;
-        message << "*** "<<key<<"["<<idx<<"] not found.";
-        if( error::is_throw == err)
-            throw std::runtime_error( message.str());
-        else if (error::is_warning == err)
-            std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-        else
-            ;
-        return value;
-    }
+    WrappedJsonValue ws( js, err);
+    return ws[key].get( idx, value);
 }
 /**
  * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
@@ -261,35 +253,8 @@ Json::Value get_idx( enum error err, const Json::Value& js, std::string key, uns
 template<class T>
 Json::Value get( enum error err, const Json::Value& js, std::string key, std::string key2, T value)
 {
-    if( js.isMember(key))
-    {
-        if( js[key].isObject() && js[key].isMember(key2))
-            return js[key][key2];
-        else
-        {
-            std::stringstream message;
-            message << "*** "<<key2<<" not found in "<<key;
-            if( error::is_throw == err)
-                throw std::runtime_error( message.str());
-            else if (error::is_warning == err)
-                std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-            else
-                ;
-            return value;
-        }
-    }
-    else
-    {
-        std::stringstream message;
-        message << "*** "<<key<<" : "<<key2<<" not found.";
-        if( error::is_throw == err)
-            throw std::runtime_error( message.str());
-        else if (error::is_warning == err)
-            std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-        else
-            ;
-        return value;
-    }
+    WrappedJsonValue ws( js, err);
+    return ws[key].get( key2, value);
 }
 /**
  * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
@@ -307,54 +272,12 @@ Json::Value get( enum error err, const Json::Value& js, std::string key, std::st
 template<class T>
 Json::Value get_idx( enum error err, const Json::Value& js, std::string key, std::string key2, unsigned idx, T value)
 {
-    if( js.isMember(key))
-    {
-        if( js[key].isObject() && js[key].isMember(key2))
-        {
-            if( js[key][key2].isArray() && js[key][key2].isValidIndex(idx))
-                return js[key][key2][idx];
-            else
-            {
-                std::stringstream message;
-                message << "*** Index "<<idx<<" not present in "<<key<<" : "<<key2;
-                if( error::is_throw == err)
-                    throw std::runtime_error( message.str());
-                else if (error::is_warning == err)
-                    std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-                else
-                    ;
-                return value;
-            }
-        }
-        else
-        {
-            std::stringstream message;
-            message << "*** "<<key2<<"["<<idx<<"] not found in "<<key;
-            if( error::is_throw == err)
-                throw std::runtime_error( message.str());
-            else if (error::is_warning == err)
-                std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-            else
-                ;
-            return value;
-        }
-    }
-    else
-    {
-        std::stringstream message;
-        message << "*** "<<key<<" : "<<key2<<"["<<idx<<"] not found.";
-        if( error::is_throw == err)
-            throw std::runtime_error( message.str());
-        else if (error::is_warning == err)
-            std::cerr <<"WARNING "<< message.str()<<" Using default value "<<value<<"\n";
-        else
-            ;
-        return value;
-    }
+    WrappedJsonValue ws( js, err);
+    return ws[key][key2].get( idx, value);
 }
 
 /**
- * @brief DEPRECATED Convenience wrapper to open a file and parse it into a Json::Value
+ * @brief Convenience wrapper to open a file and parse it into a Json::Value
  *
  * @note included in \c json_utilities.h
  * @param filename Name of the JSON file to parse
@@ -406,7 +329,7 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
     }
 }
 /**
- * @brief DEPRECATED Convenience wrapper to parse a string into a Json::Value
+ * @brief Convenience wrapper to parse a string into a Json::Value
  *
  * Parse a string into a Json Value
  * @attention This function will throw a \c std::runtime_error with the Json error string on any error that occurs on parsing.
