@@ -53,13 +53,15 @@ enum class comments{
  * case an input key is misspelled or missing. Jsoncpp by default silently
  * generates a new key in case it is not present which in our scenario is an
  * invitation for stupid mistakes.
+ *
+ * You can use the \c WrappedJsonValue like a \c Json::Value with read-only access:
  * @code
 Json::Value js;
 dg::file::file2Json( "test.json", js);
 dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
 try{
-    std::string hello = ws.get_string( "hello", "");
-    int idx0 = ws.get( "array" ).get_int( 0, 0);
+    std::string hello = ws.get( "hello", "");
+    int idx0 = ws[ "array" ][0].asInt();
 } catch ( std::exception& e){
     std::cerr << "Error in file test.json\n";
     std::cerr << e.what()<<std::endl;
@@ -69,39 +71,26 @@ try{
 struct WrappedJsonValue
 {
     WrappedJsonValue() : m_js(0), m_mode( error::is_silent){}
-    WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_silent) {}
+    WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_throw) {}
     WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
-    WrappedJsonValue(Json::Value js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
+    void set_mode( error new_mode){
+        m_mode = new_mode;
+    }
     WrappedJsonValue operator[](std::string key) const{
-        std::string access = m_access_str + "\""+key+"\": ";
-        std::stringstream message;
-        if( !m_js.isObject( ))
-        {
-            message <<"*** Key error: "<<access<<" not found.";
-            raise_error( message.str(), "empty object ");
-            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
-        }
-        if( !m_js.isMember(key))
-        {
-            message <<"*** Key error: "<<access<<" not found.";
-            raise_error( message.str(), "empty object ");
-            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
-        }
-        return WrappedJsonValue(m_js[key], m_mode, access);
+        return get( key, Json::ValueType::objectValue, "empty object ");
+    }
+    WrappedJsonValue get( std::string key, const Json::Value& value) const{
+        std::stringstream default_str;
+        default_str << "value "<<value;
+        return get( key, value, default_str.str());
     }
     WrappedJsonValue operator[]( unsigned idx) const{
-        std::string access = m_access_str + "["+std::to_string(idx)+"] ";
-        std::stringstream message;
-        if( !m_js.isArray() || !m_js.isValidIndex(idx))
-        {
-            if( !m_js.isArray())
-                message <<"*** Key error: "<<m_access_str<<" is not an Array.";
-            else
-                message <<"*** Key error: "<<access<<" is not a valid Index.";
-            raise_error( message.str(), "empty array ");
-            return WrappedJsonValue( Json::ValueType::objectValue, m_mode, access);
-        }
-        return WrappedJsonValue(m_js[idx], m_mode, access);
+        return get( idx, Json::ValueType::objectValue, "empty array");
+    }
+    WrappedJsonValue get( unsigned idx, const Json::Value& value) const{
+        std::stringstream default_str;
+        default_str << "value "<<value;
+        return get( idx, value, default_str.str());
     }
     double asDouble( double value = 0) const{
         if( m_js.isDouble())
@@ -131,6 +120,34 @@ struct WrappedJsonValue
     }
     const Json::Value& asJson( ) const{ return m_js;}
     private:
+    WrappedJsonValue(Json::Value js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
+    WrappedJsonValue get( std::string key, const Json::Value& value, std::string default_str) const
+    {
+        std::string access = m_access_str + "\""+key+"\": ";
+        std::stringstream message;
+        if( !m_js.isObject( ) || !m_js.isMember(key))
+        {
+            message <<"*** Key error: "<<access<<" not found.";
+            raise_error( message.str(), default_str);
+            return WrappedJsonValue( value, m_mode, access);
+        }
+        return WrappedJsonValue(m_js[key], m_mode, access);
+    }
+    WrappedJsonValue get( unsigned idx, const Json::Value& value, std::string default_str) const
+    {
+        std::string access = m_access_str + "["+std::to_string(idx)+"] ";
+        if( !m_js.isArray() || !m_js.isValidIndex(idx))
+        {
+            std::stringstream message;
+            if( !m_js.isArray())
+                message <<"*** Key error: "<<m_access_str<<" is not an Array.";
+            else
+                message <<"*** Key error: "<<access<<" is not a valid Index.";
+            raise_error( message.str(), default_str);
+            return WrappedJsonValue( value, m_mode, access);
+        }
+        return WrappedJsonValue(m_js[idx], m_mode, access);
+    }
     template<class T>
     T type_error( T value, std::string type) const
     {

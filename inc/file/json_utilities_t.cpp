@@ -27,7 +27,15 @@ int main()
             std::cerr << "Hello "<<hello<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
+            std::string hello = ws.get( "hell", "default").asString( );
+            std::cerr << "Hello "<<hello<<"\n";
+        }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
+        try{
             int idx0 = ws[ "array"][2].asInt(0);
+            std::cerr << "array 0 "<<idx0<<"\n";
+        }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
+        try{
+            int idx0 = ws[ "array"].get(2,0).asInt();
             std::cerr << "array 0 "<<idx0<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
@@ -66,6 +74,8 @@ int main()
         std::string hello = ws["hello"].asString();
         assert( hello == "world");
         int idx0 = ws[ "array"][0].asInt(0);
+        assert( idx0 == 42);
+        idx0 = ws[ "array"].get(0,0).asInt();
         assert( idx0 == 42);
         int idx1 = ws["array"][1].asInt();
         assert( idx1 == 73);
