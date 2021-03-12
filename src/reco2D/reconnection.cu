@@ -31,7 +31,6 @@ int main( int argc, char* argv[])
 
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
-    enum dg::file::error mode = dg::file::error::is_throw;
     if( argc == 1)
         dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
     else
@@ -39,6 +38,7 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << js <<std::endl;
 
     const asela::Parameters p( js);
+    dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);
 
     //////////////////////////////////////////////////////////////////////////
     //Make grid
@@ -55,11 +55,11 @@ int main( int argc, char* argv[])
     /// //////////////////The initial field///////////////////////////////////////////
     double time = 0.;
     std::array<std::array<dg::x::DVec,2>,2> y0;
-    std::string initial = dg::file::get( mode, js, "init", "type", "harris").asString();
     try{
-        y0 = asela::initial_conditions(initial, asela, grid, p, mode, js );
-    }catch ( std::out_of_range& error){
-        DG_RANK0 std::cerr << "Warning: initne parameter '"<<initial<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)" << std::endl;
+        y0 = asela::initial_conditions(asela, grid, p, ws );
+    }catch ( std::exception& error){
+        DG_RANK0 std::cerr << "Error in input file\n ";
+        DG_RANK0 std::cerr << error.what();
 #ifdef WITH_MPI
         MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //WITH_MPI
@@ -73,17 +73,17 @@ int main( int argc, char* argv[])
     unsigned step = 0;
     if( p.timestepper == "multistep")
     {
-        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "TVB-3-3").asString();
+        std::string tableau = ws[ "timestepper"]["tableau"].asString("TVB-3-3");
         multistep.construct( tableau, y0);
-        dt = dg::file::get( mode, js, "timestepper", "dt", 20).asDouble();
+        dt = ws[ "timestepper"]["dt"].asDouble( 20);
         multistep.init( asela, time, y0, dt);
     }
     else if (p.timestepper == "adaptive")
     {
-        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "Tsitouras09-7-4-5").asString();
+        std::string tableau = ws[ "timestepper"]["tableau"].asString( "Tsitouras09-7-4-5");
         adapt.construct( tableau, y0);
-        rtol = dg::file::get( mode, js, "timestepper", "rtol", 1e-7).asDouble();
-        atol = dg::file::get( mode, js, "timestepper", "rtol", 1e-10).asDouble();
+        rtol = ws[ "timestepper"][ "rtol"].asDouble( 1e-7);
+        atol = ws[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-3; //that should be a small enough initial guess
     }
     else
@@ -114,9 +114,9 @@ int main( int argc, char* argv[])
 
     DG_RANK0 std::cout << "Begin computation \n";
     DG_RANK0 std::cout << std::scientific << std::setprecision( 2);
-    unsigned maxout = dg::file::get( mode, js, "output", "maxout", 100).asUInt();
-    unsigned itstp = dg::file::get( mode, js, "output", "itstp", 5).asUInt();
-    std::string output = dg::file::get( mode, js, "output", "type", "glfw").asString();
+    unsigned maxout = ws["output"]["maxout"].asUInt(100);
+    unsigned itstp = ws["output"]["itstp"].asUInt(5);
+    std::string output = ws[ "output"]["type"].asString("glfw");
 #ifndef WITHOUT_GLFW
     if( "glfw" == output)
     {
@@ -235,9 +235,9 @@ int main( int argc, char* argv[])
 
         int dim_ids[3], tvarID;
         std::map<std::string, int> id1d, id3d;
-        unsigned n_out     = dg::file::get( mode, js, "output", "n", 3).asUInt();
-        unsigned Nx_out    = dg::file::get( mode, js, "output", "Nx", 48).asUInt();
-        unsigned Ny_out    = dg::file::get( mode, js, "output", "Ny", 48).asUInt();
+        unsigned n_out     = ws[ "output"]["n"].asUInt( 3);
+        unsigned Nx_out    = ws[ "output"]["Nx"].asUInt( 48);
+        unsigned Ny_out    = ws[ "output"]["Ny"].asUInt( 48);
         dg::x::CartesianGrid2d grid_out( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf, n_out, Nx_out, Ny_out, dg::DIR, dg::PER
             #ifdef WITH_MPI
             , comm

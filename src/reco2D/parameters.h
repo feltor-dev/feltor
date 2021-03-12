@@ -27,38 +27,39 @@ struct Parameters
 
     double nu_perp;  //!< perpendicular diffusion
 
-    Parameters( const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
-        n       = dg::file::get( mode, js, "grid", "n", 3).asUInt();
-        Nx      = dg::file::get( mode, js, "grid", "Nx", 48).asUInt();
-        Ny      = dg::file::get( mode, js, "grid", "Ny", 48).asUInt();
-        lxhalf  = dg::file::get( mode, js, "grid", "lxhalf", 80).asDouble();
-        lyhalf  = dg::file::get( mode, js, "grid", "lyhalf", 80).asDouble();
+    Parameters( const dg::file::WrappedJsonValue& ws ) {
+        n       = ws["grid"]["n"].asUInt(3);
+        Nx      = ws["grid"]["Nx"].asUInt(48);
+        Ny      = ws["grid"]["Ny"].asUInt( 48);
+        lxhalf  = ws["grid"]["lxhalf"].asDouble( 80);
+        lyhalf  = ws["grid"]["lyhalf"].asDouble( 80);
 
-        timestepper = dg::file::get( mode, js, "timestepper", "type", "multistep").asString();
+        timestepper = ws["timestepper"]["type"].asString("multistep");
 
-        advection = dg::file::get( mode, js, "advection", "type", "arakawa").asString();
+        advection = ws["advection"]["type"].asString("arakawa");
 
-        stages      = dg::file::get( mode, js, "elliptic", "stages", 3).asUInt();
+        auto ell = ws["elliptic"];
+        stages      = ell[ "stages"].asUInt(3);
         eps_pol.resize(stages);
-        eps_pol[0] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", 0, 1e-6).asDouble();
+        eps_pol[0] = ell[ "eps_pol"][0].asDouble( 1e-6);
         for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", i, 1).asDouble();
+            eps_pol[i] = ell[ "eps_pol"][i].asDouble( 1);
             eps_pol[i]*=eps_pol[0];
         }
-        jfactor     = dg::file::get( mode, js, "elliptic", "jumpfactor", 1).asDouble();
-        direction_ell = dg::file::get( mode, js, "elliptic", "direction", "forward").asString();
-        eps_maxwell = dg::file::get( mode, js, "elliptic", "eps_maxwell", 1e-7).asDouble();
-        eps_gamma   = dg::file::get( mode, js, "elliptic", "eps_gamma", 1e-10).asDouble();
+        jfactor     = ell[ "jumpfactor"].asDouble( 1);
+        direction_ell = ell["direction"].asString( "forward");
+        eps_maxwell = ell[ "eps_maxwell"].asDouble( 1e-7);
+        eps_gamma   = ell[ "eps_gamma"].asDouble( 1e-10);
 
-        mu[0]    = dg::file::get( mode, js, "physical", "mu", -0.000544617 ).asDouble();
+        mu[0]    = ws["physical"]["mu"].asDouble( -0.000544617 );
         mu[1]    = +1.;
         tau[0]   = -1.;
-        tau[1]   = dg::file::get( mode, js, "physical", "tau",  0.0 ).asDouble();
-        beta     = dg::file::get( mode, js, "physical", "beta", 1e-4).asDouble();
-        viscosity = dg::file::get( mode, js, "regularization", "type", "velocity-viscosity").asString();
-        nu_perp   = dg::file::get( mode, js, "regularization", "nu_perp", 1e-4).asDouble();
-        direction_diff = dg::file::get( mode, js, "regularization", "direction", "centered").asString();
+        tau[1]    = ws["physical"]["tau"].asDouble(  0.0 );
+        beta      = ws["physical"]["beta"].asDouble( 1e-4);
+        viscosity = ws["regularization"]["type"].asString( "velocity-viscosity");
+        nu_perp   = ws["regularization"]["nu_perp"].asDouble( 1e-4);
+        direction_diff = ws["regularization"]["direction"].asString( "centered");
 
 
     }
