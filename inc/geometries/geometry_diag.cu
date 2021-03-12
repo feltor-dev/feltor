@@ -29,7 +29,7 @@ struct Parameters
     double sigma, posX, posY;
     double source_alpha, source_boundary;
     double profile_alpha;
-    Parameters( const Json::Value& js){
+    Parameters( const dg::file::WrappedJsonValue& js){
         n = js.get("n",3).asUInt();
         Nx = js.get("Nx",100).asUInt()/js["compression"].get(0u,1).asUInt();
         Ny = js.get("Ny",100).asUInt()/js["compression"].get(1u,1).asUInt();
@@ -48,28 +48,6 @@ struct Parameters
         posY = js.get("posY", 0.5).asDouble();
         source_alpha = js["source"].get("alpha", 0.5).asDouble();
         source_boundary = js["source"].get("boundary", 0.5).asDouble();
-    }
-    void display( std::ostream& os = std::cout ) const
-    {
-        os << "Input parameters are: \n";
-        os  <<" n             = "<<n<<"\n"
-            <<" Nx            = "<<Nx<<"\n"
-            <<" Ny            = "<<Ny<<"\n"
-            <<" Nz            = "<<Nz<<"\n"
-            <<" Npsi          = "<<Npsi<<"\n"
-            <<" boxscaleRm    = "<<boxscaleRm<<"\n"
-            <<" boxscaleRp    = "<<boxscaleRp<<"\n"
-            <<" boxscaleZm    = "<<boxscaleZm<<"\n"
-            <<" boxscaleZp    = "<<boxscaleZp<<"\n"
-            <<" source bound  = "<<source_boundary<<"\n"
-            <<" source alpha  = "<<source_alpha<<"\n"
-            <<" amp           = "<<amp<<"\n"
-            <<" k_psi         = "<<k_psi<<"\n"
-            <<" nprofileamp   = "<<nprofileamp<<"\n"
-            <<" sigma         = "<<sigma<<"\n"
-            <<" posX          = "<<posX<<"\n"
-            <<" posY          = "<<posY<<"\n";
-        os << std::flush;
     }
 };
 
@@ -114,15 +92,13 @@ int main( int argc, char* argv[])
         return -1;
     }
     std::cout << input_js<<std::endl;
-    const Parameters p(input_js);
-    p.display( std::cout);
+    dg::file::WrappedJsonValue ws ( input_js, dg::file::error::is_warning);
+    const Parameters p(ws);
     //Test coefficients
     dg::geo::CylindricalFunctor wall, transition, sheath, direction;
-    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(geom_js,
-            dg::file::error::is_throw);
+    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(geom_js);
     dg::geo::TokamakMagneticField mod_mag =
-        dg::geo::createModifiedField(geom_js, input_js, dg::file::error::is_throw,
-                wall, transition);
+        dg::geo::createModifiedField(geom_js, ws["wall"], wall, transition);
     std::string input = input_js.toStyledString();
     std::string geom = geom_js.toStyledString();
     unsigned n, Nx, Ny, Nz;
@@ -131,7 +107,8 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
     double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
-    dg::geo::createSheathRegion( input_js, dg::file::error::is_warning,
+    ws.set_mode( dg::file::error::is_warning);
+    dg::geo::createSheathRegion( ws["sheath"],
             mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
 
     dg::geo::description mag_description = mag.params().getDescription();

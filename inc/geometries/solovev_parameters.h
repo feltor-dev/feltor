@@ -64,20 +64,20 @@ struct Parameters
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
-    Parameters( const Json::Value& js, dg::file::error mode = dg::file::error::is_silent) {
-        A  = dg::file::get( mode, js, "A", 0).asDouble();
-        pp  = dg::file::get( mode, js, "PP", 1).asDouble();
-        pi  = dg::file::get( mode, js, "PI", 1).asDouble();
+    Parameters( const dg::file::WrappedJsonValue& js) {
+        A   = js.get("A", 0).asDouble();
+        pp  = js.get("PP", 1).asDouble();
+        pi  = js.get("PI", 1).asDouble();
         c.resize(12);
         for (unsigned i=0;i<12;i++)
-            c[i] = dg::file::get_idx( mode, js, "c", i, 0.).asDouble();
+            c[i] = js["c"].get(i,0.).asDouble();
 
-        R_0  = dg::file::get( mode, js, "R_0", 0.).asDouble();
-        a  = R_0*dg::file::get( mode, js, "inverseaspectratio", 0.).asDouble();
-        elongation=dg::file::get( mode, js, "elongation", 1.).asDouble();
-        triangularity=dg::file::get( mode, js, "triangularity", 0.).asDouble();
+        R_0  =          js.get( "R_0", 0.).asDouble();
+        a        = R_0* js.get( "inverseaspectratio", 0.).asDouble();
+        elongation=     js.get( "elongation", 1.).asDouble();
+        triangularity=  js.get( "triangularity", 0.).asDouble();
         try{
-            description = dg::file::get( dg::file::error::is_throw, js, "description", "standardX").asString();
+            description = js.get( "description", "standardX").asString();
         } catch ( std::exception& err)
         {
             if( isToroidal())
