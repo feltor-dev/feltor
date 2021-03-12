@@ -10,13 +10,13 @@ INCLUDE+= -I../../inc   # other project libraries
 
 all: toeflR toefl_hpc toefl_mpi
 
-toeflR: toeflR.cu toeflR.cuh
+toeflR: toeflR.cu toeflR.cuh parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK  -g
 
-toefl_hpc: toefl_hpc.cu toeflR.cuh
+toefl_hpc: toefl_hpc.cu toeflR.cuh parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK  -g
 
-toefl_mpi: toefl_hpc.cu toeflR.cuh
+toefl_mpi: toefl_hpc.cu toeflR.cuh parameters.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DDG_BENCHMARK -g
 
 doc:

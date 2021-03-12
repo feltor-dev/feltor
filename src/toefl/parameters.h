@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "dg/algorithm.h"
+#include "dg/file/json_utilities.h"
 #include "json/json.h"
 
 /**
@@ -26,7 +27,7 @@ struct Parameters
     std::string init, equations;
     bool boussinesq;
 
-    Parameters( const Json::Value& js) {
+    Parameters( const dg::file::WrappedJsonValue& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
