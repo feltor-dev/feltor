@@ -252,7 +252,7 @@ class Lanczos
             dg::blas1::axpby( y[i], m_v, 1., b); //Compute b= V y
 
             dg::blas2::symv(A, m_v, m_wp); 
-            dg::blas1::axpbypgz(-T.values(i,0)/T.values(i,2), m_wm, -T.values(i,1)/T.values(i,2), m_w,  1.0, m_wp);
+            dg::blas1::axpbypgz(-T.values(i,0), m_wm, -T.values(i,1), m_w,  1.0, m_wp);
             dg::blas1::scal(m_wp, 1./T.values(i,2));
             dg::blas2::symv(Minv, m_wp, m_v);
             m_wm = m_w;
