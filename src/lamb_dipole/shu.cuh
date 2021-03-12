@@ -15,18 +15,18 @@ namespace shu
 template< class Geometry, class Matrix, class Container>
 struct Diffusion
 {
-    Diffusion( const Geometry& g, Json::Value& js, enum dg::file::error mode)
+    Diffusion( const Geometry& g, dg::file::WrappedJsonValue& js)
     {
         //only allocate if needed
-        std::string regularization = dg::file::get( mode, js, "regularization", "type", "modal").asString();
-        std::string timestepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
+        std::string regularization = js[ "regularization"].get( "type", "modal").asString();
+        std::string timestepper = js[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
         if( "ImExMultistep" == timestepper &&  "viscosity" == regularization)
         {
-            m_nu = dg::file::get( mode, js, "regularization", "nu", 1e-3).asDouble();
-            m_order = dg::file::get( mode, js, "regularization", "order", 1).asUInt();
+            m_nu = js[ "regularization"].get( "nu", 1e-3).asDouble();
+            m_order = js[ "regularization"].get( "order", 1).asUInt();
             m_temp = dg::evaluate( dg::zero, g);
-            enum dg::direction dir = dg::str2direction( dg::file::get( mode, js,
-                        "regularization", "direction", "centered").asString());
+            enum dg::direction dir = dg::str2direction(
+                    js[ "regularization"].get( "direction", "centered").asString());
             m_LaplacianM.construct( g, dg::normed, dir, 1);
         }
     }
@@ -56,7 +56,7 @@ struct Shu
 {
     using value_type = dg::get_value_type<Container>;
 
-    Shu( const Geometry& grid, Json::Value& js, enum dg::file::error mode);
+    Shu( const Geometry& grid, dg::file::WrappedJsonValue& js);
 
     const dg::Elliptic<Matrix, Container, Container>& lap() const { return m_multi_laplaceM[0];}
     dg::ArakawaX<Geometry, Matrix, Container>& arakawa() {return m_arakawa;}
@@ -97,14 +97,14 @@ struct Shu
 
 template<class Geometry, class Matrix, class Container>
 Shu< Geometry, Matrix, Container>::Shu(
-        const Geometry& g, Json::Value& js, enum dg::file::error mode):
+        const Geometry& g, dg::file::WrappedJsonValue& js):
     m_old_psi( 2, dg::evaluate( dg::zero, g)),
     m_multigrid( g, 3),
     m_x( dg::evaluate( dg::cooX2d, g)),
     m_y( dg::evaluate( dg::cooY2d, g))
 {
-    m_advection = dg::file::get( mode, js, "advection", "type", "arakawa").asString();
-    m_multiplication = dg::file::get( mode, js, "advection", "multiplication", "pointwise").asString();
+    m_advection = js[ "advection"].get( "type", "arakawa").asString();
+    m_multiplication = js[ "advection"].get( "multiplication", "pointwise").asString();
     m_metric = g.metric();
 
     m_psi = dg::evaluate( dg::zero, g);
@@ -150,30 +150,30 @@ Shu< Geometry, Matrix, Container>::Shu(
     m_backward[0] = dg::create::dx( g, dg::inverse( g.bcx()), dg::backward);
     m_backward[1] = dg::create::dy( g, dg::inverse( g.bcy()), dg::backward);
 
-    unsigned stages = dg::file::get( mode, js, "elliptic", "stages", 3).asUInt();
+    unsigned stages = js[ "elliptic"].get( "stages", 3).asUInt();
     m_eps.resize(stages);
-    m_eps[0] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", 0, 1e-6).asDouble();
+    m_eps[0] = js[ "elliptic"][ "eps_pol"].get( 0, 1e-6).asDouble();
     for( unsigned i=1;i<stages; i++)
     {
-        m_eps[i] = dg::file::get_idx( mode, js, "elliptic", "eps_pol", i, 1).asDouble();
+        m_eps[i] = js[ "elliptic"][ "eps_pol"].get( i, 1).asDouble();
         m_eps[i]*= m_eps[0];
     }
     //this is a hidden parameter
     //note that only centered works with double periodic boundary conditions
-    enum dg::direction dir = dg::str2direction( dg::file::get( mode, js,
-                "elliptic", "direction", "centered").asString());
+    enum dg::direction dir = dg::str2direction(
+            js[ "elliptic"].get( "direction", "centered").asString());
     m_multi_laplaceM.resize(stages);
     for( unsigned u=0; u<stages; u++)
         m_multi_laplaceM[u].construct( m_multigrid.grid(u), dg::not_normed, dir, 1);
     // explicit Diffusion term
-    std::string regularization = dg::file::get( mode, js, "regularization", "type", "modal").asString();
-    std::string timestepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
+    std::string regularization = js[ "regularization"].get( "type", "modal").asString();
+    std::string timestepper = js[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
     if( !("ImExMultistep" == timestepper) &&  "viscosity" == regularization)
     {
-        m_nu = dg::file::get( mode, js, "regularization", "nu", 1e-3).asDouble();
-        m_order = dg::file::get( mode, js, "regularization", "order", 1).asUInt();
-        enum dg::direction dir = dg::str2direction( dg::file::get( mode, js,
-                    "regularization", "direction", "centered").asString());
+        m_nu = js[ "regularization"].get( "nu", 1e-3).asDouble();
+        m_order = js[ "regularization"].get( "order", 1).asUInt();
+        enum dg::direction dir = dg::str2direction(
+                js["regularization"].get( "direction", "centered").asString());
         m_LaplacianM.construct( g, dg::normed, dir, 1);
         m_add_viscosity = true;
     }
