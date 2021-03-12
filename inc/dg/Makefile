@@ -14,7 +14,7 @@ CUFILES=$(wildcard *.cu)
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 %_t: %_t.cu
-	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@   $(LIBS) -g
+	$(CC) $(OPT)$(INCLUDE)  -DDG_DEBUG $(CFLAGS) $< -o $@   $(LIBS)  -g
 
 %_b: %_b.cu
 	$(CC) $(OPT) $(CFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) $(LIBS) -g
