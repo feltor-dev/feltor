@@ -89,6 +89,9 @@ struct WrappedJsonValue
 {
     ///Default constructor
     WrappedJsonValue() : m_js(0), m_mode( error::is_silent){}
+    ///@brief Construct with error mode
+    ///@param mode The error mode
+    WrappedJsonValue( error mode): m_js(0), m_mode( mode) {}
     ///@brief By default the error mode is \c error::is_throw
     ///@param js The Json value that will be guarded
     WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_throw) {}
@@ -103,6 +106,8 @@ struct WrappedJsonValue
     }
     ///Read access to the raw Json value
     const Json::Value& asJson( ) const{ return m_js;}
+    ///Write access to the raw Json value (if you know what you are doing)
+    Json::Value& asJson( ) { return m_js;}
 
     ////////////Members imitating the original Json::Value///////////////
     WrappedJsonValue operator[](std::string key) const{
