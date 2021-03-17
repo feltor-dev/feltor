@@ -60,7 +60,6 @@ struct Parameters
      * @sa \c dg::geo::description to see valid values for the %description field
      * @note the \c dg::geo::taylor field is chosen by setting "taylor" in the equilibrium field (but also note that you need to include boost for the taylor field)
      * @param js valid Json object (see code above to see the valid key : value pairs)
-     * @param mode determine what happens when a key is missing
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */

@@ -68,19 +68,20 @@ int main( int argc, char* argv[])
             js["magnetic_field"]["params"]);
     //create a grid generator
     std::string type = js["grid"]["type"].asString();
+    int mode = js["grid"]["mode"].asInt();
     std::cout << "Constructing "<<type<<" grid ... \n";
     if( type == "flux")
         generator = std::make_unique<dg::geo::FluxGenerator>( mag.get_psip(),
-                mag.get_ipol(), psi_0, psi_1, mag.R0(), 0., 0, false);
+                mag.get_ipol(), psi_0, psi_1, mag.R0(), 0., mode, false);
     else if( type == "orthogonal")
         generator = std::make_unique<dg::geo::SimpleOrthogonal>( mag.get_psip(),
-                psi_0, psi_1, mag.R0(), 0., 0);
+                psi_0, psi_1, mag.R0(), 0., mode);
     else if( type == "ribeiro-flux")
         generator = std::make_unique<dg::geo::RibeiroFluxGenerator>( mag.get_psip(),
-                psi_0, psi_1, mag.R0(), 0., 0, false);
+                psi_0, psi_1, mag.R0(), 0., mode, false);
     else if( type == "ribeiro")
         generator = std::make_unique<dg::geo::Ribeiro>( mag.get_psip(),
-                psi_0, psi_1, mag.R0(), 0., 0, false);
+                psi_0, psi_1, mag.R0(), 0., mode, false);
     else
     {
         std::cerr << "Error: Unknown grid type '"<<type<<"'. Exit now!\n";
@@ -114,67 +115,68 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
+    dg::SparseTensor<dg::HVec > metric = g2d->metric();
     std::map< std::string, std::function< void( dg::HVec&, const
             dg::aGeometry2d&, const dg::geo::TokamakMagneticField&)>
         >
         output = {
-        { "Psip", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "Psip", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( mag.psip(), g2d);
         }},
-        { "PsipR", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "PsipR", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( mag.psipR(), g2d);
         }},
-        { "PsipZ", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "PsipZ", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( mag.psipZ(), g2d);
         }},
-        { "g_xx", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "g_xx", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
-            result=g2d.metric().value(0,0);
+            result=metric.value(0,0);
         }},
-        { "g_xy", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "g_xy", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
-            result=g2d.metric().value(0,1);
+            result=metric.value(0,1);
         }},
-        { "g_yy", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "g_yy", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
-            result=g2d.metric().value(1,1);
+            result=metric.value(1,1);
         }},
-        { "g_xy_g_xx", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "g_xy_g_xx", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             // deformation
-            dg::blas1::pointwiseDivide( g2d.metric().value(0,1),
-                g2d.metric().value(0,0), result);
+            dg::blas1::pointwiseDivide( metric.value(0,1),
+                metric.value(0,0), result);
         }},
-        { "g_yy_g_xx", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "g_yy_g_xx", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             //ribeiro ratio
-            dg::blas1::pointwiseDivide( g2d.metric().value(1,1),
-                g2d.metric().value(0,0), result);
+            dg::blas1::pointwiseDivide( metric.value(1,1),
+                metric.value(0,0), result);
         }},
-        { "vol", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "vol", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
-            result=dg::tensor::volume(g2d.metric());
+            result=dg::tensor::volume(metric);
         }},
-        { "Bzeta", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "Bzeta", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             dg::HVec Bzeta, Beta;
             dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
             result=Bzeta;
         }},
-        { "Beta", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "Beta", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             dg::HVec Bzeta, Beta;
             dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
             result=Beta;
         }},
-        { "Bphi", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "Bphi", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( dg::geo::BFieldP(mag), g2d);
         }},
-        { "q-profile", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "q-profile", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             dg::HVec Bzeta, Beta;
             dg::pushForwardPerp( dg::geo::BFieldR(mag), dg::geo::BFieldZ(mag), Bzeta, Beta, g2d);
@@ -182,7 +184,7 @@ int main( int argc, char* argv[])
             dg::blas1::pointwiseDivide( result, Beta, result); //Bphi / Beta
 
         }},
-        { "Ipol", []( dg::HVec& result, const dg::aGeometry2d& g2d,
+        { "Ipol", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( mag.ipol(), g2d);
         }}
@@ -204,6 +206,24 @@ int main( int argc, char* argv[])
     const dg::HVec vol2d = dg::create::volume( *g2d);
     dg::HVec ones2d = dg::evaluate( dg::one, *g2d);
     double volume2d = dg::blas1::dot( vol2d, ones2d);
+    //
+    if( type == "ribeiro")
+    {
+        dg::HVec err = dg::tensor::volume2d( metric);
+        dg::blas1::pointwiseDivide( 1., 1., metric.value(0,0), -1., err);
+        double error = dg::blas2::dot( err, vol2d, err);
+        std::cout << "Error 1/g_xx - vol: "<<error<< "\n";
+    }
+    if( type == "orthogonal")
+    {
+        //basically just tests if g_xy is really 0
+        dg::HVec err = dg::tensor::volume2d( metric);
+        dg::blas1::evaluate( err, dg::minus_equals(),
+                [](double g_xx, double g_yy){ return 1./sqrt(g_xx*g_yy); },
+                metric.value(0,0), metric.value(1,1));
+        double error = dg::blas2::dot( err, vol2d, err);
+        std::cout << "Error 1/sqrt( g_xx g_yy) - vol: "<<error<< "\n";
+    }
 
     std::cout << "TEST VOLUME IS:\n";
     double psipmin, psipmax;
