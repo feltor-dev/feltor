@@ -15,6 +15,7 @@
 #include "flux.h"
 #include "simple_orthogonal.h"
 #include "ribeiro.h"
+#include "hector.h"
 
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
@@ -67,21 +68,69 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
             js["magnetic_field"]["params"]);
     //create a grid generator
-    std::string type = js["grid"]["type"].asString();
-    int mode = js["grid"]["mode"].asInt();
+    std::string type = js["grid"]["generator"]["type"].asString();
+    int mode = js["grid"]["generator"]["mode"].asInt();
     std::cout << "Constructing "<<type<<" grid ... \n";
     if( type == "flux")
         generator = std::make_unique<dg::geo::FluxGenerator>( mag.get_psip(),
                 mag.get_ipol(), psi_0, psi_1, mag.R0(), 0., mode, false);
     else if( type == "orthogonal")
-        generator = std::make_unique<dg::geo::SimpleOrthogonal>( mag.get_psip(),
-                psi_0, psi_1, mag.R0(), 0., mode);
+    {
+        if( mode == 0 || mode == 1)
+            generator = std::make_unique<dg::geo::SimpleOrthogonal>(
+                    mag.get_psip(), psi_0, psi_1, mag.R0(), 0., mode);
+        if( mode > 1)
+        {
+            dg::geo::CylindricalSymmTensorLvl1 lc =
+                dg::geo::make_LiseikinCollective( mag.get_psip(), 0.1, 0.001);
+            generator = std::make_unique<dg::geo::SimpleOrthogonal>(
+                    mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., mode%2);
+        }
+    }
     else if( type == "ribeiro-flux")
         generator = std::make_unique<dg::geo::RibeiroFluxGenerator>( mag.get_psip(),
                 psi_0, psi_1, mag.R0(), 0., mode, false);
     else if( type == "ribeiro")
         generator = std::make_unique<dg::geo::Ribeiro>( mag.get_psip(),
                 psi_0, psi_1, mag.R0(), 0., mode, false);
+    //![doxygen]
+    else if( type == "hector")
+    {
+        //![hector]
+        unsigned nGrid = js["grid"]["generator"]["initial"]["n"].asUInt();
+        unsigned NxGrid = js["grid"]["generator"]["initial"]["Nx"].asUInt();
+        unsigned NyGrid = js["grid"]["generator"]["initial"]["Ny"].asUInt();
+        double epsHector = js["grid"]["generator"]["eps"].asDouble();
+        if( mode == 0)
+        {
+            std::cout << " ... of type conformal ...\n";
+            generator = std::make_unique< dg::geo::Hector<dg::IDMatrix,
+                      dg::DMatrix, dg::DVec>>( mag.get_psip(), psi_0, psi_1,
+                              mag.R0(), 0., nGrid, NxGrid, NyGrid, epsHector,
+                              true);
+        }
+        else if( mode == 1)
+        {
+            std::cout << " ... of type adaption ...\n";
+            dg::geo::CylindricalFunctorsLvl1 nc =
+                dg::geo::make_NablaPsiInvCollective( mag.get_psip());
+            generator = std::make_unique< dg::geo::Hector<dg::IDMatrix,
+                      dg::DMatrix, dg::DVec>>( mag.get_psip(), nc, psi_0,
+                              psi_1, mag.R0(), 0., nGrid, NxGrid, NyGrid,
+                              epsHector, true);
+        }
+        else
+        {
+            std::cout << " ... of type monitor metric ...\n";
+            dg::geo::CylindricalSymmTensorLvl1 lc =
+                dg::geo::make_LiseikinCollective( mag.get_psip(), 0.1, 0.001);
+            generator = std::make_unique< dg::geo::Hector<dg::IDMatrix,
+                      dg::DMatrix, dg::DVec>>( mag.get_psip(), lc, psi_0,
+                              psi_1, mag.R0(), 0., nGrid, NxGrid, NyGrid,
+                              epsHector, true);
+        }
+        //![hector]
+    }
     else
     {
         std::cerr << "Error: Unknown grid type '"<<type<<"'. Exit now!\n";
@@ -90,7 +139,6 @@ int main( int argc, char* argv[])
     //create a 3d and a 2d grid
     dg::geo::CurvilinearProductGrid3d g3d(*generator, n, Nx, Ny,Nz, dg::DIR);
     std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid());
-    //![doxygen]
     //Find O-point
     double R_O = mag.R0(), Z_O = 0.;
     if( mag.params().getDescription() != dg::geo::description::none )
@@ -204,8 +252,7 @@ int main( int argc, char* argv[])
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume3d = dg::blas1::dot( vol3d, ones3d);
     const dg::HVec vol2d = dg::create::volume( *g2d);
-    dg::HVec ones2d = dg::evaluate( dg::one, *g2d);
-    double volume2d = dg::blas1::dot( vol2d, ones2d);
+    double volume2d = dg::blas1::dot( vol2d, 1.0);
     //
     if( type == "ribeiro")
     {
@@ -245,7 +292,16 @@ int main( int argc, char* argv[])
     std::cout << "volumeRZ  is "<< volumeRZ  <<std::endl;
     std::cout << "relative difference in volume3d is "<<fabs(volumeRZP - volume3d)/volume3d<<std::endl;
     std::cout << "relative difference in volume2d is "<<fabs(volumeRZ - volume2d)/volume2d<<std::endl;
-    std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
+    if ( type == "hector")
+    {
+        dg::HVec volume = dg::create::volume(
+                dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix,
+                dg::DVec>*>( generator.get())->internal_grid());
+        double volumeZE = dg::blas1::dot( volume, 1.);
+        std::cout << "relative difference in volumeZE is "<<fabs(volumeZE - volume2d)/volume2d<<std::endl;
+    }
+    std::cout << "Note that the error might also come from the volume in RZP!\n";
+    //since integration of jacobian is fairly good probably
 
     return 0;
 }
