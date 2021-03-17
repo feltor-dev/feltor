@@ -207,7 +207,7 @@ void transform(
  * Einkemmer Streamline integration as a method for two-dimensional elliptic
  * grid generation Journal of Computational Physics 340, 435-450 (2017) </a>
  *
- * @snippet hector_t.cu doxygen
+ * @snippet flux_t.cu hector
  * @ingroup generators_geo
  * @tparam IMatrix The interpolation matrix type
  * @copydoc hide_matrix

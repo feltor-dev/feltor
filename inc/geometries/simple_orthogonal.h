@@ -289,9 +289,11 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param mode This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double
+            psi_1, double x0, double y0, int mode =0): SimpleOrthogonal( psi,
+                CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, mode)
     {
         m_orthogonal = true;
     }
