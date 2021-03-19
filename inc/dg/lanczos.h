@@ -373,7 +373,7 @@ class Lanczos
             m_TinvH = m_invtridiagH(m_TH); 
             residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of m_TinvH
 #ifdef DG_DEBUG
-            std::cout << "# ||r||_M =  " << residual << "  at i = " << i << "\n";
+            std::cout << "# res_fac*||r||_M =  " << res_fac*residual << "  at i = " << i << "\n";
 #endif //DG_DEBUG
             if (res_fac*residual < eps ) { 
                 set_iter(i+1); 
@@ -468,7 +468,7 @@ class MCG
      * @param Minv The inverse weights
      * @param M Weights used to compute the norm for the error condition
      * @param y vector of with v.size() = iter. Typically \f$ T^(-1) e_1 \f$ or \f$ f(T^(-1)) e_1 \f$ 
-     * @param x Contains the initial value (\f$x!=0\f$ if used for tridiagonalization) and the matrix approximation \f$x = A^{-1} b\f$ as output
+     * @param x Contains the initial value of M-CG iteration (is scaled to zero \f$x=0\f$) and the matrix approximation \f$x = A^{-1} b\f$ as output
      * @param b The right hand side vector. 
      * @param iter number of iterations (size of T)
      */
@@ -535,17 +535,10 @@ class MCG
         }
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
-        
-        if( res_fac*sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 
-        {
-            set_iter(1);
-            return m_TH;
-        }
         dg::blas2::symv( Minv, m_r, m_p );
 
         value_type nrmzr_old = dg::blas1::dot( m_p, m_r);
         value_type alpha, beta, nrmzr_new;
-//         m_TH.values(0,0)=0.; //outside matrix
         for( unsigned i=0; i<m_max_iter; i++)
         {
             dg::blas2::symv( A, m_p, m_ap);
@@ -556,9 +549,9 @@ class MCG
             if(rank==0)
 #endif //MPI
             {
-                std::cout << "# Absolute r*M*r "<<sqrt( dg::blas2::dot(M, m_r)) <<"\t ";
-                std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
-                std::cout << "# (Relative "<<sqrt( dg::blas2::dot(M, m_r) )/nrmb << ")\n";
+                std::cout << "# Absolute res_fac*||r||_M "<<res_fac*sqrt( dg::blas2::dot(M, m_r)) <<"\t ";
+                std::cout << "#  < Critical "<<eps*(nrmb + nrmb_correction)<<"\t ";
+                std::cout << "# (Relative "<<res_fac*sqrt( dg::blas2::dot(M, m_r) )/nrmb << ")\n";
             }
 #endif //DG_DEBUG
             if( res_fac*sqrt( dg::blas2::dot( M, m_r)) < eps*(nrmb + nrmb_correction)) 

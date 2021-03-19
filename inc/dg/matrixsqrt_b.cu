@@ -1,6 +1,4 @@
 #define SILENT
-// #undef DG_BENCHMARK
-// #define DG_DEBUG
 
 #include <iostream>
 #include <iomanip>
@@ -10,15 +8,15 @@
 #include "topology/evaluation.h"
 #include "backend/timer.h"
 #include "matrixsqrt.h"
-#include "eve.h"
+#include "matrixfunction.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 const double alpha = -1.;
-const double m=4.;
-const double n=4.;
+const double m=1.;
+const double n=1.;
 double lhs( double x, double y){ return sin(x*m)*sin(y*n);}
 double rhsHelmholtz( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(x*m)*sin(y*n);}
 double rhsHelmholtzsqrt( double x, double y){ return sqrt(1.-(m*m+n*n)*alpha)*sin(x*m)*sin(y*n);}
@@ -62,23 +60,27 @@ int main(int argc, char * argv[])
     
     double erel = 0;
 
-    dg::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
+    dg::Grid2d g( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
    //start and end vectors
-    Container x = dg::evaluate(lhs, grid);
-    Container x_exac = dg::evaluate(lhs, grid);
-    Container b = dg::evaluate(rhsHelmholtzsqrt, grid), b_exac(b), error(b_exac);
-    Container bs = dg::evaluate(rhsHelmholtz, grid), bs_exac(bs);
+    Container x = dg::evaluate(lhs, g);
+    Container x_exac = dg::evaluate(lhs, g);
+    Container b = dg::evaluate(rhsHelmholtzsqrt, g), b_exac(b), error(b_exac);
+    Container bs = dg::evaluate(rhsHelmholtz, g), bs_exac(bs);
     
-    const Container w2d = dg::create::weights( grid);
-    const Container v2d = dg::create::inv_weights( grid);
+    const Container w2d = dg::create::weights( g);
+    const Container v2d = dg::create::inv_weights( g);
 
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( grid, alpha, dg::centered); //not_normed
-    dg::Invert<Container> invert( x, grid.size(), epsCG);
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered); //not_normed
+    dg::Invert<Container> invert( x, g.size(), epsCG);
 
+    double hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
+    double max_weights =   dg::blas1::reduce(A.weights(), 0., dg::AbsMax<double>() );
+    double min_weights =  -dg::blas1::reduce(A.weights(), max_weights, dg::AbsMin<double>() );
+    double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
     ////////////////////////Direct Cauchy integral solve
     {
         std::cout << "\nCauchy: \n";
-        dg::DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, grid, epsCG, max_iterC);
+        dg::DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, g, epsCG, max_iterC);
 
         t.tic();
         counter = directsqrtcauchysolve(b, bs);
@@ -105,7 +107,7 @@ int main(int argc, char * argv[])
     //////////////////////Direct sqrt ODE solve
     {
         std::cout << "\nODE:\n";
-        dg::DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, grid, epsCG, epsTrel, epsTabs);
+        dg::DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, g, epsCG, epsTrel, epsTabs);
         t.tic();
         counter = directsqrtodesolve(b, bs);
         t.toc();
@@ -132,7 +134,7 @@ int main(int argc, char * argv[])
     //////////////////Krylov solve via Lanczos method and Cauchy solve
     {
         std::cout << "\nM-Lanczos+Cauchy:\n";
-        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, grid, x,  epsCG, max_iter, max_iterC, eps);
+        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, g, x,  epsCG, max_iter, max_iterC, eps);
         t.tic();
         counter = krylovsqrtcauchysolve(b, bs); 
         t.toc();
@@ -159,8 +161,8 @@ int main(int argc, char * argv[])
     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     {
         std::cout << "\nM-Lanczos+ODE:\n";  
-        dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodesolve(A, grid, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
-        b = dg::evaluate(rhsHelmholtzsqrt, grid);
+        dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodesolve(A, g, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
+        b = dg::evaluate(rhsHelmholtzsqrt, g);
         t.tic();
         counter = krylovsqrtodesolve(b, bs); //overwrites b
         t.toc();
@@ -183,11 +185,43 @@ int main(int argc, char * argv[])
         std::cout << "    error: "<<erel  << "\n"; 
         std::cout << "    iterT: "<<std::setw(3)<<number << "\n"; 
     }
+    //////////////////Krylov solve via Lanczos method and ODE sqrt solve
+    {
+        std::cout << "\nM-Lanczos+EIGEN:\n";  
+        //EVs of Helmholtz
+        double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
+        double EVmax =1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); 
+        double res_fac = kappa*sqrt(EVmin);
+        
+        dg::KrylovFuncEigenSolve<Container> krylovfunceigensolve(x,   max_iter);
+        b = dg::evaluate(rhsHelmholtzsqrt, g);
+        t.tic();
+        counter = krylovfunceigensolve(b, bs, dg::SQRT<double>(), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+        double time = t.diff();
+
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<counter << "\n"; 
+        
+        std::cout << "\nM-Lanczos+EIGEN+CG:\n";
+        t.tic();
+        unsigned number = invert(A,x,bs);
+        t.toc();
+        time += t.diff();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<number << "\n"; 
+    }
     //sqrt invert schemes
     {
         std::cout << "\nM-CG+Cauchy:\n";
         dg::blas1::scal(x, 0.0);  //must be initialized with zero
-        dg::KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix,  Container> krylovsqrtcauchyinvert(A, grid, x,  epsCG, max_iter, max_iterC, eps);
+        dg::KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix,  Container> krylovsqrtcauchyinvert(A, g, x,  epsCG, max_iter, max_iterC, eps);
         t.tic();
         counter = krylovsqrtcauchyinvert( x, b_exac);
         t.toc();
@@ -200,7 +234,7 @@ int main(int argc, char * argv[])
     {
         std::cout << "\nM-CG+ODE:\n";
         dg::blas1::scal(x, 0.0); //must be initialized with zero
-        dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodeinvert(A, grid, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
+        dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodeinvert(A, g, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
         t.tic();
         counter = krylovsqrtodeinvert( x, b_exac);
         t.toc();
@@ -210,7 +244,24 @@ int main(int argc, char * argv[])
         std::cout << "    error: "<<erel  << "\n"; 
         std::cout << "    iterT: "<<std::setw(3)<<counter << "\n"; 
     }
-
+    {
+        std::cout << "\nM-CG+EIGEN:\n";
+        //EVs of inverse Helmholtz
+        double EVmin = 1./(1.-A.alpha()*hxhy*(1.0 + 1.0));
+        double EVmax = 1./(1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()))); 
+        double res_fac = kappa*sqrt(EVmin);
+        
+        dg::blas1::scal(x, 0.0); //must be initialized with zero
+        dg::KrylovFuncEigenInvert< Container> krylovfunceigeninvert( x, max_iter);
+        t.tic();
+        counter = krylovfunceigeninvert( x, b_exac, dg::SQRT<double>(), A, A.inv_weights(), A.weights(),  eps, res_fac);
+        t.toc();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
+        std::cout << "    time: "<<t.diff()<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<counter << "\n"; 
+    }
 
     return 0;
 }

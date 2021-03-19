@@ -575,7 +575,8 @@ class KrylovSqrtCauchyinvert
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
         m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
-
+        
+        
         m_invtridiagH.resize(m_mcg.get_iter());
         m_TinvH = m_invtridiagH(m_TH); 
         
