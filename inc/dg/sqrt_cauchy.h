@@ -285,7 +285,7 @@ struct SqrtCauchyInt
         value_type sqrtminEV = sqrt(minEV);
         const value_type k2 = minEV/maxEV;
         const value_type sqrt1mk2 = sqrt(1.-k2);
-        const value_type Ks=boost::math::ellint_1(sqrt1mk2 );
+        const value_type Ks=std::comp_ellint_1(sqrt1mk2 );
         const value_type fac = 2.* Ks*sqrtminEV/(M_PI*iter);
         for (unsigned j=1; j<iter+1; j++)
         {
