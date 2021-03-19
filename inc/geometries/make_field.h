@@ -294,7 +294,7 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
     "alpha": 0.01 // radius of the transition region where the modification acts in units of minor radius a
 }
 @endcode
- * @param jsmod most contain fields as described above
+ * @param jsmod must contain fields as described above
  * @param mag (in) the magnetic field, used to find the direction of the field
  * towards or away from the sheath
  * @param wall (in) the penalization region that represents the actual
