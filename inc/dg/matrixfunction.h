@@ -211,12 +211,21 @@ class KrylovFuncEigenInvert
         //Compute eigendecomposition
         cusp::lapack::stev(m_alpha, m_beta, m_evals, m_evecs);
         //convert to COO matrix format
+//         cusp::print(m_evals);
         cusp::convert(m_evecs, m_EH);     
         cusp::transpose(m_EH, m_EHt); 
         //Compute f(T)^{-1} e1 = D E f(Lambda)^{-1} E^t D^{-1} e1
         dg::blas1::pointwiseDivide(m_e1H, m_delta, m_e1H);
         dg::blas2::symv(m_EHt, m_e1H, m_yH);
-        dg::blas1::transform(m_evals, m_e1H, [f] (double x){ return 1./f(x);});  //f(Lambda)^{-1}
+        dg::blas1::transform(m_evals, m_e1H, [f] (double x){ 
+            try{
+                return 1./f(x);                
+            } 
+            catch(boost::exception& e) //catch boost overflow error
+            {
+            return 0.;
+            }
+        });  //f(Lambda)^{-1}
         dg::blas1::pointwiseDot(m_e1H, m_yH, m_e1H);
         dg::blas2::symv(m_EH, m_e1H, m_yH);
         dg::blas1::pointwiseDot(m_yH, m_delta, m_yH);
