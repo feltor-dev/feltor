@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/math/special_functions.hpp>
 
 #include <cmath>
 //! M_PI is non-standard ... so MSVC complains
@@ -113,7 +112,6 @@ struct BESSELI0
      */
     DG_DEVICE T operator() ( T x) const
     {
-//         return boost::math::cyl_bessel_i(0, x);
         return std::cyl_bessel_i(0, x);
 
     }
@@ -136,7 +134,6 @@ struct GAMMA0
      */
     DG_DEVICE T operator() ( T x) const
     {
-//         return exp(x)*boost::math::cyl_bessel_i(0, x);
         return exp(x)*std::cyl_bessel_i(0, x);
     }
 };
