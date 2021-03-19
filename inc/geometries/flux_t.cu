@@ -47,10 +47,11 @@ int main( int argc, char* argv[])
     std::string input = argc==1 ? "flux.json" : argv[1];
     dg::file::file2Json( input, js.asJson(), dg::file::comments::are_discarded);
 
-    if( js["magnetic_field"][ "input"].asString() == "external")
+    std::string geometry_params = js["magnetic_field"]["input"].asString();
+    if( geomettry_params == "file")
     {
-        std::string path = js["magnetic_field"]["path"].asString();
-        dg::file::file2Json( path, js.asJson()["magnetic_field"]["params"],
+        std::string path = js["magnetic_field"]["file"].asString();
+        dg::file::file2Json( path, js.asJson()["magnetic_field"]["file"],
                 dg::file::comments::are_discarded);
     }
     //write parameters from file into variables
@@ -66,7 +67,7 @@ int main( int argc, char* argv[])
     std::unique_ptr<dg::geo::aGenerator2d> generator;
     //create the magnetic field
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
-            js["magnetic_field"]["params"]);
+            js["magnetic_field"][geometry_params]);
     //create a grid generator
     std::string type = js["grid"]["generator"]["type"].asString();
     int mode = js["grid"]["generator"]["mode"].asInt();

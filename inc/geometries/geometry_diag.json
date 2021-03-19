@@ -1,16 +1,13 @@
 {
     "grid":
     {
-        "type": "curvilinear",
-        "generator":{
-            "type": "flux",
-            "mode": 0
-        },
         "n" : 3,
-        "Nx" : 8,
+        "Nx" : 80,
         "Ny" : 80,
         "Nz" : 20,
-        "psi": [-20,-4]
+        "Npsi": 32,
+        "scaleR" : [1.1,1.1],
+        "scaleZ" : [1.9, 1.9]
     },
     "magnetic_field":
     {
