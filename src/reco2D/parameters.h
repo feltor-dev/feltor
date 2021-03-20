@@ -28,38 +28,38 @@ struct Parameters
     double nu_perp;  //!< perpendicular diffusion
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
-        n       = ws["grid"]["n"].asUInt(3);
-        Nx      = ws["grid"]["Nx"].asUInt(48);
-        Ny      = ws["grid"]["Ny"].asUInt( 48);
-        lxhalf  = ws["grid"]["lxhalf"].asDouble( 80);
-        lyhalf  = ws["grid"]["lyhalf"].asDouble( 80);
+        n       = ws["grid"].get("n", 3).asUInt();
+        Nx      = ws["grid"].get("Nx", 48).asUInt();
+        Ny      = ws["grid"].get("Ny", 48).asUInt();
+        lxhalf  = ws["grid"].get("lxhalf", 80).asDouble();
+        lyhalf  = ws["grid"].get("lyhalf", 80).asDouble();
 
-        timestepper = ws["timestepper"]["type"].asString("multistep");
+        timestepper = ws["timestepper"].get("type", "multistep").asString();
 
-        advection = ws["advection"]["type"].asString("arakawa");
+        advection = ws["advection"].get("type", "arakawa").asString();
 
         auto ell = ws["elliptic"];
-        stages      = ell[ "stages"].asUInt(3);
+        stages      = ell.get( "stages",3).asUInt();
         eps_pol.resize(stages);
-        eps_pol[0] = ell[ "eps_pol"][0].asDouble( 1e-6);
+        eps_pol[0] = ell[ "eps_pol"].get(0, 1e-6).asDouble();
         for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = ell[ "eps_pol"][i].asDouble( 1);
+            eps_pol[i] = ell[ "eps_pol"].get(i, 1.0).asDouble();
             eps_pol[i]*=eps_pol[0];
         }
-        jfactor     = ell[ "jumpfactor"].asDouble( 1);
-        direction_ell = ell["direction"].asString( "forward");
-        eps_maxwell = ell[ "eps_maxwell"].asDouble( 1e-7);
-        eps_gamma   = ell[ "eps_gamma"].asDouble( 1e-10);
+        jfactor     = ell.get( "jumpfactor", 1.0).asDouble( );
+        direction_ell = ell.get("direction", "forward").asString( );
+        eps_maxwell = ell.get( "eps_maxwell", 1e-7).asDouble( );
+        eps_gamma   = ell.get( "eps_gamma", 1e-10).asDouble( );
 
-        mu[0]    = ws["physical"]["mu"].asDouble( -0.000544617 );
+        mu[0]    = ws["physical"].get("mu", -0.000544617 ).asDouble( );
         mu[1]    = +1.;
         tau[0]   = -1.;
-        tau[1]    = ws["physical"]["tau"].asDouble(  0.0 );
-        beta      = ws["physical"]["beta"].asDouble( 1e-4);
-        viscosity = ws["regularization"]["type"].asString( "velocity-viscosity");
-        nu_perp   = ws["regularization"]["nu_perp"].asDouble( 1e-4);
-        direction_diff = ws["regularization"]["direction"].asString( "centered");
+        tau[1]    = ws["physical"].get("tau", 0.0).asDouble( );
+        beta      = ws["physical"].get("beta", 1e-4).asDouble();
+        viscosity = ws["regularization"].get("type", "velocity-viscosity").asString();
+        nu_perp   = ws["regularization"].get("nu_perp",1e-4).asDouble();
+        direction_diff = ws["regularization"].get("direction", "centered").asString();
 
 
     }
