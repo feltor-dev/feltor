@@ -2,6 +2,7 @@
 
 \input{../../doc/related_pages/header.tex}
 \input{../../doc/related_pages/newcommands.tex}
+\usepackage{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -153,40 +154,37 @@ memory systems (MPI+OpenMP/GPU) the program expects the distribution of processe
 x and y directions as command line input parameters.
 
 \subsection{Input file structure}
-Input file format: json
-
-%%This is a booktabs table
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &\# Gaussian nodes in x and y \\
-Nx     & integer &100& - &\# grid points in x \\
-Ny     & integer &100& - &\# grid points in y \\
-dt     & integer &3.0& - &time step in units of $c_s/\rho_s$ \\
-n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
-Nx\_out & integer &100& - &\# grid points in x in output fields \\
-Ny\_out & integer &100& - &\# grid points in y in output fields \\
-itstp  & integer &2  & - &   steps between outputs \\
-maxout & integer &100& - &      \# outputs excluding first \\
-eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
-eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
-eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
-curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
-tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
-nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
-amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
-sigma      & float &10     & - & blob radius $\sigma$ \\
-posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_x l_x$\\
-posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
-lx         & float &200    & - & $l_x$  \\
-ly         & float &200    & - & $l_y$  \\
-friction   & float & 0     & 0 & friction coefficient $\eta$ in gravity model \\
-bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-equations  & char & "global" & "global" &local, global, gravity\_local, gravity\_global, drift\_global \\
-boussinesq & bool & false    & false &boussinesq approximation in global models true or false\\
-\bottomrule
-\end{longtable}
+Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json}
+\begin{minted}[texcomments]{js}
+{
+    "n" : 3,  // \# Gaussian nodes in x and y
+    "Nx" : 100, // \# grid points in x
+    "Ny" : 100,  // \# grid points in y
+    "dt" : 3.0,  // time step in units of $c_s/\rho_s$
+    "n_out"  : 3,  // \# Gaussian nodes in x and y in output
+    "Nx_out" : 100, // \# grid points in x in output fields
+    "Ny_out" : 100, // \# grid points in y in output fields
+    "itstp"  : 2,   // steps between outputs
+    "maxout" : 100, // \# outputs excluding first
+    "eps_pol"   : 1e-6    // accuracy of polarisation solver
+    "eps_gamma" : 1e-7    // accuracy of $\Gamma_1$ (only in gyrofluid model)
+    "eps_time"  : 1e-10,   // accuracy of implicit time-stepper
+    "curvature"  : 0.00015,// magnetic curvature $\kappa$
+    "tau"        : 1.0,      // $\tau = T_i/T_e$ (only in gyrofluid models)
+    "nu_perp"   : 5e-3,    // pependicular viscosity $\nu$
+    "amplitude"  : 1.0,    // amplitude $A$ of the blob
+    "sigma"      : 10.0,   // blob radius $\sigma$
+    "posX"       : 0.3,    // blob x-position in units of $l_x$, i.e. $X =p_x l_x$
+    "posY"       : 0.5,    // blob y-position in units of $l_y$, i.e. $Y =p_y l_y$
+    "lx"         : 200.0,  // $l_x$
+    "ly"         : 200.0,  // $l_y$
+    "friction"   :  0.0,   // friction coefficient $\eta$ in gravity model
+    "bc_x"   : "DIR",     // boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR)
+    "bc_y"   : "PER",      // boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR)
+    "equations"  : "global", // "local", "global", "gravity\_local", "gravity\_global", "drift\_global"
+    "boussinesq" : false,    // boussinesq approximation in global models true or false
+}
+\end{minted}
 
 The default value is taken if the value name is not found in the input file. If there is no default and
 the value is not found,

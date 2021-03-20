@@ -20,14 +20,13 @@ toefl_mpi: toefl_hpc.cu toeflR.cuh parameters.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DDG_BENCHMARK -g
 
 doc:
-	mkdir -p doc;
-	pdflatex -output-directory doc ./toefl.tex;
-	bibtex doc/toefl.aux;
-	pdflatex -output-directory doc ./toefl.tex;
-	pdflatex -output-directory doc ./toefl.tex;
+	pdflatex -shell-escape ./toefl.tex;
+	bibtex toefl.aux;
+	pdflatex -shell-escape ./toefl.tex;
+	pdflatex -shell-escape ./toefl.tex;
 
 
 .PHONY: clean doc
 
 clean:
-	rm -rf toeflR toefl_hpc toefl_mpi doc
+	rm -rf toeflR toefl_hpc toefl_mpi toefl.aux toefl.log toefl.out toefl.pyg toefl.pdf toefl.bbl toefl.blg
