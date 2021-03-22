@@ -31,7 +31,7 @@ struct Parameters
 
     std::string init, equations;
 
-    Parameters(const Json::Value& js, enum dg::file::error mode = dg::file::error::is_warning ) {
+    Parameters(const dg::file::WrappedJsonValue& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
@@ -42,12 +42,12 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
 
-        stages      = dg::file::get( mode, js, "stages", 3).asUInt();
+        stages      = js.get("stages", 3).asUInt();
         eps_pol.resize(stages);
-        eps_pol[0] = dg::file::get_idx( mode, js, "eps_pol", 0, 1e-6).asDouble();
+        eps_pol[0] = js["eps_pol"][0].asDouble();
         for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = dg::file::get_idx( mode, js, "eps_pol", i, 1).asDouble();
+            eps_pol[i] = js["eps_pol"][i].asDouble();
             eps_pol[i]*=eps_pol[0];
         }
         eps_gamma = js["eps_gamma"].asDouble();
