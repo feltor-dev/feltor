@@ -277,6 +277,7 @@ void construct_rz( Nemov nemov,
  *
  * Psi is the radial coordinate and you can choose various discretizations of the first line
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct SimpleOrthogonal : public aGenerator2d
 {
@@ -288,9 +289,11 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param mode This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double
+            psi_1, double x0, double y0, int mode =0): SimpleOrthogonal( psi,
+                CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, mode)
     {
         m_orthogonal = true;
     }
@@ -303,14 +306,14 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param mode This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int mode =0):
         psi_(psi), chi_(chi)
     {
         assert( psi_1 != psi_0);
-        firstline_ = firstline;
-        orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, firstline);
+        firstline_ = mode;
+        orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, mode);
         f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);

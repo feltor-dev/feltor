@@ -18,120 +18,50 @@
 #include "average.h"
 
 
+// The purpose of this program is to diagnose geometry.json files with
+// as little effort as possible. This program should also remain
+// independent of any specific code and therefore does not test or output
+// any initialization related functions that require specific parameters in
+// the input file
+// We currently just
 // - write magnetic functions into file
 // - compute Flux - surface averages and write into file
-struct Parameters
-{
-    unsigned n, Nx, Ny, Nz, Npsi;
-    double boxscaleRm, boxscaleRp;
-    double boxscaleZm, boxscaleZp;
-    double amp, k_psi, nprofileamp;
-    double sigma, posX, posY;
-    double source_alpha, source_boundary;
-    double profile_alpha;
-    Parameters( const Json::Value& js){
-        n = js.get("n",3).asUInt();
-        Nx = js.get("Nx",100).asUInt()/js["compression"].get(0u,1).asUInt();
-        Ny = js.get("Ny",100).asUInt()/js["compression"].get(1u,1).asUInt();
-        Nz = js.get("Nz", 1).asUInt();
-        Npsi = js.get("Npsi", 32).asUInt();
-        boxscaleRm = js["box"]["scaleR"].get(0u, 1.1).asDouble();
-        boxscaleRp = js["box"]["scaleR"].get(1u, 1.1).asDouble();
-        boxscaleZm = js["box"]["scaleZ"].get(0u, 1.2).asDouble();
-        boxscaleZp = js["box"]["scaleZ"].get(1u, 1.1).asDouble();
-        amp = js.get("amplitude", 1.).asDouble();
-        k_psi = js.get("k_psi", 1.).asDouble();
-        nprofileamp = js["profile"].get("amp", 1.).asDouble();
-        profile_alpha = js["profile"].get("alpha", 0.1).asDouble();
-        sigma = js.get("sigma", 10).asDouble();
-        posX = js.get("posX", 0.5).asDouble();
-        posY = js.get("posY", 0.5).asDouble();
-        source_alpha = js["source"].get("alpha", 0.5).asDouble();
-        source_boundary = js["source"].get("boundary", 0.5).asDouble();
-    }
-    void display( std::ostream& os = std::cout ) const
-    {
-        os << "Input parameters are: \n";
-        os  <<" n             = "<<n<<"\n"
-            <<" Nx            = "<<Nx<<"\n"
-            <<" Ny            = "<<Ny<<"\n"
-            <<" Nz            = "<<Nz<<"\n"
-            <<" Npsi          = "<<Npsi<<"\n"
-            <<" boxscaleRm    = "<<boxscaleRm<<"\n"
-            <<" boxscaleRp    = "<<boxscaleRp<<"\n"
-            <<" boxscaleZm    = "<<boxscaleZm<<"\n"
-            <<" boxscaleZp    = "<<boxscaleZp<<"\n"
-            <<" source bound  = "<<source_boundary<<"\n"
-            <<" source alpha  = "<<source_alpha<<"\n"
-            <<" amp           = "<<amp<<"\n"
-            <<" k_psi         = "<<k_psi<<"\n"
-            <<" nprofileamp   = "<<nprofileamp<<"\n"
-            <<" sigma         = "<<sigma<<"\n"
-            <<" posX          = "<<posX<<"\n"
-            <<" posY          = "<<posY<<"\n";
-        os << std::flush;
-    }
-};
-
+//
 
 int main( int argc, char* argv[])
 {
-    std::string newfilename;
-    Json::Value input_js, geom_js;
-    if( argc == 4)
+    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+    std::string inputfile = argc==1 ? "geometry_diag.json" : argv[1];
+    dg::file::file2Json( inputfile, js.asJson(),
+            dg::file::comments::are_discarded);
+
+    std::string geometry_params = js["magnetic_field"]["input"].asString();
+    if( geometry_params == "file")
     {
-        newfilename = argv[3];
-        std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
-        dg::file::file2Json( argv[1], input_js, dg::file::comments::are_discarded);
-        dg::file::file2Json( argv[2], geom_js, dg::file::comments::are_discarded);
+        std::string path = js["magnetic_field"]["file"].asString();
+        dg::file::file2Json( path, js.asJson()["magnetic_field"]["file"],
+                dg::file::comments::are_discarded);
     }
-    else if( argc == 3)
-    {
-        newfilename = argv[2];
-        std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
-        dg::file::NC_Error_Handle err;
-        int ncid_in;
-        err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
-        size_t length;
-        err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-        std::string inputfile(length, 'x');
-        err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-        err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
-        std::string geomfile(length, 'x');
-        err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
-        err = nc_close( ncid_in);
-        Json::Value js,gs;
-        dg::file::string2Json(inputfile, input_js, dg::file::comments::are_discarded);
-        dg::file::string2Json(geomfile, geom_js, dg::file::comments::are_discarded);
-    }
-    else
-    {
-        std::cerr << "ERROR: Wrong number of arguments!\n";
-        std::cerr << " Usage: "<< argv[0]<<" [input.json] [geom.json] [output.nc]\n";
-        std::cerr << " ( Minimum input json file is { \"n\" : 3, \"Nx\": 100, \"Ny\":100 })\n";
-        std::cerr << "Or \n Usage: "<< argv[0]<<" [file.nc] [output.nc]\n";
-        std::cerr << " ( Program searches for string variables 'inputfile' and 'geomfile' in file.nc and tries a json parser)\n";
-        return -1;
-    }
-    std::cout << input_js<<std::endl;
-    const Parameters p(input_js);
-    p.display( std::cout);
     //Test coefficients
     dg::geo::CylindricalFunctor wall, transition, sheath, direction;
-    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(geom_js,
-            dg::file::error::is_throw);
+    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
+            js["magnetic_field"][geometry_params]);
     dg::geo::TokamakMagneticField mod_mag =
-        dg::geo::createModifiedField(geom_js, input_js, dg::file::error::is_throw,
-                wall, transition);
-    std::string input = input_js.toStyledString();
-    std::string geom = geom_js.toStyledString();
-    unsigned n, Nx, Ny, Nz;
-    n = p.n, Nx = p.Nx, Ny = p.Ny, Nz = p.Nz;
-    double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
-    double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
-    dg::geo::createSheathRegion( input_js, dg::file::error::is_warning,
+        dg::geo::createModifiedField(js["magnetic_field"][geometry_params],
+                js["boundary"]["wall"], wall, transition);
+    unsigned n = js["grid"].get("n",3).asUInt();
+    unsigned Nx = js["grid"].get("Nx",100).asUInt();
+    unsigned Ny = js["grid"].get("Ny",100).asUInt();
+    unsigned Nz = js["grid"].get("Nz", 1).asUInt();
+    double boxscaleRm = js["grid"]["scaleR"].get(0u, 1.1).asDouble();
+    double boxscaleRp = js["grid"]["scaleR"].get(1u, 1.1).asDouble();
+    double boxscaleZm = js["grid"]["scaleZ"].get(0u, 1.2).asDouble();
+    double boxscaleZp = js["grid"]["scaleZ"].get(1u, 1.1).asDouble();
+    double Rmin=mag.R0()-boxscaleRm*mag.params().a();
+    double Zmin=-boxscaleZm*mag.params().a();
+    double Rmax=mag.R0()+boxscaleRp*mag.params().a();
+    double Zmax=boxscaleZp*mag.params().a();
+    dg::geo::createSheathRegion( js["boundary"]["sheath"],
             mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
 
     dg::geo::description mag_description = mag.params().getDescription();
@@ -155,8 +85,6 @@ int main( int argc, char* argv[])
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
-    ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
-    unsigned npsi = 3, Npsi = p.Npsi;//set number of psivalues (NPsi % 8 == 0)
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
         {"Psip", "Flux function", mag.psip()},
@@ -212,24 +140,18 @@ int main( int argc, char* argv[])
         //////////////////////////////////
         {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
         {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
-        {"GaussianDamping", "A flux aligned Heaviside with Gaussian damping", dg::compose( dg::GaussianDamping( 0.8, p.source_alpha), dg::geo::RhoP(mag)) },
-        {"ZonalFlow",  "Flux aligned Sine function", dg::compose( dg::SinX ( p.amp, 0., 2.*M_PI*p.k_psi ), mag.psip())},
         {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
-        {"SourceProfile", "A source profile", dg::compose( dg::PolynomialHeaviside(
-                    p.source_boundary-p.source_alpha/2., p.source_alpha/2., -1 ),
-                dg::geo::RhoP(mag))},
         {"Wall", "Penalization region that acts as the wall", wall },
         {"MagneticTransition", "The region where the magnetic field is modified", transition},
-        {"Nprofile", "A flux aligned profile", dg::compose( dg::LinearX( p.nprofileamp/mag.psip()(mag.R0(),0.), p.nprofileamp ), mag.psip())},
         {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
-        {"TanhDamping", "A flux aligned Heaviside with Tanh Damping", dg::compose( dg::TanhProfX( -3*p.source_alpha, p.source_alpha, -1), mag.psip())},
         ////
-        {"BathRZ", "A randomized field", dg::BathRZ( 16, 16, Rmin,Zmin, 30.,2, p.amp)},
-        {"Gaussian3d", "A Gaussian field", dg::Gaussian3d(mag.R0()+p.posX*mag.params().a(), p.posY*mag.params().a(),
-            M_PI, p.sigma, p.sigma, p.sigma, p.amp)},
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
     };
 
+    ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
+    unsigned npsi = 3;
+    //set number of psivalues (NPsi % 8 == 0)
+    unsigned Npsi = js["grid"].get("Npsi", 32).asUInt();
     /// -------  Elements for fsa on X-point grid ----------------
     double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
@@ -337,7 +259,8 @@ int main( int argc, char* argv[])
     std::cout << "CREATING/OPENING FILE AND WRITING ... \n";
     dg::file::NC_Error_Handle err;
     int ncid;
-    err = nc_create( newfilename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    std::string newfilename = argc<2 ? "geometry_diag.nc" : argv[2];
+    err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
     std::map<std::string, std::string> att;
     att["title"] = "Output file of feltor/inc/geometries/geometry_diag.cu";
@@ -354,8 +277,8 @@ int main( int argc, char* argv[])
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
+    std::string input = js.asJson().toStyledString();
     att["inputfile"] = input;
-    att["geomfile"] = geom;
     for( auto pair : att)
         err = nc_put_att_text( ncid, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());

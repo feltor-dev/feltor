@@ -4,7 +4,6 @@
 #include "json/json.h"
 
 #include "dg/algorithm.h"
-#include "dg/file/nc_utilities.h"
 
 #include "solovev.h"
 //#include "taylor.h"
@@ -23,20 +22,20 @@ struct JPhi
 
 int main( int argc, char* argv[])
 {
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    dg::file::WrappedJsonValue js( dg::file::error::is_throw);
+    std::string input = argc==1 ? "geometry_params_Xpoint.json" : argv[1];
+    dg::file::file2Json( input, js.asJson(), dg::file::comments::are_discarded);
 
+    std::string e = js.get( "equilibrium", "solovev" ).asString();
+    dg::geo::equilibrium equi = dg::geo::str2equilibrium.at( e);
+    if( equi != dg::geo::equilibrium::solovev)
+    {
+        std::cerr << "ERROR: This test only works for solovev equilibrium\n";
+        return -1;
+    }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
+
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     if( gp.hasXpoint())
@@ -109,6 +108,7 @@ int main( int argc, char* argv[])
     dg::pushForward( curvK_.x(), curvK_.y(), curvK_.z(),
             curvK[0], curvK[1], curvK[2], grid3d);
     std::cout << "Done!\n";
+    //Test NablaTimes B = B^2( curvK - curvB)
     dg::blas1::axpby( 1., curvK, -1., curvB);
     dg::HVec Bmodule = dg::pullback( dg::geo::Bmodule(mag), grid3d);
     dg::blas1::pointwiseDot( Bmodule, Bmodule, Bmodule);

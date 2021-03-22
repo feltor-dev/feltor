@@ -188,6 +188,7 @@ struct FieldFinv
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct Ribeiro : public aGenerator2d
 {

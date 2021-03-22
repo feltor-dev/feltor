@@ -24,5 +24,7 @@
     "bc_y"  : "PER",   
     "equations": "global", 
     "boussinesq": false, 
-    "friction": 0  
+    "friction": 0,
+    "jfactor" : 1
+
 }

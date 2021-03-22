@@ -231,6 +231,7 @@ struct FluxGenerator : public aGenerator2d
 /**
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct RibeiroFluxGenerator : public aGenerator2d
 {

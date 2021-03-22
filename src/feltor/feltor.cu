@@ -9,16 +9,8 @@
 
 #include "feltor.h"
 #include "implicit.h"
-
-using HVec = dg::x::HVec;
-using DVec = dg::x::DVec;
-using DMatrix = dg::x::DMatrix;
-using IDMatrix = dg::x::IDMatrix;
-using IHMatrix = dg::x::IHMatrix;
-using Geometry = dg::x::CylindricalGrid3d;
-#define MPI_OUT
-
 #include "init.h"
+
 #include "feltordiag.h"
 
 int main( int argc, char* argv[])
@@ -57,7 +49,7 @@ int main( int argc, char* argv[])
     }
 
     const feltor::Parameters p(js);
-    p.display( std::cout);
+    std::cout << js <<  std::endl;
     std::cout << gs.toStyledString() << std::endl;
     dg::geo::TokamakMagneticField mag, mod_mag;
     dg::geo::CylindricalFunctor wall, transition, sheath, direction;
@@ -93,24 +85,24 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<Geometry, IDMatrix, DMatrix, DVec> feltor( grid, p, mag);
+    feltor::Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag);
     //std::cout << "Constructing Implicit...\n";
-    //feltor::Implicit<Geometry, IDMatrix, DMatrix, DVec> implicit( grid, p, mag);
+    //feltor::Implicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> implicit( grid, p, mag);
     std::cout << "Done!\n";
 
-    DVec result = dg::evaluate( dg::zero, grid);
+    dg::x::DVec result = dg::evaluate( dg::zero, grid);
     /// Construct feltor::Variables object for diagnostics
-    std::array<DVec, 3> gradPsip;
+    std::array<dg::x::DVec, 3> gradPsip;
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  result; //zero
-    DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
+    dg::x::DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
     feltor::Variables var = {
         feltor, p,mag, gradPsip, gradPsip, hoo
     };
     /////////////////////The initial field///////////////////////////////////////////
     double time = 0.;
-    std::array<std::array<DVec,2>,2> y0;
+    std::array<std::array<dg::x::DVec,2>,2> y0;
     try{
         y0 = feltor::initial_conditions.at(p.initne)( feltor, grid, p,mod_mag );
     }catch ( std::out_of_range& error){
@@ -120,12 +112,12 @@ int main( int argc, char* argv[])
 
     try{
         bool fixed_profile;
-        HVec profile = dg::evaluate( dg::zero, grid);
-        HVec source_profile;
+        dg::x::HVec profile = dg::evaluate( dg::zero, grid);
+        dg::x::HVec source_profile;
         source_profile = feltor::source_profiles.at(p.source_type)(
             fixed_profile, profile, grid, p,  mod_mag);
-        feltor.set_source( fixed_profile, dg::construct<DVec>(profile),
-            p.source_rate, dg::construct<DVec>(source_profile)
+        feltor.set_source( fixed_profile, dg::construct<dg::x::DVec>(profile),
+            p.source_rate, dg::construct<dg::x::DVec>(source_profile)
         );
     }catch ( std::out_of_range& error){
         std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)\n";
@@ -138,16 +130,16 @@ int main( int argc, char* argv[])
     unsigned step = 0;
     //dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
     //    feltor::FeltorSpecialSolver<
-    //        Geometry, IDMatrix, DMatrix, DVec>
+    //        dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>
     //    > karniadakis( grid, p, mag);
-    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp("TVB-3-3", y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > > mp("TVB-3-3", y0);
     {
-    HVec h_wall = dg::pullback( wall, grid);
-    HVec h_sheath = dg::pullback( sheath, grid);
-    HVec h_velocity = dg::pullback( direction, grid);
-    feltor.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath), dg::construct<DVec>(h_velocity));
-    //implicit.set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
-    //karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<DVec>( h_wall), p.sheath_rate, dg::construct<DVec>(h_sheath));
+        dg::x::HVec h_wall = dg::pullback( wall, grid);
+        dg::x::HVec h_sheath = dg::pullback( sheath, grid);
+        dg::x::HVec h_velocity = dg::pullback( direction, grid);
+        feltor.set_wall_and_sheath( p.wall_rate, dg::construct<dg::x::DVec>( h_wall), p.sheath_rate, dg::construct<dg::x::DVec>(h_sheath), dg::construct<dg::x::DVec>(h_velocity));
+    //implicit.set_wall_and_sheath( p.wall_rate, dg::construct<dg::x::DVec>( h_wall), p.sheath_rate, dg::construct<dg::x::DVec>(h_sheath));
+    //karniadakis.solver().set_wall_and_sheath( p.wall_rate, dg::construct<dg::x::DVec>( h_wall), p.sheath_rate, dg::construct<dg::x::DVec>(h_sheath));
     }
 
     std::cout << "Initialize Timestepper" << std::endl;
@@ -281,7 +273,7 @@ int main( int argc, char* argv[])
               <<" -> Accuracy: " << accuracy << "\n";
             double max_ue = dg::blas1::reduce(
                 feltor.velocity(0), 0., dg::AbsMax<double>() );
-            MPI_OUT std::cout << "\tMaximum ue "<<max_ue<<"\n";
+            std::cout << "\tMaximum ue "<<max_ue<<"\n";
             //----------------Test if induction equation holds
             if( p.beta != 0)
             {

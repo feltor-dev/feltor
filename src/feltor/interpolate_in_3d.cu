@@ -9,14 +9,6 @@
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 #include "dg/file/file.h"
-using HVec = dg::HVec;
-using DVec = dg::DVec;
-using DMatrix = dg::DMatrix;
-using HMatrix = dg::HMatrix;
-using IDMatrix = dg::IDMatrix;
-using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CylindricalGrid3d;
-#define MPI_OUT
 #include "feltordiag.h"
 
 thrust::host_vector<float> append( const thrust::host_vector<float>& in, const dg::aRealTopology3d<double>& g)
@@ -56,7 +48,7 @@ int main( int argc, char* argv[])
     dg::file::string2Json(inputfile, js, dg::file::comments::are_forbidden);
     dg::file::string2Json(geomfile, gs, dg::file::comments::are_forbidden);
     const feltor::Parameters p(js, dg::file::error::is_warning);
-    p.display();
+    std::cout << js.toStyledString() << std::endl;
     std::cout << gs.toStyledString() << std::endl;
     dg::geo::TokamakMagneticField mag;
     try{
@@ -125,7 +117,7 @@ int main( int argc, char* argv[])
 
     /////////////////////////////////////////////////////////////////////////
     auto bhat = dg::geo::createBHat( mag);
-    dg::geo::Fieldaligned<Geometry, IHMatrix, HVec> fieldaligned(
+    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix, dg::HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, 5, 5);
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation( g3d_out_equidistant, g3d_out);

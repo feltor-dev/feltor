@@ -19,25 +19,25 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
-    enum dg::file::error mode = dg::file::error::is_throw;
     if( argc == 1)
         dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
     else
         dg::file::file2Json( argv[1], js);
     std::cout << js <<std::endl;
+    dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
 
     /////////////////////////////////////////////////////////////////
-    dg::CartesianGrid2d grid = shu::createGrid( js, mode);
+    dg::CartesianGrid2d grid = shu::createGrid( ws["grid"]);
     dg::DVec w2d( dg::create::weights(grid));
     /////////////////////////////////////////////////////////////////
 
-    std::string initial = dg::file::get( mode, js, "init", "type", "lamb").asString();
     dg::HVec omega;
     try{
-        omega = shu::initial_conditions( initial, js, mode, grid);
+        omega = shu::initial_conditions( ws["init"], grid);
     }
-    catch ( std::out_of_range& e) {
-        std::cerr << "Initial condition '"<<initial<<"' not recognized! Exit!\n";
+    catch ( std::exception& e) {
+        std::cerr << e.what()<<"\n";
+        std::cerr << "Exit now!\n";
         return -1;
     }
 
@@ -50,17 +50,17 @@ int main( int argc, char* argv[])
     }
     //make solver and stepper
     shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>
-        shu( grid, js, mode);
-    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, js, mode);
-    if( "mms" == initial)
+        shu( grid, ws);
+    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, ws);
+    if( "mms" == ws["init"]["type"].asString())
     {
-        double sigma = dg::file::get( mode, js, "init", "sigma", 0.2).asDouble();
-        double velocity = dg::file::get( mode, js, "init", "velocity", 0.1).asDouble();
+        double sigma = ws["init"].get( "sigma", 0.2).asDouble();
+        double velocity = ws["init"].get( "velocity", 0.1).asDouble();
         shu.set_mms_source( sigma, velocity, grid.ly());
     }
 
     double time = 0;
-    shu::Variables var = {shu, grid, y0, time, w2d, 0., mode, js};
+    shu::Variables var = {shu, grid, y0, time, w2d, 0., ws};
     dg::Timer t;
     t.tic();
     shu( 0., y0, y1);
@@ -73,9 +73,9 @@ int main( int argc, char* argv[])
     }
 
     /// ////////////// Initialize timestepper ///////////////////////
-    std::string stepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
-    std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
-    std::string regularization = dg::file::get( mode, js, "regularization", "type", "moddal").asString();
+    std::string stepper = ws[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
+    std::string tableau = ws[ "timestepper"].get( "tableau", "ImEx-BDF-3-3").asString();
+    std::string regularization = ws[ "regularization"].get( "type", "moddal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter identity;
     bool apply_filter = true;
@@ -84,15 +84,15 @@ int main( int argc, char* argv[])
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
     if( regularization == "modal")
     {
-        double alpha = dg::file::get( mode, js, "regularization", "alpha", 36).asDouble();
-        double order = dg::file::get( mode, js, "regularization", "order", 8).asDouble();
-        double eta_c = dg::file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
+        double alpha = ws[ "regularization"].get( "alpha", 36).asDouble();
+        double order = ws[ "regularization"].get( "order", 8).asDouble();
+        double eta_c = ws[ "regularization"].get( "eta_c", 0.5).asDouble();
         filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
     }
     else
         apply_filter = false;
 
-    double dt = dg::file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
+    double dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
     if( "ImExMultistep" == stepper)
     {
         if( regularization != "viscosity")
@@ -101,7 +101,7 @@ int main( int argc, char* argv[])
 
             return -1;
         }
-        double eps_time = dg::file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
+        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
         imex.construct( tableau, y0, y0.size(), eps_time);
         imex.init( shu, diffusion, time, y0, dt);
     }
@@ -123,9 +123,9 @@ int main( int argc, char* argv[])
 
         return -1;
     }
-    unsigned maxout = dg::file::get( mode, js, "output", "maxout", 100).asUInt();
-    unsigned itstp = dg::file::get( mode, js, "output", "itstp", 5).asUInt();
-    std::string output = dg::file::get( mode, js, "output", "type", "glfw").asString();
+    unsigned maxout =    ws[ "output"].get( "maxout", 100).asUInt();
+    unsigned itstp =     ws[ "output"].get( "itstp", 5).asUInt();
+    std::string output = ws[ "output"].get( "type", "glfw").asString();
 #ifndef WITHOUT_GLFW
     if( "glfw" == output)
     {

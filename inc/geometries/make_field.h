@@ -44,48 +44,47 @@ namespace geo{
  *
  * @param gs Has to contain "equilibrium" which is converted \c dg::geo::equilibrium,
  * i.e. "solovev", "polynomial", .... After that the respective parameters are created,
- * for example if "solovev", then the dg::geo::solovev::Parameters( gs, mode) is called and forwarded to dg::geo::createSolovevField(gp); similar for the rest
- * @param mode signifies what to do if an error occurs
+ * for example if "solovev", then the dg::geo::solovev::Parameters( gs) is called and forwarded to dg::geo::createSolovevField(gp); similar for the rest
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  */
-static inline TokamakMagneticField createMagneticField( Json::Value gs, dg::file::error mode)
+static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
 {
-    std::string e = dg::file::get( mode, gs, "equilibrium", "solovev" ).asString();
+    std::string e = gs.get( "equilibrium", "solovev" ).asString();
     equilibrium equi = str2equilibrium.at( e);
     switch( equi){
         case equilibrium::polynomial:
         {
-            polynomial::Parameters gp( gs, mode);
+            polynomial::Parameters gp( gs);
             return createPolynomialField( gp);
         }
         case equilibrium::toroidal:
         {
-            double R0 = dg::file::get( mode, gs, "R_0", 10).asDouble();
+            double R0 = gs.get( "R_0", 10.0).asDouble();
             return createToroidalField( R0);
         }
         case equilibrium::guenther:
         {
-            double I0 = dg::file::get( mode, gs, "I_0", 20).asDouble();
-            double R0 = dg::file::get( mode, gs, "R_0", 10).asDouble();
+            double I0 = gs.get( "I_0", 20.0).asDouble();
+            double R0 = gs.get( "R_0", 10.0).asDouble();
             return createGuentherField( R0, I0);
         }
         case equilibrium::circular:
         {
-            double I0 = dg::file::get( mode, gs, "I_0", 20).asDouble();
-            double R0 = dg::file::get( mode, gs, "R_0", 10).asDouble();
+            double I0 = gs.get( "I_0", 20.0).asDouble();
+            double R0 = gs.get( "R_0", 10.0).asDouble();
             return createCircularField( R0, I0);
         }
 #ifdef BOOST_VERSION
         case equilibrium::taylor:
         {
-            solovev::Parameters gp( gs, mode);
+            solovev::Parameters gp( gs);
             return createTaylorField( gp);
         }
 #endif
         default:
         {
-            solovev::Parameters gp( gs, mode);
+            solovev::Parameters gp( gs);
             return createSolovevField( gp);
         }
     }
@@ -121,44 +120,40 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
  *
 @code
 {
-    "wall" :
-    {
-        "type": "none"
-    },
-    "wall":
-    {
-        "type": "heaviside",
-        "boundary": 1.1,
-        "alpha": 0.20
-    },
-    "wall":
-    {
-        "type": "sol_pfr",
-        "boundary": [1.1,0.998],
-        // First value indicates SOL, second the PFR
-        "alpha": [0.10,0.10]
-    },
+    "type": "none"
+}
+{
+    "type": "heaviside",
+    "boundary": 1.1,
+    "alpha": 0.20
+}
+{
+    "type": "sol_pfr",
+    "boundary": [1.1,0.998],
+    // First value indicates SOL, second the PFR
+    "alpha": [0.10,0.10]
 }
 @endcode
 @sa dg::geo::modification for possible values of "type" parameter
  * @param gs forwarded to \c dg::geo::createMagneticField
  * @param jsmod contains the fields described above to steer the creation of a modification region
- * @param mode Determines behaviour in case of an error
  * @param wall (out) On output contains the region where the wall is applied, the functor returns 1 where the wall is, 0 where there it is not and 0<f<1 in the transition region
  * @param transition (out) On output contains the region where the transition of Psip to a constant value occurs, the functor returns 0<f<=1 for when there is a transition and 0 else
  * @note Per default the dampening happens nowhere
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  */
-static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Value jsmod, dg::file::error mode, CylindricalFunctor& wall, CylindricalFunctor& transition)
+static inline TokamakMagneticField createModifiedField(
+        dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod,
+        CylindricalFunctor& wall, CylindricalFunctor& transition)
 {
-    std::string e = dg::file::get( mode, gs, "equilibrium", "solovev" ).asString();
+    std::string e = gs.get( "equilibrium", "solovev" ).asString();
     equilibrium equi = str2equilibrium.at( e);
-    std::string m = dg::file::get( mode, jsmod, "wall", "type", "heaviside" ).asString();
+    std::string m = jsmod.get( "type", "heaviside" ).asString();
     modifier mod = str2modifier.at( m);
-    std::string d = dg::file::get( mode, gs, "description", "standardX" ).asString();
+    std::string d = gs.get( "description", "standardX" ).asString();
     description desc = str2description.at( d);
-    TokamakMagneticField mag = createMagneticField( gs, mode);
+    TokamakMagneticField mag = createMagneticField( gs);
     const MagneticFieldParameters& inp = mag.params();
     MagneticFieldParameters mod_params{ inp.a(), inp.elongation(),
         inp.triangularity(), inp.getEquilibrium(), mod, inp.getDescription()};
@@ -172,14 +167,14 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
         }
         case modifier::heaviside:
         {
-            double psi0 = dg::file::get( mode, jsmod, "wall", "boundary", 1.1 ).asDouble();
-            double alpha = dg::file::get( mode, jsmod, "wall", "alpha", 0.2 ).asDouble();
+            double psi0 = jsmod.get( "boundary", 1.1 ).asDouble();
+            double alpha = jsmod.get( "alpha", 0.2 ).asDouble();
             double sign = +1;
             if( desc == description::standardX || desc == description::standardO ||
                     desc == description::doubleX)
                 detail::transform_psi( mag, psi0, alpha, sign);
             else
-                sign = dg::file::get( mode, jsmod, "wall", "sign", -1. ).asDouble();
+                sign = jsmod.get( "sign", -1. ).asDouble();
 
             mod_psip = mod::createPsip( mod::everywhere, mag.get_psip(), psi0, alpha, sign);
             wall = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha, -sign);
@@ -188,10 +183,10 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
         }
         case modifier::sol_pfr:
         {
-            double psi0 = dg::file::get_idx( mode, jsmod, "wall", "boundary",0, 1.1 ).asDouble();
-            double alpha0 = dg::file::get_idx( mode, jsmod, "wall", "alpha",0, 0.2 ).asDouble();
-            double psi1 = dg::file::get_idx( mode, jsmod, "wall", "boundary",1, 0.97 ).asDouble();
-            double alpha1 = dg::file::get_idx( mode, jsmod, "wall", "alpha",1, 0.2 ).asDouble();
+            double psi0     = jsmod["boundary"].get( 0, 1.1 ).asDouble();
+            double alpha0   = jsmod["alpha"].get(0, 0.2 ).asDouble();
+            double psi1     = jsmod["boundary"].get(1, 0.97 ).asDouble();
+            double alpha1   = jsmod[ "alpha"].get(1, 0.2 ).asDouble();
             switch( desc){
                 case description::standardX:
                 {
@@ -246,8 +241,8 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
                 }
                 default:
                 {
-                    double sign0 = dg::file::get_idx( mode, jsmod, "wall", "sign",0, -1. ).asDouble();
-                    double sign1 = dg::file::get_idx( mode, jsmod, "wall", "sign", 1, +1. ).asDouble();
+                    double sign0 = jsmod[ "sign"].get( 0, -1. ).asDouble();
+                    double sign1 = jsmod[ "sign"].get( 1, +1. ).asDouble();
                     CylindricalFunctorsLvl2 mod0_psip;
                     mod0_psip = mod::createPsip(
                             mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
@@ -267,7 +262,7 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
     switch( equi){
         case equilibrium::solovev:
         {
-            solovev::Parameters gp( gs, mode);
+            solovev::Parameters gp( gs);
             return TokamakMagneticField( gp.R_0,mod_psip,
                 solovev::createIpol( gp, mod_psip), mod_params);
         }
@@ -281,10 +276,10 @@ static inline TokamakMagneticField createModifiedField( Json::Value gs, Json::Va
 
 
 /// A convenience function call for \c dg::geo::createModifiedField that ignores the transition parameter and returns the wall
-static inline CylindricalFunctor createWallRegion( Json::Value gs, Json::Value jsmod, dg::file::error mode)
+static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod)
 {
     CylindricalFunctor wall, transition;
-    TokamakMagneticField mag = createModifiedField( gs, jsmod, mode, wall, transition);
+    TokamakMagneticField mag = createModifiedField( gs, jsmod, wall, transition);
     return wall;
 }
 
@@ -295,15 +290,11 @@ static inline CylindricalFunctor createWallRegion( Json::Value gs, Json::Value j
  * and determine whether the poloidal field points towards or away from the wall
 @code
 {
-    "sheath" :
-    {
-        "boundary": 0.1, //value where sheath region begins in uits of minor radius a
-        "alpha": 0.01 // radius of the transition region where the modification acts in units of minor radius a
-    }
+    "boundary": 0.1, //value where sheath region begins in uits of minor radius a
+    "alpha": 0.01 // radius of the transition region where the modification acts in units of minor radius a
 }
 @endcode
- * @param jsmod most contain the field "sheath" as described above
- * @param mode Determines behaviour in case of an error
+ * @param jsmod must contain fields as described above
  * @param mag (in) the magnetic field, used to find the direction of the field
  * towards or away from the sheath
  * @param wall (in) the penalization region that represents the actual
@@ -319,7 +310,7 @@ static inline CylindricalFunctor createWallRegion( Json::Value gs, Json::Value j
  * @return sheath region
  */
 static inline void createSheathRegion(
-        Json::Value jsmod, dg::file::error mode, TokamakMagneticField mag,
+        dg::file::WrappedJsonValue jsmod, TokamakMagneticField mag,
         CylindricalFunctor wall, double R0, double R1, double Z0, double Z1,
         CylindricalFunctor& sheath, CylindricalFunctor& direction )
 {
@@ -350,8 +341,8 @@ static inline void createSheathRegion(
     direction = dg::geo::WallDirection( mag, vertical_sheath, horizontal_sheath);
     //sheath
     CylindricalFunctor dist = dg::WallDistance( vertical_sheath, horizontal_sheath);
-    double boundary = dg::file::get( mode, jsmod, "sheath", "boundary", 0.1 ).asDouble();
-    double alpha = dg::file::get( mode, jsmod, "sheath", "alpha", 0.01 ).asDouble();
+    double boundary = jsmod.get( "boundary", 0.1 ).asDouble();
+    double alpha    = jsmod.get( "alpha", 0.01 ).asDouble();
     double a = mag.params().a();
     dg::PolynomialHeaviside poly( boundary*a - alpha*a/2., alpha*a/2., -1);
     sheath = dg::compose( poly, dist);

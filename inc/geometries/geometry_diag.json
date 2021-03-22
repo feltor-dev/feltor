@@ -1,0 +1,17 @@
+{
+    "grid":
+    {
+        "n" : 3,
+        "Nx" : 80,
+        "Ny" : 80,
+        "Nz" : 20,
+        "Npsi": 32,
+        "scaleR" : [1.1,1.1],
+        "scaleZ" : [1.9, 1.9]
+    },
+    "magnetic_field":
+    {
+        "input" : "file",
+        "file": "geometry_params_Xpoint.json"
+    }
+}

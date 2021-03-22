@@ -9,13 +9,6 @@
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 #include "dg/file/file.h"
-using HVec = dg::HVec;
-using DVec = dg::DVec;
-using DMatrix = dg::DMatrix;
-using IDMatrix = dg::IDMatrix;
-using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CylindricalGrid3d;
-#define MPI_OUT
 #include "feltordiag.h"
 
 int main( int argc, char* argv[])
@@ -47,8 +40,8 @@ int main( int argc, char* argv[])
     //we only need some parameters from p, not all
     const feltor::Parameters p(js, dg::file::error::is_warning);
     const dg::geo::solovev::Parameters gp(gs);
-    p.display();
-    gp.display();
+    std::cout << js<<std::endl;
+    std::cout << gs<<std::endl;
     std::vector<std::string> names_input{
         "electrons", "ions", "Ue", "Ui", "potential", "induction"
     };
@@ -89,9 +82,9 @@ int main( int argc, char* argv[])
     dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
         p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
     /////////////////////////////////////////////////////////////////////////
-    Geometry g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    Geometry g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
         p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
     dg::geo::CylindricalFunctor wall, transition;
@@ -105,7 +98,7 @@ int main( int argc, char* argv[])
     std::cout << "Construct Fieldaligned derivative ... \n";
 
     auto bhat = dg::geo::createBHat( mag);
-    dg::geo::Fieldaligned<Geometry, IDMatrix, DVec> fieldaligned(
+    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
         bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, 5, 5);
 
@@ -363,7 +356,7 @@ int main( int argc, char* argv[])
                 {
                     err = nc_get_vara_double( ncid, dataID,
                         start2d, count2d, transferH2d.data());
-                    DVec transferD2d = transferH2d;
+                    dg::DVec transferD2d = transferH2d;
                     fieldaligned.integrate_between_coarse_grid( g3d, transferD2d, transferD2d);
                     transferH2d = transferD2d;
                     t2d_mp = transferH2d; //save toroidal average

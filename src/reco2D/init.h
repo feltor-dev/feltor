@@ -5,12 +5,13 @@ namespace asela{
 ///The purpose of this file is to provide an interface for custom initial
 ///conditions and /source profiles.  Just add your own to the function
 ///below.
-std::array<std::array<dg::x::DVec,2>,2>
-    initial_conditions( std::string initial,
+std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
     Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f,
     const dg::x::CartesianGrid2d& grid, const asela::Parameters& p,
-    dg::file::error mode, Json::Value js)
+    dg::file::WrappedJsonValue js)
 {
+    auto init = js["init"];
+    std::string initial = init[ "type"].asString();
     std::array<std::array<dg::x::DVec,2>,2> y0;
     y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] =
         dg::construct<dg::x::DVec>(dg::evaluate( dg::zero, grid));
@@ -19,9 +20,9 @@ std::array<std::array<dg::x::DVec,2>,2>
     }
     else if( initial== "harris")
     {
-        double A = dg::file::get( mode, js, "init", "amplitude0", 1e-5).asDouble();
-        double B = dg::file::get( mode, js, "init", "amplitude1", 1e-5).asDouble();
-        double mY  = dg::file::get( mode, js, "init", "my", 1e-5).asDouble();
+        double A = init[ "amplitude0"].asDouble( 1e-5);
+        double B = init[ "amplitude1"].asDouble( 1e-5);
+        double mY  = init["my"].asDouble(1e-5);
         double kx = 2.*M_PI/p.lxhalf, ky = mY*M_PI/p.lyhalf;
         double kxp = M_PI/p.lxhalf/2.;
         dg::x::DVec apar = dg::evaluate( [=](double x, double y){ return
@@ -38,9 +39,9 @@ A*pow(1./cosh(kx*x),2)*(-(pow(kxp,2)*cos(kxp*x)) + 4*kx*kxp*sin(kxp*x)*tanh(kx*x
     }
     else if( initial== "island")
     {
-        double A = dg::file::get( mode, js, "init", "amplitude0", 1e-5).asDouble();
-        double B = dg::file::get( mode, js, "init", "amplitude1", 1e-5).asDouble();
-        double mY  = dg::file::get( mode, js, "init", "my", 1e-5).asDouble();
+        double A = init[ "amplitude0"].asDouble( 1e-5);
+        double B = init[ "amplitude1"].asDouble( 1e-5);
+        double mY  = init["my"].asDouble(1e-5);
         double kx = 2.*M_PI/p.lxhalf, ky = mY*M_PI/p.lyhalf;
         double kxp = M_PI/p.lxhalf/2., e = 0.2;
         dg::x::DVec apar = dg::evaluate( [=](double x, double y){ return
@@ -56,7 +57,7 @@ A*pow(1./cosh(kx*x),2)*(-(pow(kxp,2)*cos(kxp*x)) + 4*kx*kxp*sin(kxp*x)*tanh(kx*x
         dg::blas1::axpby(1./p.mu[1], apar, 0.0, y0[1][1]);
     }
     else
-        throw std::out_of_range("Initial condition not recognized!");
+        throw dg::Error( dg::Message() << "Initial condition "<<initial<<" not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)");
     return y0;
 };
 }//namespace asela
