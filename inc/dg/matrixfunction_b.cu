@@ -62,7 +62,6 @@ int main(int argc, char * argv[])
     dg::EXP<double> exp_f;
     dg::BESSELI0<double> besseli0_f;
     dg::GAMMA0<double> gamma0_f;
-//     std::tuple<dg::SQRT<double>, dg::EXP<double>, dg::BESSELI0<double>, dg::GAMMA0<double> > func = {sqrt_f, exp_f, besseli0_f, gamma0_f};
     auto func = std::make_tuple(sqrt_f, exp_f, besseli0_f, gamma0_f); 
     
     {

@@ -56,15 +56,7 @@ struct DirectSqrtODESolve
      */    
     unsigned operator()(const Container& x, Container& b)
     {
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
         unsigned counter =  dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtode, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-#ifdef DG_BENCHMARK
-        t.toc();
-        std::cout << "# b = sqrt(A) x took \t"<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
         return counter;
     }
   private:
@@ -113,19 +105,11 @@ struct DirectSqrtCauchySolve
      *
      * @param x input vector
      * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \f$
-     * @return number of timesteps of sqrt ODE solve
+     * @return number of integration steps of sqrt cauchy solve
      */    
     unsigned operator()(const Container& x, Container& b)
     {
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
         m_cauchysqrtint(x, b, m_EVmin, m_EVmax, m_iterCauchy);
-#ifdef DG_BENCHMARK
-        t.toc();
-        std::cout << "# b = sqrt(A) x took \t"<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
         return m_iterCauchy;
     }
   private:
@@ -202,30 +186,33 @@ struct KrylovSqrtODESolve
      * 
      * @return number of time steps in sqrt ODE solve
      */    
-    unsigned operator()(const Container& x, Container& b)
+    std::array<unsigned,2> operator()(const Container& x, Container& b)
     {
-        //Lanczos solve first         
 #ifdef DG_BENCHMARK
-        dg::Timer t;
+        Timer t;
         t.tic();
 #endif //DG_BENCHMARK
+        //Lanczos solve first         
         value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
         if( xnorm == 0)
         {
             dg::blas1::copy( x,b);
-            return 0;
+            return {0,0} ;
         }
         m_TH  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps, false, m_kappa*sqrt(m_EVmin)); 
-        m_e1H.resize(m_lanczos.get_iter(), 0.);
+        unsigned iter = m_lanczos.get_iter();
+        m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
-        m_yH.resize( m_lanczos.get_iter());
+        m_yH.resize( iter);
         
-        m_sqrtodeH.new_size(m_lanczos.get_iter()); //resize  vectors in sqrtODE
+        m_sqrtodeH.new_size(iter); //resize  vectors in sqrtODE
         m_sqrtodeH.set_A(m_TH); //set T in sqrtODE 
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
 
-        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, m_lanczos.get_iter());          // b = ||x|| V T^(1/2) e_1    
+        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, iter);          // b = ||x|| V T^(1/2) e_1  
+        //reset max iterations if () operator is called again
+        m_lanczos.set_iter(m_max_iter);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -234,14 +221,10 @@ struct KrylovSqrtODESolve
         if(rank==0)
 #endif //MPI
         {
-            std::cout << "# b = sqrt(A) x info \n" 
-                  << "    iter: " << m_lanczos.get_iter()  << "\n"
-                  << "    time: " << t.diff()<<"s"<<std::endl;
+            std::cout << "# SQRT solve with {"<< iter << "," << counter<< "} iterations took "<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
-        //reset max iterations if () operator is called again
-        m_lanczos.set_iter(m_max_iter);
-        return counter;
+        return {iter, counter};
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
@@ -320,45 +303,45 @@ struct KrylovSqrtCauchySolve
      * 
      * @return number of time steps in sqrt ODE solve
      */    
-    unsigned operator()(const Container& x, Container& b)
+    std::array<unsigned,2> operator()(const Container& x, Container& b)
     {
-        //Lanczos solve first         
 #ifdef DG_BENCHMARK
-        dg::Timer t;
+        Timer t;
         t.tic();
 #endif //DG_BENCHMARK
         value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
         if( xnorm == 0)
         {
             dg::blas1::copy( x,b);
-            return 0;
+            return {0, m_iterCauchy};
         }
         
         m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin)); 
-        m_e1H.resize(m_lanczos.get_iter(), 0.);
-        m_e1H[0] = 1.;
-        m_yH.resize(m_lanczos.get_iter());        
+        unsigned iter = m_lanczos.get_iter();
 
-        m_cauchysqrtH.new_size(m_lanczos.get_iter()); //resize vectors in cauchy
+        m_e1H.resize(iter, 0.);
+        m_e1H[0] = 1.;
+        m_yH.resize(iter);        
+
+        m_cauchysqrtH.new_size(iter); //resize vectors in cauchy
         m_cauchysqrtH.set_A(m_TH);         //set T in cauchy
         m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
-        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, m_lanczos.get_iter());
+        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, iter);
+
+        //reset max iterations if () operator is called again
+        m_lanczos.set_iter(m_max_iter);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if(rank==0)
-#endif // MPI_VERSION
+#endif //MPI
         {
-            std::cout << "# b = sqrt(A) x info \n" 
-                  << "    iter: " << m_lanczos.get_iter()  << "\n"
-                  << "    time: " << t.diff()<<"s"<<"\n";
+            std::cout << "# SQRT solve with {"<< iter << "," << m_iterCauchy<< "} iterations took "<<t.diff()<<"s\n";
         }
 #endif //DG_BENCHMARK
-        //reset max iterations if () operator is called again
-        m_lanczos.set_iter(m_max_iter);
-        return m_iterCauchy;
+        return {iter, m_iterCauchy};
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
@@ -433,46 +416,34 @@ class KrylovSqrtODEinvert
      * @return Number of iterations used to achieve desired precision
      * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.
       */
-    unsigned operator()(Container& x, const Container& b)
+    std::array<unsigned,2> operator()(Container& x, const Container& b)
     {
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
+
         if( sqrt(dg::blas2::dot(m_A.weights(), b)) == 0)
         {
             dg::blas1::copy( b, x);
-#ifdef DG_BENCHMARK
-            t.toc();
-            std::cout << "# x = sqrt(A)^(-1) b with 0 iterations took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
-            return 0;
+            return {0,0};
         }
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
         m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
-
-        m_invtridiagH.resize(m_mcg.get_iter());
+        unsigned iter = m_mcg.get_iter();
+        m_invtridiagH.resize(iter);
         m_TinvH = m_invtridiagH(m_TH);
         
-        m_e1H.resize(m_mcg.get_iter(), 0.);
+        m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
-        m_yH.resize( m_mcg.get_iter(), 0.);
-        m_sqrtodeH.new_size(m_mcg.get_iter()); //resize  vectors in sqrtODE solver
+        m_yH.resize( iter, 0.);
+        m_sqrtodeH.new_size(iter); //resize  vectors in sqrtODE solver
         m_sqrtodeH.set_A(m_TinvH);
 
         //could be replaced by Cauchy sqrt solve
         unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1
-#ifdef DG_BENCHMARK
-        t.toc();
-        std::cout << "# x = sqrt(A)^(-1) b info: \n"
-                  << "    iter: " << m_mcg.get_iter()  << "\n"
-                  << "    time: " << t.diff()<<"s"<< std::endl;
-#endif //DG_BENCHMARK
+        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1
+
         m_mcg.set_iter(m_max_iter);
-        return time_iter;
+        return {iter,time_iter};
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;
@@ -556,46 +527,33 @@ class KrylovSqrtCauchyinvert
      * @return Number of iterations used to achieve desired precision
      * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.
       */
-    unsigned operator()(Container& x, const Container& b)
+    std::array<unsigned,2> operator()(Container& x, const Container& b)
     {
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
         if( sqrt(dg::blas2::dot(m_A.weights(), b)) == 0)
         {
             dg::blas1::copy( b, x);
-#ifdef DG_BENCHMARK
-            t.toc();
-            std::cout << "# x = sqrt(A)^(-1) b with 0 iterations took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
-            return 0;
+            return {0,0};
         }
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
         m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
+        unsigned iter = m_mcg.get_iter();
         
-        
-        m_invtridiagH.resize(m_mcg.get_iter());
+        m_invtridiagH.resize(iter);
         m_TinvH = m_invtridiagH(m_TH); 
         
-        m_e1H.resize(m_mcg.get_iter(), 0.);
+        m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
-        m_yH.resize( m_mcg.get_iter(), 0.);
-        m_cauchysqrtH.new_size(m_mcg.get_iter()); //resize  vectors in sqrtODE solver
+        m_yH.resize( iter, 0.);
+        m_cauchysqrtH.new_size(iter); //resize  vectors in sqrtODE solver
         m_cauchysqrtH.set_A(m_TinvH);
         
         m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated
-        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  m_mcg.get_iter()); // x =  R T^(-1/2) e_1  
-#ifdef DG_BENCHMARK
-        t.toc();
-        std::cout << "# x = sqrt(A)^(-1) b info: \n"
-                  << "    iter: " << m_mcg.get_iter()  << "\n"
-                  << "    time: " << t.diff()<<"s"<<std::endl;
-#endif //DG_BENCHMARK
+        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1  
+
         m_mcg.set_iter(m_max_iter);
-        return m_iterCauchy;
+        return {iter,m_iterCauchy};
     }
   private:
     dg::Helmholtz<Geometry,  Matrix, Container> m_A;

@@ -20,7 +20,7 @@ use Cartesian coordinates $x$, $y$.
 \subsection{Models}
 
 
-The two delta-f models ("df" \& "df-O2") share the same evolution equations\footnote{The densities are for delta-f models are understood as fluctuating quantities with respect to a background} 
+The two delta-f models ("df-lwl" \& "df-O2") share the same evolution equations\footnote{The densities are for delta-f models are understood as fluctuating quantities with respect to a background} 
 \begin{subequations}
 \begin{align}
 %  -\Delta_{\perp} \phi =  \Gamma_1 N -n, \\
@@ -38,7 +38,7 @@ The two delta-f models ("df" \& "df-O2") share the same evolution equations\foot
 \end{subequations}
 and differ only in the polarization equation:\\
 
-"df"
+"df-lwl"
 \begin{subequations}
 \begin{align}
  -\Delta_{\perp} \phi =  \Gamma_1 N -n, 
@@ -271,7 +271,7 @@ lx         & float &200    & - & $l_x$  \\
 ly         & float &200    & - & $l_y$  \\
 bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-equations  & char & "ff-lwl" & "ff-lwl" &df, df-O2, ff, ff-O2, ff-O4\\
+equations  & char & "ff-lwl" & "ff-lwl" &df-lwl, df-O2, ff-lwl, ff-O2, ff-O4\\
 \bottomrule
 \end{longtable}
 

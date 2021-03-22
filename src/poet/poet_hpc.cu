@@ -155,11 +155,12 @@ int main( int argc, char* argv[])
 
     
     
-    //////////////////initialisation of timekarniadakis and first step///////////////////
+    //////////////////initialisation of timestepper and first step///////////////////
     MPI_OUT std::cout << "Initializing timestepper" <<std::endl;
     double time = 0;
-    dg::Karniadakis< std::vector<DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( ex, im, time, y0, p.dt);
+    dg::ImExMultistep<std::vector<DVec>> stepper( "ImEx-TVB-3-3", y0, y0[0].size(), p.eps_time);
+
+    stepper.init( ex, im, time, y0, p.dt);
     y1 = y0;
     MPI_OUT std::cout << "Timestepper initialized" <<std::endl;
 
@@ -225,7 +226,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            karniadakis.step( ex, im, time, y1);
+            stepper.step( ex, im, time, y1);
             //store accuracy details
             {
                 MPI_OUT std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
