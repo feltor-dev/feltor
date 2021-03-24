@@ -248,6 +248,7 @@ tableau to use
     "dt"      : 20.0, // Fixed timestep
 }
 \end{minted}
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_explicit_multistep.html}{dg documentation} for what tableaus are available.
 The second option is an adaptive explicit embedded Runge-Kutta scheme
 \begin{minted}[texcomments]{js}
 "timestepper":
@@ -258,7 +259,7 @@ The second option is an adaptive explicit embedded Runge-Kutta scheme
     "atol"    : 1e-10 // The absolute tolerance in the timestep
 }
 \end{minted}
-*See the dg documentation for what tableaus are available.
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_e_r_k_step.html}{dg documentation} for what tableaus are available.
 
 \subsection{Advection scheme}
 We implemented the advection in terms of Arakawa brackets
@@ -328,16 +329,18 @@ we can also apply it to the canonical velocity:
       \\
       \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =& \ldots -\nu_\perp \Delta_\perp^2 \left( \Ui+ \Gamma_1 \Apar  \right)
 \end{align}
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-regularization & dict & & \\
-\qquad type & string & velocity-viscosity & Apply viscosity on density and parallel velocity \\
-\qquad type & string & canonical-viscosity & Apply viscosity on density and parallel canonical velocity \\
-\qquad direction & string & centered & The direction of the Laplacian \\
-\qquad nu\_perp & float & 1e-6  &  The strength of the diffusion \\
-\bottomrule
-\end{longtable}
+
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type" : "velocity-viscosity",  // Apply viscosity on density and
+    // parel velocity
+    "type" : "canonical-viscosity",  // Apply viscosity on density and
+    // parallel canonical velocity
+    "direction" : "centered",  // The direction of the Laplacian
+    "nu_perp" : 1e-6 // The strength of the diffusion
+}
+\end{minted}
 Simply set the diffusion to 0 if you do not want any regularization.
 \begin{tcolorbox}[title=Note]
     If you set nu\_perp too large the timestep in the explicit timestepper will
@@ -378,15 +381,16 @@ This can be controlled via
     // Use glfw to display results in a window while computing (requires to
     // compile with the glfw3 library)
     "type"  : "glfw"
-    "itstp"  : 4, // The number of steps between outputs of 2d fields \\
+    "itstp"  : 4, // The number of steps between outputs of 2d fields
+
     // Use netcdf to write results into a file (filename given on command line)
     // (see next section for information about what is written in there)
     "type"  : "netcdf"
-    "itstp"  : 4,    // The number of steps between outputs of 2d fields \\
+    "itstp"  : 4,    // The number of steps between outputs of 2d fields
     "maxout"  : 500, // The total number of field outputs. The endtime is
     // T=itstp*maxout*dt
-    "n"  : 3 , // The number of polynomial coefficients in the output file\\
-    "Nx" : 48, // Number of cells in x in the output file \\
+    "n"  : 3 , // The number of polynomial coefficients in the output file
+    "Nx" : 48, // Number of cells in x in the output file
     "Ny" : 48  // Number of cells in y in the output file
 }
 \end{minted}
