@@ -126,6 +126,9 @@ struct WrappedJsonValue
         default_str << "value "<<value;
         return get( idx, value, default_str.str());
     }
+    unsigned size() const{
+        return m_js.size();
+    }
     double asDouble( double value = 0) const{
         if( m_js.isDouble())
             return m_js.asDouble();
