@@ -13,8 +13,8 @@
     },
     "output":
     {
-        //"type": "glfw",
-        "type": "netcdf",
+        "type": "glfw",
+        //"type": "netcdf",
         "itstp"  : 5,
         "maxout" : 2,
         "n" : 5,

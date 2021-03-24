@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
         v2d["ne-1 / "] = &y0[0],  v2d["ni-1 / "] = &y0[1];
         v2d["Phi / "] = &poet.potential(0); 
         v2d["Vor / "] = &poet.potential(0); 
-while ( !glfwWindowShouldClose( w ))
+        while ( !glfwWindowShouldClose( w ))
         {
             for( auto pair : v2d)
             {

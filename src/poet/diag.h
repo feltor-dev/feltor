@@ -18,7 +18,17 @@ struct RadialEnergyDiff
     private:
     double m_tau, m_z;
 };
+struct RadialEnergyDiffDeltaF
+{
+    RadialEnergyDiffDeltaF(double tau, double z): m_tau(tau), m_z(z){}
 
+    double DG_DEVICE operator() ( double dn, double P,
+        double diffN){
+        return m_z*(m_tau*dn+P)*diffN;
+    }
+    private:
+    double m_tau, m_z;
+};
 }
 
 struct Variables{
@@ -87,25 +97,79 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// ------------------- Energy terms ------------------------//
-    {"nelnne", "Entropy electrons",
+    {"Ene", "Entropy electrons", //nelnne or (delta ne)^2
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(0), result, dg::LN<double>());
-            dg::blas1::pointwiseDot( result, v.f.density(0), result);
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::transform( v.f.density(0), result, dg::LN<double>());
+                dg::blas1::pointwiseDot( result, v.f.density(0), result);
+            }
+            {
+                dg::blas1::transform( v.f.density(0), result, dg::PLUS<double>(-1.));
+                dg::blas1::pointwiseDot( 0.5, result, result, 0., result);
+            }
         }
     },
-    {"nilnni", "Entropy ions",
+    {"Eni", "Entropy ions", //nilnni or (delta ni)^2
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(1), result, dg::LN<double>());
-            dg::blas1::pointwiseDot( v.p.tau[1], result, v.f.density(1), 0., result);
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::transform( v.f.density(1), result, dg::LN<double>());
+                dg::blas1::pointwiseDot( v.p.tau[1], result, v.f.density(1), 0., result);
+            }
+            else
+            {
+                dg::blas1::transform( v.f.density(1), result, dg::PLUS<double>(-1.));
+                dg::blas1::pointwiseDot( 0.5*v.p.tau[1], result, result, 0., result);
+            }
         }
     },
-//     {"ue2", "ExB energy",
-//         []( dg::x::DVec& result, Variables& v ) {
-//             dg::blas1::pointwiseDot( 1., v.f.gradP(0)[0], v.f.gradP(0)[0],
-//                     1., v.f.gradP(0)[1], v.f.gradP(0)[1], 0., result);
-//             dg::blas1::pointwiseDot( 0.5, v.f.density(1), result, 0., result);
-//         }
-//     },
+    {"eExB", "ExB energy",
+        []( dg::x::DVec& result, Variables& v ) {
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::pointwiseDot( -1.0, v.f.density(1), v.f.psi2(), 0., result);
+            }
+            else {
+                dg::blas1::axpby( -1.0, v.f.psi2(), 0., result);
+            }
+        }
+    },
+ /// ------------------------ Energy dissipation terms ------------------//
+    {"leeperp", "Perpendicular electron energy dissipation",
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::axpby( 1., v.f.density(0), -1., 1., v.tmp[0]);
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::evaluate( result, dg::equals(),
+                    routines::RadialEnergyDiff( v.p.tau[0], -1),
+                    v.f.density(0),  v.f.potential(0), v.tmp[0]
+                );
+            }
+            else {
+                dg::blas1::evaluate( result, dg::equals(),
+                    routines::RadialEnergyDiffDeltaF( v.p.tau[0], -1),
+                    v.f.density(0),  v.f.potential(0), v.tmp[0]
+                );
+            }
+        }
+    },
+    {"leiperp", "Perpendicular ion energy dissipation",
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::axpby( 1., v.f.density(1), -1., 1., v.tmp[0]);
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::evaluate( result, dg::equals(),
+                    routines::RadialEnergyDiff(  v.p.tau[1], 1),
+                    v.f.density(1),  v.f.potential(1), v.tmp[0]
+                );
+            }
+            else {
+                 dg::blas1::evaluate( result, dg::equals(),
+                    routines::RadialEnergyDiffDeltaF(  v.p.tau[1], 1),
+                    v.f.density(1),  v.f.potential(1), v.tmp[0]
+                );
+            }
+                
+        }
+    }
 };
 
 std::vector<Record1d> diagnostics1d_list = {
