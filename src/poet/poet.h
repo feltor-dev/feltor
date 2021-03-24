@@ -42,18 +42,9 @@ struct Poet
      */
     void gamma1_y( const container& y, container& yp)
     {
-        if (m_p.equations == "ff-O2") {
-            // via two step approach
-            m_sqrtsolve(y, m_iota);
-            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g0, yp, m_iota, m_p.eps_gamma);
-            if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_gamma);
-        }
-        else {
-            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, yp, y, m_p.eps_gamma);
-            if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_gamma);
-        }
+        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, yp, y, m_p.eps_gamma1);
+        if(  number[0] == m_multigrid.max_iter())
+            throw dg::Fail( m_p.eps_gamma1);
     }
     /**
      * @brief compute \f$  \Gamma_1 yp = y \f$ (or \f$ \sqrt{\Gamma_1} yp =  y \f$ )
@@ -62,15 +53,8 @@ struct Poet
      */
     void gamma1inv_y( const container& y, container& yp)
     {
-        if (m_p.equations == "ff-O2")
-        {
-            m_sqrtsolve(y, yp);
-        }
-        else
-        {
-            dg::blas2::symv( m_multi_g1[0], y, m_chi); //invG ne-1
-            dg::blas2::symv( m_v2d, m_chi, yp);
-        }
+        dg::blas2::symv( m_multi_g1[0], y, m_chi); //invG ne-1
+        dg::blas2::symv( m_v2d, m_chi, yp);
     }
     /**
      * @brief Invert \f$ -\nabla \cdot (1/B \nabla_\perp yp) = y \f$ where y equals the ExB vorticity
@@ -113,12 +97,11 @@ struct Poet
         //apply G0 for df-02
         if( m_p.equations == "df-O2")
         {
-            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g0, Ni, m_iota, m_p.eps_gamma);
+            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g0, Ni, m_iota, m_p.eps_gamma0);
             if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_gamma);
+                throw dg::Fail( m_p.eps_gamma0);
         }
         else dg::blas1::copy(m_iota, Ni);
-             
         
         if( m_p.equations == "df-O2" || m_p.equations == "df-lwl")
         {
@@ -165,7 +148,7 @@ struct Poet
     dg::Advection<Geometry, Matrix, container> m_adv;
     
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
-    dg::Extrapolation<container> m_phi_ex, m_psi1_ex, m_gamma_n_ex;
+    dg::Extrapolation<container> m_phi_ex, m_psi1_ex, m_gamma_n_ex, m_gamma0sqrt_phi_ex, m_rho_ex, m_gamma0sqrtinv_rho_ex;
     std::vector<container> m_multi_chi, m_multi_iota;
     
     Matrix m_centered[2];
@@ -182,7 +165,8 @@ Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p 
     m_n_old(m_chi),    m_gamma_n_old(m_chi), m_phi_old(m_chi),    m_psi1_old(m_chi),
     m_lapMperp( grid, dg::normed, dg::centered),
     m_multigrid( grid, 3),
-    m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi),
+    m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), 
+    m_gamma0sqrtinv_rho_ex(2, m_chi),
     m_w2d( dg::create::volume(grid)), m_v2d( dg::create::inv_weights(grid)), m_one( dg::evaluate(dg::one, grid)),
     m_p(p)
 {
@@ -199,48 +183,40 @@ Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p 
     for( unsigned u=0; u<3; u++)
     {
         m_multi_elliptic[u].construct(       m_multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
-        m_multi_tensorelliptic[u].construct( m_multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor); //only centered implemented
-        
+        m_multi_tensorelliptic[u].construct( m_multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);       
         m_multi_g0[u].construct( m_multigrid.grid(u), -p.tau[1], dg::centered, p.jfactor);
-        if( m_p.equations == "ff-O2" ) {
-            m_multi_g1[u].construct( m_multigrid.grid(u), -p.tau[1], dg::centered, p.jfactor);
-            m_sqrtsolve.construct( m_multi_g1[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma);
-        }
-        else {
-            m_multi_g1[u].construct( m_multigrid.grid(u), -0.5*p.tau[1], dg::centered, p.jfactor);
-        }               
+        m_multi_g1[u].construct( m_multigrid.grid(u), -0.5*p.tau[1], dg::centered, p.jfactor);     
     }
+    m_sqrtsolve.construct( m_multi_g0[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma0);
 }
 
 template< class G,  class M, class container>
 const container& Poet<G,  M,  container>::compute_psi( double t, const container& potential)
 {
-    if( m_p.equations == "ff-O4" )
-    {     
+    if( m_p.equations == "ff-O4" ) {     
         dg::blas1::pointwiseDot(m_binv, m_binv, m_chi);
         m_multi_tensorelliptic[0].variation( m_psi1, m_p.tau[1]/2., m_chi, m_psi2);
         dg::blas1::axpby( 1.0, m_psi1, 1.0, m_psi2, m_psi[1]);
     }
-    else if ( m_p.equations == "ff-O2") {
-        m_multi_elliptic[0].variation(-0.5, m_binv, m_psi1, 0.0, m_psi2);
-        dg::blas1::axpby( 1.0, m_psi1, 1.0, m_psi2, m_psi[1]);
-    }
-    else { //"df-lwl" || "df-O2" || "ff-lwl"
+    else { //"df-lwl" || "df-O2" || "ff-lwl" || "ff-O2"
         if (m_p.tau[1] == 0.) {
             dg::blas1::axpby( 1., potential, 0., m_psi1); 
         }
         else {
             m_psi1_ex.extrapolate( t, m_psi1);
-            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, m_psi1, potential, m_p.eps_gamma);
+            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, m_psi1, potential, m_p.eps_gamma1);
             m_psi1_ex.update( t, m_psi1);
             if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_gamma);
+                throw dg::Fail( m_p.eps_gamma1);
         }
-        
-        if (m_p.equations == "ff-lwl") {
+
+        if ( m_p.equations == "ff-O2") {
+            m_multi_elliptic[0].variation(-0.5, m_binv, m_psi1, 0.0, m_psi2);
+            dg::blas1::axpby( 1.0, m_psi1, 1.0, m_psi2, m_psi[1]);
+        }
+        else if  (m_p.equations == "ff-lwl") {
             m_multi_elliptic[0].variation(-0.5, m_binv, potential, 0.0, m_psi2);
             dg::blas1::axpby( 1.0, m_psi1, 1.0, m_psi2, m_psi[1]);
-
         }
         else { //df-O2" || "df-lwl"            
             m_multi_elliptic[0].variation(potential, m_psi2);
@@ -284,29 +260,31 @@ const container& Poet<G,  M, container>::polarisation( double t, const std::arra
         dg::blas2::symv( m_multi_g1[0], y[0], m_chi); //invG ne-1
         dg::blas2::symv( m_v2d, m_chi, m_gamma_n);
     }
-    else if( m_p.equations == "ff-O2" ) {
-        dg::blas1::axpby(1.0, y[0], -1.0, m_n_old);
-        m_sqrtsolve(m_n_old, m_gamma_n); 
-        dg::blas1::axpby( 1.0, m_gamma_n_old, 1.0, m_gamma_n); 
-        dg::blas1::copy(y[0], m_n_old);
-        dg::blas1::copy(m_gamma_n, m_gamma_n_old); 
-//         m_sqrtsolve(y[0], m_gamma_n); //without old solution
-    } 
-    else { //"ff-lwl" || "df-lwl" || "df-O2" 
+    else { //"ff-lwl" || "df-lwl" || "df-O2"  || "ff-O2"
         m_gamma_n_ex.extrapolate(t, m_gamma_n);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, m_gamma_n, y[1], m_p.eps_gamma);
+        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, m_gamma_n, y[1], m_p.eps_gamma1);
         m_gamma_n_ex.update(t, m_gamma_n);
         if(  number[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_p.eps_gamma);
+            throw dg::Fail( m_p.eps_gamma1);
     }
 
-    if( m_p.equations == "ff-O2" || m_p.equations == "ff-O4" )
+//     if( m_p.equations == "ff-O2" || m_p.equations == "ff-O4" )
+    if(  m_p.equations == "ff-O4" )
         dg::blas1::axpby(1., y[1],  -1., m_gamma_n, m_omega);    
-    else { //"ff-lwl" || "df-lwl" || "df-O2" 
-        dg::blas1::axpby( -1., y[0], 1., m_gamma_n, m_omega); 
+    else { //"ff-lwl" || "df-lwl" || "df-O2" ||  "ff-O2"
+        dg::blas1::axpby( 1., m_gamma_n, -1., y[0], m_omega); 
         if (m_p.equations == "df-O2") {            
             dg::blas2::symv(m_multi_g0[0], m_omega, m_chi);
             dg::blas2::symv(m_v2d, m_chi, m_omega);
+        }
+        else if (m_p.equations == "ff-O2") {
+            m_gamma0sqrtinv_rho_ex.update( t, m_omega);
+            dg::blas1::axpby(-1.0, m_gamma0sqrtinv_rho_ex.tail(), 1.0, m_omega, m_chi);
+            m_sqrtsolve(m_chi, m_omega); 
+            dg::blas1::axpby( 1.0, m_rho_ex.head(), 1.0, m_omega); 
+            m_rho_ex.update( t, m_omega);            
+//             m_sqrtsolve(m_omega, m_chi); //without using linearity
+//             dg::blas1::copy(m_chi, m_omega);            
         }
     }
 
@@ -322,18 +300,17 @@ const container& Poet<G,  M, container>::polarisation( double t, const std::arra
         dg::blas1::pointwiseDot( m_v2d, m_psi[0], m_psi[0]);
     }
     else if( m_p.equations == "ff-O2" ) {
-        m_psi1_ex.extrapolate(t, m_psi1);
+        m_gamma0sqrt_phi_ex.extrapolate(t, m_psi1);
         std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_elliptic, m_psi1, m_omega, m_p.eps_pol);
-        m_psi1_ex.update( t, m_psi1);
+        m_gamma0sqrt_phi_ex.update( t, m_psi1);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_pol[0]);
 
-        dg::blas1::axpby(1.0, m_psi1, -1.0, m_psi1_old); //        
-        m_sqrtsolve(m_psi1_old, m_psi[0]); 
-        dg::blas1::axpby( 1.0, m_phi_old, 1.0, m_psi[0]); //       
-        dg::blas1::copy(m_psi1, m_psi1_old);//     
-        dg::blas1::copy(m_psi[0], m_phi_old); 
-//         m_sqrtsolve(m_psi1, m_psi[0]);    //without old solution
+        dg::blas1::axpby(-1.0, m_gamma0sqrt_phi_ex.tail(), 1.0, m_psi1);
+        m_sqrtsolve(m_psi1, m_psi[0]); 
+        dg::blas1::axpby( 1.0, m_phi_ex.head(), 1.0, m_psi[0]); 
+        m_phi_ex.update( t, m_psi[0]);
+//         m_sqrtsolve(m_psi1, m_psi[0]);    //without using linearity
     }
     else { // "ff-lwl" || "df-lwl" || "df-O2"
         m_phi_ex.extrapolate(t, m_psi[0]);

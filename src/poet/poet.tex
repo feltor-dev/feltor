@@ -18,13 +18,13 @@
 Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density. $\phi$ is the electric potential. We
 use Cartesian coordinates $x$, $y$.
 \subsection{Models}
-
-
+\subsubsection{Delta-F gyro-fluid models}
 The two delta-f models ("df-lwl" \& "df-O2") share the same evolution equations\footnote{The densities are for delta-f models are understood as fluctuating quantities with respect to a background} 
 \begin{subequations}
 \begin{align}
 %  -\Delta_{\perp} \phi =  \Gamma_1 N -n, \\
 \psi = \Gamma_1 \phi \quad \Gamma_1 = ( 1- 0.5\tau\Delta_{\perp})^{-1} \\
+ \vec{\nabla}\cdot \vec{P}_2=  \Gamma_1 N -n, \\
  \frac{\partial n}{\partial t}     = 
     \{ n, \phi\} 
   + \kappa \frac{\partial \phi}{\partial y} 
@@ -41,7 +41,7 @@ and differ only in the polarization equation:\\
 "df-lwl"
 \begin{subequations}
 \begin{align}
- -\Delta_{\perp} \phi =  \Gamma_1 N -n, 
+  \vec{\nabla}\cdot \vec{P}_2 = -\Delta_{\perp} \phi 
 %  \\
 % \psi = \Gamma_1 \phi \quad \Gamma_1 = ( 1- 0.5\tau\Delta_{\perp})^{-1} \\
 %  \frac{\partial n}{\partial t}     = 
@@ -59,7 +59,7 @@ and differ only in the polarization equation:\\
 "df-O2"
 \begin{subequations}
 \begin{align}
- -\Gamma_0\Delta_{\perp} \phi =  \Gamma_1 N -n, \quad \Gamma_0 = ( 1- \tau\Delta_{\perp})^{-1} 
+  \vec{\nabla}\cdot \vec{P}_2 = -\Gamma_0\Delta_{\perp} \phi  \quad \Gamma_0 = ( 1- \tau\Delta_{\perp})^{-1} 
 %  \\
 % \psi = \Gamma_1 \phi 
 % \quad \Gamma_1 = ( 1- 0.5\tau\Delta_{\perp})^{-1}  \\
@@ -74,6 +74,7 @@ and differ only in the polarization equation:\\
 %   + \tau \kappa\frac{\partial N}{\partial y} +\nu\Delta_{\perp}N
 \end{align}
 \end{subequations}
+\subsubsection{Full-F gyro-fluid models}
 Likewise the full-f models ("ff-lwl" \& "ff-O2" \& "ff-O4") share the same evolution equations
 \begin{subequations}
 \begin{align}

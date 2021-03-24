@@ -9,13 +9,13 @@
     },
     "timestepper":
     {
-        "dt" : 0.1
+        "dt" : 0.05
     },
     "output":
     {
         "type": "glfw",
         //"type": "netcdf",
-        "itstp"  : 5,
+        "itstp"  : 1,
         "maxout" : 2,
         "n" : 5,
         "Nx" : 32,
@@ -24,15 +24,16 @@
     "elliptic":
     {
         "stages"     : 3,
-        "eps_pol"    : [1e-7,0.1,0.1],
+        "eps_pol"    : [1e-6,0.1,0.1],
         "jumpfactor": 1
     },
     "helmholtz":
     {
-        "eps_gamma" :   1e-5,
+        "eps_gamma1" :   1e-8,
+        "eps_gamma0" :   1e-6,
         "maxiter_sqrt":  200,
         "maxiter_cauchy": 35,
-        "eps_cauchy" :  1e-10
+        "eps_cauchy" :  1e-12
     },
     "physical":
     {
