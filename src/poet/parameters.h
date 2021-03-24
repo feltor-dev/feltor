@@ -1,9 +1,11 @@
 #pragma once
-#include <string>
-#include "dg/algorithm.h"
-#include "json/json.h"
-#include "dg/file/json_utilities.h"
+// #include <string>
+#include "dg/enums.h"
 
+// #include "dg/algorithm.h"
+#include "json/json.h"
+// #include "dg/file/json_utilities.h"
+namespace poet{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -20,91 +22,65 @@ struct Parameters
 
     std::vector<double> eps_pol;
 
-    double eps_gamma, eps_time;
+    double eps_gamma, eps_cauchy;
     double jfactor;
-    double tau, kappa,  nu;
+    double tau[2];
+    double kappa,  nu;
 
     double amp, sigma, posX, posY;
 
     double lx, ly;
     dg::bc bc_x, bc_y;
 
-    std::string init, equations;
+    std::string init, equations, output;
 
-    Parameters(const dg::file::WrappedJsonValue& js) {
-        n  = js["n"].asUInt();
-        Nx = js["Nx"].asUInt();
-        Ny = js["Ny"].asUInt();
-        dt = js["dt"].asDouble();
-        n_out  = js["n_out"].asUInt();
-        Nx_out = js["Nx_out"].asUInt();
-        Ny_out = js["Ny_out"].asUInt();
-        itstp = js["itstp"].asUInt();
-        maxout = js["maxout"].asUInt();
+    Parameters( const dg::file::WrappedJsonValue& ws ) {
+        n  = ws["grid"].get("n", 5).asUInt();
+        Nx = ws["grid"].get("Nx", 64).asUInt();
+        Ny = ws["grid"].get("Ny", 64).asUInt();
+        lx = ws["grid"].get("lx", 100).asDouble();
+        ly = ws["grid"].get("ly", 100).asDouble();
+        
+        dt = ws["timestepper"].get("dt",0.05).asDouble();
 
-        stages      = js.get("stages", 3).asUInt();
+        output = ws[ "output"]["type"].asString("glfw");    
+        n_out  = ws["output"].get("n",5).asUInt();
+        Nx_out = ws["output"].get("Nx",64).asUInt();
+        Ny_out = ws["output"].get("Ny",64).asUInt();
+        itstp  = ws["output"].get("itstp",5).asUInt();
+        maxout = ws["output"].get("maxout",20).asUInt();
+
+        auto ell = ws["elliptic"];
+        stages   = ell.get("stages", 3).asUInt();
         eps_pol.resize(stages);
-        eps_pol[0] = js["eps_pol"][0].asDouble();
+        eps_pol[0] = ell["eps_pol"].get(0,1e-6).asDouble();
         for( unsigned i=1;i<stages; i++)
         {
-            eps_pol[i] = js["eps_pol"][i].asDouble();
+            eps_pol[i] = ell[ "eps_pol"].get(i, 1.0).asDouble();
             eps_pol[i]*=eps_pol[0];
         }
-        eps_gamma = js["eps_gamma"].asDouble();
-        eps_time = js["eps_time"].asDouble();
-        maxiter_sqrt = js["maxiter_sqrt"].asUInt();
-        maxiter_cauchy = js["maxiter_cauchy"].asUInt();
-        tau = js["tau"].asDouble();
-        kappa = js["curvature"].asDouble();
-        nu = js["nu_perp"].asDouble();
-        amp = js["amplitude"].asDouble();
-        sigma = js["sigma"].asDouble();
-        posX = js["posX"].asDouble();
-        posY = js["posY"].asDouble();
-        lx = js["lx"].asDouble();
-        ly = js["ly"].asDouble();
-        bc_x = dg::str2bc(js["bc_x"].asString());
-        bc_y = dg::str2bc(js["bc_y"].asString());
-        init = "blob";
-        equations = js.get("equations", "global").asString();
-        jfactor = js.get("jfactor", 1.).asDouble();
+        jfactor     = ell.get( "jumpfactor", 1.0).asDouble( );
+         
+        eps_gamma  = ws["helmholtz"].get("eps_gamma",1e-6).asDouble();
+        eps_cauchy = ws["helmholtz"].get("eps_cauchy",1e-10).asDouble();
+        maxiter_sqrt = ws["helmholtz"].get("maxiter_sqrt",500).asUInt();
+        maxiter_cauchy = ws["helmholtz"].get("maxiter_cauchy",40).asUInt();
+        
+        tau[0]   = -1.;
+        tau[1] = ws["physical"].get("tau",1.0).asDouble();
+        kappa = ws["physical"].get("curvature",0.00015).asDouble();
+        equations = ws["physical"].get("equations", "ff-O2").asString();
+        
+        init = ws["init"].get("type", "blob").asString();
+        amp = ws["init"].get("amplitude", 1.0).asDouble();
+        sigma = ws["init"].get("sigma", 5.0).asDouble();
+        posX = ws["init"].get("posX", 0.25).asDouble();
+        posY = ws["init"].get("posY", 0.5).asDouble();        
+
+        nu = ws["nu_perp"].asDouble();
+        bc_x = dg::str2bc(ws["bc_x"].asString());
+        bc_y = dg::str2bc(ws["bc_y"].asString());
     }
 
-    void display( std::ostream& os = std::cout ) const
-    {
-        os << "Physical parameters are: \n"
-            <<"    Viscosity:       = "<<nu<<"\n"
-            <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"    Ion-temperature: = "<<tau<<"\n";
-        os << "Equation parameters are: \n"
-            <<"    "<<equations<<"\n";
-        os << "Boundary parameters are: \n"
-            <<"    lx = "<<lx<<"\n"
-            <<"    ly = "<<ly<<"\n";
-        os << "Boundary conditions in x are: \n"
-            <<"    "<<bc2str(bc_x)<<"\n";  //Curious! dg:: is not needed due to ADL!
-        os << "Boundary conditions in y are: \n"
-            <<"    "<<bc2str(bc_y)<<"\n";
-        os << "Algorithmic parameters are: \n"
-            <<"    n  = "<<n<<"\n"
-            <<"    Nx = "<<Nx<<"\n"
-            <<"    Ny = "<<Ny<<"\n"
-            <<"    dt = "<<dt<<"\n"
-            <<"    n_out  = "<<n_out<<"\n"
-            <<"    Nx_out = "<<Nx_out<<"\n"
-            <<"    Ny_out = "<<Ny_out<<"\n"
-            <<"    maxiter_sqrt = "<<maxiter_sqrt<<"\n"
-            <<"    maxiter_cauchy = "<<maxiter_cauchy<<"\n";
-        os  <<"Blob parameters are: \n"
-            << "    width:        "<<sigma<<"\n"
-            << "    amplitude:    "<<amp<<"\n"
-            << "    posX:         "<<posX<<"\n"
-            << "    posY:         "<<posY<<"\n";
-        for( unsigned i=1; i<stages; i++)
-            os <<"     Factors for Multigrid "<<i<<" "<<eps_pol[i]<<"\n";
-        os  <<"scale for jump terms:    "<<jfactor<<"\n"
-            <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
-            <<"Steps between output:    "<<itstp<<"\n"
-            <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush
-    }
 };
+}

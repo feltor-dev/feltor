@@ -5,25 +5,19 @@
 #include <vector>
 #include <sstream>
 
+#ifdef WITH_MPI
+#include <mpi.h>
+#endif //WITH_MPI
+
+#ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
-//#include "draw/device_window.cuh"
+#endif // WITHOUT_GLFW
+
+#include "dg/file/file.h"
+
+#include "poet.h"
 #include "init.h"
-#include "poet.cuh"
-#include "dg/algorithm.h"
-#include "dg/file/json_utilities.h"
-#include "parameters.h"
-
-#include "dg/polarization_init.h"
-#include "dg/andersonacc.h"
-
-/*
-   - reads parameters from input.json or any other given file,
-   - integrates the ToeflR - functor and
-   - directly visualizes results on the screen using parameters in window_params.json
-*/
-using DVec = dg::DVec;
-using DMatrix =  dg::DMatrix;
-
+#include "diag.h"
 
 
 int main( int argc, char* argv[])
@@ -32,160 +26,331 @@ int main( int argc, char* argv[])
     std::stringstream title;
     Json::Value js;
     if( argc == 1)
-        dg::file::file2Json( "input.json", js, dg::file::comments::are_forbidden);
-    else if( argc == 2)
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
+        dg::file::file2Json( "/input/default.json", js, dg::file::comments::are_discarded);
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded);
+    }
+    const poet::Parameters p( js);
+    dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);  
+    
+#ifdef WITH_MPI
+    ////////////////////////////////setup MPI///////////////////////////////
+    dg::mpi_init( argc, argv);
+    MPI_Comm comm;
+    dg::mpi_init2d( p.bc_x, p.bc_y, comm, std::cin, true);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+
+    DG_RANK0 std::cout << js <<std::endl;
+
+    ///////MAKE GRID///////////////////////////////////////////////
+    dg::x::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y
+        #ifdef WITH_MPI
+        , comm
+        #endif //WITH_MPI
+    );
+    ///////MAKE MODEL///////////////////////////////////////////////
+    DG_RANK0 std::cout << "Constructing Poet...\n";
+    poet::Poet<dg::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> poet( grid, p);
+    DG_RANK0 std::cout << "Done!\n";
+
+    //////////////////create initial fields///////////////////////////////////////
+    double time = 0.;
+    std::array<dg::x::DVec,2> y0;
+    try{
+        y0 = poet::initial_conditions(poet, grid, p, ws );
+    }catch ( std::exception& error){
+        DG_RANK0 std::cerr << "Error in input file\n ";
+        DG_RANK0 std::cerr << error.what();
+#ifdef WITH_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //WITH_MPI
         return -1;
     }
-    const Parameters p( js);
-    p.display( std::cout);
-    /////////glfw initialisation ////////////////////////////////////////////
-    dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
-    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
-    /////////////////////////////////////////////////////////////////////////
-
-    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    //create RHS
-    poet::Explicit<dg::CartesianGrid2d, DMatrix, DVec> ex( grid, p);
-    poet::Implicit<dg::CartesianGrid2d, DMatrix, DVec> im( grid, p.nu);
-    //////////////////create initial vector///////////////////////////////////////
-    std::vector<DVec> y0(2, dg::evaluate( dg::zero, grid)), y1(y0); // n_e' = gaussian
-
-    if (p.init == "blob")
-    {
-        dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
-        y0[0] = dg::evaluate(g, grid);
-        ex.gamma1inv_y(y0[0],y0[1]); //no inversion -> smaller accuracy but n_e can be chosen instead of N_i!
-//         y0[1] = dg::evaluate(g, grid);
-//         ex.gamma1_y(y0[1], y0[0]); //invert Gamma operator for initialization with higher accuracy!
-    }
-    else if (p.init == "shearlayer")
-    {
-        ShearLayer layer(M_PI/15., 0.05, p.lx, p.ly); //shear layer
-        std::vector<DVec> y0(2, dg::evaluate( layer, grid)), y1(y0);
-        dg::blas1::scal(y0[0], p.amp);
-        ex.invLap_y(y0[0], y1[0]); //phi 
-        dg::blas1::scal(y0[0], 0.);
-        ex.solve_Ni_lwl(y0[0], y1[0], y0[1]); //if df
-        //Compute exact Ni with fixed point iteration
-    //     dg::PolChargeN< dg::CartesianGrid2d, DMatrix, DVec > polN(grid, dg::DIR, dg::PER, dg::normed, dg::centered, 1.0, false);
-    //     polN.set_phi(y1[0]);
-    //     dg::AndersonAcceleration<DVec> acc( y1[0], 10000);
-    // 
-    //     dg::blas1::scal(y0[1], 0.0);
-    //     dg::blas1::plus(y0[1], 1.0); //x solution must be positive 
-    //     dg::blas1::scal(y0[0], 0.);  //ne_tilde = 0
-    // 
-    //     acc.solve( polN, y0[1], y0[0], im.weights(), 1e-4, 1e-4, grid.size(), 1e-13, 10000, true);    
-    //     dg::blas1::plus(y0[1],-1.0);
-    }
-    else if (p.init == "rot_blob")
-    {
-//     //double rotating gaussian
-//     dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian g2( (0.5+p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-// 
-//     std::vector<DVec> y0(2, dg::evaluate( g1, grid)); // n_e' = gaussian
-//     std::vector<DVec> y1(2, dg::evaluate( g2, grid)); // n_e' = gaussian
-//     dg::blas1::axpby(1.0,y0[0],1.0,y1[0],y0[0]);
-//     dg::blas1::axpby(10, y0[0], 0.0, y1[1]);
-//     ex.invLap_y(y1[1], y1[0]); //phi 
-//     ex.solve_Ni_lwl(y0[0], y1[0], y0[1]);
-    }
-
-    //////////////////////////////////////////////////////////////////////
-    dg::ImExMultistep<std::vector<DVec>> stepper( "ImEx-TVB-3-3", y0, y0[0].size(), p.eps_time);
-//     dg::Adaptive<dg::ARKStep<std::vector<DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
-//     dg::Adaptive<dg::ERKStep<std::vector<DVec>>> stepper( "Dormand-Prince-7-4-5", y0);
-
-    DVec dvisual( grid.size(), 0.);
-    dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
-    dg::IHMatrix equi = dg::create::backscatter( grid);
-    draw::ColorMapRedBlueExt colors( 1.);
-    //create timer
-    dg::Timer t;
-    double time = 0;
-    stepper.init( ex, im, time, y0, p.dt);
-//     double dt = 1e-5;
-    const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
-    std::cout << "Begin computation \n";
-    std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    while ( !glfwWindowShouldClose( w ))
+    DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
+    dg::ExplicitMultistep<std::array<dg::x::DVec, 2>> multistep;
+    multistep.construct( "TVB-3-3", y0);
+    double dt = p.dt;
+    multistep.init( poet, time, y0, dt);
+    DG_RANK0 std::cout << "Done!\n";
+
+    /// ////////////Init diagnostics ////////////////////
+    poet::Variables var = {poet, p, y0};
+    dg::Timer t;
+    t.tic();
     {
-        //transform field to an equidistant grid
-        dvisual = y0[0];
-
-        dg::assign( dvisual, hvisual);
-        dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
-        title << std::setprecision(2) << std::scientific;
-        title <<"ne / "<<colors.scale()<<"\t";
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-
-        //transform phi
-        dvisual = ex.potential()[0];
-        dg::blas2::gemv( ex.laplacianM(), dvisual, y1[1]);
-        dg::assign( y1[1], hvisual);
-        dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw phi and swap buffers
-        title <<"omega / "<<colors.scale()<<"\t";
-        title << std::fixed;
-        title << " &&   time = "<<time;
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        glfwSetWindowTitle(w,title.str().c_str());
-        title.str("");
-        glfwPollEvents();
-        glfwSwapBuffers( w);
-
-        //step
-#ifdef DG_BENCHMARK
-        t.tic();
-#endif//DG_BENCHMARK
-        for( unsigned i=0; i<p.itstp; i++)
-        {
-            step++;
-            {
-                std::cout << "(m_tot-m_0)/m_0: "<< (ex.mass()-mass0)/mass_blob0<<"\t";
-                E0 = E1;
-                E1 = ex.energy();
-                diff = (E1 - E0)/p.dt;
-                double diss = ex.energy_diffusion( );
-                std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-                std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
-
-            }
-            try{ stepper.step( ex, im, time, y0);}
-//             try{
-// //                 std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
-// //                 stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-7, 1e-14);
-// //                 stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-7, 1e-14);
-//             }
-            catch( dg::Fail& fail) {
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
-        }
-#ifdef DG_BENCHMARK
-        t.toc();
-        std::cout << "\n\t Step "<<step;
-        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
-#endif//DG_BENCHMARK
+        std::array<dg::x::DVec,2>y1 = y0;
+        poet( 0., y0, y1);
     }
-    glfwTerminate();
-    ////////////////////////////////////////////////////////////////////
+    t.toc();
+    var.duration = t.diff();
+    t.tic();
 
+
+    DG_RANK0 std::cout << "Begin computation \n";
+    DG_RANK0 std::cout << std::scientific << std::setprecision( 2);
+#ifndef WITHOUT_GLFW
+    if( "glfw" == p.output)
+    {
+        /////////glfw initialisation ////////////////////////////////////////////
+        dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
+        GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+        draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+        //create visualisation vectors
+        dg::DVec visual( grid.size()), temp(visual);
+        dg::HVec hvisual( grid.size());
+        //transform vector to an equidistant grid
+        std::stringstream title;
+        draw::ColorMapRedBlueExtMinMax colors( -1.0, 1.0);
+        dg::IDMatrix equidistant = dg::create::backscatter( grid );
+        // the things to plot:
+        std::map<std::string, const dg::DVec* > v2d;
+        v2d["ne-1 / "] = &y0[0],  v2d["ni-1 / "] = &y0[1];
+        v2d["Phi / "] = &poet.potential(0); 
+        v2d["Vor / "] = &poet.potential(0); 
+while ( !glfwWindowShouldClose( w ))
+        {
+            for( auto pair : v2d)
+            {
+                if( pair.first == "Vor / " )
+                {
+                    poet.compute_lapM( 1., *pair.second, 0., temp);
+                    dg::blas2::gemv( equidistant, temp, visual);
+                }
+                else
+                    dg::blas2::gemv( equidistant, *pair.second, visual);
+                dg::assign( visual, hvisual);
+                colors.scalemax() = dg::blas1::reduce(
+                    hvisual, 0., dg::AbsMax<double>() );
+                colors.scalemin() = -colors.scalemax();
+                title << std::setprecision(2) << std::scientific;
+                title <<pair.first << colors.scalemax()<<"   ";
+                render.renderQuad( hvisual, grid.n()*grid.Nx(),
+                        grid.n()*grid.Ny(), colors);
+            }
+            title << std::fixed;
+            title << " &&   time = "<<time;
+            glfwSetWindowTitle(w,title.str().c_str());
+            title.str("");
+            glfwPollEvents();
+            glfwSwapBuffers( w);
+
+            //step
+            dg::Timer ti;
+            ti.tic();
+            for( unsigned i=0; i<p.itstp; i++)
+            {
+                try{
+                    multistep.step( poet, time, y0);
+                }
+                catch( dg::Fail& fail) {
+                    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    std::cerr << "Does Simulation respect CFL condition?\n";
+                    glfwSetWindowShouldClose( w, GL_TRUE);
+                    break;
+                }
+                step++;
+            }
+            ti.toc();
+            std::cout << "\n\t Step "<<step;
+            std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n";
+        }
+        glfwTerminate();
+    }
+#endif //WITHOT_GLFW    
+    if( "netcdf" == p.output)
+    {
+        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string outputfile;
+        if( argc==1 || argc == 2 )
+            outputfile = "poet.nc";
+        else
+            outputfile = argv[2];
+        /// //////////////////////set up netcdf/////////////////////////////////////
+        dg::file::NC_Error_Handle err;
+        int ncid=-1;
+        try{
+            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+        }catch( std::exception& e)
+        {
+            std::cerr << "ERROR creating file "<<outputfile<<std::endl;
+            std::cerr << e.what()<<std::endl;
+           return -1;
+        }
+        /// Set global attributes
+        std::map<std::string, std::string> att;
+        att["title"] = "Output file of feltor/src/poet/poet.cu";
+        att["Conventions"] = "CF-1.7";
+        ///Get local time and begin file history
+        auto ttt = std::time(nullptr);
+        auto tm = *std::localtime(&ttt);
+
+        std::ostringstream oss;
+        ///time string  + program-name + args
+        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        for( int i=0; i<argc; i++) oss << " "<<argv[i];
+        att["history"] = oss.str();
+        att["comment"] = "Find more info in feltor/src/poet/poet.tex";
+        att["source"] = "FELTOR";
+        att["references"] = "https://github.com/feltor-dev/feltor";
+        att["inputfile"] = inputfile;
+        for( auto pair : att)
+            DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
+                pair.first.data(), pair.second.size(), pair.second.data());
+
+        int dim_ids[3], tvarID;
+        std::map<std::string, int> id1d, id3d;
+        dg::x::CartesianGrid2d grid_out(  0, p.lx, 0, p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y
+            #ifdef WITH_MPI
+            , comm
+            #endif //WITH_MPI
+            );
+        dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
+        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out,
+                {"time", "y", "x"});
+
+        //Create field IDs
+        for( auto& record : poet::diagnostics2d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+                    &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        for( auto& record : poet::diagnostics2d_list)
+        {
+            std::string name = record.name + "_1d";
+            std::string long_name = record.long_name + " (Volume integrated)";
+            id1d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                &id1d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        for( auto& record : poet::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id1d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                &id1d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
+        dg::x::DVec volume = dg::create::volume( grid);
+        dg::x::DVec resultD = volume;
+        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+        dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
+        for( auto& record : poet::diagnostics2d_static_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            int staticID = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
+                &staticID);
+            DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
+                long_name.data());
+            DG_RANK0 err = nc_enddef(ncid);
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::blas2::gemv( projection, resultH, transferH);
+            dg::file::put_var_double( ncid, staticID, grid_out, transferH);
+            DG_RANK0 err = nc_redef(ncid);
+        }
+        DG_RANK0 err = nc_enddef(ncid);
+        size_t start = {0};
+        size_t count = {1};
+        ///////////////////////////////////first output/////////////////////////
+        for( auto& record : poet::diagnostics2d_list)
+        {
+            record.function( resultD, var);
+            double result = dg::blas1::dot( volume, resultD);
+            dg::assign( resultD, resultH);
+            dg::blas2::gemv( projection, resultH, transferH);
+            dg::file::put_vara_double( ncid, id3d.at(record.name), start,
+                    grid_out, transferH);
+            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"),
+                    &start, &count, &result);
+        }
+        for( auto& record : poet::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
+        }
+        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
+        DG_RANK0 err = nc_close( ncid);
+        ///////////////////////////////////timeloop/////////////////////////
+        for( unsigned i=1; i<=p.maxout; i++)
+        {
+            dg::Timer ti;
+            ti.tic();
+            for( unsigned j=0; j<p.itstp; j++)
+            {
+                try{
+                    multistep.step( poet, time, y0);
+                }
+                catch( dg::Fail& fail) {
+                    DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
+                    DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
+#ifdef WITH_MPI
+                    MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //WITH_MPI
+                    return -1;
+                }
+            }
+            ti.toc();
+            var.duration = ti.diff() / (double) p.itstp;
+            step+=p.itstp;
+            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time << " with current timestep "<<dt;
+            DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+            //output all fields
+            ti.tic();
+            start = i;
+            DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
+            DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
+            for( auto& record : poet::diagnostics2d_list)
+            {
+                record.function( resultD, var);
+                double result = dg::blas1::dot( volume, resultD);
+                dg::assign( resultD, resultH);
+                dg::blas2::gemv( projection, resultH, transferH);
+                dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
+                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
+            }
+            for( auto& record : poet::diagnostics1d_list)
+            {
+                double result = record.function( var);
+                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
+            }
+            DG_RANK0 err = nc_close( ncid);
+            ti.toc();
+            DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
+        }
+    }
+    if( !("netcdf" == p.output) && !("glfw" == p.output))
+    {
+        DG_RANK0 std::cerr <<"Error: Wrong value for output type "<<p.output<<" Must be glfw or netcdf! Exit now!";
+#ifdef WITH_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //WITH_MPI
+        return -1;
+    }
+    t.toc();
+    unsigned hour = (unsigned)floor(t.diff()/3600);
+    unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
+    double second = t.diff() - hour*3600 - minute*60;
+    DG_RANK0 std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    DG_RANK0 std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
+    DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+#ifdef WITH_MPI
+    MPI_Finalize();
+#endif //WITH_MPI
     return 0;
 
 }
