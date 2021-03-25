@@ -12,7 +12,7 @@
 
 #include "init.h"
 #include "diag.h"
-#include "shu.cuh"
+#include "shu.h"
 
 
 int main( int argc, char* argv[])

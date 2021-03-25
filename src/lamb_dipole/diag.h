@@ -2,7 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
-#include "shu.cuh"
+#include "shu.h"
 
 namespace shu{
 
