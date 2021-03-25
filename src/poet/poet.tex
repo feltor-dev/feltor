@@ -40,19 +40,19 @@ and differ only in the polarization equation given in Section~\ref{sec:polarizat
 Likewise the full-f models ("ff-lwl" \& "ff-O2" \& "ff-O4") share the same evolution equations
 \begin{subequations}
 \begin{align}
- \frac{\partial n}{\partial t}     = 
+ \frac{\partial n}{\partial t}     &= 
     \frac{1}{B}\{ n, \phi\} 
   + \kappa n\frac{\partial \phi}{\partial y} 
   -\kappa \frac{\partial n}{\partial y}
   + \nu \nabla_\perp^2 n  \\
-  \frac{\partial N}{\partial t} =
+  \frac{\partial N}{\partial t} &=
   \frac{1}{B}\{ N, \psi\} 
   + \kappa N\frac{\partial \psi}{\partial y} 
   + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N \\
-   \vec{\nabla}\cdot \vec{P}_2 = \Gamma_1 N-n
+   \vec{\nabla}\cdot \vec{P}_2 &= \Gamma_1 N-n
 \end{align}
- are based upon a ``radially'' varying magnetic field magnitude
 \end{subequations}
+and are based upon a ``radially'' varying magnetic field magnitude
 \begin{align}
  B(x)^{-1} = \kappa x +1-\kappa X 
 \end{align}
@@ -118,12 +118,13 @@ We initialize
     n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
     \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= \delta \hspace{1mm} (n-1)
 \end{align}
-where \(\delta\) is a parameter for the rotation
+where \(\delta = 10\) is a parameter for the rotation.
 Thus we have
 \begin{align}
-  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E = \dots \\
-  \partial_x \phi &= \dots \\
-   \partial_y \phi &= \dots
+  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E 
+%   = \dots \\
+%   \partial_x \phi &= \dots \\
+%    \partial_y \phi &= \dots
 \end{align}
 
 the ion gyro-center density follows from the respective polarization equation.
@@ -260,10 +261,10 @@ electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
 ions                     & Dataset & 3 (time, y, x) & ion density $N$ or vorticity density $\rho$  \\
 potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
 vorticity                & Dataset & 3 (time, y, x) & Laplacian of potential $\Delta_{\perp}\phi$  \\
-dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
-dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  \\
-energy                   & Dataset & 1 (energy\_time) & total energy integral  \\
-mass                     & Dataset & 1 (energy\_time) & mass integral   \\
+% dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
+% dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  \\
+% energy                   & Dataset & 1 (energy\_time) & total energy integral  \\
+% mass                     & Dataset & 1 (energy\_time) & mass integral   \\
 \bottomrule
 \end{longtable}
 %..................................................................

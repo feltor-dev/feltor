@@ -72,7 +72,7 @@ struct Poet
             throw dg::Fail( m_p.eps_pol[0]);
     }
     /**
-     * @brief solve the LWL approximated polarization equation for Ni with ne and potential given for the FF models and exactly for the df models
+     * @brief solve the LWL approximated polarization equation for Ni with ne and potential given for the FF models (not finished TODO) and exactly for the df models
      *
      * @param ne fluctuating electron density
      * @param potential electric potential
@@ -114,7 +114,6 @@ struct Poet
             dg::blas2::symv( m_multi_g1[0], ne, m_chi); //invG ne-1
             dg::blas2::symv( m_v2d, m_chi, m_iota);
             dg::blas1::axpby( 1.0, m_iota, 1.0, Ni);
-
         }
     }
     /**
