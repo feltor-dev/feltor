@@ -14,7 +14,7 @@ int main()
     //op(1,0) = 2, op(1,1) = 4, op(1,2) = 1;
     //op(2,0) = 2, op(2,1) = 1, op(2,2) = 0;
     std::cout << "Operator\n"<<op<<"\n";
-    dg::Operator<double> inv_op = dg::create::invert( op);
+    dg::Operator<double> inv_op = dg::create::inverse( op);
     std::vector<unsigned> pivot( op.size());
     dg::Operator<double> lr(op);
     double det= dg::create::detail::lr_pivot( lr, pivot);
@@ -30,7 +30,7 @@ int main()
     //op.zero();
     op(0,2) = op(1,1) = op(2,0) = 0;// op(3,3)= 1;
     std::cout << "Operator\n"<<op<<"\n";
-    inv_op = dg::create::invert(op);
+    inv_op = dg::create::inverse(op);
     lr = op;
     det= dg::create::detail::lr_pivot( lr, pivot);
     std::cout << "Determinant "<<det<<"\n";

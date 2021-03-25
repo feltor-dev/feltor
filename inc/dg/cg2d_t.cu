@@ -158,45 +158,6 @@ int main()
         res.d = sqrt(dg::blas2::dot( w2d, resi));
         std::cout << "L2 Norm of Residuum is        " << res.d<<"\n\n";
     }
-    // Test Extrapolation object
-    double value;
-    dg::Extrapolation<double> extra(3,-1);
-    extra.update( 0, 0);
-    extra.update( 1, 1);
-    extra.extrapolate( 5, value);
-    std::cout << "Linear Extrapolated value is "<<value<< " (5)\n";
-    extra.update( 1, 1); //should not change anything
-    extra.derive( 4, value);
-    std::cout << "Linear Derived value is "<<value<< " (1)\n";
-    extra.update( 3, 9);
-    extra.update( 2, 4);
-    extra.extrapolate( 5, value);
-    std::cout << "Extrapolated value is "<<value<< " (25)\n";
-    extra.derive( 4, value);
-    std::cout << "Derived value is "<<value<< " (8)\n";
-    extra.set_max(2,-1);
-    extra.update( 0, 0);
-    extra.update( 1, 1);
-    extra.update( 3, 9);
-    extra.update( 2, 4);
-    extra.extrapolate( 5, value);
-    std::cout << "Linear Extrapolated value is "<<value<< " (19)\n";
-    extra.derive( 4, value);
-    std::cout << "Linear Derived value is "<<value<< " (5)\n";
-    extra.set_max(1,-1);
-    extra.extrapolate( 5, value);
-    std::cout << "Empty Extrapolated value is "<<value<< " (0)\n";
-    extra.derive( 4, value);
-    std::cout << "Empty Derived value is "<<value<< " (0)\n";
-    extra.update( 0, 0);
-    extra.update( 1, 1);
-    extra.update( 3, 9);
-    extra.update( 2, 4);
-    extra.update( 2, 4);
-    extra.extrapolate( 5, value);
-    std::cout << "Monomial Extrapolated value is "<<value<< " (4)\n";
-    extra.derive( 4, value);
-    std::cout << "Monomial Derived value is "<<value<< " (0)\n";
 
 
     return 0;

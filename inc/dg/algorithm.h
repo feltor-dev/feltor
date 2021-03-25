@@ -25,6 +25,7 @@
 #include "elliptic.h"
 #include "runge_kutta.h"
 #include "adaptive.h"
+#include "extrapolation.h"
 #include "multigrid.h"
 #include "refined_elliptic.h"
 #include "arakawa.h"

@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <cassert>
 #include "dlt.h"
+#include "../blas1.h" // reproducible DOT products
 
 namespace dg{
 
@@ -371,6 +372,8 @@ namespace detail
  *
  * @tparam T value type
  * @throw std::runtime_error if the matrix is singular
+ * @note computes with extended accuracy using exblas which makes it quite robust
+ * against almost singular matrices
  */
 template< class T>
 T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
@@ -384,12 +387,20 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
     {
         //compute upper matrix except for the diagonal element (the pivot)
         for( size_t i = 0; i< j; i++)
+        {
+            thrust::host_vector<T> mik(i), mkj(i);
             for( size_t k=0; k<i; k++)
-                m(i,j)-=m(i,k)*m(k,j);
+                mik[k] = m(i,k), mkj[k] = m(k,j);
+            m(i,j) -= dg::blas1::dot( mik, mkj);
+        }
         //compute canditates for pivot elements
         for( size_t i = j; i< n; i++)
+        {
+            thrust::host_vector<T> mik(j), mkj(j);
             for( size_t k=0; k<j; k++)
-                m(i,j)-=m(i,k)*m(k,j);
+                mik[k] = m(i,k), mkj[k] = m(k,j);
+            m(i,j) -= dg::blas1::dot( mik, mkj);
+        }
         //search for absolute maximum of pivot candidates
         pivot = m(j,j);
         pivotzeile = j;
@@ -399,7 +410,7 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
                 pivot = m(i,j), pivotzeile = i;
             }
 
-        if( pivot!= (T)0 )
+        if( fabs(pivot) > 1e-15 )
         {
             if( pivotzeile != j)
             {
@@ -440,14 +451,18 @@ void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::v
     {
         //mache Zeilentausch
         std::swap( b[ p[i] ], b[i]);
+        thrust::host_vector<T> lri(i), bi(i);
         for( size_t j = 0; j < i; j++)
-            b[i] -= lr(i,j)*b[j];
+            lri[j] = lr(i,j), bi[j] = b[j];
+        b[i] -= dg::blas1::dot( lri, bi);
     }
     // Rückwärtseinsetzen
     for( int i = n-1; i>=0; i--)
     {
+        thrust::host_vector<T> lri(n-(i+1)), bi(n-(i+1));
         for( size_t j = i+1; j < n; j++)
-            b[i] -= lr(i,j)*b[j];
+            lri[j-(i+1)] = lr(i,j), bi[j-(i+1)] = b[j];
+        b[i] -= dg::blas1::dot( lri, bi);
         b[i] /= lr(i,i);
     }
 }
@@ -470,7 +485,7 @@ void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::v
  * @throw std::runtime_error if in is singular
  */
 template<class T>
-dg::Operator<T> invert( const dg::Operator<T>& in)
+dg::Operator<T> inverse( const dg::Operator<T>& in)
 {
     dg::Operator<T> out(in);
     const unsigned n = in.size();
