@@ -7,7 +7,7 @@ namespace dg
 {
 
 /**
- * @brief Compute solution of \f$ B^T B a = B^T b\f$ for given \f$ B\f$ and \f$ a\f$
+ * @brief Compute \f$ a = (B^T B)^{-1} B^T b\f$ for given \f$ B\f$ and \f$ a\f$
  *
  * This is the normal form of a least squares problem: given vectors \f$ b_i\f$
  * find coefficients \f$ a_i\f$ such that \f$ a_i b_i\f$ is as close as possible
@@ -15,11 +15,23 @@ namespace dg
  * \f$ b_i\f$ constitute the columns of the matrix \f$ B\f$
  * This can be transformed into the solution of the *normal equation*
  * \f[ B^T B a = B^T b\f]
- * @copydoc hide_ContainerType
  * @param bs a number of input vectors all with the same size
  * @param b must have the same size as the bs
+ * @note With a little trick this function can be used to compute the least squares
+ * fit through a given list of points
  *
+ * @code{.c}
+dg::HVec x(100), y(100);
+// ... fill in x and y coordinates
+dg::HVec ones(100, 1.);
+// The ones signify the constant a_1 in the formula y = a_0x + a_1
+auto a = dg::least_squares<dg::HVec>( {x, ones}, y);
+// size of a is 2
+    @endcode
+ *
+ * @ingroup extrapolation
  * @return the minimal coefficients a
+ * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1>
 std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const ContainerType1 & b)
@@ -27,7 +39,8 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
     // Solve B^T B a = B^T b
     unsigned size = bs.size();
     dg::Operator<double> op( size, 0.); // B^T B
-    std::vector<double> rhs( size, 0.), a(rhs); // B^T b
+    thrust::host_vector<double> rhs( size, 0.), opIi(rhs); // B^T b
+    std::vector<double> a(size,0.);
     for( unsigned i=0; i<size; i++)
     {
         for( unsigned j=i; j<size; j++)
@@ -40,12 +53,13 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
     // a =  op_inv * rhs
     for( unsigned i=0; i<size; i++)
     {
-        a[i] = 0.;
         for( unsigned j=0; j<size; j++)
-            a[i] += op_inv(i,j)*rhs[j];
+            opIi[j] = op_inv(i,j);
+        a[i] = dg::blas1::dot( rhs, opIi) ;
     }
     return a;
 }
+
 /**
  * @brief %Evaluate a least squares fit
  *
@@ -55,14 +69,17 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
  * \f[ \min ||a_i \vec x_i - \vec x||\f]
  * to get
  * \f[ \vec y = a_i \vec y_i\f]
- * @code
+ * @note This works best if the unkown function \f$ \vec y = f(\vec x) \f$ is linear and
+ * if the \f$ x_i\f$ are orthogonal
+ *
+ * @code{.c}
 dg::LeastSquaresExtrapolation<dg::HVec, dg::HVec> extra(3,copyable, copyable);
 extra.update( x0, y0);
 extra.update( x1, y1);
 extra.update( x1, y1); // will be rejected because already there
 extra.extrapolate( x, y); // y contains the new guess
     @endcode
- * @ingroup invert
+ * @ingroup extrapolation
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1>
@@ -190,7 +207,7 @@ struct LeastSquaresExtrapolation
 * constant or linear extrapolation
 * @note The derivative of the interpolating polynomial at a new point reduces to familiar finite difference formulas
 * @copydoc hide_ContainerType
-* @ingroup invert
+* @ingroup extrapolation
 * @sa https://en.wikipedia.org/wiki/Extrapolation
 */
 template<class ContainerType>

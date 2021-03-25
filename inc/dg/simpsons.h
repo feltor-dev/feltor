@@ -26,7 +26,7 @@ The class works by first calling the init function to set the left-side
 boundary and then adding values as they become available.
 * @snippet simpsons_t.cu docu
 * @copydoc hide_ContainerType
-* @ingroup time
+* @ingroup integration
 */
 template<class ContainerType>
 struct Simpsons
