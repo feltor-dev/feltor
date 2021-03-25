@@ -9,12 +9,11 @@
     },
     "timestepper":
     {
-        "dt" : 0.05
+        "dt" : 0.1
     },
     "output":
     {
-        "type": "glfw",
-        //"type": "netcdf",
+        "type": "glfw",   // "netcdf",
         "itstp"  : 1,
         "maxout" : 2,
         "n" : 5,
