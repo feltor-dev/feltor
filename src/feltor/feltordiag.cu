@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     std::cout << js<<std::endl;
     std::cout << gs<<std::endl;
     std::vector<std::string> names_input{
-        "electrons", "ions", "Ue", "Ui", "potential", "induction"
+        "electrons", "ions", "Ue", "Ui", "potential", "aparallel"
     };
 
     //-----------------Create Netcdf output file with attributes----------//

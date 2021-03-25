@@ -97,9 +97,9 @@ struct RadialEnergyFlux{
     }
     //energy dissipation
     DG_DEVICE double operator()( double ne, double ue, double P,
-        double lapMperpN, double lapMperpU){
-        return m_z*(m_tau*(1+log(ne))+P+0.5*m_mu*ue*ue)*lapMperpN
-                + m_z*m_mu*ne*ue*lapMperpU;
+        double lambdaN, double lambdaU){
+        return m_z*(m_tau*(1+log(ne))+P+0.5*m_mu*ue*ue)*lambdaN
+                + m_z*m_mu*ne*ue*lambdaU;
     }
     //energy source
     DG_DEVICE double operator()( double ne, double ue, double P,
@@ -299,9 +299,9 @@ std::vector<Record> diagnostics3d_list = {
              dg::blas1::copy(v.f.potential(0), result);
         }
     },
-    {"induction", "parallel magnetic induction", false,
+    {"aparallel", "parallel magnetic potential", false,
         []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.induction(), result);
+             dg::blas1::copy(v.f.aparallel(), result);
         }
     }
 };
@@ -415,9 +415,9 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::copy(v.f.potential(1), result);
         }
     },
-    {"induction", "Magnetic potential", false,
+    {"aparallel", "Magnetic potential", false,
         []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.induction(), result);
+             dg::blas1::copy(v.f.aparallel(), result);
         }
     },
     /// -----------------Miscellaneous additions --------------------//
@@ -521,7 +521,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
-                v.f.density(0), v.f.velocity(0), v.f.induction(),
+                v.f.density(0), v.f.velocity(0), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -531,8 +531,8 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"lneperp_tt", "Perpendicular electron diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diffusive_lapMperpN( v.f.density(0), v.tmp[0], result);
-            dg::blas1::scal( result, -v.p.nu_perp);
+            v.f.compute_diffusiveN( 1., v.f.density(0), v.tmp[0], v.tmp[1], 0.,
+                    result);
         }
     },
     //{"lneparallel_tt", "Parallel electron diffusion (Time average)", true,
@@ -585,7 +585,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialParticleFlux( v.p.tau[1], v.p.mu[1]),
-                v.f.density(1), v.f.velocity(1), v.f.induction(),
+                v.f.density(1), v.f.velocity(1), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -595,8 +595,8 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"lniperp_tt", "Perpendicular ion diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diffusive_lapMperpN( v.f.density(1), v.tmp[0], result);
-            dg::blas1::scal( result, -v.p.nu_perp);
+            v.f.compute_diffusiveN( 1., v.f.density(1), v.tmp[0], v.tmp[1], 1.,
+                    result);
         }
     },
     //{"lniparallel_tt", "Parallel ion diffusion (Time average)", true,
@@ -715,7 +715,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
-                v.f.density(0), v.f.velocity(0), v.f.potential(0), v.f.induction(),
+                v.f.density(0), v.f.velocity(0), v.f.potential(0), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -740,7 +740,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
-                v.f.density(1), v.f.velocity(1), v.f.potential(1), v.f.induction(),
+                v.f.density(1), v.f.velocity(1), v.f.potential(1), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.gradPsip[0], v.gradPsip[1], v.gradPsip[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
@@ -751,20 +751,23 @@ std::vector<Record> diagnostics2d_list = {
     /// ------------------------ Energy dissipation terms ------------------//
     {"leeperp_tt", "Perpendicular electron energy dissipation (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diffusive_lapMperpN( v.f.density(0), result, v.tmp[0]);
-            v.f.compute_diffusive_lapMperpU( v.f.velocity(0), result, v.tmp[1]);
+            v.f.compute_diffusiveN( 1., v.f.density(0), result, v.tmp[2], 0.,
+                    v.tmp[0]);
+            v.f.compute_diffusiveU( 1., v.f.velocity(0), result, v.tmp[2], 0.,
+                    v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
-            dg::blas1::scal( result, -v.p.nu_perp);
         }
     },
     {"leiperp_tt", "Perpendicular ion energy dissipation (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diffusive_lapMperpN( v.f.density(1), result, v.tmp[0]);
-            v.f.compute_diffusive_lapMperpU( v.f.velocity(1), result, v.tmp[1]);
+            v.f.compute_diffusiveN( 1., v.f.density(1), result, v.tmp[2], 0.,
+                    v.tmp[0]);
+            v.f.compute_diffusiveU( 1., v.f.velocity(1), result, v.tmp[2], 0.,
+                    v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
@@ -969,12 +972,7 @@ std::vector<Record> diagnostics2d_list = {
             routines::dot( v.f.gradP(0), v.gradPsip, result);
             dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
 
-            v.f.compute_diffusive_lapMperpN( v.f.density(0), v.tmp[0], v.tmp[1]);
-            dg::blas1::scal( v.tmp[1], -v.p.nu_perp);
-            //v.f.compute_lapParN( 0, v.tmp[2]);
-            //dg::blas1::scal( v.tmp[2], v.p.nu_parallel);
-            dg::blas1::copy( 0., v.tmp[2]);
-            dg::blas1::axpby( 1., v.tmp[1], 1., v.tmp[2]); //Lambda_ne
+            v.f.compute_diffusiveN( 1., v.f.density(0), v.tmp[0], v.tmp[1], 0., v.tmp[2]);
             dg::blas1::pointwiseDot( v.tmp[2], result, result);
 
             dg::blas1::scal( result, v.p.mu[1]);
@@ -1147,9 +1145,12 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"lparperp_tt", "Parallel momentum dissipation by perp diffusion", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_diffusive_lapMperpN( v.f.density(1), result, v.tmp[0]);
-            v.f.compute_diffusive_lapMperpU( v.f.velocity(1), result, v.tmp[1]);
-            dg::blas1::pointwiseDot( -v.p.nu_perp, v.tmp[0], v.f.velocity(1), -v.p.nu_perp, v.tmp[1], v.f.density(1), 0., result);
+            v.f.compute_diffusiveN( 1., v.f.density(1), result, v.tmp[2], 0.,
+                    v.tmp[0]);
+            v.f.compute_diffusiveU( 1., v.f.velocity(1), result, v.tmp[2], 0.,
+                    v.tmp[1]);
+            dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.velocity(1),
+                    1., v.tmp[1], v.f.density(1), 0., result);
         }
     },
     /// --------------------- Mirror force term ---------------------------//
@@ -1188,7 +1189,7 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"spardotAe_tt", "Apar Electric force in electron momentum density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            v.f.compute_dot_induction( result);
+            v.f.compute_dot_aparallel( result);
             dg::blas1::pointwiseDot( v.f.density(0), result, result);
         }
     },
@@ -1269,9 +1270,9 @@ std::vector<Record> restart3d_list = {
              dg::blas1::copy(v.f.velocity(1), result);
         }
     },
-    {"restart_induction", "parallel magnetic induction", false,
+    {"restart_aparallel", "parallel magnetic potential", false,
         []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.induction(), result);
+             dg::blas1::copy(v.f.aparallel(), result);
         }
     }
 };

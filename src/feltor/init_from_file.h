@@ -2,12 +2,12 @@
 
 
 #include "dg/file/nc_utilities.h"
+#include "parameters.h"
 
 namespace feltor
 {//We use the typedefs and DG_RANK0
 //
 //everyone reads their portion of the input data
-//don't forget to also read source profiles
 std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, const dg::x::CylindricalGrid3d& grid, const Parameters& p, double& time){
 #ifdef WITH_MPI
     int rank;
@@ -19,23 +19,25 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     dg::file::NC_Error_Handle errIN;
     int ncidIN;
     errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    Json::Value jsIN;
+    dg::file::WrappedJsonValue jsIN;
     size_t length;
     errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
     std::string input(length, 'x');
     errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    dg::file::string2Json( input, jsIN, dg::file::comments::are_forbidden);
-    unsigned  pINn  = jsIN["n"].asUInt();
-    unsigned  pINNx = jsIN["Nx"].asUInt();
-    unsigned  pINNy = jsIN["Ny"].asUInt();
-    unsigned  pINNz = jsIN["Nz"].asUInt();
-    bool      pINsymmetric   = jsIN.get( "symmetric", false).asBool();
+    dg::file::string2Json( input, jsIN.asJson(), dg::file::comments::are_forbidden);
+    feltor::Parameters pIN( jsIN);
+    unsigned  pINn  = pIN.n;
+    unsigned  pINNx = pIN.Nx;
+    unsigned  pINNy = pIN.Ny;
+    unsigned  pINNz = pIN.Nz;
+    bool      pINsymmetric = pIN.symmetric;
     DG_RANK0 std::cout << "RESTART from file "<<file_name<< std::endl;
     DG_RANK0 std::cout << " file parameters:" << std::endl;
     DG_RANK0 std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz<<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
 
     // Now read in last timestep
-    dg::x::CylindricalGrid3d grid_IN( grid.x0(), grid.x1(), grid.y0(), grid.y1(), grid.z0(), grid.z1(),
+    dg::x::CylindricalGrid3d grid_IN( grid.x0(), grid.x1(), grid.y0(),
+        grid.y1(), grid.z0(), grid.z1(),
         pINn, pINNx, pINNy, pINNz, dg::DIR, dg::DIR, dg::PER
         #ifdef WITH_MPI
         , grid.communicator()
@@ -45,7 +47,8 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     dg::x::HVec transferIN;
     if( pINsymmetric)
     {
-        std::unique_ptr< typename dg::x::CylindricalGrid3d::perpendicular_grid> grid_perp ( static_cast<typename dg::x::CylindricalGrid3d::perpendicular_grid*>(grid.perp_grid()));
+        std::unique_ptr< typename dg::x::CylindricalGrid3d::perpendicular_grid>
+            grid_perp ( static_cast<typename dg::x::CylindricalGrid3d::perpendicular_grid*>(grid.perp_grid()));
         interpolateIN = dg::create::interpolation( grid, *grid_perp);
         transferIN = dg::evaluate(dg::zero, *grid_perp);
     }
@@ -77,7 +80,7 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     }
     std::vector<dg::x::HVec> transferOUTvec( 5, dg::evaluate( dg::zero, grid));
 
-    std::string namesIN[5] = {"restart_electrons", "restart_ions", "restart_Ue", "restart_Ui", "restart_induction"};
+    std::string namesIN[5] = {"restart_electrons", "restart_ions", "restart_Ue", "restart_Ui", "restart_aparallel"};
 
     int timeIDIN;
     size_t size_time, count_time = 1;

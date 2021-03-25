@@ -18,18 +18,12 @@
 
 int main( int argc, char* argv[])
 {
-    Json::Value js, gs;
-    if( argc == 1)
-        dg::file::file2Json( "input.json", js, dg::file::comments::are_forbidden);
-    else if( argc == 2)
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
-    else
-    {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile]\n";
-        return -1;
-    }
-    const feltor::Parameters p( js, dg::file::error::is_throw);
-    std::cout << js <<std::endl;
+    dg::file::WrappedJsonValue js( dg::file::error::is_throw);
+    std::string inputfile = argc == 1 ? "input.json" : argv[1];
+    dg::file::file2Json( inputfile, js.asJson(), dg::file::comments::are_forbidden);
+
+    const feltor::Parameters p( js);
+    std::cout << js.asJson() <<std::endl;
     const double R_0 = 10;
     const double I_0 = 20; //q factor at r=1 is I_0/R_0
     const double a  = 1; //small radius
@@ -41,8 +35,6 @@ int main( int argc, char* argv[])
     std::cout << "Initialize explicit" << std::endl;
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, mag);
-    //std::cout << "Initialize implicit" << std::endl;
-    //feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
 
     feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
                                  p.beta,p.nu_perp,p.nu_parallel[0],p.nu_parallel[1]};
@@ -75,15 +67,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby(1./p.mu[0], apar, 1., y0[1][0]); //we=ue+1/mA
     dg::blas1::axpby(1./p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+1/mA
 
-    //Adaptive solver
-    //dg::Adaptive< dg::ARKStep<std::array<std::array<dg::DVec,2>,2>> > adaptive(
-    //    "ARK-4-2-3", y0, y0[0][0].size(), p.eps_time);
-    //Multistep solver
-    //dg::Karniadakis< std::array<std::array<dg::DVec,2>,2 >,
-    //    feltor::FeltorSpecialSolver<
-    //        dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
-    //    > karniadakis( grid, p, mag);
-    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp("TVB-3-3", y0);
+    dg::ExplicitMultistep< std::array<std::array<dg::DVec,2>,2 > > mp(p.tableau, y0);
     double time = 0, TMAX = 0.1;
     mp.init( feltor, time, y0, p.dt);
     while( time < TMAX)
@@ -110,7 +94,7 @@ int main( int argc, char* argv[])
     dg::blas1::plus(sol[0][1],-1); //Ni-1
     const std::array<std::array<dg::DVec,2>,2>& num = feltor.fields();
     const std::array<dg::DVec,2>& num_phi = feltor.potentials();
-    const dg::DVec& num_apar = feltor.induction();
+    const dg::DVec& num_apar = feltor.aparallel();
     double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
     double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
     double normue = sqrt(dg::blas2::dot( w3d, sol[1][0]));

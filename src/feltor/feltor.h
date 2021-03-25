@@ -20,7 +20,7 @@ struct Explicit
     using vector = std::array<std::array<Container,2>,2>;
     using container = Container;
     Explicit( const Geometry& g, feltor::Parameters p,
-        dg::geo::TokamakMagneticField mag ); //full system means explicit AND implicit
+        dg::geo::TokamakMagneticField mag );
 
     //Given N_i-1 initialize n_e-1 such that phi=0
     void initializene( const Container& ni, Container& ne);
@@ -64,7 +64,7 @@ struct Explicit
     const Container& potential(int i) const {
         return m_phi[i];
     }
-    const Container& induction() const {
+    const Container& aparallel() const {
         return m_apar;
     }
     const std::array<Container, 3> & gradN (int i) const {
@@ -107,7 +107,7 @@ struct Explicit
         dg::blas2::symv( m_dyF_N, m_s[0][i], gradS[1]);
         if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
-    void compute_dot_induction( Container& tmp) const {
+    void compute_dot_aparallel( Container& tmp) const {
         m_old_apar.derive( tmp);
     }
     const dg::SparseTensor<Container>& projection() const{
@@ -144,33 +144,43 @@ struct Explicit
         return m_temp1;
     }
     /// //////////////////////DIAGNOSTICS END////////////////////////////////
-    void compute_diffusive_lapMperpN( const Container& density, Container& temp0, Container& result ){
-        // compute the negative diffusion contribution -Lambda N
-        // perp dissipation for N: nu_perp Delta_p N or -nu_perp Delta_p**2 N
-        if( m_p.perp_diff == "viscous")
+    void compute_diffusiveN( double alpha, const Container& density,
+            Container& temp0, Container& temp1, double beta, Container& result )
+    {
+        // density = full N
+        // result = alpha Lambda_N + beta result
+        if( m_p.nu_perp_n != 0)
         {
             dg::blas1::transform( density, temp0, dg::PLUS<double>(-1));
-            dg::blas2::gemv( m_lapperpN, temp0, result); //!minus
+            for( unsigned s=0; s<m_p.diff_order; s++)
+            {
+                using std::swap;
+                swap( temp0, temp1);
+                dg::blas2::symv( 1., m_lapperpN, temp1, 0., temp0);
+            }
+            dg::blas1::axpbxy( -alpha*m_p.nu_perp_n, temp0, beta, result);
         }
         else
-        {
-            dg::blas1::transform( density, result, dg::PLUS<double>(-1));
-            dg::blas2::gemv( m_lapperpN, result, temp0);
-            dg::blas2::gemv( m_lapperpN, temp0, result); //!plus
-        }
+            dg::blas1::scal( result, beta);
     }
-    void compute_diffusive_lapMperpU( const Container& velocity, Container& temp0, Container& result ){
-        // compute the negative diffusion contribution -Lambda U
-        // perp dissipation for U: nu_perp Delta_p U or -nu_perp Delta_p**2 U
-        if( m_p.perp_diff == "viscous")
+    void compute_diffusiveU( double alpha, const Container& velocity,
+            Container& temp0, Container& temp1, double beta, Container& result)
+    {
+        // density = full N
+        // result = alpha Lambda_U + beta result
+        if( m_p.nu_perp_n != 0)
         {
-            dg::blas2::gemv( m_lapperpU, velocity, result); //!minus
+            dg::blas1::copy( velocity, temp0);
+            for( unsigned s=0; s<m_p.diff_order; s++)
+            {
+                using std::swap;
+                swap( temp0, temp1);
+                dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
+            }
+            dg::blas1::axpbxy( -alpha*m_p.nu_perp_u, temp0, beta, result);
         }
         else
-        {
-            dg::blas2::gemv( m_lapperpU, velocity, temp0);
-            dg::blas2::gemv( m_lapperpU, temp0, result); //!plus
-        }
+            dg::blas1::scal( result, beta);
     }
 
     //source strength, profile - 1
@@ -238,7 +248,7 @@ struct Explicit
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
-        m_multi_invgammaN, m_multi_induction;
+        m_multi_invgammaN, m_multi_ampere;
 
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
@@ -295,7 +305,8 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
         }
     }
     else
-        throw dg::Error(dg::Message(_ping_)<<"Warning! curvmode value '"<<p.curvmode<<"' not recognized!! I don't know what to do! I exit!\n");
+        throw std::runtime_error( "Warning! curvmode value '"+p.curvmode+"' not
+                recognized!! I don't know what to do! I exit!\n");
     dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
         m_curv[0], m_curv[1], m_curv[2], g);
     dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
@@ -311,22 +322,26 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
 {
     //in DS we take the true bhat
     auto bhat = dg::geo::createBHat( mag);
-    m_fa.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-        p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
-    //m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-    //    p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
-    //if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
-    //    m_fa_U.construct( m_fa_N);
-    //else
-    //    m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-    //        p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
-    //if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
-    //    m_fa_P.construct( m_fa_N);
-    //else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
-    //    m_fa_P.construct( m_fa_U);
-    //else
-    //    m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-    //         p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+    // do not construct FCI if we just want to calibrate
+    if( !p.calibrate )
+    {
+        m_fa.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+        //m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+        //    p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+        //if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
+        //    m_fa_U.construct( m_fa_N);
+        //else
+        //    m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
+        //        p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+        //if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
+        //    m_fa_P.construct( m_fa_N);
+        //else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
+        //    m_fa_P.construct( m_fa_U);
+        //else
+        //    m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
+        //         p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+    }
 
     // in Poisson we take EPhi except for the true curvmode
     bhat = dg::geo::createEPhi(+1);
@@ -344,8 +359,8 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
-    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, dg::centered),
-    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, dg::centered),
+    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, m_p.diff_dir),
+    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, m_p.diff_dir),
     m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER, dg::normed, dg::centered),
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
@@ -372,30 +387,30 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     m_multi_pol.resize(p.stages);
     m_multi_invgammaP.resize(p.stages);
     m_multi_invgammaN.resize(p.stages);
-    m_multi_induction.resize(p.stages);
+    m_multi_ampere.resize(p.stages);
     for( unsigned u=0; u<p.stages; u++)
     {
         m_multi_pol[u].construct( m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, dg::not_normed,
-            dg::centered, p.jfactor);
+            p.pol_dir, p.jfactor);
         m_multi_invgammaP[u].construct(  m_multigrid.grid(u),
-            p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
+            p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], p.pol_dir);
         m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
-            p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], dg::centered);
-        m_multi_induction[u].construct(  m_multigrid.grid(u),
-            p.bcxU, p.bcyU, dg::PER, -1., dg::centered);
+            p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], p.pol_dir);
+        m_multi_ampere[u].construct(  m_multigrid.grid(u),
+            p.bcxA, p.bcyA, dg::PER, -1., p.pol_dir);
 
         dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
             bhat, m_multigrid.grid(u));
         m_multi_pol[u].set_chi( hh);
         m_multi_invgammaP[u].elliptic().set_chi( hh);
         m_multi_invgammaN[u].elliptic().set_chi( hh);
-        m_multi_induction[u].elliptic().set_chi( hh);
+        m_multi_ampere[u].elliptic().set_chi( hh);
         if(p.curvmode != "true"){
             m_multi_pol[u].set_compute_in_2d( true);
             m_multi_invgammaP[u].elliptic().set_compute_in_2d( true);
             m_multi_invgammaN[u].elliptic().set_compute_in_2d( true);
-            m_multi_induction[u].elliptic().set_compute_in_2d( true);
+            m_multi_ampere[u].elliptic().set_compute_in_2d( true);
         }
     }
 }
@@ -412,13 +427,13 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
     m_dxB_U( dg::create::dx( g, p.bcxU, dg::backward) ),
     m_dx_P(  dg::create::dx( g, p.bcxP, dg::centered) ),
-    m_dx_A(  dg::create::dx( g, p.bcxU, dg::centered) ),
+    m_dx_A(  dg::create::dx( g, p.bcxA, dg::centered) ),
     m_dyF_N( dg::create::dy( g, p.bcyN, dg::forward) ),
     m_dyB_N( dg::create::dy( g, p.bcyN, dg::backward) ),
     m_dyF_U( dg::create::dy( g, p.bcyU, dg::forward) ),
     m_dyB_U( dg::create::dy( g, p.bcyU, dg::backward) ),
     m_dy_P(  dg::create::dy( g, p.bcyP, dg::centered) ),
-    m_dy_A(  dg::create::dy( g, p.bcyU, dg::centered) ),
+    m_dy_A(  dg::create::dy( g, p.bcyA, dg::centered) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
@@ -468,25 +483,20 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
     // Ni = ne
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
-        if( m_p.initphi == "zero")
+        if( initphi == "zero")
         {
             //add FLR correction -0.5*tau*mu*Delta n_e
             dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
             //wird stark negativ falls alpha klein!!
         }
-        else if( m_p.initphi == "balance")
+        else if( initphi == "balance")
             //add FLR correction +0.5*tau*mu*Delta n_e
             dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
             //wird stark negativ falls alpha klein!!
         else
         {
-            #ifdef MPI_VERSION
-                int rank;
-                MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-                if(rank==0)
-            #endif
             throw dg::Error(dg::Message(_ping_)<<"Warning! initphi value '"<<initphi<<"' not recognized. I have tau = "<<m_p.tau[1]<<" ! I don't know what to do! I exit!\n");
         }
     }
@@ -602,7 +612,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
                       -m_p.beta/m_p.mu[0], fields[0][0], m_temp0);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
-        m_multi_induction[u].set_chi( m_multi_chi[u]);
+        m_multi_ampere[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
     dg::blas1::pointwiseDot(  m_p.beta, fields[0][1], fields[1][1],
@@ -611,7 +621,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_induction, m_apar, m_temp0, m_p.eps_pol[0]);
+        m_multi_ampere, m_apar, m_temp0, m_p.eps_maxwell);
     m_old_apar.update( time, m_apar);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol[0]);
@@ -742,7 +752,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
             fields[1][i], m_dFU[i][0], m_dFU[i][1], m_dFU[i][2],
                           m_dBU[i][0], m_dBU[i][1], m_dBU[i][2],
                           m_dP[i][0], m_dP[i][1], m_dP[i][2],
-            //induction
+            //aparallel
             m_apar, m_dA[0], m_dA[1], m_dA[2],
             //magnetic parameters
             m_b[0], m_b[1], m_b[2],
@@ -798,6 +808,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
     /* y[0][0] := n_e - 1
        y[0][1] := N_i - 1
        y[1][0] := w_e
@@ -828,12 +842,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     timer.toc();
     accu += timer.diff();
-    #ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        if(rank==0)
-    #endif
-    std::cout << "## Compute phi and psi               took "<<timer.diff()<<"s\t A: "<<accu<<"s\n";
+    DG_RANK0 std::cout << "## Compute phi and psi               took "<<timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic();
 
     // Transform n-1 to n and n to logn
@@ -860,10 +869,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     timer.toc();
     accu += timer.diff();
-    #ifdef MPI_VERSION
-        if(rank==0)
-    #endif
-    std::cout << "## Compute Apar and perp dynamics    took "<<timer.diff()<<"s\t A: "<<accu<<"s\n";
+    DG_RANK0 std::cout << "## Compute Apar and perp dynamics    took "
+              << timer.diff() << "s\t A: "<<accu<<"s\n";
     timer.tic();
 
     // Add parallel dynamics --- needs m_logn
@@ -872,49 +879,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_parallel( t, y, m_fields, yp);
 
 #endif
-    //right now we do not support that option i.e everything is explicit
-    //if( m_p.explicit_diffusion )
-    {
 #if FELTORPERP == 1
-        /* y[0] := n_e - 1
-           y[1] := N_i - 1
-        */
-        for( unsigned i=0; i<2; i++)
-        {
-            if( m_p.perp_diff == "hyperviscous")
-            {
-                dg::blas2::symv( m_lapperpN, y[0][i], m_temp0);
-                dg::blas2::symv( -m_p.nu_perp, m_lapperpN, m_temp0, 1., yp[0][i]);
-            }
-            else // m_p.perp_diff == "viscous"
-                dg::blas2::symv( -m_p.nu_perp, m_lapperpN, y[0][i],  1., yp[0][i]);
-        }
-        /* fields[1][0] := u_e
-           fields[1][1] := U_i
-        */
-        for( unsigned i=0; i<2; i++)
-        {
-            if( m_p.perp_diff == "hyperviscous")
-            {
-                dg::blas2::symv( m_lapperpU, m_fields[1][i], m_temp0);
-                dg::blas2::symv( -m_p.nu_perp, m_lapperpU, m_temp0, 1., yp[1][i]);
-            }
-            else // m_p.perp_diff == "viscous"
-                dg::blas2::symv( -m_p.nu_perp, m_lapperpU,
-                    m_fields[1][i],  1., yp[1][i]);
-        }
-        //------------------Add Resistivity--------------------------//
-        double eta = m_p.eta, mu0 = m_p.mu[0], mu1 = m_p.mu[1];
-        dg::blas1::subroutine( [eta,mu0,mu1] DG_DEVICE ( double ne, double ni,
-                double ue, double ui, double& dtUe, double& dtUi){
-                    double current = (ne)*(ui-ue);
-                    dtUe += -eta/mu0 * current;
-                    dtUi += -eta/mu1 * (ne)/(ni) * current;
-                },
-            m_fields[0][0], m_fields[0][1],
-            m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
-#endif
+    for( unsigned i=0; i<2; i++)
+    {
+        compute_diffusiveN( 1., m_fields[0][i], m_temp0, m_temp1, 1., yp[0][i]);
+        compute_diffusiveU( 1., m_fields[1][i], m_temp0, m_temp1, 1., yp[1][i]);
     }
+    //------------------Add Resistivity--------------------------//
+    double eta = m_p.eta, mu0 = m_p.mu[0], mu1 = m_p.mu[1];
+    dg::blas1::subroutine( [eta,mu0,mu1] DG_DEVICE (
+            double ne, double ni,
+            double ue, double ui, double& dtUe, double& dtUi){
+                double current = (ne)*(ui-ue);
+                dtUe += -eta/mu0 * current;
+                dtUi += -eta/mu1 * (ne)/(ni) * current;
+            },
+        m_fields[0][0], m_fields[0][1],
+        m_fields[1][0], m_fields[1][1], yp[1][0], yp[1][1]);
+#endif
 
     //Add source terms
     if( m_omega_source != 0 )

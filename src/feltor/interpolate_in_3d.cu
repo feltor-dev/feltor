@@ -41,21 +41,16 @@ int main( int argc, char* argv[])
     err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
     std::string inputfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
-    std::string geomfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
-    Json::Value js,gs;
-    dg::file::string2Json(inputfile, js, dg::file::comments::are_forbidden);
-    dg::file::string2Json(geomfile, gs, dg::file::comments::are_forbidden);
-    const feltor::Parameters p(js, dg::file::error::is_warning);
-    std::cout << js.toStyledString() << std::endl;
-    std::cout << gs.toStyledString() << std::endl;
+    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
+    const feltor::Parameters p(js);
+    std::cout << js.asJson().toStyledString() << std::endl;
     dg::geo::TokamakMagneticField mag;
     try{
-        mag = dg::geo::createMagneticField(gs, dg::file::error::is_throw);
+        mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
     }catch(std::runtime_error& e)
     {
-        std::cerr << "ERROR in geometry file "<<geomfile<<std::endl;
+        std::cerr << "ERROR in geometry file "<<argv[1]<<std::endl;
         std::cerr <<e.what()<<std::endl;
         return -1;
     }
@@ -80,7 +75,6 @@ int main( int argc, char* argv[])
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
-    att["geomfile"] = geomfile;
     for( auto pair : att)
         err = nc_put_att_text( ncid_out, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
@@ -88,21 +82,24 @@ int main( int argc, char* argv[])
     //-------------------Construct grids-------------------------------------//
 
     const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a()*mag.params().elongation();
+    const double Zmin=-p.boxscaleZm*mag.params().a();
     const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a()*mag.params().elongation();
+    const double Zmax=p.boxscaleZp*mag.params().a();
     const unsigned FACTOR = 6;
 
+    unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
+    unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
+    unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy, Nz_out = p.Nz;
     dg::RealCylindricalGrid3d<double> g3d_in( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+        n_out, Nx_out, Ny_out, Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<double> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+        n_out, Nx_out, Ny_out, FACTOR*Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<double> g3d_out_equidistant( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
-        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, FACTOR*p.Nz_out, p.bcxN, p.bcyN, dg::PER);
+        1, n_out*Nx_out, n_out*Ny_out, FACTOR*Nz_out, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<float> g3d_out_periodic( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
-        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
+        n_out, Nx_out, Ny_out, FACTOR*Nz_out+1, p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<float> g3d_out_periodic_equidistant( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(),
-        1, p.n_out*p.Nx_out, p.n_out*p.Ny_out, FACTOR*p.Nz_out+1, p.bcxN, p.bcyN, dg::PER);
+        1, n_out*Nx_out, n_out*Ny_out, FACTOR*Nz_out+1, p.bcxN, p.bcyN, dg::PER);
 
     // Construct weights and temporaries
     dg::HVec transferH_in = dg::evaluate(dg::zero,g3d_in);
@@ -112,7 +109,8 @@ int main( int argc, char* argv[])
 
     // define 4d dimension
     int dim_ids[4], tvarID;
-    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
+    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID,
+            g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
     std::map<std::string, int> id4d;
 
     /////////////////////////////////////////////////////////////////////////
