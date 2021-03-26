@@ -57,6 +57,7 @@ int main(int argc, char * argv[])
     std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
+         {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
          {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
          {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},

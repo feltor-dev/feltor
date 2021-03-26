@@ -262,6 +262,12 @@ unsigned max_iter = 1e4, double eps = 1e-6)
     else if( name == "backward") ds.ds( dg::backward, in, out);
     else if( name == "centered") ds.ds( dg::centered, in, out);
     else if( name == "dss") ds.dss( in, out);
+    else if( name == "centered_bc_along")
+        ds.centered_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
+    else if( name == "dss_bc_along")
+        ds.dss_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
+    else if( name == "centered") ds.ds( dg::centered, in, out);
+    else if( name == "dss") ds.dss( in, out);
     else if( name == "divForward") ds.div( dg::forward, in, out);
     else if( name == "divBackward") ds.div( dg::backward, in, out);
     else if( name == "divCentered") ds.div( dg::centered, in, out);
