@@ -81,8 +81,6 @@ dg::SparseTensor<host_vector> square( const dg::SparseTensor<host_vector >& jac,
 
 /**
  * @brief A two-dimensional grid based on curvilinear coordinates
- *
- * @snippet flux_t.cu doxygen
  */
 template<class real_type>
 struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
@@ -127,7 +125,6 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
  * @brief A 2x1 curvilinear product space grid
 
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
- * @snippet hector_t.cu doxygen
  */
 template<class real_type>
 struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_type>

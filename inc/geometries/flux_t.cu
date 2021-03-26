@@ -48,14 +48,17 @@ int main( int argc, char* argv[])
     dg::file::file2Json( input, js.asJson(), dg::file::comments::are_discarded);
 
     std::string geometry_params = js["magnetic_field"]["input"].asString();
-    if( geomettry_params == "file")
+    if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["file"].asString();
-        dg::file::file2Json( path, js.asJson()["magnetic_field"]["file"],
+        dg::file::file2Json( path, js.asJson()["magnetic_field"]["params"],
                 dg::file::comments::are_discarded);
     }
-    //write parameters from file into variables
-    //std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
+    else if( geometry_params != "params")
+    {
+        std::cerr << "Error: Unknown magnetic field input '"<<geometry_params<<"'. Exit now!\n";
+        return -1;
+    }
     dg::file::WrappedJsonValue grid = js["grid"];
     unsigned  n = grid ["n"].asUInt(), Nx = grid["Nx"].asUInt(),
              Ny = grid["Ny"].asUInt(), Nz = grid["Nz"].asUInt();
@@ -67,7 +70,7 @@ int main( int argc, char* argv[])
     std::unique_ptr<dg::geo::aGenerator2d> generator;
     //create the magnetic field
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
-            js["magnetic_field"][geometry_params]);
+            js["magnetic_field"]["params"]);
     //create a grid generator
     std::string type = js["grid"]["generator"]["type"].asString();
     int mode = js["grid"]["generator"]["mode"].asInt();
