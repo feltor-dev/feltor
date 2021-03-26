@@ -84,9 +84,23 @@ std::vector<Record> diagnostics2d_list = {
             v.f.compute_lapM( -1., v.f.potential(0), 0., result);
         }
     },
-    {"psi", "Ion potential psi",
+    {"electronsm1", "electron density minus ref density",
         []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.potential(1), result);
+          dg::blas1::transform( v.f.density(0), result, dg::PLUS<double>(-1));
+        }
+    },
+    {"electronsx", "Electron density minus ref density times x",
+        []( dg::x::DVec& result, Variables& v ) {
+          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+          result = dg::evaluate( dg::cooX2d, v.f.grid());
+          dg::blas1::pointwiseDot(result,v.tmp[0],result);
+        }
+    },
+    {"electronsy", "Electron density minus ref density times y",
+        []( dg::x::DVec& result, Variables& v ) {
+          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+          result = dg::evaluate( dg::cooY2d, v.f.grid());
+          dg::blas1::pointwiseDot(result,v.tmp[0],result);
         }
     },
     /// ------------------- Mass   terms ------------------------//

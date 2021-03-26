@@ -39,6 +39,10 @@ std::array<dg::x::DVec,2> initial_conditions(
 //        y0[1] = dg::evaluate( dg::Gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp), grid);
 //        f.gamma1_y(y0[1], y0[0]);
     }
+    else if( initial== "blob_zeropol")
+    {
+        y0[0] = y0[1] = dg::evaluate( dg::Gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp), grid);
+    }
     else if (initial =="rot_blob")
     {
         dg::Gaussian g1( (0.5-p.posX)*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);

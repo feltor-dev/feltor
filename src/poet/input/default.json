@@ -4,18 +4,18 @@
         "n" :  5,
         "Nx" : 32,
         "Ny" : 32,
-        "lx"  : 64,
-        "ly"  : 64
+        "lx"  : 100,
+        "ly"  : 100
     },
     "timestepper":
     {
-        "dt" : 0.1
+        "dt" : 0.05
     },
     "output":
     {
         "type": "glfw",   // "netcdf",
-        "itstp"  : 1,
-        "maxout" : 2,
+        "itstp"  : 50,
+        "maxout" : 50,
         "n" : 5,
         "Nx" : 32,
         "Ny" : 32
@@ -38,14 +38,14 @@
     {
         "curvature"  : 0.00015,
         "tau"  : 4.0,
-        "equations": "ff-O2"
+        "equations": "df-O2"
     },
     "init":
     {
-        "type"       : "blob",
+        "type"       : "blob_zeropol",
         "amplitude"  :1.0,
         "sigma"  : 5,
-        "posX"  : 0.5,
+        "posX"  : 0.25,
         "posY"  : 0.5
     },
     "nu_perp"  : 0e-5,

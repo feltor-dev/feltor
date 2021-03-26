@@ -101,10 +101,10 @@ The polarization part of the gyro-fluid potential is
 \end{align}
 \subsection{Initialization}
 We follow the strategy to enforce the initial fields of the physical variables, the electron density \(n\) and the electric potential \(\phi\), in order to compute the initial ion gyro-center density.
-\subsubsection{Non-rotating Gaussian}
+\subsubsection{Non-rotating Gaussian ("blob")}
 Initialization of $n$ is a Gaussian 
 \begin{align}
-    n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+    n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
     \phi(x,y)&=const.
 \end{align}
 where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
@@ -113,7 +113,19 @@ We initialize
 \begin{align}
     N &= \Gamma_1^{-1} n 
 \end{align}
-\subsubsection{Rotating Gaussian}
+\subsubsection{Gaussian with zero polarization charge density("blob")}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the radius of the blob. We initialize then
+\begin{align}
+    N &= n 
+\end{align}
+so that the total polarization charge vanishes  \(\vec{\nabla}\cdot \vec{P}&=0\).
+
+\subsubsection{Double Rotating Gaussian ("rot_blob")}
+We initialize two blobs
 \begin{align}
     n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
     \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= \delta \hspace{1mm} (n-1)
@@ -122,9 +134,6 @@ where \(\delta = 10\) is a parameter for the rotation.
 Thus we have
 \begin{align}
   \phi(x,y) &= \Delta_\perp^{-1} \Omega_E 
-%   = \dots \\
-%   \partial_x \phi &= \dots \\
-%    \partial_y \phi &= \dots
 \end{align}
 
 the ion gyro-center density follows from the respective polarization equation.
