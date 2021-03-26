@@ -350,7 +350,7 @@ struct DS
      * @copydoc hide_ds_parameters2
      * @copydoc hide_ds_attention
      */
-    void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}
+    void symv( const container& f, container& g){ symv( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
@@ -358,7 +358,7 @@ struct DS
      * @copydoc hide_ds_parameters4
      * @copydoc hide_ds_attention
      */
-    void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
+    void symv( double alpha, const container& f, double beta, container& g);
     /**
      * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
@@ -410,7 +410,6 @@ struct DS
     void do_divForward(double alpha, const container& f, double beta, container& dsf);
     void do_divBackward(double alpha, const container& f, double beta, container& dsf);
     void do_divCentered(double alpha, const container& f, double beta, container& dsf);
-    void do_symv(double alpha, const container& f, double beta, container& dsf);
 
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
     container m_temp;
@@ -490,9 +489,9 @@ void DS<G, I,M,container>::do_divCentered( double alpha, const container& f, dou
 }
 
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
+void DS<G,I,M,container>::symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
-
+    //CUDA LAMBDAS CANNOT BE CONTAINED IN A PRIVATE OR PROTECTED METHOD
     if(m_dir == dg::centered) //does not converge with BC!!
     {
         m_fa(einsPlus, f, m_tempP);
