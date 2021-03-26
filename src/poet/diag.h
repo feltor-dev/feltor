@@ -97,7 +97,7 @@ std::vector<Record> diagnostics2d_list = {
         }
     },
     /// ------------------- Energy terms ------------------------//
-    {"Ene", "Entropy electrons", //nelnne or (delta ne)^2
+    {"ene", "Entropy electrons", //nelnne or (delta ne)^2
         []( dg::x::DVec& result, Variables& v ) {
             if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
                 dg::blas1::transform( v.f.density(0), result, dg::LN<double>());
@@ -109,7 +109,7 @@ std::vector<Record> diagnostics2d_list = {
             }
         }
     },
-    {"Eni", "Entropy ions", //nilnni or (delta ni)^2
+    {"eni", "Entropy ions", //nilnni or (delta ni)^2
         []( dg::x::DVec& result, Variables& v ) {
             if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
                 dg::blas1::transform( v.f.density(1), result, dg::LN<double>());
@@ -122,7 +122,7 @@ std::vector<Record> diagnostics2d_list = {
             }
         }
     },
-    {"eExB", "ExB energy",
+    {"eexb", "ExB energy",
         []( dg::x::DVec& result, Variables& v ) {
             if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
                 dg::blas1::pointwiseDot( -1.0, v.f.density(1), v.f.psi2(), 0., result);
