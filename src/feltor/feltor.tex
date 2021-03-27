@@ -925,7 +925,7 @@ For both electrons and ions we add to the equations
     \partial_t W_\parallel &= F_U -\omega_w\chi_w (U_\parallel-U_\parallel^w)
 \end{align}
 \end{subequations}
-where $\omega_w$ is the penalization parameter, $N_w = 1$, $U_\parallel^w = 0$ and $F_N$ and $F_U$ are the
+where $\omega_w$ is the penalization parameter, $N_w = 1$, $U_{\parallel,w} = 0$ and $F_N$ and $F_U$ are the
 right hand sides as defined in Eqs.~\eqref{eq:EgyrofluidN} and \eqref{eq:EgyrofluidU}.
 \begin{minted}[texcomments]{js}
 "boundary":
@@ -959,9 +959,10 @@ as in
 \begin{subequations} \label{eq:wall_equations}
 \begin{align}
     \partial_t N &= F_N ( 1-\chi_w) -\omega_w\chi_w (N-N_w)\\
-    \partial_t W_\parallel &= F_U ( 1 - \chi_w) -\omega_w\chi_w (U_\parallel-U_\parallel^w)
+\partial_t W_\parallel &= F_U ( 1 - \chi_w) -\omega_w\chi_w (U_\parallel-U_{\parallel,w})
 \end{align}
 \end{subequations}
+with $N_w = 1$ and $U_{\parallel,w}=0$.
 
 \begin{tcolorbox}[title=Note]
     Computing on a box and cutting away the parts that are the wall,
@@ -990,7 +991,7 @@ penalization. Then we check for each point in the box the poloidal distance to
 the sheath wall and if the poloidal field points toward or away from the wall closest
 to it.
 We then take $\theta_{\alpha/2}\left( (\eps_s + \frac{\alpha}{2})a - d(R,Z)\right)$
-and take the set intersection between that region and the ``not wall'' region to
+and take the set intersection of that region and the ``not wall'' region to
 determine the sheath penalization region:
 \begin{align}\label{eq:sheath}
     \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( \left(\eps_s + \frac{\alpha}{2}\right)a - d(R,Z)\right)
@@ -999,13 +1000,13 @@ Within the sheath region we penalize
 \begin{subequations} \label{eq:sheath_penalization}
 \begin{align}
     \partial_t N &= F_N +\omega_s \chi_s \left(N_{sh}-N\right)\\
-    \partial_t W_{\parallel,i} &= F_{U_i} +\omega_s \chi_s \left(\sqrt{1+\tau} - U_{\parallel,i} \right) \\
-    \partial_t w_{\parallel,e} &= F_{u_e} +\omega_s \chi_s \left(\sqrt{1+\tau}\exp(-\phi) - u_{\parallel,e} \right)
-    \text{ or } \label{eq:bohm_sheath}\\
-    \partial_t w_{\parallel,e} &= F_{u_e} +\omega_s \chi_s \left(\sqrt{1+\tau} - u_{\parallel,e} \right) \label{eq:insulating_sheath}
+    \partial_t W_{\parallel,i} &= F_{U_i} +\omega_s \chi_s \left(\pm\sqrt{1+\tau} - U_{\parallel,i} \right) \\
+    \partial_t w_{\parallel,e} &= F_{u_e} +\omega_s \chi_s \left(\pm\sqrt{1+\tau}\exp(-\phi) - u_{\parallel,e} \right)
+    \text{ "bohm" } \label{eq:bohm_sheath}\\
+    \partial_t w_{\parallel,e} &= F_{u_e} +\omega_s \chi_s \left(\pm\sqrt{1+\tau} - u_{\parallel,e} \right)\text{ "insulating" } \label{eq:insulating_sheath}
 \end{align}
 \end{subequations}
-where $\omega_s$ is the sheath penalization parameter and $N_{sh}$ is obtained by extrapolating $N$ along the magnetic field line with
+where $\omega_s$ is the sheath penalization parameter, the sign is such that the velocity is always flowing out of the plasma and $N_{sh}$ is obtained by extrapolating $N$ along the magnetic field line with
 the help of the parallel derivative operators
 \begin{align}
     N_{sh} = \Tpm N \text{ such that } \nabla_\parallel N|_{sh} = 0
@@ -1019,13 +1020,12 @@ an insulating condition where the total current $j_s = n_e ( U_{\parallel,i} - u
 {
     "sheath" :
     {
-        // Simple flux aligned wall above a threshold value
         "type" : "bohm", // Eq.\eqref{eq:bohm_sheath}
         "type" : "insulating" // Eq.\eqref{eq:insulating_sheath}
-        "boundary" : 0.2, // width of the sheath $\eps_s$ in units of $a$ in Eq.\eqref{eq:sheath}
-        "alpha" : 0.25, // Transition width $\alpha_p$: yields
-        // $\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside
-        // in the wall function \eqref{eq:sheath}.
+        "boundary" : 0.2, // width of the sheath $\eps_s$ away from the wall
+        // in units of $a$ in Eq.\eqref{eq:sheath}
+        "alpha" : 0.25, // Transition width $\alpha$
+        // in units of $a$ in Eq.\eqref{eq:sheath}.
         "penalization" : 1.0, //penalization coefficient $\omega_s$ in density
         // and velocity damping Eq.\eqref{eq:sheath_penalization}
         "penalize-rhs" : false // if true we use Eq.\eqref{eq:sheath_equations} else Eq.\eqref{eq:sheath_penalization}
@@ -1502,7 +1502,7 @@ one accuracy can be set:
     // Tuning those factors is a major performance tuning oppourtunity!!
     // For saturated turbulence the suggested values are [1e-6, 2000, 100].
     "eps_gamma" : 1e-10, // Accuracy requirement of Gamma operator
-    "eps_maxwell": 1e-7, //Accuracy requirement of Ampere equation
+    "eps_ampere": 1e-7,  //Accuracy requirement of Ampere equation
     "direction" : "forward", // Direction of the Laplacian: forward or centered
     "jumpfactor" : 1.0
     // Jumpfactor $\in \left[0.01,1\right]$ in the local DG method for the
@@ -1548,8 +1548,13 @@ There seems to be no benefit in using the grid refinement technique except when 
 \end{minted}
 
 \begin{tcolorbox}[title=Note]
-The along\_field boundary condition option saves memory because then we can use
+The "along\_field" option saves memory because then we can use
 the same FCI object for all quantities.
+\end{tcolorbox}
+\begin{tcolorbox}[title=Note]
+    When the "modify-B" option is used for the wall the magnetic fieldlines
+    do not intersect the domain boundary in the wall region (but still do in the
+    sheath region).
 \end{tcolorbox}
 
 % Check periodify field

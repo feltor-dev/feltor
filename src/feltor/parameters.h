@@ -19,7 +19,7 @@ struct Parameters
 
     std::vector<double> eps_pol;
     double jfactor;
-    double eps_gamma;
+    double eps_gamma, eps_ampere;
     unsigned stages;
     unsigned mx, my;
     double rk4eps;
@@ -66,8 +66,7 @@ struct Parameters
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
-            throw std::runtime_error( "Output type "+output+" not
-                    recognized!\n");
+            throw std::runtime_error( "Output type "+output+" not recognized!\n");
 #ifdef WITHOUT_GLFW
         if( "glfw" == output)
             throw std::runtime_error( "Output type glfw not possible without glfw compiled!\n");
@@ -83,8 +82,8 @@ struct Parameters
         }
         jfactor     = js["elliptic"].get( "jumpfactor", 1).asDouble();
         eps_gamma   = js["elliptic"].get( "eps_gamma", 1e-6).asDouble();
-        eps_maxwell = js["elliptic"].get( "eps_maxwell", 1e-6).asDouble();
-        dir_pol = dg::str2direction(
+        eps_ampere  = js["elliptic"].get( "eps_ampere", 1e-6).asDouble();
+        pol_dir = dg::str2direction(
                 js["elliptic"].get("direction", "centered").asString() );
 
 
@@ -149,13 +148,13 @@ struct Parameters
                 throw std::runtime_error( "ERROR: For along field fci boundary condition potential bc must be either dg::NEU or dg::DIR in both directions!\n");
         }
         else if( fci_bc != "perp")
-            throw std::runtime_error("Error! FCI bc '"+fci_bc+"' not recognized!\n";
+            throw std::runtime_error("Error! FCI bc '"+fci_bc+"' not recognized!\n");
 
 
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
         modify_B = penalize_wall = penalize_sheath = false;
         wall_rate = sheath_rate = 0.;
-        if( js["boundary"]["wall"].get("type","none") != "none")
+        if( js["boundary"]["wall"].get("type","none").asString() != "none")
         {
             modify_B = js["boundary"]["wall"].get( "modify-B", false).asBool();
             penalize_wall = js["boundary"]["wall"].get( "penalize-rhs",
@@ -163,7 +162,7 @@ struct Parameters
             wall_rate = js ["boundary"]["wall"].get( "penalization",
                     0.).asDouble();
         }
-        if( js["boundary"]["sheath"].get("type","none") != "none")
+        if( js["boundary"]["sheath"].get("type","none").asString() != "none")
         {
             penalize_sheath = js["boundary"]["sheath"].get( "penalize-rhs",
                     false).asBool();

@@ -303,8 +303,9 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
  * @param R1 right boundary
  * @param Z0 bottom boundary
  * @param Z1 top boundary
- * @param sheath (out) contains the region recognized as sheath
- * @param direction (out) contains (+/-) indicating direction of magnetic field
+ * @param sheath (out) contains the region recognized as sheath (returning +1 within
+ * the sheath and 0 outside of it and something in-between in the transition region)
+ * @param direction (out) contains (+1/-1) indicating direction of magnetic field
  * to closest sheath boundary (defined on entire box)
  *
  * @return sheath region

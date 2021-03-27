@@ -65,7 +65,7 @@ int main( int argc, char* argv[])
     try{
         dg::file::file2Json( argv[1], js.asJson(),
                 dg::file::comments::are_discarded, dg::file::error::is_throw);
-        feltor::Parameters( js);
+        feltor::Parameters p( js);
     } catch( std::exception& e) {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
         DG_RANK0 std::cerr << e.what()<<std::endl;
@@ -179,27 +179,28 @@ int main( int argc, char* argv[])
     dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
     dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
 
-    std::array<dg::x::DVec, 3> gradPsip;
-    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
-    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
-    gradPsip[2] =  resultD; //zero
-    dg::x::DVec hoo = dg::pullback( dg::geo::Hoo( mag), grid);
-    feltor::Variables var = {
-        feltor, p, mag, gradPsip, gradPsip, hoo
-    };
     // the vector ids
     std::map<std::string, int> id3d, id4d, restart_ids;
 
     double dEdt = 0, accuracy = 0;
     double E0 = 0.;
 
-    /// //////////////////The initial field///////////////////////////////////////////
+    /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
     std::array<std::array<dg::x::DVec,2>,2> y0;
+    std::array<dg::x::DVec, 3> gradPsip;
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  resultD; //zero
+    feltor::Variables var{
+        feltor, y0, p, mag, gradPsip, gradPsip,
+        dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid))
+    };
     if( argc == 3 )
     {
         try{
-            y0 = feltor::initial_conditions(feltor, grid, p, mod_mag, js["init"] );
+            y0 = feltor::initial_conditions(feltor, grid, p, mod_mag,
+                    js["init"], time );
         }catch ( dg::Error& error){
             DG_RANK0 std::cerr << error.what();
             DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
@@ -210,7 +211,7 @@ int main( int argc, char* argv[])
     if( argc == 4 )
     {
         try{
-            y0 = feltor::init_from_file(argv[4], grid, p,time);
+            y0 = feltor::init_from_file(argv[4], grid, p, time);
         }catch (std::exception& e){
             DG_RANK0 std::cerr << "ERROR occured initializing from file "<<argv[4]<<std::endl;
             DG_RANK0 std::cerr << e.what()<<std::endl;
@@ -228,17 +229,18 @@ int main( int argc, char* argv[])
         bool fixed_profile;
         dg::x::HVec ne_profile, source_profile;
         source_profile = feltor::source_profiles(
-            fixed_profile, ne_profile, grid, mag, js);
-        feltor.set_source( fixed_profile, dg::construct<dg::x::DVec>(profile),
+            fixed_profile, ne_profile, grid, mag, js["source"]);
+        feltor.set_source( fixed_profile, dg::construct<dg::x::DVec>(ne_profile),
             p.source_rate, dg::construct<dg::x::DVec>(source_profile)
         );
     }catch ( std::out_of_range& error){
-        DG_RANK0 std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
+        DG_RANK0 std::cerr << "ERROR: in source: "<<error.what();
+        DG_RANK0 std::cerr <<"Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
         abort_program();
     }
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
-    if( output == "netcdf")
+    if( p.output == "netcdf")
     {
         dg::file::NC_Error_Handle err;
         std::string file_name = argv[2];
@@ -586,7 +588,7 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/maxout/p.inner_loop<<"s/step\n";
     }
 #ifndef WITHOUT_GLFW
-    if( output == "glfw")
+    if( p.output == "glfw")
     {
         dg::Timer t;
         unsigned step = 0;
@@ -696,8 +698,8 @@ int main( int argc, char* argv[])
                     if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
                     {
                         std::cout << record.name<<" : ";
-                        record.function( result, var);
-                        double norm = dg::blas1::dot( result, feltor.vol3d());
+                        record.function( resultD, var);
+                        double norm = dg::blas1::dot( resultD, feltor.vol3d());
                         energy += norm;
                         std::cout << norm<<std::endl;
 
@@ -705,8 +707,8 @@ int main( int argc, char* argv[])
                     if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
                     {
                         std::cout << record.name<<" : ";
-                        record.function( result, var);
-                        double norm = dg::blas1::dot( result, feltor.vol3d());
+                        record.function( resultD, var);
+                        double norm = dg::blas1::dot( resultD, feltor.vol3d());
                         ediff += norm;
                         std::cout << norm<<std::endl;
                     }

@@ -58,7 +58,7 @@ dg::x::HVec xpoint_damping(
 
 dg::x::HVec make_profile(
     const dg::x::CylindricalGrid3d& grid,
-    dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& mag,
     dg::file::WrappedJsonValue js )
 {
     //js = input["profile"]
@@ -96,7 +96,7 @@ dg::x::HVec make_profile(
 
 dg::x::HVec make_damping(
     const dg::x::CylindricalGrid3d& grid,
-    dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& mag,
     dg::file::WrappedJsonValue js )
 {
     //js = input["damping"]
@@ -137,7 +137,7 @@ dg::x::HVec make_damping(
 }
 dg::x::HVec make_ntilde(
     const dg::x::CylindricalGrid3d& grid,
-    dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& mag,
     dg::file::WrappedJsonValue js )
 {
     //js = input["ntilde"]
@@ -170,7 +170,7 @@ dg::x::HVec make_ntilde(
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in blob initial condition\n");
-            dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1);
+            dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
             ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
         }
     }
@@ -193,8 +193,8 @@ dg::x::HVec make_ntilde(
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
-            dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1);
-            ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, 1);
+            dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+            ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
         }
     }
     else if(  "zonal" == type)
@@ -217,7 +217,7 @@ dg::x::HVec make_ntilde(
  */
 
 std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
-    Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& f,
+    Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& feltor,
     const dg::x::CylindricalGrid3d& grid, const feltor::Parameters& p,
     const dg::geo::TokamakMagneticField& mag, dg::file::WrappedJsonValue js,
     double & time )
@@ -260,7 +260,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
         else if( "ni" == type)
         {
             dg::assign( profile, y0[0][1]);
-            feltor.initializene( y0[0][1], y[0][0]);
+            feltor.initializene( y0[0][1], y0[0][0]);
         }
     }
     else if( "restart" == type)
@@ -322,7 +322,7 @@ dg::x::HVec source_profiles(
         const double sigma = 9.3e-3*psip0/0.4;
         source = dg::pullback(
             dg::compose( dg::GaussianX( psip0, sigma, 1.),  mag.psip() ), grid);
-        dg::blas1::pointwiseDot( detail::xpoint_damping(grid,p,mag),
+        dg::blas1::pointwiseDot( detail::xpoint_damping(grid,mag),
                source, source);
     }
     else

@@ -160,6 +160,21 @@ struct Explicit
         dg::blas2::gemv( m_lapperpU, m_apar, m_temp1);
         return m_temp1;
     }
+    const Container& get_source() const{
+        return m_source;
+    }
+    const Container& get_source_prof() const{
+        return m_profne;
+    }
+    const Container& get_wall() const{
+        return m_wall;
+    }
+    const Container& get_sheath() const{
+        return m_sheath;
+    }
+    const Container& get_sheathDotDirection() const{
+        return m_sheathDotDirection;
+    }
     /// //////////////////////DIAGNOSTICS END////////////////////////////////
     void compute_diffusiveN( double alpha, const Container& density,
             Container& temp0, Container& temp1, double beta, Container& result )
@@ -175,7 +190,7 @@ struct Explicit
                 swap( temp0, temp1);
                 dg::blas2::symv( 1., m_lapperpN, temp1, 0., temp0);
             }
-            dg::blas1::axpbxy( -alpha*m_p.nu_perp_n, temp0, beta, result);
+            dg::blas1::axpby( -alpha*m_p.nu_perp_n, temp0, beta, result);
         }
         else
             dg::blas1::scal( result, beta);
@@ -194,29 +209,27 @@ struct Explicit
                 swap( temp0, temp1);
                 dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
             }
-            dg::blas1::axpbxy( -alpha*m_p.nu_perp_u, temp0, beta, result);
+            dg::blas1::axpby( -alpha*m_p.nu_perp_u, temp0, beta, result);
         }
         else
             dg::blas1::scal( result, beta);
     }
 
     //source strength, profile - 1
-    void set_source( bool fixed_profile, Container profile, double omega_source, Container source)
+    void set_source( bool fixed_profile, Container profile, double source_rate, Container source)
     {
         m_fixed_profile = fixed_profile;
         m_profne = profile;
-        m_omega_source = omega_source;
+        m_source_rate = source_rate;
         m_source = source;
     }
-    void set_wall_and_sheath(double wall_forcing, Container wall, double sheath_forcing, Container sheath, Container velocity_sheath)
+    void set_wall_and_sheath(double wall_rate, Container wall, double sheath_rate, Container sheath, Container direction)
     {
-        m_sheath_forcing = sheath_forcing; //1/eta
-        m_wall_forcing = wall_forcing;
-        dg::blas1::axpby( wall_forcing, wall, sheath_forcing, sheath, m_forcing);
-        dg::blas1::pointwiseDot( sheath, velocity_sheath, m_U_sheath);
-
-        dg::blas1::axpby( -1., wall, -1., sheath, m_masked);
-        dg::blas1::plus( m_masked, +1);
+        m_sheath_rate = sheath_rate; //1/eta
+        m_wall_rate = wall_rate;
+        dg::blas1::copy( wall, m_wall);
+        dg::blas1::copy( sheath, m_sheath);
+        dg::blas1::pointwiseDot( sheath, direction, m_sheathDotDirection);
     }
     void compute_apar( double t, std::array<std::array<Container,2>,2>& fields);
     void compute_phi( double t, const std::array<Container,2>& y);
@@ -226,6 +239,15 @@ struct Explicit
         const std::array<std::array<Container,2>,2>& fields,
         std::array<std::array<Container,2>,2>& yp);
     void compute_parallel( double t,
+        const std::array<std::array<Container,2>,2>& y,
+        const std::array<std::array<Container,2>,2>& fields,
+        std::array<std::array<Container,2>,2>& yp);
+    void add_source_terms( double t,
+        const std::array<std::array<Container,2>,2>& y,
+        const std::array<std::array<Container,2>,2>& fields,
+        std::array<std::array<Container,2>,2>& yp);
+    void add_rhs_penalization( std::array<std::array<Container,2>,2>& yp);
+    void add_wall_and_sheath_terms( double t,
         const std::array<std::array<Container,2>,2>& y,
         const std::array<std::array<Container,2>,2>& fields,
         std::array<std::array<Container,2>,2>& yp);
@@ -247,7 +269,8 @@ struct Explicit
     std::array<Container,3> m_curv, m_curvKappa, m_b; //m_b is bhat/ sqrt(g) / B
     Container m_divCurvKappa;
     Container m_bphi, m_binv, m_divb;
-    Container m_source, m_profne, m_forcing, m_U_sheath, m_masked;
+    Container m_source, m_profne, m_sheathDotDirection;
+    Container m_wall, m_sheath;
 
     Container m_apar;
     std::array<Container,2> m_phi;
@@ -273,7 +296,7 @@ struct Explicit
     dg::SparseTensor<Container> m_hh;
 
     const feltor::Parameters m_p;
-    double m_omega_source = 0., m_sheath_forcing = 0., m_wall_forcing = 0.;
+    double m_source_rate = 0., m_sheath_rate = 0., m_wall_rate = 0.;
     bool m_fixed_profile = true, m_reversed_field = false;
 
 };
@@ -282,8 +305,6 @@ template<class Grid, class IMatrix, class Matrix, class Container>
 void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
-    if( !(p.perp_diff == "viscous" || p.perp_diff == "hyperviscous") )
-        throw dg::Error(dg::Message(_ping_)<<"Warning! perp_diff value '"<<p.perp_diff<<"' not recognized!! I do not know how to proceed! Exit now!");
     //due to the various approximations bhat and mag not always correspond
     dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
     m_reversed_field = false;
@@ -322,8 +343,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
         }
     }
     else
-        throw std::runtime_error( "Warning! curvmode value '"+p.curvmode+"' not
-                recognized!! I don't know what to do! I exit!\n");
+        throw std::runtime_error( "Warning! curvmode value '"+p.curvmode+"' not recognized!! I don't know what to do! I exit!\n");
     dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
         m_curv[0], m_curv[1], m_curv[2], g);
     dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
@@ -460,9 +480,8 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_forcing = m_source = m_U_sheath = m_UE2 = m_temp2 = m_temp1 = m_temp0;
-    dg::assign( dg::evaluate( dg::one, g), m_masked );
-    m_apar = m_temp0;
+    m_source = m_sheathDotDirection = m_UE2 = m_temp2 = m_temp1 = m_temp0;
+    m_apar = m_wall = m_sheath = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
     m_plusN = m_minusN = m_minusU = m_plusU = m_minusP = m_plusP = m_phi;
@@ -639,7 +658,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar);
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_ampere, m_apar, m_temp0, m_p.eps_maxwell);
+        m_multi_ampere, m_apar, m_temp0, m_p.eps_ampere);
     m_old_apar.update( time, m_apar);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol[0]);
@@ -848,6 +867,126 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
                 1., yp[1][i]);
     }
 }
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
+    double t,
+    const std::array<std::array<Container,2>,2>& y,
+    const std::array<std::array<Container,2>,2>& fields,
+    std::array<std::array<Container,2>,2>& yp)
+{
+    if( m_fixed_profile )
+        dg::blas1::subroutine(
+            [] DG_DEVICE ( double& result, double tilde_n, double profne,
+                double source, double source_rate){
+                result = source_rate*source*(profne - tilde_n);
+                },
+            m_s[0][0], y[0][0], m_profne, m_source, m_source_rate);
+    else
+        dg::blas1::axpby( m_source_rate, m_source, 0., m_s[0][0]);
+    //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
+    dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
+    dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
+    // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
+    dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
+    m_lapperpP.set_chi( m_temp0);
+    m_lapperpP.symv( 1., m_phi[0], 1., m_s[0][1]);
+
+    // S_U += - U S_N/N
+    dg::blas1::pointwiseDot( -1.,  fields[1][0],  m_s[0][0], 0., m_temp0);
+    dg::blas1::pointwiseDot( -1.,  fields[1][1],  m_s[0][1], 0., m_temp1);
+    dg::blas1::pointwiseDivide( 1.,  m_temp0,  fields[0][0], 1., m_s[1][0]);
+    dg::blas1::pointwiseDivide( 1.,  m_temp1,  fields[0][1], 1., m_s[1][1]);
+
+    //Add all to the right hand side
+    dg::blas1::axpby( 1., m_s, 1.0, yp);
+}
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::add_rhs_penalization(
+        std::array<std::array<Container,2>,2>& yp)
+{
+    //mask right hand side in penalization region
+    for( unsigned i=0; i<2; i++)
+        for( unsigned j=0; j<2; j++)
+        {
+            if( m_p.penalize_wall && m_p.penalize_sheath)
+            {
+                dg::blas1::subroutine( []DG_DEVICE(
+                    double& rhs, double wall, double sheath){
+                        rhs *= (1.0-wall-sheath);
+                    }, yp[i][j], m_wall, m_sheath);
+            }
+            else if( m_p.penalize_wall)
+            {
+                dg::blas1::subroutine( []DG_DEVICE( double& rhs, double wall){
+                        rhs *= (1.0-wall); }, yp[i][j], m_wall);
+            }
+            else if( m_p.penalize_sheath)
+            {
+                dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
+                        rhs *= (1.0-sheath); }, yp[i][j], m_sheath);
+            }
+        }
+}
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
+        double t,
+        const std::array<std::array<Container,2>,2>& y,
+        const std::array<std::array<Container,2>,2>& fields,
+        std::array<std::array<Container,2>,2>& yp)
+{
+    // wall boundary conditions are zero so nothing to add
+    // add sheath boundary conditions
+    if( m_sheath_rate != 0)
+    {
+        //density
+        //Here, we need to find out where "downstream" is
+        auto computeDensityBC = [] DG_DEVICE
+            ( double nminus, double nplus, double sheathDotDirection)
+            {
+                if ( sheathDotDirection > 0 )
+                    return nminus*sheathDotDirection;
+                else
+                    return -nplus*sheathDotDirection;
+            };
+        for( unsigned i=0; i<2; i++)
+        {
+            if( m_reversed_field) //bphi negative (exchange + and -)
+                dg::blas1::evaluate( m_temp0, dg::equals(), computeDensityBC,
+                    m_plusN[i], m_minusN[i], m_sheathDotDirection);
+            else
+                dg::blas1::evaluate( m_temp0, dg::equals(), computeDensityBC,
+                    m_minusN[i], m_plusN[i], m_sheathDotDirection);
+            dg::blas1::axpby( m_sheath_rate, m_temp0, 1.,  yp[0][i]);
+        }
+        //compute sheath velocity
+        //velocity c_s
+        if( "insulating" == m_p.sheath_bc)
+        {
+            // u_e = +- sqrt(1+tau)
+            dg::blas1::axpby( m_sheath_rate*sqrt(1+m_p.tau[1]),
+                    m_sheathDotDirection, 1.,  yp[1][0]);
+        }
+        else // "bohm" == m_p.sheath_bc
+        {
+            //exp(-phi)
+            dg::blas1::transform( m_phi[0], m_temp0, dg::ExpProfX(1., 0., 1.));
+            dg::blas1::pointwiseDot( m_sheath_rate*sqrt(1+m_p.tau[1]),
+                    m_sheathDotDirection, m_temp0, 1.,  yp[1][0]);
+        }
+        // u_i = +- sqrt(1+tau)
+        dg::blas1::axpby( m_sheath_rate*sqrt(1+m_p.tau[1]),
+                m_sheathDotDirection, 1.,  yp[1][1]);
+    }
+    // now add wall and sheath penalization "damping" term
+    for( unsigned i=0; i<2; i++)
+    {
+        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, y[0][i],
+                -m_sheath_rate, m_sheath, y[0][i], 1., yp[0][i]);
+        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, fields[1][i],
+                -m_wall_rate, m_wall, fields[1][i], 1., yp[1][i]);
+    }
+
+}
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
@@ -892,9 +1031,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     DG_RANK0 std::cout << "## Compute phi and psi               took "<<timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic();
 
-    // Transform n-1 to n and n to logn
-    //dg::blas1::subroutine( routines::ComputeLogN(), y[0], m_fields[0], m_logn);
-
     // Transform n-1 to n (this computes both n_e and N_i)
     dg::blas1::transform( y[0], m_fields[0], dg::PLUS<double>(+1));
 
@@ -920,13 +1056,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
               << timer.diff() << "s\t A: "<<accu<<"s\n";
     timer.tic();
 
-    // Add parallel dynamics --- needs m_logn
+    // Add parallel dynamics
 #if FELTORPARALLEL == 1
 
     compute_parallel( t, y, m_fields, yp);
 
 #endif
 #if FELTORPERP == 1
+    //-------------Add perpendicular regularization--------------//
     for( unsigned i=0; i<2; i++)
     {
         compute_diffusiveN( 1., m_fields[0][i], m_temp0, m_temp1, 1., yp[0][i]);
@@ -946,82 +1083,17 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #endif
 
     //Add source terms
-    if( m_omega_source != 0 )
+    if( m_source_rate != 0 )
     {
-        if( m_fixed_profile )
-            dg::blas1::subroutine(
-                [] DG_DEVICE ( double& result, double tilde_n, double profne,
-                    double source, double omega_source){
-                    result = omega_source*source*(profne - tilde_n);
-                    },
-                m_s[0][0], y[0][0], m_profne, m_source, m_omega_source);
-        else
-            dg::blas1::axpby( m_omega_source, m_source, 0., m_s[0][0]);
-        //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
-        dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
-        dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
-        // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
-        dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
-        m_lapperpP.set_chi( m_temp0);
-        m_lapperpP.symv( 1., m_phi[0], 1., m_s[0][1]);
-
-        // S_U += - U S_N/N
-        dg::blas1::pointwiseDot( -1.,  m_fields[1][0],  m_s[0][0], 0., m_temp0);
-        dg::blas1::pointwiseDot( -1.,  m_fields[1][1],  m_s[0][1], 0., m_temp1);
-        dg::blas1::pointwiseDivide( 1.,  m_temp0,  m_fields[0][0], 1., m_s[1][0]);
-        dg::blas1::pointwiseDivide( 1.,  m_temp1,  m_fields[0][1], 1., m_s[1][1]);
-
-        //Add all to the right hand side
-        dg::blas1::axpby( 1., m_s, 1.0, yp);
+        // set m_s
+        add_source_terms( t, y, m_fields, yp);
     }
-    //mask right hand side in forcing region
-    dg::blas1::pointwiseDot( m_masked, yp[0][0], yp[0][0]);
-    dg::blas1::pointwiseDot( m_masked, yp[0][1], yp[0][1]);
-    dg::blas1::pointwiseDot( m_masked, yp[1][0], yp[1][0]);
-    dg::blas1::pointwiseDot( m_masked, yp[1][1], yp[1][1]);
-    // sheath boundary conditions
-    if( m_sheath_forcing != 0)
-    {
-        //density
-        //Here, we need to find out where "downstream" is
-        auto computeDensityBC = [] DG_DEVICE
-            ( double nminus, double nplus, double sheathDotDirection)
-            {
-                if ( sheathDotDirection > 0 )
-                    return nminus*sheathDotDirection;
-                else
-                    return -nplus*sheathDotDirection;
-            };
-        for( unsigned i=0; i<2; i++)
-        {
-            if( m_reversed_field) //bphi negative (exchange + and -)
-                dg::blas1::evaluate( m_temp0, dg::equals(), computeDensityBC,
-                    m_plusN[i], m_minusN[i], m_U_sheath);
-            else
-                dg::blas1::evaluate( m_temp0, dg::equals(), computeDensityBC,
-                    m_minusN[i], m_plusN[i], m_U_sheath);
-            dg::blas1::axpby( m_sheath_forcing, m_temp0, 1.,  yp[0][i]);
-        }
-        //compute sheath velocity
-        //velocity c_s
-        if( "insulating" == m_p.sheath_bc)
-        {
-            // u_e = +- sqrt(1+tau)
-            dg::blas1::axpby( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, 1.,  yp[1][0]);
-        }
-        else // "bohm" == m_p.sheath_bc
-        {
-            //exp(-phi)
-            dg::blas1::transform( m_phi[0], m_temp0, dg::ExpProfX(1., 0., 1.));
-            dg::blas1::pointwiseDot( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, m_temp0, 1.,  yp[1][0]);
-        }
-        // u_i = +- sqrt(1+tau)
-        dg::blas1::axpby( m_sheath_forcing*sqrt(1+m_p.tau[1]), m_U_sheath, 1.,  yp[1][1]);
-    }
-    dg::blas1::pointwiseDot( -1., m_forcing, y[0][0], 1., yp[0][0]);
-    dg::blas1::pointwiseDot( -1., m_forcing, y[0][1], 1., yp[0][1]);
-    dg::blas1::pointwiseDot( -1., m_forcing, m_fields[1][0], 1., yp[1][0]);
-    dg::blas1::pointwiseDot( -1., m_forcing, m_fields[1][1], 1., yp[1][1]);
+
+    add_rhs_penalization( yp);
+
+    // use m_plusN and m_minusN
+    add_wall_and_sheath_terms( t, y, m_fields, yp);
+
 
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{

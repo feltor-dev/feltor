@@ -176,9 +176,10 @@ void jacobian(
 
 struct Variables{
     feltor::Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& f;
+    std::array<std::array<dg::x::DVec,2>,2>& y0;
     feltor::Parameters p;
     dg::geo::TokamakMagneticField mag;
-    std::array<dg::x::DVec, 3> gradPsip;
+    const std::array<dg::x::DVec, 3>& gradPsip;
     std::array<dg::x::DVec, 3> tmp;
     dg::x::DVec hoo; //keep hoo there to avoid pullback
 };
@@ -200,8 +201,7 @@ struct Record_static{
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //Here is a list of static (time-independent) 3d variables that go into the output
-//Except xc, yc, and zc these are redundant since we have geometry_diag.cu
-//MW: maybe it's a test of sorts
+//Cannot be feltor internal variables
 std::vector<Record_static> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
@@ -224,22 +224,6 @@ std::vector<Record_static> diagnostics3d_static_list = {
     { "Psip", "Flux-function psi",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
              result = dg::pullback( v.mag.psip(), grid);
-        }
-    },
-    { "Nprof", "Density profile (that the source may force)",
-        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            result = dg::evaluate( dg::zero, grid);
-            bool fixed_profile;
-            dg::x::HVec source = feltor::source_profiles.at(v.p.source_type)(
-                fixed_profile, result, grid, v.p, v.mag);
-        }
-    },
-    { "Source", "Source region",
-        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            bool fixed_profile;
-            dg::x::HVec profile;
-            result = feltor::source_profiles.at(v.p.source_type)(
-                fixed_profile, profile, grid, v.p, v.mag);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
@@ -307,8 +291,8 @@ std::vector<Record> diagnostics3d_list = {
 };
 
 //Here is a list of static (time-independent) 2d variables that go into the output
-//MW: These are redundant since we have geometry_diag.cu -> remove ? if geometry_diag works as expected (I guess it can also be a test of sorts)
 //MW: if they stay they should be documented in feltor.tex
+//MW: we should add initialization and source terms here
 //( we make 3d variables here but only the first 2d slice is output)
 std::vector<Record_static> diagnostics2d_static_list = {
     { "Psip2d", "Flux-function psi",
@@ -316,9 +300,49 @@ std::vector<Record_static> diagnostics2d_static_list = {
             result = dg::pullback( v.mag.psip(), grid);
         }
     },
+    { "PsipR2d", "Flux-function psi R-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.psipR(), grid);
+        }
+    },
+    { "PsipZ2d", "Flux-function psi Z-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.psipZ(), grid);
+        }
+    },
+    { "PsipRR2d", "Flux-function psi RR-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.psipRR(), grid);
+        }
+    },
+    { "PsipRZ2d", "Flux-function psi RZ-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.psipRZ(), grid);
+        }
+    },
+    { "PsipZZ2d", "Flux-function psi ZZ-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.psipZZ(), grid);
+        }
+    },
     { "Ipol", "Poloidal current",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
             result = dg::pullback( v.mag.ipol(), grid);
+        }
+    },
+    { "IpolR", "Poloidal current R-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.ipolR(), grid);
+        }
+    },
+    { "IpolZ", "Poloidal current Z-derivative",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( v.mag.ipolZ(), grid);
+        }
+    },
+    { "Rho_p", "Normalized Poloidal flux label",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::pullback( dg::geo::RhoP( v.mag), grid);
         }
     },
     { "Bmodule", "Magnetic field strength",
@@ -328,60 +352,111 @@ std::vector<Record_static> diagnostics2d_static_list = {
     },
     { "Divb", "The divergence of the magnetic unit vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            result = v.f.divb();
+            dg::assign( v.f.divb(), result);
         }
     },
     { "InvB", "Inverse of Bmodule",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            result = v.f.binv();
+            dg::assign( v.f.binv(), result);
         }
     },
     { "CurvatureKappaR", "R-component of the Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            result = v.f.curvKappa()[0];
+            dg::assign( v.f.curvKappa()[0], result);
         }
     },
     { "CurvatureKappaZ", "Z-component of the Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.curvKappa()[1];
+            dg::assign( v.f.curvKappa()[1], result);
         }
     },
     { "CurvatureKappaP", "Contravariant Phi-component of the Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.curvKappa()[2];
+            dg::assign( v.f.curvKappa()[2], result);
         }
     },
     { "DivCurvatureKappa", "Divergence of the Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.divCurvKappa();
+            dg::assign( v.f.divCurvKappa(), result);
         }
     },
     { "CurvatureR", "R-component of the curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.curv()[0];
+            dg::assign( v.f.curv()[0], result);
         }
     },
     { "CurvatureZ", "Z-component of the full curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.curv()[1];
+            dg::assign( v.f.curv()[1], result);
         }
     },
     { "CurvatureP", "Contravariant Phi-component of the full curvature vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.curv()[2];
+            dg::assign( v.f.curv()[2], result);
         }
     },
     { "bphi", "Contravariant Phi-component of the magnetic unit vector",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
-            result = v.f.bphi();
+            dg::assign( v.f.bphi(), result);
+        }
+    },
+    { "BHatR", "R-component of the magnetic field unit vector",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
+            result = dg::pullback( dg::geo::BHatR(v.mag), grid);
+        }
+    },
+    { "BHatZ", "Z-component of the magnetic field unit vector",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
+            result = dg::pullback( dg::geo::BHatZ(v.mag), grid);
+        }
+    },
+    { "BHatP", "P-component of the magnetic field unit vector",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
+            result = dg::pullback( dg::geo::BHatP(v.mag), grid);
         }
     },
     {"NormGradPsip", "Norm of gradient of Psip",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
             result = dg::pullback(
-                dg::geo::SquareNorm( dg::geo::createGradPsip(v.mag), dg::geo::createGradPsip(v.mag)), grid);
+                dg::geo::SquareNorm( dg::geo::createGradPsip(v.mag),
+                    dg::geo::createGradPsip(v.mag)), grid);
         }
-    }
+    },
+    { "Wall", "Wall Region",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.f.get_wall(), result);
+        }
+    },
+    { "Sheath", "Sheath Region",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.f.get_sheath(), result);
+        }
+    },
+    { "SheathDotDirection", "Sheath Region Dot Direction of field lines",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.f.get_sheathDotDirection(), result);
+        }
+    },
+    { "Nprof", "Density profile (that the source may force)",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.f.get_source_prof(), result);
+        }
+    },
+    { "Source", "Source region",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.f.get_source(), result);
+        }
+    },
+    { "neinit", "Initial condition for electrons",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.y0[0][0], result);
+        }
+    },
+    { "niinit", "Initial condition for ions",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.y0[0][1], result);
+        }
+    },
 };
 // and here are all the 2d outputs we want to produce (currently ~ 100)
 std::vector<Record> diagnostics2d_list = {
@@ -773,7 +848,6 @@ std::vector<Record> diagnostics2d_list = {
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
             );
-            dg::blas1::scal( result, -v.p.nu_perp);
         }
     },
     {"leeparallel_tt", "Parallel electron energy dissipation (Time average)", true,
