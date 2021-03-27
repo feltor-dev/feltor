@@ -16,7 +16,7 @@ The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
 \textsc{Feltor} is a program for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
 
 The purpose of this document is to describe the programs
-contained in \texttt{path/to/feltor/src/feltor}.
+contained in \mintinline{bash}{path/to/feltor/src/feltor}.
  The goal is to provide
 information such that there is no need to look
 into the source code on the one side and connect
@@ -28,20 +28,20 @@ the presented formulas to relevant journal publications on the other.
 
 \mint{bash}|cd path/to/feltor/src/feltor|
 \subsection{Compilation}
-Compile \texttt{feltor.cu} for shared memory. glfw or netcdf output:
+Compile \mintinline{bash}{feltor.cu} for shared memory. glfw or netcdf output:
 \mint{bash}|make feltor device=[gpu,omp] # choose one of gpu or omp|
-\noindent Compile \texttt{feltor.cu} for shared memory system. Only {\it netcdf} output (no glfw):
+\noindent Compile \mintinline{bash}{feltor.cu} for shared memory system. Only {\it netcdf} output (no glfw):
 \mint{bash}|make feltor_hpc device=[gpu,omp] # choose one of gpu or omp|
-\noindent Compile \texttt{feltor.cu} for distributed memory systems. Only {\it netcdf} output (no glfw):
+\noindent Compile \mintinline{bash}{feltor.cu} for distributed memory systems. Only {\it netcdf} output (no glfw):
 \mint{bash}|make feltor_mpi device=[gpu,omp,skl] # choose one of gpu, omp or skl|
 \begin{tcolorbox}[title=Note]
-    \texttt{feltor}, \texttt{feltor\_hpc} and \texttt{feltor\_mpi} are
+    \mintinline{bash}{feltor}, \mintinline{bash}{feltor_hpc} and \mintinline{bash}{feltor_mpi} are
     compilations of the same program for different hardware.
 \end{tcolorbox}
-\noindent Compile \texttt{feltordiag.cu} for shared memory systems.
+\noindent Compile \mintinline{bash}{feltordiag.cu} for shared memory systems.
 \mint{bash}|make feltordiag device=[gpu,omp,skl] # choose one of gpu, omp or skl|
 \begin{tcolorbox}[title=Note]
-    All our codes link to the \texttt{libjsoncpp} library and the serial \texttt{libnetcdf} library. \texttt{feltor} also links to \texttt{libglfw3}
+    All our codes link to the \mintinline{bash}{libjsoncpp} library and the serial \mintinline{bash}{libnetcdf} library. \mintinline{bash}{feltor} also links to \mintinline{bash}{libglfw3}
 \end{tcolorbox}
 \subsection{Usage}
 \begin{minted}{bash}
@@ -53,11 +53,11 @@ echo npx npy npz | mpirun -n np ./feltor_mpi input.json output.nc [initial.nc]
 
 
 \begin{tcolorbox}[title=Note]
-\texttt{feltor\_mpi} expects the
+    \mintinline{bash}{feltor_mpi} expects the
 partition of the total number of processes np into the three directions x, y and z
 as an input from the command line.
 \end{tcolorbox}
-Make sure that \texttt{npx*npy*npz==np} and that
+Make sure that \mintinline{bash}{npx*npy*npz==np} and that
 they evenly divide the number of grid points in the respective direction! The
 number of stages in the multigrid algorithm and the compression parameters further
 restrict this choice. Also note that the number of processes in a direction must
@@ -69,19 +69,19 @@ Output file format: \href{https://www.unidata.ucar.edu/software/netcdf/docs/}{ne
 \href{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}{CF Conventions CF-1.7}
  $\rightarrow$ Section~\ref{sec:output_file} \\
 
- The programs \texttt{feltor}, \texttt{feltor\_hpc} and \texttt{feltor\_mpi}
- expect an input file \texttt{input.json}.
+ The programs \mintinline{bash}{feltor}, \mintinline{bash}{feltor_hpc} and \mintinline{bash}{feltor_mpi}
+ expect an input file \mintinline{bash}{input.json}.
  The possible fields in the input file are described in Section~\ref{sec:input_file}.
- The program \texttt{feltor} plots the results directly to the screen using \texttt{glfw3}.
- The programs \texttt{feltor\_hpc} and \texttt{feltor\_mpi} write results into
-the output file \texttt{output.nc}.
+ The program \mintinline{bash}{feltor} plots the results directly to the screen using \mintinline{bash}{glfw3}.
+ The programs \mintinline{bash}{feltor_hpc} and \mintinline{bash}{feltor_mpi} write results into
+ the output file \mintinline{bash}{output.nc}.
  The output file is described in Section~\ref{sec:output_file}.
- The optional file \texttt{initial.nc} can be used to initialize a simulation from an existing file.
+ The optional file \mintinline{bash}{initial.nc} can be used to initialize a simulation from an existing file.
  This behavior is described in Section~\ref{sec:restart_file}.
  All programs write unstructured human readable performance information of the running simulation
- to \texttt{std::cout}.
+ to \mintinline{c++}{std::cout}.
  \\
- \texttt{feltordiag} is used to compute post-processing diagnostics that are
+ \mintinline{bash}{feltordiag} is used to compute post-processing diagnostics that are
  stored in a separate file, see Section~\ref{sec:diagnostics}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -730,7 +730,7 @@ I_p(R,Z):=I_0
 \end{align*}
 with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times[0,2\pi]$.
 We then symbolically compute (with the help of Mathematica) source terms that we insert to the right hand side of
-the corresponding equation in code (\texttt{manufactured.h}) and simulate from $t=0...10^{-3}$.
+the corresponding equation in code (\mintinline{c}{manufactured.h}) and simulate from $t=0...10^{-3}$.
 By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
 the convergence of the DG discretized terms from our parallel derivative
 we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
@@ -1348,9 +1348,9 @@ The idea is that you can start with zero density and evolve the profile purely
 with the source. Destabilization of the profile works if you put a turbulent
 bath on top of it.
 \begin{tcolorbox}[title=Note]
-See the output \texttt{sne\_tt\_ifs} in \texttt{feltordiag} for how much mass
+    See the output \mintinline{c}{sne_tt_ifs} in \mintinline{bash}{feltordiag.cu} for how much mass
 the source with the parameters below generates and compare to
-\texttt{jsne\_tt\_fsa} to see how much mass is lost.
+\mintinline{c}{jsne_tt_fsa} to see how much mass is lost.
 \end{tcolorbox}
 \begin{minted}[texcomments]{js}
 "source":
@@ -1478,7 +1478,7 @@ we implement an artificial viscosity of order $s$ Eq.~\eqref{eq:perpdiffNU}
 Simply set the diffusion to 0 if you do not want any regularization.
 \begin{tcolorbox}[title=Note]
     Having to make the timestep smaller due to viscosity
-    is a clear warning that nu\_perp is too large for the chosen resolution.
+    is a clear warning that \mintinline{json}{nu_perp} is too large for the chosen resolution.
 \end{tcolorbox}
 
 \subsection{Elliptic solvers}
@@ -1593,13 +1593,13 @@ determine the physical parameter regime we are in.
     // integrating selected quantities in time during the simulation is how we
     // maintain the time-resolution in the file output (cf.\ref{sec:output_file}).
     // Choose as low as you can get away with (between 1 and 10).
-    "itstp"  : 4, // { \tt inner\_loop*itstp} is the number of
+    "itstp"  : 4, // inner\_loop*itstp is the number of
     // timesteps between file outputs (2d and 3d quantities); Note that 1d and
     // 0d quantities can only be computed post-simulation since we can't
     // compute flux-integrals in parallel in MPI.
     "maxout" : 100 // Total Number of fields outputs excluding first
-    // (The total number of time steps is
-    // {\tt maxout$\cdot$itstp$\cdot$inner\_loop})
+    // The total number of time steps is
+    // maxout*itstp*inner\_loop
     // If you want to let the simulation run for a certain time instead just
     // choose this parameter very large and let the simulation hit the
     // time-limit. ONLY FOR NETCDF
@@ -1641,7 +1641,7 @@ We follow
 and write according attributes into the file.
 
 \begin{tcolorbox}[title=Note]
-The command \texttt{ncdump -h output.nc} gives a full list of what a file contains.
+    The command \mintinline{bash}{ncdump -h output.nc} gives a full list of what a file contains.
 \end{tcolorbox}
 Here, we list the content without attributes
 since the internal netcdf information does not display equations.
@@ -1676,10 +1676,10 @@ X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\PA{ X }$
 Eq.~\eqref{eq:phi_average} \\
 Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs, Simpson's rule) selected plane
 $\int_{t_0}^{t_1}\d t Y(\varphi=0) $
-where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
+where $t_1 - t_0 = $ \mintinline{c}{\tt dt*inner_loop*itstp} and {\tt itstp} is the number of discretization points\\
 Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs, Simpson's rule) toroidal average (Eq.~\eqref{eq:phi_average})
 $\int_{t_0}^{t_1}\d t \PA{ Y }$
-where $t_1 - t_0 = ${\tt dt*inner\_loop*itstp} and {\tt itstp} is the number of discretization points\\
+where $t_1 - t_0 = $ \mintinline{c}{\tt dt*inner_loop*itstp} and {\tt itstp} is the number of discretization points\\
 \bottomrule
 \end{longtable}
 where
@@ -2023,15 +2023,17 @@ where we neglected the term $\RA{n\vec u\cn \mathcal I_0}$ in the continuity equ
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
-\texttt{feltor/src/feltor/feltordiag.cu}
- reads one or more previously generated simulation file(s) \texttt{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a single second output file \texttt{output.nc} described as follows. \\
-Compilation\\
-\texttt{make feltordiag device=\{gpu,omp\}} \\
-Usage \\
-\texttt{./feltordiag input0.nc ... inputN.nc output.nc} \\
+\mintinline{bash}{feltor/src/feltor/feltordiag.cu}
+reads one or more previously generated simulation file(s) \mintinline{bash}{input0.nc
+ ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a
+ single second output file \mintinline{bash}{output.nc} described as follows. \\
+Compilation
+\mint{bash}{make feltordiag device={gpu,omp}}
+\noindent Usage
+\mint{bash}{./feltordiag input0.nc ... inputN.nc output.nc}
 
 \begin{tcolorbox}[title=Note]
-\texttt{feltordiag} refuses to overwrite existing files in order to protect against data loss in case of accidental spelling
+\mintinline{bash}{feltordiag} refuses to overwrite existing files in order to protect against data loss in case of accidental spelling
 errors or other careless mistakes.
 \end{tcolorbox}
 
@@ -2073,7 +2075,7 @@ Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface av
 \end{longtable}
 where Z $\in$ \{X, Y\_tt\}
 \begin{tcolorbox}[title=Note]
-\texttt{feltoridag} converts all $jsX$ quantities into $jvX$
+    \mintinline{bash}{feltoridag} converts all $jsX$ quantities into $jvX$
 by multiplying $\d v/\d \psi_p$
 in the sense that $\vec j\cn v  = \vec j \cn \psi_p \d v/\d\psi_p$.
 \end{tcolorbox}
@@ -2369,10 +2371,10 @@ the fields with the results of a previous simulation.
 There are two possibilities to restart a simulation
 \begin{enumerate}
     \item setting the option "restart" in the input file in the init type field
-        and providing the path to an \texttt{initial.nc} netcdf file in the
+        and providing the path to an \mintinline{bash}{initial.nc} netcdf file in the
         corresponding file field (see Section~\ref{sec:initial})
-    \item providing an additional netcdf file \texttt{initial.nc}
-        to \texttt{feltor}, \texttt{feltor\_hpc} or \texttt{feltor\_mpi} on the
+    \item providing an additional netcdf file \mintinline{bash}{initial.nc}
+        to \mintinline{bash}{feltor}, \mintinline{bash}{feltor_hpc} or \mintinline{bash}{feltor_mpi} on the
         command line. This mode takes precedence over the first because it
         subsequently ignores the "init" field of the input file.
 \end{enumerate}
@@ -2384,11 +2386,11 @@ simulation that ran with a specific set of parameters as an initial condition
 for another simulation with different parameters.
 \begin{tcolorbox}[title=Note]
     The restart file is only used to initialize $n_e$, $N_i$, $u_{\parallel,e}$
-    and $U_{\parallel,i}$ with the latest timestep in \texttt{initial.nc}, all
+    and $U_{\parallel,i}$ with the latest timestep in \mintinline{bash}{initial.nc}, all
     other parameters (magnetic field, profiles, resolutions, sources, etc.)
     are still read from the input json file.  The user is responsible
     that these are consistent with the paramters in the existing
-    \texttt{initial.nc} file.
+    \mintinline{bash}{initial.nc} file.
 \end{tcolorbox}
 
 \begin{tcolorbox}[title=Note]
@@ -2405,9 +2407,9 @@ the output file that in contrast to the other fields are not compressed.
 We try to discourage
 appending new results to an exisiting file directly, because if for some reason
 the cluster crashes and the file is corrupted the whole simulation is lost.
-It is safer to just merge files afterwards with\\
-\texttt{ncrcat output1.nc output2.nc output.nc}\\
-from the \texttt{nco} package
+It is safer to just merge files afterwards with
+\mint{bash}{ncrcat output1.nc output2.nc output.nc}
+from the \mintinline{bash}{nco} package
 \end{tcolorbox}
 \section{Troubleshooting}
 All previously mentioned codes can crash for various reasons. Here,
@@ -2418,15 +2420,15 @@ termination
 \rowcolor{gray!50}\textbf{Error condition} &  \textbf{Handling} \\ \midrule
 An input file does not exist or is otherwise invalid
 &
-Program terminates with an error message to \texttt{std::cerr}. \texttt{feltordiag.cu} writes an error to \texttt{std::cerr} and continues with the next input file.
+Program terminates with an error message to \mintinline{c}{std::cerr}. \mintinline{bash}{feltordiag.cu} writes an error to \mintinline{c}{std::cerr} and continues with the next input file.
     \\
 An input netcdf file misses a required field
 &
-Program terminates with a NetCDF error message to \texttt{std::cerr}
+Program terminates with a NetCDF error message to \mintinline{c}{std::cerr}
     \\
 No write permission for the output file location
 &
-Program terminates with an error message to \texttt{std::cerr}
+Program terminates with an error message to \mintinline{c}{std::cerr}
     \\
 An input Json file misses a key or contains a typo in a key
 &
@@ -2441,11 +2443,11 @@ which is $0$ if not otherwise specified.
     \\
     An input Json file has an invalid value, e.g. a typo in a string value
 &
-Invalid values lead to termination with an error message to \texttt{std::cerr}, once and if program tries to use the value
+Invalid values lead to termination with an error message to \mintinline{c}{std::cerr}, once and if program tries to use the value
     \\
     Number of processes in $x$, $y$ and $z$ direction does not match total number of Processes
 &
-Program terminates with an error message to \texttt{std::cerr}.
+Program terminates with an error message to \mintinline{c}{std::cerr}.
     \\
     $2^{s-1}$ or $c_x$ or $c_y$ does not evenly divide $N_x$ and $N_y$, where $s$ is the number of stages in the multigrid algorithm.
 &
@@ -2457,7 +2459,7 @@ Program terminates on failed assert
     \\
 An MPI error occurs
 &
-Program crashes horribly printing cryptic error messages (stack trace) to \texttt{std::cerr}
+Program crashes horribly printing cryptic error messages (stack trace) to \mintinline{c}{std::cerr}
     \\
 A numerical instability occurs
 &
