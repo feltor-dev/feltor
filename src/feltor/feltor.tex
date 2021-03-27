@@ -26,27 +26,31 @@ the presented formulas to relevant journal publications on the other.
 
 \section{Quick-start}
 
-\texttt{cd path/to/feltor/src/feltor}
+\mint{bash}|cd path/to/feltor/src/feltor|
 \subsection{Compilation}
-Compile \texttt{feltor.cu} (only shared memory, glfw or netcdf output)\\
-\texttt{make feltor device=\{gpu,omp\}} \\
-\\
-Compile \texttt{feltor.cu} for shared memory system. Only {\it serial netcdf} output (no glfw). \\
-\texttt{make feltor\_hpc device=\{gpu,omp\}}\\
-\\
-Compile \texttt{feltor.cu} for distributed memory systems. Only {\it serial netcdf} output (no glfw).\\
-\texttt{make feltor\_mpi device=\{gpu,omp,skl\}} \\
+Compile \texttt{feltor.cu} for shared memory. glfw or netcdf output:
+\mint{bash}|make feltor device=[gpu,omp] # choose one of gpu or omp|
+\noindent Compile \texttt{feltor.cu} for shared memory system. Only {\it netcdf} output (no glfw):
+\mint{bash}|make feltor_hpc device=[gpu,omp] # choose one of gpu or omp|
+\noindent Compile \texttt{feltor.cu} for distributed memory systems. Only {\it netcdf} output (no glfw):
+\mint{bash}|make feltor_mpi device=[gpu,omp,skl] # choose one of gpu, omp or skl|
 \begin{tcolorbox}[title=Note]
     \texttt{feltor}, \texttt{feltor\_hpc} and \texttt{feltor\_mpi} are
     compilations of the same program for different hardware.
 \end{tcolorbox}
-Compile \texttt{feltordiag.cu} for shared memory systems. Needs {\it serial netcdf}\\
-\texttt{make feltordiag device=\{gpu,omp,skl\}}
+\noindent Compile \texttt{feltordiag.cu} for shared memory systems.
+\mint{bash}|make feltordiag device=[gpu,omp,skl] # choose one of gpu, omp or skl|
+\begin{tcolorbox}[title=Note]
+    All our codes link to the \texttt{libjsoncpp} library and the serial \texttt{libnetcdf} library. \texttt{feltor} also links to \texttt{libglfw3}
+\end{tcolorbox}
 \subsection{Usage}
-\texttt{./feltor input.json [output.nc] [initial.nc]} \\
-\texttt{./feltor\_hpc input.json output.nc [initial.nc]} \\
-\texttt{echo npx npy npz | mpirun -n np ./feltor\_mpi input.json output.nc [initial.nc]} \\
-\texttt{./feltordiag output.nc diag\_output.nc}
+\begin{minted}{bash}
+./feltor input.json [output.nc] [initial.nc]
+./feltor_hpc input.json output.nc [initial.nc]
+echo npx npy npz | mpirun -n np ./feltor_mpi input.json output.nc [initial.nc]
+./feltordiag output.nc diag_output.nc
+\end{minted}
+
 
 \begin{tcolorbox}[title=Note]
 \texttt{feltor\_mpi} expects the
@@ -1528,18 +1532,27 @@ There seems to be no benefit in using the grid refinement technique except when 
     // values higher than [1,1] take longer to solve, but possibly stabilize
     // the simulation
     "rk4eps" : 1e-6, //Accuracy of fieldline integrator. The default is reasonable
-    "bc" : "along_field", // use ds\_bc\_along\_field function for parallel derivatives
-    "bc" : "perp", // use perpendicular interpolation technique
     "periodify" : true
     // Indicate if flux function is periodified beyond grid boundaries such that
     // the contours are perpendicular to the boundaries. This is not entirely
-    // consistent but works well for small toroidal resolution
-    // Does not have any effect for the "along\_field" mode
+    // consistent but works well for small Nz
+    // Does not have an effect on derivatives for the "along\_field" mode
+    // (but has an effect on field-aligning init and source)
+
+    "bc" : "along_field", // use ds\_bc\_along\_field function for parallel
+    // derivatives, only valid if boundary conditions for density, potential and
+    // parallel velocity are each either "dg::DIR" or "dg::NEU" in both directions
+    "bc" : "perp", // use perpendicular interpolation technique to implement
+    // boundary conditions
 }
 \end{minted}
-% Check periodify field
-% bc_along_field ?
 
+\begin{tcolorbox}[title=Note]
+The along\_field boundary condition option saves memory because then we can use
+the same FCI object for all quantities.
+\end{tcolorbox}
+
+% Check periodify field
 
 \subsection{Parameters in equations}
 These parameters, together with the $R_0$ parameter in the magnetic\_field params
@@ -2357,11 +2370,11 @@ There are two possibilities to restart a simulation
 \begin{enumerate}
     \item setting the option "restart" in the input file in the init type field
         and providing the path to an \texttt{initial.nc} netcdf file in the
-        corresponding file field
+        corresponding file field (see Section~\ref{sec:initial})
     \item providing an additional netcdf file \texttt{initial.nc}
         to \texttt{feltor}, \texttt{feltor\_hpc} or \texttt{feltor\_mpi} on the
-        command line. This mode takes precedence over the firstl because it
-        ignores the "init" field of the input file.
+        command line. This mode takes precedence over the first because it
+        subsequently ignores the "init" field of the input file.
 \end{enumerate}
 The intention behind the two different modes is that there are two different
 restarting scenarios. In the first you have one input file that you just want
@@ -2370,12 +2383,12 @@ simulation into several smaller parts. In the second you want to use a
 simulation that ran with a specific set of parameters as an initial condition
 for another simulation with different parameters.
 \begin{tcolorbox}[title=Note]
-    The restart file is only used to initialize $n_e$, $N_i$, $u_{\parallel,e}$ and
-    $U_{\parallel,i}$ with the latest timestep, all parameters (magnetic field,
-    profiles, resolutions, sources, etc.) except "init" are still read from the input
-    json file.
-The user is responsible that these are consistent with the paramters
-in the existing \texttt{initial.nc} file.
+    The restart file is only used to initialize $n_e$, $N_i$, $u_{\parallel,e}$
+    and $U_{\parallel,i}$ with the latest timestep in \texttt{initial.nc}, all
+    other parameters (magnetic field, profiles, resolutions, sources, etc.)
+    are still read from the input json file.  The user is responsible
+    that these are consistent with the paramters in the existing
+    \texttt{initial.nc} file.
 \end{tcolorbox}
 
 \begin{tcolorbox}[title=Note]

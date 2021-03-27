@@ -71,7 +71,8 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cerr << e.what()<<std::endl;
         abort_program();
     }
-    if( js["magnetic_field"][ "input"].asString() == "file")
+    std::string geometry_params = js["magnetic_field"]["input"].asString();
+    if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["path"].asString();
         try{
@@ -84,6 +85,11 @@ int main( int argc, char* argv[])
             abort_program();
         }
     }
+    else if( geometry_params != "params")
+    {
+        DG_RANK0 std::cerr << "Error: Unknown magnetic field input '"<<geometry_params<<"'. Exit now!\n";
+        abort_program();
+    }
     const feltor::Parameters p( js);
     DG_RANK0 std::cout << js.asJson() <<  std::endl;
     std::string inputfile = js.asJson().toStyledString();
@@ -95,8 +101,8 @@ int main( int argc, char* argv[])
                 js["boundary"]["wall"], wall, transition);
     }catch(std::runtime_error& e)
     {
-        std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
-        std::cerr <<e.what()<<std::endl;
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        DG_RANK0 std::cerr <<e.what()<<std::endl;
         abort_program();
     }
 #ifdef WITH_MPI
@@ -227,7 +233,7 @@ int main( int argc, char* argv[])
             p.source_rate, dg::construct<dg::x::DVec>(source_profile)
         );
     }catch ( std::out_of_range& error){
-        std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
+        DG_RANK0 std::cerr << "Warning: source_type parameter '"<<p.source_type<<"' not recognized! Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
         abort_program();
     }
 
@@ -241,8 +247,8 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
         }catch( std::exception& e)
         {
-            std::cerr << "ERROR creating file "<<file_name<<std::endl;
-            std::cerr << e.what()<<std::endl;
+            DG_RANK0 std::cerr << "ERROR creating file "<<file_name<<std::endl;
+            DG_RANK0 std::cerr << e.what()<<std::endl;
             abort_program();
         }
         /// Set global attributes

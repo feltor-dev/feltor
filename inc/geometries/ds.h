@@ -634,8 +634,8 @@ void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
  * @copydoc hide_ds_freestanding
  */
 template<class FieldAligned, class container>
-void dss_centered( const FieldAligned& fa, double alpha, const container&
-        fm,const container& f, const container& fp, double beta, container& g)
+void dss_centered( const FieldAligned& fa, double alpha, const container& fm,
+        const container& f, const container& fp, double beta, container& g)
 {
     dg::blas1::subroutine( [ alpha, beta]DG_DEVICE(
         double& dssf, double fm, double fo, double fp, double hm, double hp)

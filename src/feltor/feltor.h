@@ -80,19 +80,36 @@ struct Explicit
         return m_dA;
     }
     void compute_dsN (int i, Container& dsN) const {
-        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusN[i], m_fields[0][i],
-                m_plusN[i], 0., dsN, dg::NEU, {0,0});
+        if( m_p.fci_bc == "along_field")
+            dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusN[i],
+                    m_fields[0][i], m_plusN[i], 0., dsN, m_p.bcxN, {0,0});
+        else
+            dg::geo::ds_centered( m_fa_N, 1., m_minusN[i],
+                    m_fields[0][i], m_plusN[i], 0., dsN);
     }
     void compute_dsU (int i, Container& dsU) const {
-        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusU[i], m_fields[1][i],
-                m_plusU[i], 0., dsU, dg::NEU, {0,0});
+        if( m_p.fci_bc == "along_field")
+            dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusU[i],
+                    m_fields[1][i], m_plusU[i], 0., dsU, m_p.bcxU, {0,0});
+        else
+            dg::geo::ds_centered( m_fa_U, 1., m_minusU[i],
+                    m_fields[1][i], m_plusU[i], 0., dsU);
     }
     void compute_dsP (int i, Container& dsP) const {
-        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusP[i], m_phi[i],
-                m_plusP[i], 0.0, dsP, dg::DIR, {0,0});
+        if( m_p.fci_bc == "along_field")
+            dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusP[i],
+                    m_phi[i], m_plusP[i], 0.0, dsP, m_p.bcxP, {0,0});
+        else
+            dg::geo::ds_centered( m_fa_P, 1., m_minusP[i],
+                    m_phi[i], m_plusP[i], 0.0, dsP);
     }
     void compute_dssU(int i, Container& dssU) {
-        dg::geo::dss_centered_bc_along_field( m_fa, 1., m_minusU[i], m_fields[1][i], m_plusU[i], 0., dssU, dg::NEU, {0,0});
+        if( m_p.fci_bc == "along_field")
+            dg::geo::dss_centered_bc_along_field( m_fa_N, 1., m_minusU[i],
+                m_fields[1][i], m_plusU[i], 0., dssU, m_p.bcxU, {0,0});
+        else
+            dg::geo::dss_centered( m_fa_U, 1., m_minusU[i],
+                m_fields[1][i], m_plusU[i], 0., dssU);
     }
     void compute_lapParU(int i, Container& lapU) {
         compute_dsU(i, m_temp0);
@@ -244,7 +261,7 @@ struct Explicit
     //matrices and solvers
     Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
     Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_P, m_dy_A, m_dz;
-    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa;//_P, m_fa_N, m_fa_U;
+    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa_N, m_fa_U, m_fa_P;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
@@ -325,22 +342,23 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     // do not construct FCI if we just want to calibrate
     if( !p.calibrate )
     {
-        m_fa.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
+        m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
-        //m_fa_N.construct( bhat, g, p.bcxN, p.bcyN, dg::geo::NoLimiter(),
-        //    p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
-        //if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
-        //    m_fa_U.construct( m_fa_N);
-        //else
-        //    m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
-        //        p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
-        //if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
-        //    m_fa_P.construct( m_fa_N);
-        //else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
-        //    m_fa_P.construct( m_fa_U);
-        //else
-        //    m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
-        //         p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+        if ( p.fci_bc == "perp")
+        {
+            if( p.bcxU == p.bcxN && p.bcyU == p.bcyN)
+                m_fa_U.construct( m_fa_N);
+            else
+                m_fa_U.construct( bhat, g, p.bcxU, p.bcyU, dg::geo::NoLimiter(),
+                    p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+            if( p.bcxP == p.bcxN && p.bcyP == p.bcyN)
+                m_fa_P.construct( m_fa_N);
+            else if( p.bcxP == p.bcxU && p.bcyP == p.bcyU)
+                m_fa_P.construct( m_fa_U);
+            else
+                m_fa_P.construct( bhat, g, p.bcxP, p.bcyP, dg::geo::NoLimiter(),
+                     p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz);
+        }
     }
 
     // in Poisson we take EPhi except for the true curvmode
@@ -774,14 +792,30 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     for( unsigned i=0; i<2; i++)
     {
 
-        m_fa( dg::geo::einsMinus, y[0][i], m_minusN[i]);
-        m_fa( dg::geo::einsPlus,  y[0][i], m_plusN[i]);
-        m_fa( dg::geo::einsMinus, fields[1][i], m_minusU[i]);
-        m_fa( dg::geo::einsPlus,  fields[1][i], m_plusU[i]);
-        m_fa( dg::geo::einsMinus, m_phi[i], m_minusP[i]);
-        m_fa( dg::geo::einsPlus,  m_phi[i], m_plusP[i]);
-        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusN[i], y[0][i], m_plusN[i], 0., m_temp0, dg::NEU, {0,0});
-        dg::geo::ds_centered_bc_along_field( m_fa, 1., m_minusU[i], fields[1][i], m_plusU[i], 0., m_temp1, dg::NEU, {0,0});
+        m_fa_N( dg::geo::einsMinus, y[0][i], m_minusN[i]);
+        m_fa_N( dg::geo::einsPlus,  y[0][i], m_plusN[i]);
+        if( m_p.fci_bc == "along_field")
+        {
+            m_fa_N( dg::geo::einsMinus, fields[1][i], m_minusU[i]);
+            m_fa_N( dg::geo::einsPlus,  fields[1][i], m_plusU[i]);
+            m_fa_N( dg::geo::einsMinus, m_phi[i], m_minusP[i]);
+            m_fa_N( dg::geo::einsPlus,  m_phi[i], m_plusP[i]);
+            dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusN[i],
+                    y[0][i], m_plusN[i], 0., m_temp0, m_p.bcxN, {0,0});
+            dg::geo::ds_centered_bc_along_field( m_fa_N, 1., m_minusU[i],
+                    fields[1][i], m_plusU[i], 0., m_temp1, m_p.bcxU, {0,0});
+        }
+        else
+        {
+            m_fa_U( dg::geo::einsMinus, fields[1][i], m_minusU[i]);
+            m_fa_U( dg::geo::einsPlus,  fields[1][i], m_plusU[i]);
+            m_fa_P( dg::geo::einsMinus, m_phi[i], m_minusP[i]);
+            m_fa_P( dg::geo::einsPlus,  m_phi[i], m_plusP[i]);
+            dg::geo::ds_centered( m_fa_N, 1., m_minusN[i], y[0][i], m_plusN[i],
+                    0., m_temp0);
+            dg::geo::ds_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i],
+                    0., m_temp1);
+        }
         //---------------------density--------------------------//
         //density: -Div ( NUb)
         dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i],
@@ -792,13 +826,26 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         // Burgers term: -U ds U
         dg::blas1::pointwiseDot(-1., fields[1][i], m_temp1, 1., yp[1][i]);
         // force terms: -tau/mu * ds N/N -1/mu * ds Phi
-        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp0, fields[0][i], 1., yp[1][i]);
-        dg::geo::ds_centered_bc_along_field( m_fa, -1./m_p.mu[i], m_minusP[i], m_phi[i], m_plusP[i], 1.0, yp[1][i], dg::DIR, {0,0});
+        dg::blas1::pointwiseDivide( -m_p.tau[i]/m_p.mu[i], m_temp0,
+                fields[0][i], 1., yp[1][i]);
+        if( m_p.fci_bc == "along_field")
+            dg::geo::ds_centered_bc_along_field( m_fa_N, -1./m_p.mu[i],
+                    m_minusP[i], m_phi[i], m_plusP[i], 1.0, yp[1][i],
+                    m_p.bcxP, {0,0});
+        else
+            dg::geo::ds_centered( m_fa_P, -1./m_p.mu[i], m_minusP[i],
+                m_phi[i], m_plusP[i], 1.0, yp[1][i]);
         // viscosity: + nu_par Delta_par U/N = nu_par ( Div b dsU + dssU)/N
         // Maybe factor this out in an operator splitting method? To get larger timestep
         dg::blas1::pointwiseDot(1., m_divb, m_temp1, 0., m_temp1);
-        dg::geo::dss_centered_bc_along_field( m_fa, 1., m_minusU[i], fields[1][i], m_plusU[i], 1., m_temp1, dg::NEU, {0,0});
-        dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i], 1., yp[1][i]);
+        if( m_p.fci_bc == "along_field")
+            dg::geo::dss_centered_bc_along_field( m_fa_N, 1., m_minusU[i],
+                fields[1][i], m_plusU[i], 1., m_temp1, m_p.bcxU, {0,0});
+        else
+            dg::geo::dss_centered( m_fa_U, 1., m_minusU[i],
+                fields[1][i], m_plusU[i], 1., m_temp1);
+        dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i],
+                1., yp[1][i]);
     }
 }
 

@@ -120,14 +120,15 @@ struct Parameters
             nu_parallel[1] = nu_parallel[1];
         }
         else
-            throw std::runtime_error( "physical viscosity "+viscosity+" not
-                    recognized!\n");
+            throw std::runtime_error( "ERROR: physical viscosity "+viscosity+" not recognized!\n");
 
 
         source_rate = 0.;
         if( js["source"].get("type", "zero").asString() != "zero")
             source_rate = js[ "source"].get( "rate", 0.).asDouble();
         sheath_bc       = js["sheath"].get("bc", "bohm").asString();
+        if( (sheath_bc != "bohm") && (sheath_bc != "insulating"))
+            throw std::runtime_error( "ERROR: Sheath bc "+sheath_bc+" not recognized!\n");
 
         bcxN = dg::str2bc(js["boundary"]["bc"][  "density"].get( 0, "").asString());
         bcyN = dg::str2bc(js["boundary"]["bc"][  "density"].get( 1, "").asString());
@@ -137,6 +138,19 @@ struct Parameters
         bcyP = dg::str2bc(js["boundary"]["bc"]["potential"].get( 1, "").asString());
         bcxA = dg::str2bc(js["boundary"]["bc"]["aparallel"].get( 0, "").asString());
         bcyA = dg::str2bc(js["boundary"]["bc"]["aparallel"].get( 1, "").asString());
+
+        if( fci_bc == "along_field")
+        {
+            if( bcxN != bcyN || bcxN == dg::DIR_NEU || bcxN == dg::NEU_DIR)
+                throw std::runtime_error( "ERROR: For along field fci boundary condition density bc must be either dg::NEU or dg::DIR in both directions!\n");
+            if( bcxU != bcyU || bcxU == dg::DIR_NEU || bcxU == dg::NEU_DIR)
+                throw std::runtime_error( "ERROR: For along field fci boundary condition velocity bc must be either dg::NEU or dg::DIR in both directions!\n");
+            if( bcxP != bcyP || bcxP == dg::DIR_NEU || bcxP == dg::NEU_DIR)
+                throw std::runtime_error( "ERROR: For along field fci boundary condition potential bc must be either dg::NEU or dg::DIR in both directions!\n");
+        }
+        else if( fci_bc != "perp")
+            throw std::runtime_error("Error! FCI bc '"+fci_bc+"' not recognized!\n";
+
 
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
         modify_B = penalize_wall = penalize_sheath = false;
