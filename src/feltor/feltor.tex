@@ -13,14 +13,14 @@ The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
 \maketitle
 
 \begin{abstract}
-\textsc{Feltor} is a program for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
+\textsc{Feltor} is a model for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
 
 The purpose of this document is to describe the programs
 contained in \mintinline{bash}{path/to/feltor/src/feltor}.
  The goal is to provide
 information such that there is no need to look
-into the source code on the one side and connect
-the presented formulas to relevant journal publications on the other.
+into the source code and connect
+the presented formulas to relevant journal publications.
 \end{abstract}
 \tableofcontents
 
@@ -40,6 +40,8 @@ Compile \mintinline{bash}{feltor.cu} for shared memory. glfw or netcdf output:
 \end{tcolorbox}
 \noindent Compile \mintinline{bash}{feltordiag.cu} for shared memory systems.
 \mint{bash}|make feltordiag device=[gpu,omp,skl] # choose one of gpu, omp or skl|
+\noindent Compile \mintinline{bash}{manufactured.cu} for shared memory systems.
+\mint{bash}|make manufactured device=[gpu,omp,skl] # choose one of gpu, omp or skl|
 \begin{tcolorbox}[title=Note]
     All our codes link to the \mintinline{bash}{libjsoncpp} library and the serial \mintinline{bash}{libnetcdf} library. \mintinline{bash}{feltor} also links to \mintinline{bash}{libglfw3}
 \end{tcolorbox}
@@ -48,9 +50,9 @@ Compile \mintinline{bash}{feltor.cu} for shared memory. glfw or netcdf output:
 ./feltor input.json [output.nc] [initial.nc]
 ./feltor_hpc input.json output.nc [initial.nc]
 echo npx npy npz | mpirun -n np ./feltor_mpi input.json output.nc [initial.nc]
-./feltordiag output.nc diag_output.nc
+./feltordiag input0.nc [... inputN.nc] diag_output.nc
+./manufactured input.json
 \end{minted}
-
 
 \begin{tcolorbox}[title=Note]
     \mintinline{bash}{feltor_mpi} expects the
@@ -83,6 +85,11 @@ Output file format: \href{https://www.unidata.ucar.edu/software/netcdf/docs/}{ne
  \\
  \mintinline{bash}{feltordiag} is used to compute post-processing diagnostics that are
  stored in a separate file, see Section~\ref{sec:diagnostics}.
+ \\
+ \mintinline{bash}{manufactured} is used to test the correct implementation of
+ the equations with the method of manufactured solutions, see
+ Section~\ref{sec:manufactured}.  The results are written to the terminal in
+ \href{https://en.wikipedia.org/wiki/YAML}{yaml} format.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The magnetic field}\label{sec:magnetic}
@@ -712,7 +719,7 @@ The helicity should however not have any influence on the plasma dynamics. With
 a mirror transformation (view the tokamak in a mirror) we should be able
 to transform the solution to one with reversed helicity.
 
-\subsection{Manufactured Solution}
+\subsection{Manufactured Solution} \label{sec:manufactured}
 In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
 n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
@@ -736,6 +743,13 @@ the convergence of the DG discretized terms from our parallel derivative
 we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
 
 Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
+\begin{tcolorbox}[title=Note]
+    The program \mintinline{bash}{manufactured} ignores the "init" parameter
+    in the input file and must be used with a circular magnetic field equilibrium
+    in combination with "wall", "sheath" and "source" set as "none" or "zero".
+    % What is the regularization?
+    % Check exact equations that are solved!
+\end{tcolorbox}
 
 \section{The Input file} \label{sec:input_file}
 Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json}
@@ -1304,7 +1318,7 @@ Finally, we can have a circular damping profile
 \end{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Sinks and sources} \label{sec:sources}
+\subsection{Sources} \label{sec:sources}
     See the file {\tt init.h} to add your own custom source.
 In order to disable the source term $S_N$ choose
 \begin{minted}[texcomments]{js}
@@ -1322,6 +1336,7 @@ where $\omega_s$ is the source strength parameter.
 "source":
 {
     "type" : "fixed_profile",
+    "rate" : 1e-3 // source strength $\omega_s$
     "profile" :
     {
         // Determine $n_{prof}(R,Z)$
@@ -1332,8 +1347,7 @@ where $\omega_s$ is the source strength parameter.
         // Determine $D(R,Z)$
         // Choose anything from section\ref{sec:damping}
         // The boundary determines where the source is active
-    },
-    "rate" : 1e-3 // source strength $\omega_s$
+    }
 }
 \end{minted}
 The forced source will result in exponential adaption of the core
@@ -1356,6 +1370,7 @@ the source with the parameters below generates and compare to
 "source":
 {
     "type" : "influx",
+    "rate" : 1e-3, // source strength $\omega_s$
     "ntilde" :
     {
         // Determine $\tilde n(R,Z,\varphi)$
@@ -1372,8 +1387,7 @@ the source with the parameters below generates and compare to
         // Determine $D(R,Z)$
         // Choose anything from section\ref{sec:damping}
         // The boundary determines where the source is active
-    },
-    "rate" : 1e-3 // source strength $\omega_s$
+    }
 }
 \end{minted}
 
@@ -1555,6 +1569,10 @@ the same FCI object for all quantities.
     When the "modify-B" option is used for the wall the magnetic fieldlines
     do not intersect the domain boundary in the wall region (but still do in the
     sheath region).
+\end{tcolorbox}
+\begin{tcolorbox}[title=Note]
+The boundary conditions in the FCI scheme are the number one reason of why
+simulations crash. See also~\ref{sec:troubleshooting}
 \end{tcolorbox}
 
 % Check periodify field
@@ -2416,7 +2434,7 @@ It is safer to just merge files afterwards with
 \mint{bash}{ncrcat output1.nc output2.nc output.nc}
 from the \mintinline{bash}{nco} package
 \end{tcolorbox}
-\section{Troubleshooting}
+\section{Troubleshooting} \label{sec:troubleshooting}
 All previously mentioned codes can crash for various reasons. Here,
 we list and describe situations, which generally may lead to program
 termination

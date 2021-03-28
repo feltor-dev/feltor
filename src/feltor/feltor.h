@@ -569,7 +569,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         dg::blas1::copy( y[1], m_temp1);
         dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-            m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+            m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
 #else
@@ -584,7 +584,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, m_phi[0]);
@@ -608,7 +608,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
         dg::blas1::copy( m_phi[0], m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-            m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+            m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaP, m_phi[1], m_temp0, m_p.eps_gamma);
 #else
@@ -630,7 +630,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //m_UE2 now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dx_P, m_phi[1], m_dP[1][0]);
@@ -665,11 +665,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
 #ifdef DG_MANUFACTURED
     //dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SA{
     //    m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-    //    m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+    //    m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
     //here we cheat (a bit)
     dg::blas1::evaluate( m_apar, dg::equals(), manufactured::A{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Compute Derivatives----------------------------//
     dg::blas2::symv( m_dx_A, m_apar, m_dA[0]);
@@ -1019,10 +1019,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     dg::blas1::evaluate( m_phi[0], dg::equals(), manufactured::Phie{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( m_phi[1], dg::equals(), manufactured::Phii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
 
 #endif
 
@@ -1098,16 +1098,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[0][1], dg::plus_equals(), manufactured::SNi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SWe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SWi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();
     accu += timer.diff();

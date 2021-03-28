@@ -29,7 +29,11 @@ namespace geo{
     "equilibrium" : "toroidal",
     "R_0" : 10
 }
-// description "none" is chosen by default
+// Automatically chosen:
+// description : "none",
+// a : 1.0,
+// elongation : 1.0,
+// triangularity : 0.0
  * @endcode
  * @code
 // Circular flux surfaces
@@ -38,7 +42,11 @@ namespace geo{
     "I_0" : 20
     "R_0" : 10
 }
-// description "standardO" is chosen by default
+// Automatically chosen:
+// description : "standardO",
+// a : 1.0,
+// elongation : 1.0,
+// triangularity : 0.0
  * @endcode
  * @sa \c dg::geo::description to see valid values for the %description field
  *
@@ -47,6 +55,7 @@ namespace geo{
  * for example if "solovev", then the dg::geo::solovev::Parameters( gs) is called and forwarded to dg::geo::createSolovevField(gp); similar for the rest
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
+ * @ingroup geom
  */
 static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
 {

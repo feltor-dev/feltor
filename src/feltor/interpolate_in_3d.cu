@@ -24,6 +24,7 @@ thrust::host_vector<float> append( const thrust::host_vector<float>& in, const d
 //convert all 3d variables of every N-th timestep to float
 //and interpolate to a FACTOR times finer grid in phi
 //also periodify in 3d and equidistant in RZ
+//input should probably come from another json file
 int main( int argc, char* argv[])
 {
     if( argc != 3)
