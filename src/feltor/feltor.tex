@@ -15,12 +15,11 @@ The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
 \begin{abstract}
 \textsc{Feltor} is a model for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
 
-The purpose of this document is to describe the programs
-contained in \mintinline{bash}{path/to/feltor/src/feltor}.
- The goal is to provide
-information such that there is no need to look
-into the source code and connect
-the presented formulas to relevant journal publications.
+The purpose of this document is to describe the (usage of) programs
+contained in \mintinline{bash}{path/to/feltor/src/feltor} such
+that there is no need to look
+into the actual source code and to connect
+the implemented formulas to relevant journal publications.
 \end{abstract}
 \tableofcontents
 
@@ -79,7 +78,7 @@ Output file format: \href{https://www.unidata.ucar.edu/software/netcdf/docs/}{ne
  the output file \mintinline{bash}{output.nc}.
  The output file is described in Section~\ref{sec:output_file}.
  The optional file \mintinline{bash}{initial.nc} can be used to initialize a simulation from an existing file.
- This behavior is described in Section~\ref{sec:restart_file}.
+ This behavior is described in Section~\ref{sec:restart}.
  All programs write unstructured human readable performance information of the running simulation
  to \mintinline{c++}{std::cout}.
  \\
@@ -719,38 +718,6 @@ The helicity should however not have any influence on the plasma dynamics. With
 a mirror transformation (view the tokamak in a mirror) we should be able
 to transform the solution to one with reversed helicity.
 
-\subsection{Manufactured Solution} \label{sec:manufactured}
-In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
-\begin{align*}
-n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
-N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \gamma_{ N_i}  \\
-u_{\parallel,e}(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
-U_{\parallel,i}(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_{\parallel,e}(R,Z,\varphi,t) \\
-\phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
-\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \gamma_{\phi} \\
-A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
-\end{align*}
-We choose circular flux surfaces of the form
-\begin{align*}
-\psi_p(R,Z) :=0.5((R-R_0)^2 + Z^2),\quad
-I_p(R,Z):=I_0
-\end{align*}
-with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times[0,2\pi]$.
-We then symbolically compute (with the help of Mathematica) source terms that we insert to the right hand side of
-the corresponding equation in code (\mintinline{c}{manufactured.h}) and simulate from $t=0...10^{-3}$.
-By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
-the convergence of the DG discretized terms from our parallel derivative
-we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
-
-Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
-\begin{tcolorbox}[title=Note]
-    The program \mintinline{bash}{manufactured} ignores the "init" parameter
-    in the input file and must be used with a circular magnetic field equilibrium
-    in combination with "wall", "sheath" and "source" set as "none" or "zero".
-    % What is the regularization?
-    % Check exact equations that are solved!
-\end{tcolorbox}
-
 \section{The Input file} \label{sec:input_file}
 Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json}
 
@@ -1143,7 +1110,7 @@ run different simulation or to initialize the simulation in the symmetric mode.
 "init":
 {
     "type" : "zero", // $n_e = N_i = 0$ no other parameters needed
-    "type" : "restart", // only the file parameter is needed
+    "type" : "restart", // only the file parameter is needed (see Section \ref{sec:restart})
     "file" : "path/to/file.nc" // the file to use as a restart for $n_e$, $N_i$, $u_{\parallel,e}$ and $U_{\parallel,i}$
 
     "type" : "ne",  // $n_e = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)$
@@ -1658,6 +1625,53 @@ flags present or leave the field empty.
     Use ["symmetric", "calibrate"] together (to avoid FCI initialization
     which takes a long time) and quickly fine-tune
     magnetic field, wall, sheath, init, source and grid parameters
+\end{tcolorbox}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Restarting} \label{sec:restart}
+We have the possibility to initialize time and
+the fields with the results of a previous simulation.
+There are two possibilities to restart a simulation
+\begin{enumerate}
+    \item setting the option "restart" in the input file in the init type field
+        and providing the path to an \mintinline{bash}{initial.nc} netcdf file in the
+        corresponding file field (see Section~\ref{sec:initial})
+    \item providing an additional netcdf file \mintinline{bash}{initial.nc}
+        to \mintinline{bash}{feltor}, \mintinline{bash}{feltor_hpc} or \mintinline{bash}{feltor_mpi} on the
+        command line. This mode takes precedence over the first because it
+        subsequently ignores the "init" field of the input file.
+\end{enumerate}
+The intention behind the two different modes is that there are two different
+restarting scenarios. In the first you have one input file that you just want
+to restart over and over again. In a way you only want to split a single
+simulation into several smaller parts. In the second you want to use a
+simulation that ran with a specific set of parameters as an initial condition
+for another simulation with different parameters.
+\begin{tcolorbox}[title=Note]
+    The restart file is only used to initialize $n_e$, $N_i$, $u_{\parallel,e}$
+    and $U_{\parallel,i}$ with the latest timestep in \mintinline{bash}{initial.nc}, all
+    other parameters (magnetic field, profiles, resolutions, sources, etc.)
+    are still read from the input json file.  The user is responsible
+    that these are consistent with the paramters in the existing
+    \mintinline{bash}{initial.nc} file.
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=Note]
+    You can submit chain jobs on the cluster. See the --dependency option in SLURM.
+\end{tcolorbox}
+\begin{tcolorbox}[title=Note]
+In order to enable a
+loss-less continuation of the simulation we output special restart fields into
+the output file that in contrast to the other fields are not compressed.
+\end{tcolorbox}
+
+
+\begin{tcolorbox}[title=Note]
+We try to discourage
+appending new results to an exisiting file directly, because if for some reason
+the cluster crashes and the file is corrupted the whole simulation is lost.
+It is safer to just merge files afterwards with
+\mint{bash}{ncrcat output1.nc output2.nc output.nc}
+from the \mintinline{bash}{nco} package
 \end{tcolorbox}
 
 \section{Output} \label{sec:output_file}
@@ -2392,53 +2406,38 @@ The labels $\rho_t$ and $\rho_p$ are useful because
 equidistant $\rho_p$ and $\rho_t$ values tend to translate to equidistant flux-surfaces
 in configuration space.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Restarting} \label{sec:restart_file}
-We have the possibility to initialize time and
-the fields with the results of a previous simulation.
-There are two possibilities to restart a simulation
-\begin{enumerate}
-    \item setting the option "restart" in the input file in the init type field
-        and providing the path to an \mintinline{bash}{initial.nc} netcdf file in the
-        corresponding file field (see Section~\ref{sec:initial})
-    \item providing an additional netcdf file \mintinline{bash}{initial.nc}
-        to \mintinline{bash}{feltor}, \mintinline{bash}{feltor_hpc} or \mintinline{bash}{feltor_mpi} on the
-        command line. This mode takes precedence over the first because it
-        subsequently ignores the "init" field of the input file.
-\end{enumerate}
-The intention behind the two different modes is that there are two different
-restarting scenarios. In the first you have one input file that you just want
-to restart over and over again. In a way you only want to split a single
-simulation into several smaller parts. In the second you want to use a
-simulation that ran with a specific set of parameters as an initial condition
-for another simulation with different parameters.
+\subsection{Manufactured Solution} \label{sec:manufactured}
+In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
+\begin{align*}
+n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
+N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \gamma_{ N_i}  \\
+u_{\parallel,e}(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
+U_{\parallel,i}(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_{\parallel,e}(R,Z,\varphi,t) \\
+\phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
+\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \gamma_{\phi} \\
+A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
+\end{align*}
+We choose circular flux surfaces of the form
+\begin{align*}
+\psi_p(R,Z) :=0.5((R-R_0)^2 + Z^2),\quad
+I_p(R,Z):=I_0
+\end{align*}
+with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times[0,2\pi]$.
+We then symbolically compute (with the help of Mathematica) source terms that we insert to the right hand side of
+the corresponding equation in code (\mintinline{c}{manufactured.h}) and simulate from $t=0...10^{-3}$.
+By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
+the convergence of the DG discretized terms from our parallel derivative
+we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
+
+Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
 \begin{tcolorbox}[title=Note]
-    The restart file is only used to initialize $n_e$, $N_i$, $u_{\parallel,e}$
-    and $U_{\parallel,i}$ with the latest timestep in \mintinline{bash}{initial.nc}, all
-    other parameters (magnetic field, profiles, resolutions, sources, etc.)
-    are still read from the input json file.  The user is responsible
-    that these are consistent with the paramters in the existing
-    \mintinline{bash}{initial.nc} file.
+    The program \mintinline{bash}{manufactured} ignores the "init" parameter
+    in the input file and must be used with a circular magnetic field equilibrium
+    in combination with "wall", "sheath" and "source" set as "none" or "zero".
+    % What is the regularization?
+    % Check exact equations that are solved!
 \end{tcolorbox}
 
-\begin{tcolorbox}[title=Note]
-    You can submit chain jobs on the cluster. See the --dependency option in SLURM.
-\end{tcolorbox}
-\begin{tcolorbox}[title=Note]
-In order to enable a
-loss-less continuation of the simulation we output special restart fields into
-the output file that in contrast to the other fields are not compressed.
-\end{tcolorbox}
-
-
-\begin{tcolorbox}[title=Note]
-We try to discourage
-appending new results to an exisiting file directly, because if for some reason
-the cluster crashes and the file is corrupted the whole simulation is lost.
-It is safer to just merge files afterwards with
-\mint{bash}{ncrcat output1.nc output2.nc output.nc}
-from the \mintinline{bash}{nco} package
-\end{tcolorbox}
 \section{Troubleshooting} \label{sec:troubleshooting}
 All previously mentioned codes can crash for various reasons. Here,
 we list and describe situations, which generally may lead to program
