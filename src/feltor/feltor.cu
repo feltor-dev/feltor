@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
     std::string geometry_params = js["magnetic_field"]["input"].asString();
     if( geometry_params == "file")
     {
-        std::string path = js["magnetic_field"]["path"].asString();
+        std::string path = js["magnetic_field"]["file"].asString();
         try{
             dg::file::file2Json( path, js.asJson()["magnetic_field"]["params"],
                     dg::file::comments::are_discarded, dg::file::error::is_throw);
@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << js.asJson() <<  std::endl;
     std::string inputfile = js.asJson().toStyledString();
     dg::geo::TokamakMagneticField mag, mod_mag;
-    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
+    dg::geo::CylindricalFunctor wall, transition;
     try{
         mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
         mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
@@ -105,6 +105,8 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cerr <<e.what()<<std::endl;
         abort_program();
     }
+
+    ////////////////////////////////set up computations///////////////////////////
 #ifdef WITH_MPI
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -114,7 +116,6 @@ int main( int argc, char* argv[])
         abort_program();
     }
 #endif //WITH_MPI
-    ////////////////////////////////set up computations///////////////////////////
     //Make grids
     double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
     double Zmin=-p.boxscaleZm*mag.params().a();
@@ -126,64 +127,16 @@ int main( int argc, char* argv[])
         , comm
         #endif //WITH_MPI
         );
-    unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
-    unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
-    unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy, Nz_out = p.Nz;
-    dg::x::CylindricalGrid3d g3d_out( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
-        n_out, Nx_out, Ny_out, p.symmetric ? 1 : Nz_out, p.bcxN, p.bcyN, dg::PER
-        #ifdef WITH_MPI
-        , comm
-        #endif //WITH_MPI
-        );
-    std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
-        g2d_out_ptr  ( dynamic_cast<typename
-                dg::x::CylindricalGrid3d::perpendicular_grid*>(
-                    g3d_out.perp_grid()));
-#ifdef WITH_MPI
-    unsigned local_size2d = g2d_out_ptr->local().size();
-#else
-    unsigned local_size2d = g2d_out_ptr->size();
-#endif
 
-    try{
-        dg::geo::createSheathRegion( js["boundary"]["sheath"], mag, wall,
-                Rmin, Rmax, Zmin, Zmax, sheath, direction);
-    }catch(std::runtime_error& e)
-    {
-        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
-        DG_RANK0 std::cerr <<e.what()<<std::endl;
-        return -1;
-    }
+    //create RHS
     if( p.modify_B)
         mag = mod_mag;
-
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
-    //create RHS
-    DG_RANK0 std::cout << "Constructing Explicit...\n";
+    DG_RANK0 std::cout << "Constructing Feltor...\n";
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag);
     DG_RANK0 std::cout << "Done!\n";
-
-    // helper variables for output computations
-    std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
-    dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
-    dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
-        dg::create::fast_projection( grid, 1, cx, cy, dg::normed);
-    dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
-        dg::create::fast_projection( grid, 1, cx, cy, dg::normed);
-    dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
-    dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
-    dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
-    dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
-    dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-    dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
-
-    // the vector ids
-    std::map<std::string, int> id3d, id4d, restart_ids;
-
-    double dEdt = 0, accuracy = 0;
-    double E0 = 0.;
 
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
@@ -191,23 +144,12 @@ int main( int argc, char* argv[])
     std::array<dg::x::DVec, 3> gradPsip;
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
-    gradPsip[2] =  resultD; //zero
+    gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
     feltor::Variables var{
         feltor, y0, p, mag, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid))
     };
-    if( argc == 3 )
-    {
-        try{
-            y0 = feltor::initial_conditions(feltor, grid, p, mod_mag,
-                    js["init"], time );
-        }catch ( dg::Error& error){
-            DG_RANK0 std::cerr << error.what();
-            DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
-            abort_program();
-            return -1;
-        }
-    }
+    DG_RANK0 std::cout << "# Set Initial conditions \n";
     if( argc == 4 )
     {
         try{
@@ -218,13 +160,39 @@ int main( int argc, char* argv[])
             abort_program();
         }
     }
+    else
+    {
+        try{
+            y0 = feltor::initial_conditions(feltor, grid, p, mod_mag,
+                    js["init"], time );
+        }catch ( dg::Error& error){
+            DG_RANK0 std::cerr << error.what();
+            DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
+            abort_program();
+        }
+    }
 
-    feltor.set_wall_and_sheath( p.wall_rate,
-            dg::construct<dg::x::DVec>( dg::pullback( wall, grid)),
-            p.sheath_rate,
-            dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
-            dg::construct<dg::x::DVec>(dg::pullback( direction, grid)));
+    feltor.set_wall( p.wall_rate,
+            dg::construct<dg::x::DVec>( dg::pullback( wall, grid)));
+    if( p.sheath_bc != "none")
+    {
+        dg::geo::CylindricalFunctor sheath, direction;
+        try{
+            dg::geo::createSheathRegion( js["boundary"]["sheath"], mag, wall,
+                    Rmin, Rmax, Zmin, Zmax, sheath, direction);
+        }catch(std::runtime_error& e)
+        {
+            DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+            DG_RANK0 std::cerr <<e.what()<<std::endl;
+            abort_program();
+        }
+        feltor.set_sheath(
+                p.sheath_rate,
+                dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
+                dg::construct<dg::x::DVec>(dg::pullback( direction, grid)));
+    }
 
+    DG_RANK0 std::cout << "# Set Source \n";
     try{
         bool fixed_profile;
         dg::x::HVec ne_profile, source_profile;
@@ -242,6 +210,44 @@ int main( int argc, char* argv[])
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
+        // helper variables for output computations
+        unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
+        unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
+        unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy, Nz_out = p.Nz;
+        dg::x::CylindricalGrid3d g3d_out( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+            n_out, Nx_out, Ny_out, p.symmetric ? 1 : Nz_out, p.bcxN, p.bcyN, dg::PER
+            #ifdef WITH_MPI
+            , comm
+            #endif //WITH_MPI
+            );
+        std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
+            g2d_out_ptr  ( dynamic_cast<typename
+                    dg::x::CylindricalGrid3d::perpendicular_grid*>(
+                        g3d_out.perp_grid()));
+#ifdef WITH_MPI
+        unsigned local_size2d = g2d_out_ptr->local().size();
+#else
+        unsigned local_size2d = g2d_out_ptr->size();
+#endif
+        std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
+        dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
+        dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
+            dg::create::fast_projection( grid, 1, cx, cy, dg::normed);
+        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
+            dg::create::fast_projection( grid, 1, cx, cy, dg::normed);
+        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
+        dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        if( argc != 3 && argc != 4)
+        {
+            DG_RANK0 std::cerr << "ERROR: Wrong number of arguments for netcdf output!\nUsage: "
+                    << argv[0]<<" [input.json] [output.nc]\n OR \n"
+                    << argv[0]<<" [input.json] [output.nc] [initial.nc] "<<std::endl;
+            abort_program();
+        }
         dg::file::NC_Error_Handle err;
         std::string file_name = argv[2];
         int ncid=-1;
@@ -255,7 +261,7 @@ int main( int argc, char* argv[])
         }
         /// Set global attributes
         std::map<std::string, std::string> att;
-        att["title"] = "Output file of feltor/src/feltor/feltor_hpc.cu";
+        att["title"] = "Output file of feltor/src/feltor/feltor.cu";
         att["Conventions"] = "CF-1.7";
         ///Get local time and begin file history
         auto ttt = std::time(nullptr);
@@ -276,8 +282,10 @@ int main( int argc, char* argv[])
 
         // Define dimensions (t,z,y,x)
         int dim_ids[4], restart_dim_ids[3], tvarID;
-        DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, g3d_out,
-                {"time", "z", "y", "x"});
+        DG_RANK0 err = dg::file::define_dimensions( ncid, &dim_ids[1], g3d_out,
+                {"z", "y", "x"});
+        if( !p.calibrate)
+            DG_RANK0 err = dg::file::define_time( ncid, "time", dim_ids, &tvarID);
         DG_RANK0 err = dg::file::define_dimensions( ncid, restart_dim_ids, grid,
                 {"zr", "yr", "xr"});
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
@@ -313,7 +321,7 @@ int main( int argc, char* argv[])
                 "long_name", record.long_name.size(), record.long_name.data());
             DG_RANK0 err = nc_enddef( ncid);
             DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
-            //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal varialbes return full grid functions
+            //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal variables return full grid functions
             record.function( resultH, var, grid);
             dg::blas2::symv( projectH, resultH, transferH);
             if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
@@ -329,6 +337,8 @@ int main( int argc, char* argv[])
         }
 
         //Create field IDs
+        // the vector ids
+        std::map<std::string, int> id3d, id4d, restart_ids;
         for( auto& record : feltor::diagnostics3d_list)
         {
             std::string name = record.name;
@@ -447,7 +457,6 @@ int main( int argc, char* argv[])
             ti.tic();
             for( unsigned j=0; j<p.itstp; j++)
             {
-                double previous_time = time;
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
@@ -467,15 +476,8 @@ int main( int argc, char* argv[])
                 }
                 dg::Timer tti;
                 tti.tic();
-                double deltat = time - previous_time;
-                double energy = 0, ediff = 0.;
                 for( auto& record : feltor::diagnostics2d_list)
                 {
-                    if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
-                    {
-                        record.function( resultD, var);
-                        energy += dg::blas1::dot( resultD, feltor.vol3d());
-                    }
                     if( record.integral)
                     {
                         record.function( resultD, var);
@@ -483,26 +485,19 @@ int main( int argc, char* argv[])
                         //toroidal average and add to time integral
                         dg::assign( transferD, transferH);
                         toroidal_average( transferH, transferH2d, false);
-                        time_integrals.at(record.name+"_ta2d").add( time, transferH2d);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
 
                         // 2d data of plane varphi = 0
-                        feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
                         dg::assign( transferD2d, transferH2d);
-                        time_integrals.at(record.name+"_2d").add( time, transferH2d);
-                        if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
-                            ediff += dg::blas1::dot( resultD, feltor.vol3d());
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
                     }
-
                 }
 
-                dEdt = (energy - E0)/deltat;
-                E0 = energy;
-                accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
-
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
-                DG_RANK0 std::cout <<"\td E/dt = " << dEdt
-                          <<" Lambda = " << ediff
-                          <<" -> Accuracy: " << accuracy << "\n";
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
@@ -602,8 +597,6 @@ int main( int argc, char* argv[])
         v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
         v4d["Ue / "]   = &feltor.velocity(0), v4d["Ui / "]   = &feltor.velocity(1);
         v4d["Phi / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.aparallel();
-        double dEdt = 0, accuracy = 0;
-        double E0 = 0.;
         /////////////////////////set up transfer for glfw
         dg::DVec dvisual( grid.size(), 0.);
         dg::HVec hvisual( grid.size(), 0.), visual(hvisual), avisual(hvisual);
@@ -624,7 +617,7 @@ int main( int argc, char* argv[])
 
         std::cout << "Begin computation \n";
         std::cout << std::scientific << std::setprecision( 2);
-        dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
+        dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z, "simple");
         title << std::setprecision(2) << std::scientific;
         while ( !glfwWindowShouldClose( w ))
         {
@@ -677,7 +670,6 @@ int main( int argc, char* argv[])
             t.tic();
             for( unsigned i=0; i<p.itstp; i++)
             {
-                double previous_time = time;
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
@@ -691,37 +683,8 @@ int main( int argc, char* argv[])
                     }
                     step++;
                 }
-                double deltat = time - previous_time;
-                double energy = 0, ediff = 0.;
-                for( auto& record : feltor::diagnostics2d_list)
-                {
-                    if( std::find( feltor::energies.begin(), feltor::energies.end(), record.name) != feltor::energies.end())
-                    {
-                        std::cout << record.name<<" : ";
-                        record.function( resultD, var);
-                        double norm = dg::blas1::dot( resultD, feltor.vol3d());
-                        energy += norm;
-                        std::cout << norm<<std::endl;
-
-                    }
-                    if( std::find( feltor::energy_diff.begin(), feltor::energy_diff.end(), record.name) != feltor::energy_diff.end())
-                    {
-                        std::cout << record.name<<" : ";
-                        record.function( resultD, var);
-                        double norm = dg::blas1::dot( resultD, feltor.vol3d());
-                        ediff += norm;
-                        std::cout << norm<<std::endl;
-                    }
-
-                }
-                dEdt = (energy - E0)/deltat;
-                E0 = energy;
-                accuracy  = 2.*fabs( (dEdt - ediff)/( dEdt + ediff));
 
                 std::cout << "\tTime "<<time<<"\n";
-                std::cout <<"\td E/dt = " << dEdt
-                  <<" Lambda = " << ediff
-                  <<" -> Accuracy: " << accuracy << "\n";
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";

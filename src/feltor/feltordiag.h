@@ -1350,9 +1350,6 @@ std::vector<Record> restart3d_list = {
         }
     }
 };
-// These two lists signify the quantities involved in accuracy computation
-std::vector<std::string> energies = { "nelnne", "nilnni", "aperp2", "ue2","neue2","niui2"};
-std::vector<std::string> energy_diff = { "resistivity_tt", "leeperp_tt", "leiperp_tt", "leeparallel_tt", "leiparallel_tt", "see_tt", "sei_tt"};
 
 template<class Container>
 void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)

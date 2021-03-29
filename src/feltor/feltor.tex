@@ -1056,6 +1056,11 @@ as in
         U_\parallel^{sh})
 \end{align}
 \end{subequations}
+\begin{tcolorbox}[title=Note]
+    Make sure that in case the rhs is not penalized the density boundary conditions
+    read \texttt{dg::NEU} and the "FCI" boundary condition is set to "along\_field".
+    Same for the velocity.
+\end{tcolorbox}
 
 \begin{tcolorbox}[title=Note]
     In case both wall and sheath boundaries penalize the equations we get

@@ -17,13 +17,16 @@
     {
         "refine": [1,1],
         "rk4eps": 1e-6,
-        "periodify": true
+        "periodify": true,
+        "bc" : "along_field"
     },
     "output":
     {
-        "type" : "glfw",
+        "type" : "netcdf",
         "inner_loop" : 2,
-        "itstp"  : 2
+        "itstp"  : 2,
+        "maxout" : 1,
+        "compression" : [1,1]
     },
     "elliptic":
     {
@@ -68,7 +71,7 @@
         },
         "sheath":
         {
-            "bc": "bohm",
+            "type": "bohm",
             "penalization" : 1e+0,
             "boundary": 0.30,
             "alpha": 0.2,
@@ -109,5 +112,6 @@
             "alpha" : 0.2,
             "boundary" : 0.55
         }
-    }
+    },
+    "flags" :  ["calibrate", "symmetric"]
 }

@@ -223,11 +223,15 @@ struct Explicit
         m_source_rate = source_rate;
         m_source = source;
     }
-    void set_wall_and_sheath(double wall_rate, Container wall, double sheath_rate, Container sheath, Container direction)
+    void set_wall(double wall_rate, const Container& wall)
     {
-        m_sheath_rate = sheath_rate; //1/eta
         m_wall_rate = wall_rate;
         dg::blas1::copy( wall, m_wall);
+    }
+    void set_sheath(double sheath_rate, const Container& sheath,
+            const Container& direction)
+    {
+        m_sheath_rate = sheath_rate;
         dg::blas1::copy( sheath, m_sheath);
         dg::blas1::pointwiseDot( sheath, direction, m_sheathDotDirection);
     }

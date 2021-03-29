@@ -46,9 +46,11 @@
     },
     "output":
     {
-        "type" : "glfw",
+        "type" : "netcdf",
         "inner_loop" : 2,
-        "itstp"  : 2
+        "itstp"  : 2,
+        "maxout" : 1,
+        "compression" : [1,1]
     },
     "source":
     {
@@ -74,10 +76,6 @@
             "boundary" : 0.55
         }
     },
-    "flags" :
-    [
-        "calibrate"
-    ],
     "init":
     {
         "type" : "ne",
@@ -106,16 +104,16 @@
     {
         "wall":
         {
-            "type": "sol_pfr",
-            "boundary": [1.1,0.998],
-            "alpha": [0.10,0.10],
+            "type": "heaviside",
+            "boundary": 1.1,
+            "alpha": 0.10,
             "modify-B" : true,
             "penalization" : 1e+0,
             "penalize-rhs" : false
         },
         "sheath":
         {
-            "bc": "bohm",
+            "type": "bohm",
             "boundary": 0.30,
             "alpha": 0.2,
             "penalization" : 1e+0,
@@ -129,6 +127,7 @@
             "aparallel":["NEU", "NEU"]
         }
     },
+    "flags" : [ "symmetric", "calibrate" ],
     "magnetic_field":
     {
         "curvmode" : "toroidal",
