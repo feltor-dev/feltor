@@ -156,22 +156,21 @@ static inline TokamakMagneticField createModifiedField(
         dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod,
         CylindricalFunctor& wall, CylindricalFunctor& transition)
 {
-    std::string e = gs.get( "equilibrium", "solovev" ).asString();
-    equilibrium equi = str2equilibrium.at( e);
-    std::string m = jsmod.get( "type", "heaviside" ).asString();
-    modifier mod = str2modifier.at( m);
-    std::string d = gs.get( "description", "standardX" ).asString();
-    description desc = str2description.at( d);
     TokamakMagneticField mag = createMagneticField( gs);
     const MagneticFieldParameters& inp = mag.params();
+    description desc = inp.getDescription();
+    equilibrium equi = inp.getEquilibrium();
+    std::string m = jsmod.get( "type", "heaviside" ).asString();
+    modifier mod = str2modifier.at( m);
     MagneticFieldParameters mod_params{ inp.a(), inp.elongation(),
-        inp.triangularity(), inp.getEquilibrium(), mod, inp.getDescription()};
+        inp.triangularity(), equi, mod, desc};
     CylindricalFunctorsLvl2 mod_psip;
     switch (mod) {
         default: //none
         {
-            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 0, 0);
-            transition = mod::MagneticTransition( mod::nowhere, mag.psip(), 0, 0, 0);
+            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 1, -1);
+            transition = mod::MagneticTransition( mod::nowhere, mag.psip(),
+                    0,  1, -1);
             return mag;
         }
         case modifier::heaviside:
@@ -299,7 +298,7 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
  * and determine whether the poloidal field points towards or away from the wall
 @code
 {
-    "boundary": 0.1, //value where sheath region begins in uits of minor radius a
+    "boundary": 0.1, //value where sheath region begins in units of minor radius a
     "alpha": 0.01 // radius of the transition region where the modification acts in units of minor radius a
 }
 @endcode
