@@ -110,45 +110,55 @@ struct WrappedJsonValue
     Json::Value& asJson( ) { return m_js;}
 
     ////////////Members imitating the original Json::Value///////////////
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue operator[](std::string key) const{
         return get( key, Json::ValueType::objectValue, "empty object ");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue get( std::string key, const Json::Value& value) const{
         std::stringstream default_str;
         default_str << "value "<<value;
         return get( key, value, default_str.str());
     }
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue operator[]( unsigned idx) const{
         return get( idx, Json::ValueType::objectValue, "empty array");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue get( unsigned idx, const Json::Value& value) const{
         std::stringstream default_str;
         default_str << "value "<<value;
         return get( idx, value, default_str.str());
     }
+    /// Wrap the corresponding Json::Value function with error handling
     unsigned size() const{
         return m_js.size();
     }
+    /// Wrap the corresponding Json::Value function with error handling
     double asDouble( double value = 0) const{
         if( m_js.isDouble())
             return m_js.asDouble();
         return type_error<double>( value, "a Double");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     unsigned asUInt( unsigned value = 0) const{
         if( m_js.isUInt())
             return m_js.asUInt();
         return type_error<unsigned>( value, "an Unsigned");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     int asInt( int value = 0) const{
         if( m_js.isInt())
             return m_js.asInt();
         return type_error<int>( value, "an Int");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     bool asBool( bool value = false) const{
         if( m_js.isBool())
             return m_js.asBool();
         return type_error<bool>( value, "a Bool");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     std::string asString( std::string value = "") const{
         //return m_js["hhaha"].asString(); //does not throw
         if( m_js.isString())

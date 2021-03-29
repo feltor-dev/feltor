@@ -16,7 +16,7 @@ typedef thrust::host_vector<double> HVec;
 
 int main()
 {
-    std::cout << "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO A NETCDF4 FILE\n";
+    std::cout << "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO NETCDF4 FILE test.nc\n";
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;

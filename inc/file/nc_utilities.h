@@ -141,6 +141,11 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
 /**
  * @brief Define a 1d time-dependent dimension variable together with its data points
  *
+ * Semantically equivalent to the following:
+ * @code
+ * define_time( ncid, name_dims[0], &dimsIDs[0], tvarID);
+ * define_dimension( ncid, &dimsIDs[1], g, name_dims[1]);
+ * @endcode
  * Dimensions have attribute of (time, X)
  * @param ncid file ID
  * @param dimsIDs dimension IDs (time, X)
@@ -187,6 +192,11 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<
 /**
  * @brief Define 2d time-dependent dimensions and associate values in NetCDF-file
  *
+ * Semantically equivalent to the following:
+ * @code
+ * define_time( ncid, name_dims[0], &dimsIDs[0], tvarID);
+ * define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2]});
+ * @endcode
  * Dimensions have attributes of (time, Y, X)
  * @param ncid file ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, Y,X)
@@ -264,6 +274,11 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<
 /**
  * @brief Define 3d time-dependent dimensions and associate values in NetCDF-file
  *
+ * Semantically equivalent to the following:
+ * @code
+ * define_time( ncid, name_dims[0], &dimsIDs[0], tvarID);
+ * define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2], name_dims[3]});
+ * @endcode
  * Dimensions have attributes ( time, Z, Y, X)
  * @param ncid file ID
  * @param dimsIDs (write - only) 4D array of dimension IDs (time, Z,Y,X)
@@ -279,7 +294,7 @@ template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRealTopology3d<T>& g, std::array<std::string, 4> name_dims = {"time", "z", "y", "x"})
 {
     int retval;
-    retval = define_real_time<T>( ncid, "time", &dimsIDs[0], tvarID);
+    retval = define_real_time<T>( ncid, name_dims[0].data(), &dimsIDs[0], tvarID);
     if(retval)
         return retval;
     return define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2], name_dims[3]});
