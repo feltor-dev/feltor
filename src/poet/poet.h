@@ -21,9 +21,11 @@ struct Poet
     const container& density(   int i) const { return m_ype[i];}
     const container& psi2() const {return m_psi2;}
     const Geometry& grid() const {return m_multigrid.grid(0);}
-    void compute_lapM ( double alpha, const container& in, double beta, container& result)
+    const container& volume() const {return m_volume;}
+    void compute_vorticity ( double alpha, const container& in, double beta, container& result)
     {
-        dg::blas2::symv( alpha, m_lapMperp, in, beta, result);
+        m_lapMperp.set_chi(m_binv);
+        dg::blas2::symv( -1.0*alpha, m_lapMperp, in, beta, result);
     }
     void compute_diff( double alpha, const container& nme, double beta, container& result)
     {
@@ -152,7 +154,7 @@ struct Poet
     
     Matrix m_centered[2];
     
-    const container m_w2d, m_v2d, m_one;
+    const container m_volume, m_v2d, m_one;
 
     const poet::Parameters m_p;
 };
@@ -166,7 +168,7 @@ Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p 
     m_multigrid( grid, 3),
     m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), 
     m_gamma0sqrtinv_rho_ex(2, m_chi),
-    m_w2d( dg::create::volume(grid)), m_v2d( dg::create::inv_weights(grid)), m_one( dg::evaluate(dg::one, grid)),
+    m_volume( dg::create::volume(grid)), m_v2d( dg::create::inv_weights(grid)), m_one( dg::evaluate(dg::one, grid)),
     m_p(p)
 {
     m_psi[0] = m_psi[1] = m_ype[0] = m_ype[1]  = m_chi; 

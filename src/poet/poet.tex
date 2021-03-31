@@ -122,9 +122,9 @@ where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coord
 \begin{align}
     N &= n 
 \end{align}
-so that the total polarization charge vanishes  \(\vec{\nabla}\cdot \vec{P}&=0\).
+so that the total polarization charge vanishes  \(\vec{\nabla}\cdot \vec{P}=0\).
 
-\subsubsection{Double Rotating Gaussian ("rot_blob")}
+\subsubsection{Double Rotating Gaussian }
 We initialize two blobs
 \begin{align}
     n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
@@ -155,11 +155,16 @@ where \(\rho=\pi/15\) is the width of the shear layer and \(\delta=0.05\). The A
 the ion gyro-center density follows from the respective polarization equation, which requires a non-linear solve \(f(N,\phi) = n_e\). An initial guess for the ion gyro-cente rdensity \(N\) is obtained via the lwl approximated polarization equation.
 
 \subsection{Diagnostics}
+Diagnostics are the mass \(M\), the center of mass position \(\vec{X}_{com}\) and the (non-normalized) compactness \(I_c\)
 \begin{align}
-    M(t) = \int dA (n-1)  \\
-%     \Lambda_n = \nu \int \Delta n  \\
-    ...
-    \label{}
+    M(t) &:= \int dA (n-1)  \\
+    M \vec{X}_{com} &:= \int dA \vec{x} (n-1) \\
+    I_c(t)  &:= \int dA (n(\vec{x},t)-1) h(\vec{x},t) \\
+    h(\vec{x},t) &:= \begin{cases}
+          1, 
+        &\ \text{if} \hspace{2mm}||\vec{x} - \vec{X}_{max}||^2 < \sigma^2 \\
+0,  &\ \text{else} 
+           \end{cases}
 \end{align}
 \section{Numerical methods}
 discontinuous Galerkin on structured grid
@@ -267,9 +272,9 @@ time                     & Dataset & 1 & time at which fields are written \\
 x                        & Dataset & 1 & x-coordinate  \\
 y                        & Dataset & 1 & y-coordinate \\
 electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
-ions                     & Dataset & 3 (time, y, x) & ion density $N$ or vorticity density $\rho$  \\
+ions                     & Dataset & 3 (time, y, x) & ion density $N$ \\
 potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
-vorticity                & Dataset & 3 (time, y, x) & Laplacian of potential $\Delta_{\perp}\phi$  \\
+vorticity                & Dataset & 3 (time, y, x) & z-component of ExB vorticity  $\Omega_E = \vec{\nabla}\cdot (B^{-1} \vec{\nabla}_{\perp}\phi)$  \\
 % dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
 % dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  \\
 % energy                   & Dataset & 1 (energy\_time) & total energy integral  \\

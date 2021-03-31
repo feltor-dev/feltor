@@ -29,7 +29,25 @@ struct RadialEnergyDiffDeltaF
     private:
     double m_tau, m_z;
 };
+struct Heaviside2d
+{
+    Heaviside2d( double sigma):m_sigma2(sigma*sigma), m_x0(0), m_y0(0){}
+    void set_origin( double x0, double y0){ m_x0=x0, m_y0=y0;}
+    double operator()(double x, double y)const
+    {
+        double r2 = (x-m_x0)*(x-m_x0)+(y-m_y0)*(y-m_y0);
+        if( r2 >= m_sigma2)
+            return 0.;
+        return 1.;
+    }
+  private:
+    const double m_sigma2;
+    double m_x0,m_y0;
+};
 }
+
+
+
 
 struct Variables{
     poet::Poet<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f;
@@ -79,111 +97,11 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::copy(v.f.potential(0), result);
         }
     },
-    {"vorticity", "Laplace potential",
+    {"vorticity", "ExB vorticity potential",
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_lapM( -1., v.f.potential(0), 0., result);
+            v.f.compute_vorticity( 1., v.f.potential(0), 0., result);
         }
-    },
-    {"electronsm1", "electron density minus ref density",
-        []( dg::x::DVec& result, Variables& v ) {
-          dg::blas1::transform( v.f.density(0), result, dg::PLUS<double>(-1));
-        }
-    },
-    {"electronsx", "Electron density minus ref density times x",
-        []( dg::x::DVec& result, Variables& v ) {
-          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
-          result = dg::evaluate( dg::cooX2d, v.f.grid());
-          dg::blas1::pointwiseDot(result,v.tmp[0],result);
-        }
-    },
-    {"electronsy", "Electron density minus ref density times y",
-        []( dg::x::DVec& result, Variables& v ) {
-          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
-          result = dg::evaluate( dg::cooY2d, v.f.grid());
-          dg::blas1::pointwiseDot(result,v.tmp[0],result);
-        }
-    },
-    /// ------------------- Mass   terms ------------------------//
-    {"lneperp", "Perpendicular electron diffusion",
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
-            v.f.compute_diff( 1., v.tmp[0], 0., result);
-        }
-    },
-    /// ------------------- Energy terms ------------------------//
-    {"ene", "Entropy electrons", //nelnne or (delta ne)^2
-        []( dg::x::DVec& result, Variables& v ) {
-            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
-                dg::blas1::transform( v.f.density(0), result, dg::LN<double>());
-                dg::blas1::pointwiseDot( result, v.f.density(0), result);
-            }
-            {
-                dg::blas1::transform( v.f.density(0), result, dg::PLUS<double>(-1.));
-                dg::blas1::pointwiseDot( 0.5, result, result, 0., result);
-            }
-        }
-    },
-    {"eni", "Entropy ions", //nilnni or (delta ni)^2
-        []( dg::x::DVec& result, Variables& v ) {
-            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
-                dg::blas1::transform( v.f.density(1), result, dg::LN<double>());
-                dg::blas1::pointwiseDot( v.p.tau[1], result, v.f.density(1), 0., result);
-            }
-            else
-            {
-                dg::blas1::transform( v.f.density(1), result, dg::PLUS<double>(-1.));
-                dg::blas1::pointwiseDot( 0.5*v.p.tau[1], result, result, 0., result);
-            }
-        }
-    },
-    {"eexb", "ExB energy",
-        []( dg::x::DVec& result, Variables& v ) {
-            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
-                dg::blas1::pointwiseDot( -1.0, v.f.density(1), v.f.psi2(), 0., result);
-            }
-            else {
-                dg::blas1::axpby( -1.0, v.f.psi2(), 0., result);
-            }
-        }
-    },
- /// ------------------------ Energy dissipation terms ------------------//
-    {"leeperp", "Perpendicular electron energy dissipation",
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::axpby( 1., v.f.density(0), -1., 1., v.tmp[0]);
-            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
-            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
-                dg::blas1::evaluate( result, dg::equals(),
-                    routines::RadialEnergyDiff( v.p.tau[0], -1),
-                    v.f.density(0),  v.f.potential(0), v.tmp[0]
-                );
-            }
-            else {
-                dg::blas1::evaluate( result, dg::equals(),
-                    routines::RadialEnergyDiffDeltaF( v.p.tau[0], -1),
-                    v.f.density(0),  v.f.potential(0), v.tmp[0]
-                );
-            }
-        }
-    },
-    {"leiperp", "Perpendicular ion energy dissipation",
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::axpby( 1., v.f.density(1), -1., 1., v.tmp[0]);
-            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
-            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
-                dg::blas1::evaluate( result, dg::equals(),
-                    routines::RadialEnergyDiff(  v.p.tau[1], 1),
-                    v.f.density(1),  v.f.potential(1), v.tmp[0]
-                );
-            }
-            else {
-                 dg::blas1::evaluate( result, dg::equals(),
-                    routines::RadialEnergyDiffDeltaF(  v.p.tau[1], 1),
-                    v.f.density(1),  v.f.potential(1), v.tmp[0]
-                );
-            }
-                
-        }
-    }
+    }    
 };
 
 std::vector<Record1d> diagnostics1d_list = {
@@ -192,5 +110,132 @@ std::vector<Record1d> diagnostics1d_list = {
             return v.duration;
         }
     },
+    {"mass", "volume integrated electron density minus ref density",
+        []( Variables& v ) {
+          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+          return dg::blas1::dot( v.f.volume(), v.tmp[0]);
+        }
+    },
+    {"masstimesxcom", "x-component of center of mass position",
+        []( Variables& v ) {
+          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+          v.tmp[1] = dg::evaluate( dg::cooX2d, v.f.grid());
+          dg::blas1::pointwiseDot(v.tmp[1],v.tmp[0],v.tmp[1]);
+          return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+    {"masstimesycom", "y-component of center of mass position",
+        []( Variables& v ) {
+          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+          v.tmp[1] = dg::evaluate( dg::cooY2d, v.f.grid());
+          dg::blas1::pointwiseDot(v.tmp[1],v.tmp[0],v.tmp[1]);
+          return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+    {"ic", "not normalized blob compactness",
+        []( Variables& v ) {
+          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+          routines::Heaviside2d heavi(v.p.sigma);
+         
+          unsigned position = thrust::distance( v.tmp[0].begin(), thrust::max_element( v.tmp[0].begin(), v.tmp[0].end()) );
+          v.tmp[1] = dg::evaluate( dg::cooX2d, v.f.grid());
+          double X_max = v.tmp[1][position] ;
+          v.tmp[1] = dg::evaluate( dg::cooY2d, v.f.grid());
+          double Y_max = v.tmp[1][position] ;
+          std::cout<< X_max << "  " << Y_max << std::endl;
+            
+          heavi.set_origin( X_max, Y_max );
+          v.tmp[1] = dg::evaluate( heavi, v.f.grid());
+          //Compute m_x0max
+          dg::blas1::pointwiseDot(v.tmp[1],v.tmp[0],v.tmp[1]);
+          return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },   
+    /// ------------------- Mass   terms ------------------------//
+    {"lneperp", "Perpendicular electron diffusion",
+        [](  Variables& v ) {
+            dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[1]);
+            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+    /// ------------------- Energy terms ------------------------//
+    {"ene", "Entropy electrons", //nelnne or (delta ne)^2
+        []( Variables& v ) {
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::transform( v.f.density(0), v.tmp[1], dg::LN<double>());
+                dg::blas1::pointwiseDot( v.tmp[1], v.f.density(0), v.tmp[1]);
+            }
+            {
+                dg::blas1::transform( v.f.density(0), v.tmp[1], dg::PLUS<double>(-1.));
+                dg::blas1::pointwiseDot( 0.5, v.tmp[1], v.tmp[1], 0., v.tmp[1]);
+            }
+            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+    {"eni", "Entropy ions", //nilnni or (delta ni)^2
+        [](Variables& v ) {
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::transform( v.f.density(1), v.tmp[1], dg::LN<double>());
+                dg::blas1::pointwiseDot( v.p.tau[1], v.tmp[1], v.f.density(1), 0., v.tmp[1]);
+            }
+            else
+            {
+                dg::blas1::transform( v.f.density(1), v.tmp[1], dg::PLUS<double>(-1.));
+                dg::blas1::pointwiseDot( 0.5*v.p.tau[1], v.tmp[1], v.tmp[1], 0., v.tmp[1]);
+            }
+            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+    {"eexb", "ExB energy",
+        []( Variables& v ) {
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::pointwiseDot( -1.0, v.f.density(1), v.f.psi2(), 0., v.tmp[1]);
+            }
+            else {
+                dg::blas1::axpby( -1.0, v.f.psi2(), 0., v.tmp[1]);
+            }
+            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+ /// ------------------------ Energy dissipation terms ------------------//
+    {"leeperp", "Perpendicular electron energy dissipation",
+        [](  Variables& v ) {
+            dg::blas1::axpby( 1., v.f.density(0), -1., 1., v.tmp[0]);
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::evaluate( v.tmp[1], dg::equals(),
+                    routines::RadialEnergyDiff( v.p.tau[0], -1),
+                    v.f.density(0),  v.f.potential(0), v.tmp[0]
+                );
+            }
+            else {
+                dg::blas1::evaluate( v.tmp[1], dg::equals(),
+                    routines::RadialEnergyDiffDeltaF( v.p.tau[0], -1),
+                    v.f.density(0),  v.f.potential(0), v.tmp[0]
+                );
+            }
+            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    },
+    {"leiperp", "Perpendicular ion energy dissipation",
+        [](  Variables& v ) {
+            dg::blas1::axpby( 1., v.f.density(1), -1., 1., v.tmp[0]);
+            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[0]);
+            if (v.p.equations == "ff-lwl" || v.p.equations == "ff-O2" || v.p.equations == "ff-O4") {
+                dg::blas1::evaluate( v.tmp[1], dg::equals(),
+                    routines::RadialEnergyDiff(  v.p.tau[1], 1),
+                    v.f.density(1),  v.f.potential(1), v.tmp[0]
+                );
+            }
+            else {
+                 dg::blas1::evaluate( v.tmp[1], dg::equals(),
+                    routines::RadialEnergyDiffDeltaF(  v.p.tau[1], 1),
+                    v.f.density(1),  v.f.potential(1), v.tmp[0]
+                );
+            }
+            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
+        }
+    }
 };
 }//namespace poet

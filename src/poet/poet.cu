@@ -117,7 +117,7 @@ int main( int argc, char* argv[])
             {
                 if( pair.first == "Vor / " )
                 {
-                    poet.compute_lapM( 1., *pair.second, 0., temp);
+                    poet.compute_vorticity( 1., *pair.second, 0., temp);
                     dg::blas2::gemv( equidistant, temp, visual);
                 }
                 else
@@ -215,6 +215,7 @@ int main( int argc, char* argv[])
         //Create field IDs
         for( auto& record : poet::diagnostics2d_list)
         {
+            std::cout << record.name << std::endl;
             std::string name = record.name;
             std::string long_name = record.long_name;
             id3d[name] = 0;

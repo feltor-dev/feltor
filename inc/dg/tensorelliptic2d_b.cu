@@ -10,9 +10,6 @@
 #include "tensorelliptic.h"
 #include "multigrid.h"
 
-const double tau = 1.;
-const double alpha = -tau/2.;
-
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
@@ -32,10 +29,11 @@ double rhs( double x, double y) { return 2.0*(-amp*cos(2.*y) + amp* cos(2.*x) *(
 double sol(double x, double y)  { return sin( x)*sin(y);} //phi
 
 
-int main()
+int main(int argc, char * argv[])
 {
     unsigned n, Nx, Ny;
     double eps;
+    double eps_fac;
     double jfactor;
 
 // 	n = 3;
@@ -45,10 +43,16 @@ int main()
     
 // 	jfactor = 1;
 
-	std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
+	std::cout << "# Type n, Nx and Ny, and epsilon, and epsilon_factor (0.1) and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
-    std::cin >> eps >> jfactor;
-    std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
+    std::cin >> eps >> eps_fac >> jfactor;
+    std::cout <<"# You typed\n"
+              <<"n:  "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"eps: "<<eps<<"\n"
+              <<"eps_fac: "<<eps_fac<<"\n"
+              <<"jfactor: "<<jfactor<<std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
 	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
@@ -83,21 +87,21 @@ int main()
         multi_tensorelliptic[u].set_iota( multi_chi[u]);
     }
     t.toc();
-    std::cout << "Creation of multigrid took: "<<t.diff()<<"s\n";
+    std::cout << "# Creation of multigrid took: "<<t.diff()<<"s\n";
     
-    std::cout << "#####Inverting tensor elliptic operator\n";
+    std::cout << "# Inverting tensor elliptic operator\n";
     t.tic();
-    std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, b,{eps, eps*0.1, eps*0.1});
+    std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, b,{eps, eps*eps_fac, eps*eps_fac});
     t.toc();
     
-    std::cout << "Solution took "<< t.diff() <<"s\n";
+    std::cout << "time: "<< t.diff() <<"s\n";
     for( unsigned u=0; u<number.size(); u++)
-    	std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
+    	std::cout << "iterations["<< number.size()-1-u <<"]: " << number[number.size()-1-u] << " \n";
     //! [multigrid]
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err_norm = dg::blas2::dot( w2d, error);
     err_norm = sqrt( err_norm/norm); 
-    std::cout << " "<<err_norm <<"\n";
+    std::cout << "error: "<<err_norm <<"\n";
     
     return 0;
 }
