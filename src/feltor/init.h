@@ -242,7 +242,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
         if( "ne" == type)
         {
             dg::assign( profile, y0[0][0]);
-            std::string initphi = js.get("potential", "zero").asString();
+            std::string initphi = js.get("potential", "zero_pol").asString();
 #ifdef WITH_MPI
             int rank;
             MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -260,7 +260,8 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
         else if( "ni" == type)
         {
             dg::assign( profile, y0[0][1]);
-            feltor.initializene( y0[0][1], y0[0][0]);
+            std::string initphi = js.get("potential", "zero_pol").asString();
+            feltor.initializene( y0[0][1], y0[0][0], initphi);
         }
     }
     else if( "restart" == type)

@@ -117,10 +117,10 @@ int main( int argc, char* argv[])
     }
 #endif //WITH_MPI
     //Make grids
-    double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    double Zmin=-p.boxscaleZm*mag.params().a();
-    double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    double Zmax=p.boxscaleZp*mag.params().a();
+    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    const double Zmin=-p.boxscaleZm*mag.params().a();
+    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    const double Zmax=p.boxscaleZp*mag.params().a();
     dg::x::CylindricalGrid3d grid( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER
         #ifdef WITH_MPI

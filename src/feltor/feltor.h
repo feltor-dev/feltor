@@ -23,7 +23,7 @@ struct Explicit
         dg::geo::TokamakMagneticField mag );
 
     //Given N_i-1 initialize n_e-1 such that phi=0
-    void initializene( const Container& ni, Container& ne);
+    void initializene( const Container& ni, Container& ne, std::string initphi);
     //Given n_e-1 initialize N_i-1 such that phi=0
     void initializeni( const Container& ne, Container& ni, std::string initphi);
 
@@ -503,16 +503,30 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
-    const Container& src, Container& target)
+    const Container& src, Container& target, std::string initphi)
 {
     // ne = Ni
     dg::blas1::copy( src, target);
     if (m_p.tau[1] != 0.) {
-        // ne-1 = Gamma (ni-1)
-        std::vector<unsigned> number = m_multigrid.direct_solve(
-            m_multi_invgammaN, target, src, m_p.eps_gamma);
-        if(  number[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_p.eps_gamma);
+        if( initphi == "zero")
+        {
+            // ne-1 = Gamma (ni-1)
+            std::vector<unsigned> number = m_multigrid.direct_solve(
+                m_multi_invgammaN, target, src, m_p.eps_gamma);
+            if(  number[0] == m_multigrid.max_iter())
+                throw dg::Fail( m_p.eps_gamma);
+        }
+        else if( initphi == "balance")
+        {
+            //add FLR correction -0.5*tau*mu*Delta n_e
+            dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
+                m_lapperpN, src, 1.0, target);
+            //wird stark negativ falls alpha klein!!
+        }
+        else if( !(initphi == "zero_pol"))
+        {
+            throw dg::Error(dg::Message(_ping_)<<"Warning! initphi value '"<<initphi<<"' not recognized. I have tau = "<<m_p.tau[1]<<" ! I don't know what to do! I exit!\n");
+        }
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -536,7 +550,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
             dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
                 m_lapperpN, src, 1.0, target);
             //wird stark negativ falls alpha klein!!
-        else
+        else if( !(initphi == "zero_pol"))
         {
             throw dg::Error(dg::Message(_ping_)<<"Warning! initphi value '"<<initphi<<"' not recognized. I have tau = "<<m_p.tau[1]<<" ! I don't know what to do! I exit!\n");
         }

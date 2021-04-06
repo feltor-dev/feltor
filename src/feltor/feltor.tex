@@ -1110,13 +1110,33 @@ run different simulation or to initialize the simulation in the symmetric mode.
 "init":
 {
     "type" : "zero", // $n_e = N_i = 0$ no other parameters needed
+}
+\end{minted}
+\begin{minted}[texcomments]{js}
+"init":
+{
     "type" : "restart", // only the file parameter is needed (see Section \ref{sec:restart})
     "file" : "path/to/file.nc" // the file to use as a restart for $n_e$, $N_i$, $u_{\parallel,e}$ and $U_{\parallel,i}$
-
+}
+\end{minted}
+\begin{minted}[texcomments]{js}
+"init":
+{
     "type" : "ne",  // $n_e = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)$
-    "potential" : "zero",    // $N_i = \Gamma_{1,i}^{-1} n_e$ (ignored if $\tau_i = 0$)
-    "potential" : "balance", // $N_i = \Gamma_{1,i}n_e\approx \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e$ (ignored if $\tau_i = 0$)
-    "type" : "ni"  // $N_i = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)$, $n_e = \Gamma_{1,i} N_i$
+    "potential" : "zero_pol",// $N_i = n_e$ (polarization charge is 0)
+    "potential" : "zero",    // $N_i = \left( 1 - \frac{1}{2}\tau_i\mu_i\Delta_\perp \right) n_e= \Gamma_{1,i}^{-1} n_e $ (ignored if $\tau_i = 0$)
+    "potential" : "balance", // $N_i = \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e\approx \Gamma_{1,i}n_e$ (ignored if $\tau_i = 0$)
+    // \ldots ntilde, profile and damping parameters
+}
+\end{minted}
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "type" : "ni",  // $N_i = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)$
+    "potential" : "zero_pol",// $n_e = N_i$ (polarization charge is 0)
+    "potential" : "zero",    // $n_e = \Gamma_{1,i}N_i$ (ignored if $\tau_i = 0$)
+    "potential" : "balance", // $n_e = \left(1-\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)N_i = \Gamma_{1,i}^{-1}N_i$ (ignored if $\tau_i = 0$)
+    // \ldots ntilde, profile and damping parameters
 }
 \end{minted}
 \noindent
