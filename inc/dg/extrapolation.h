@@ -246,7 +246,7 @@ struct Extrapolation
     *
     * Construt and evaluate the interpolating polynomial at a given point
     * @param t time to which to extrapolate (or at which interpolating polynomial is evaluated)
-    * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @param new_x (write only) contains extrapolated value on output
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => new_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
     */
@@ -313,7 +313,7 @@ struct Extrapolation
 
     /**
     * @brief Extrapolate value (equidistant version)
-    * @param new_x (write only) contains extrapolated value on output ( may alias the tail if it exists)
+    * @param new_x (write only) contains extrapolated value on output
     * @note Assumes that extrapolation time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
@@ -359,7 +359,7 @@ struct Extrapolation
     }
     /**
     * @brief insert a new entry
-    * @param new_entry the new entry ( may alias the tail if it exists)
+    * @param new_entry the new entry
     * @note Assumes new time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
@@ -376,11 +376,11 @@ struct Extrapolation
     const ContainerType& head()const{
         return m_x[0];
     }
-    ///write access to tail value ( the one that will be deleted in the next update, undefined if max==0)
+    ///DEPRECATED write access to tail value ( the one that will be deleted in the next update, undefined if max==0)
     ContainerType& tail(){
         return m_x[m_max-1];
     }
-    ///read access to tail value ( the one that will be deleted in the next update, undefined if max==0)
+    ///DEPRECATED read access to tail value ( the one that will be deleted in the next update, undefined if max==0)
     const ContainerType& tail()const{
         return m_x[m_max-1];
     }
