@@ -16,7 +16,6 @@ struct Poet
      * @param p The parameters
      */
     Poet( const Geometry& g, const Parameters& p );
-
     const container& potential( int i) const { return m_psi[i];}
     const container& density(   int i) const { return m_ype[i];}
     const container& psi2() const {return m_psi2;}
@@ -133,9 +132,8 @@ struct Poet
     const container& compute_psi( double t, const container& potential);
     const container& polarisation( double t, const std::array<container,2>& y);
 
-    container m_chi, m_omega, m_iota, m_gamma_n, m_psi1, m_psi2;
+    container m_chi, m_omega, m_iota, m_gamma_n, m_psi1, m_psi2, m_rho_m1, m_phi_m1, m_gamma0sqrtinv_rho_m1, m_gamma0sqrt_phi_m1;
     const container m_binv; //magnetic field
-    container m_n_old, m_gamma_n_old, m_phi_old, m_psi1_old;
     std::array<container,2> m_psi, m_ype;
     
     //matrices and solvers
@@ -161,9 +159,8 @@ struct Poet
 
 template< class Geometry, class M, class container>
 Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p ):
-    m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_psi1(m_chi), m_psi2(m_chi),
+    m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_psi1(m_chi), m_psi2(m_chi), m_rho_m1(m_chi), m_phi_m1(m_chi), m_gamma0sqrtinv_rho_m1(m_chi), m_gamma0sqrt_phi_m1(m_chi),
     m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
-    m_n_old(m_chi),    m_gamma_n_old(m_chi), m_phi_old(m_chi),    m_psi1_old(m_chi),
     m_lapMperp( grid, dg::normed, dg::centered),
     m_multigrid( grid, 3),
     m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), 
@@ -279,11 +276,11 @@ const container& Poet<G,  M, container>::polarisation( double t, const std::arra
             dg::blas2::symv(m_v2d, m_chi, m_omega);
         }
         else if (m_p.equations == "ff-O2") {
-            m_gamma0sqrtinv_rho_ex.update( t, m_omega);
-            dg::blas1::axpby(-1.0, m_gamma0sqrtinv_rho_ex.tail(), 1.0, m_omega, m_chi);
+            dg::blas1::axpby(-1.0, m_gamma0sqrtinv_rho_m1, 1.0, m_omega, m_chi);
+            dg::blas1::copy(m_omega, m_gamma0sqrtinv_rho_m1);
             m_sqrtsolve(m_chi, m_omega); 
-            dg::blas1::axpby( 1.0, m_rho_ex.head(), 1.0, m_omega); 
-            m_rho_ex.update( t, m_omega);            
+            dg::blas1::axpby( 1.0, m_rho_m1, 1.0, m_omega); 
+            dg::blas1::copy(m_omega, m_rho_m1);
 //             m_sqrtsolve(m_omega, m_chi); //without using linearity
 //             dg::blas1::copy(m_chi, m_omega);            
         }
@@ -301,17 +298,18 @@ const container& Poet<G,  M, container>::polarisation( double t, const std::arra
         dg::blas1::pointwiseDot( m_v2d, m_psi[0], m_psi[0]);
     }
     else if( m_p.equations == "ff-O2" ) {
-        m_gamma0sqrt_phi_ex.extrapolate(t, m_psi1);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_elliptic, m_psi1, m_omega, m_p.eps_pol);
-        m_gamma0sqrt_phi_ex.update( t, m_psi1);
+        m_gamma0sqrt_phi_ex.extrapolate(t, m_iota);
+        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_elliptic, m_iota, m_omega, m_p.eps_pol);
+        m_gamma0sqrt_phi_ex.update( t, m_iota); 
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_pol[0]);
-
-        dg::blas1::axpby(-1.0, m_gamma0sqrt_phi_ex.tail(), 1.0, m_psi1);
-        m_sqrtsolve(m_psi1, m_psi[0]); 
-        dg::blas1::axpby( 1.0, m_phi_ex.head(), 1.0, m_psi[0]); 
-        m_phi_ex.update( t, m_psi[0]);
-//         m_sqrtsolve(m_psi1, m_psi[0]);    //without using linearity
+        
+        dg::blas1::axpby(1.0, m_iota, -1.0, m_gamma0sqrt_phi_m1, m_chi); 
+        dg::blas1::copy(m_iota, m_gamma0sqrt_phi_m1);
+        m_sqrtsolve(m_chi, m_psi[0]); 
+        dg::blas1::axpby( 1.0, m_phi_m1, 1.0, m_psi[0]); 
+        dg::blas1::copy(m_psi[0], m_phi_m1);
+//         m_sqrtsolve(m_iota, m_psi[0]);    //without using linearity
     }
     else { // "ff-lwl" || "df-lwl" || "df-O2"
         m_phi_ex.extrapolate(t, m_psi[0]);

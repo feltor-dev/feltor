@@ -2,20 +2,20 @@
     "grid":
     {
         "n" :  5,
-        "Nx" : 32,
-        "Ny" : 32,
-        "lx"  : 64,
-        "ly"  :64
+        "Nx" : 16,
+        "Ny" : 16,
+        "lx"  : 50,
+        "ly"  :50
     },
     "timestepper":
     {
-        "dt" : 0.025
+        "dt" : 0.05
     },
     "output":
     {
-        "type": "netcdf",   // "netcdf",
+        "type": "glfw",   // "netcdf",
         "itstp"  : 5,
-        "maxout" : 5,
+        "maxout" : 20,
         "n" : 5,
         "Nx" : 32,
         "Ny" : 32
@@ -23,7 +23,7 @@
     "elliptic":
     {
         "stages"     : 3,
-        "eps_pol"    : [1e-6,0.5,0.5],
+        "eps_pol"    : [1e-6,10.0,10.0],
         "jumpfactor": 1
     },
     "helmholtz":
@@ -38,14 +38,14 @@
     {
         "curvature"  : 0.00015,
         "tau"  : 4.0,
-        "equations": "ff-O4"
+        "equations": "ff-O2"
     },
     "init":
     {
-        "type"       : "blob",
+        "type"       : "blob_zeropol",
         "amplitude"  :1.0,
         "sigma"  : 5,
-        "posX"  : 0.25,
+        "posX"  : 0.5,
         "posY"  : 0.5
     },
     "nu_perp"  : 5e-5,
