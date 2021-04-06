@@ -30,18 +30,12 @@ int main( int argc, char* argv[])
     err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
     std::string inputfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
-    std::string geomfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
     err = nc_close( ncid_in);
-    Json::Value js,gs;
-    dg::file::string2Json(inputfile, js, dg::file::comments::are_forbidden);
-    dg::file::string2Json(geomfile, gs, dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
-    const feltor::Parameters p(js, dg::file::error::is_warning);
-    const dg::geo::solovev::Parameters gp(gs);
-    std::cout << js<<std::endl;
-    std::cout << gs<<std::endl;
+    const feltor::Parameters p(js);
+    std::cout << js.asJson() <<  std::endl;
     std::vector<std::string> names_input{
         "electrons", "ions", "Ue", "Ui", "potential", "aparallel"
     };
@@ -66,30 +60,47 @@ int main( int argc, char* argv[])
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
-    att["geomfile"] = geomfile;
     for( auto pair : att)
         err = nc_put_att_text( ncid_out, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
 
+    dg::geo::CylindricalFunctor wall, transition;
+    dg::geo::TokamakMagneticField mag, mod_mag;
+    try{
+        mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
+        mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
+                js["boundary"]["wall"], wall, transition);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
+
     //-------------------Construct grids-------------------------------------//
 
-    const double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    const double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    const double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    const double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    const double Zmin=-p.boxscaleZm*mag.params().a();
+    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    const double Zmax=p.boxscaleZp*mag.params().a();
     const unsigned FACTOR=10;
 
+    unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
+    unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
+    unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy;
     dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
-        p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
+        n_out, Nx_out, Ny_out, p.bcxN, p.bcyN);
     /////////////////////////////////////////////////////////////////////////
     dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
+        n_out, Nx_out, Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
     dg::CylindricalGrid3d g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
+        n_out, Nx_out, Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
-    dg::geo::CylindricalFunctor wall, transition;
-    dg::geo::TokamakMagneticField mag =
-        dg::geo::createModifiedField(gs, js, dg::file::error::is_warning, wall, transition);
+    //create RHS
+    if( p.modify_B)
+        mag = mod_mag;
+    if( p.periodify)
+        mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
     dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
     // Construct weights and temporaries
 
@@ -113,15 +124,17 @@ int main( int argc, char* argv[])
     //std::cin >> npsi >> Npsi >> Neta;
     std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
     std::cout << "Generate X-point flux-aligned grid!\n";
-    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    double Z_X = -1.1*gp.elongation*gp.a;
+    double R_X = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+    double Z_X = -1.1*mag.params().elongation()*mag.params().a();
     dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
-    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
-    double R_O = gp.R_0, Z_O = 0;
+    dg::geo::CylindricalSymmTensorLvl1 monitor_chi =
+        dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
+    double R_O = mag.R0(), Z_O = 0;
     dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
     double psipO = mag.psip()(R_O, Z_O);
 
-    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, R_X, Z_X, mag.R0(), 0, 0, false);
+    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO,
+            R_X, Z_X, mag.R0(), 0, 0, false);
     double fx_0 = 1./8.;
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::cout << "psi max is            "<<psipmax<<"\n";
@@ -316,7 +329,7 @@ int main( int argc, char* argv[])
             std::cerr << "Continue with next file\n";
             continue;
         }
-        err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
+        err = nc_inq_unlimdim( ncid, &timeID);
         err = nc_inq_dimlen( ncid, timeID, &steps);
         //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
