@@ -743,19 +743,25 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
             {
                 dtN = dtU = 0;
                 // density - upwind scheme
-                double v0 = (b_1*d2P - b_2*d1P) + mu*curv0 + mu*U*U*curvKappa0;
-                double v1 = (b_2*d0P - b_0*d2P) + mu*curv1 + mu*U*U*curvKappa1;
-                double v2 = (b_0*d1P - b_1*d0P) + mu*curv2 + mu*U*U*curvKappa2;
+                double v0 = (b_1*d2P - b_2*d1P) + tau*curv0 + mu*U*U*curvKappa0;
+                double v1 = (b_2*d0P - b_0*d2P) + tau*curv1 + mu*U*U*curvKappa1;
+                double v2 = (b_0*d1P - b_1*d0P) + tau*curv2 + mu*U*U*curvKappa2;
+                double bp0 = 0., bp1 = 0., bp2 = 0.;
                 if( beta != 0)
                 {
-                    v0 += U * ( A * curvKappa0 + ( d1A*b_2 - d2A*b_1));
-                    v1 += U * ( A * curvKappa1 + ( d2A*b_0 - d0A*b_2));
-                    v2 += U * ( A * curvKappa2 + ( d0A*b_1 - d1A*b_0));
+                    bp0 = A * curvKappa0 + ( d1A*b_2 - d2A*b_1);
+                    bp1 = A * curvKappa1 + ( d2A*b_0 - d0A*b_2);
+                    bp2 = A * curvKappa2 + ( d0A*b_1 - d1A*b_0);
+
+                    v0 += U * bp0;
+                    v1 += U * bp1;
+                    v2 += U * bp2;
                     //Q: doesn't U in U^2K_kappa and U b_perp create nonlinearity
                     //in velocity equation that may create shocks?
-                    //A: since advection is in perp direction it should not give
-                    //shocks. LeVeque argues that for smooth solutions the
-                    //upwind discretization should be fine but is wrong for shocks
+                    //A: we did some studies in the reconnection2d program and
+                    //did not find shocks. LeVeque argues that for smooth
+                    //solutions the upwind discretization should be fine but is
+                    //wrong for shocks
                 }
                 dtN += ( v0 > 0 ) ? -v0*d0BN : -v0*d0FN;
                 dtN += ( v1 > 0 ) ? -v1*d1BN : -v1*d1FN;
@@ -776,29 +782,25 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp(
                 double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
                 double KP = curv0*d0P+curv1*d1P+curv2*d2P;
 
-                dtN +=  - N * KP
-                        - mu * N * U * U * divCurvKappa
-                        - 2. * mu * N * U * KappaU;
-                dtU +=  - 2. * tau * U * KappaN / N
-                        - tau * U * divCurvKappa
-                        - U * KappaP;
+                dtN +=  - N * ( KP + mu * U * U * divCurvKappa
+                                + 2. * mu * U * KappaU);
+                dtU +=  - U * ( 2. * tau * KappaN / N + tau * divCurvKappa
+                                + KappaP);
                 if( beta != 0)
                 {
-                    double KnablaBA = (curv0-curvKappa0)*d0A
-                                     +(curv1-curvKappa1)*d1A
-                                     +(curv2-curvKappa2)*d2A;
-                    double UA = b_0*( (d1FU+d1BU)*d2A-(d2FU+d2BU)*d1A) / 2. +
-                                b_1*( (d2FU+d2BU)*d0A-(d0FU+d0BU)*d2A) / 2. +
-                                b_2*( (d0FU+d0BU)*d1A-(d1FU+d1BU)*d0A) / 2.;
-                    double NA = b_0*( (d1FN+d1BN)*d2A-(d2FN+d2BN)*d1A) / 2. +
-                                b_1*( (d2FN+d2BN)*d0A-(d0FN+d0BN)*d2A) / 2. +
-                                b_2*( (d0FN+d0BN)*d1A-(d1FN+d1BN)*d0A) / 2.;
-                    double PA = b_0*( d1P*d2A-d2P*d1A)+
-                                b_1*( d2P*d0A-d0P*d2A)+
-                                b_2*( d0P*d1A-d1P*d0A);
-                    dtN +=  -N*( A*KappaU + UA + U*( A*divCurvKappa - KnablaBA));
-                    dtU +=  -1./mu * ( A*KappaP + PA)
-                            -tau/mu * ( A*KappaN + NA) / N;
+                    double divbp = A*divCurvKappa
+                                     - (curv0-curvKappa0)*d0A
+                                     - (curv1-curvKappa1)*d1A
+                                     - (curv2-curvKappa2)*d2A;
+                    double bpU = bp0*( d0FU + d0BU) / 2. +
+                                 bp1*( d1FU + d1BU) / 2. +
+                                 bp2*( d2FU + d2BU) / 2.;
+                    double bpN = bp0*( d0FN + d0BN) / 2. +
+                                 bp1*( d1FN + d1BN) / 2. +
+                                 bp2*( d2FN + d2BN) / 2.;
+                    double bpP = bp0 * d0P + bp1 * d1P + bp2 * d2P;
+                    dtN +=  -N*( U*divbp + bpU);
+                    dtU +=  - bpP/mu - tau/mu * bpN/N;
                 }
             },
             //species depdendent
@@ -996,12 +998,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
                 m_sheathDotDirection, 1.,  yp[1][1]);
     }
     // now add wall and sheath penalization "damping" term
+    // pointwiseDot catches 0 coefficients
     for( unsigned i=0; i<2; i++)
     {
         dg::blas1::pointwiseDot( -m_wall_rate, m_wall, y[0][i],
                 -m_sheath_rate, m_sheath, y[0][i], 1., yp[0][i]);
         dg::blas1::pointwiseDot( -m_wall_rate, m_wall, fields[1][i],
-                -m_wall_rate, m_wall, fields[1][i], 1., yp[1][i]);
+                -m_sheath_rate, m_sheath, fields[1][i], 1., yp[1][i]);
     }
 
 }

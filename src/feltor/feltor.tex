@@ -633,7 +633,7 @@ used to implement and divergences.
 %\left.
     \vphantom{\frac{\vec b\times\vn \psi}{B}} %PHANTOM
     - N\npar U_\parallel - U_\parallel \npar N - NU_\parallel \nc \bhat
-    - \nu_\perp\Delta_\perp^2 N + S_N
+    - \nu_{N,\perp}(-\Delta_\perp)^s N + S_N
 %\right] (1-\chi_s - \chi_w)
 % \nonumber \\&
 %    + \omega_s\chi_s( N_{sh} - N) + \omega_w \chi_w (1-N)
@@ -667,7 +667,7 @@ used to implement and divergences.
 %\left.
 \vphantom{\frac{\vec b\times\vn \psi}{B}} %PHANTOM
         - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_{\parallel,i} - u_{\parallel,e})
-    + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \nu_\perp\Delta_\perp^2 U_\parallel
+        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \nu_{U,\perp}(-\Delta_\perp)^s U_\parallel
     + S_U
 %\right] (1-\chi_s - \chi_w)
  %\nonumber \\&
@@ -679,9 +679,10 @@ used to implement and divergences.
     \label{eq:Egyrofluid}
 \end{subequations}
 together with
-$\vec u_E\cn f = [ \psi, f]_\perp$,
-${\vec b}_\perp\cdot \nabla f = A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
-and $\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ { K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
+%$\vec u_E\cn f = [ \psi, f]_\perp$,
+%${\vec b}_\perp\cdot \nabla f = A_\parallel \mathcal K_{\vn\times\bhat}(f) + \frac{1}{B}[ f, A_\parallel]_\perp$
+%and
+$\nc { \vec b}_\perp = A_\parallel \vec \nc\vec{ { K}_{\vn\times\bhat}} - \mathcal K_{\vn B}(A_\parallel) $
 and
 \begin{subequations} \label{eq:elliptic}
   \begin{align}
@@ -1020,7 +1021,7 @@ as in
 \begin{align}
     \partial_t N &= F_N ( 1-\chi_s)  -\omega_s\chi_s (N-N_{sh})\\
     \partial_t W_\parallel &= F_U  ( 1 - \chi_s) -\omega_s\chi_s (U_\parallel-
-        U_\parallel^{sh})
+        U_{\parallel,sh})
 \end{align}
 \end{subequations}
 \begin{tcolorbox}[title=Note]
@@ -1034,7 +1035,7 @@ as in
     \begin{subequations} \label{eq:sheath_wall_equations}
     \begin{align}
         \partial_t N &= F_N ( 1-\chi_s - \chi_w)  -\omega_s\chi_s (N-N_{sh}) -\omega_w\chi_w (N-N_{w})\\
-        \partial_t W_\parallel &= F_U  ( 1 - \chi_s- \chi_w) -\omega_w\chi_w (U_\parallel- U_\parallel^{w})
+        \partial_t W_\parallel &= F_U  ( 1 - \chi_s- \chi_w) -\omega_s \chi_s (U_\parallel - U_{\parallel,sh})-\omega_w\chi_w (U_\parallel- U_{\parallel,w})
     \end{align}
     \end{subequations}
     In this case the perpendicular boundary
@@ -1484,7 +1485,8 @@ we implement an artificial viscosity of order $s$ Eq.~\eqref{eq:perpdiffNU}
 Simply set the diffusion to 0 if you do not want any regularization.
 \begin{tcolorbox}[title=Note]
     Having to make the timestep smaller due to viscosity
-    is a clear warning that \mintinline{json}{nu_perp} is too large for the chosen resolution.
+    is a clear warning that \mintinline{c}{nu_perp} is too large for the
+    chosen resolution.
 \end{tcolorbox}
 
 \subsection{Elliptic solvers}
@@ -2427,34 +2429,45 @@ equidistant $\rho_p$ and $\rho_t$ values tend to translate to equidistant flux-s
 in configuration space.
 
 \subsection{Manufactured Solution} \label{sec:manufactured}
-In order to test the implementation we manufacture a solution to Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
+In order to test the implementation we manufacture a solution to
+Eqs.~\eqref{eq:Egyrofluid} and \eqref{eq:elliptic} of the form
 \begin{align*}
-n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
-N_i(R,Z,\varphi, t) &:= n_e(R,Z,\varphi,t) = \gamma_{ N_i}  \\
-u_{\parallel,e}(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
-U_{\parallel,i}(R,Z,\varphi, t) &:= \sqrt{-\mu_e}u_{\parallel,e}(R,Z,\varphi,t) \\
 \phi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5; \\
-\psi(R,Z,\varphi,t) &:= \phi(R,Z,\varphi, t) = \gamma_{\phi} \\
-A_\parallel( R,Z,\varphi,t) &:= \beta\sin(4\pi(R-R_0))\sin(4\pi Z)\sin(4\varphi)\sin(4\pi t)/4;
+\psi(R,Z,\varphi,t) &:= \sin(3\pi(R-R_0))\sin(3\pi Z)\sin(3\varphi)\sin(3\pi t)/5 = \gamma_{\phi}; \\
+n_e(R,Z,\varphi, t) &:= 1 + 0.5\sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) \\
+{N_i}(R,Z,\varphi,t) &:= 1 + 0.25 \sin(\pi(R-R_0))\sin(\pi Z)\sin(\varphi)\sin(\pi t) = \gamma_{N_i} \\
+u_{\parallel,e}(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3\sqrt{-\mu_e}) \\
+U_{\parallel,i}(R,Z,\varphi, t) &:= \sin(2\pi(R-R_0))\sin(2\pi Z)\sin(2\varphi)\sin(2\pi t)/(3) \\
+A_\parallel( R,Z,\varphi,t) &:= \beta( U_{\parallel,i} - u_{\parallel,e})
 \end{align*}
 We choose circular flux surfaces of the form
 \begin{align*}
 \psi_p(R,Z) :=0.5((R-R_0)^2 + Z^2),\quad
 I_p(R,Z):=I_0
 \end{align*}
-with $R_0=10$ and $I_0=20$ and a simulation box $[R_0-a,R_0+a]\times[-a,a]\times[0,2\pi]$.
-We then symbolically compute (with the help of Mathematica) source terms that we insert to the right hand side of
-the corresponding equation in code (\mintinline{c}{manufactured.h}) and simulate from $t=0...10^{-3}$.
-By comparing the numerical solution to the manufactured one we can observe the convergence of our numerical methods. Note that in order to better distinguish
-the convergence of the DG discretized terms from our parallel derivative
-we can selectively choose to only activate perpendicular (including $A_\parallel$ terms) or parallel terms (those that involve derivatives along $\bhat$).
+with $R_0=10$ and $I_0=20$ and a simulation box
+$[R_0-a,R_0+a]\times[-a,a]\times[0,2\pi]$.
+We then insert these solutions into Eqs.~\eqref{eq:Egyrofluid} and
+\eqref{eq:elliptic} and symbolically compute (with the help of Mathematica) the
+remainder as source terms that are stored as C-code in the file
+\mintinline{c}{manufactured.h}. We insert these source terms to the right hand
+side of the corresponding equation in code and simulate for a small time-span.
+By comparing the numerical solution to the manufactured one we can observe the
+convergence of our numerical methods.
+\begin{tcolorbox}[title=Note]
+    In order to better distinguish the convergence of the DG discretized terms
+    from our parallel derivative we can selectively choose to only activate
+    perpendicular (including $A_\parallel$ terms) or parallel terms (those that
+    involve derivatives along $\bhat$).
+\end{tcolorbox}
 
 Unfortunately, we were unable to find a closed solution for the energy integrals with the above fields.
 \begin{tcolorbox}[title=Note]
     The program \mintinline{bash}{manufactured} ignores the "init" parameter
     in the input file and must be used with a circular magnetic field equilibrium
     in combination with "wall", "sheath" and "source" set as "none" or "zero".
-    % What is the regularization?
+    Further, we have the "regularization" of "order" : 1 and we have the same
+    diffusion for density and velocity.
     % Check exact equations that are solved!
 \end{tcolorbox}
 

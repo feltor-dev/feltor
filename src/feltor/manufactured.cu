@@ -8,9 +8,9 @@
 
 #include "parameters.h"
 #define DG_MANUFACTURED
-//Change here to selectively test parallel and perp parts
-#define FELTORPARALLEL 1
-#define FELTORPERP 0
+//Changed by Makefile
+// #define FELTORPARALLEL 1
+// #define FELTORPERP 1
 
 #include "manufactured.h"
 #include "feltor.h"
@@ -23,7 +23,8 @@ int main( int argc, char* argv[])
 
     const feltor::Parameters p( js);
     std::cout << js.asJson() <<std::endl;
-    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField( js["params"]);
+    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
+            js["magnetic_field"]["params"]);
 
     double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
     double Zmin=-p.boxscaleZm*mag.params().a();
@@ -39,22 +40,23 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "# Construct rhs" << std::endl;
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::x::DVec> feltor( grid, p, mag);
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix,
+        dg::x::DVec> feltor( grid, p, mag);
 
     feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                 p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                 p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                 p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                     p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                     p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
     feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-                                p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
 
     dg::x::DVec R = dg::pullback( dg::cooX3d, grid);
     dg::x::DVec Z = dg::pullback( dg::cooY3d, grid);
@@ -72,18 +74,23 @@ int main( int argc, char* argv[])
     dg::blas1::axpby(1./p.mu[0], apar, 1., y0[1][0]); //we=ue+1/mA
     dg::blas1::axpby(1./p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+1/mA
 
-    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > > mp(p.tableau, y0);
-    double time = 0, TMAX = 0.1;
+    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > >
+        mp(p.tableau, y0);
+    double time = 0;
     mp.init( feltor, time, y0, p.dt);
-    while( time < TMAX)
+    unsigned maxout = js["output"].get( "maxout", 0).asUInt();
+    for( unsigned j=0; j<p.itstp*maxout; j++)
     {
-        try{
-            mp.step( feltor, time, y0);
-        }
-        catch( dg::Fail& fail) {
-            std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-            std::cerr << "Does Simulation respect CFL condition?\n";
-            return -1;
+        for( unsigned i=0; i<p.inner_loop; i++)
+        {
+            try{
+                mp.step( feltor, time, y0);
+            }
+            catch( dg::Fail& fail) {
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                return -1;
+            }
         }
         std::cout << "#Time "<<time<<std::endl;
     }
@@ -129,13 +136,13 @@ int main( int argc, char* argv[])
               <<"Nz: "<<p.Nz<<"\n"
               <<"Time: "<<time<<"\n";
     std::cout <<"error:\n"
-              <<"    ne:   "<<errone/normne<<"\n"
-              <<"    ni:   "<<erroni/normni<<"\n"
-              <<"    ue:   "<<erroue/normue<<"\n"
-              <<"    ui:   "<<erroui/normui<<"\n"
-              <<"    phie: "<<errophie/normphie<<"\n"
-              <<"    phii: "<<errophii/normphii<<"\n"
-              <<"    apar: "<<erroapar/normapar<<"\n";
+              <<"    ne:   "<<errone<<"\n"
+              <<"    ni:   "<<erroni<<"\n"
+              <<"    ue:   "<<erroue<<"\n"
+              <<"    ui:   "<<erroui<<"\n"
+              <<"    phie: "<<errophie<<"\n"
+              <<"    phii: "<<errophii<<"\n"
+              <<"    apar: "<<erroapar<<"\n";
     std::cout << "norm:\n"
               <<"    ne:   "<<normne<<"\n"
               <<"    ni:   "<<normni<<"\n"
