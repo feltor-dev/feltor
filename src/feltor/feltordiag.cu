@@ -40,29 +40,7 @@ int main( int argc, char* argv[])
         "electrons", "ions", "Ue", "Ui", "potential", "aparallel"
     };
 
-    //-----------------Create Netcdf output file with attributes----------//
-    int ncid_out;
-    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
-
-    /// Set global attributes
-    std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
-    att["Conventions"] = "CF-1.7";
-    ///Get local time and begin file history
-    auto ttt = std::time(nullptr);
-    auto tm = *std::localtime(&ttt);
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/feltor.tex";
-    att["source"] = "FELTOR";
-    att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = inputfile;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid_out, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    //-------------------Construct grids-------------------------------------//
 
     dg::geo::CylindricalFunctor wall, transition;
     dg::geo::TokamakMagneticField mag, mod_mag;
@@ -76,8 +54,6 @@ int main( int argc, char* argv[])
         std::cerr <<e.what()<<std::endl;
         return -1;
     }
-
-    //-------------------Construct grids-------------------------------------//
 
     const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
     const double Zmin=-p.boxscaleZm*mag.params().a();
@@ -106,12 +82,6 @@ int main( int argc, char* argv[])
 
     dg::HVec transferH2d = dg::evaluate(dg::zero,g2d_out);
     dg::HVec t2d_mp = dg::evaluate(dg::zero,g2d_out);
-    std::cout << "Construct Fieldaligned derivative ... \n";
-
-    auto bhat = dg::geo::createBHat( mag);
-    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
-        bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5);
 
 
     ///--------------- Construct X-point grid ---------------------//
@@ -187,7 +157,14 @@ int main( int argc, char* argv[])
     map1d.emplace_back("rho_p", rho,
         "Alternative flux label rho_p = sqrt(1-psi/psimin)");
     dg::geo::SafetyFactor qprof( mag);
-    dg::HVec qprofile = dg::evaluate( qprof, g1d_out);
+    dg::HVec psi_vals = dg::evaluate( dg::cooX1d, g1d_out);
+    // we need to avoid calling SafetyFactor outside closed fieldlines
+    dg::blas1::subroutine( [psipO]( double& psi){
+           if( (psipO < 0 && psi > 0) || (psipO>0 && psi <0))
+               psi = psipO/2.; // just use a random value
+        }, psi_vals);
+    dg::HVec qprofile( psi_vals);
+    dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
     map1d.emplace_back("q-profile", qprofile,
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
@@ -205,6 +182,53 @@ int main( int argc, char* argv[])
     map1d.emplace_back("rho_t", psit,
         "Toroidal flux label rho_t = sqrt( psit/psit_tot)");
 
+    //-----------------Create Netcdf output file with attributes----------//
+    //-----------------And 1d static output                     ----------//
+    int ncid_out;
+    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
+
+    /// Set global attributes
+    std::map<std::string, std::string> att;
+    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
+    att["Conventions"] = "CF-1.7";
+    ///Get local time and begin file history
+    auto ttt = std::time(nullptr);
+    auto tm = *std::localtime(&ttt);
+    std::ostringstream oss;
+    ///time string  + program-name + args
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    for( int i=0; i<argc; i++) oss << " "<<argv[i];
+    att["history"] = oss.str();
+    att["comment"] = "Find more info in feltor/src/feltor.tex";
+    att["source"] = "FELTOR";
+    att["references"] = "https://github.com/feltor-dev/feltor";
+    att["inputfile"] = inputfile;
+    for( auto pair : att)
+        err = nc_put_att_text( ncid_out, NC_GLOBAL,
+            pair.first.data(), pair.second.size(), pair.second.data());
+
+    int dim_id1d = 0;
+    err = dg::file::define_dimension( ncid_out, &dim_id1d, g1d_out, {"psi"} );
+    //write 1d static vectors (psi, q-profile, ...) into file
+    for( auto tp : map1d)
+    {
+        int vid;
+        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1,
+            &dim_id1d, &vid);
+        err = nc_put_att_text( ncid_out, vid, "long_name",
+            std::get<2>(tp).size(), std::get<2>(tp).data());
+        err = nc_enddef( ncid_out);
+        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
+        err = nc_redef(ncid_out);
+    }
+    if( p.calibrate )
+    {
+        err = nc_close( ncid_out);
+        return 0;
+    }
+    //
+    //---------------------END OF CALIBRATION-----------------------------//
+    //
     // interpolate from 2d grid to X-point points
     dg::IHMatrix grid2gridX2d  = dg::create::interpolation(
         coordsX[0], coordsX[1], g2d_out);
@@ -216,34 +240,19 @@ int main( int argc, char* argv[])
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
     dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
     //although the first point outside LCFS is still wrong
-
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
+    int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
     //Write long description
     std::string long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
-    int dim_ids1d[2] = {dim_ids[0], 0}; //time,  psi
-    err = dg::file::define_dimension( ncid_out, &dim_ids1d[1], g1d_out, {"psi"} );
     std::map<std::string, int> id0d, id1d, id2d;
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
     size_t start2d[3] = {0, 0, 0};
-
-    //write 1d static vectors (psi, q-profile, ...) into file
-    for( auto tp : map1d)
-    {
-        int vid;
-        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1,
-            &dim_ids1d[1], &vid);
-        err = nc_put_att_text( ncid_out, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef( ncid_out);
-        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid_out);
-    }
 
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -273,13 +282,13 @@ int main( int argc, char* argv[])
 
         name = record_name + "_fsa";
         long_name = record.long_name + " (Flux surface average.)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids2d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
         name = record_name + "_std_fsa";
         long_name = record.long_name + " (Flux surface average standard deviation on outboard midplane.)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids2d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
@@ -288,7 +297,7 @@ int main( int argc, char* argv[])
         long_name = record.long_name + " (wrt. vol integrated flux surface average)";
         if( record_name[0] == 'j')
             long_name = record.long_name + " (wrt. vol derivative of the flux surface average)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids2d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
@@ -311,6 +320,12 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id0d[name], "long_name", long_name.size(),
             long_name.data());
     }
+    std::cout << "Construct Fieldaligned derivative ... \n";
+
+    auto bhat = dg::geo::createBHat( mag);
+    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
+        bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
+        p.rk4eps, 5, 5);
     /////////////////////////////////////////////////////////////////////////
     size_t counter = 0;
     int ncid;

@@ -234,8 +234,15 @@ int main( int argc, char* argv[])
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
         if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO)
         {
-            dg::geo::SafetyFactor qprof( mod_mag); //mag can lead to dead-lock!?
-            dg::HVec qprofile = dg::evaluate( qprof, grid1d);
+            dg::geo::SafetyFactor qprof( mag);
+            dg::HVec psi_vals = dg::evaluate( dg::cooX1d, grid1d);
+            // we need to avoid calling SafetyFactor outside closed fieldlines
+            dg::blas1::subroutine( [psipO]( double& psi){
+                   if( (psipO < 0 && psi > 0) || (psipO>0 && psi <0))
+                       psi = psipO/2.; // just use a random value
+                }, psi_vals);
+            dg::HVec qprofile( psi_vals);
+            dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
             map1d.emplace_back("q-profile", qprofile,
                 "q-profile (Safety factor) using direct integration");
             dg::HVec psit = dg::integrate( qprofile, grid1d);

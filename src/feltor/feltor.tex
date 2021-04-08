@@ -15,10 +15,13 @@ The full-F electromagnetic model in toroidal geometry \textsc{Feltor}}
 \begin{abstract}
 \textsc{Feltor} is a model for global 3d isothermal electromagnetic full-F gyro-fluid simulations.
 
-The purpose of this document is to describe the (usage of) programs
-contained in \mintinline{bash}{path/to/feltor/src/feltor} such
-that there is no need to look
-into the actual source code and to connect
+\noindent
+This document describes the (usage of) programs
+contained in \mintinline{bash}{path/to/feltor/src/feltor}
+%such
+%that there is no need to look
+%into the actual source code
+and connects
 the implemented formulas to relevant journal publications.
 \end{abstract}
 \tableofcontents
@@ -2118,7 +2121,7 @@ time             & Coord. Var. & 1 (time)& time at which fields are written (var
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
 psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
-q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but unavailable outside separatrix) \\
+q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but we assign random values outside separatrix) \\
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$ \\
 rho              & Dataset & 1 (psi) & Transformed flux label $\rho:= 1 - \psi_p/\psi_{p,O}$ \\
@@ -2304,9 +2307,11 @@ q\equiv\frac{1}{2\pi}\oint \frac{B^\varphi}{B^\Theta} \d\Theta
 \end{align}
 We integrate this equation with the help of one of our ODE integrators, i.e. we use a high-order Runge-Kutta method
 and refine the stepsize until machine-precision is reached.
-Notice that the safety factor diverges on the last closed flux
+\begin{tcolorbox}[title=Note]
+The safety factor diverges on the last closed flux
 surface whereas Eq.~\eqref{eq:total_flux}
-remains finite due to the $\vn\psi_p$ factor.
+remains finite due to the $\vn\psi_p$ factor. Outside the LCFS $q$ remains undefined.
+\end{tcolorbox}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Toroidal averages}
 Here, we comment on the $\varphi$ average that is part of the flux-surface average Eq.~\eqref{eq:fsa_vol}.
