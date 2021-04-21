@@ -169,7 +169,7 @@ int main( int argc, char* argv[])
             return -1;
         }
         dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, false);
+        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, true);
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipO;
         std::cout << "psi 1 is          "<<psipmax<<"\n";

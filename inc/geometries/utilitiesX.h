@@ -373,25 +373,19 @@ struct SeparatriX
         //find four points on the separatrix and construct y coordinate at those points and at last construct f
         //////////////////////////////////////////////
         double R_X = xX; double Z_X = yX;
+        double boxR = 0.05, boxZ = 0.01; // determine bisection boundaries
+        std::array<double,4> R_min={R_X, R_X*(1.0-boxR), R_X*(1.0-boxR), R_X};
+        std::array<double,4> R_max={R_X*(1.0+boxR), R_X, R_X, R_X*(1.0+boxR)};
+        std::array<double,4> Z_0={Z_X+boxZ*R_X, Z_X+boxZ*R_X, Z_X-boxZ*R_X, Z_X-boxZ*R_X};
         PsipSep psip_sep( psi.f());
-        psip_sep.set_Z( Z_X + 1.);
-        double R_min = R_X, R_max = R_X + 10.;
-        dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
-        R_i[0] = (R_min+R_max)/2., Z_i[0] = Z_X+1.;
-        if(m_verbose)std::cout << "Found 1st point "<<R_i[0]<<" "<<Z_i[0]<<"\n";
-        R_min = R_X-10, R_max = R_X;
-        dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
-        R_i[1] = (R_min+R_max)/2., Z_i[1] = Z_X+1.;
-        if(m_verbose)std::cout << "Found 2nd point "<<R_i[1]<<" "<<Z_i[1]<<"\n";
-        psip_sep.set_Z( Z_X - 1.);
-        R_min = R_X-10, R_max = R_X;
-        dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
-        R_i[2] = (R_min+R_max)/2., Z_i[2] = Z_X-1.;
-        if(m_verbose)std::cout << "Found 3rd point "<<R_i[2]<<" "<<Z_i[2]<<"\n";
-        R_min = R_X, R_max = R_X+10;
-        dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
-        R_i[3] = (R_min+R_max)/2., Z_i[3] = Z_X-1.;
-        if(m_verbose)std::cout << "Found 4th point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
+        for( unsigned i=0; i<4; i++)
+        {
+            psip_sep.set_Z( Z_0[i]);
+            dg::bisection1d( psip_sep, R_min[i], R_max[i], 1e-13);
+            R_i[i] = (R_min[i]+R_max[i])/2., Z_i[i] = Z_0[i];
+            if(m_verbose)std::cout << "Found "<<i+1<<"st point "<<R_i[i]
+                                   <<" "<<Z_i[i]<<"\n";
+        }
         //now measure y distance to X-point
         std::array<double, 3> begin2d{ {0,0,0} }, end2d(begin2d);
         for( int i=0; i<4; i++)
@@ -401,16 +395,17 @@ struct SeparatriX
             begin2d[1] = end2d[1] = Z_i[i];
             begin2d[2] = end2d[2] = 0.;
             double eps = 1e10, eps_old = 2e10;
-            double y=0, y_old=0;
+            //double y=0, y_old=0;
             //difference to X-point isn't much better than 1e-5
             while( (eps < eps_old || eps > 5e-5))
             {
-                eps_old = eps; N*=2; y_old=y;
+                eps_old = eps; N*=2;// y_old=y;
                 if(mode_==0)dg::stepperRK( "Fehlberg-6-4-5",  fieldRZYZconf_, Z_i[i], begin2d, Z_X, end2d, N);
                 if(mode_==1)dg::stepperRK( "Fehlberg-6-4-5",  fieldRZYZequi_, Z_i[i], begin2d, Z_X, end2d, N);
-                y=end2d[2];
-                eps = fabs((y-y_old)/y_old);
+                //y=end2d[2];
+                //eps = fabs((y-y_old)/y_old);
                 eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
+                if( std::isnan(eps)) { eps = eps_old/2.; }
                 //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
             }
             //remember last call
