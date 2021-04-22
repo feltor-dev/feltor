@@ -6,8 +6,23 @@
         "Ny" : 80,
         "Nz" : 20,
         "Npsi": 32,
-        "scaleR" : [1.1,1.1],
+        "Neta": 640,
+        "scaleR" : [1.1, 1.1],
         "scaleZ" : [1.9, 1.9]
+    },
+    "boundary":
+    {
+        "wall":
+        {
+            "type" : "heaviside",
+            "boundary" : 1.1,
+            "alpha" : 0.2
+        },
+        "sheath":
+        {
+            "boundary" : 0.1,
+            "alpha" : 0.01
+        }
     },
     "magnetic_field":
     {

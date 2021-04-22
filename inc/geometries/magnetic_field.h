@@ -854,13 +854,21 @@ struct GradBHatP: public aCylindricalFunctor<GradBHatP>
     TokamakMagneticField m_mag;
 };
 
-///@brief \f$ \sqrt{\psi_p/ \psi_{p,\min}} \f$
+/*@brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
+ *
+ * @attention undefined if there is no O-point near [R_0 , 0]
+ */
 struct RhoP: public aCylindricalFunctor<RhoP>
 {
     RhoP( const TokamakMagneticField& mag): m_mag(mag){
         double RO = m_mag.R0(), ZO = 0;
-        findOpoint( mag.get_psip(), RO, ZO);
-        m_psipmin = m_mag.psip()(RO, ZO);
+        try{
+            findOpoint( mag.get_psip(), RO, ZO);
+            m_psipmin = m_mag.psip()(RO, ZO);
+        } catch ( dg::Error& err)
+        {
+            m_psipmin = 1.;
+        }
     }
     double do_compute( double R, double Z) const
     {

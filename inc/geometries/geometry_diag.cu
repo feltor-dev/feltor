@@ -65,8 +65,16 @@ int main( int argc, char* argv[])
             mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
 
     dg::geo::description mag_description = mag.params().getDescription();
-    double psipO = -1.;
-    if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO )
+
+    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
+    dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
+    double psipO = dg::blas1::reduce( psipog2d, 0., thrust::minimum<double>());
+    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>());
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
         //Find O-point
         double RO = mag.R0(), ZO = 0.;
@@ -79,11 +87,10 @@ int main( int argc, char* argv[])
             std::cout << " (maximum)"<<std::endl;
         double psip0 = mag.psip()(mag.R0(), 0);
         std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
+        double fx_0 = 1./8.;
+        psipmax = -fx_0/(1.-fx_0)*psipO;
     }
 
-
-    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
-    dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
@@ -152,8 +159,8 @@ int main( int argc, char* argv[])
     unsigned npsi = 3;
     //set number of psivalues (NPsi % 8 == 0)
     unsigned Npsi = js["grid"].get("Npsi", 32).asUInt();
+    unsigned Neta = js["grid"].get("Neta", 640).asUInt();
     /// -------  Elements for fsa on X-point grid ----------------
-    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
     if( mag_description == dg::geo::description::standardX)
     {
@@ -173,7 +180,7 @@ int main( int argc, char* argv[])
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipO;
         std::cout << "psi 1 is          "<<psipmax<<"\n";
-        gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
+        gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";
         dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
@@ -223,7 +230,11 @@ int main( int argc, char* argv[])
     /// --------- More flux labels --------------------------------
     dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
-    if( mag_description != dg::geo::description::none && mag_description != dg::geo::description::centeredX)
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
         dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
@@ -232,34 +243,31 @@ int main( int argc, char* argv[])
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
         map1d.emplace_back("rho_p", rho,
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
-        if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO)
-        {
-            dg::geo::SafetyFactor qprof( mag);
-            dg::HVec psi_vals = dg::evaluate( dg::cooX1d, grid1d);
-            // we need to avoid calling SafetyFactor outside closed fieldlines
-            dg::blas1::subroutine( [psipO]( double& psi){
-                   if( (psipO < 0 && psi > 0) || (psipO>0 && psi <0))
-                       psi = psipO/2.; // just use a random value
-                }, psi_vals);
-            dg::HVec qprofile( psi_vals);
-            dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
-            map1d.emplace_back("q-profile", qprofile,
-                "q-profile (Safety factor) using direct integration");
-            dg::HVec psit = dg::integrate( qprofile, grid1d);
-            map1d.emplace_back("psit1d", psit,
-                "Toroidal flux label psi_t integrated  on grid1d using direct q");
-            //we need to avoid integrating >=0
-            dg::Grid1d g1d_fine(psipO<0. ? psipO : 0.,
-                    psipO<0. ? 0. : psipO, npsi, Npsi,dg::NEU);
-            qprofile = dg::evaluate( qprof, g1d_fine);
-            dg::HVec w1d = dg::create::weights( g1d_fine);
-            double psit_tot = dg::blas1::dot( w1d, qprofile);
-            //std::cout << "psit tot "<<psit_tot<<"\n";
-            dg::blas1::scal ( psit, 1./psit_tot);
-            dg::blas1::transform( psit, psit, dg::SQRT<double>());
-            map1d.emplace_back("rho_t", psit,
-                "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
-        }
+        dg::geo::SafetyFactor qprof( mag);
+        dg::HVec psi_vals = dg::evaluate( dg::cooX1d, grid1d);
+        // we need to avoid calling SafetyFactor outside closed fieldlines
+        dg::blas1::subroutine( [psipO]( double& psi){
+               if( (psipO < 0 && psi > 0) || (psipO>0 && psi <0))
+                   psi = psipO/2.; // just use a random value
+            }, psi_vals);
+        dg::HVec qprofile( psi_vals);
+        dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
+        map1d.emplace_back("q-profile", qprofile,
+            "q-profile (Safety factor) using direct integration");
+        dg::HVec psit = dg::integrate( qprofile, grid1d);
+        map1d.emplace_back("psit1d", psit,
+            "Toroidal flux label psi_t integrated  on grid1d using direct q");
+        //we need to avoid integrating outside closed fieldlines
+        dg::Grid1d g1d_fine(psipO<0. ? psipO : 0.,
+                psipO<0. ? 0. : psipO, npsi, Npsi,dg::NEU);
+        qprofile = dg::evaluate( qprof, g1d_fine);
+        dg::HVec w1d = dg::create::weights( g1d_fine);
+        double psit_tot = dg::blas1::dot( w1d, qprofile);
+        //std::cout << "psit tot "<<psit_tot<<"\n";
+        dg::blas1::scal ( psit, 1./psit_tot);
+        dg::blas1::transform( psit, psit, dg::SQRT<double>());
+        map1d.emplace_back("rho_t", psit,
+            "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
     }
 
     /////////////////////////////set up netcdf/////////////////////////////////////

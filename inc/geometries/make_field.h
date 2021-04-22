@@ -39,11 +39,24 @@ namespace geo{
 // Circular flux surfaces
 {
     "equilibrium" : "circular",
-    "I_0" : 20
+    "I_0" : 20,
     "R_0" : 10
 }
 // Automatically chosen:
 // description : "standardO",
+// a : 1.0,
+// elongation : 1.0,
+// triangularity : 0.0
+ * @endcode
+ * @code
+// The guenther magnetic field
+{
+    "equilibrium" : "guenther",
+    "I_0" : 20,
+    "R_0" : 10
+}
+// Automatically chosen:
+// description : "square",
 // a : 1.0,
 // elongation : 1.0,
 // triangularity : 0.0
