@@ -110,8 +110,8 @@ struct Parameters
                 "braginskii").asString();
         if( viscosity == "braginskii")
         {
-            nu_parallel[0] = 0.73/eta;
-            nu_parallel[1] = sqrt(fabs(mu[0]))*1.36/eta;
+            nu_parallel[0] = 0.37/eta;
+            nu_parallel[1] = sqrt(fabs(mu[0]))*power(tau[1], 1.5)*0.69/eta;
         }
         else if ( viscosity == "value")
         {
