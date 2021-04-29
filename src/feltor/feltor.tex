@@ -979,11 +979,11 @@ We define as sheath any part on the bounding box that is not included in the wal
 penalization. Then we check for each point in the box the poloidal distance to
 the sheath wall and if the poloidal field points toward or away from the wall closest
 to it.
-We then take $\theta_{\alpha/2}\left( (\eps_s + \frac{\alpha}{2})a - d(R,Z)\right)$
+We then take $\theta_{\alpha/2}\left( (\eps_s - \frac{\alpha}{2})a - d(R,Z)\right)$
 and take the set intersection of that region and the ``not wall'' region to
 determine the sheath penalization region:
 \begin{align}\label{eq:sheath}
-    \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( \left(\eps_s + \frac{\alpha}{2}\right)a - d(R,Z)\right)
+    \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( \left(\eps_s - \frac{\alpha}{2}\right)a - d(R,Z)\right)
 \end{align}
 Within the sheath region we penalize
 \begin{subequations} \label{eq:sheath_penalization}
@@ -1011,7 +1011,7 @@ an insulating condition where the total current $j_s = n_e ( U_{\parallel,i} - u
     {
         "type" : "bohm", // Eq.\eqref{eq:bohm_sheath}
         "type" : "insulating" // Eq.\eqref{eq:insulating_sheath}
-        "boundary" : 0.2, // width of the sheath $\eps_s$ away from the wall
+        "boundary" : 0.2, // Total width of the sheath $\eps_s$ away from the wall
         // in units of $a$ in Eq.\eqref{eq:sheath}
         "alpha" : 0.25, // Transition width $\alpha$
         // in units of $a$ in Eq.\eqref{eq:sheath}.
@@ -1588,6 +1588,9 @@ simulations crash. See also~\ref{sec:troubleshooting}
     "beta" : 5e-5, // Plasma beta $5\cdot 10^{-6}$ (TJK), $4\cdot 10^{-3}$ (Compass),
     // If $0$, then the model is electrostatic
     "resistivity" : 1e-4, // parallel resistivity parameter Eq.\eqref{eq:resistivity}
+    "epsilon_D" : 1e-5, // [IGNORED] Eq.\eqref{eq:epsilon_D} This parameter is
+    // ignored by all codes, its sole purpose is to make the set of numerical
+    // parameters uniquely invertible for analysis purposes (see discussion below)
     "viscosity" : "braginskii", //use Eq.\eqref{eq:nu_parallele} and \eqref{eq:nu_paralleli} for the parallel viscosity
 
     // use the nu\_parallel field to determine value
@@ -1612,12 +1615,16 @@ These are computed from \textbf{6} physical parameters
  A given set of numerical parameters thus represents a one-dimensional
  submanifold of physical parameters.
  This is because we neglect the Debye length relative to the ion gyro-radius
- in the model.
-If we further neglect $\beta$ this becomes a two-dimensional submanifold
+ in the model
+ \begin{align}\label{eq:epsilon_D}
+     \epsilon_D = (\lambda_D/\rho_s)^2 = \epsilon_0 T_e /n_0 /e^2 / T_e/m_i e^2 B_0^2 = \epsilon_0 B_0^2/n_0 /m_i \rightarrow 0
+ \end{align}
+If we further neglect $\beta=0$ this becomes a two-dimensional submanifold
 of physical parameters.
 \begin{tcolorbox}[title=Note]
-    In order to invert the system (i.e. given numerical parameters find the
-    corresponding physical parameters) we have to fix one (or more) physical
+    In order to invert the system (for given numerical parameters find the
+    corresponding physical parameters) we have to (i) give $\epsilon_D$ in the
+    input file or (ii) fix one (or more) physical
     parameters to get a solvable system.  In practice this may be the scale of
     the machine $\hat R_0$ (and after that the magnetic field strength $B_0$).
 \end{tcolorbox}

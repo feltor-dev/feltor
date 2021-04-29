@@ -2,6 +2,7 @@
 #include <map>
 #include <array>
 #include <string>
+#include <cmath>
 #include "dg/enums.h"
 #include "json/json.h"
 #include "dg/file/json_utilities.h"
@@ -111,7 +112,7 @@ struct Parameters
         if( viscosity == "braginskii")
         {
             nu_parallel[0] = 0.37/eta;
-            nu_parallel[1] = sqrt(fabs(mu[0]))*power(tau[1], 1.5)*0.69/eta;
+            nu_parallel[1] = sqrt(fabs(mu[0]))*pow(tau[1], 1.5)*0.69/eta;
         }
         else if ( viscosity == "value")
         {

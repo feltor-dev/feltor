@@ -415,7 +415,7 @@ std::vector<Record_static> diagnostics2d_static_list = {
             result = dg::pullback( dg::geo::BHatP(v.mag), grid);
         }
     },
-    {"NormGradPsip", "Norm of gradient of Psip",
+    { "NormGradPsip", "Norm of gradient of Psip",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
             result = dg::pullback(
                 dg::geo::SquareNorm( dg::geo::createGradPsip(v.mag),

@@ -327,6 +327,22 @@ int main( int argc, char* argv[])
             if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
             DG_RANK0 err = nc_redef(ncid);
         }
+        {
+            // transition has to be done by hand
+            int vecID;
+            DG_RANK0 err = nc_def_var( ncid, "MagneticTransition", NC_DOUBLE, 2,
+                &dim_ids[2], &vecID);
+            std::string long_name = "The region where the magnetic field is modified";
+            DG_RANK0 err = nc_put_att_text( ncid, vecID,
+                "long_name", long_name.size(), long_name.data());
+            DG_RANK0 err = nc_enddef( ncid);
+            DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
+            resultH = dg::pullback( transition, grid);
+            dg::blas2::symv( projectH, resultH, transferH);
+            if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
+            DG_RANK0 err = nc_redef(ncid);
+        }
+
         if( p.calibrate)
         {
             DG_RANK0 err = nc_close(ncid);

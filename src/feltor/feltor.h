@@ -485,7 +485,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_source = m_sheathDotDirection = m_UE2 = m_temp2 = m_temp1 = m_temp0;
-    m_apar = m_wall = m_sheath = m_temp0;
+    m_apar = m_profne = m_wall = m_sheath = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
     m_plusN = m_minusN = m_minusU = m_plusU = m_minusP = m_plusP = m_phi;

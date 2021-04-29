@@ -287,6 +287,7 @@ dg::x::HVec source_profiles(
 
     std::string type  = js.get( "type", "zero").asString();
     dg::x::HVec source = dg::evaluate( dg::zero, grid);
+    ne_profile = source;
     if( "zero" == type)
     {
     }

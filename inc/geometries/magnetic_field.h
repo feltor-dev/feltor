@@ -856,7 +856,8 @@ struct GradBHatP: public aCylindricalFunctor<GradBHatP>
 
 /*@brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
  *
- * @attention undefined if there is no O-point near [R_0 , 0]
+ * @attention undefined if there is no O-point near [R_0 , 0], except for
+ * \c description::centeredX when we take psipO = -10
  */
 struct RhoP: public aCylindricalFunctor<RhoP>
 {
@@ -868,6 +869,8 @@ struct RhoP: public aCylindricalFunctor<RhoP>
         } catch ( dg::Error& err)
         {
             m_psipmin = 1.;
+            if( mag.params().getDescription() == description::centeredX)
+                m_psipmin = -10;
         }
     }
     double do_compute( double R, double Z) const
