@@ -458,10 +458,10 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
         dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > >
-            mp( p.tableau, y0);
+            stepper( p.tableau, y0);
 
         DG_RANK0 std::cout << "Initialize Timestepper" << std::endl;
-        mp.init( feltor, time, y0, p.dt);
+        stepper.init( feltor, time, y0, p.dt);
         dg::Timer t;
         t.tic();
         unsigned step = 0;
@@ -476,7 +476,7 @@ int main( int argc, char* argv[])
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
-                        mp.step( feltor, time, y0);
+                        stepper.step( feltor, time, y0);
                     }
                     catch( dg::Fail& fail){ // a specific exception
                         DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -604,9 +604,10 @@ int main( int argc, char* argv[])
         dg::Timer t;
         unsigned step = 0;
         dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > >
-            mp(p.tableau, y0);
+            stepper(p.tableau, y0);
+        //dg::Adaptive<dg::ERKStep<std::array<std::array<dg::x::DVec,2>,2 >>> stepper( "Bogacki-Shampine-4-2-3", y0);
         std::cout << "Initialize Timestepper" << std::endl;
-        mp.init( feltor, time, y0, p.dt);
+        stepper.init( feltor, time, y0, p.dt);
         std::cout << "Done!" << std::endl;
 
         std::map<std::string, const dg::x::DVec* > v4d;
@@ -622,11 +623,9 @@ int main( int argc, char* argv[])
         /////////glfw initialisation ////////////////////////////////////////////
         //
         std::stringstream title;
-        dg::file::file2Json( "window_params.json", js.asJson(),
-                dg::file::comments::are_discarded);
-        unsigned red = js.get("reduction", 1).asUInt();
-        double rows = js["rows"].asDouble(), cols = p.Nz/red+1,
-               width = js["width"].asDouble(), height = js["height"].asDouble();
+        unsigned red = js["output"]["window"].get("reduction", 1).asUInt();
+        double rows = js["output"]["window"]["rows"].asDouble(), cols = p.Nz/red+1,
+               width = js["output"]["window"]["width"].asDouble(), height = js["output"]["window"]["height"].asDouble();
         if ( p.symmetric ) cols = rows, rows = 1;
         GLFWwindow* w = draw::glfwInitAndCreateWindow( cols*width, rows*height, "");
         draw::RenderHostData render(rows, cols);
@@ -635,6 +634,7 @@ int main( int argc, char* argv[])
         std::cout << std::scientific << std::setprecision( 2);
         dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z, "simple");
         title << std::setprecision(2) << std::scientific;
+        //double dt = p.dt; // stepper
         while ( !glfwWindowShouldClose( w ))
         {
             title << std::fixed;
@@ -689,7 +689,10 @@ int main( int argc, char* argv[])
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
-                        mp.step( feltor, time, y0);
+                        stepper.step( feltor, time, y0);
+                        //stepper.step( feltor, time, y0, time, y0, dt,
+                        //   dg::pid_control, dg::l2norm,
+                        //   1e-6, 1e-6);
                     }
                     catch( dg::Fail& fail) {
                         std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

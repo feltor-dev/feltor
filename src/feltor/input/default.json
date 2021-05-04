@@ -47,6 +47,13 @@
     "output":
     {
         "type" : "glfw",
+        "window" :
+        {
+            "rows":  6,
+            "reduction" : 4,
+            "width" : 200,
+            "height" : 200
+        },
         "inner_loop" : 2,
         "itstp"  : 2,
         "maxout" : 1,

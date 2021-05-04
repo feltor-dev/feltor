@@ -1327,7 +1327,7 @@ In order to disable the source term $S_N$ choose
     "type" : "zero" // $S_{n_e} = 0$
 }
 \end{minted}
-\noindent We can choose the source terms $S_N$ to either force a profile
+\noindent We can choose the source terms $S_N$ to force a profile
 \begin{align} \label{eq:electron_source}
   S_{n_e}(R,Z,\varphi, t) &= \omega_s (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))D(R,Z)
 \end{align}
@@ -1637,10 +1637,16 @@ of physical parameters.
     // Use glfw to display results in a window while computing (requires to
     // compile with the glfw3 library)
     "type" : "glfw",
+    "window" : // ONLY GLFW : output window parameters
+    {
+        "rows":6,        // ONLY GLFW : # of rows
+        "reduction" : 4, // ONLY GLFW : # of cols = Nz/reduction+1
+        "width" :200,    // ONLY GLFW : box width (in pixel)
+        "height" : 200,  // ONLY GLFW : box height (in pixel)
+    }
     // Use netcdf to write results into a file (filename given on command line)
     // (see section\ref{sec:output_file} for information about what is written in there)
     "type" : "netcdf",
-
     "inner_loop"  : 4, // Number of time steps between updates to the
     // time integrated quantities. (Although the diagnostics is quite fast
     // sometimes you need to amortize the time spent on it). Note that
@@ -1656,12 +1662,12 @@ of physical parameters.
     // maxout*itstp*inner\_loop
     // If you want to let the simulation run for a certain time instead just
     // choose this parameter very large and let the simulation hit the
-    // time-limit. ONLY FOR NETCDF
+    // time-limit. ONLY NETCDF
     "compression" : [2,2] // Compress output file by reducing points in x and y
     // (pojecting the polynomials onto a coarser grid): output contains
     // n*Nx/c[0] points in x, (has to divde Nx evenly), and n*Ny/c[1] points in
     // y, (has to divde Ny evenly). 2 or 3 are reasonable values.
-    // ONLY FOR NETCDF
+    // ONLY NETCDF
 }
 \end{minted}
 
