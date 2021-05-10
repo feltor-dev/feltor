@@ -235,7 +235,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
     detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic, grid_coarse->local(),
-            yp_coarse, ym_coarse, hbp, hbm, in_boxp, in_boxm, deltaPhi, eps);
+            yp_coarse, hbp, in_boxp, deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic, grid_coarse->local(),
+            ym_coarse, hbm, in_boxm, -deltaPhi, eps);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse->local());  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine.local())); ym = yp;
     for( int i=0; i<2; i++)

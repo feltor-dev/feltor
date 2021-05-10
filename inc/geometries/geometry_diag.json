@@ -7,8 +7,8 @@
         "Nz" : 20,
         "Npsi": 32,
         "Neta": 640,
-        "scaleR" : [1.1, 1.1],
-        "scaleZ" : [1.9, 1.9]
+        "scaleR" : [1.4, 1.3],
+        "scaleZ" : [2.5, 2.3]
     },
     "boundary":
     {

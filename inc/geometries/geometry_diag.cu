@@ -141,6 +141,18 @@ int main( int argc, char* argv[])
         {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
         /////////////////////////////////////
         {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()})) },
+        {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
+            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
+                        dg::geo::createBHat(mag), grid2d, 2.*M_PI, 1e-6, "phi"
+                        )) },
+        {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
+            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
+                        dg::geo::createBHat(mag), grid2d, -2.*M_PI, 1e-6, "phi"
+                        )) },
+        {"WallFieldlineSDistance", "Distance to wall along fieldline",
+            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
+                        dg::geo::createBHat(mag), grid2d, 2.*M_PI, 1e-6, "s"
+                        )) },
         {"WallDirection", "Direction of magnetic field to closest wall", dg::geo::WallDirection(mag, {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()}) },
         {"Sheath", "Sheath region", sheath},
         {"SheathDirection", "Direction of magnetic field relative to sheath", direction},

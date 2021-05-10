@@ -407,8 +407,10 @@ struct EntireDomain
  * @param u0 initial value at \c t0
  * @param t1 (read / write) end time; if the solution leaves the domain
  * contains the last time where the solution still lies within the domain
+ * on output
  * @param u1 (write only) contains the result corresponding to t1 on output
- * @param dt The initial timestep guess. Choose something small, it is not really
+ * @param dt The initial timestep guess (if 0 the function chooses something
+ * for you). The exact value is not really
  * important, the stepper does not even have to succeed. Usually the
  * control function will very(!) quickly adapt the stepsize in just one or
  * two steps (even if it's several orders of magnitude off in the beginning).
@@ -430,7 +432,7 @@ struct EntireDomain
  * @return number of steps
  * @copydoc hide_rhs
  * @copydoc hide_control_error
- * @tparam Domain Must have the \c contains(const ContainerType&) member
+ * @tparam Domain Must have the \c contains(const ContainerType&) const member
  * function returning true if the given solution is part of the domain,
  * false else (can for example be \c dg::aRealTopology2d)
  * @copydoc hide_ContainerType
@@ -465,7 +467,7 @@ int integrateAdaptive(
                       ErrorNorm norm,
                       get_value_type<ContainerType> rtol,
                       get_value_type<ContainerType> atol=1e-10,
-                      Domain domain = EntireDomain()
+                      const Domain& domain = EntireDomain()
                       )
 {
     using  value_type = get_value_type<ContainerType>;
@@ -563,7 +565,7 @@ int integrateERK( std::string name,
                   ErrorNorm norm,
                   get_value_type<ContainerType> rtol,
                   get_value_type<ContainerType> atol=1e-10,
-                  Domain domain = EntireDomain()
+                  const Domain& domain = EntireDomain()
               )
 {
     dg::Adaptive<dg::ERKStep<ContainerType>> pd( name,u0);

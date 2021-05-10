@@ -46,16 +46,9 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v,
-            const dg::aGeometry2d& g, bool stay_in_box):
-        m_v(v), m_g(g), m_in_box( stay_in_box){}
+    DSFieldCylindrical( const dg::geo::CylindricalVectorLvl0& v): m_v(v){}
     void operator()( double t, const std::array<double,3>& y, std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
-        if( m_in_box && !m_g->contains( R,Z) )
-        {
-            yp[0] = yp[1] = yp[2] = 0.;
-            return;
-        }
         double vz = m_v.z()(R, Z);
         yp[0] = m_v.x()(R, Z)/vz;
         yp[1] = m_v.y()(R, Z)/vz;
@@ -64,14 +57,12 @@ struct DSFieldCylindrical
 
     private:
     dg::geo::CylindricalVectorLvl0 m_v;
-    dg::ClonePtr<dg::aGeometry2d> m_g;
-    bool m_in_box;
 };
 
 struct DSField
 {
     //z component of v may not vanish
-    DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g, bool stay_in_box ): m_g(g), m_in_box( stay_in_box)
+    DSField( const dg::geo::CylindricalVectorLvl0& v, const dg::aGeometry2d& g ): m_g(g)
     {
         thrust::host_vector<double> v_zeta, v_eta;
         dg::pushForwardPerp( v.x(), v.y(), v_zeta, v_eta, g);
@@ -86,12 +77,7 @@ struct DSField
     //interpolate the vectors given in the constructor on the given point
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
-        if( m_in_box && !m_g->contains( y[0],y[1]) )
-        {
-            yp[0] = yp[1] = yp[2] = 0.;
-            return;
-        }
-        // else shift point into domain
+        // shift point into domain
         yp[0] = interpolate(dg::lspace, dzetadphi_, y[0], y[1], *m_g);
         yp[1] = interpolate(dg::lspace, detadphi_,  y[0], y[1], *m_g);
         yp[2] = interpolate(dg::lspace, dsdphi_,    y[0], y[1], *m_g);
@@ -99,7 +85,6 @@ struct DSField
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
     dg::ClonePtr<dg::aGeometry2d> m_g;
-    bool m_in_box;
 };
 
 template<class real_type>
@@ -107,76 +92,66 @@ real_type ds_norm( const std::array<real_type,3>& x0){
     return sqrt( x0[0]*x0[0] +x0[1]*x0[1] + x0[2]*x0[2]);
 }
 
+
 //used in constructor of Fieldaligned
 template<class real_type>
 void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
     const dg::aRealGeometry2d<real_type>& grid_field,
     const dg::aRealTopology2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp,
-    std::array<thrust::host_vector<real_type>,3>& ym,
     thrust::host_vector<real_type>& yp2b,
-    thrust::host_vector<real_type>& ym2b,
     thrust::host_vector<bool>& in_boxp,
-    thrust::host_vector<bool>& in_boxm,
     real_type deltaPhi, real_type eps)
 {
     //grid_field contains the global geometry for the field and the boundaries
     //grid_evaluate contains the points to actually integrate
-    thrust::host_vector<real_type> tmp( dg::evaluate( dg::cooX2d, grid_evaluate));
-    std::array<thrust::host_vector<real_type>,3> y{tmp,tmp,tmp};; //x
-    y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
-    y[2] = dg::evaluate( dg::zero, grid_evaluate); //s
-    yp.fill(tmp); ym.fill(tmp); yp2b = ym2b = tmp; //allocate memory for output
-    in_boxp.resize( tmp.size()), in_boxm.resize( tmp.size() );
+    std::array<thrust::host_vector<real_type>,3> y{
+        dg::evaluate( dg::cooX2d, grid_evaluate),
+        dg::evaluate( dg::cooY2d, grid_evaluate),
+        dg::evaluate( dg::zero, grid_evaluate)}; //s
+    yp.fill(dg::evaluate( dg::zero, grid_evaluate));
+    yp2b = dg::evaluate( dg::zero, grid_evaluate); //allocate memory for output
+    in_boxp.resize( yp2b.size());
     //construct field on high polynomial grid, then integrate it
-    dg::geo::detail::DSField field( vec, grid_field, false);
+    dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec, grid_field, false);
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
     const unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
-        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP, coordsM;
+        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP;
         //x,y,s
         real_type phi1 = deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords,
+                    phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10);
+        //integration
         else
-            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
-        phi1 =  - deltaPhi;
-        if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
-        else
-            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords,
+                    phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-        ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-        in_boxp[i] = grid_field.contains( yp[0][i], yp[1][i]) ? true : false;
-        in_boxm[i] = grid_field.contains( ym[0][i], ym[1][i]) ? true : false;
     }
-    yp2b = yp[2], ym2b = ym[2];
+    yp2b = yp[2];
     //Now integrate again but this time find the boundary distance
-    field = dg::geo::detail::DSField( vec, grid_field,true);
-    cyl_field = dg::geo::detail::DSFieldCylindrical(vec, grid_field, true);
     for( unsigned i=0; i<size; i++)
     {
-        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP, coordsM;
+        std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP;
+        in_boxp[i] = grid_field.contains( yp[0][i], yp[1][i]) ? true : false;
         if( false == in_boxp[i])
         {
             //x,y,s
             real_type phi1 = deltaPhi;
             if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-                dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+                dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0.,
+                        coords, phi1, coordsP, 0., dg::pid_control, ds_norm,
+                        eps,1e-10,(const dg::aRealTopology2d<real_type>&
+                            )grid_field); //integration
             else
-                dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsP, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
+                dg::integrateERK( "Dormand-Prince-7-4-5", field, 0.,
+                        coords, phi1, coordsP, 0., dg::pid_control, ds_norm,
+                        eps,1e-10,(const dg::aRealTopology2d<real_type>&
+                            )grid_field); //integration
             yp2b[i] = coordsP[2];
-        }
-        if( false == in_boxm[i])
-        {
-            real_type phi1 =  - deltaPhi;
-            if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-                dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
-            else
-                dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords, phi1, coordsM, 0., dg::pid_control, ds_norm, eps,1e-10); //integration
-            ym2b[i] = coordsM[2];
         }
     }
 }
@@ -184,6 +159,62 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
 
 }//namespace detail
 ///@endcond
+
+/**
+ * @brief %Distance to wall along fieldline in phi or s coordinate
+ * @ingroup fluxfunctions
+ */
+struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
+{
+    /**
+     * @brief Construct with vector field, domain
+     *
+     * @param vec The vector field to integrate
+     * @param domain The box
+     * @param maxPhi the maximum angle to integrate to (something like +- 2.*M_PI)
+     * If the angle is negative the fieldlines are followed in the negative direction
+     * @param eps the accuracy of the fieldline integrator
+     * @param type either "phi" then the distance is computed in the angle coordinate
+     * or "s" then the distance is computed in the s parameter
+     */
+    WallFieldlineDistance(
+        const dg::geo::CylindricalVectorLvl0& vec,
+        const dg::aRealTopology2d<double>& domain,
+        double maxPhi, double eps, std::string type) :
+        m_domain( domain), m_cyl_field(vec),
+        m_deltaPhi( maxPhi), m_eps( eps), m_type(type)
+    {
+        if( m_type != "phi" && m_type != "s")
+            throw std::runtime_error( "Distance type "+m_type+" not recognized!\n");
+    }
+    /**
+     * @brief Integrate fieldline until wall is reached
+     *
+     * If wall is not reached integration stops at maxPhi given in the constructor
+     * @param R starting coordinate in R
+     * @param Z starting coordinate in Z
+     *
+     * @return distance in phi or s
+     * @sa dg::integrateERK
+     */
+    double do_compute( double R, double Z) const
+    {
+        double phi1 = m_deltaPhi;
+        std::array<double,3> coords{ R, Z, 0}, coordsP(coords);
+        dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
+                coords, phi1, coordsP, 0., dg::pid_control, dg::geo::detail::ds_norm,
+                m_eps,1e-10, m_domain); //integration
+        if( m_type == "phi")
+            return phi1;
+        return coordsP[2];
+    }
+
+    private:
+    const dg::Grid2d m_domain;
+    dg::geo::detail::DSFieldCylindrical m_cyl_field;
+    double m_deltaPhi, m_eps;
+    std::string m_type;
+};
 
 
     /*!@class hide_fieldaligned_physics_parameters
@@ -509,7 +540,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            yp_coarse, ym_coarse, hbp, hbm, in_boxp, in_boxm, deltaPhi, eps);
+            yp_coarse, hbp, in_boxp, deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
+            ym_coarse, hbm, in_boxm, -deltaPhi, eps);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, *grid_coarse);  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;

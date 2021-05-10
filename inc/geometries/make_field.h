@@ -4,6 +4,7 @@
 #include "guenther.h"
 #include "polynomial.h"
 #include "toroidal.h"
+#include "fieldaligned.h"
 #include <dg/file/json_utilities.h>
 
 /*!@file
