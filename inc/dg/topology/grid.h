@@ -255,9 +255,11 @@ struct RealGrid1d
      * @param x point to check
      *
      * @return true if x0()<=x<=x1(), false else
+     * @attention returns false if x is NaN or INF
      */
     bool contains( real_type x)const
     {
+        if( !std::isfinite(x) ) return false;
         //should we catch the case x1_==x && dg::PER?
         if( (x>=x0_ && x <= x1_)) return true;
         return false;
@@ -454,6 +456,11 @@ struct aRealTopology2d
     {
         if( gx_.contains(x) && gy_.contains(y)) return true;
         return false;
+    }
+    /// Shortcut for contains( x[0], x[1])
+    template<class Vector>
+    bool contains( const Vector& x) const{
+        return contains( x[0], x[1]);
     }
     protected:
     ///disallow destruction through base class pointer
@@ -703,6 +710,11 @@ struct aRealTopology3d
         if( gx_.contains(x) && gy_.contains(y) && gz_.contains(z))
             return true;
         return false;
+    }
+    /// Shortcut for contains( x[0], x[1], x[2])
+    template<class Vector>
+    bool contains( const Vector& x) const{
+        return contains( x[0], x[1], x[2]);
     }
     ///@copydoc aRealTopology2d::multiplyCellNumbers()
     void multiplyCellNumbers( real_type fx, real_type fy){

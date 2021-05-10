@@ -80,7 +80,7 @@ struct ERKStep
     void enable_fsal(){ m_ignore_fsal = false;}
 
     ///@copydoc RungeKutta::step()
-    ///@param delta Contains error estimate on output (must have equal size as \c u0)
+    ///@param delta Contains error estimate (u1 - tilde u1) on output (must have equal size as \c u0)
     template<class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///global order of the method given by the current Butcher Tableau
@@ -361,7 +361,7 @@ struct ARKStep
     * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
     * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
-    * @param delta Contains error estimate on output (must have equal size as \c u0)
+    * @param delta Contains error estimate (u1 - tilde u1) on output (must have equal size as \c u0)
     * @note on return \c ex(t1, u1) will be the last call to \c ex (this is useful if \c Explicit holds state, which is then updated to the current timestep)
     */
     template< class Explicit, class Implicit>
@@ -784,7 +784,7 @@ struct DIRKStep
     *   may alias \c t0)
     * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
-    * @param delta Contains error estimate on output (must have equal size as \c u0)
+    * @param delta Contains error estimate (u1 - tilde u1) on output (must have equal size as \c u0)
     */
     template< class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
