@@ -308,17 +308,26 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
 /**
  * @brief Create the sheath region where fieldlines intersect the boundary
  *
- * Check if any fieldlines that are not in the wall region intersect the boundary
- * and determine whether the poloidal field points towards or away from the wall
+ * (i) on each the four lines defined by the two vertical (R0, R1) and two
+ * horizontal (Z0, Z1) boundaries check if the "wall" functor is zero
+ * anywhere on the line: if not then remove this boundary from consideration
+ * (ii) Measure the angular distance along the fieldline (both in positive and
+ * negative direction) to the remaining walls
+ * (iii) Modify the angular distances with a dg::PolynomialHeaviside functor
+ * with parameters given in jsmod:
 @code
 {
-    "boundary": 0.1, //value where sheath region begins in units of minor radius a
-    "alpha": 0.01 // radius of the transition region where the modification acts in units of minor radius a
+    "boundary" : 0.0625, // value where sheath region begins in units of 2Pi
+    "alpha" : 0.015625 // diameter of the transition region in units of 2Pi
 }
 @endcode
+ * (iv) The sheath region is the SetUnion of positive and negative functor,
+ * SetIntersection with the SetNot(wall) region.
+ * (v) The direction is positive if the magnetic field points towards the
+ * nearest wall and negative else.
  * @param jsmod must contain fields as described above
- * @param mag (in) the magnetic field, used to find the direction of the field
- * towards or away from the sheath
+ * @param mag (in) the (unmodified) magnetic field, used to integrate
+ * the field towards or away from the sheath
  * @param wall (in) the penalization region that represents the actual
  * (perpendicular) wall without the divertor (if 0 on the boundary the boundary will be considered to be a sheath, else the boundary will be ignored)
  * @param R0 left boundary
@@ -327,10 +336,9 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
  * @param Z1 top boundary
  * @param sheath (out) contains the region recognized as sheath (returning +1 within
  * the sheath and 0 outside of it and something in-between in the transition region)
- * @param direction (out) contains (+1/-1) indicating direction of magnetic field
- * to closest sheath boundary (defined on entire box)
- *
- * @return sheath region
+ * @param direction (out) contains (+1/-1) inside the sheath indicating
+ * direction of magnetic field to closest sheath boundary
+ * ( undefined outside the sheath )
  */
 static inline void createSheathRegion(
         dg::file::WrappedJsonValue jsmod, TokamakMagneticField mag,
@@ -351,25 +359,32 @@ static inline void createSheathRegion(
         if( wall( R1, Z0 + i*gZ1d.h()) == 0)
             sheathZ[1] = true;
     }
-    std::vector<double> horizontal_sheath, vertical_sheath;
-    if( true == sheathR[0])
-        horizontal_sheath.push_back( Z0);
-    if( true == sheathR[1])
-        horizontal_sheath.push_back( Z1);
-    if( true == sheathZ[0])
-        vertical_sheath.push_back( R0);
-    if( true == sheathZ[1])
-        vertical_sheath.push_back( R1);
-    //direction
-    direction = dg::geo::WallDirection( mag, vertical_sheath, horizontal_sheath);
-    //sheath
-    CylindricalFunctor dist = dg::WallDistance( vertical_sheath, horizontal_sheath);
-    double boundary = jsmod.get( "boundary", 0.1 ).asDouble();
-    double alpha    = jsmod.get( "alpha", 0.01 ).asDouble();
-    double a = mag.params().a();
-    dg::PolynomialHeaviside poly( boundary*a - alpha*a/2., alpha*a/2., -1);
-    sheath = dg::compose( poly, dist);
+    if( false == sheathR[0]) Z0 = -1e6;
+    if( false == sheathR[1]) Z1 = 1e6;
+    if( false == sheathZ[0]) R0 = -1e6;
+    if( false == sheathZ[1]) R1 = 1e6;
+    double boundary = jsmod.get( "boundary", 0.0625 ).asDouble(); // 1/16
+    double alpha    = jsmod.get( "alpha", 0.015625 ).asDouble(); // 1/64
+    CylindricalFunctor distM = dg::geo::WallFieldlineDistance( dg::geo::createBHat(
+            mag), dg::Grid2d( R0, R1, Z0, Z1, 1,1,1), (-boundary-1e-3)*2.0*M_PI,
+            1e-6, "phi");
+    CylindricalFunctor distP = dg::geo::WallFieldlineDistance( dg::geo::createBHat(
+            mag), dg::Grid2d( R0, R1, Z0, Z1, 1,1,1), (+boundary+1e-3)*2.0*M_PI,
+            1e-6, "phi");
+    //direction = mod::SetCompose( []( double m, double p){
+    //        if( fabs(m) < p ) return -1;
+    //        if( fabs(m) > p ) return +1;
+    //        return +0;}, distM, distP);
+    direction = dg::geo::WallDirection( mag, {R0, R1}, {Z0,Z1});
+    dg::PolynomialHeaviside polyM( -boundary*2.*M_PI + alpha*M_PI, alpha*M_PI, +1);
+    dg::PolynomialHeaviside polyP(  boundary*2.*M_PI - alpha*M_PI, alpha*M_PI, -1);
+    auto sheathM = dg::compose( polyM, distM); //positive (because distance)
+    auto sheathP = dg::compose( polyP, distP);
+    sheath = mod::SetUnion( sheathM, sheathP);
     sheath = mod::SetIntersection( mod::SetNot( wall), sheath);
+    //direction = mod::SetCompose( []( double m, double p){return p-m;},
+    //                                 sheathM, sheathP);
+    //direction = mod::SetIntersection( mod::SetNot( wall), direction);
 }
 ///@}
 

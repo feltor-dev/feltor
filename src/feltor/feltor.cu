@@ -178,8 +178,10 @@ int main( int argc, char* argv[])
     {
         dg::geo::CylindricalFunctor sheath, direction;
         try{
-            dg::geo::createSheathRegion( js["boundary"]["sheath"], mag, wall,
-                    Rmin, Rmax, Zmin, Zmax, sheath, direction);
+            // sheath is created on unmodified magnetic field
+            dg::geo::createSheathRegion( js["boundary"]["sheath"],
+                dg::geo::createMagneticField(js["magnetic_field"]["params"]),
+                wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
         }catch(std::runtime_error& e)
         {
             DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;

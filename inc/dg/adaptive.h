@@ -44,7 +44,6 @@ value_type pid_control( value_type dt_old, value_type eps_0, value_type eps_1, v
     value_type factor = pow( eps_0, m_k1/(value_type)order)
                      * pow( eps_1, m_k2/(value_type)order)
                      * pow( eps_2, m_k3/(value_type)order);
-    //std::cout <<" control "<< eps_0<<" "<<eps_1<<" "<<eps_2<<" "<<factor<<"\n";
     return dt_old*factor;
 }
 ///\f[ h'= h \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f]
@@ -300,11 +299,9 @@ struct Adaptive
                 value_type atol
               )
     {
-        //std::cout << "Try stepsize "<<dt;
         dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
                     m_size), u0, m_delta);
         value_type eps0 = norm(m_delta);
-        //std::cout << " error "<<eps0;
         if( eps0 > m_reject_limit || std::isnan( eps0) )
         {
             value_type dt_old = dt;
@@ -317,7 +314,6 @@ struct Adaptive
             m_failed = true;
             dg::blas1::copy( u0, u1);
             t1 = t0;
-            //std::cout << " Failed! New stepsize: "<<dt;
         }
         else
         {
@@ -328,10 +324,7 @@ struct Adaptive
             dg::blas1::copy( m_next, u1);
             t1 = m_t_next;
             m_failed = false;
-            //std::cout << " Success " << t1<<" "<<u1[0]<<" "<<u1[1];
-            //std::cout << " New stepsize "<<dt;
         }
-        //std::cout << std::endl;
     }
     bool m_failed = false;
     Stepper m_stepper;
@@ -430,6 +423,7 @@ struct EntireDomain
  * boundary (up to the given tolerances) and return (t1, u1) that lies closest
  * (but within) the domain boundary.
  * @return number of steps
+ * @attention If the timestepper fails too often, or encounters NaN, Inf, or other non-sanitary behaviour the function may throw
  * @copydoc hide_rhs
  * @copydoc hide_control_error
  * @tparam Domain Must have the \c contains(const ContainerType&) const member
@@ -481,7 +475,7 @@ int integrateAdaptive(
         dt_current = adaptive.guess_stepsize( rhs, t0, u0, forward ?
                 dg::forward:dg::backward, norm, rtol, atol);
 
-    int counter =0;
+    int counter =0, failed_counter = 0;
     ContainerType last( u0), delta(u0);
     while( (forward && t_current < t1) || (!forward && t_current > t1))
     {
@@ -494,6 +488,12 @@ int integrateAdaptive(
         // Compute a step and error
         adaptive.step( rhs, t_current, current, t_current, current, dt_current,
                 control, norm, rtol, atol);
+        if( adaptive.failed())
+            failed_counter ++;
+        else
+            failed_counter = 0;
+        if( failed_counter > 10)
+            throw std::runtime_error("integrateERK fails to find a suitable timestep! dt = "+std::to_string(dt_current));
         counter++;
         if( !domain.contains( current) )
         {

@@ -149,9 +149,13 @@ int main( int argc, char* argv[])
             dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
                         dg::geo::createBHat(mag), grid2d, -2.*M_PI, 1e-6, "phi"
                         )) },
-        {"WallFieldlineSDistance", "Distance to wall along fieldline",
+        {"WallFieldlineSPDistance", "Distance to wall along fieldline",
             dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
                         dg::geo::createBHat(mag), grid2d, 2.*M_PI, 1e-6, "s"
+                        )) },
+        {"WallFieldlineSMDistance", "Distance to wall along fieldline",
+            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
+                        dg::geo::createBHat(mag), grid2d, -2.*M_PI, 1e-6, "s"
                         )) },
         {"WallDirection", "Direction of magnetic field to closest wall", dg::geo::WallDirection(mag, {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()}) },
         {"Sheath", "Sheath region", sheath},
@@ -283,10 +287,10 @@ int main( int argc, char* argv[])
     }
 
     /////////////////////////////set up netcdf/////////////////////////////////////
-    std::cout << "CREATING/OPENING FILE AND WRITING ... \n";
+    std::cout << "CREATING/OPENING FILE ... \n";
     dg::file::NC_Error_Handle err;
     int ncid;
-    std::string newfilename = argc<2 ? "geometry_diag.nc" : argv[2];
+    std::string newfilename = argc<3 ? "geometry_diag.nc" : argv[2];
     err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
     std::map<std::string, std::string> att;

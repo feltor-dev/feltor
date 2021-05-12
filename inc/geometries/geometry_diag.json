@@ -20,8 +20,8 @@
         },
         "sheath":
         {
-            "boundary" : 0.1,
-            "alpha" : 0.01
+            "boundary" : 0.0625,
+            "alpha" : 0.015625
         }
     },
     "magnetic_field":

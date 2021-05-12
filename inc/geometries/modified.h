@@ -241,6 +241,26 @@ struct HeavisideZ{
 
 ///@addtogroup profiles
 ///@{
+
+/**
+ * @brief \f$ f( f_1(R,Z) , f_2(R,Z)) \f$
+ *
+ * General composition of two functions
+ */
+struct SetCompose : public aCylindricalFunctor<SetCompose>
+{
+    SetCompose( std::function<double(double,double)> fct_mod,
+            std::function<double(double,double)> fct1,
+            std::function<double(double,double)> fct2) :
+        m_fct1(fct1), m_fct2(fct2), m_fct_mod( fct_mod)
+    { }
+    double do_compute(double R, double Z) const
+    {
+        return m_fct_mod( m_fct1(R,Z), m_fct2(R,Z));
+    }
+    private:
+    std::function<double(double,double)> m_fct1, m_fct2, m_fct_mod;
+};
 /**
  * @brief \f$ f_1 + f_2 - f_1 f_2 \equiv f_1 \cup f_2\f$
  *
@@ -249,7 +269,8 @@ struct HeavisideZ{
  */
 struct SetUnion : public aCylindricalFunctor<SetUnion>
 {
-    SetUnion( std::function<double(double,double)> fct1, std::function<double(double,double)> fct2) :
+    SetUnion( std::function<double(double,double)> fct1,
+            std::function<double(double,double)> fct2) :
         m_fct1(fct1), m_fct2(fct2)
     { }
     double do_compute(double R, double Z) const
@@ -268,7 +289,8 @@ struct SetUnion : public aCylindricalFunctor<SetUnion>
  */
 struct SetIntersection : public aCylindricalFunctor<SetIntersection>
 {
-    SetIntersection( std::function<double(double,double)> fct1, std::function<double(double,double)> fct2) :
+    SetIntersection( std::function<double(double,double)> fct1,
+            std::function<double(double,double)> fct2) :
         m_fct1(fct1), m_fct2(fct2)
     { }
     double do_compute(double R, double Z) const

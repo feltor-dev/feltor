@@ -201,9 +201,16 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
     {
         double phi1 = m_deltaPhi;
         std::array<double,3> coords{ R, Z, 0}, coordsP(coords);
-        dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
+        try{
+            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
                 coords, phi1, coordsP, 0., dg::pid_control, dg::geo::detail::ds_norm,
                 m_eps,1e-10, m_domain); //integration
+        }catch (std::runtime_error& e)
+        {
+            // if not possible the distance is large
+            phi1 = m_deltaPhi;
+            coordsP[2] = 1e6*m_deltaPhi;
+        }
         if( m_type == "phi")
             return phi1;
         return coordsP[2];
