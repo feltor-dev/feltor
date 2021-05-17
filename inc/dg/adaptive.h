@@ -423,7 +423,7 @@ struct EntireDomain
  * boundary (up to the given tolerances) and return (t1, u1) that lies closest
  * (but within) the domain boundary.
  * @return number of steps
- * @attention If the timestepper fails too often, or encounters NaN, Inf, or other non-sanitary behaviour the function may throw
+ * @attention The integrator may throw if it detects too small timesteps, too many failures, NaN, Inf, or other non-sanitary behaviour
  * @copydoc hide_rhs
  * @copydoc hide_control_error
  * @tparam Domain Must have the \c contains(const ContainerType&) const member
@@ -475,7 +475,7 @@ int integrateAdaptive(
         dt_current = adaptive.guess_stepsize( rhs, t0, u0, forward ?
                 dg::forward:dg::backward, norm, rtol, atol);
 
-    int counter =0, failed_counter = 0;
+    int counter =0;
     ContainerType last( u0), delta(u0);
     while( (forward && t_current < t1) || (!forward && t_current > t1))
     {
@@ -488,12 +488,8 @@ int integrateAdaptive(
         // Compute a step and error
         adaptive.step( rhs, t_current, current, t_current, current, dt_current,
                 control, norm, rtol, atol);
-        if( adaptive.failed())
-            failed_counter ++;
-        else
-            failed_counter = 0;
-        if( failed_counter > 10)
-            throw std::runtime_error("integrateERK fails to find a suitable timestep! dt = "+std::to_string(dt_current));
+        if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
+            throw dg::Error(dg::Message(_ping_)<<"integrateERK failed to converge! dt = "<<std::scientific<<dt_current);
         counter++;
         if( !domain.contains( current) )
         {
