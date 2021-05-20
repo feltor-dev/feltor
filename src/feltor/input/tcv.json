@@ -10,6 +10,7 @@
     },
     "timestepper":
     {
+        "type" : "multistep",
         "tableau": "TVB-3-3",
         "dt" : 1e-1
     },
@@ -67,19 +68,24 @@
             "boundary": [1.1,0.998],
             "alpha": [0.10,0.10],
             "modify-B" : true,
-            "penalize-rhs" : false
+            "penalize-rhs" : false,
+            "nwall" : 1.0,
+            "uwall" : 0.0
         },
         "sheath":
         {
             "type": "bohm",
             "penalization" : 1e+0,
-            "boundary": 0.30,
-            "alpha": 0.2,
-            "penalize-rhs" : false
+            "boundary": 0.125,
+            "alpha": 0.0625,
+            "penalize-rhs" : false,
+            "coordinate" : "s",
+            "max_angle" : 4
         },
         "bc" :
         {
             "density" : ["DIR", "DIR"],
+            "nbc" : 1.0,
             "velocity": ["NEU", "NEU"],
             "potential":["DIR", "DIR"],
             "aparallel":["NEU", "NEU"]
@@ -87,10 +93,20 @@
     },
     "init":
     {
-        "type" : "zero"
+        "type" : "fields",
+        "density" :
+        {
+            "type" : "const",
+            "background" : 1.0
+        },
+        "velocity" :
+        {
+            "type" : "zero"
+        }
     },
     "source":
     {
+        "minne" : 0.0,
         "type" : "influx",
         "rate": 1e-2,
         "ntilde": {
@@ -108,9 +124,10 @@
         },
         "damping":
         {
-            "type": "aligned",
+            "type": "alignedX",
             "alpha" : 0.2,
-            "boundary" : 0.55
+            "boundary" : 0.55,
+            "background" : 1.0
         }
     },
     "flags" :  ["calibrate", "symmetric"]

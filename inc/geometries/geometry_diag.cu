@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
                 dg::file::comments::are_discarded);
     }
     //Test coefficients
-    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
+    dg::geo::CylindricalFunctor wall, transition, sheath;
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
             js["magnetic_field"][geometry_params]);
     dg::geo::TokamakMagneticField mod_mag =
@@ -61,8 +61,11 @@ int main( int argc, char* argv[])
     double Zmin=-boxscaleZm*mag.params().a();
     double Rmax=mag.R0()+boxscaleRp*mag.params().a();
     double Zmax=boxscaleZp*mag.params().a();
+    dg::Grid2d sheath_walls( Rmin, Rmax, Zmin, Zmax, 1,1,1);
+    //std::string sheath_bc = js["boundary"]["sheath"].get("type", "none").asString();
+    //if( sheath_bc != "none")
     dg::geo::createSheathRegion( js["boundary"]["sheath"],
-            mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
+            mag, wall, sheath_walls, sheath);
 
     dg::geo::description mag_description = mag.params().getDescription();
 
@@ -140,26 +143,22 @@ int main( int argc, char* argv[])
         {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
         /////////////////////////////////////
-        {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()})) },
+        {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( sheath_walls)) },
         {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
-            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
-                        dg::geo::createBHat(mag), grid2d, 2.*M_PI, 1e-6, "phi"
-                        )) },
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, 4*2.*M_PI, 1e-4, "phi") },
         {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
-            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
-                        dg::geo::createBHat(mag), grid2d, -2.*M_PI, 1e-6, "phi"
-                        )) },
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, -4*2.*M_PI, 1e-4, "phi") },
         {"WallFieldlineSPDistance", "Distance to wall along fieldline",
-            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
-                        dg::geo::createBHat(mag), grid2d, 2.*M_PI, 1e-6, "s"
-                        )) },
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, 4*2.*M_PI, 1e-4, "s") },
         {"WallFieldlineSMDistance", "Distance to wall along fieldline",
-            dg::geo::CylindricalFunctor( dg::geo::WallFieldlineDistance(
-                        dg::geo::createBHat(mag), grid2d, -2.*M_PI, 1e-6, "s"
-                        )) },
-        {"WallDirection", "Direction of magnetic field to closest wall", dg::geo::WallDirection(mag, {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()}) },
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, -4*2.*M_PI, 1e-4, "s") },
         {"Sheath", "Sheath region", sheath},
-        {"SheathDirection", "Direction of magnetic field relative to sheath", direction},
+        {"SheathDirection", "Direction of magnetic field relative to sheath", dg::geo::WallDirection(mag, sheath_walls) },
+        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, 4*2.*M_PI, 1e-6, "s")},
         //////////////////////////////////
         {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
         {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
@@ -229,6 +228,10 @@ int main( int argc, char* argv[])
         dg::HVec transferH, transferH1d;
         for( auto tp : map)
         {
+            if( std::get<0>(tp).find("Wall") != std::string::npos)
+                continue;
+            if( std::get<0>(tp).find("Sheath") != std::string::npos)
+                continue;
             transferH = dg::pullback( std::get<2>(tp), *gX2d);
             dg::blas1::pointwiseDot( volX2d, transferH, transferH);
             avg_eta( transferH, transferH1d, false);
@@ -386,7 +389,13 @@ int main( int argc, char* argv[])
         std::string coordinates = "zc yc xc";
         err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
         err = nc_enddef( ncid);
+        dg::Timer t;
+        t.tic();
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
+        t.toc();
+        if((    std::get<0>(tp).find("Wall") != std::string::npos)
+            ||( std::get<0>(tp).find("Sheath") != std::string::npos))
+            std::cout<< std::get<0>(tp) << " took "<<t.diff()<<"s\n";
         dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);
         dg::assign( hvisual3d, fvisual3d);

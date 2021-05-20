@@ -581,7 +581,7 @@ with $\ln \lambda \approx 10$.
 Note that $\nu_\parallel/N$ represents a kinematic viscosity and is a factor $\sqrt{|\mu_e|}$ smaller for ions than for electrons.
 The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_{\parallel,i} - u_{\parallel,e}\right)\)
- determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$.
+ determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$ (This form both conserves parallel momentum and a quadratic energy dissipation term).
 
  Note also that since $A_\parallel/\mu_e$ is (potentially) much larger than $u_e$
  it is important that the diffusive operators act on $u_e$ rather than $w_e$.
@@ -826,7 +826,7 @@ planes in $\varphi$ (no dG).
     "scaleZ"  : [1.2,1.1], // $[\varepsilon_{Z-}, \varepsilon_{Z+}]$ scale lower and upper boundary in Z in Eq.\eqref{eq:box}
 }
 \end{minted}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The boundary region} \label{sec:boundary}
 Setting the boundary conditions in an appropriate manner is probably the most
 fiddly task in setting up a simulation. Things to consider are:
@@ -849,7 +849,8 @@ We have several tools to try to address the above issues
     \item modify the magnetic field in the wall region
     \item various ways of implementing the parallel boundary condition
 \end{itemize}
-\subsubsection{The wall region}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{The wall region}\label{sec:wall}
 \begin{minted}[texcomments]{js}
 "boundary":
 {
@@ -906,15 +907,15 @@ negative and $\psi_{p,O}$ is positive).
 We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}$.
 
 Now, our idea is to dampen the density and velocity in the region defined by the
-wall to 1 or 0 respectively.
+wall to $N_w$ or $U_{\parallel,w}$ respectively.
 For both electrons and ions we add to the equations
 \begin{subequations} \label{eq:wall_penalization}
 \begin{align}
     \partial_t N &= F_N -\omega_w\chi_w (N-N_w)\\
-    \partial_t W_\parallel &= F_U -\omega_w\chi_w (U_\parallel-U_\parallel^w)
+    \partial_t W_\parallel &= F_U -\omega_w\chi_w (U_\parallel-U_{\parallel,w})
 \end{align}
 \end{subequations}
-where $\omega_w$ is the penalization parameter, $N_w = 1$, $U_{\parallel,w} = 0$ and $F_N$ and $F_U$ are the
+where $\omega_w$ is the penalization parameter and $F_N$ and $F_U$ are the
 right hand sides as defined in Eqs.~\eqref{eq:EgyrofluidN} and \eqref{eq:EgyrofluidU}.
 \begin{minted}[texcomments]{js}
 "boundary":
@@ -933,12 +934,15 @@ right hand sides as defined in Eqs.~\eqref{eq:EgyrofluidN} and \eqref{eq:Egyrofl
         "type" : "sol_pfr",
         "boundary" : [1.2, 0.8],
         "alpha" : [0.25,0.25],
+        // first one is for main region, second one for PFR
 
         "penalization" : 1.0, //penalization coefficient $\omega_w$ in density
         // and velocity damping Eq.\eqref{eq:wall_penalization}
         "modify-B" : false, // modify the magnetic field inside the wall to a
         // purely toroidal field (uses the same parameters as the wall itself)
-        "penalize-rhs" : false // if true we use Eq.\eqref{eq:wall_equations} else \eqref{eq:wall_penalization}
+        "penalize-rhs" : false, // if true we use Eq.\eqref{eq:wall_equations} else \eqref{eq:wall_penalization}
+        "nwall" : 0.1, // $N_w$ (see also nbc, background and minne)
+        "uwall" : 0.0 // $U_{\parallel,w}$
     }
 }
 \end{minted}
@@ -951,7 +955,6 @@ as in
 \partial_t W_\parallel &= F_U ( 1 - \chi_w) -\omega_w\chi_w (U_\parallel-U_{\parallel,w})
 \end{align}
 \end{subequations}
-with $N_w = 1$ and $U_{\parallel,w}=0$.
 
 \begin{tcolorbox}[title=Note]
     Computing on a box and cutting away the parts that are the wall,
@@ -961,8 +964,8 @@ with $N_w = 1$ and $U_{\parallel,w}=0$.
     \end{align*}
 \end{tcolorbox}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{The sheath region}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{The sheath region}\label{sec:sheath}
 \begin{minted}[texcomments]{js}
 "boundary":
 {
@@ -976,34 +979,47 @@ with $N_w = 1$ and $U_{\parallel,w}=0$.
 In order to define sheath boundary conditions we first define a sheath region
 and then determine whether the field lines point toward the wall or away from it.
 We define as sheath any part on the bounding box that is not included in the wall
-penalization. Then we check for each point in the box the poloidal distance to
-the sheath wall and if the poloidal field points toward or away from the wall closest
-to it.
-We then take $\theta_{\alpha/2}\left( (\eps_s - \frac{\alpha}{2})a - d(R,Z)\right)$
+penalization. Then we check for each point in the box the poloidal distance (in
+terms of angle $\varphi$) to the sheath wall and if the poloidal field points
+toward or away from the wall closest to it.
+We then take $\theta_{\alpha/2}\left( 2\pi(\eps_s - \frac{\alpha}{2}) - d(R,Z)\right)$
 and take the set intersection of that region and the ``not wall'' region to
 determine the sheath penalization region:
 \begin{align}\label{eq:sheath}
-    \chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( \left(\eps_s - \frac{\alpha}{2}\right)a - d(R,Z)\right)
+\chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( 2\pi\left(\eps_s - \frac{\alpha}{2}\right) - d(R,Z)\right)
 \end{align}
 Within the sheath region we penalize
 \begin{subequations} \label{eq:sheath_penalization}
 \begin{align}
-    \partial_t N &= F_N +\omega_s \chi_s \left(N_{sh}-N\right)\\
-    \partial_t W_{\parallel,i} &= F_{U_i} +\omega_s \chi_s \left(\pm\sqrt{1+\tau} - U_{\parallel,i} \right) \\
-    \partial_t w_{\parallel,e} &= F_{u_e} +\omega_s \chi_s \left(\pm\sqrt{1+\tau}\exp(-\phi) - u_{\parallel,e} \right)
-    \text{ "bohm" } \label{eq:bohm_sheath}\\
-    \partial_t w_{\parallel,e} &= F_{u_e} +\omega_s \chi_s \left(\pm\sqrt{1+\tau} - u_{\parallel,e} \right)\text{ "insulating" } \label{eq:insulating_sheath}
+    \partial_t N &= F_N -\omega_s \chi_s \left(N-N_{sh}\right)\\
+    \partial_t W &= F_U -\omega_s \chi_s \left(U_\parallel-U_{\parallel,sh}\right)
 \end{align}
 \end{subequations}
-where $\omega_s$ is the sheath penalization parameter, the sign is such that the velocity is always flowing out of the plasma and $N_{sh}$ is obtained by extrapolating $N$ along the magnetic field line with
+where $\omega_s$ is the sheath penalization parameter.
+$N_{sh}$ is obtained by extrapolating $N$ along the magnetic field line with
 the help of the parallel derivative operators
 \begin{align}
     N_{sh} = \Tpm N \text{ such that } \nabla_\parallel N|_{sh} = 0
 \end{align}
 where the sign depends again on the direction of the magnetic field line (we always extrapolate ``downstream'').
 The extrapolation models a parallel Neumann boundary condition for the density.
+
 The boundary condition for the parallel electron velocity can be either the Bohm condition containing the contribution from the electric potential or
-an insulating condition where the total current $j_s = n_e ( U_{\parallel,i} - u_{\parallel,e})$ vanishes.
+an insulating condition where the total current $j_\parallel =  (N_i U_{\parallel,i} - n_e u_{\parallel,e})$ vanishes.
+
+\begin{align}
+    U_{\parallel,i, sh} &= s\sqrt{1+\tau} \\
+    u_{\parallel,e, sh} &= s\sqrt{1+\tau}\exp(-\phi) \text{ "bohm" } \label{eq:bohm_sheath}\\
+    u_{\parallel,e, sh} &= U_{\parallel,i,sh}N_i/n_e \text{ "insulating" } \label{eq:insulating_sheath}
+\end{align}
+where "s" is a fieldline coordinate that equals $-1$ on the negative divertor and $+1$ on the positive divertor
+and varies linearly in-between.
+\begin{tcolorbox}[title=Note]
+    The sign $+1$ of the divertor is defined such that if we follow $+\bhat$
+    then we leave the domain.
+    The sign $-1$ of the divertor is defined such that if we follow $-\bhat$
+    then we leave the domain.
+\end{tcolorbox}
 \begin{minted}[texcomments]{js}
 "boundary" :
 {
@@ -1011,13 +1027,18 @@ an insulating condition where the total current $j_s = n_e ( U_{\parallel,i} - u
     {
         "type" : "bohm", // Eq.\eqref{eq:bohm_sheath}
         "type" : "insulating" // Eq.\eqref{eq:insulating_sheath}
-        "boundary" : 0.2, // Total width of the sheath $\eps_s$ away from the wall
-        // in units of $a$ in Eq.\eqref{eq:sheath}
-        "alpha" : 0.25, // Transition width $\alpha$
-        // in units of $a$ in Eq.\eqref{eq:sheath}.
+        "boundary" : 3/32, // Total width of the sheath $\eps_s$ away from the wall
+        // in units of $2\pi$ in Eq.\eqref{eq:sheath}
+        "alpha" : 2/32, // Transition width $\alpha$
+        // in units of $2\pi$ in Eq.\eqref{eq:sheath}.
         "penalization" : 1.0, //penalization coefficient $\omega_s$ in density
         // and velocity damping Eq.\eqref{eq:sheath_penalization}
         "penalize-rhs" : false // if true we use Eq.\eqref{eq:sheath_equations} else Eq.\eqref{eq:sheath_penalization}
+        "coordinate" : "s", // can be "s" or "phi", should be "s"
+        "max_angle" : 4 // $\varphi_{\max}$ in units of $2\pi$
+        // in order to compute field-line following coordinates
+        // we need to integrate fieldlines. In order to avoid infinite integration
+        // we here give a maximum angle where to stop integration
     }
 }
 \end{minted}
@@ -1072,6 +1093,8 @@ where $\hat n$ is the normal vector to the boundary.
         "density" : [NEU, NEU], // boundary conditions in x and y for $n_e$
         // and $N_i$, DIR (density 1 on boundary) means both convective and
         // diffusive outflow while NEU (gradient 0) means no outflow by diffusion
+        "nbc" : 1.0, // Dirichlet value; must be present if and only if any one
+        // density boundary condition is DIR (see also nwall, background and minne)
         "velocity" : [NEU, NEU], // boundary conditions in x and y for
         // $u_{\parallel,e}$ and $U_{\parallel,i}$,
         // DIR is in general not very stable, NEU works better
@@ -1086,73 +1109,132 @@ where $\hat n$ is the normal vector to the boundary.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Initial conditions} \label{sec:initial}
-We initialize the parallel velocity to zero
-\begin{align}
-  u_{\parallel,e}(R,Z,\varphi,0) = U_{\parallel,i}(R,Z,\varphi,0) = 0
-  \label{}
-\end{align}
-which in turn initializes $A_\parallel = 0$.
-We then initialize the electron density with
-\begin{align} \label{eq:initial_ne}
-    n_e(R,Z,\varphi, 0)= 1 + (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)
-\end{align}
-consisting of a toroidally symmetric background profile $n_{\text{prof}}(R,Z)$ and a perturbation
-$\tilde n(R,Z,\varphi)$, which breaks the toroidal symmetry, multiplied with a
-damping profile $D(R,Z)$.
-Each of these functions can be chosen separately using parameters in the
-input file.
-Note that we should take care to intitialize a smooth profile with ideally well-defined $\Delta^2_\perp n_e$.
+See the file {\tt init.h} to add your own custom condition.
 
-We have two possibilities to initialize the ion density
+We have the possibility to
+initialize a simulation with the output of a previously
+run simulation:
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "type" : "restart",
+    // only the "file" parameter is needed (also see Section \ref{sec:restart})
+    "file" : "path/to/file.nc"
+    // the file to use as a restart for $n_e$, $N_i$, $u_{\parallel,e}$ and $U_{\parallel,i}$
+}
+\end{minted}
+In contrast, we can initialize the fields $n_e$, $N_i$, $u_{\parallel,e}$, $U_{\parallel,i}$
+directly:
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "type" : "fields",
+    // "density", "potential", "velocity", "aparallel"
+}
+\end{minted}
+The density can be initialized to the constant background value
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "density" :
+    {
+        "type" : "const"  // $n_e = N_i = const$, $\phi = 0$
+        "background" : 0.1, // $const$
+        // same as choosing "const" profile with zero perturbation and no damping
+        //(see also nbc, minne and nwall)
+    }
+    //  "potential not needed
+}
+\end{minted}
+Or we initialize the electron density with
+\begin{align} \label{eq:initial_ne}
+    n_e(R,Z,\varphi, 0)= (n_{prof}(R,Z) + \tilde n(R,Z,\varphi) - n_{bg}) D(R,Z) + n_{bg}
+\end{align}
+consisting of a toroidally symmetric profile $n_{\text{prof}}(R,Z)$ and a
+perturbation $\tilde n(R,Z,\varphi)$, which breaks the toroidal symmetry,
+multiplied with a damping profile $D(R,Z)$ (typically with values between 0 and
+1) that optionally dampens the density to a constant background value $n_{bg}$.
+Each of these functions can be chosen separately using parameters in the input
+file.  Note that we should take care to intitialize a smooth profile with
+ideally well-defined $\Delta^2_\perp n_e$.
+
+We have three possibilities to initialize the ion density
 \begin{align} \label{eq:initphi}
-  N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = \Gamma_{1,i}n_e\approx \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e
+    N_i = n_e \text{ or }N_i = \Gamma_{1,i}^{-1} n_e \text{ or } N_i = \Gamma_{1,i}n_e\approx \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e
 \end{align}
 In the first case the potential $\phi= 0$ while in the second case
 the $E\times B$ and ion diamagnetic vorticity coincide $\Delta_\perp N_i \propto \Delta_\perp \phi$ in the long-wavelength limit.
 Note that $\alpha$ must not be too small to avoid $N_i < 0$.
-
-Lastly we also have the possibility to initialize $N_i$ instead of $n_e$ first
-or to initialize a simulation with the output of a previously
-run different simulation or to initialize the simulation in the symmetric mode.
 \begin{minted}[texcomments]{js}
 "init":
 {
-    "type" : "zero", // $n_e = N_i = 0$ no other parameters needed
-}
-\end{minted}
-\begin{minted}[texcomments]{js}
-"init":
-{
-    "type" : "restart", // only the file parameter is needed (see Section \ref{sec:restart})
-    "file" : "path/to/file.nc" // the file to use as a restart for $n_e$, $N_i$, $u_{\parallel,e}$ and $U_{\parallel,i}$
-}
-\end{minted}
-\begin{minted}[texcomments]{js}
-"init":
-{
-    "type" : "ne",  // $n_e = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)$
-    "potential" : "zero_pol",// $N_i = n_e$ (polarization charge is 0)
-    "potential" : "zero",    // $N_i = \left( 1 - \frac{1}{2}\tau_i\mu_i\Delta_\perp \right) n_e= \Gamma_{1,i}^{-1} n_e $ (ignored if $\tau_i = 0$)
-    "potential" : "balance", // $N_i = \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e\approx \Gamma_{1,i}n_e$ (ignored if $\tau_i = 0$)
-    // \ldots ntilde, profile and damping parameters
-}
-\end{minted}
-\begin{minted}[texcomments]{js}
-"init":
-{
-    "type" : "ni",  // $N_i = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi)) D(R,Z)$
-    "potential" : "zero_pol",// $n_e = N_i$ (polarization charge is 0)
-    "potential" : "zero",    // $n_e = \Gamma_{1,i}N_i$ (ignored if $\tau_i = 0$)
-    "potential" : "balance", // $n_e = \left(1-\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)N_i = \Gamma_{1,i}^{-1}N_i$ (ignored if $\tau_i = 0$)
-    // \ldots ntilde, profile and damping parameters
+    "density" :
+    {
+        "type" : "ne",  // $n_e = n_{bg} + (n_{prof}(R,Z) + \tilde n(R,Z,\varphi) - n_{bg}) D(R,Z)$
+        // \ldots ntilde\ref{sec:ntilde}, profile\ref{sec:profile} and damping\ref{sec:damping} parameters
+    }
+    "potential" :
+    {
+        "type" : "zero_pol",// $N_i = n_e$ (polarization charge is 0)
+        "type" : "zero",    // $N_i = \left( 1 - \frac{1}{2}\tau_i\mu_i\Delta_\perp \right) n_e= \Gamma_{1,i}^{-1} n_e $ (same as zero\_pol if $\tau_i = 0$)
+        "type" : "balance", // $N_i = \left(1+\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)n_e\approx \Gamma_{1,i}n_e$ (same as zero\_pol if $\tau_i = 0$)
+    }
 }
 \end{minted}
 \noindent
-See the file {\tt init.h} to add your own custom condition.
+We can also reverse the roles of electron and ion densities like so:
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "density" :
+    {
+        "type" : "ni",  // $N_i = (n_{prof}(R,Z) + \tilde n(R,Z,\varphi) - n_{bg}) D(R,Z) + n_{bg}$
+        // \ldots ntilde\ref{sec:ntilde}, profile\ref{sec:profile} and damping\ref{sec:damping} parameters
+    }
+    "potential" :
+    {
+        "type" : "zero_pol",// $n_e = N_i$ (polarization charge is 0)
+        "type" : "zero",    // $n_e = \Gamma_{1,i}N_i$ (ignored if $\tau_i = 0$)
+        "type" : "balance", // $n_e = \left(1-\frac{1}{2}\tau_i\mu_i\Delta_\perp\right)N_i = \Gamma_{1,i}^{-1}N_i$ (ignored if $\tau_i = 0$)
+    }
+}
+\end{minted}
+\noindent
+The velocity can be chosen zero
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "velocity" :
+    {
+        "type" : "zero",  // $u_{\parallel,e}(R,Z,\varphi,0) = U_{\parallel,i}(R,Z,\varphi,0) = 0$
+    }
+    // "aparallel" not needed
+}
+\end{minted}
+\noindent
+Or we initialize a linear profile between the divertor plates. This is achieved
+by integrating fieldlines towards the positive and negative divertor.
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "velocity" :
+    {
+        "type" : "ui",
+        "profile" : "linear_cs" // $ U_{\parallel,i}= s\sqrt{1+\tau}$ in the SOL
+        // where "s" is the fieldline coordinate defined in section\ref{sec:sheath}
+        // if the sheath type is "none" then $s=0$
+    }
+    "aparallel"
+    {
+        "type" : "zero", // $u_{\parallel,e} = N_i U_{\parallel,i} / n_e$
+    }
+}
+\end{minted}
+\noindent
 \subsubsection{ntilde} \label{sec:ntilde}
 We can choose between several initial conditions for $\tilde n$:
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "ntilde" : { "type" : "zero" } // $\tilde n = 0$
 }
@@ -1171,7 +1253,7 @@ to transform this blob to all other poloidal
 planes.
 We either follow fieldlines around the torus several times or only once.
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "ntilde" :
     {
@@ -1199,7 +1281,7 @@ Again, we transform this to all poloidal planes along the magnetic field lines a
     \tilde n_e(R,Z,\varphi) = \tilde n_{\text{bath}}(R,Z,\varphi)
 \end{align}
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "ntilde" :
     {
@@ -1220,7 +1302,7 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \tilde n_e(R,Z,\varphi) &= \tilde n_{\text{zonal}}(R,Z)
 \end{align}
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "ntilde" :
     {
@@ -1232,39 +1314,49 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 \end{minted}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{profile} \label{sec:profile}
+We can have a constant (background) profile
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
-    "profile" : { "type" : "zero" } // $n_{prof} = 0$
+    "profile" :
+    {
+        "type" : "const",// $n_{prof} = const$
+        "background" : 0.1 // $const$
+        //(see also nbc, minne and nwall)
+    }
 }
 \end{minted}
-
+ \noindent
 We define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
-  n_{\text{prof}}(R,Z)= \triangle n_{peak}\frac{\psi_p(R,Z) }{\psi_{p,O}}
+    n_{\text{prof}}(R,Z)= n_{peak}\frac{\psi_p(R,Z) }{\psi_{p,O}} + n_{sep} \frac{\psi_{p,O} - \psi_p(R,Z)}{\psi_{p,O}}
 \end{align}
+Typically this profile is used in combination with an aligned damping profile~\eqref{eq:aligned_damping}.
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "profile" :
     {
         "type" : "aligned",
-        "amplitude" : 1.0 // Profile amplitude $\triangle n_{peak}$ in Eq.\eqref{eq:density_profile}
+        "npeak" : 10.0, // Profile peak density $n_{peak}$ in Eq.\eqref{eq:density_profile}
+        "nsep" : 1.0 // Profile separatrix density $n_{sep}$ in Eq.\eqref{eq:density_profile}
     }
 }
 \end{minted}
-
+\noindent
 Instead of the flux-aligned profile we can also choose a toroidally symmetric Gaussian profile
 \begin{align} \label{eq:profile_blob}
-  n_{prof}(R,Z) = \triangle n_{peak} \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+    n_{prof}(R,Z) = B + A \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
 \end{align}
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "profile" :
     {
         "type" : "gaussian",
-        "amplitude": 1.0, // $\triangle n$ in Eq.\eqref{eq:profile_blob}
+        "background" : 1.0, // $B$ in Eq.\eqref{eq:profile_blob}
+        //(see also nbc, minne and nwall)
+        "amplitude": 1.0, // $A$ in Eq.\eqref{eq:profile_blob}
         "posX" : 0, // $p_x$ in Eq.\eqref{eq:profile_blob}
         "posY" : 0, // $p_y$ in Eq.\eqref{eq:profile_blob}
         "sigma" : 1.0, // $\sigma$ in Eq.\eqref{eq:profile_blob}
@@ -1275,29 +1367,57 @@ Instead of the flux-aligned profile we can also choose a toroidally symmetric Ga
 \subsubsection{damping} \label{sec:damping}
 We can have no damping
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "damping" : { "type" : "none" } // $D(R,Z) = 1$
+    //$n_{bg}$ drops from initial condition Eq.\eqref{eq:initial_ne}
 }
 \end{minted}
 Or we can have an aligned damping profile
-\begin{align} \label{eq:aligned_damping}
-    D_\mathrm{aligned}(R,Z)=\Theta_{\alpha_p/2}\left(\rho_{p,b}-\rho_p(R, Z)-\frac{\alpha_p}{2}\right) H(Z-Z_X)
+\begin{align}
+    \label{eq:aligned_damping}
+    D_\mathrm{aligned}(R,Z)&=\Theta_{\alpha_p/2}\left(\rho_{p,b}-\rho_p(R, Z)-\frac{\alpha_p}{2}\right)\\
+    \label{eq:alignedX_damping}
+    D_\mathrm{alignedX}(R,Z)&=\Theta_{\alpha_p/2}\left(\rho_{p,b}-\rho_p(R, Z)-\frac{\alpha_p}{2}\right) H(Z-Z_X)
 \end{align}
 The second Heaviside is multiplied only if the equilibrium $\psi_p$ has an
-X-point and avoids a profile in the private flux region. The factor $\alpha_p$ provides a smooth transition
+X-point and avoids a profile in the private flux region.
+The factor $\alpha_p$ provides a smooth transition
 zone that avoids numerical oscillations.
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "damping" :
     {
         "type" : "aligned", // Choose Eq.\eqref{eq:aligned_damping}
+        "type" : "alignedX", // Choose Eq.\eqref{eq:alignedX_damping}
         "alpha" : 0.2,
         // $\alpha_p$ in Eq.\eqref{eq:aligned_damping},
         // (should be small but cannot be too small if $\tau_i > 0$ else
         // $\Delta_\perp n_e$ explodes, must not be zero)
         "boundary" : 1.0    // $\rho_{p,b}$ in Eq.\eqref{eq:aligned_damping}
+        "background" : 0.1 // $n_{bg}$ value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
+        //(see also nbc, minne and nwall)
+    }
+}
+\end{minted}
+If a profile also in the SOL is desired we can provide a "sol\_pfr" type damping
+profile requiring two boundaries and alphas
+\begin{minted}[texcomments]{js}
+"density":
+{
+    "damping" :
+    {
+        "type" : "alignedPFR", // Choose double sided damping region in SOL and PFR
+        "alpha" : [0.2, 0.2], //first one is for main region, second one for PFR
+        // $\alpha_p$ in Eq.\eqref{eq:aligned_damping},
+        // (should be small but cannot be too small if $\tau_i > 0$ else
+        // $\Delta_\perp n_e$ explodes, must not be zero)
+        "boundary" : [0.7, 1.1],    // $\rho_{p,b}$ in Eq.\eqref{eq:aligned_damping}
+        // first one is for main region, second one for PFR
+        // second values should be $\alpha+\rho_b \leq 1$
+        "background" : 0.1 // $n_{bg}$ value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
+        //(see also nbc, minne and nwall)
     }
 }
 \end{minted}
@@ -1306,21 +1426,45 @@ Finally, we can have a circular damping profile
     D_\mathrm{circular}(R,Z) = \Theta_{ a \alpha_p/2}\left( r a- \sqrt{(R-R_0)^2 + Z^2}\right)
 \end{align}
 \begin{minted}[texcomments]{js}
-"init":
+"density":
 {
     "damping" :
     {
         "type" : "circular", // Choose Eq.\eqref{eq:circular_damping}
         "alpha" : 0.2,      // $\alpha_p$ in Eq.\eqref{eq:circular_damping}, must not be zero
         "boundary" : 1.0    // $r$ in Eq.\eqref{eq:circular_damping}
+        "background" : 0.1 // $n_{bg}$ value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
+        //(see also nbc, minne and nwall)
     }
 }
 \end{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Sources} \label{sec:sources}
-    See the file {\tt init.h} to add your own custom source.
-In order to disable the source term $S_N$ choose
+See the file {\tt init.h} to add your own custom source.
+
+The first task of the source is to globally ensure a minimum density. This
+is required since through sheath dissipation the density can in
+principle become arbitrarily close to zero. This would however
+be detrimental to the stability of the simulation and in reality
+also never happens due to wall-recycling etc.
+\begin{align}
+    S_{n_e} = -\omega_{\min} ( n - n_{\min}) \Theta_{\alpha/2}( n_{\min}-\alpha/2 -n)
+    \label{eq:minimumne}
+\end{align}
+The Heaviside function ensures that this source term only acts when the density
+is below the lower limit. $n_{\min}=0$ disables this term.
+\begin{minted}[texcomments]{js}
+"source":
+{
+    "minne" : 0.1 // $n_{\min}$ in Eq.\eqref{eq:minimumne}
+    //if 0 then the other two parameters are ignored
+    "minrate" : 1 // $\omega_{\min}$ in Eq.\eqref{eq:minimumne} (only if $n_{\min}>0$)
+    "minalpha" : 0.01 // $\alpha$ in Eq.\eqref{eq:minimumne} (only if $n_{\min}>0$)
+}
+\end{minted}
+\noindent
+In order to disable any additional source terms choose
 \begin{minted}[texcomments]{js}
 "source":
 {
@@ -1329,9 +1473,11 @@ In order to disable the source term $S_N$ choose
 \end{minted}
 \noindent We can choose the source terms $S_N$ to force a profile
 \begin{align} \label{eq:electron_source}
-  S_{n_e}(R,Z,\varphi, t) &= \omega_s (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))D(R,Z)
+    S_{n_e}(R,Z,\varphi, t) &= \omega_s (n_{prof}(R,Z) - n_e(R,Z,\varphi, t))D(R,Z)
 \end{align}
 where $\omega_s$ is the source strength parameter.
+The forced source will result in exponential adaption of the core
+density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 \begin{minted}[texcomments]{js}
 "source":
 {
@@ -1344,18 +1490,16 @@ where $\omega_s$ is the source strength parameter.
     },
     "damping" :
     {
-        // Determine $D(R,Z)$
+        // $D(R,Z)$ determines where the source is active
         // Choose anything from section\ref{sec:damping}
-        // The boundary determines where the source is active
+        // The background parameter must be present but is ignored ($n_{bg} = 0$)
     }
 }
 \end{minted}
-The forced source will result in exponential adaption of the core
-density profile of the form $n_e \propto n_{prof}+(n_{prof}-n_{e,0})e^{-\omega_st}$.
 
 Another option is to provide a constant influx of particles
 \begin{align}
-  S_{n_e}(R,Z,\varphi, t) &= \omega_s (n_{prof}(R,Z) + \tilde n(R,Z,\varphi))D(R,Z)
+    S_{n_e}(R,Z,\varphi, t) &= \omega_s \left( (n_{prof}(R,Z) + \tilde n(R,Z,\varphi) - n_{bg})D(R,Z) + n_{bg}\right)
 \end{align}
 where $\omega_s$ is the source strength parameter.
 The idea is that you can start with zero density and evolve the profile purely
@@ -1441,11 +1585,24 @@ tableau to use
 \begin{minted}[texcomments]{js}
 "timestepper" :
 {
+    "type"    : "multistep", //Choose an explicit multistep method
     "tableau" : "TVB-3-3", // Any explicit multistep tableau *
     "dt"      : 2e-2, // Fixed timestep in units of $c_s/\rho_s$
 }
 \end{minted}
 *See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_explicit_multistep.html}{dg documentation} for what tableaus are available.
+
+The second option is an adaptive explicit embedded Runge-Kutta scheme
+\begin{minted}[texcomments]{js}
+"timestepper":
+{
+    "type"    : "adaptive", //Choose an explicit adaptive RK scheme
+    "tableau" : "Bogacki-Shampine-4-2-3", // Any explicit embedded RK tableau *
+    "rtol"    : 1e-7, // The relative tolerance in the timestep
+    "atol"    : 1e-10 // The absolute tolerance in the timestep
+}
+\end{minted}
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_e_r_k_step.html}{dg documentation} for what tableaus are available.
 
 Note that the explicit resistive term leads to an absolute (CFL) restriction
 on the timestep according to $\partial_t u_e \propto \frac{\eta}{\mu_e} u_e \Rightarrow \Delta t < \frac{-\mu_e}{\eta}$. This is a quite weak restriction unless the resistivity exceeds $\eta > 10^{-4}$.

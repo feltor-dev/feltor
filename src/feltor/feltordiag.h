@@ -432,9 +432,9 @@ std::vector<Record_static> diagnostics2d_static_list = {
             dg::assign( v.f.get_sheath(), result);
         }
     },
-    { "SheathDotDirection", "Sheath Region Dot Direction of field lines",
+    { "SheathCoordinate", "Sheath Coordinate of field lines",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            dg::assign( v.f.get_sheathDotDirection(), result);
+            dg::assign( v.f.get_sheath_coordinate(), result);
         }
     },
     { "Nprof", "Density profile (that the source may force)",
@@ -449,12 +449,24 @@ std::vector<Record_static> diagnostics2d_static_list = {
     },
     { "neinit", "Initial condition for electrons",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            dg::assign( v.y0[0][0], result);
+            dg::blas1::transform( v.y0[0][0], v.tmp[0], dg::PLUS<double>(v.p.nbc));
+            dg::assign( v.tmp[0], result);
         }
     },
     { "niinit", "Initial condition for ions",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
-            dg::assign( v.y0[0][1], result);
+            dg::blas1::transform( v.y0[0][1], v.tmp[0], dg::PLUS<double>(v.p.nbc));
+            dg::assign( v.tmp[0], result);
+        }
+    },
+    { "weinit", "Initial condition for electron canonical velocity",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.y0[1][0], result);
+        }
+    },
+    { "wiinit", "Initial condition for ion canonical velocity",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            dg::assign( v.y0[1][1], result);
         }
     },
 };
@@ -533,7 +545,7 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"lparallelinv", "Parallel density gradient length scale", false,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_dsN(0, result);
+            v.f.compute_dsN(0, result, v.tmp[0]);
             dg::blas1::pointwiseDot ( result, result, result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
@@ -542,7 +554,7 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"aligned", "Parallel density alignement", false,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_dsN(0, result);
+            v.f.compute_dsN(0, result, v.tmp[0]);
             dg::blas1::pointwiseDot ( result, result, result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
@@ -627,7 +639,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), v.f.divb(), 0., result);
             v.f.compute_dsU(0, v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.f.density(0),  v.tmp[0], 1., result);
-            v.f.compute_dsN(0, v.tmp[0]);
+            v.f.compute_dsN(0, v.tmp[0], v.tmp[2]);
             dg::blas1::pointwiseDot( 1., v.f.velocity(0), v.tmp[0], 1., result);
         }
     },
@@ -691,7 +703,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.divb(), 0., result);
             v.f.compute_dsU(1, v.tmp[1]);
             dg::blas1::pointwiseDot( 1., v.f.density(1),  v.tmp[1], 1., result);
-            v.f.compute_dsN(1, v.tmp[1]);
+            v.f.compute_dsN(1, v.tmp[1], v.tmp[2]);
             dg::blas1::pointwiseDot( 1., v.f.velocity(1), v.tmp[1], 1., result);
         }
     },
@@ -1177,7 +1189,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.tmp[1], v.f.divb(), 0., result);
             v.f.compute_dsU( 1, v.tmp[2]);
             dg::blas1::pointwiseDot( 0.5*v.p.mu[1], v.f.density(1),  v.f.velocity(1), v.tmp[2], 1., result);
-            v.f.compute_dsN( 1, v.tmp[2]);
+            v.f.compute_dsN( 1, v.tmp[2], v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[1], v.tmp[2], 1., result);
         }
     },
@@ -1230,8 +1242,7 @@ std::vector<Record> diagnostics2d_list = {
     /// --------------------- Mirror force term ---------------------------//
     {"sparmirrore_tt", "Mirror force term with electron density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            //dg::blas1::pointwiseDot( -v.p.tau[0], v.f.divb(), v.f.density(0), 0., result);
-            v.f.compute_dsN(0, result);
+            v.f.compute_dsN(0, result, v.tmp[0]);
             dg::blas1::scal( result, v.p.tau[0]);
         }
     },
@@ -1243,8 +1254,7 @@ std::vector<Record> diagnostics2d_list = {
     },
     {"sparmirrori_tt", "Mirror force term with ion density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            //dg::blas1::pointwiseDot( v.p.tau[1], v.f.divb(), v.f.density(1), 0., result);
-            v.f.compute_dsN(1, result);
+            v.f.compute_dsN(1, result, v.tmp[0]);
             dg::blas1::scal( result, -v.p.tau[1]);
         }
     },

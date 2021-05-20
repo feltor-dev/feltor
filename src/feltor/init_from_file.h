@@ -107,14 +107,14 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     errIN = nc_close(ncidIN);
     /// ///////////////Now Construct initial fields ////////////////////////
     //
-    //Convert to N-1 and W
-    dg::blas1::plus( transferOUTvec[0], -1.);
-    dg::blas1::plus( transferOUTvec[1], -1.);
+    //Convert to N-nbc and W
+    dg::blas1::plus( transferOUTvec[0], -p.nbc);
+    dg::blas1::plus( transferOUTvec[1], -p.nbc);
     dg::blas1::axpby( 1., transferOUTvec[2], 1./p.mu[0], transferOUTvec[4], transferOUTvec[2]);
     dg::blas1::axpby( 1., transferOUTvec[3], 1./p.mu[1], transferOUTvec[4], transferOUTvec[3]);
 
-    dg::assign( transferOUTvec[0], y0[0][0]); //ne-1
-    dg::assign( transferOUTvec[1], y0[0][1]); //Ni-1
+    dg::assign( transferOUTvec[0], y0[0][0]); //ne-nbc
+    dg::assign( transferOUTvec[1], y0[0][1]); //Ni-nbc
     dg::assign( transferOUTvec[2], y0[1][0]); //We
     dg::assign( transferOUTvec[3], y0[1][1]); //Wi
     return y0;

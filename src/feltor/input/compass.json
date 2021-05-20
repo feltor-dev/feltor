@@ -10,6 +10,7 @@
     },
     "timestepper":
     {
+        "type" : "multistep",
         "tableau": "TVB-3-3",
         "dt" : 2e-3
     },
@@ -54,6 +55,7 @@
     },
     "source":
     {
+        "minne" : 0.0,
         "type" : "influx",
         "rate" : 2e-3,
         "ntilde": {
@@ -67,38 +69,55 @@
         "profile":
         {
             "type" : "aligned",
-            "amplitude" : 1.0
+            "npeak" : 8.0,
+            "nsep" : 1.0
         },
         "damping":
         {
-            "type": "aligned",
+            "type": "alignedX",
             "alpha" : 0.2,
-            "boundary" : 0.55
+            "boundary" : 0.55,
+            "background" : 1.0
         }
     },
     "init":
     {
-        "type" : "ne",
-        "potential" : "zero",
-        "ntilde": {
-            "type" : "turbulence",
-            "amplitude"  : 0.1,
-            "rk4eps" : 1e-6,
-            "refine" : [5,5],
-            "revolutions" : 1,
-            "sigma_z" : 0.5
-        },
-        "profile":
+        "type" : "fields",
+        "density" :
         {
-            "type" : "aligned",
-            "amplitude" : 1.0
+            "type" : "ne",
+            "ntilde": {
+                "type" : "turbulence",
+                "amplitude"  : 0.1,
+                "rk4eps" : 1e-6,
+                "refine" : [5,5],
+                "revolutions" : 1,
+                "sigma_z" : 0.5
+            },
+            "profile":
+            {
+                "type" : "aligned",
+                "npeak" : 1.0,
+                "nsep" : 0.0
+            },
+            "damping":
+            {
+                "type": "alignedX",
+                "alpha" : 0.2,
+                "boundary" : 1.0,
+                "background" : 1.0
+            }
         },
-        "damping":
+        "potential" :
         {
-            "type": "aligned",
-            "alpha" : 0.2,
-            "boundary" : 1.0
-        }
+            "type" : "zero"
+        },
+        "velocity" :
+        {
+            "type" : "ui",
+            "profile" : "linear_cs"
+        },
+        "aparallel" : {"type" : "zero"}
     },
     "boundary":
     {
@@ -109,19 +128,24 @@
             "alpha": [0.10,0.10],
             "modify-B" : true,
             "penalization" : 1e+0,
-            "penalize-rhs" : false
+            "penalize-rhs" : false,
+            "nwall" : 1.0,
+            "uwall" : 0.0
         },
         "sheath":
         {
             "type": "bohm",
-            "boundary": 0.30,
-            "alpha": 0.2,
+            "boundary": 0.125,
+            "alpha": 0.0625,
             "penalization" : 1e+0,
-            "penalize-rhs" : false
+            "penalize-rhs" : false,
+            "coordinate" : "s",
+            "max_angle" : 4
         },
         "bc" :
         {
             "density" : ["DIR", "DIR"],
+            "nbc" : 1.0,
             "velocity": ["NEU", "NEU"],
             "potential":["DIR", "DIR"],
             "aparallel":["NEU", "NEU"]

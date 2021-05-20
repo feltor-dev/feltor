@@ -10,6 +10,7 @@
     },
     "timestepper":
     {
+        "type" : "multistep",
         "tableau": "TVB-3-3",
         "dt" : 1e-3
     },
@@ -69,6 +70,7 @@
         "bc" :
         {
             "density" : ["DIR", "DIR"],
+            "nbc" : 1.0,
             "velocity": ["DIR", "DIR"],
             "potential":["DIR", "DIR"],
             "aparallel":["DIR", "DIR"]
@@ -76,10 +78,20 @@
     },
     "init":
     {
-        "type" : "zero"
+        "type" : "fields",
+        "density" :
+        {
+            "type" : "const",
+            "background" : 1.0
+        },
+        "velocity" :
+        {
+            "type" : "zero"
+        }
     },
     "source":
     {
-        "type" : "zero"
+        "type" : "zero",
+        "minne" : 0.0
     }
 }

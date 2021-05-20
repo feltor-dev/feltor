@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << js.asJson() <<  std::endl;
     std::string inputfile = js.asJson().toStyledString();
     dg::geo::TokamakMagneticField mag, mod_mag;
-    dg::geo::CylindricalFunctor wall, transition;
+    dg::geo::CylindricalFunctor wall, transition, sheath, sheath_coordinate = [](double x, double y){return 0.;};
     try{
         mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
         mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
@@ -134,10 +134,54 @@ int main( int argc, char* argv[])
     if( p.periodify)
         mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
 
-    DG_RANK0 std::cout << "Constructing Feltor...\n";
-    feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag);
-    DG_RANK0 std::cout << "Done!\n";
+    DG_RANK0 std::cout << "# Constructing Feltor...\n";
+    feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+        dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag);
+    DG_RANK0 std::cout << "# Done!\n";
 
+    feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
+                    wall, grid)), p.nwall, p.uwall );
+    if( p.sheath_bc != "none")
+    {
+        DG_RANK0 std::cout << "# Compute Sheath coordinates \n";
+        try{
+            // sheath is created on unmodified magnetic field
+            dg::Grid2d sheath_walls( Rmin, Rmax, Zmin, Zmax, 1, 1, 1);
+            dg::geo::createSheathRegion( js["boundary"]["sheath"],
+                dg::geo::createMagneticField(js["magnetic_field"]["params"]),
+                wall, sheath_walls, sheath);
+            sheath_coordinate = dg::geo::WallFieldlineCoordinate(
+                    dg::geo::createBHat( mag), sheath_walls,
+                    p.sheath_max_angle, 1e-6, p.sheath_coord);
+        }catch(std::runtime_error& e)
+        {
+            DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+            DG_RANK0 std::cerr <<e.what()<<std::endl;
+            abort_program();
+        }
+        feltor.set_sheath(
+                p.sheath_rate,
+                dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
+                dg::construct<dg::x::DVec>(dg::pullback( sheath_coordinate, grid)));
+    }
+
+    DG_RANK0 std::cout << "# Set Source \n";
+    try{
+        bool fixed_profile;
+        dg::x::HVec ne_profile, source_profile;
+        double minne = 0., minrate = 0., minalpha = 0.;
+        source_profile = feltor::source_profiles(
+            fixed_profile, ne_profile, grid, mag, js["source"],
+            minne, minrate, minalpha);
+        feltor.set_source( fixed_profile,
+                dg::construct<dg::x::DVec>(ne_profile), p.source_rate,
+                dg::construct<dg::x::DVec>(source_profile),
+                minne, minrate, minalpha);
+    }catch ( std::out_of_range& error){
+        DG_RANK0 std::cerr << "ERROR: in source: "<<error.what();
+        DG_RANK0 std::cerr <<"Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
+        abort_program();
+    }
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
     std::array<std::array<dg::x::DVec,2>,2> y0;
@@ -164,7 +208,7 @@ int main( int argc, char* argv[])
     {
         try{
             y0 = feltor::initial_conditions(feltor, grid, p, mod_mag,
-                    js["init"], time );
+                    js["init"], time, sheath_coordinate );
         }catch ( dg::Error& error){
             DG_RANK0 std::cerr << error.what();
             DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
@@ -172,42 +216,30 @@ int main( int argc, char* argv[])
         }
     }
 
-    feltor.set_wall( p.wall_rate,
-            dg::construct<dg::x::DVec>( dg::pullback( wall, grid)));
-    if( p.sheath_bc != "none")
+    ///////////////////////////////////////////////////////////////////////////
+    DG_RANK0 std::cout << "Initialize Timestepper" << std::endl;
+    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
+    dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
+    double rtol = 0., atol = 0., dt = 0.;
+    if( p.timestepper == "multistep")
     {
-        dg::geo::CylindricalFunctor sheath, direction;
-        try{
-            // sheath is created on unmodified magnetic field
-            dg::geo::createSheathRegion( js["boundary"]["sheath"],
-                dg::geo::createMagneticField(js["magnetic_field"]["params"]),
-                wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
-        }catch(std::runtime_error& e)
-        {
-            DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
-            DG_RANK0 std::cerr <<e.what()<<std::endl;
-            abort_program();
-        }
-        feltor.set_sheath(
-                p.sheath_rate,
-                dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
-                dg::construct<dg::x::DVec>(dg::pullback( direction, grid)));
+        multistep.construct( p.tableau, y0);
+        dt = js[ "timestepper"]["dt"].asDouble( 0.01);
     }
-
-    DG_RANK0 std::cout << "# Set Source \n";
-    try{
-        bool fixed_profile;
-        dg::x::HVec ne_profile, source_profile;
-        source_profile = feltor::source_profiles(
-            fixed_profile, ne_profile, grid, mag, js["source"]);
-        feltor.set_source( fixed_profile, dg::construct<dg::x::DVec>(ne_profile),
-            p.source_rate, dg::construct<dg::x::DVec>(source_profile)
-        );
-    }catch ( std::out_of_range& error){
-        DG_RANK0 std::cerr << "ERROR: in source: "<<error.what();
-        DG_RANK0 std::cerr <<"Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
+    else if (p.timestepper == "adaptive")
+    {
+        adapt.construct( p.tableau, y0);
+        rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
+        atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
+        dt = 1e-4; //that should be a small enough initial guess
+    }
+    else
+    {
+        DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
         abort_program();
+        return -1;
     }
+    DG_RANK0 std::cout << "Done!\n";
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
@@ -459,15 +491,13 @@ int main( int argc, char* argv[])
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
-        dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > >
-            stepper( p.tableau, y0);
 
-        DG_RANK0 std::cout << "Initialize Timestepper" << std::endl;
-        stepper.init( feltor, time, y0, p.dt);
         dg::Timer t;
         t.tic();
         unsigned step = 0;
         unsigned maxout = js["output"].get( "maxout", 0).asUInt();
+        if( p.timestepper == "multistep")
+            multistep.init( feltor, time, y0, dt);
         for( unsigned i=1; i<=maxout; i++)
         {
 
@@ -478,7 +508,10 @@ int main( int argc, char* argv[])
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
-                        stepper.step( feltor, time, y0);
+                        if( p.timestepper == "adaptive")
+                            adapt.step( feltor, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                        if( p.timestepper == "multistep")
+                            multistep.step( feltor, time, y0);
                     }
                     catch( dg::Fail& fail){ // a specific exception
                         DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -605,12 +638,6 @@ int main( int argc, char* argv[])
     {
         dg::Timer t;
         unsigned step = 0;
-        dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2 > >
-            stepper(p.tableau, y0);
-        //dg::Adaptive<dg::ERKStep<std::array<std::array<dg::x::DVec,2>,2 >>> stepper( "Bogacki-Shampine-4-2-3", y0);
-        std::cout << "Initialize Timestepper" << std::endl;
-        stepper.init( feltor, time, y0, p.dt);
-        std::cout << "Done!" << std::endl;
 
         std::map<std::string, const dg::x::DVec* > v4d;
         v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
@@ -636,7 +663,6 @@ int main( int argc, char* argv[])
         std::cout << std::scientific << std::setprecision( 2);
         dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z, "simple");
         title << std::setprecision(2) << std::scientific;
-        //double dt = p.dt; // stepper
         while ( !glfwWindowShouldClose( w ))
         {
             title << std::fixed;
@@ -686,15 +712,18 @@ int main( int argc, char* argv[])
 
             //step
             t.tic();
+            if( p.timestepper == "multistep")
+                multistep.init( feltor, time, y0, dt);
             for( unsigned i=0; i<p.itstp; i++)
             {
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
-                        stepper.step( feltor, time, y0);
-                        //stepper.step( feltor, time, y0, time, y0, dt,
-                        //   dg::pid_control, dg::l2norm,
-                        //   1e-6, 1e-6);
+                        if( p.timestepper == "adaptive")
+                            adapt.step( feltor, time, y0, time, y0, dt,
+                                    dg::pid_control, dg::l2norm, rtol, atol);
+                        if( p.timestepper == "multistep")
+                            multistep.step( feltor, time, y0);
                     }
                     catch( dg::Fail& fail) {
                         std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

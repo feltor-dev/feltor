@@ -12,8 +12,7 @@ namespace feltor{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-    double dt;
-    std::string tableau;
+    std::string tableau, timestepper;
 
     unsigned inner_loop;
     unsigned itstp;
@@ -24,6 +23,7 @@ struct Parameters
     unsigned stages;
     unsigned mx, my;
     double rk4eps;
+    double nbc;
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
@@ -34,7 +34,9 @@ struct Parameters
     double nu_perp_n, nu_perp_u;
     enum dg::direction diff_dir;
 
-    double source_rate, wall_rate, sheath_rate;
+    double source_rate, nwall, uwall, wall_rate;
+    double sheath_rate, sheath_max_angle;
+    std::string sheath_coord;
 
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
@@ -61,8 +63,8 @@ struct Parameters
         boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
         boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
         boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
-        dt      = js["timestepper"].get("dt", 0.).asDouble();
         tableau = js["timestepper"].get("tableau", "TVB-3-3").asString();
+        timestepper = js["timestepper"].get("type", "multistep").asString();
         inner_loop  = js["output"].get("inner_loop",1).asUInt();
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
@@ -133,6 +135,11 @@ struct Parameters
 
         bcxN = dg::str2bc(js["boundary"]["bc"][  "density"].get( 0, "").asString());
         bcyN = dg::str2bc(js["boundary"]["bc"][  "density"].get( 1, "").asString());
+        nbc = 0.;
+        if( bcxN == dg::DIR || bcxN == dg::DIR_NEU || bcxN == dg::NEU_DIR
+            || bcyN == dg::DIR || bcyN == dg::DIR_NEU || bcyN == dg::NEU_DIR)
+            nbc = js["boundary"]["bc"].get( "nbc", 1.0).asDouble();
+
         bcxU = dg::str2bc(js["boundary"]["bc"][ "velocity"].get( 0, "").asString());
         bcyU = dg::str2bc(js["boundary"]["bc"][ "velocity"].get( 1, "").asString());
         bcxP = dg::str2bc(js["boundary"]["bc"]["potential"].get( 0, "").asString());
@@ -155,7 +162,8 @@ struct Parameters
 
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
         modify_B = penalize_wall = penalize_sheath = false;
-        wall_rate = sheath_rate = 0.;
+        nwall = uwall = wall_rate = sheath_rate = sheath_max_angle = 0.;
+        sheath_coord = "s";
         if( js["boundary"]["wall"].get("type","none").asString() != "none")
         {
             modify_B = js["boundary"]["wall"].get( "modify-B", false).asBool();
@@ -163,13 +171,17 @@ struct Parameters
                     false).asBool();
             wall_rate = js ["boundary"]["wall"].get( "penalization",
                     0.).asDouble();
+            nwall = js["boundary"]["wall"].get( "nwall", 1.0).asDouble();
+            uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
         }
         if( js["boundary"]["sheath"].get("type","none").asString() != "none")
         {
             penalize_sheath = js["boundary"]["sheath"].get( "penalize-rhs",
                     false).asBool();
-            sheath_rate = js ["boundary"]["wall"].get( "penalization",
+            sheath_rate = js ["boundary"]["sheath"].get( "penalization",
                     0.).asDouble();
+            sheath_coord = js["boundary"]["sheath"].get( "coordinate", "s").asString();
+            sheath_max_angle = js["boundary"]["sheath"].get( "max_angle", 4).asDouble()*2.*M_PI;
         }
 
         // Computing flags
