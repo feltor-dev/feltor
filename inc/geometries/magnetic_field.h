@@ -899,7 +899,9 @@ struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
     dg::geo::TokamakMagneticField m_mag;
 };
 
-///@brief Determine if field points towards or away from the nearest wall
+///@brief Determine if poloidal field points towards or away from the nearest wall
+///
+///@attention Does not account for toroidal field direction
 struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
 {
     /**
@@ -912,6 +914,15 @@ struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
     WallDirection( dg::geo::TokamakMagneticField mag, std::vector<double>
             vertical, std::vector<double> horizontal) : m_vertical(vertical),
         m_horizontal(horizontal), m_BR( mag), m_BZ(mag){}
+    /**
+     * @brief Allocate lines
+     *
+     * @param mag Use to construct magnetic field
+     * @param walls two vertical x0, x1 and two horizontal y0, y1 walls
+     */
+    WallDirection( dg::geo::TokamakMagneticField mag,
+            dg::Grid2d walls) : m_vertical({walls.x0(), walls.x1()}),
+        m_horizontal({walls.y0(), walls.y1()}), m_BR( mag), m_BZ(mag){}
     double do_compute ( double R, double Z) const
     {
         std::vector<double> v_dist(1,1e100), h_dist(1,1e100);

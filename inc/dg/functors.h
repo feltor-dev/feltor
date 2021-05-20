@@ -2043,6 +2043,13 @@ struct WallDistance
     WallDistance( std::vector<double> vertical, std::vector<double> horizontal) :
         m_vertical(vertical), m_horizontal( horizontal) {}
     /**
+     * @brief Allocate lines
+     *
+     * @param walls two vertical (x0, x1) and two horizontal (y0, y1) walls
+     */
+    WallDistance( dg::Grid2d walls) : m_vertical({walls.x0(), walls.x1()}),
+        m_horizontal({walls.y0(), walls.y1()}){}
+    /**
      * @brief Distance to closest wall in a box
      */
     double operator() (double R, double Z) const

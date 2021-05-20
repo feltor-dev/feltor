@@ -109,8 +109,7 @@ struct aCylindricalFunctor
 };
 
 /**
- * @brief The constant functor
- * \f[ f(x,y) = c\f]
+ * @brief \f$ f(x,y) = c\f$
  */
 struct Constant: public aCylindricalFunctor<Constant>
 {
@@ -120,23 +119,22 @@ struct Constant: public aCylindricalFunctor<Constant>
     double c_;
 };
 /**
- * @brief <tt> (double Z_X)</tt>
- \f[ f(R,Z)= \begin{cases}
- 1 \text{ if } Z > Z_X \\
- 0 \text{ else }
+ * @brief
+ * \f$ f(R,Z)= \begin{cases}
+ 0 \text{ if } Z < Z_X \\
+ 1 \text{ else }
  \end{cases}
- \f]
+ \f$
+ @note the 1 is inclusive i.e. if Z == Z_X the functor always returns 1
  */
 struct ZCutter : public aCylindricalFunctor<ZCutter>
 {
-    ZCutter(double ZX): Z_X(ZX){}
+    ZCutter(double ZX, int sign = +1): m_heavi( ZX, sign){}
     double do_compute(double R, double Z) const {
-        if( Z > Z_X)
-            return 1;
-        return 0;
+        return m_heavi(Z);
     }
     private:
-    double Z_X;
+    dg::Heaviside m_heavi;
 };
 
 /**
