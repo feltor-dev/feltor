@@ -163,6 +163,8 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl0& vec,
 /**
  * @brief %Distance to wall along fieldline in phi or s coordinate
  * @ingroup fluxfunctions
+ * @attention The sign of the distance is defined with respect to the direction
+ * of the magnetic field (not the angle coordinate like in Fieldaligned)
  */
 struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 {
@@ -172,7 +174,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
      * @param vec The vector field to integrate
      * @param domain The box
      * @param maxPhi the maximum angle to integrate to (something like +- 2.*M_PI)
-     * If the angle is negative the fieldlines are followed in the negative direction
+     * If the angle is negative the fieldlines are followed in the negative angle direction
      * @param eps the accuracy of the fieldline integrator
      * @param type either "phi" then the distance is computed in the angle coordinate
      * or "s" then the distance is computed in the s parameter
@@ -201,19 +203,84 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
     {
         double phi1 = m_deltaPhi;
         std::array<double,3> coords{ R, Z, 0}, coordsP(coords);
+        // determine sign
+        m_cyl_field( 0., coords, coordsP);
+        double sign = coordsP[2] > 0 ? +1. : -1.;
         try{
             dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
                 coords, phi1, coordsP, 0., dg::pid_control, dg::geo::detail::ds_norm,
                 m_eps,1e-10, m_domain); //integration
-        }catch (std::runtime_error& e)
+        }catch (std::exception& e)
         {
             // if not possible the distance is large
+            //std::cerr << e.what();
             phi1 = m_deltaPhi;
             coordsP[2] = 1e6*m_deltaPhi;
         }
         if( m_type == "phi")
-            return phi1;
-        return coordsP[2];
+            return sign*phi1;
+        return sign*coordsP[2];
+    }
+
+    private:
+    const dg::Grid2d m_domain;
+    dg::geo::detail::DSFieldCylindrical m_cyl_field;
+    double m_deltaPhi, m_eps;
+    std::string m_type;
+};
+
+/**
+ * @brief Normalized coordinate relative to wall along fieldline in phi or s coordinate
+ *
+ * -1 means at the negative sheath (you have to go agains the field to go out
+ *  of the box), +1 at the postive sheath (you have to go with the field to go
+ *  out of the box) and anything else is in-between; when the sheath cannot be
+ *  reached 0 is returned
+ * @ingroup fluxfunctions
+ * @attention The sign of the coordinate is defined with respect to the direction
+ * of the magnetic field (not the angle coordinate like in Fieldaligned)
+ */
+struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordinate>
+{
+    ///@copydoc WallFieldineDistance()
+    WallFieldlineCoordinate(
+        const dg::geo::CylindricalVectorLvl0& vec,
+        const dg::aRealTopology2d<double>& domain,
+        double maxPhi, double eps, std::string type) :
+        m_domain( domain), m_cyl_field(vec),
+        m_deltaPhi( maxPhi), m_eps( eps), m_type(type)
+    {
+        if( m_type != "phi" && m_type != "s")
+            throw std::runtime_error( "Distance type "+m_type+" not recognized!\n");
+    }
+    double do_compute( double R, double Z) const
+    {
+        double phiP = m_deltaPhi, phiM = -m_deltaPhi;
+        std::array<double,3> coords{ R, Z, 0}, coordsP(coords), coordsM(coords);
+        // determine sign
+        m_cyl_field( 0., coords, coordsP);
+        double sign = coordsP[2] > 0 ? +1. : -1.;
+        try{
+            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
+                coords, phiP, coordsP, 0., dg::pid_control, dg::geo::detail::ds_norm,
+                m_eps,1e-10, m_domain); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
+                coords, phiM, coordsM, 0., dg::pid_control, dg::geo::detail::ds_norm,
+                m_eps,1e-10, m_domain); //integration
+        }catch (std::exception& e)
+        {
+            // if not possible the distance is large
+            phiP = m_deltaPhi;
+            coordsP[2] = 1e6*phiP;
+            phiM = -m_deltaPhi;
+            coordsM[2] = 1e6*phiM;
+        }
+        if( m_type == "phi")
+            return sign*(-phiP-phiM)/(phiP-phiM);
+        double sP = coordsP[2], sM = coordsM[2];
+        if( (phiM <= -m_deltaPhi)  && (phiP >= m_deltaPhi))
+            return 0.; //return exactly zero if sheath not reached
+        return sign*(-sP-sM)/(sP-sM);
     }
 
     private:
