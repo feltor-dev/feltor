@@ -95,7 +95,7 @@ dg::x::HVec pfr_damping(
                 boundary1+alpha1/2., alpha1/2., +1),
                     dg::geo::RhoP(mag)), grid);
         // Set Union
-        dg::blas1::evaluate( damping1, dg::equals(), [](double x, double y)
+        dg::blas1::evaluate( damping1, dg::equals(), []DG_DEVICE(double x, double y)
                 { return x+y-x*y;}, xpoint, damping1);
         // Set Intersection
         dg::blas1::pointwiseDot( damping0, damping1, damping);
