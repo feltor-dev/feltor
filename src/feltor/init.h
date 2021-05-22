@@ -294,6 +294,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
     if( "fields" == type)
     {
         std::string ntype = js["density"].get("type", "zero").asString();
+        DG_RANK0 std::cout << "# Initialize density with "<<ntype << std::endl;
         if ( "const" == ntype)
         {
             double nbg = js["density"].get("background", 0.1).asDouble();
@@ -321,14 +322,14 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             //actually we should always invert according to Markus
             //because the dG direct application is supraconvergent
             std::string ptype = js["potential"].get("type", "zero_pol").asString();
-            DG_RANK0 std::cout << "initialize potential with "<<ptype << std::endl;
+            DG_RANK0 std::cout << "# Initialize potential with "<<ptype << std::endl;
             if( "ne" == ntype)
             {
                 dg::assign( density, y0[0][0]);
                 feltor.initializeni( y0[0][0], y0[0][1], ptype);
                 double minimalni = dg::blas1::reduce( y0[0][1], 1,
                         thrust::minimum<double>());
-                DG_RANK0 std::cerr << "Minimum Ni value "<<minimalni+p.nbc<<std::endl;
+                DG_RANK0 std::cerr << "# Minimum Ni value "<<minimalni+p.nbc<<std::endl;
                 if( minimalni + p.nbc <= 0.0)
                 {
                     throw dg::Error(dg::Message()<< "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n"
@@ -345,6 +346,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             throw dg::Error(dg::Message()<< "Invalid density initial condition "<<ntype<<"\n");
         // init velocity and thus canonical W
         std::string utype = js["velocity"].get("type", "zero").asString();
+        DG_RANK0 std::cout << "# Initialize velocity with "<<utype << std::endl;
         if( "zero" == utype)
             ; // velocity already is zero
         else if( "ui" == utype )
@@ -358,7 +360,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             dg::assign( ui, y0[1][1]); // Wi = Ui
 
             std::string atype = js["aparallel"].get("type", "zero").asString();
-            DG_RANK0 std::cout << "initialize aparallel with "<<atype << std::endl;
+            DG_RANK0 std::cout << "# Initialize aparallel with "<<atype << std::endl;
             // ue = Ui
             if( atype == "zero")
             {

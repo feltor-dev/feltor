@@ -150,6 +150,8 @@ int main( int argc, char* argv[])
             dg::geo::createSheathRegion( js["boundary"]["sheath"],
                 dg::geo::createMagneticField(js["magnetic_field"]["params"]),
                 wall, sheath_walls, sheath);
+            // I think we should compute Sheath coordinates only for one plane
+            // and copy them to all planes
             sheath_coordinate = dg::geo::WallFieldlineCoordinate(
                     dg::geo::createBHat( mag), sheath_walls,
                     p.sheath_max_angle, 1e-6, p.sheath_coord);
@@ -217,7 +219,7 @@ int main( int argc, char* argv[])
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    DG_RANK0 std::cout << "Initialize Timestepper" << std::endl;
+    DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
     dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
     dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
     double rtol = 0., atol = 0., dt = 0.;
@@ -494,7 +496,7 @@ int main( int argc, char* argv[])
 
         dg::Timer t;
         t.tic();
-        unsigned step = 0;
+        unsigned step = 0, failed_counter = 0;
         unsigned maxout = js["output"].get( "maxout", 0).asUInt();
         if( p.timestepper == "multistep")
             multistep.init( feltor, time, y0, dt);
@@ -509,7 +511,12 @@ int main( int argc, char* argv[])
                 {
                     try{
                         if( p.timestepper == "adaptive")
-                            adapt.step( feltor, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                        {
+                            adapt.step( feltor, time, y0, time, y0, dt,
+                                    dg::pid_control, dg::l2norm, rtol, atol);
+                            if( adapt.failed())
+                                failed_counter++;
+                        }
                         if( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
                     }
@@ -552,6 +559,12 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
+                if( p.timestepper == "adaptive")
+                {
+                    DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
+                    DG_RANK0 std::cout << "\tfailed "<<failed_counter<<"\n";
+                }
+
                 //----------------Test if ampere equation holds
                 if( p.beta != 0)
                 {
@@ -637,7 +650,7 @@ int main( int argc, char* argv[])
     if( p.output == "glfw")
     {
         dg::Timer t;
-        unsigned step = 0;
+        unsigned step = 0, failed_counter=0;
 
         std::map<std::string, const dg::x::DVec* > v4d;
         v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
@@ -720,8 +733,12 @@ int main( int argc, char* argv[])
                 {
                     try{
                         if( p.timestepper == "adaptive")
+                        {
                             adapt.step( feltor, time, y0, time, y0, dt,
                                     dg::pid_control, dg::l2norm, rtol, atol);
+                            if( adapt.failed())
+                                failed_counter++;
+                        }
                         if( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
                     }
@@ -738,6 +755,11 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";
+                if( p.timestepper == "adaptive")
+                {
+                    std::cout << "\tdt "<<dt<<"\n";
+                    std::cout << "\tfailed "<<failed_counter<<"\n";
+                }
                 //----------------Test if ampere equation holds
                 if( p.beta != 0)
                 {
