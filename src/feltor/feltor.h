@@ -427,6 +427,9 @@ template<class Grid, class IMatrix, class Matrix, class Container>
 void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
+    //Set a hard code limit on the maximum number of iteration to avoid
+    //endless iteration in case of failure
+    m_multigrid.set_max_iter( 1e5);
     /////////////////////////init elliptic and helmholtz operators/////////
     auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
     if( p.curvmode == "true")

@@ -148,22 +148,31 @@ struct MultigridCG2d
     ///@return number of stages (same as \c stages)
     unsigned num_stages()const{return m_stages;}
 
-    ///return the grid at given stage
+    ///@brief return the grid at given stage
     ///@param stage must fulfill \c 0 <= stage < stages()
     const Geometry& grid( unsigned stage) const {
         return *(m_grids[stage]);
     }
 
 
-    ///After a call to a solution method returns the maximum number of iterations allowed at stage  0
+    ///The maximum number of iterations allowed at stage 0
     ///(if the solution method returns this number, failure is indicated)
     unsigned max_iter() const{return m_cg[0].get_max();}
+    /**
+     * @brief Set the maximum number of iterations allowed at stage 0
+     *
+     * By default this number is the grid size. However, for large
+     * simulations you may want to prevent the solver from iterating to that number
+     * in case of failure.
+     * @param new_max new maximum number of iterations allowed at stage 0
+    */
+    void set_max_iter(unsigned new_max){ m_cg[0].set_max(new_max);}
 
     ///@brief Return an object of same size as the object used for construction on the finest grid
     ///@return A copyable object; what it contains is undefined, its size is important
     const Container& copyable() const {return m_x[0];}
     /**
-     * @brief USE THIS ONE Nested iterations
+     * @brief USE THIS %ONE Nested iterations
      *
      * Equivalent to the following
      * -# Compute residual with given initial guess.
