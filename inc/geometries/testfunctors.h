@@ -296,9 +296,10 @@ unsigned max_iter = 1e4, double eps = 1e-6)
         ds.symv( in, out);
     }
     else if( name == "directLap") {
-        ds.ds( dg::centered, in, out);
-        dg::blas1::pointwiseDot( divb, out, out);
-        ds.dss( 1., in, 1., out);
+        ds.dssd( 1., divb, in, 0., out);
+    }
+    else if( name == "directLap_bc_along") {
+        ds.dssd_bc_along_field( 1., divb, in, 0., out, ds.fieldaligned().bcx(), {0,0});
     }
     else if( name == "invForwardLap"){
         dg::Invert<container> invert( in, max_iter, eps, 1);

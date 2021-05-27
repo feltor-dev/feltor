@@ -54,6 +54,7 @@ int main( )
          {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
          {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
          {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
+         {"directLap_bc_along",{&fun,&sol3}},
          {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
          {"invCenteredLap",{&sol4,&fun}}
     };
