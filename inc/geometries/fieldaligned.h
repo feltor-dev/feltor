@@ -174,7 +174,10 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
      * @param vec The vector field to integrate
      * @param domain The box
      * @param maxPhi the maximum angle to integrate to (something like +- 2.*M_PI)
-     * If the angle is negative the fieldlines are followed in the negative angle direction
+     * @attention The sign of the angle coordinate in this class (unlike in
+     * Fieldaligned) is defined with respect to the direction of the magnetic
+     * field. Thus, for a positive maxPhi, the distance (both "phi" and "s")
+     * will be positive and for negative maxPhi the distance is negative.
      * @param eps the accuracy of the fieldline integrator
      * @param type either "phi" then the distance is computed in the angle coordinate
      * or "s" then the distance is computed in the s parameter
@@ -201,25 +204,26 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
      */
     double do_compute( double R, double Z) const
     {
-        double phi1 = m_deltaPhi;
         std::array<double,3> coords{ R, Z, 0}, coordsP(coords);
         // determine sign
         m_cyl_field( 0., coords, coordsP);
         double sign = coordsP[2] > 0 ? +1. : -1.;
+        double phi1 = sign*m_deltaPhi; // we integrate negative ...
         try{
-            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
-                coords, phi1, coordsP, 0., dg::pid_control, dg::geo::detail::ds_norm,
-                m_eps,1e-10, m_domain); //integration
+            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0., coords,
+                    phi1, coordsP, 0., dg::pid_control,
+                    dg::geo::detail::ds_norm, m_eps,1e-10, m_domain);
+            //integration
         }catch (std::exception& e)
         {
             // if not possible the distance is large
             //std::cerr << e.what();
-            phi1 = m_deltaPhi;
-            coordsP[2] = 1e6*m_deltaPhi;
+            phi1 = sign*m_deltaPhi;
+            coordsP[2] = 1e6*phi1;
         }
         if( m_type == "phi")
             return sign*phi1;
-        return sign*coordsP[2];
+        return coordsP[2];
     }
 
     private:
@@ -237,12 +241,13 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
  *  out of the box) and anything else is in-between; when the sheath cannot be
  *  reached 0 is returned
  * @ingroup fluxfunctions
- * @attention The sign of the coordinate is defined with respect to the direction
- * of the magnetic field (not the angle coordinate like in Fieldaligned)
+ * @attention The sign of the coordinate (both angle and distance) is defined
+ * with respect to the direction of the magnetic field (not the angle
+ * coordinate like in Fieldaligned)
  */
 struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordinate>
 {
-    ///@copydoc WallFieldineDistance()
+    ///@copydoc WallFieldlineDistance::WallFieldlineDistance()
     WallFieldlineCoordinate(
         const dg::geo::CylindricalVectorLvl0& vec,
         const dg::aRealTopology2d<double>& domain,
@@ -278,9 +283,14 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
         if( m_type == "phi")
             return sign*(-phiP-phiM)/(phiP-phiM);
         double sP = coordsP[2], sM = coordsM[2];
+        double value = sign*(-sP-sM)/(sP-sM);
         if( (phiM <= -m_deltaPhi)  && (phiP >= m_deltaPhi))
             return 0.; //return exactly zero if sheath not reached
-        return sign*(-sP-sM)/(sP-sM);
+        if( (phiM <= -m_deltaPhi))
+            return value*sign > 0 ? value : 0.; // avoid false negatives
+        if( (phiP >= m_deltaPhi))
+            return value*sign < 0 ? value : 0.; // avoid false positives
+        return value;
     }
 
     private:
