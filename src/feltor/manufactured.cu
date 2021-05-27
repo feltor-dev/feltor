@@ -21,6 +21,7 @@ void abort_program(int code = -1){
     exit( code);
 }
 
+// ATTENTION: add parallel diffusion in n needed in manufactured solution
 int main( int argc, char* argv[])
 {
     dg::file::WrappedJsonValue js( dg::file::error::is_throw);
@@ -50,19 +51,19 @@ int main( int argc, char* argv[])
         dg::x::DVec> feltor( grid, p, mag);
 
     feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
     feltor::manufactured::Ni ni{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
     feltor::manufactured::Ue ue{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
     feltor::manufactured::Ui ui{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
     feltor::manufactured::Phie phie{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
     feltor::manufactured::Phii phii{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
     feltor::manufactured::A aa{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
-        p.beta,p.nu_perp_n,p.nu_parallel[0],p.nu_parallel[1]};
+        p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
 
     dg::x::DVec R = dg::pullback( dg::cooX3d, grid);
     dg::x::DVec Z = dg::pullback( dg::cooY3d, grid);

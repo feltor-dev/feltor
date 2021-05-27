@@ -27,11 +27,11 @@ struct Parameters
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
-    std::array<double,2> nu_parallel;
+    std::array<double,2> nu_parallel_u;
     double eta, beta;
 
     unsigned diff_order;
-    double nu_perp_n, nu_perp_u;
+    double nu_perp_n, nu_perp_u, nu_parallel_n;
     enum dg::direction diff_dir;
 
     double source_rate, nwall, uwall, wall_rate;
@@ -101,6 +101,7 @@ struct Parameters
                 js["regularization"].get( "direction", "centered").asString() );
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
+        nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
 
         mu[0]       = js["physical"].get( "mu", -0.000272121).asDouble();
         mu[1]       = +1.;
@@ -113,13 +114,13 @@ struct Parameters
                 "braginskii").asString();
         if( viscosity == "braginskii")
         {
-            nu_parallel[0] = 0.37/eta;
-            nu_parallel[1] = sqrt(fabs(mu[0]))*pow(tau[1], 1.5)*0.69/eta;
+            nu_parallel_u[0] = 0.37/eta;
+            nu_parallel_u[1] = sqrt(fabs(mu[0]))*pow(tau[1], 1.5)*0.69/eta;
         }
         else if ( viscosity == "value")
         {
-            nu_parallel[0] = js["physical"].get("nu_parallel", 1.0).asDouble();
-            nu_parallel[1] = nu_parallel[1];
+            nu_parallel_u[0] = js["physical"].get("nu_parallel", 1.0).asDouble();
+            nu_parallel_u[1] = nu_parallel_u[1];
         }
         else
             throw std::runtime_error( "ERROR: physical viscosity "+viscosity+" not recognized!\n");

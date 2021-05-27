@@ -41,7 +41,8 @@
         "order" : 1,
         "direction": "centered",
         "nu_perp_n" : 1e-1,
-        "nu_perp_u" : 1e-1
+        "nu_perp_u" : 1e-1,
+        "nu_parallel_n" : 1000
     },
     "physical":
     {

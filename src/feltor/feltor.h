@@ -113,11 +113,6 @@ struct Explicit
             dg::geo::dss_centered( m_fa_U, 1., m_minusU[i],
                 m_fields[1][i], m_plusU[i], 0., dssU);
     }
-    void compute_lapParU(int i, Container& lapU) {
-        compute_dsU(i, m_temp0);
-        compute_dssU(i, lapU);
-        dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., lapU);
-    }
     void compute_gradSN( int i, std::array<Container,3>& gradS) const{
         // MW: don't like this function, if we need more gradients we might
         // want a more flexible solution
@@ -178,7 +173,34 @@ struct Explicit
         return m_sheath_coordinate;
     }
     /// //////////////////////DIAGNOSTICS END////////////////////////////////
-    void compute_diffusiveN( double alpha, const Container& density,
+    void compute_lapParN( double alpha, unsigned i,
+            double beta, Container& result, Container& temp0 )
+    {
+        // the temp0 is there because the function is also called internally
+        // and then it is important to see which temporary is used
+        // result = alpha Delta_par N + beta result
+        dg::blas1::transform( m_fields[0][i], temp0, dg::PLUS<double>( -m_p.nbc));
+        if( m_p.fci_bc == "along_field")
+            dg::geo::dssd_centered_bc_along_field( m_divb, m_fa_N,
+                    alpha, m_minusN[i], temp0, m_plusN[i],
+                    beta, result, m_p.bcxN, {0,0});
+        else
+            dg::geo::dssd_centered( m_divb, m_fa_U, alpha,
+                    m_minusN[i], temp0, m_plusN[i], beta, result);
+    }
+    void compute_lapParU( double alpha, unsigned i, double beta,
+            Container& result)
+    {
+        // result = alpha Delta_par U + beta result
+        if( m_p.fci_bc == "along_field")
+            dg::geo::dssd_centered_bc_along_field( m_divb, m_fa_N,
+                    alpha, m_minusU[i], m_fields[1][i], m_plusU[i],
+                    beta, result, m_p.bcxU, {0,0});
+        else
+            dg::geo::dssd_centered( m_divb, m_fa_U, alpha,
+                    m_minusU[i], m_fields[1][i], m_plusU[i], beta, result);
+    }
+    void compute_perp_diffusiveN( double alpha, const Container& density,
             Container& temp0, Container& temp1, double beta, Container& result )
     {
         // density = full N
@@ -197,7 +219,7 @@ struct Explicit
         else
             dg::blas1::scal( result, beta);
     }
-    void compute_diffusiveU( double alpha, const Container& velocity,
+    void compute_perp_diffusiveU( double alpha, const Container& velocity,
             Container& temp0, Container& temp1, double beta, Container& result)
     {
         // density = full N
@@ -599,7 +621,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         dg::blas1::copy( y[1], m_temp1);
         dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-            m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+            m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
 #else
@@ -614,7 +636,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, m_phi[0]);
@@ -638,7 +660,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
         dg::blas1::copy( m_phi[0], m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-            m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+            m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
         std::vector<unsigned> number = m_multigrid.direct_solve(
             m_multi_invgammaP, m_phi[1], m_temp0, m_p.eps_gamma);
 #else
@@ -660,7 +682,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[1], dg::plus_equals(), manufactured::SPhii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //m_UE2 now contains u_E^2; also update derivatives
     dg::blas2::symv( m_dx_P, m_phi[1], m_dP[1][0]);
@@ -695,11 +717,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
 #ifdef DG_MANUFACTURED
     //dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SA{
     //    m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-    //    m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+    //    m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
     //here we cheat (a bit)
     dg::blas1::evaluate( m_apar, dg::equals(), manufactured::A{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,time);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Compute Derivatives----------------------------//
     dg::blas2::symv( m_dx_A, m_apar, m_dA[0]);
@@ -867,12 +889,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
             dg::geo::ds_centered( m_fa_U, 1., m_minusU[i], fields[1][i], m_plusU[i],
                     0., m_temp1);
         }
+        // m_temp0 -> dsN
+        // m_temp1 -> dsU
         //---------------------density--------------------------//
         //density: -Div ( NUb)
         dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i],
             -1., fields[0][i], m_temp1, 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
             1.,yp[0][i]);
+        // density regularization added later
+
         //---------------------velocity-------------------------//
         // Burgers term: -U ds U
         dg::blas1::pointwiseDot(-1., fields[1][i], m_temp1, 1., yp[1][i]);
@@ -886,17 +912,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         else
             dg::geo::ds_centered( m_fa_P, -1./m_p.mu[i], m_minusP[i],
                 m_phi[i], m_plusP[i], 1.0, yp[1][i]);
-        // viscosity: + nu_par Delta_par U/N = nu_par ( Div b dsU + dssU)/N
+        // viscosity: + nu_par Delta_par U/N
+        compute_lapParU( m_p.nu_parallel_u[i], i, 0., m_temp2);
+        dg::blas1::pointwiseDivide( 1., m_temp2, m_fields[0][i], 1., yp[1][i]);
         // Maybe factor this out in an operator splitting method? To get larger timestep
-        dg::blas1::pointwiseDot(1., m_divb, m_temp1, 0., m_temp1);
-        if( m_p.fci_bc == "along_field")
-            dg::geo::dss_centered_bc_along_field( m_fa_N, 1., m_minusU[i],
-                fields[1][i], m_plusU[i], 1., m_temp1, m_p.bcxU, {0,0});
-        else
-            dg::geo::dss_centered( m_fa_U, 1., m_minusU[i],
-                fields[1][i], m_plusU[i], 1., m_temp1);
-        dg::blas1::pointwiseDivide( m_p.nu_parallel[i], m_temp1, fields[0][i],
-                1., yp[1][i]);
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1080,12 +1099,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
 #else
 
+#ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_phi[0], dg::equals(), manufactured::Phie{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( m_phi[1], dg::equals(), manufactured::Phii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,t);
+#endif //DG_MANUFACTURED
 
 #endif
 
@@ -1126,11 +1147,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
 #endif
 #if FELTORPERP == 1
-    //-------------Add perpendicular regularization--------------//
+    //-------------Add regularization----------------------------//
     for( unsigned i=0; i<2; i++)
     {
-        compute_diffusiveN( 1., m_fields[0][i], m_temp0, m_temp1, 1., yp[0][i]);
-        compute_diffusiveU( 1., m_fields[1][i], m_temp0, m_temp1, 1., yp[1][i]);
+        compute_perp_diffusiveN( 1., m_fields[0][i], m_temp0, m_temp1, 1.,
+                yp[0][i]);
+        compute_perp_diffusiveU( 1., m_fields[1][i], m_temp0, m_temp1, 1.,
+                yp[1][i]);
+        compute_lapParN( m_p.nu_parallel_n, i, 1., yp[0][i], m_temp0);
     }
     //------------------Add Resistivity--------------------------//
     double eta = m_p.eta, mu0 = m_p.mu[0], mu1 = m_p.mu[1];
@@ -1158,16 +1182,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[0][1], dg::plus_equals(), manufactured::SNi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SWe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SWi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
-        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel[0],m_p.nu_parallel[1]},m_R,m_Z,m_P,t);
+        m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();
     accu += timer.diff();

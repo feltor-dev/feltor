@@ -588,11 +588,12 @@ The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  The latter essentially would entail that electron diffusion acts on $A_\parallel$.
 
  For the perpendicular terms we use ad-hoc artificial numerical diffusion (or
- order s) for numerical stabilisation.
+ order s) for numerical stabilisation and add numerical parallel diffusion
+ to the density equation.
 \begin{align}
 \label{eq:perpdiffNU}
-\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e &
-\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i & \\
+\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e + \nu_{N,\parallel}\Delta_\parallel n_e&
+\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i + \nu_{N,\parallel}\Delta_\parallel n_e& \\
 \Lambda_{u_e} &=  -\nu_{U,\perp}(-\Delta_\perp)^s u_{\parallel,e} &
 \Lambda_{U_i} &=  -\nu_{U,\perp}(-\Delta_\perp)^s U_{\parallel,i}
 \end{align}
@@ -1627,11 +1628,16 @@ form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 \subsection{Advection}
 We implemented an upwind-advection scheme for the perpendicular terms.
 No other scheme is currently choosable.
+
+For the parallel advection terms $U_\parallel \npar N$ and $U_\parallel \npar
+U_\parallel$ we use centered differences, which in the density case mandates
+artificial parallel diffusion to be stable (centered in space is
+unconditionally unstable without diffusion).
 \subsection{Regularization} \label{sec:regularization}
 In order to prevent shocks and regularize the advection scheme
 we implement an artificial viscosity of order $s$ Eq.~\eqref{eq:perpdiffNU}
 \begin{tcolorbox}[title=Note]
-    We apply the artificial viscosity to the parallel velocities $U_\parallel$ and
+    We apply the viscosity to the parallel velocities $U_\parallel$ and
     not to the parallel canonical velocities $W_\parallel$.
 \end{tcolorbox}
 \begin{minted}[texcomments]{js}
@@ -1644,6 +1650,9 @@ we implement an artificial viscosity of order $s$ Eq.~\eqref{eq:perpdiffNU}
     // increase this or the resolution if you see vertical or horizontal
     // oscillations in your simulation box, decrease if simulation
     // looks "out of focus"
+    "nu_parallel_n" : 1000 // $\nu_{N,\parallel}$, the density artificial parallel
+    // diffusion to stabilize the centered advection
+    // (should be chosen in units of $R_0^2$, for example $\nu_{N,\parallel} = 10^{-2} R_0^2$)
 }
 \end{minted}
 Simply set the diffusion to 0 if you do not want any regularization.
@@ -1695,7 +1704,8 @@ and use a support operator method.
 All terms use the direct centered difference, which turns out is best
 at keeping the numerical flux-surface leakage in $\RA{\nc ( \bhat NU_\parallel)}$ to a minimum, even
 though it is not exactly zero like in the adjoint discretizations, which in turn are unusable because they do not reliably converge.
-There seems to be no benefit in using the grid refinement technique except when field-aligning the initial condition.
+We also use the grid refinement technique (support operator)
+in particular also when field-aligning the initial condition.
 \begin{minted}[texcomments]{js}
 "FCI",
 {
@@ -2031,8 +2041,7 @@ The relevant terms in the output file are
     jsneA\_tt &$ n_e u_{\parallel,e} \vec{ b}_\perp  \cn \psi_p$ &
     jsneE\_tt & $ n_e \vec u_E\cn\psi_p$ \\
     lneperp\_tt &$ \Lambda_{\perp,n_e} = -\nu_{n,\perp} (-\Delta_\perp)^s n_e$&
-    & \\
-    %lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_\parallel \Delta_\parallel n_e$ \\
+    lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_{N\parallel} \Delta_\parallel n_e$ \\
     sne\_tt & $S_{n_e}$ &
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
     dnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
@@ -2042,8 +2051,7 @@ The relevant terms in the output file are
     jsniA\_tt &$ N_i U_{\parallel,i} \vec{ b}_\perp  \cn \psi_p$ &
     jsniE\_tt & $ N_i \vec u^i_E\cn\psi_p$ \\
     lniperp\_tt &$ \Lambda_{\perp,N_i} = -\nu_{n,\perp} (-\Delta_\perp)^s N_i$&
-    & \\
-    %lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_\parallel \Delta_\parallel N_i$ \\
+    lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_{N,\parallel} \Delta_\parallel N_i$ \\
     sni\_tt & $S_{N_i}$ &
     jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
     dnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
@@ -2123,12 +2131,12 @@ The relevant terms in the output file are
         + z_e \tau_e n_e u_{\parallel,e} \vec{ b}_\perp \cn \psi_p $ \\
     jseia\_tt &$z_i(\tau_i \ln N_i + \mu_i U_{\parallel,i}^2 + \psi_i)N_i \vec { b}_\perp\cn \psi_p
         + z_i \tau_i N_i U_{\parallel,i} \vec{ b}_\perp \cn \psi_p $ \\
-        leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e}$ \\
-        leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i}$ \\
-    leeparallel\_tt & %$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_\parallel \Delta_\parallel n_e +$
-    $z_e\mu_e n_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
-    leiparallel\_tt & %$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_\parallel \Delta_\parallel N_i + $
-    $z_i\mu_i N_i
+    leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e}$ \\
+    leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i}$ \\
+    leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
+    z_e\mu_e n_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
+    leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_{N,\parallel} \Delta_\parallel N_i +
+    z_i\mu_i N_i
     U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
 \bottomrule
 \end{longtable}

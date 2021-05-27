@@ -164,8 +164,8 @@ int main( int argc, char* argv[])
                psi = psipO/2.; // just use a random value
         }, psi_vals);
     dg::HVec qprofile( psi_vals);
-    // you can ignore warnings about calling device functions ...
-    dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
+    for( unsigned i=0; i<qprofile.size(); i++)
+        qprofile[i] = qprof( psi_vals[i]);
     map1d.emplace_back("q-profile", qprofile,
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
