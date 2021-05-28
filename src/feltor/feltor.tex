@@ -1630,12 +1630,27 @@ We implemented an upwind-advection scheme for the perpendicular terms.
 No other scheme is currently choosable.
 
 For the parallel advection terms $U_\parallel \npar N$ and $U_\parallel \npar
-U_\parallel$ we use centered differences, which in the density case mandates
-artificial parallel diffusion to be stable (centered in space is
-unconditionally unstable without diffusion).
+U_\parallel$ we can select several discretizations
+\begin{minted}[texcomments]{js}
+"advection":
+{
+    "parallel" : "centered" // centered differences for $U_\parallel \npar N$,
+    // and $U_\parallel \npar U_\parallel$
+    //  mandates artificial parallel diffusion to be stable (centered in space
+    // is unconditionally unstable without diffusion).
+    "parallel" : "upwind"  // 1st order upwind scheme for $U_\parallel \npar N$,
+    // centered for $U_\parallel \npar U_\parallel$
+    "parallel" : "upwind2"  // 2nd order upwind scheme for $U_\parallel \npar N$,
+    // centered for $U_\parallel \npar U_\parallel$
+}
+\end{minted}
 \subsection{Regularization} \label{sec:regularization}
-In order to prevent shocks and regularize the advection scheme
+In order to stabilize the advection schemes and/or remove cascading energy
+from small scale wave components
 we implement an artificial viscosity of order $s$ Eq.~\eqref{eq:perpdiffNU}
+for the perpendicular terms and parallel viscosity of order 1 for the
+density equations (the velocity equations already have a high physical
+viscosity and thus should not need additional damping)
 \begin{tcolorbox}[title=Note]
     We apply the viscosity to the parallel velocities $U_\parallel$ and
     not to the parallel canonical velocities $W_\parallel$.

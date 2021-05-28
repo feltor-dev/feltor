@@ -205,7 +205,7 @@ struct Explicit
     {
         // density = full N
         // result = alpha Lambda_N + beta result
-        if( m_p.nu_perp_n != 0)
+        if( m_p.nu_perp_n > 0)
         {
             dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
             for( unsigned s=0; s<m_p.diff_order; s++)
@@ -224,7 +224,7 @@ struct Explicit
     {
         // density = full N
         // result = alpha Lambda_U + beta result
-        if( m_p.nu_perp_n != 0)
+        if( m_p.nu_perp_u > 0)
         {
             dg::blas1::copy( velocity, temp0);
             for( unsigned s=0; s<m_p.diff_order; s++)
@@ -292,7 +292,7 @@ struct Explicit
         dg::geo::TokamakMagneticField);
 
     Container m_UE2;
-    Container m_temp0, m_temp1, m_temp2;//helper variables
+    Container m_temp0, m_temp1, m_temp2, m_temp3;//helper variables
 #ifdef DG_MANUFACTURED
     Container m_R, m_Z, m_P; //coordinates
 #endif //DG_MANUFACTURED
@@ -517,7 +517,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_source = m_sheath_coordinate = m_UE2 = m_temp2 = m_temp1 = m_temp0;
+    m_source = m_sheath_coordinate = m_UE2 = m_temp3 = m_temp2 = m_temp1 = m_temp0;
     m_apar = m_profne = m_wall = m_sheath = m_temp0;
 
     m_phi[0] = m_phi[1] = m_temp0;
@@ -893,10 +893,39 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         // m_temp1 -> dsU
         //---------------------density--------------------------//
         //density: -Div ( NUb)
-        dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i],
-            -1., fields[0][i], m_temp1, 1., yp[0][i] );
+        //dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i],
+        //    -1., fields[0][i], m_temp1, 1., yp[0][i] );
         dg::blas1::pointwiseDot( -1., fields[0][i],fields[1][i],m_divb,
             1.,yp[0][i]);
+        dg::blas1::pointwiseDot( -1., fields[0][i], m_temp1, 1., yp[0][i] );
+        if( "centered" == m_p.parallel_advection)
+            dg::blas1::pointwiseDot(-1., m_temp0, fields[1][i], 1., yp[0][i]);
+        else if( "upwind" == m_p.parallel_advection)
+        {
+            dg::geo::ds_backward( m_fa_N, 1., m_minusN[i], y[0][i], 0., m_temp2);
+            dg::geo::ds_forward( m_fa_N, 1., y[0][i], m_plusN[i], 0., m_temp3);
+            if( !m_reversed_field)
+                dg::blas1::evaluate( yp[0][i], dg::minus_equals(),
+                        dg::UpwindProduct(), fields[1][i], m_temp2, m_temp3);
+            else
+                dg::blas1::evaluate( yp[0][i], dg::minus_equals(),
+                        dg::UpwindProduct(), fields[1][i], m_temp3, m_temp2);
+        }
+        else if( "upwind2" == m_p.parallel_advection)
+        {
+            m_fa_N( dg::geo::einsMinus, m_minusN[i], m_temp2);
+            dg::geo::ds_backward2( m_fa_N, 1., m_temp2, m_minusN[i], y[0][i],
+                    0., m_temp2);
+            m_fa_N( dg::geo::einsPlus,  m_plusN[i], m_temp3);
+            dg::geo::ds_forward2( m_fa_N, 1., y[0][i], m_plusN[i], m_temp3, 0.,
+                    m_temp3);
+            if( !m_reversed_field)
+                dg::blas1::evaluate( yp[0][i], dg::minus_equals(),
+                        dg::UpwindProduct(), fields[1][i], m_temp2, m_temp3);
+            else
+                dg::blas1::evaluate( yp[0][i], dg::minus_equals(),
+                        dg::UpwindProduct(), fields[1][i], m_temp3, m_temp2);
+        }
         // density regularization added later
 
         //---------------------velocity-------------------------//
@@ -1154,7 +1183,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 yp[0][i]);
         compute_perp_diffusiveU( 1., m_fields[1][i], m_temp0, m_temp1, 1.,
                 yp[1][i]);
-        compute_lapParN( m_p.nu_parallel_n, i, 1., yp[0][i], m_temp0);
+        if( m_p.nu_parallel_n > 0)
+            compute_lapParN( m_p.nu_parallel_n, i, 1., yp[0][i], m_temp0);
     }
     //------------------Add Resistivity--------------------------//
     double eta = m_p.eta, mu0 = m_p.mu[0], mu1 = m_p.mu[1];

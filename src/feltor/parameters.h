@@ -33,6 +33,7 @@ struct Parameters
     unsigned diff_order;
     double nu_perp_n, nu_perp_u, nu_parallel_n;
     enum dg::direction diff_dir;
+    std::string parallel_advection;
 
     double source_rate, nwall, uwall, wall_rate;
     double sheath_rate, sheath_max_angle;
@@ -102,6 +103,10 @@ struct Parameters
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
         nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
+        parallel_advection = js["advection"].get("parallel", "centered").asString();
+        if( (parallel_advection != "centered") && (parallel_advection != "upwind") &&
+                (parallel_advection != "upwind2"))
+            throw std::runtime_error( "ERROR: advection : parallel "+parallel_advection+" not recognized!\n");
 
         mu[0]       = js["physical"].get( "mu", -0.000272121).asDouble();
         mu[1]       = +1.;

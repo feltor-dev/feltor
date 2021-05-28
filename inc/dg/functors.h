@@ -380,25 +380,25 @@ struct MinMod
     }
 };
 /**
- * @brief \f$ f(v, a, b ) = \begin{cases}  a \text{ if } v \geq 0 \\
- *  b \text{ else}
+ * @brief \f$ up(v, b, f ) = \begin{cases}  b \text{ if } v \geq 0 \\
+ *  f \text{ else}
  *  \end{cases}
  *  \f$
  */
 struct Upwind
 {
     template<class T>
-    DG_DEVICE T operator()( T v, T a, T b){
-        if( v >= 0)
-            return a;
+    DG_DEVICE T operator()( T velocity, T backward, T forward){
+        if( velocity >= 0)
+            return backward;
         else
-            return b;
+            return forward;
     }
 };
 
 /**
- * @brief \f$ f(v, a, b ) = \begin{cases}  av \text{ if } v \geq 0 \\
- *  bv \text{ else}
+ * @brief \f$ up(v, b, f ) = \begin{cases}  bv \text{ if } v \geq 0 \\
+ *  fv \text{ else}
  *  \end{cases}
  *  \f$
  *
@@ -407,11 +407,11 @@ struct Upwind
 struct UpwindProduct
 {
     template<class T>
-    DG_DEVICE T operator()( T v, T a, T b){
-        if( v >= 0)
-            return a*v;
+    DG_DEVICE T operator()( T velocity, T backward, T forward){
+        if( velocity >= 0)
+            return backward*velocity;
         else
-            return b*v;
+            return forward*velocity;
     }
 };
 ///@}
