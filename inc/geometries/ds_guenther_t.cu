@@ -47,6 +47,7 @@ int main( )
     dg::DVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     std::vector<std::pair<std::string, std::array<const dg::DVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
+         {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
          {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},

@@ -36,6 +36,14 @@ namespace geo{
 /*!@class hide_ds_fp
  * @param fp fieldaligned(einsPlus, f, fp)
  */
+/*!@class hide_ds_fmm
+ * @param fm fieldaligned(einsMinus, f, fm)
+ * @param fmm twice apply fieldaligned(einsMinus, f, fm)
+ */
+/*!@class hide_ds_fpp
+ * @param fp fieldaligned(einsPlus, f, fp)
+ * @param fpp twice apply fieldaligned(einsPlus, f, fp)
+ */
 /*!@class hide_ds_dir
  * @param dir indicate the direction in the bracket operator and in symv
  */
@@ -184,6 +192,17 @@ struct DS
         ds_forward( m_fa, alpha, f, m_tempP, beta, g);
     }
     /**
+    * @brief 2nd order forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+    *
+    * forward derivative \f$ g_i = \alpha \frac{1}{2h_z^+}(-f_{i+2} + 4f_{i+1} - 3f_{i}) + \beta g_i\f$
+    * @copydoc hide_ds_parameters4
+    */
+    void forward2( double alpha, const container& f, double beta, container& g){
+        m_fa(einsPlus, f, m_tempP);
+        m_fa(einsPlus, m_tempP, m_tempM);
+        ds_forward2( m_fa, alpha, f, m_tempP, m_tempM, beta, g);
+    }
+    /**
     * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
     * backward derivative \f$ g_i = \alpha \frac{1}{h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
@@ -192,6 +211,17 @@ struct DS
     void backward( double alpha, const container& f, double beta, container& g){
         m_fa(einsMinus, f, m_tempM);
         ds_backward( m_fa, alpha, m_tempM, f, beta, g);
+    }
+    /**
+    * @brief 2nd order backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+    *
+    * backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(3f_{i} - 4f_{i-1} + f_{i-2}) + \beta g_i \f$
+    * @copydoc hide_ds_parameters4
+    */
+    void backward2( double alpha, const container& f, double beta, container& g){
+        m_fa(einsMinus, f, m_tempM);
+        m_fa(einsMinus, m_tempM, m_tempP);
+        ds_backward2( m_fa, alpha, m_tempP, m_tempM, f, beta, g);
     }
     /**
     * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -570,14 +600,27 @@ void ds_forward(const FieldAligned& fa, double alpha, const container& f, const 
             },
             g, f, fp, fa.hp());
 }
-    //MW: ds_forward_along_field?
-//    DG_DEVICE
-//    void operator()( double& dsf, double fo, double fp, double fpp,
-//            double hp)
-//    {
-//        dsf = alpha*( -3.*fo + 4.*fp - fpp)/2./hp
-//            + beta*dsf;
-//    }
+/**
+* @brief 2nd order forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+*
+* forward derivative \f$ g_i = \alpha \frac{1}{2h_z^+}(-f_{i+2} + 4f_{i+1} - 3f_{i}) + \beta g_i\f$
+* @param fa this object will be used to get grid distances
+* @copydoc hide_ds_parameters4
+* @copydoc hide_ds_fpp
+* @ingroup fieldaligned
+* @copydoc hide_ds_freestanding
+*/
+template<class FieldAligned, class container>
+void ds_forward2(const FieldAligned& fa, double alpha, const container& f, const container& fp, const container& fpp, double beta, container& g)
+{
+    //direct
+    dg::blas1::subroutine( [ alpha, beta]DG_DEVICE(
+            double& dsf, double fo, double fp, double fpp, double hp){
+                dsf = alpha*( -3.*fo + 4.*fp - fpp)/2./hp
+                     + beta*dsf;
+            },
+            g, f, fp, fpp, fa.hp());
+}
 
 /**
 * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -598,16 +641,30 @@ void ds_backward( const FieldAligned& fa, double alpha, const container& fm, con
                 dsf = alpha*( fo - fm)/hm + beta*dsf;
             },
             g, f, fm, fa.hm());
-    //MW: ds_backward_along_field?
-//void operator()( double& dsf, double fo, double fm, double fmm,
-//        double hm)
-//{
-//    dsf = alpha*( 3.*fo - 4.*fm + fmm)/2./hm
-//        + beta*dsf;
-//}
 
 }
+/**
+* @brief 2nd order backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+*
+* backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(3f_{i} - 4f_{i-1} + f_{i-2}) + \beta g_i \f$
+* @param fa this object will be used to get grid distances
+* @copydoc hide_ds_parameters4
+* @copydoc hide_ds_fmm
+* @ingroup fieldaligned
+* @copydoc hide_ds_freestanding
+*/
+template<class FieldAligned, class container>
+void ds_backward2( const FieldAligned& fa, double alpha, const container& fmm, const container& fm, const container& f, double beta, container& g)
+{
+    //direct
+    dg::blas1::subroutine( [ alpha, beta] DG_DEVICE(
+            double& dsf, double fo, double fm,  double fmm, double hm){
+                dsf = alpha*( 3.*fo - 4.*fm + fmm)/2./hm
+                    + beta*dsf;
+            },
+            g, f, fm, fmm, fa.hm());
 
+}
 
 ///@cond
 namespace detail

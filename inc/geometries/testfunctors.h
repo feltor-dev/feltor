@@ -260,6 +260,8 @@ unsigned max_iter = 1e4, double eps = 1e-6)
 {
     if( name == "forward") ds.ds( dg::forward, in, out);
     else if( name == "backward") ds.ds( dg::backward, in, out);
+    else if( name == "forward2") ds.forward2( 1., in, 0., out);
+    else if( name == "backward2") ds.backward2( 1., in, 0., out);
     else if( name == "centered") ds.ds( dg::centered, in, out);
     else if( name == "dss") ds.dss( in, out);
     else if( name == "centered_bc_along")
