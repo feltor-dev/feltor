@@ -20,14 +20,14 @@ namespace geo{
 
 /*!@class hide_ds_parameters2
 * @param f The vector to derive
-* @param g contains result on output (write only)
+* @param g contains result on output (may alias input vectors)
 * @note the vector sizes need to equal the grid size in the constructor
 */
 /*!@class hide_ds_parameters4
 * @param alpha Scalar
 * @param f The vector to derive
 * @param beta Scalar
-* @param g contains result on output (write only)
+* @param g contains result on output (may alias input vectors)
 * @note the vector sizes need to equal the grid size in the constructor
 */
 /*!@class hide_ds_fm

@@ -72,7 +72,15 @@ int main(int argc, char * argv[])
         std::string name = std::get<0>(tuple);
         const dg::DVec& function = *std::get<1>(tuple)[0];
         const dg::DVec& solution = *std::get<1>(tuple)[1];
-        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        if( name.find("inv") != std::string::npos ||
+                name.find( "div") != std::string::npos)
+            callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        else
+        {
+            // test aliasing
+            dg::blas1::copy( function, derivative);
+            callDS( ds, name, derivative, derivative, divb, max_iter,1e-8);
+        }
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
@@ -91,7 +99,16 @@ int main(int argc, char * argv[])
         std::string name = std::get<0>(tuple);
         const dg::DVec& function = *std::get<1>(tuple)[0];
         const dg::DVec& solution = *std::get<1>(tuple)[1];
-        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        if( name.find("inv") != std::string::npos ||
+                name.find( "div") != std::string::npos)
+            callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        else
+        {
+            // test aliasing
+            dg::blas1::copy( function, derivative);
+            callDS( ds, name, derivative, derivative, divb, max_iter,1e-8);
+        }
+
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
