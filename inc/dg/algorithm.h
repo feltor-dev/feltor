@@ -32,6 +32,7 @@
 #include "advection.h"
 #include "poisson.h"
 #include "simpsons.h"
+#include "nullstelle.h"
 #include "topology/average.h"
 #ifdef MPI_VERSION
 #include "topology/average_mpi.h"
