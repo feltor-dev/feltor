@@ -85,7 +85,7 @@ class LGMRES
         V.assign(krylovDimension+1,copyable);
         W.assign(krylovDimension,copyable);
         //In principle we don't need this many... but just to be on board with the algorithm
-        outer_v.assign(outer_k,copyable);
+        outer_v.assign(outer_k+1,copyable);
         z = copyable;
         dx = copyable;
         residual = copyable;
