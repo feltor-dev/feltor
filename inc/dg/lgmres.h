@@ -79,7 +79,7 @@ class LGMRES
         }
         //Declare s that minimizes the residual... something like that.
         //s(krylovDimension+1);
-        s.assign(krylovDimension,0);
+        s.assign(krylovDimension+1,0);
 
         //The residual which will be used to calculate the solution.
         V.assign(krylovDimension+1,copyable);
@@ -273,7 +273,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
                 Update(dx,x,iteration,H,s,W);
                 dg::blas2::symv(A,x,residual);
                 dg::blas1::axpby(1.,b,-1.,residual);
-                std::cout << sqrt(dg::blas2::dot(S,residual) )<< std::endl;
+                //std::cout << sqrt(dg::blas2::dot(S,residual) )<< std::endl;
                 return(iteration+totalRestarts*krylovDimension);
             }
         }
