@@ -29,6 +29,10 @@ namespace dg{
     Furthermore, if the \c DefaultSolver is used, the routines %weights(), %inv_weights() and %precond() must be callable
     and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient method.
     The return type of these member functions must be useable in blas2 functions together with the ContainerType type.
+   @note If Explicit is a class then the suggested way of implementing Implicit is as a **friend** to the
+   Explicit class. This is because the only reason to write the implicit part separate from the
+   explicit part is the interface to the timestepper. The friend construct helps to avoid
+   duplicate code and increase memory consumption by making Implicit essentially an extension of Explicit.
  * @param ex explic part
  * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
  */
