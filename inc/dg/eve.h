@@ -76,7 +76,7 @@ class EVE
     template< class MatrixType, class ContainerType0, class ContainerType1>
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, value_type& ev_max, value_type eps_ev=1e-16);
     ///@brief DEPRECATED: use solve method instead
-    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,value_type,value_type)
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,value_type&,value_type)
     template< class MatrixType, class ContainerType0, class ContainerType1>
     unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, value_type& ev_max, value_type eps_ev=1e-16)
     {
@@ -101,7 +101,7 @@ class EVE
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner>
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev = 1e-12);
     ///@brief DEPRECATED: use solve method instead
-    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,Preconditioner&,value_type,value_type)
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,Preconditioner&,value_type&,value_type)
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner>
     unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev = 1e-12)
     {
