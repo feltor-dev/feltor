@@ -226,7 +226,7 @@ struct MultigridCG2d
 #ifdef DG_BENCHMARK
             t.tic();
 #endif //DG_BENCHMARK
-            number[u] = m_cg[u]( op[u], m_x[u], m_r[u], op[u].precond(),
+            number[u] = m_cg[u].solve( op[u], m_x[u], m_r[u], op[u].precond(),
                 op[u].inv_weights(), eps[u], 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
@@ -246,7 +246,7 @@ struct MultigridCG2d
 
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
-        number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(),
+        number[0] = m_cg[0].solve( op[0], x, m_b[0], op[0].precond(),
             op[0].inv_weights(), eps[0]);
 #ifdef DG_BENCHMARK
         t.toc();
@@ -313,7 +313,7 @@ struct MultigridCG2d
         Container tmp = m_x[lowest];
         dg::blas1::scal( tmp, 0.);
         //unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
-        unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+        unsigned counter = eve.solve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
         counter++;
         //std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
         //    t.toc();
@@ -323,7 +323,7 @@ struct MultigridCG2d
             //double evu_min;
             //dg::detail::WrapperSpectralShift<SymmetricOp, Container> shift(
             //        op[u], evu_max);
-            //counter = eve( shift, m_x[u], m_r[u], evu_min, eps);
+            //counter = eve.solve( shift, m_x[u], m_r[u], evu_min, eps);
             //evu_min = evu_max - evu_min;
             //std::cout << "# MIN EV is "<<evu_min<<" in "<<counter<<"iterations\n";
             dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
@@ -332,7 +332,7 @@ struct MultigridCG2d
             //        op[u], m_x[u], evu_max/5./(num_cheby[u]), evu_max, num_cheby[u] );
             //dg::LeastSquaresPreconditioner<SymmetricOp&, const Container&, Container> precond(
             //        op[u], op[u].precond(), m_x[u], evu_max, num_cheby );
-            number[u] = m_cg[u]( op[u], m_x[u], m_r[u], precond,
+            number[u] = m_cg[u].solve( op[u], m_x[u], m_r[u], precond,
                 op[u].inv_weights(), eps[u], 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
 #ifdef DG_BENCHMARK
@@ -350,19 +350,19 @@ struct MultigridCG2d
         t.tic();
 #endif //DG_BENCHMARK
         //unsigned lowest = 0;
-        //dg::EVE<Container> eve( m_x[lowest]);
+        //dg::EVE<Container> eve.solve( m_x[lowest]);
         //double evu_max;
         //Container tmp = m_x[lowest];
         //dg::blas1::scal( tmp, 0.);
-        ////unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
-        //unsigned counter = eve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+        ////unsigned counter = eve.solve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
+        //unsigned counter = eve.solve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
         //counter++;
 
         //dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
         //        op[0], m_x[0], 0.01*evu_max, 1.1*evu_max, num_cheby[0] );
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
-        number[0] = m_cg[0]( op[0], x, m_b[0], op[0].precond(),
+        number[0] = m_cg[0].solve( op[0], x, m_b[0], op[0].precond(),
                 //precond,
             op[0].inv_weights(), eps[0]);
 #ifdef DG_BENCHMARK
@@ -556,7 +556,7 @@ struct MultigridCG2d
 //#ifdef DG_BENCHMARK
 //            t.tic();
 //#endif //DG_BENCHMARK
-            int number = m_cg[p+1]( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
+            int number = m_cg[p+1].solve( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
                 op[p+1].inv_weights(), eps/2.);
             number++;//avoid compiler warning
 //#ifdef DG_BENCHMARK
@@ -613,7 +613,7 @@ struct MultigridCG2d
         dg::Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        int number = m_cg[s]( op[s], x[s], b[s], op[s].precond(),
+        int number = m_cg[s].solve( op[s], x[s], b[s], op[s].precond(),
             op[s].inv_weights(), eps/2.);
         number++;//avoid compiler warning
 #ifdef DG_BENCHMARK

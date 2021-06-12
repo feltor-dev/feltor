@@ -74,7 +74,14 @@ class EVE
      * @copydoc hide_matrix
      */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, value_type& ev_max, value_type eps_ev=1e-16);
+    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, value_type& ev_max, value_type eps_ev=1e-16);
+    ///@brief DEPRECATED: use solve method instead
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,value_type,value_type)
+    template< class MatrixType, class ContainerType0, class ContainerType1>
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, value_type& ev_max, value_type eps_ev=1e-16)
+    {
+        return solve(A,x,b,ev_max,eps_ev);
+    }
     /**
      * @brief Preconditioned CG to estimate maximum Eigenvalue of the generalized problem \f$ Ax = \lambda M x\f$
      *
@@ -92,7 +99,14 @@ class EVE
      * @copydoc hide_matrix
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner>
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev = 1e-12);
+    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev = 1e-12);
+    ///@brief DEPRECATED: use solve method instead
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,Preconditioner&,value_type,value_type)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner>
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev = 1e-12)
+    {
+        return solve(A,x,b,P,ev_max,eps_ev);
+    }
   private:
     ContainerType r, p, ap;
     unsigned m_max_iter;
@@ -101,7 +115,7 @@ class EVE
 ///@cond
 template< class ContainerType>
 template< class MatrixType, class ContainerType0, class ContainerType1>
-unsigned EVE< ContainerType>::operator()( MatrixType& A, ContainerType0& x, const ContainerType1&
+unsigned EVE< ContainerType>::solve( MatrixType& A, ContainerType0& x, const ContainerType1&
 b, value_type& ev_max, value_type eps_ev)
 {
     blas2::symv( A, x, r);
@@ -143,7 +157,7 @@ b, value_type& ev_max, value_type eps_ev)
 
 template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner>
-unsigned EVE< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev )
+unsigned EVE< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev )
 {
     blas2::symv( A,x,r);
     blas1::axpby( 1., b, -1., r);

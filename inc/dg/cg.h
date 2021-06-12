@@ -65,6 +65,13 @@ class CG
         ap = p = r = copyable;
         max_iter = max_iterations;
     }
+    ///@brief DEPRECATED: use solve method instead
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,Preconditioner&,value_type,value_type)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner >
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1)
+    {
+        return solve(A,x,b,P,eps,nrmb_correction);
+    }
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
@@ -88,7 +95,14 @@ class CG
      blas2::dot( const Preconditioner&, const ContainerType&) </tt> functions are callable.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner >
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    ///@brief DEPRECATED: use solve method instead
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,Preconditioner&,SquareNorm&,value_type,value_type,int)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1)
+    {
+        return solve(A,x,b,P,S,eps,nrmb_correction,test_frequency);
+    }
     //version of CG where Preconditioner is not trivial
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
@@ -114,7 +128,7 @@ class CG
      * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1);
+    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
@@ -139,7 +153,7 @@ class CG
 ///@cond
 template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
+unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -202,7 +216,7 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
 
 template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, int save_on_dots )
+unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, int save_on_dots )
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -353,6 +367,13 @@ struct Invert
      */
     unsigned get_max() const {return cg.get_max();}
 
+    ///@brief DEPRECATED: use solve method instead
+    ///@copydetails solve(SymmetricOp&,ContainerType0&,const ContainerType1&)
+    template< class SymmetricOp, class ContainerType0, class ContainerType1 >
+    unsigned operator()( SymmetricOp& op, ContainerType0& phi, const ContainerType1& rho)
+    {
+        return solve(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
+    }
     /**
      * @brief Solve linear problem
      *
@@ -369,9 +390,17 @@ struct Invert
      * @return number of iterations used
      */
     template< class SymmetricOp, class ContainerType0, class ContainerType1 >
-    unsigned operator()( SymmetricOp& op, ContainerType0& phi, const ContainerType1& rho)
+    unsigned solve( SymmetricOp& op, ContainerType0& phi, const ContainerType1& rho)
     {
-        return this->operator()(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
+        return solve(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
+    }
+
+    ///@brief DEPRECATED: use solve method instead
+    ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,const SquareNorm0&,const SquareNorm1&,Preconditioner&)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm0, class SquareNorm1, class Preconditioner >
+    unsigned operator()( MatrixType& op, ContainerType0& phi, const ContainerType1& rho, const SquareNorm0& weights, const SquareNorm1& inv_weights, Preconditioner& p)
+    {
+        return solve( op, phi, rho, weights, inv_weights, p);
     }
 
     /**
@@ -396,7 +425,7 @@ struct Invert
      * @return number of iterations used
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm0, class SquareNorm1, class Preconditioner >
-    unsigned operator()( MatrixType& op, ContainerType0& phi, const ContainerType1& rho, const SquareNorm0& weights, const SquareNorm1& inv_weights, Preconditioner& p)
+    unsigned solve( MatrixType& op, ContainerType0& phi, const ContainerType1& rho, const SquareNorm0& weights, const SquareNorm1& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);

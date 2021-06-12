@@ -62,7 +62,7 @@ int main()
     std::cout << "... for a precision of "<< eps<<std::endl;
     x = dg::evaluate( initial, grid);
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( lap, x, b, v2d, eps)<<std::endl;
+    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x, b, v2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
 

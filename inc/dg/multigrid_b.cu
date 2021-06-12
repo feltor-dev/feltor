@@ -82,7 +82,7 @@ int main()
         //estimate EVs
         multi_eve[u].construct( multi_chi[u]);
         dg::blas2::symv(multi_pol[u].weights(), multi_b[u], multi_b[u]);
-        counter = multi_eve[u]( multi_pol[u], multi_x[u], multi_b[u],
+        counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
                 multi_pol[u].precond(),
             multi_ev[u], eps_ev);
         //multi_ev[u]/=hxhy;

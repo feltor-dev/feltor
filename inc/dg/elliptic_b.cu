@@ -69,7 +69,7 @@ int main()
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     unsigned num;
     t.tic();
-    num = pcg( laplace, x, b, v3d, eps);
+    num = pcg.solve( laplace, x, b, v3d, eps);
     t.toc();
     std::cout << "Number of pcg iterations "<<num<<std::endl;
     std::cout << "... on the device took   "<< t.diff()<<"s\n";
@@ -125,7 +125,7 @@ int main()
     {
         laplace_split[i].set_chi( chi_split[i]);
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
-        number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
+        number[i] = pcg.solve( laplace_split[i], x_split[i], b_split[i], v2d, eps);
     }
     t.toc();
     std::cout << "Number of iterations in split     "<< number[0]<<"\n";

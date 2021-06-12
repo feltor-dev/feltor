@@ -12,6 +12,7 @@
 namespace shu
 {
 
+// Improvement: make Diffusion a friend to Shu to save memory and duplicate code
 template< class Geometry, class Matrix, class Container>
 struct Diffusion
 {
