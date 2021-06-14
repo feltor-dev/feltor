@@ -157,6 +157,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
   private:
     void ePlus( enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     void eMinus(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    void zero(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     MPIDistMat<LocalIMatrix, CommunicatorXY> m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     MPI_Vector<LocalContainer> m_hm, m_hp, m_hbm, m_hbp; //3d size
     MPI_Vector<LocalContainer> m_bbm, m_bbp, m_bbo; //3d size masks
@@ -209,7 +210,7 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     m_perp_size = grid_coarse->local().size();
     dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
-    dg::assign( dg::evaluate(zero, *grid_coarse), m_left);
+    dg::assign( dg::evaluate(dg::zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
 #ifdef _DG_CUDA_UNAWARE_MPI
     m_recv_buffer = m_send_buffer = m_ghostP.data();
@@ -386,10 +387,34 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
 }
 
 template<class G, class M, class C, class container>
-void Fieldaligned<G, MPIDistMat<M,C>, MPI_Vector<container> >::operator()(enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fe)
+void Fieldaligned<G, MPIDistMat<M,C>, MPI_Vector<container> >::operator()(enum
+        whichMatrix which, const MPI_Vector<container>& f,
+        MPI_Vector<container>& fe)
 {
     if(which == einsPlus || which == einsMinusT) ePlus( which, f, fe);
     if(which == einsMinus || which == einsPlusT) eMinus( which, f, fe);
+    if(     which == einsPlus  || which == einsMinusT ) ePlus(  which, f, fe);
+    else if(which == einsMinus || which == einsPlusT  ) eMinus( which, f, fe);
+    else if(which == zeroMinus || which == zeroPlus ||
+            which == zeroMinusT|| which == zeroPlusT  ) zero(   which, f, fe);
+}
+template< class G, class M, class C, class container>
+void Fieldaligned<G, MPIDistMat<M,C>, MPI_Vector<container> >::zero( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& f0)
+{
+    dg::split( f, m_f, *m_g);
+    dg::split( f0, m_temp, *m_g);
+    //1. compute 2d interpolation in every plane and store in m_temp
+    for( unsigned i0=0; i0<m_Nz; i0++)
+    {
+        if(which == zeroPlus)
+            dg::blas2::symv( m_plus,   m_f[i0], m_temp[i0]);
+        else if(which == zeroMinus)
+            dg::blas2::symv( m_minus,  m_f[i0], m_temp[i0]);
+        else if(which == zeroPlusT)
+            dg::blas2::symv( m_plusT,  m_f[i0], m_temp[i0]);
+        else if(which == zeroMinusT)
+            dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
+    }
 }
 
 template<class G, class M, class C, class container>
@@ -401,8 +426,10 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         unsigned ip = (i0==m_Nz-1) ? 0:i0+1;
-        if(which == einsPlus)           dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
-        else if(which == einsMinusT)    dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
+        if(which == einsPlus)
+            dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
+        else if(which == einsMinusT)
+            dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
     }
 
     //2. communicate halo in z
@@ -447,8 +474,10 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         unsigned im = (i0==0) ? m_Nz-1:i0-1;
-        if(which == einsPlusT)         dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
-        else if(which == einsMinus)    dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
+        if(which == einsPlusT)
+            dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
+        else if(which == einsMinus)
+            dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
     }
 
     //2. communicate halo in z

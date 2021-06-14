@@ -27,9 +27,13 @@ namespace geo{
 enum whichMatrix
 {
     einsPlus = 0,   //!< plus interpolation in next plane
-    einsPlusT = 1,  //!< transposed plus interpolation in previous plane
-    einsMinus = 2,  //!< minus interpolation in previous plane
-    einsMinusT = 3, //!< transposed minus interpolation in next plane
+    einsPlusT, //!< transposed plus interpolation in previous plane
+    einsMinus, //!< minus interpolation in previous plane
+    einsMinusT,//!< transposed minus interpolation in next plane
+    zeroPlus,  //!< plus interpolation in the current plane
+    zeroMinus, //!< minus interpolation in the current plane
+    zeroPlusT, //!< transposed plus interpolation in the current plane
+    zeroMinusT //!< transposed minus interpolation in the current plane
 };
 
 ///@brief Full Limiter means there is a limiter everywhere
@@ -557,6 +561,7 @@ struct Fieldaligned
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
+    void zero( enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     container m_hm, m_hp, m_hbm, m_hbp;         //3d size
     container m_bbm, m_bbp, m_bbo;  //3d size masks
@@ -604,7 +609,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     m_perp_size = grid_coarse->size();
     dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
-    dg::assign( dg::evaluate(zero, *grid_coarse), m_left);
+    dg::assign( dg::evaluate(dg::zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
 #ifdef DG_BENCHMARK
@@ -627,7 +632,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             yp_coarse, hbp, in_boxp, deltaPhi, eps);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
             ym_coarse, hbm, in_boxm, -deltaPhi, eps);
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, *grid_coarse);  //INTERPOLATE TO FINE GRID
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine,
+            *grid_coarse);  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;
     for( int i=0; i<2; i++) //only R and Z get interpolated
@@ -641,8 +647,10 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     t.tic();
 #endif //DG_BENCHMARK
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid_coarse, bcx, bcy), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid_coarse, bcx, bcy), minus, minusT;
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
+            *grid_coarse, bcx, bcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
+            *grid_coarse, bcx, bcy), minus, minusT;
     if( mx == my && mx == 1)
     {
         plus = plusFine;
@@ -699,7 +707,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 
 template<class G, class I, class container>
 template< class BinaryOp, class UnaryOp>
-container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const UnaryOp& unary, unsigned p0, unsigned rounds) const
+container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary,
+        const UnaryOp& unary, unsigned p0, unsigned rounds) const
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
@@ -766,7 +775,8 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
 }
 
 template<class G, class I, class container>
-container Fieldaligned<G, I,container>::interpolate_from_coarse_grid( const G& grid, const container& in)
+container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
+        const G& grid, const container& in)
 {
     //I think we need grid as input to split input vector and we need to interpret
     //the grid nodes as node centered not cell-centered!
@@ -836,12 +846,34 @@ void Fieldaligned<G, I,container>::integrate_between_coarse_grid( const G& grid,
 template<class G, class I, class container>
 void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe)
 {
-    if(which == einsPlus  || which == einsMinusT) ePlus(  which, f, fe);
-    if(which == einsMinus || which == einsPlusT ) eMinus( which, f, fe);
+    if(     which == einsPlus  || which == einsMinusT ) ePlus(  which, f, fe);
+    else if(which == einsMinus || which == einsPlusT  ) eMinus( which, f, fe);
+    else if(which == zeroMinus || which == zeroPlus ||
+            which == zeroMinusT|| which == zeroPlusT  ) zero(   which, f, fe);
 }
 
 template< class G, class I, class container>
-void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const container& f, container& fpe)
+void Fieldaligned<G, I, container>::zero( enum whichMatrix which,
+        const container& f, container& f0)
+{
+    dg::split( f, m_f, *m_g);
+    dg::split( f0, m_temp, *m_g);
+    //1. compute 2d interpolation in every plane and store in m_temp
+    for( unsigned i0=0; i0<m_Nz; i0++)
+    {
+        if(which == zeroPlus)
+            dg::blas2::symv( m_plus,   m_f[i0], m_temp[i0]);
+        else if(which == zeroMinus)
+            dg::blas2::symv( m_minus,  m_f[i0], m_temp[i0]);
+        else if(which == zeroPlusT)
+            dg::blas2::symv( m_plusT,  m_f[i0], m_temp[i0]);
+        else if(which == zeroMinusT)
+            dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
+    }
+}
+template< class G, class I, class container>
+void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which,
+        const container& f, container& fpe)
 {
     dg::split( f, m_f, *m_g);
     dg::split( fpe, m_temp, *m_g);
@@ -849,8 +881,10 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         unsigned ip = (i0==m_Nz-1) ? 0:i0+1;
-        if(which == einsPlus)           dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
-        else if(which == einsMinusT)    dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
+        if(which == einsPlus)
+            dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
+        else if(which == einsMinusT)
+            dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
     }
     //2. apply right boundary conditions in last plane
     unsigned i0=m_Nz-1;
@@ -870,7 +904,8 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
 }
 
 template< class G, class I, class container>
-void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const container& f, container& fme)
+void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which,
+        const container& f, container& fme)
 {
     dg::split( f, m_f, *m_g);
     dg::split( fme, m_temp, *m_g);
@@ -878,8 +913,10 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const contai
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         unsigned im = (i0==0) ? m_Nz-1:i0-1;
-        if(which == einsPlusT)          dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
-        else if (which == einsMinus)    dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
+        if(which == einsPlusT)
+            dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
+        else if (which == einsMinus)
+            dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
     }
     //2. apply left boundary conditions in first plane
     unsigned i0=0;
