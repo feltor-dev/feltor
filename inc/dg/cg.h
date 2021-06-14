@@ -107,7 +107,7 @@ class CG
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
      *
-     * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
+     * The iteration stops if \f$ ||Ax-b||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
      * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
      * @param A A symmetric positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
@@ -156,6 +156,7 @@ template< class Matrix, class ContainerType0, class ContainerType1, class Precon
 unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
+    value_type tol = eps*(nrmb + nrmb_correction);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
@@ -169,7 +170,7 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 #endif //DG_DEBUG
     if( nrmb == 0)
     {
-        blas1::axpby( 1., b, 0., x);
+        blas1::copy( 0., x);
         return 0;
     }
     blas2::symv( A,x,r);
@@ -177,7 +178,7 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
     blas2::symv( P, r, p );//<-- compute p_0
     //note that dot does automatically synchronize
     value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
-    if( sqrt( nrm2r_old ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+    if( sqrt( nrm2r_old ) < tol) //if x happens to be the solution
         return 0;
     value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
@@ -201,11 +202,11 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 #endif //MPI
         {
             std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
-            std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+            std::cout << "#  < Critical "<<tol <<"\t ";
             std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
         }
 #endif //DG_DEBUG
-        if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction))
+        if( sqrt( nrm2r_new) < tol)
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
@@ -219,6 +220,7 @@ template< class Matrix, class ContainerType0, class ContainerType1, class Precon
 unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, int save_on_dots )
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
+    value_type tol = eps*(nrmb + nrmb_correction);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
@@ -232,13 +234,13 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 #endif //DG_DEBUG
     if( nrmb == 0)
     {
-        blas1::copy( b, x);
+        blas1::copy( 0., x);
         return 0;
     }
     blas2::symv( A,x,r);
     blas1::axpby( 1., b, -1., r);
     //note that dot does automatically synchronize
-    if( sqrt( blas2::dot(S,r) ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+    if( sqrt( blas2::dot(S,r) ) < tol) //if x happens to be the solution
         return 0;
     blas2::symv( P, r, p );//<-- compute p_0
     value_type nrmzr_old = blas1::dot( p,r); //and store the scalar product
@@ -257,11 +259,11 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 #endif //MPI
             {
                 std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-                std::cout << "#  < Critical "<<eps*nrmb + eps <<"\t ";
+                std::cout << "#  < Critical "<<tol <<"\t ";
                 std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
             }
 #endif //DG_DEBUG
-                if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
+                if( sqrt( blas2::dot(S,r)) < tol)
                     return i;
         }
         blas2::symv(P,r,ap);
