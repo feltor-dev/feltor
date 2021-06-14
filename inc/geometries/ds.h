@@ -58,12 +58,144 @@ namespace geo{
  * @attention The boundary condition given as a parameter to this function
  * overrules the boundary conditions used in the given \c dg::geo::Fieldaligned
  * object and the ones implicit in the einsPlus and einsMinus interpolations
- * (This includes the fact whether the magnetic field was periodified or not).
+ * (Independently of whether the magnetic field was periodified or not).
  * In this way it is possible to apply the same Fieldaligned object to
  * several quantities with different boundary conditions and save quite a bit
  * of memory consumption.
  */
 
+
+/**
+ * @brief Assign boundary conditions along magnetic field lines
+ * interpolating a 2nd order polynomial
+ *
+ * **Call this function before one of the freestanding ds functions to
+ * replace the default boundary conditions with along field boundary conditions**
+ *
+ * This function replaces the values of the plus and minus fields that
+ * are outside of the domain with ghost values. These values are
+ * constructed by fitting a polynomial through the
+ * boundary point, the plus or minus point and the center point.
+ * For the exact resulting formula consult the
+ * <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
+ * This is achieved using masks that mark the points where fieldlines intersect
+ * the domain boundary and replace the interpolated boundary values.
+ * @tparam FieldAligned
+ * @tparam container
+ * @param fa this object will be used to get grid distances and masking regions
+ * @copydoc hide_ds_fm
+ * @param f
+ * @copydoc hide_ds_fp
+ * @param fmg resulting eMinus field (can alias fm)
+ * @param fpg resulting ePlus field (can alias fp)
+ * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
+ * @param boundary_value first value is for incoming fieldlines, second one for outgoing
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_along_field
+ */
+template<class FieldAligned, class container>
+void assign_bc_along_field_2nd( const FieldAligned& fa, const container& fm,
+        const container& f, const container& fp, container& fmg, container& fpg,
+        dg::bc bound, std::array<double,2> boundary_value = {0,0})
+{
+    if( bound == dg::NEU)
+    {
+        double dbm = boundary_value[0], dbp = boundary_value[1];
+        dg::blas1::subroutine( [dbm, dbp]DG_DEVICE( double fm, double fo,
+                    double fp, double& fmg, double& fpg, double hm, double hp,
+                    double hbm, double hbp, double bbm, double bbo, double bbp
+                    ){
+            double plus=0, minus=0, bothP=0, bothM = 0;
+            plus = dbp*hp*(hm+hp)/(2.*hbp+hm) +
+                fo*(2.*hbp+hm-hp)*(hm+hp)/hm/(2.*hbp+hm) + fm*hp*(-2.*hbp +
+                    hp)/hm/(2.*hbp + hm);
+            minus = fp*hm*(-2.*hbm+hm)/hp/(2.*hbm+hp) -
+                dbm*hm*(hm+hp)/(2.*hbm+hp) +
+                fo*(2.*hbm-hm+hp)*(hm+hp)/hp/(2.*hbm+hp);
+            bothM = fo + dbp*hm*(-2.*hbm + hm)/2./(hbm+hbp) -
+                dbm*hm*(2.*hbp+hm)/2./(hbm+hbp);
+            bothP = fo + dbp*hp*(2.*hbm + hp)/2./(hbm+hbp) +
+                dbm*hp*(2.*hbp-hp)/2./(hbm+hbp);
+            fmg = (1.-bbo-bbm)*fm + bbm*minus + bbo*bothM;
+            fpg = (1.-bbo-bbp)*fp + bbp*plus  + bbo*bothP;
+        }, fm, f, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
+                fa.bbo(), fa.bbp() );
+    }
+    else// if( bound == dg:DIR)
+    {
+        double fbm = boundary_value[0], fbp = boundary_value[1];
+        dg::blas1::subroutine( [fbm, fbp]DG_DEVICE( double fm, double fo,
+                    double fp, double& fmg, double& fpg, double hm, double hp,
+                    double hbm, double hbp, double bbm, double bbo, double bbp
+                    ){
+            double plus=0, minus=0, bothP=0, bothM = 0;
+            plus  = fm*hp*(-hbp + hp)/hm/(hbp+hm) + fo*(hbp-hp)*(hm+hp)/hbp/hm
+                +fbp*hp*(hm+hp)/hbp/(hbp+hm);
+            minus = +fo*(hbm-hm)*(hm+hp)/hbm/hp + fbm*hm*(hm+hp)/hbm/(hbm+hp)
+                + fp*hm*(-hbm+hm)/hp/(hbm+hp);
+            bothM = fbp*hm*(-hbm+hm)/hbp/(hbm+hbp) +
+                fo*(hbm-hm)*(hbp+hm)/hbm/hbp + fbm*hm*(hbp+hm)/hbm/(hbm+hbp);
+            bothP = fo*(hbp-hp)*(hbm+hp)/hbm/hbp +
+                fbp*hp*(hbm+hp)/hbp/(hbm+hbp) + fbm*hp*(-hbp+hp)/hbm/(hbm+hbp);
+            fmg = (1.-bbo-bbm)*fm + bbm*minus + bbo*bothM;
+            fpg = (1.-bbo-bbp)*fp + bbp*plus  + bbo*bothP;
+        }, fm, f, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
+                fa.bbo(), fa.bbp());
+    }
+
+}
+/**
+ * @brief Assign boundary conditions along magnetic field lines
+ * interpolating a 1st order polynomial (a line)
+ *
+ * @tparam FieldAligned
+ * @tparam container
+ * @param fa
+ * @param fm
+ * @param fp
+ * @param fmg result (can alias fm)
+ * @param fpg result (can alias fp)
+ * @param bound
+ * @param boundary_value
+ */
+template<class FieldAligned, class container>
+void assign_bc_along_field_1st( const FieldAligned& fa, const container& fm,
+        const container& fp, container& fmg, container& fpg,
+        dg::bc bound, std::array<double,2> boundary_value = {0,0})
+{
+    if( bound == dg::NEU)
+    {
+        double dbm = boundary_value[0], dbp = boundary_value[1];
+        dg::blas1::subroutine( [dbm, dbp]DG_DEVICE( double fm, double fp,
+                    double& fmg, double& fpg, double hm, double hp,
+                    double bbm, double bbo, double bbp
+                    ){
+            double plus=0, minus=0, bothP=0, bothM = 0;
+            plus = fm + dbp*(hp+hm);
+            minus = fp - dbm*(hp+hm);
+            fmg = (1.-bbm)*fm + bbm*minus;
+            fpg = (1.-bbp)*fp + bbp*plus;
+        }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.bbm(),
+                fa.bbo(), fa.bbp() );
+    }
+    else// if( bound == dg:DIR)
+    {
+        double fbm = boundary_value[0], fbp = boundary_value[1];
+        dg::blas1::subroutine( [fbm, fbp]DG_DEVICE( double fm, double fp,
+                    double& fmg, double& fpg, double hm, double hp, double hbm,
+                    double hbp, double bbm, double bbo, double bbp
+                    ){
+            double plus=0, minus=0, bothP=0, bothM = 0;
+            plus  = fm + (fbp-fm)/(hbp+hm)*(hp+hm) ;
+            minus = fp - (hp+hm)*(fp-fbm)/(hp+hbm);
+            bothM = fbp + (fbp-fbm)/(hbp+hbm)*(hp+hbm);
+            bothP = fbp - (fbp-fbm)/(hbp+hbm)*(hbp+hm);
+            fmg = (1.-bbo-bbm)*fm + bbm*minus + bbo*bothM;
+            fpg = (1.-bbo-bbp)*fp + bbp*plus  + bbo*bothP;
+        }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
+                fa.bbo(), fa.bbp());
+    }
+}
 
 /*!@class hide_ds_attention
 @attention The \c div and \c symv member functions reliably converge only if fieldlines
@@ -234,18 +366,20 @@ struct DS
     * @copydoc hide_ds_parameters4
     */
     void centered( double alpha, const container& f, double beta, container& g){
-        m_fa(einsPlus, f, m_tempP);
+        m_fa(einsPlus,  f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         ds_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
-    /// Same as \c dg::geo::ds_centered_bc_along_field
+    /// Same as \c dg::geo::ds_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void centered_bc_along_field(
         double alpha, const container& f, double beta, container& g, dg::bc bound,
         std::array<double,2> boundary_value = {0,0}){
-        m_fa(einsPlus, f, m_tempP);
+        m_fa(einsPlus,  f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        ds_centered_bc_along_field( m_fa, alpha, m_tempM, f, m_tempP, beta, g,
+        assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
+        ds_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+
     }
     /**
     * @brief backward derivative \f$ g = \vec v \cdot \nabla f \f$
@@ -410,29 +544,32 @@ struct DS
         m_fa(einsMinus, f, m_tempM);
         dss_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
-    /// Same as \c dg::geo::dss_centered_bc_along_field
+    /// Same as \c dg::geo::dss_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void dss_bc_along_field(
         double alpha, const container& f, double beta, container& g, dg::bc bound,
         std::array<double,2> boundary_value = {0,0}){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dss_centered_bc_along_field( m_fa, alpha, m_tempM, f, m_tempP, beta, g,
+        assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
+        dss_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::dssd_centered
-    void dssd( double alpha, const container& divv, const container& f, double beta, container& g){
+    void dssd( double alpha, const container& divv, const container& f, double
+            beta, container& g){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         dssd_centered( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
-    /// Same as \c dg::geo::dssd_centered_bc_along_field
-    void dssd_bc_along_field(
-        double alpha, const container& divv, const container& f, double beta, container& g, dg::bc bound,
-        std::array<double,2> boundary_value = {0,0}){
+    /// Same as \c dg::geo::dssd_centered after \c dg::geo::ds_assign_bc_along_field_2nd
+    void dssd_bc_along_field( double alpha, const container& divv, const
+            container& f, double beta, container& g, dg::bc bound,
+            std::array<double,2> boundary_value = {0,0}){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dssd_centered_bc_along_field( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g,
+        assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
+        dssd_centered( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
 
     const container& weights()const {
@@ -722,144 +859,6 @@ struct DSSDCentered
     double m_alpha, m_beta;
 };
 
-struct DSCenteredNEU
-{
-    DSCenteredNEU( double alpha, double beta, double bm, double bp) :
-        m_alpha(alpha), m_beta(beta), m_bm(bm), m_bp(bp), m_ds(1., 0.){}
-    DG_DEVICE
-    void operator()(
-            double& dsf, double fm, double fo, double fp,
-            double hm, double hp, double hbm, double hbp,
-            double bbm, double bbo, double bbp)
-    {
-        double inner=0, plus=0, minus=0, both=0;
-        m_ds( inner, fm, fo, fp, hm, hp);
-        plus  = ( 1./hm - 1./( 2.*hbp + hm))*(fo-fm) + m_bp * hm /(2.*hbp + hm);
-        minus = ( 1./hp - 1./( 2.*hbm + hp))*(fp-fm) + m_bm * hp /(2.*hbm + hp);
-        both = (m_bp*hbm+hbp*m_bm)/(hbp+hbm);
-        dsf = m_alpha*(
-                  (1.-bbm-bbo-bbp)*inner + bbp*plus + bbm*minus + bbo*both
-              ) + m_beta*dsf;
-    };
-
-    private:
-    double m_alpha, m_beta, m_bm, m_bp;
-    DSCentered m_ds;
-};
-struct DSCenteredDIR
-{
-    DSCenteredDIR( double alpha, double beta, double bm, double bp) :
-        m_alpha(alpha), m_beta(beta), m_bm(bm), m_bp(bp), m_ds(1., 0.){}
-    DG_DEVICE
-    void operator()(
-            double& dsf, double fm, double fo, double fp,
-            double hm, double hp, double hbm, double hbp,
-            double bbm, double bbo, double bbp)
-    {
-        double inner=0, plus=0, minus=0, both=0;
-        m_ds( inner, fm, fo, fp, hm, hp);
-        m_ds( plus,  fm, fo, m_bp, hm, hbp);
-        m_ds( minus, m_bm, fo, fp, hbm, hp);
-        m_ds( both,  m_bm, fo, m_bp, hbm, hbp);
-        dsf = m_alpha*(
-                  (1.-bbm-bbo-bbp)*inner + bbp*plus + bbm*minus + bbo*both
-              ) + m_beta*dsf;
-    };
-
-    private:
-    double m_alpha, m_beta, m_bm, m_bp;
-    DSCentered m_ds;
-};
-struct DSSCenteredNEU
-{
-    DSSCenteredNEU( double alpha, double beta, double bm, double bp) :
-        m_alpha(alpha), m_beta(beta), m_bm(bm), m_bp(bp), m_dss(1., 0.){}
-    DG_DEVICE
-    void operator()(
-            double& dssf, double fm, double fo, double fp,
-            double hm, double hp, double hbm, double hbp,
-            double bbm, double bbo, double bbp)
-    {
-        double inner=0, plus=0, minus=0, both=0;
-        m_dss( inner, fm, fo, fp, hm, hp);
-        plus  =  2./( 2.*hbp + hm)*( m_bp - (fo-fm)/hm );
-        minus =  2./( 2.*hbm + hp)*( (fp-fo)/hp - m_bm );
-        both = (m_bp-m_bm)/(hbp+hbm);
-        dssf = m_alpha*(
-                  (1.-bbm-bbo-bbp)*inner + bbp*plus + bbm*minus + bbo*both
-              ) + m_beta*dssf;
-    };
-
-    private:
-    double m_alpha, m_beta, m_bm, m_bp;
-    DSSCentered m_dss;
-};
-struct DSSCenteredDIR
-{
-    DSSCenteredDIR( double alpha, double beta, double bm, double bp) :
-        m_alpha(alpha), m_beta(beta), m_bm(bm), m_bp(bp), m_dss(1., 0.){}
-    DG_DEVICE
-    void operator()(
-            double& dssf, double fm, double fo, double fp,
-            double hm, double hp, double hbm, double hbp,
-            double bbm, double bbo, double bbp)
-    {
-        double inner=0, plus=0, minus=0, both=0;
-        m_dss( inner, fm, fo, fp, hm, hp);
-        m_dss( plus,  fm, fo, m_bp, hm, hbp);
-        m_dss( minus, m_bm, fo, fp, hbm, hp);
-        m_dss( both,  m_bm, fo, m_bp, hbm, hbp);
-        dssf = m_alpha*(
-                  (1.-bbm-bbo-bbp)*inner + bbp*plus + bbm*minus + bbo*both
-              ) + m_beta*dssf;
-    };
-
-    private:
-    double m_alpha, m_beta, m_bm, m_bp;
-    DSSCentered m_dss;
-};
-struct DSSDCenteredNEU
-{
-    DSSDCenteredNEU( double alpha, double beta, double bm, double bp) :
-        m_alpha(alpha), m_beta(beta), m_bm(bm), m_bp(bp), m_ds(1.,0., bm, bp),m_dss(1., 0., bm,bp){}
-    DG_DEVICE
-    void operator()(
-            double& dssdf, double fm, double fo, double fp,
-            double hm, double hp, double hbm, double hbp,
-            double bbm, double bbo, double bbp, double divv)
-    {
-        double ds = 0., dss = 0.;
-        m_ds(  ds,  fm, fo, fp, hm, hp, hbm, hbp, bbm, bbo, bbp);
-        m_dss( dss, fm, fo, fp, hm, hp, hbm, hbp, bbm, bbo, bbp);
-        dssdf = m_alpha*( ds*divv + dss) + m_beta*dssdf;
-    };
-
-    private:
-    double m_alpha, m_beta, m_bm, m_bp;
-    DSCenteredNEU m_ds;
-    DSSCenteredNEU m_dss;
-};
-struct DSSDCenteredDIR
-{
-    DSSDCenteredDIR( double alpha, double beta, double bm, double bp) :
-        m_alpha(alpha), m_beta(beta), m_bm(bm), m_bp(bp), m_ds(1.,0., bm, bp),m_dss(1., 0., bm,bp){}
-    DG_DEVICE
-    void operator()(
-            double& dssdf, double fm, double fo, double fp,
-            double hm, double hp, double hbm, double hbp,
-            double bbm, double bbo, double bbp, double divv)
-    {
-        double ds = 0., dss = 0.;
-        m_ds(  ds,  fm, fo, fp, hm, hp, hbm, hbp, bbm, bbo, bbp);
-        m_dss( dss, fm, fo, fp, hm, hp, hbm, hbp, bbm, bbo, bbp);
-        dssdf = m_alpha*( ds*divv + dss) + m_beta*dssdf;
-    };
-
-    private:
-    double m_alpha, m_beta, m_bm, m_bp;
-    DSCenteredDIR m_ds;
-    DSSCenteredDIR m_dss;
-};
 }//namespace detail
 ///@endcond
 
@@ -923,124 +922,6 @@ void dssd_centered( const container& divv, const FieldAligned& fa, double
 {
     dg::blas1::subroutine( detail::DSSDCentered( alpha, beta),
         g, fm, f, fp, fa.hm(), fa.hp(), divv);
-}
-
-/**
- * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
- *
- * The centered derivative is constructed by fitting a polynomial through the
- * plus point the minus point and the center point and evaluating its
- * derivative at the center point. For the exact resulting formula consult the
- * <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
- * the boundary condition is implemented along the field-line, that is the
- * boundary condition is used as part of the polynomial interpolation. This is
- * achieved using masks that mark the points where fieldlines intersect the
- * domain boundary and replace the interpolated boundary values.
- * @param fa this object will be used to get grid distances
- * @copydoc hide_ds_parameters4
- * @copydoc hide_ds_fm
- * @copydoc hide_ds_fp
- * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
- * @param boundary_value first value is for incoming fieldlines, second one for
- * outgoing
- * @ingroup fieldaligned
- * @copydoc hide_ds_along_field
- * @copydoc hide_ds_freestanding
- */
-template<class FieldAligned, class container>
-void ds_centered_bc_along_field( const FieldAligned& fa, double alpha,
-        const container& fm, const container& f, const container& fp, double beta,
-        container& g, dg::bc bound, std::array<double,2> boundary_value = {0,0})
-{
-    double bm = boundary_value[0], bp = boundary_value[1];
-    if( bound == dg::NEU)
-    {
-        dg::blas1::subroutine( detail::DSCenteredNEU( alpha, beta, bm, bp),
-                g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
-                fa.bbo(), fa.bbp());
-    }
-    else// if( bound == dg:DIR)
-    {
-        dg::blas1::subroutine( detail::DSCenteredDIR( alpha, beta, bm, bp),
-             g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
-             fa.bbo(), fa.bbp());
-    }
-}
-
-/**
- * @brief Centered derivative \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
- *
- * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
- * which is the second derivative of a 2nd order polynomial fitted through the
- * plus, minus and centre points the boundary condition is implemented along
- * the field-line, that is the boundary condition is used as part of the
- * polynomial interpolation. This is achieved using masks that mark the points
- * where fieldlines intersect the domain boundary and replace the interpolated
- * boundary values.
- * @param fa this object will be used to get grid distances
- * @copydoc hide_ds_parameters4
- * @copydoc hide_ds_fm
- * @copydoc hide_ds_fp
- * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
- * @param boundary_value first value is for incoming fieldlines, second one for outgoing
- * @ingroup fieldaligned
- * @copydoc hide_ds_along_field
- * @copydoc hide_ds_freestanding
- */
-template<class FieldAligned, class container>
-void dss_centered_bc_along_field( const FieldAligned& fa, double alpha, const
-        container& fm, const container& f, const container& fp, double beta,
-        container& g, dg::bc bound, std::array<double,2> boundary_value =
-        {0,0})
-{
-    double bm = boundary_value[0], bp = boundary_value[1];
-    if( bound == dg::NEU)
-    {
-        dg::blas1::subroutine( detail::DSSCenteredNEU( alpha, beta, bm, bp),
-                g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
-                fa.bbo(), fa.bbp());
-    }
-    else// if( bound == dg:DIR)
-    {
-        dg::blas1::subroutine( detail::DSSCenteredDIR( alpha, beta, bm, bp),
-             g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
-             fa.bbo(), fa.bbp());
-    }
-}
-/**
- * @brief Centered derivative \f$ g = \alpha \nabla\cdot(\vec v \vec v\cdot \nabla) f + \beta g \f$
- *
- * The formula used is \f[ \Delta_\parallel f = \nabla\cdot \vec v \nabla_\parallel f + \nabla_\parallel^2 f \f]
- * @param divv The divergence of the vector field
- * @param fa this object will be used to get grid distances
- * @copydoc hide_ds_parameters4
- * @copydoc hide_ds_fm
- * @copydoc hide_ds_fp
- * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
- * @param boundary_value first value is for incoming fieldlines, second one for outgoing
- * @ingroup fieldaligned
- * @copydoc hide_ds_along_field
- * @copydoc hide_ds_freestanding
- */
-template<class FieldAligned, class container>
-void dssd_centered_bc_along_field( const container& divv, const FieldAligned&
-        fa, double alpha, const container& fm, const container& f, const
-        container& fp, double beta, container& g, dg::bc bound,
-        std::array<double,2> boundary_value = {0,0})
-{
-    double bm = boundary_value[0], bp = boundary_value[1];
-    if( bound == dg::NEU)
-    {
-        dg::blas1::subroutine( detail::DSSDCenteredNEU( alpha, beta, bm, bp),
-                g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
-                fa.bbo(), fa.bbp(), divv);
-    }
-    else// if( bound == dg:DIR)
-    {
-        dg::blas1::subroutine( detail::DSSDCenteredDIR( alpha, beta, bm, bp),
-             g, fm, f, fp, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
-             fa.bbo(), fa.bbp(), divv);
-    }
 }
 
 }//namespace geo

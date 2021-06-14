@@ -560,11 +560,14 @@ struct Fieldaligned
     /**
     * @brief Integrate a 2d function on the fine grid \f[ \frac{1}{\Delta\varphi} \int_{-\Delta\varphi}^{\Delta\varphi}d \varphi w(\varphi) f(R(\varphi), Z(\varphi) \f]
     *
-    * @param grid_coarse The coarse grid (\c coarse_grid.Nz() must integer divide \c Nz from input grid) The x and y dimensions must be equal
+    * @param grid_coarse The coarse grid (\c coarse_grid.Nz() must integer
+    * divide \c Nz from input grid). The x and y dimensions must be equal to
+    * the input grid.
     * @param coarse the 2d input vector
     * @param out the integral (2d vector)
     */
     void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out );
+
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
