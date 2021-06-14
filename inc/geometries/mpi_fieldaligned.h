@@ -170,6 +170,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     std::vector<MPI_Vector<dg::View<const LocalContainer>> > m_f;
     std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
+    double m_deltaPhi;
     unsigned m_coords2, m_sizeZ; //number of processes in z
 #ifdef _DG_CUDA_UNAWARE_MPI
     //we need to manually send data through the host
@@ -201,7 +202,6 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz(), m_bcx = bcx, m_bcy = bcy;
     m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
-    else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( m_g->communicator(), 3, dims, periods, coords);
     m_coords2 = coords[2], m_sizeZ = dims[2];
@@ -225,7 +225,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
-    dg::ClonePtr<dg::aGeometry2d> global_grid_magnetic = grid_magnetic->global_geometry();
+    dg::ClonePtr<dg::aGeometry2d> global_grid_magnetic =
+        grid_magnetic->global_geometry();
     dg::MPIGrid2d grid_fine( *grid_coarse);//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
@@ -235,11 +236,12 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
 #endif
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
-    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic, grid_coarse->local(),
-            yp_coarse, hbp, in_boxp, deltaPhi, eps);
-    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic, grid_coarse->local(),
-            ym_coarse, hbm, in_boxm, -deltaPhi, eps);
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse->local());  //INTERPOLATE TO FINE GRID
+    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic,
+            grid_coarse->local(), yp_coarse, hbp, in_boxp, deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic,
+            grid_coarse->local(), ym_coarse, hbm, in_boxm, -deltaPhi, eps);
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(),
+            grid_coarse->local());  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine.local())); ym = yp;
     for( int i=0; i<2; i++)
     {
@@ -252,8 +254,10 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     t.tic();
 #endif
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse->global(), bcx, bcy), plus;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse->global(), bcx, bcy), minus;
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
+            grid_coarse->global(), bcx, bcy), plus;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
+            grid_coarse->global(), bcx, bcy), minus;
     if( mx == my && mx == 1)
     {
         plus = plusFine;
@@ -315,6 +319,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     assign3dfrom2d( bbm, m_bbm, grid);
     assign3dfrom2d( bbo, m_bbo, grid);
     assign3dfrom2d( bbp, m_bbp, grid);
+
+    m_deltaPhi = deltaPhi; // store for evaluate
 }
 
 template<class G, class M, class C, class container>
@@ -350,8 +356,8 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
                 dg::blas2::symv( m_plus, tempM, temp);
                 temp.swap( tempM);
             }
-            dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*m_g->hz() ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*m_deltaPhi ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_deltaPhi ) );
             dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
             dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
         }

@@ -322,7 +322,14 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     * @param mx refinement factor in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
     * high as possible, 10 is a good start)
     * @param my analogous to \c mx, applies to y direction
-    * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz()==1, then \c deltaPhi is taken instead of \c grid.hz()
+    * @param deltaPhi The angular distance that the fieldline-integrator will
+    * integrate. Per default this is the distance between planes, which is
+    * chosen automatically if you set it <=0, i.e. if deltaPhi <=0 then it will
+    * be overwritten to deltaPhi = grid.hz().  Sometimes however, you may want
+    * to set it to a different value from \c grid.hz() for example for 2d problems
+    * or for a staggered grid.
+    * @note  deltaPhi influences the interpolation matrices and the parallel
+    * modulation in the evaluate() member function.
     * @note If there is a limiter, the boundary condition on the first/last plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries function.
         If there is no limiter, the boundary condition is periodic.
@@ -447,9 +454,9 @@ struct Fieldaligned
     }
 
     /**
-     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     * @brief %Evaluate a 2d functor and transform to all planes along the fieldlines
      *
-     * Evaluates the given functor on a 2d plane and then follows fieldlines to
+     * %Evaluate the given functor on a 2d plane and then follows fieldlines to
      * get the values in the 3rd dimension. Uses the grid given in the constructor.
      * @tparam BinaryOp Binary Functor
      * @param binary Functor to evaluate
@@ -465,12 +472,12 @@ struct Fieldaligned
     }
 
     /**
-     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     * @brief %Evaluate a 2d functor and transform to all planes along the fieldlines
      *
      * The algorithm does the equivalent of the following:
-     *  - Evaluate the given \c BinaryOp on a 2d plane
+     *  - %Evaluate the given \c BinaryOp on a 2d plane
      *  - Apply the plus and minus transformation each \f$ r N_z\f$ times where \f$ N_z\f$ is the number of planes in the global 3d grid and \f$ r\f$ is the number of rounds.
-     *  - Scale the transformations with \f$ u ( \pm (iN_z + j)h_z) \f$, where \c u is the given \c UnarayOp, \c i in [0..r] is the round index and \c j in [0..Nz] is the plane index.
+     *  - Scale the transformations with \f$ u ( \pm (iN_z + j)\Delta\varphi) \f$, where \c u is the given \c UnarayOp, \c i in [0..r] is the round index and \c j in [0..Nz] is the plane index and \f$\Delta\varphi\f$ is the angular distance given in the constructor (can be different from the actual grid distance hz!).
      *  - %Sum all transformations with the same plane index \c j , where the minus transformations get the inverted index \f$ N_z - j\f$.
      *  - Shift the index by \f$ p_0\f$
      *  .
@@ -574,6 +581,7 @@ struct Fieldaligned
     std::vector<dg::View<const container>> m_f;
     std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
+    double m_deltaPhi;
     template<class Geometry>
     void assign3dfrom2d( const thrust::host_vector<double>& in2d, container& out, const Geometry& grid)
     {
@@ -603,7 +611,6 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
     m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
-    else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
@@ -703,6 +710,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     assign3dfrom2d( bbm, m_bbm, grid);
     assign3dfrom2d( bbo, m_bbo, grid);
     assign3dfrom2d( bbp, m_bbp, grid);
+
+    m_deltaPhi = deltaPhi; // store for evaluate
 }
 
 template<class G, class I, class container>
@@ -738,8 +747,8 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary,
                 dg::blas2::symv( m_plus, tempM, temp);
                 temp.swap( tempM);
             }
-            dg::blas1::scal( tempP, unary(  (double)rep*m_g->hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*m_g->hz() ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*m_deltaPhi ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_deltaPhi ) );
             dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
             dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
         }
