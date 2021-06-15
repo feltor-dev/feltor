@@ -118,7 +118,8 @@ struct LeastSquaresExtrapolation
     * @param beta Quality of live parameter
     * @param y (write only) contains extrapolated value on output
     */
-    void extrapolate( double alpha, const ContainerType0& x, double beta, ContainerType1& y) const{
+    void extrapolate( double alpha, const ContainerType0& x, double beta,
+            ContainerType1& y) const{
         unsigned size = m_counter;
         thrust::host_vector<double> rhs( size, 0.), a(rhs), opIi(rhs); // B^T b
         for( unsigned i=0; i<size; i++)
@@ -220,8 +221,9 @@ struct Extrapolation
     Extrapolation( ){ m_counter = 0; }
     /*! @brief Set maximum extrapolation order and allocate memory
      * @param max maximum of vectors to use for extrapolation.
-         Choose between 0 (no extrapolation) 1 (constant), 2 (linear) or 3 (parabola) extrapolation.
-         Higher values currently default back to a linear extrapolation
+         Choose between 0 (no extrapolation) 1 (constant), 2 (linear) or 3
+         (parabola) extrapolation.  Higher values currently default back to a
+         linear extrapolation
      * @param copyable the memory is allocated based on this vector
      */
     Extrapolation( unsigned max, const ContainerType& copyable) {
@@ -235,17 +237,44 @@ struct Extrapolation
         m_t.assign( max, 0);
         m_max = max;
     }
-    ///return the current extrapolation max
-    ///This may not coincide with the max set in the constructor if values have not been updated yet
+    /**
+     * @brief Current extrapolation count
+     *
+     * @note This may not coincide with the max set in the constructor if
+     * values have not been updated yet
+     * @return The current size of the extrapolation
+     */
     unsigned get_max( ) const{
         return m_counter;
+    }
+
+
+    /**
+     * @brief Check if time exists in current points
+     *
+     * @note The check is numerical and returns true if \f$|t - t_i| < 10^{-14}\f$
+     * for all i
+     * @note If extrapolate() is called on an exisiting time,
+     * the corresponding vector is returned while update() will overwrite
+     * the existing vector
+     * @param t The time to check for
+     *
+     * @return true if time exists in current points, false else
+     */
+    bool exists( value_type t)const{
+        if( m_max == 0) return false;
+        for( unsigned i=0; i<m_counter; i++)
+            if( fabs(t - m_t[i]) <1e-14)
+                return true;
+        return false;
     }
 
     /**
     * @brief Extrapolate value to given time
     *
     * Construt and evaluate the interpolating polynomial at a given point
-    * @param t time to which to extrapolate (or at which interpolating polynomial is evaluated)
+    * @param t time to which to extrapolate (or at which interpolating
+    * polynomial is evaluated)
     * @param new_x (write only) contains extrapolated value on output
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => new_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
@@ -336,7 +365,7 @@ struct Extrapolation
     /**
     * @brief insert a new entry, deleting the oldest entry or update existing entry
     * @param t_new the time for the new entry
-    * @param new_entry the new entry ( replaces value of existing entry if \c t_new already exists
+    * @param new_entry the new entry ( replaces value of existing entry if \c t_new already exists)
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
