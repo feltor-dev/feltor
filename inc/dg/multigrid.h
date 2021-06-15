@@ -183,7 +183,7 @@ struct MultigridCG2d
      * @copydoc hide_symmetric_op
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
-     * @param x (read/write) contains initial guess on input and the solution on output
+     * @param x (read/write) contains initial guess on input and the solution on output (if the initial guess is good enough the solve may return immediately)
      * @param b The right hand side (will be multiplied by \c weights)
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon(
      * ||b|| + 1) \f$. If needed (and it is recommended to tune these values)
@@ -207,14 +207,22 @@ struct MultigridCG2d
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
     {
+        std::vector<unsigned> number(m_stages, 0);
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
+        value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
+        if( nrmb == 0)
+        {
+            blas1::copy( 0., x);
+            return number;
+        }
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
         dg::blas1::axpby(-1.0, m_r[0], 1.0, m_b[0], m_r[0]);
+        if( sqrt( blas2::dot(op[0].inv_weights(),m_r[0]) ) < eps[0]*(nrmb+1.)) //if x happens to be the solution
+            return number;
         // project residual down to coarse grid
         for( unsigned u=0; u<m_stages-1; u++)
             dg::blas2::gemv( m_interT[u], m_r[u], m_r[u+1]);
-        std::vector<unsigned> number(m_stages);
 #ifdef DG_BENCHMARK
         Timer t;
 #endif //DG_BENCHMARK
