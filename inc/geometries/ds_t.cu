@@ -16,7 +16,7 @@ int main(int argc, char * argv[])
 {
     std::cout << "# Test the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
-    unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
+    unsigned n, Nx, Ny, Nz, mx[2], max_iter = 1e4;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout <<"# You typed\n"
               <<"n:  "<<n<<"\n"
@@ -24,10 +24,10 @@ int main(int argc, char * argv[])
               <<"Ny: "<<Ny<<"\n"
               <<"Nz: "<<Nz<<std::endl;
     std::cout << "# Type mx (10) and my (10)\n";
-    std::cin >> mx>> my;
+    std::cin >> mx[0]>> mx[1];
     std::cout << "# You typed\n"
-              <<"mx: "<<mx<<"\n"
-              <<"my: "<<my<<std::endl;
+              <<"mx: "<<mx[0]<<"\n"
+              <<"my: "<<mx[1]<<std::endl;
     std::cout << "# Create parallel Derivative!\n";
 
     //![doxygen]
@@ -36,8 +36,10 @@ int main(int argc, char * argv[])
     const dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     const dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat(mag);
     //create Fieldaligned object and construct DS from it
-    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my);
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::centered );
+    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA(
+            bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+        ds( dsFA, dg::centered );
     //![doxygen]
     ///##########################################################///
     const dg::DVec fun = dg::pullback( dg::geo::TestFunctionDirNeu(mag), g3d);
@@ -89,7 +91,7 @@ int main(int argc, char * argv[])
     }
     ///##########################################################///
     std::cout << "# Reconstruct parallel derivative!\n";
-    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx, my);
+    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
     ds.construct( dsFA, dg::centered);
     std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
@@ -124,6 +126,58 @@ int main(int argc, char * argv[])
     ds( aligned, derivative);
     double norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
+    ///##########################################################///
+    std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
+    dg::DVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
+    dg::DVec funST(fun);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFAST(
+            bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
+            g3d.hz()/2.);
+    for( auto bc : {dg::NEU, dg::DIR})
+    {
+        if( bc == dg::DIR)
+            if(rank==0)std::cout << "DirichletST:\n";
+        if( bc == dg::NEU)
+            if(rank==0)std::cout << "NeumannST:\n";
+        dsFAST( dg::geo::zeroMinus, fun, zMinus);
+        dsFAST( dg::geo::einsPlus,  fun, ePlus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
+            bc, {0,0});
+        dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
+        dsFAST( dg::geo::zeroPlus, funST, zPlus);
+        dsFAST( dg::geo::einsMinus, funST, eMinus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
+            bc, {0,0});
+        dg::blas1::subroutine( []DG_DEVICE( double& df, double fm, double fp,
+                    double hp, double hm){
+                df = (fp-fm)/(hp+hm);
+                }, derivative, eMinus, zPlus, dsFAST.hp(), dsFAST.hm());
+        double sol = dg::blas2::dot( vol3d, sol0);
+        dg::blas1::axpby( 1., sol0, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::string name = "forward";
+        std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
 
+        // now try the adjoint direction (should be exactly the same result)
+        dsFAST( dg::geo::zeroPlus, fun, zPlus);
+        dsFAST( dg::geo::einsMinus, fun, eMinus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
+            bc, {0,0});
+        dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
+        dsFAST( dg::geo::einsPlus, funST, ePlus);
+        dsFAST( dg::geo::zeroMinus, funST, zMinus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
+            bc, {0,0});
+        dg::blas1::subroutine( []DG_DEVICE( double& df, double fm, double fp,
+                    double hp, double hm){
+                df = (fp-fm)/(hp+hm);
+                }, derivative, zMinus, ePlus, dsFAST.hp(), dsFAST.hm());
+        dg::blas1::axpby( 1., sol0, -1., derivative);
+        norm = dg::blas2::dot( derivative, vol3d, derivative);
+        name = "backward";
+        std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
     return 0;
 }

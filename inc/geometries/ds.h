@@ -168,15 +168,14 @@ void assign_bc_along_field_1st( const FieldAligned& fa, const container& fm,
         double dbm = boundary_value[0], dbp = boundary_value[1];
         dg::blas1::subroutine( [dbm, dbp]DG_DEVICE( double fm, double fp,
                     double& fmg, double& fpg, double hm, double hp,
-                    double bbm, double bbo, double bbp
+                    double bbm, double bbp
                     ){
-            double plus=0, minus=0, bothP=0, bothM = 0;
+            double plus=0, minus=0;
             plus = fm + dbp*(hp+hm);
             minus = fp - dbm*(hp+hm);
             fmg = (1.-bbm)*fm + bbm*minus;
             fpg = (1.-bbp)*fp + bbp*plus;
-        }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.bbm(),
-                fa.bbo(), fa.bbp() );
+        }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.bbm(), fa.bbp() );
     }
     else// if( bound == dg:DIR)
     {

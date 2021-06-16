@@ -114,6 +114,59 @@ int main(int argc, char* argv[])
     ds( aligned, derivative);
     double norm = dg::blas2::dot(vol3d, derivative);
     if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
+    ///##########################################################///
+    std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
+    dg::MDVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
+    dg::MDVec funST(fun);
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFAST(
+            bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
+            g3d.hz()/2.);
+    for( auto bc : {dg::NEU, dg::DIR})
+    {
+        if( bc == dg::DIR)
+            std::cout << "DirichletST:\n";
+        if( bc == dg::NEU)
+            std::cout << "NeumannST:\n";
+        dsFAST( dg::geo::zeroMinus, fun, zMinus);
+        dsFAST( dg::geo::einsPlus,  fun, ePlus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
+            bc, {0,0});
+        dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
+        dsFAST( dg::geo::zeroPlus, funST, zPlus);
+        dsFAST( dg::geo::einsMinus, funST, eMinus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
+            bc, {0,0});
+        dg::blas1::subroutine( []DG_DEVICE( double& df, double fm, double fp,
+                    double hp, double hm){
+                df = (fp-fm)/(hp+hm);
+                }, derivative, eMinus, zPlus, dsFAST.hp(), dsFAST.hm());
+        double sol = dg::blas2::dot( vol3d, sol0);
+        dg::blas1::axpby( 1., sol0, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        std::string name = "forward";
+        if(rank==0)std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+
+        // now try the adjoint direction (should be exactly the same result)
+        dsFAST( dg::geo::zeroPlus, fun, zPlus);
+        dsFAST( dg::geo::einsMinus, fun, eMinus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
+            bc, {0,0});
+        dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
+        dsFAST( dg::geo::einsPlus, funST, ePlus);
+        dsFAST( dg::geo::zeroMinus, funST, zMinus);
+        dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
+            bc, {0,0});
+        dg::blas1::subroutine( []DG_DEVICE( double& df, double fm, double fp,
+                    double hp, double hm){
+                df = (fp-fm)/(hp+hm);
+                }, derivative, zMinus, ePlus, dsFAST.hp(), dsFAST.hm());
+        dg::blas1::axpby( 1., sol0, -1., derivative);
+        norm = dg::blas2::dot( derivative, vol3d, derivative);
+        name = "backward";
+        if(rank==0)std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+                  <<" "<<sqrt(norm/sol)<<"\n";
+    }
     MPI_Finalize();
     return 0;
 }
