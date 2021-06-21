@@ -32,7 +32,7 @@ struct Parameters
     double lx, ly;
     dg::bc bc_x, bc_y;
 
-    std::string init, equations, output;
+    std::string init, equations, output, timestepper;
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
         n  = ws["grid"].get("n", 5).asUInt();
@@ -40,7 +40,8 @@ struct Parameters
         Ny = ws["grid"].get("Ny", 64).asUInt();
         lx = ws["grid"].get("lx", 100).asDouble();
         ly = ws["grid"].get("ly", 100).asDouble();
-        
+     
+        timestepper = ws["timestepper"].get("type", "multistep").asString();
         dt = ws["timestepper"].get("dt",0.05).asDouble();
 
         output = ws[ "output"]["type"].asString("glfw");    

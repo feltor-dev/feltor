@@ -69,12 +69,38 @@ int main( int argc, char* argv[])
 #endif //WITH_MPI
         return -1;
     }
-    unsigned step = 0;
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
     dg::ExplicitMultistep<std::array<dg::x::DVec, 2>> multistep;
-    multistep.construct( "TVB-3-3", y0);
-    double dt = p.dt;
-    multistep.init( poet, time, y0, dt);
+    dg::Adaptive< dg::ERKStep< std::array<dg::x::DVec,2>>> adapt;
+    double rtol = 0., atol = 0., dt = 0.;
+  
+    unsigned step = 0;
+    double dt_out = p.dt*p.itstp;
+    double t_out = dt_out;
+    
+    if( p.timestepper == "multistep")
+    {
+        std::string tableau = ws[ "timestepper"]["tableau"].asString("TVB-3-3");
+        multistep.construct( tableau, y0);
+        dt = p.dt;
+        multistep.init( poet, time, y0, dt);
+    }
+    else if (p.timestepper == "adaptive")
+    {
+        std::string tableau = ws[ "timestepper"]["tableau"].asString( "Bogacki-Shampine-4-2-3");
+        adapt.construct( tableau, y0);
+        rtol = ws[ "timestepper"][ "rtol"].asDouble( 1e-7);
+        atol = ws[ "timestepper"][ "atol"].asDouble( 1e-10);
+        dt = 1e-6; //that should be a small enough initial guess
+    }
+    else
+    {
+        DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
+#ifdef WITH_MPI
+        MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //WITH_MPI
+        return -1;
+    }
     DG_RANK0 std::cout << "Done!\n";
 
     /// ////////////Init diagnostics ////////////////////
@@ -141,10 +167,15 @@ int main( int argc, char* argv[])
             //step
             dg::Timer ti;
             ti.tic();
-            for( unsigned i=0; i<p.itstp; i++)
+            while( time < t_out )
             {
+                if( time+dt > t_out)
+                    dt = t_out-time;
                 try{
-                    multistep.step( poet, time, y0);
+                    if( p.timestepper == "adaptive")
+                        adapt.step( poet, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                    if( p.timestepper == "multistep")
+                        multistep.step( poet, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -154,6 +185,7 @@ int main( int argc, char* argv[])
                 }
                 step++;
             }
+            t_out += dt_out;
             ti.toc();
             std::cout << "\n\t Step "<<step;
             std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n";
@@ -291,10 +323,15 @@ int main( int argc, char* argv[])
         {
             dg::Timer ti;
             ti.tic();
-            for( unsigned j=0; j<p.itstp; j++)
+            while( time < t_out )
             {
+                if( time+dt > t_out)
+                    dt = t_out-time;
                 try{
-                    multistep.step( poet, time, y0);
+                    if( p.timestepper == "adaptive")
+                        adapt.step( poet, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                    if( p.timestepper == "multistep")
+                        multistep.step( poet, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -305,6 +342,7 @@ int main( int argc, char* argv[])
                     return -1;
                 }
             }
+            t_out += dt_out;
             ti.toc();
             var.duration = ti.diff() / (double) p.itstp;
             step+=p.itstp;
