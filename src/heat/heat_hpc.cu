@@ -14,7 +14,7 @@
 #include "dg/geometries/geometries.h"
 
 #include "parameters.h"
-#include "heat.cuh"
+#include "heat.h"
 
 int main( int argc, char* argv[])
 {
