@@ -52,7 +52,10 @@ namespace geo{
  * of \c dg::geo::DS but you have to compute the einsPlus and einsMinus
  * interpolations from \c dg::geo::Fieldaligned yourself. The reasoning for
  * this function is that you can re-use the latter interpolations if you
- * compute for example both first and second derivative of a function.
+ * compute for example both first and second derivative of a function
+ * or even if you compute it for difference boundary conditions using
+ * dg::geo::assign_bc_along_field_2nd, dg::geo::assign_bc_along_field_1st or
+ * dg::geo::swap_bc_perp
  */
 /*!@class hide_ds_along_field
  * @attention The boundary condition given as a parameter to this function
@@ -155,8 +158,10 @@ void assign_bc_along_field_2nd( const FieldAligned& fa, const container& fm,
  * @param fp
  * @param fmg result (can alias fm)
  * @param fpg result (can alias fp)
- * @param bound
- * @param boundary_value
+ * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
+ * @param boundary_value first value is for incoming fieldlines, second one for outgoing
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_along_field
  */
 template<class FieldAligned, class container>
 void assign_bc_along_field_1st( const FieldAligned& fa, const container& fm,
@@ -194,6 +199,45 @@ void assign_bc_along_field_1st( const FieldAligned& fa, const container& fm,
         }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
                 fa.bbo(), fa.bbp());
     }
+}
+
+/**
+ * @brief Swap the perp boundary condition
+ *
+ * This function multiplies (-1) to every value that lies outside the box.
+ * This effectively swaps the boundary conditions in the Fourier boundary
+ * mode, i.e. if NEU was used in Fieldaligned, then now they are DIR and
+ * vice versa.
+ *
+ * @tparam FieldAligned
+ * @tparam container
+ * @param fa this object will be used to get masking regions
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @param fmg resulting eMinus field (can alias fm)
+ * @param fpg resulting ePlus field (can alias fp)
+ * @note The motivation for this function is to avoid reconstructing a
+ * fieldaligned object since its constructor is quite expensive in runtime and
+ * memory. The idea is to construct Fieldaligned with NEU boundary conditions
+ * and then use this function to swap them to DIR whenever needed.
+ * @note The swapping of bc is not exactly (but almost) the same as
+ * re-constructing the fieldaligned object in case the support operator is used
+ * (mx, my > 1), this is because the swap is performed only on the coarse grid.
+ * In all tests the error is negligible so far.
+ * @ingroup fieldaligned
+ */
+template<class FieldAligned, class container>
+void swap_bc_perp( const FieldAligned& fa, const container& fm,
+        const container& fp, container& fmg, container& fpg)
+{
+    dg::blas1::subroutine( []DG_DEVICE( double fm, double fp,
+                double& fmg, double& fpg,
+                double bbm, double bbo, double bbp
+                ){
+        fmg = (1.-bbo-bbm)*fm + (bbm+bbo)*(-fm);
+        fpg = (1.-bbo-bbp)*fp + (bbp+bbo)*(-fp);
+    }, fm, fp, fmg, fpg, fa.bbm(), fa.bbo(), fa.bbp() );
+
 }
 
 /*!@class hide_ds_attention
@@ -449,6 +493,13 @@ struct DS
     ///@note divCentered is the negative adjoint of centered
     void divCentered(const container& f, container& g){
         do_divCentered( 1.,f,0.,g);
+    }
+    /// Same as \c dg::geo::divDirectCentered
+    void divDirect( double alpha, const container& divv, const
+            container& f, double beta, container& g){
+        m_fa(einsPlus,  f, m_tempP);
+        m_fa(einsMinus, f, m_tempM);
+        divDirectCentered( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
 
     /**
@@ -921,6 +972,33 @@ void dssd_centered( const container& divv, const FieldAligned& fa, double
 {
     dg::blas1::subroutine( detail::DSSDCentered( alpha, beta),
         g, fm, f, fp, fa.hm(), fa.hp(), divv);
+}
+
+/**
+ * @brief centered derivative \f$ g = \alpha \nabla \cdot \vec v f + \beta g\f$
+ *
+ * This is the direct derivative (i.e. product rule) \f$ \nabla \cdot \vec v
+ * f = \vec v \cdot \nabla f + f \nabla\cdot \vec v\f$ where for the first
+ * derivative
+ * we use a centered derivative and for the second f we use the average
+ * along the fieldline. ( This has advantageous conservative properties)
+ * @param divv The divergence of the vector field
+ * @param fa this object will be used to get grid distances
+ * @copydoc hide_ds_parameters4
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_freestanding
+*/
+template<class FieldAligned, class container>
+void divDirectCentered( const container& divv, const FieldAligned& fa, double
+        alpha, const container& fm, const container& f, const container& fp,
+        double beta, container& g){
+    ds_centered( fa, alpha, fm, f, fp, beta, g);
+    dg::blas1::subroutine( [alpha]DG_DEVICE( double& g, double minus,
+                double plus, double hp, double hm, double divv){
+            g += alpha*(hm*plus+hp*minus)/(hp+hm)*divv;
+            }, g, fm, fp, fa.hp(), fa.hm(), divv);
 }
 
 }//namespace geo

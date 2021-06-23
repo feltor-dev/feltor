@@ -282,8 +282,7 @@ unsigned max_iter = 1e4, double eps = 1e-6)
         dg::blas1::pointwiseDot( 1., divb, in, 1., out);
     }
     else if( name == "divDirectCentered"){
-        ds.ds( dg::centered, in, out);
-        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
+        ds.divDirect( 1., divb, in, 0., out);
     }
     else if( name == "forwardLap") {
         ds.set_direction( dg::forward);
