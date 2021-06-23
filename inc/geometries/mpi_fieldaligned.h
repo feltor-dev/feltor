@@ -185,6 +185,13 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         for( unsigned i=0; i<m_Nz; i++)
             dg::blas1::copy( tmp2d, m_temp[i].data());
     }
+    bool m_have_adjoint = false;
+    void updateAdjoint( )
+    {
+        m_plusT = dg::transpose( m_plus);
+        m_minusT = dg::transpose( m_minus);
+        m_have_adjoint = true;
+    }
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
@@ -274,14 +281,14 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
     t.tic();
 #endif
-    dg::MIHMatrix temp = dg::convert( plus, *grid_coarse), tempT;
-    tempT  = dg::transpose( temp);
+    dg::MIHMatrix temp = dg::convert( plus, *grid_coarse); //, tempT;
+    //tempT  = dg::transpose( temp);
     dg::blas2::transfer( temp, m_plus);
-    dg::blas2::transfer( tempT, m_plusT);
+    //dg::blas2::transfer( tempT, m_plusT);
     temp = dg::convert( minus, *grid_coarse);
-    tempT  = dg::transpose( temp);
+    //tempT  = dg::transpose( temp);
     dg::blas2::transfer( temp, m_minus);
-    dg::blas2::transfer( tempT, m_minusT);
+    //dg::blas2::transfer( tempT, m_minusT);
 
 #ifdef DG_BENCHMARK
     t.toc();
@@ -417,9 +424,15 @@ void Fieldaligned<G, MPIDistMat<M,C>, MPI_Vector<container> >::zero( enum whichM
         else if(which == zeroMinus)
             dg::blas2::symv( m_minus,  m_f[i0], m_temp[i0]);
         else if(which == zeroPlusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_plusT,  m_f[i0], m_temp[i0]);
+        }
         else if(which == zeroMinusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
+        }
     }
 }
 
@@ -435,7 +448,10 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
         if(which == einsPlus)
             dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
         else if(which == einsMinusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
+        }
     }
 
     //2. communicate halo in z
@@ -481,7 +497,10 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     {
         unsigned im = (i0==0) ? m_Nz-1:i0-1;
         if(which == einsPlusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
+        }
         else if(which == einsMinus)
             dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
     }

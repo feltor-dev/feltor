@@ -594,6 +594,14 @@ struct Fieldaligned
         for( unsigned i=0; i<m_Nz; i++)
             dg::blas1::copy( tmp2d, m_temp[i]);
     }
+
+    bool m_have_adjoint = false;
+    void updateAdjoint( )
+    {
+        m_plusT = dg::transpose( m_plus);
+        m_minusT = dg::transpose( m_minus);
+        m_have_adjoint = true;
+    }
 };
 
 ///@cond
@@ -676,12 +684,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     t.toc();
     std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
 #endif //DG_BENCHMARK
-    plusT = dg::transpose( plus);
-    minusT = dg::transpose( minus);
     dg::blas2::transfer( plus, m_plus);
-    dg::blas2::transfer( plusT, m_plusT);
     dg::blas2::transfer( minus, m_minus);
-    dg::blas2::transfer( minusT, m_minusT);
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
     dg::assign( dg::evaluate( dg::zero, grid), m_hm);
     m_temp  = dg::split( m_hm, grid); //3d vector
@@ -878,9 +882,15 @@ void Fieldaligned<G, I, container>::zero( enum whichMatrix which,
         else if(which == zeroMinus)
             dg::blas2::symv( m_minus,  m_f[i0], m_temp[i0]);
         else if(which == zeroPlusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_plusT,  m_f[i0], m_temp[i0]);
+        }
         else if(which == zeroMinusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
+        }
     }
 }
 template< class G, class I, class container>
@@ -896,7 +906,10 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which,
         if(which == einsPlus)
             dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
         else if(which == einsMinusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
+        }
     }
     //2. apply right boundary conditions in last plane
     unsigned i0=m_Nz-1;
@@ -926,7 +939,10 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which,
     {
         unsigned im = (i0==0) ? m_Nz-1:i0-1;
         if(which == einsPlusT)
+        {
+            if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
+        }
         else if (which == einsMinus)
             dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
     }
