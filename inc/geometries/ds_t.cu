@@ -143,19 +143,12 @@ int main(int argc, char * argv[])
         dsFAST( dg::geo::einsPlus,  fun, ePlus);
         dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
             bc, {0,0});
-        //dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
-        dg::blas1::subroutine( []DG_DEVICE( double& funST, double zm, double ep,
-                    double hp, double hm){
-                funST = (hm*ep+hp*zm)/(hp+hm);
-                }, funST, zMinus, ePlus, dsFAST.hp(), dsFAST.hm());
+        dg::geo::ds_average( dsFAST, 1., zMinus, ePlus, 0., funST);
         dsFAST( dg::geo::zeroPlus, funST, zPlus);
         dsFAST( dg::geo::einsMinus, funST, eMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
             bc, {0,0});
-        dg::blas1::subroutine( []DG_DEVICE( double& df, double fm, double fp,
-                    double hp, double hm){
-                df = (fp-fm)/(hp+hm);
-                }, derivative, eMinus, zPlus, dsFAST.hp(), dsFAST.hm());
+        dg::geo::ds_slope( dsFAST, 1., eMinus, zPlus, 0., derivative);
         double sol = dg::blas2::dot( vol3d, sol0);
         dg::blas1::axpby( 1., sol0, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
@@ -168,19 +161,12 @@ int main(int argc, char * argv[])
         dsFAST( dg::geo::einsMinus, fun, eMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
             bc, {0,0});
-        //dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
-        dg::blas1::subroutine( []DG_DEVICE( double& funST, double zm, double ep,
-                    double hp, double hm){
-                funST = (hm*ep+hp*zm)/(hp+hm);
-                }, funST, eMinus, zPlus, dsFAST.hp(), dsFAST.hm());
+        dg::geo::ds_average( dsFAST, 1., eMinus, zPlus, 0., funST);
         dsFAST( dg::geo::einsPlus, funST, ePlus);
         dsFAST( dg::geo::zeroMinus, funST, zMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
             bc, {0,0});
-        dg::blas1::subroutine( []DG_DEVICE( double& df, double fm, double fp,
-                    double hp, double hm){
-                df = (fp-fm)/(hp+hm);
-                }, derivative, zMinus, ePlus, dsFAST.hp(), dsFAST.hm());
+        dg::geo::ds_slope( dsFAST, 1., zMinus, ePlus, 0., derivative);
         dg::blas1::axpby( 1., sol0, -1., derivative);
         norm = dg::blas2::dot( derivative, vol3d, derivative);
         name = "backward";

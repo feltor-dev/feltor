@@ -1001,6 +1001,56 @@ void divDirectCentered( const container& divv, const FieldAligned& fa, double
             }, g, fm, fp, fa.hp(), fa.hm(), divv);
 }
 
+/**
+ * @brief Compute average along a fieldline \f$ g = \alpha \frac{h^- f_{k+1} + h^+ f_{k-1}}{h^- + h^+} + \beta g\f$
+ *
+ * @note The idea is to use this function on staggered grid implementations. There
+ * it can be used to convert a function from one grid to the staggered grid and
+ * back
+ * @param fa this object will be used to get grid distances
+ * @param alpha Scalar
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @param beta Scalar
+ * @param g contains result on output (may alias input vectors)
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_freestanding
+ */
+template<class FieldAligned, class container>
+void ds_average( const FieldAligned& fa, double alpha,
+        const container& fm, const container& fp, double beta, container& g)
+{
+    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp,
+                double hp, double hm){
+            g = alpha*(hm*fp+hp*fm)/(hp+hm) + beta*g;
+            }, g, fm, fp, fa.hp(), fa.hm());
+}
+/**
+ * @brief Compute simple slope along a fieldline \f$ g = \alpha \frac{f_{k+1} - f_{k-1}}{h^- + h^+} + \beta g\f$
+ *
+ * @note The idea is to use this function on staggered grid implementations. There
+ * it can be used to compute the gradient from one grid onto the staggered grid
+ * and vice versa
+ * @param fa this object will be used to get grid distances
+ * @param alpha Scalar
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @param beta Scalar
+ * @param g contains result on output (may alias input vectors)
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_freestanding
+ */
+template<class FieldAligned, class container>
+void ds_slope( const FieldAligned& fa, double alpha,
+        const container& fm, const container& fp, double beta, container& g)
+{
+    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp,
+                double hp, double hm){
+            g = alpha*(fp-fm)/(hp+hm) + beta*g;
+            }, g, fm, fp, fa.hp(), fa.hm());
+}
+
+
 }//namespace geo
 
 ///@cond
