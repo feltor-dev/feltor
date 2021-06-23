@@ -43,6 +43,7 @@ int main()
         std::cout << "Test correct behaviour of handle: cat and mouse\n";
         dg::ClonePtr<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
         dg::ClonePtr<aAnimal> h2(*h1); //reference constructor
+        dg::ClonePtr<aAnimal> h3(h0); // copy an empty object
         aAnimal* ptr = new Cat();
         h0.reset(ptr); //pointer reset
         h1.reset( *h2); //reference reset

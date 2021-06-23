@@ -35,7 +35,7 @@ struct ClonePtr
     * @brief deep copy the given handle using the \c clone() method of \c Cloneable
     * @param src an oject to copy, clones the contained object if not empty
     */
-    ClonePtr( const ClonePtr& src) : m_ptr( src.m_ptr->clone() ) { }
+    ClonePtr( const ClonePtr& src) : m_ptr( src.m_ptr.get() == nullptr ? nullptr : src.m_ptr->clone() ) { }
     /**
     * @brief deep copy the given handle using the \c clone() method of \c Cloneable
     * @param src an oject to copy and swap
