@@ -136,14 +136,18 @@ int main(int argc, char * argv[])
     for( auto bc : {dg::NEU, dg::DIR})
     {
         if( bc == dg::DIR)
-            if(rank==0)std::cout << "DirichletST:\n";
+            std::cout << "DirichletST:\n";
         if( bc == dg::NEU)
-            if(rank==0)std::cout << "NeumannST:\n";
+            std::cout << "NeumannST:\n";
         dsFAST( dg::geo::zeroMinus, fun, zMinus);
         dsFAST( dg::geo::einsPlus,  fun, ePlus);
         dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
             bc, {0,0});
-        dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
+        //dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
+        dg::blas1::subroutine( []DG_DEVICE( double& funST, double zm, double ep,
+                    double hp, double hm){
+                funST = (hm*ep+hp*zm)/(hp+hm);
+                }, funST, zMinus, ePlus, dsFAST.hp(), dsFAST.hm());
         dsFAST( dg::geo::zeroPlus, funST, zPlus);
         dsFAST( dg::geo::einsMinus, funST, eMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
@@ -164,7 +168,11 @@ int main(int argc, char * argv[])
         dsFAST( dg::geo::einsMinus, fun, eMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
             bc, {0,0});
-        dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
+        //dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
+        dg::blas1::subroutine( []DG_DEVICE( double& funST, double zm, double ep,
+                    double hp, double hm){
+                funST = (hm*ep+hp*zm)/(hp+hm);
+                }, funST, eMinus, zPlus, dsFAST.hp(), dsFAST.hm());
         dsFAST( dg::geo::einsPlus, funST, ePlus);
         dsFAST( dg::geo::zeroMinus, funST, zMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,

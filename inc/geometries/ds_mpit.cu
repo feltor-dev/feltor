@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
     double norm = dg::blas2::dot(vol3d, derivative);
     if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
     ///##########################################################///
-    std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
+    if(rank==0)std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
     dg::MDVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
     dg::MDVec funST(fun);
     dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFAST(
@@ -124,14 +124,18 @@ int main(int argc, char* argv[])
     for( auto bc : {dg::NEU, dg::DIR})
     {
         if( bc == dg::DIR)
-            std::cout << "DirichletST:\n";
+            if(rank==0)std::cout << "DirichletST:\n";
         if( bc == dg::NEU)
-            std::cout << "NeumannST:\n";
+            if(rank==0)std::cout << "NeumannST:\n";
         dsFAST( dg::geo::zeroMinus, fun, zMinus);
         dsFAST( dg::geo::einsPlus,  fun, ePlus);
         dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
             bc, {0,0});
-        dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
+        //dg::blas1::axpby( 0.5, zMinus, 0.5, ePlus, funST);
+        dg::blas1::subroutine( []DG_DEVICE( double& funST, double zm, double ep,
+                    double hp, double hm){
+                funST = (hm*ep+hp*zm)/(hp+hm);
+                }, funST, zMinus, ePlus, dsFAST.hp(), dsFAST.hm());
         dsFAST( dg::geo::zeroPlus, funST, zPlus);
         dsFAST( dg::geo::einsMinus, funST, eMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
@@ -152,7 +156,11 @@ int main(int argc, char* argv[])
         dsFAST( dg::geo::einsMinus, fun, eMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, eMinus, zPlus, eMinus, zPlus,
             bc, {0,0});
-        dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
+        //dg::blas1::axpby( 0.5, eMinus, 0.5, zPlus, funST);
+        dg::blas1::subroutine( []DG_DEVICE( double& funST, double zm, double ep,
+                    double hp, double hm){
+                funST = (hm*ep+hp*zm)/(hp+hm);
+                }, funST, eMinus, zPlus, dsFAST.hp(), dsFAST.hm());
         dsFAST( dg::geo::einsPlus, funST, ePlus);
         dsFAST( dg::geo::zeroMinus, funST, zMinus);
         dg::geo::assign_bc_along_field_1st( dsFAST, zMinus, ePlus, zMinus, ePlus,
