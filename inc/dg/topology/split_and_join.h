@@ -147,12 +147,12 @@ std::vector<get_mpi_view_type<MPIContainer> > split(
  *
  * Conceptually the same as a split of the out vector followed by assigning
  * the input to each plane
- * @param in2d the 2d input
+ * @param in2d the 2d input (communicator is ignored)
  * @param out output (memory will be allocated)
  * @param grid provide dimensions in 3rd and first two dimensions
  */
 template<class LocalContainer, class real_type>
-void assign3dfrom2d( const thrust::host_vector<real_type>& in2d,
+void assign3dfrom2d( const MPI_Vector<thrust::host_vector<real_type>>& in2d,
         MPI_Vector<LocalContainer>& out,
         const aRealMPITopology3d<real_type>& grid)
 {
@@ -160,7 +160,7 @@ void assign3dfrom2d( const thrust::host_vector<real_type>& in2d,
     std::vector<MPI_Vector<dg::View<thrust::host_vector<real_type>>> > view =
         dg::split( vector, grid); //3d vector
     for( unsigned i=0; i<grid.local().Nz(); i++)
-        dg::blas1::copy( in2d, view[i].data());
+        dg::blas1::copy( in2d, view[i]);
     dg::assign( vector, out);
 }
 #endif //MPI_VERSION

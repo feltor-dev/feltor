@@ -294,10 +294,10 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::assign( yp_coarse[2], m_hp2d.data()); //2d vector
     dg::assign( dg::evaluate( dg::zero, *grid_coarse), m_hm2d);
     dg::assign( ym_coarse[2], m_hm2d.data()); //2d vector
-    dg::assign3dfrom2d( hbp, m_hbp, grid);
-    dg::assign3dfrom2d( hbm, m_hbm, grid);
-    dg::assign3dfrom2d( yp_coarse[2], m_hp, grid);
-    dg::assign3dfrom2d( ym_coarse[2], m_hm, grid);
+    dg::assign3dfrom2d( dg::MHVec(hbp, MPI_COMM_WORLD), m_hbp, grid);
+    dg::assign3dfrom2d( dg::MHVec(hbm, MPI_COMM_WORLD), m_hbm, grid);
+    dg::assign3dfrom2d( dg::MHVec(yp_coarse[2], MPI_COMM_WORLD), m_hp, grid);
+    dg::assign3dfrom2d( dg::MHVec(ym_coarse[2], MPI_COMM_WORLD), m_hm, grid);
     dg::blas1::scal( m_hm2d, -1.);
     dg::blas1::scal( m_hbm, -1.);
     dg::blas1::scal( m_hm, -1.);
@@ -313,10 +313,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
             bbm[i] = 1.;
         // else all are 0
     }
-    m_bbm = m_bbo = m_bbp = m_hm;
-    dg::assign3dfrom2d( bbm, m_bbm, grid);
-    dg::assign3dfrom2d( bbo, m_bbo, grid);
-    dg::assign3dfrom2d( bbp, m_bbp, grid);
+    dg::assign3dfrom2d( dg::MHVec(bbm, MPI_COMM_WORLD), m_bbm, grid);
+    dg::assign3dfrom2d( dg::MHVec(bbo, MPI_COMM_WORLD), m_bbo, grid);
+    dg::assign3dfrom2d( dg::MHVec(bbp, MPI_COMM_WORLD), m_bbp, grid);
 
     m_deltaPhi = deltaPhi; // store for evaluate
 }
