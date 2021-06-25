@@ -138,6 +138,13 @@ int main()
         std::cerr << "Error thrown as expected\n";
         //std::cerr << e.what() << std::endl;
     }
+    std::cout << "Test MinMod function:\n";
+    dg::MinMod minmod;
+    std::cout << " 3 -5 ="<<minmod( 3,-5)<< " (0) "<<std::endl;
+    std::cout << " 2 4 1 ="<<minmod( 2,4,1)<< " (1) "<<std::endl;
+    std::cout << " 0 1 2 ="<<minmod( 0,1,2)<< " (0) "<<std::endl;
+    std::cout << " -1 1 2 ="<<minmod( -1,1,2)<< " (0) "<<std::endl;
+    std::cout << " -5 -3 -2 ="<<minmod( -5,-3,-2)<< " (-2) "<<std::endl;
 
     std::cout << "\nFINISHED! Continue with topology/derivatives_t.cu !\n\n";
     return 0;
