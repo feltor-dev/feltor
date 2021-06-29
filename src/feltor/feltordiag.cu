@@ -36,9 +36,6 @@ int main( int argc, char* argv[])
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.asJson() <<  std::endl;
-    std::vector<std::string> names_input{
-        "electrons", "ions", "Ue", "Ui", "potential", "aparallel"
-    };
 
     //-------------------Construct grids-------------------------------------//
 

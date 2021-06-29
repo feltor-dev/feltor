@@ -420,7 +420,7 @@ struct UpwindProduct
 {
     template<class T>
     DG_DEVICE T operator()( T velocity, T backward, T forward)const{
-        velocity*m_up(velocity, backward, forward);
+        return velocity*m_up(velocity, backward, forward);
     }
     private:
     Upwind m_up;
