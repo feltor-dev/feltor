@@ -53,7 +53,7 @@ int main( int argc, char* argv[])
     );
     ///////MAKE MODEL///////////////////////////////////////////////
     DG_RANK0 std::cout << "Constructing Poet...\n";
-    poet::Poet<dg::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> poet( grid, p);
+    poet::Poet<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> poet( grid, p);
     DG_RANK0 std::cout << "Done!\n";
 
     //////////////////create initial fields///////////////////////////////////////

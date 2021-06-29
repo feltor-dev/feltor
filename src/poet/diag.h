@@ -136,14 +136,19 @@ std::vector<Record1d> diagnostics1d_list = {
         []( Variables& v ) {
           dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1));
           routines::Heaviside2d heavi(v.p.sigma);
-         
+#ifdef WITH_MPI
+          unsigned position = thrust::distance( v.tmp[0].data().begin(), thrust::max_element( v.tmp[0].data().begin(), v.tmp[0].data().end()) );
+          v.tmp[1] = dg::evaluate( dg::cooX2d, v.f.grid());
+          double X_max = v.tmp[1].data()[position] ;
+          v.tmp[1] = dg::evaluate( dg::cooY2d, v.f.grid());
+          double Y_max = v.tmp[1].data()[position] ;
+#else
           unsigned position = thrust::distance( v.tmp[0].begin(), thrust::max_element( v.tmp[0].begin(), v.tmp[0].end()) );
           v.tmp[1] = dg::evaluate( dg::cooX2d, v.f.grid());
-          double X_max = v.tmp[1][position] ;
+          double X_max = v.tmp[1][position];
           v.tmp[1] = dg::evaluate( dg::cooY2d, v.f.grid());
-          double Y_max = v.tmp[1][position] ;
-          std::cout<< X_max << "  " << Y_max << std::endl;
-            
+          double Y_max = v.tmp[1][position];
+#endif
           heavi.set_origin( X_max, Y_max );
           v.tmp[1] = dg::evaluate( heavi, v.f.grid());
           //Compute m_x0max
