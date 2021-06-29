@@ -586,9 +586,9 @@ class MCG
             dg::InvTridiag<HVec, HDiaMatrix, HCooMatrix> invtridiag(yH);
             HCooMatrix TinvH = invtridiag(m_TH); //Compute on Host!            
             dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1   
-            ContainerType y(get_iter(), 0.);
-            dg::assign(yH, y); //transfer to device
-            Ry(A, m_TH, Minv, M, y, x, b,  get_iter());  // x =  R T^(-1) e_1  
+//             ContainerType y(get_iter(), 0.);
+//             dg::assign(yH, y); //transfer to device
+            Ry(A, m_TH, Minv, M, yH, x, b,  get_iter());  // x =  R T^(-1) e_1  
         }
         return m_TH;
     }
