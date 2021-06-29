@@ -78,5 +78,27 @@ int main( )
                   <<" "<<sqrt(norm/sol)<<"  \t"<<vol<<"\n";
     }
     ///##########################################################///
+    std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
+    dg::DVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
+    dg::DVec funST(fun);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFAST(
+            mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my,
+            g3d.hz()/2.);
+    dsFAST( dg::geo::zeroMinus, fun, zMinus);
+    dsFAST( dg::geo::einsPlus,  fun, ePlus);
+    dg::geo::ds_slope( dsFAST, 1., zMinus, ePlus, 0., funST);
+    dsFAST( dg::geo::zeroPlus, funST, zPlus);
+    dsFAST( dg::geo::einsMinus, funST, eMinus);
+    dg::geo::ds_average( dsFAST, 1., eMinus, zPlus, 0., derivative);
+    dg::blas1::pointwiseDot( derivative, divb, derivative);
+    ds.dss( 1., fun, 1., derivative);
+
+    double sol = dg::blas2::dot( vol3d, sol3);
+    double vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, fun));
+    dg::blas1::axpby( 1., sol3, -1., derivative);
+    double norm = dg::blas2::dot( derivative, vol3d, derivative);
+    std::string name  = "directLapST";
+    std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+              <<" "<<sqrt(norm/sol)<<"  \t"<<vol<<"\n";
     return 0;
 }
