@@ -73,11 +73,10 @@ int main( int argc, char* argv[])
     dg::ExplicitMultistep<std::array<dg::x::DVec, 2>> multistep;
     dg::Adaptive< dg::ERKStep< std::array<dg::x::DVec,2>>> adapt;
     double rtol = 0., atol = 0., dt = 0.;
-  
     unsigned step = 0;
     double dt_out = p.dt*p.itstp;
     double t_out = dt_out;
-    
+
     if( p.timestepper == "multistep")
     {
         std::string tableau = ws[ "timestepper"]["tableau"].asString("TVB-3-3");
