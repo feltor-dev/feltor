@@ -17,6 +17,7 @@
 This write-up shows how we numerically treat parallel derivatives in a non field
 aligned coordinate system. It is mainly based on References~\cite{Hariri2014,Held2016,Stegmeir2017} and contains parts from References~\cite{WiesenbergerPhD, HeldPhD}
 }
+\tableofcontents
 \section{Discretization of parallel derivatives} \label{sec:parallel}
 We introduce the method
 and discuss some problems arising from the boundaries of the computational domain.
@@ -38,8 +39,10 @@ the solution of the differential equation
 \end{align}
 where $z^i$ is one of $(R, Z, \varphi)$ and $v^i$ are the contravariant components
 of $\vec v$ in cylindrical coordinates.
+\begin{tcolorbox}[title=Note]
 Note here that $s$ does NOT necessarily denote the distance
 (especially since we do not require the existence of a metric at this point).
+\end{tcolorbox}
 Moreover, by definition we have
 \begin{align}
     \frac{\d f(\vec z(s))}{\d s} = \vec v\cdot \nabla f|_{\vec z(s)}
@@ -87,8 +90,10 @@ polynomial at that point.
 \end{align}
 where $\vec z_k = (R,Z,\varphi_k)$ and $f_k = f(\vec z_k)$
 and $f_{k\pm 1} := f(\Tpm \vec z_k)$.
-Note that Eq.~\eqref{eq:paralleldis} reduces to
+\begin{tcolorbox}[title=Note]
+Eq.~\eqref{eq:paralleldis} reduces to
 the familiar centered difference formula in case of equidistant spacings.
+\end{tcolorbox}
 Eq.~\eqref{eq:paralleldis} is slightly different from Reference~\cite{Hariri2014}, where the $\d f/\d\varphi v^\varphi$ is discretized to avoid integrating $s$.
 However, our discretization has the advantage that it can be used for higher
 order derivatives as well (e.g. $\d^2f/\d \varphi^2$), which is not possible otherwise due to the chain rule
