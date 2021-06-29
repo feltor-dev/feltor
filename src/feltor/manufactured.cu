@@ -48,7 +48,7 @@ int main( int argc, char* argv[])
     //create RHS
     DG_RANK0 std::cout << "# Construct rhs" << std::endl;
     feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix,
-        dg::x::DVec> feltor( grid, p, mag);
+        dg::x::DVec> feltor( grid, p, mag, js);
 
     feltor::manufactured::Ne ne{ p.mu[0],p.mu[1],p.tau[0],p.tau[1],p.eta,
         p.beta,p.nu_perp_n,p.nu_parallel_u[0],p.nu_parallel_u[1]};
@@ -68,16 +68,17 @@ int main( int argc, char* argv[])
     dg::x::DVec R = dg::pullback( dg::cooX3d, grid);
     dg::x::DVec Z = dg::pullback( dg::cooY3d, grid);
     dg::x::DVec P = dg::pullback( dg::cooZ3d, grid);
+    dg::x::DVec PST = dg::pullback( dg::cooZ3d, grid);
+    dg::blas1::plus(PST, grid.hz()/2.);
+
     std::array<dg::x::DVec,2> phi{R,R}, sol_phi{phi};
     std::array<std::array<dg::x::DVec,2>,2> y0{phi,phi}, sol{y0};
     dg::x::DVec apar{R}, sol_apar{apar};
     dg::blas1::evaluate( y0[0][0], dg::equals(), ne, R,Z,P,0);
     dg::blas1::evaluate( y0[0][1], dg::equals(), ni, R,Z,P,0);
-    dg::blas1::evaluate( y0[1][0], dg::equals(), ue, R,Z,P,0);
-    dg::blas1::evaluate( y0[1][1], dg::equals(), ui, R,Z,P,0);
-    dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,P,0);
-    dg::blas1::plus(y0[0][0],-p.nbc); //ne-1
-    dg::blas1::plus(y0[0][1],-p.nbc); //Ni-1
+    dg::blas1::evaluate( y0[1][0], dg::equals(), ue, R,Z,PST,0);
+    dg::blas1::evaluate( y0[1][1], dg::equals(), ui, R,Z,PST,0);
+    dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,PST,0);
     dg::blas1::axpby(1./p.mu[0], apar, 1., y0[1][0]); //we=ue+1/mA
     dg::blas1::axpby(1./p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+1/mA
 
@@ -133,11 +134,6 @@ int main( int argc, char* argv[])
     dg::blas1::evaluate( sol_apar, dg::equals(), aa, R,Z,P,time);
     dg::blas1::evaluate( sol_phi[0], dg::equals(),phie,R,Z,P,time);
     dg::blas1::evaluate( sol_phi[1], dg::equals(),phii,R,Z,P,time);
-    dg::blas1::plus(sol[0][0],-p.nbc); //ne-nbc
-    dg::blas1::plus(sol[0][1],-p.nbc); //Ni-nbc
-    const std::array<std::array<dg::x::DVec,2>,2>& num = feltor.fields();
-    const std::array<dg::x::DVec,2>& num_phi = feltor.potentials();
-    const dg::x::DVec& num_apar = feltor.aparallel();
     double normne = sqrt(dg::blas2::dot( w3d, sol[0][0]));
     double normni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
     double normue = sqrt(dg::blas2::dot( w3d, sol[1][0]));
@@ -145,13 +141,13 @@ int main( int argc, char* argv[])
     double normphie = sqrt(dg::blas2::dot( w3d, sol_phi[0]));
     double normphii = sqrt(dg::blas2::dot( w3d, sol_phi[1]));
     double normapar = sqrt(dg::blas2::dot( w3d, sol_apar));
-    dg::blas1::axpby( 1., y0[0][0], -1.,sol[0][0]);
-    dg::blas1::axpby( 1., y0[0][1], -1.,sol[0][1]);
-    dg::blas1::axpby( 1., num[1][0], -1.,sol[1][0]);
-    dg::blas1::axpby( 1., num[1][1], -1.,sol[1][1]);
-    dg::blas1::axpby( 1., num_phi[0], -1.,sol_phi[0]);
-    dg::blas1::axpby( 1., num_phi[1], -1.,sol_phi[1]);
-    dg::blas1::axpby( 1., num_apar, -1.,sol_apar);
+    dg::blas1::axpby( 1., feltor.density(0), -1.,sol[0][0]);
+    dg::blas1::axpby( 1., feltor.density(1), -1.,sol[0][1]);
+    dg::blas1::axpby( 1., feltor.velocity(0), -1.,sol[1][0]);
+    dg::blas1::axpby( 1., feltor.velocity(1), -1.,sol[1][1]);
+    dg::blas1::axpby( 1., feltor.potential(0), -1.,sol_phi[0]);
+    dg::blas1::axpby( 1., feltor.potential(1), -1.,sol_phi[1]);
+    dg::blas1::axpby( 1., feltor.aparallel(), -1.,sol_apar);
     double errone = sqrt(dg::blas2::dot( w3d, sol[0][0]));
     double erroni = sqrt(dg::blas2::dot( w3d, sol[0][1]));
     double erroue = sqrt(dg::blas2::dot( w3d, sol[1][0]));

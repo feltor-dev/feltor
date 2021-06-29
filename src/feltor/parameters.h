@@ -31,9 +31,10 @@ struct Parameters
     double eta, beta;
 
     unsigned diff_order;
-    double nu_perp_n, nu_perp_u, nu_parallel_n;
+    double nu_perp_n, nu_perp_u;
     enum dg::direction diff_dir;
     std::string parallel_advection;
+    std::string slope_limiter;
 
     double source_rate, nwall, uwall, wall_rate;
     double sheath_rate, sheath_max_angle;
@@ -102,11 +103,12 @@ struct Parameters
                 js["regularization"].get( "direction", "centered").asString() );
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
-        nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
-        parallel_advection = js["advection"].get("parallel", "centered").asString();
-        if( (parallel_advection != "centered") && (parallel_advection != "upwind") &&
-                (parallel_advection != "upwind2"))
-            throw std::runtime_error( "ERROR: advection : parallel "+parallel_advection+" not recognized!\n");
+        //nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
+        slope_limiter = js["advection"].get("slope_limiter", "none").asString();
+        if( (parallel_advection != "none") && (parallel_advection != "minmod")
+             && (parallel_advection != "vanLeer")
+                )
+            throw std::runtime_error( "ERROR: advection : slope_limiter "+slope_limiter+" not recognized!\n");
 
         mu[0]       = js["physical"].get( "mu", -0.000272121).asDouble();
         mu[1]       = +1.;
@@ -124,8 +126,8 @@ struct Parameters
         }
         else if ( viscosity == "value")
         {
-            nu_parallel_u[0] = js["physical"].get("nu_parallel", 1.0).asDouble();
-            nu_parallel_u[1] = nu_parallel_u[1];
+            nu_parallel_u[0] = js["physical"]["nu_parallel"].get(0u, 1.0).asDouble();
+            nu_parallel_u[1] = js["physical"]["nu_parallel"].get(1u, 1.0).asDouble();
         }
         else
             throw std::runtime_error( "ERROR: physical viscosity "+viscosity+" not recognized!\n");
@@ -153,14 +155,14 @@ struct Parameters
         bcxA = dg::str2bc(js["boundary"]["bc"]["aparallel"].get( 0, "").asString());
         bcyA = dg::str2bc(js["boundary"]["bc"]["aparallel"].get( 1, "").asString());
 
-        if( fci_bc == "along_field")
+        if( fci_bc == "along_field" || fci_bc == "perp")
         {
             if( bcxN != bcyN || bcxN == dg::DIR_NEU || bcxN == dg::NEU_DIR)
-                throw std::runtime_error( "ERROR: For along field fci boundary condition density bc must be either dg::NEU or dg::DIR in both directions!\n");
+                throw std::runtime_error( "ERROR: density bc must be either dg::NEU or dg::DIR in both directions!\n");
             if( bcxU != bcyU || bcxU == dg::DIR_NEU || bcxU == dg::NEU_DIR)
-                throw std::runtime_error( "ERROR: For along field fci boundary condition velocity bc must be either dg::NEU or dg::DIR in both directions!\n");
+                throw std::runtime_error( "ERROR: velocity bc must be either dg::NEU or dg::DIR in both directions!\n");
             if( bcxP != bcyP || bcxP == dg::DIR_NEU || bcxP == dg::NEU_DIR)
-                throw std::runtime_error( "ERROR: For along field fci boundary condition potential bc must be either dg::NEU or dg::DIR in both directions!\n");
+                throw std::runtime_error( "ERROR: potential bc must be either dg::NEU or dg::DIR in both directions!\n");
         }
         else if( fci_bc != "perp")
             throw std::runtime_error("Error! FCI bc '"+fci_bc+"' not recognized!\n");

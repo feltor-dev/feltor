@@ -273,6 +273,7 @@ dg::x::HVec make_ntilde(
 
 /* The purpose of this file is to provide an interface for custom initial conditions and
  * source profiles.  Just add your own to the relevant map below.
+ * @note y0[1] has to be the staggered velocity
  */
 
 std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
@@ -300,8 +301,6 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             double nbg = js["density"].get("background", 0.1).asDouble();
             y0[0][0] = y0[0][1] = dg::construct<dg::x::DVec>(
                     dg::evaluate( dg::CONSTANT( nbg), grid));
-            // subtract bc value for density
-            dg::blas1::plus( y0[0], -p.nbc);
         }
         else if( "ne" == ntype || "ni" == ntype)
         {
@@ -317,8 +316,6 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
                         damping, double& density)
                     { density = (profile+ntilde-nbg)*damping+nbg;},
                     profile, ntilde, damping, density);
-            // subtract bc value for density
-            dg::blas1::plus( density, -p.nbc);
             //actually we should always invert according to Markus
             //because the dG direct application is supraconvergent
             std::string ptype = js["potential"].get("type", "zero_pol").asString();
@@ -329,11 +326,11 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
                 feltor.initializeni( y0[0][0], y0[0][1], ptype);
                 double minimalni = dg::blas1::reduce( y0[0][1], 1,
                         thrust::minimum<double>());
-                DG_RANK0 std::cerr << "# Minimum Ni value "<<minimalni+p.nbc<<std::endl;
-                if( minimalni + p.nbc <= 0.0)
+                DG_RANK0 std::cerr << "# Minimum Ni value "<<minimalni<<std::endl;
+                if( minimalni <= 0.0)
                 {
                     throw dg::Error(dg::Message()<< "ERROR: invalid initial condition. Increase value for alpha since now the ion gyrocentre density is negative!\n"
-                        << "Minimum Ni value "<<minimalni+p.nbc);
+                        << "Minimum Ni value "<<minimalni);
                 }
             }
             else if( "ni" == ntype)
@@ -344,7 +341,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
         }
         else
             throw dg::Error(dg::Message()<< "Invalid density initial condition "<<ntype<<"\n");
-        // init velocity and thus canonical W
+        // init (staggered) velocity and thus canonical W
         std::string utype = js["velocity"].get("type", "zero").asString();
         DG_RANK0 std::cout << "# Initialize velocity with "<<utype << std::endl;
         if( "zero" == utype)
@@ -355,7 +352,10 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             if( !(uprofile == "linear_cs"))
                 throw dg::Error(dg::Message(_ping_)<<"Warning! Unkown velocity profile '"<<uprofile<<"'! I don't know what to do! I exit!\n");
 
-            dg::x::HVec ui = dg::pullback( sheath_coordinate, grid);
+            dg::x::HVec coord2d = dg::pullback( sheath_coordinate,
+                    *grid.perp_grid());
+            dg::x::HVec ui;
+            dg::assign3dfrom2d( coord2d, ui, grid);
             dg::blas1::scal( ui, sqrt( 1.0+p.tau[1]));
             dg::assign( ui, y0[1][1]); // Wi = Ui
 
@@ -364,10 +364,9 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             // ue = Ui
             if( atype == "zero")
             {
-                double nbc = p.nbc;
-                dg::blas1::subroutine( [nbc] DG_DEVICE( double net, double nit,
+                dg::blas1::subroutine( [] DG_DEVICE( double ne, double ni,
                             double& ue, double ui)
-                        { ue = (nit+nbc)*ui/(net+nbc);}, y0[0][0], y0[0][1],
+                        { ue = ni*ui/ne;}, y0[0][0], y0[0][1],
                         y0[1][0], y0[1][1]);
             }
             else if( !(atype == "zero"))

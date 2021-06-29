@@ -87,14 +87,16 @@ int main( int argc, char* argv[])
     }
     else if( geometry_params != "params")
     {
-        DG_RANK0 std::cerr << "Error: Unknown magnetic field input '"<<geometry_params<<"'. Exit now!\n";
+        DG_RANK0 std::cerr << "Error: Unknown magnetic field input '"
+                           << geometry_params<<"'. Exit now!\n";
         abort_program();
     }
     const feltor::Parameters p( js);
     DG_RANK0 std::cout << js.asJson() <<  std::endl;
     std::string inputfile = js.asJson().toStyledString();
     dg::geo::TokamakMagneticField mag, mod_mag;
-    dg::geo::CylindricalFunctor wall, transition, sheath, sheath_coordinate = [](double x, double y){return 0.;};
+    dg::geo::CylindricalFunctor wall, transition, sheath, sheath_coordinate =
+        [](double x, double y){return 0.;};
     try{
         mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
         mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
@@ -112,7 +114,8 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 3, dims, periods, coords);
     if( dims[2] >= (int)p.Nz)
     {
-        DG_RANK0 std::cerr << "ERROR: Number of processes in z "<<dims[2]<<" may not be larger or equal Nz "<<p.Nz<<std::endl;
+        DG_RANK0 std::cerr << "ERROR: Number of processes in z "<<dims[2]
+                    <<" may not be larger or equal Nz "<<p.Nz<<std::endl;
         abort_program();
     }
 #endif //WITH_MPI
@@ -136,7 +139,7 @@ int main( int argc, char* argv[])
 
     DG_RANK0 std::cout << "# Constructing Feltor...\n";
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
-        dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag);
+        dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
     DG_RANK0 std::cout << "# Done!\n";
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
@@ -150,8 +153,6 @@ int main( int argc, char* argv[])
             dg::geo::createSheathRegion( js["boundary"]["sheath"],
                 dg::geo::createMagneticField(js["magnetic_field"]["params"]),
                 wall, sheath_walls, sheath);
-            // I think we should compute Sheath coordinates only for one plane
-            // and copy them to all planes
             sheath_coordinate = dg::geo::WallFieldlineCoordinate(
                     dg::geo::createBHat( mag), sheath_walls,
                     p.sheath_max_angle, 1e-6, p.sheath_coord);
@@ -161,10 +162,13 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cerr <<e.what()<<std::endl;
             abort_program();
         }
+        dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *grid.perp_grid());
+        dg::x::DVec coord3d;
+        dg::assign3dfrom2d( coord2d, coord3d, grid);
         feltor.set_sheath(
                 p.sheath_rate,
                 dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
-                dg::construct<dg::x::DVec>(dg::pullback( sheath_coordinate, grid)));
+                coord3d);
     }
 
     DG_RANK0 std::cout << "# Set Source \n";
@@ -237,9 +241,9 @@ int main( int argc, char* argv[])
     }
     else
     {
-        DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
+        DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
+                           << p.timestepper << "'! Exit now!";
         abort_program();
-        return -1;
     }
     DG_RANK0 std::cout << "Done!\n";
 
@@ -568,12 +572,11 @@ int main( int argc, char* argv[])
                 //----------------Test if ampere equation holds
                 if( p.beta != 0)
                 {
-                    dg::blas1::pointwiseDot(
-                        feltor.density(0), feltor.velocity(0), resultD);
-                    dg::blas1::pointwiseDot( p.beta,
-                        feltor.density(1), feltor.velocity(1), -p.beta, resultD);
+                    feltor.compute_lapMperpA( resultD);
                     double norm  = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
-                    dg::blas1::axpby( -1., feltor.lapMperpA(), 1., resultD);
+                    dg::blas1::pointwiseDot( -p.beta,
+                        feltor.density(0), feltor.velocity(0), p.beta,
+                        feltor.density(1), feltor.velocity(1), -1., resultD);
                     double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
                     DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
                 }
@@ -763,14 +766,13 @@ int main( int argc, char* argv[])
                 //----------------Test if ampere equation holds
                 if( p.beta != 0)
                 {
-                    dg::blas1::pointwiseDot(
-                        feltor.density(0), feltor.velocity(0), dvisual);
-                    dg::blas1::pointwiseDot( p.beta,
-                        feltor.density(1), feltor.velocity(1), -p.beta, dvisual);
+                    feltor.compute_lapMperpA( dvisual);
                     double norm  = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
-                    dg::blas1::axpby( -1., feltor.lapMperpA(), 1., dvisual);
+                    dg::blas1::pointwiseDot( -p.beta,
+                        feltor.density(0), feltor.velocity(0), p.beta,
+                        feltor.density(1), feltor.velocity(1), -1., dvisual);
                     double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
-                    std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
+                    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
                 }
 
             }

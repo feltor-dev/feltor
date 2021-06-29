@@ -514,7 +514,7 @@ colback=yellow!10!white, colframe=red!50!black,
     + \mu NU_\parallel\mathcal K_{\vn\times\bhat}(\psi) \nonumber\\
     =& -\tau \left(\bhat + {\vec b}_\perp\right)\cn N
     -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right)
-    - \eta n_e^2(U_{\parallel,i}-u_{\parallel,e})
+    - \eta n_e(N_iU_{\parallel,i}-n_eu_{\parallel,e})
     \nonumber\\
     &+ \mu \nu_\parallel \Delta_\parallel U+ \mu N\left(\Lambda_U + S_U\right) + \mu U_\parallel \left(\Lambda_N + S_N\right)
 \label{}
@@ -580,8 +580,11 @@ $\mu_{\parallel,e}:=0.73\frac{n_eT_e}{\nu_{ei}}$ and $\mu_{\parallel,i} = 0.96\f
 with $\ln \lambda \approx 10$.
 Note that $\nu_\parallel/N$ represents a kinematic viscosity and is a factor $\sqrt{|\mu_e|}$ smaller for ions than for electrons.
 The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
- The approximate Spitzer current \(J_{\parallel,s}:= n_e \left(U_{\parallel,i} - u_{\parallel,e}\right)\)
- determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel,s}$ (This form both conserves parallel momentum and a quadratic energy dissipation term).
+
+ The parallel current \(J_{\parallel}:=N_iU_{\parallel,i} - n_eu_{\parallel,e}\)
+ determines the parallel resistive terms to $R_\parallel:= n_e\eta J_{\parallel}$
+ (This form both conserves parallel momentum and vanishes for zero current but
+ does not lead to a quadratic energy dissipation term).
 
  Note also that since $A_\parallel/\mu_e$ is (potentially) much larger than $u_e$
  it is important that the diffusive operators act on $u_e$ rather than $w_e$.
@@ -674,7 +677,7 @@ used to implement and divergences.
 \nonumber \\&
 %\left.
 \vphantom{\frac{\vec b\times\vn \psi}{B}} %PHANTOM
-        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_{\parallel,i} - u_{\parallel,e})
+        - \frac{\eta}{\mu} \frac{n_e}{N}(N_iU_{\parallel,i} - n_eu_{\parallel,e})
         + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \nu_{U,\perp}(-\Delta_\perp)^s U_\parallel
     + S_U
 %\right] (1-\chi_s - \chi_w)
@@ -802,7 +805,7 @@ contains
 \subsection{Spatial grid} \label{sec:spatial}
 We define the simulation box as
 The spatial grid is an equidistant discretization of the 3D Cylindrical
-product-space $[R_{\min},R_{\max}] \times [Z_{\min},Z_{\max}] \times [0,2\pi]$
+product-space
 $[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
 where we define
 \begin{align} \label{eq:box}
@@ -1089,6 +1092,7 @@ where $\hat n$ is the normal vector to the boundary.
 \begin{minted}[texcomments]{js}
 "boundary":
 {
+    // must be either DIR or NEU in both directions!!
     "bc" :
     {
         "density" : [NEU, NEU], // boundary conditions in x and y for $n_e$
@@ -1629,28 +1633,28 @@ form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 We implemented an upwind-advection scheme for the perpendicular terms.
 No other scheme is currently choosable.
 
-For the parallel advection terms $U_\parallel \npar N$ and $U_\parallel \npar
-U_\parallel$ we can select several discretizations
+For the parallel advection we implemented a velocity-staggered finite-volume
+scheme. Here, we have some choices regarding the slope-limiter to use
 \begin{minted}[texcomments]{js}
 "advection":
 {
-    "parallel" : "centered" // centered differences for $U_\parallel \npar N$,
-    // and $U_\parallel \npar U_\parallel$
-    //  mandates artificial parallel diffusion to be stable (centered in space
-    // is unconditionally unstable without diffusion).
-    "parallel" : "upwind"  // 1st order upwind scheme for $U_\parallel \npar N$,
-    // centered for $U_\parallel \npar U_\parallel$
-    "parallel" : "upwind2"  // 2nd order upwind scheme for $U_\parallel \npar N$,
-    // centered for $U_\parallel \npar U_\parallel$
+    "slope-limiter" : "none", // no slope-limiter
+    "slope-limiter" : "minmod", // minmod has the highest dissipation
+    "slope-limiter" : "vanLeer", // an average slope-limiter
 }
 \end{minted}
+\begin{tcolorbox}[title=Note]
+    A slope limiter increases the discretization order from 1 to 2.
+\end{tcolorbox}
 \subsection{Regularization} \label{sec:regularization}
 In order to stabilize the advection schemes and/or remove cascading energy
 from small scale wave components
 we implement an artificial viscosity of order $s$ Eq.~\eqref{eq:perpdiffNU}
-for the perpendicular terms and parallel viscosity of order 1 for the
-density equations (the velocity equations already have a high physical
-viscosity and thus should not need additional damping)
+for the perpendicular terms.
+The finite volume scheme is shock capturing and thus does not need
+parallel viscosity in the density equations.
+The velocity equations already have a high physical
+viscosity and thus should not need additional damping.
 \begin{tcolorbox}[title=Note]
     We apply the viscosity to the parallel velocities $U_\parallel$ and
     not to the parallel canonical velocities $W_\parallel$.
@@ -1665,9 +1669,6 @@ viscosity and thus should not need additional damping)
     // increase this or the resolution if you see vertical or horizontal
     // oscillations in your simulation box, decrease if simulation
     // looks "out of focus"
-    "nu_parallel_n" : 1000 // $\nu_{N,\parallel}$, the density artificial parallel
-    // diffusion to stabilize the centered advection
-    // (should be chosen in units of $R_0^2$, for example $\nu_{N,\parallel} = 10^{-2} R_0^2$)
 }
 \end{minted}
 Simply set the diffusion to 0 if you do not want any regularization.
@@ -1715,12 +1716,6 @@ We discretize all parallel derivatives with the
 flux coordinate independent scheme (FCI) adapted to dG methods
 cf.~\cite{Held2016,Stegmeir2017}
 and use a support operator method.
-
-All terms use the direct centered difference, which turns out is best
-at keeping the numerical flux-surface leakage in $\RA{\nc ( \bhat NU_\parallel)}$ to a minimum, even
-though it is not exactly zero like in the adjoint discretizations, which in turn are unusable because they do not reliably converge.
-We also use the grid refinement technique (support operator)
-in particular also when field-aligning the initial condition.
 \begin{minted}[texcomments]{js}
 "FCI",
 {
@@ -1736,7 +1731,7 @@ in particular also when field-aligning the initial condition.
     // Does not have an effect on derivatives for the "along\_field" mode
     // (but has an effect on field-aligning init and source)
 
-    "bc" : "along_field", // use ds\_bc\_along\_field function for parallel
+    "bc" : "along_field", // use along\_field function for parallel
     // derivatives, only valid if boundary conditions for density, potential and
     // parallel velocity are each either "dg::DIR" or "dg::NEU" in both directions
     "bc" : "perp", // use perpendicular interpolation technique to implement
@@ -1778,7 +1773,7 @@ simulations crash. See also~\ref{sec:troubleshooting}
     // use the nu\_parallel field to determine value
     // same for electrons and ions
     "viscosity" : "value",
-    "nu_parallel" : 400
+    "nu_parallel" : [400,400] // first for electrons, second for ions
 }
 \end{minted}
 These parameters, together with the $R_0$ parameter in the magnetic field,
@@ -2059,7 +2054,7 @@ The relevant terms in the output file are
     lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_{N\parallel} \Delta_\parallel n_e$ \\
     sne\_tt & $S_{n_e}$ &
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
-    dnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
+    divjnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
     & \\
     ions & $N_i$ &
     jsniC\_tt &$ N_i ( \vec u_K + \vec u_C )\cn \psi_p$ \\
@@ -2069,7 +2064,7 @@ The relevant terms in the output file are
     lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_{N,\parallel} \Delta_\parallel N_i$ \\
     sni\_tt & $S_{N_i}$ &
     jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
-    dnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
+    divjnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
       & \\
 \bottomrule
 \end{longtable}
@@ -2099,11 +2094,11 @@ with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \vn\phi}/{B}$
   \nonumber\\
   &+ \sum_z z\left[\mu \tau NU_\parallel^2\vec K_{\vn\times\bhat} + \tau NU_\parallel \left(\bhat + {\vec b}_\perp\right)\right], \\
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U_\parallel^2 \right)
-  \Lambda_N  +  \mu NU_\parallel\left(\Lambda_U + \nu_\parallel\Delta_\parallel U_\parallel\right) \right]
+  \Lambda_N  +  \mu NU_\parallel\Lambda_U + \mu \nu_\parallel U_\parallel \Delta_\parallel U_\parallel \right]
 \nonumber \\
   S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U_\parallel^2 \right)S_{N}\right]
 \nonumber \\
-  R_{\mathcal E} =&  -\eta_\parallel  \left[ n_e(U_{\parallel,i}-u_{\parallel,e})\right]^2.
+R_{\mathcal E} =&  -\eta_\parallel  n_e(U_{\parallel,i}-u_{\parallel,e})(N_iU_{\parallel,i} - n_eu_{\parallel,e}).
 \end{align}
 where in the energy flux $\vec j_{\mathcal E}$
 we neglect terms  containing time derivatives
@@ -2137,7 +2132,7 @@ The relevant terms in the output file are
     niui2 &$ z_i\mu_i N_i U_{\parallel,i}^2/2$ \\
     see\_tt & $z_e(\tau_e (1+\ln n_e) + \phi + \frac{1}{2}\mu_e u_{\parallel,e}^2) S_{n_e} $ \\
     sei\_tt & $z_i(\tau_i (1+\ln N_i) + \psi + \frac{1}{2}\mu_i U_{\parallel,i}^2) S_{N_i} $ \\
-    resistivity\_tt &-$\eta_\parallel n_e^2 (U_{\parallel,i}-u_{\parallel,e})^2$ \\
+    resistivity\_tt &-$\eta_\parallel n_e (U_{\parallel,i}-u_{\parallel,e})(N_iU_{\parallel,i}-n_eu_{\parallel,e})$ \\
     jsee\_tt &$z_e(\tau_e \ln n_e + \mu_e u_{\parallel,e}^2/2 + \phi)n_e(\vec u_E + \vec u_C + \vec u_K)\cn \psi_p
         + z_e \tau_e n_e u_{\parallel,e}^2 \vec K_{\vn\times\bhat}\cn \psi_p$ \\
     jsei\_tt &$z_i(\tau_i \ln N_i + \mu_i U_{\parallel,i}^2/2 + \psi_i)N_i(\vec u_E^i + \vec u_C + \vec u_K)\cn \psi_p
@@ -2148,11 +2143,15 @@ The relevant terms in the output file are
         + z_i \tau_i N_i U_{\parallel,i} \vec{ b}_\perp \cn \psi_p $ \\
     leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e}$ \\
     leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i}$ \\
-    leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
-    z_e\mu_e n_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
-    leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_{N,\parallel} \Delta_\parallel N_i +
-    z_i\mu_i N_i
-    U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
+    %leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
+    %z_e\mu_e n_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
+    %leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_{N,\parallel} \Delta_\parallel N_i +
+    %z_i\mu_i N_i
+    %U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
+    leeparallel\_tt & $ z_e\mu_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
+    leiparallel\_tt & $ z_i\mu_i U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
+    divjeeparallel\_tt &$ z_e\nc \left( (\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) n_eu_{\parallel,e}\bhat\right)$ \\
+    divjeiparallel\_tt &$ z_i\nc \left( (\tau_i(1+\ln N_i) + \psi + \mu_iU_{\parallel,i}^2/2) N_iU_{\parallel,i}\bhat\right)$ \\
 \bottomrule
 \end{longtable}
 
@@ -2249,6 +2248,8 @@ The relevant terms in the output file are (the Lorentz force term is described i
     sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi + \mu_i S_{U,i} N_i b_\varphi $ \\
     lparpar\_tt   & $\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ &
     lparperp\_tt & $U_{\parallel,i} \Lambda_{N_i} + N_i\Lambda_{U_i} $ \\
+    divjpare\_tt & $ \nc( -\mu_e n_e u_{\parallel,e}^2 \bhat)$ &
+    divjpari\_tt & $ \nc( +\mu_i N_i U_{\parallel,i}^2 \bhat)$ \\
 \bottomrule
 \end{longtable}
 Note that the parallel viscosity term vanishes exactly under the flux-surface average. This can serve as a numerical test.
@@ -2256,7 +2257,7 @@ Note that the parallel viscosity term vanishes exactly under the flux-surface av
 \subsection{Parallel electron force balance}
 We gather the dominant terms in the electron momentum equation (neglecting all terms as $\mu_e=0$). This leaves the parallel force balance
 \begin{align}
-    -(\bhat + \vec b_\perp) \cn n_e +n_e\left( \left( \bhat + \vec b_\perp \right) \cn \phi + \frac{\partial A_\parallel}{\partial t} \right) +\eta n_e^2 \left( U_{\parallel,i} - u_{\parallel,e}\right) = 0
+    -(\bhat + \vec b_\perp) \cn n_e +n_e\left( \left( \bhat + \vec b_\perp \right) \cn \phi + \frac{\partial A_\parallel}{\partial t} \right) +\eta n_e \left( N_iU_{\parallel,i} - n_eu_{\parallel,e}\right) = 0
 \end{align}
 \begin{longtable}{llll}
 \toprule
@@ -2264,7 +2265,7 @@ We gather the dominant terms in the electron momentum equation (neglecting all t
 \textbf{Name} &  \textbf{Equation}\\
 \midrule
     sparphie\_tt & $n_e\npar \phi$ &
-    friction\_tt & $ \eta n_e^2(U_{\parallel,i}-u_{\parallel,e})$ \\
+    friction\_tt & $ \eta n_e(N_iU_{\parallel,i}-n_eu_{\parallel,e})$ \\
     sparmirrore\_tt & $-\npar n_e$ &
     sparmirrorAe\_tt & $-\vn A_\parallel \times \bhat \cn n_e /B$ \\
     sparphiAe\_tt & $n_e \vn A_\parallel \times \bhat \cn \phi /B$ &

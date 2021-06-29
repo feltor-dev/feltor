@@ -8,7 +8,10 @@ namespace feltor
 {//We use the typedefs and DG_RANK0
 //
 //everyone reads their portion of the input data
-std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, const dg::x::CylindricalGrid3d& grid, const Parameters& p, double& time){
+std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
+        const dg::x::CylindricalGrid3d& grid, const Parameters& p,
+        double& time)
+{
 #ifdef WITH_MPI
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -33,7 +36,8 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     bool      pINsymmetric = pIN.symmetric;
     DG_RANK0 std::cout << "RESTART from file "<<file_name<< std::endl;
     DG_RANK0 std::cout << " file parameters:" << std::endl;
-    DG_RANK0 std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz<<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
+    DG_RANK0 std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz
+                <<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
 
     // Now read in last timestep
     dg::x::CylindricalGrid3d grid_IN( grid.x0(), grid.x1(), grid.y0(),
@@ -48,7 +52,8 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     if( pINsymmetric)
     {
         std::unique_ptr< typename dg::x::CylindricalGrid3d::perpendicular_grid>
-            grid_perp ( static_cast<typename dg::x::CylindricalGrid3d::perpendicular_grid*>(grid.perp_grid()));
+            grid_perp ( static_cast<typename
+                dg::x::CylindricalGrid3d::perpendicular_grid*>(grid.perp_grid()));
         interpolateIN = dg::create::interpolation( grid, *grid_perp);
         transferIN = dg::evaluate(dg::zero, *grid_perp);
     }
@@ -80,7 +85,8 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     }
     std::vector<dg::x::HVec> transferOUTvec( 5, dg::evaluate( dg::zero, grid));
 
-    std::string namesIN[5] = {"restart_electrons", "restart_ions", "restart_Ue", "restart_Ui", "restart_aparallel"};
+    std::string namesIN[5] = {"restart_electrons", "restart_ions",
+        "restart_Ue", "restart_Ui", "restart_aparallel"};
 
     int timeIDIN;
     size_t size_time, count_time = 1;
@@ -107,14 +113,14 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name, c
     errIN = nc_close(ncidIN);
     /// ///////////////Now Construct initial fields ////////////////////////
     //
-    //Convert to N-nbc and W
-    dg::blas1::plus( transferOUTvec[0], -p.nbc);
-    dg::blas1::plus( transferOUTvec[1], -p.nbc);
-    dg::blas1::axpby( 1., transferOUTvec[2], 1./p.mu[0], transferOUTvec[4], transferOUTvec[2]);
-    dg::blas1::axpby( 1., transferOUTvec[3], 1./p.mu[1], transferOUTvec[4], transferOUTvec[3]);
+    //Convert to W
+    dg::blas1::axpby( 1., transferOUTvec[2], 1./p.mu[0], transferOUTvec[4],
+            transferOUTvec[2]);
+    dg::blas1::axpby( 1., transferOUTvec[3], 1./p.mu[1], transferOUTvec[4],
+            transferOUTvec[3]);
 
-    dg::assign( transferOUTvec[0], y0[0][0]); //ne-nbc
-    dg::assign( transferOUTvec[1], y0[0][1]); //Ni-nbc
+    dg::assign( transferOUTvec[0], y0[0][0]); //ne
+    dg::assign( transferOUTvec[1], y0[0][1]); //Ni
     dg::assign( transferOUTvec[2], y0[1][0]); //We
     dg::assign( transferOUTvec[3], y0[1][1]); //Wi
     return y0;
