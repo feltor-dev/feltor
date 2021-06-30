@@ -104,6 +104,19 @@ std::vector<Record> diagnostics2d_list = {
     }    
 };
 
+std::vector<Record> restart2d_list = {
+    {"restart_electrons", "Electron density",
+        []( dg::x::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.density(0), result);
+        }
+    },
+    {"restart_ions", "Ion gyro-centre density",
+        []( dg::x::DVec& result, Variables& v ) {
+             dg::blas1::copy(v.f.density(1), result);
+        }
+    }    
+};
+
 std::vector<Record1d> diagnostics1d_list = {
     {"time_per_step", "Computation time per step",
         []( Variables& v ) {

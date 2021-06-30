@@ -205,7 +205,7 @@ int main( int argc, char* argv[])
         dg::file::NC_Error_Handle err;
         int ncid=-1;
         try{
-            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+            DG_RANK0 err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
         }catch( std::exception& e)
         {
             std::cerr << "ERROR creating file "<<outputfile<<std::endl;

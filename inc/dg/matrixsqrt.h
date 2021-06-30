@@ -56,8 +56,7 @@ struct DirectSqrtODESolve
      */    
     unsigned operator()(const Container& x, Container& b)
     {
-        unsigned counter =  dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtode, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-        return counter;
+        return dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtode, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
     }
   private:
     dg::SqrtODE<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_sqrtode;  

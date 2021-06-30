@@ -508,8 +508,7 @@ int integrateAdaptive(
 
                 counter++;
                 dg::blas1::axpby(  1., last, -1., u1, delta);
-                dg::blas1::subroutine( detail::Tolerance<value_type>( rtol,
-                            atol, size), last, delta);
+                dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol, size), last, delta);
                 value_type eps0 = norm(delta);
                 if( domain.contains( u1) )
                 {

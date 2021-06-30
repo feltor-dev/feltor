@@ -17,6 +17,7 @@
 
 #include "poet.h"
 #include "init.h"
+#include "init_from_file.h"
 #include "diag.h"
 
 
@@ -59,24 +60,39 @@ int main( int argc, char* argv[])
     //////////////////create initial fields///////////////////////////////////////
     double time = 0.;
     std::array<dg::x::DVec,2> y0;
-    try{
-        y0 = poet::initial_conditions(poet, grid, p, ws );
-    }catch ( std::exception& error){
-        DG_RANK0 std::cerr << "Error in input file\n ";
-        DG_RANK0 std::cerr << error.what();
+    if( argc == 4 )
+    {
+        try{
+            y0 = poet::init_from_file(argv[3], grid, p, time);
+        }catch (std::exception& error){
+            DG_RANK0 std::cerr << "ERROR occured initializing from file "<<argv[3]<<std::endl;
+            DG_RANK0 std::cerr << error.what()<<std::endl;
 #ifdef WITH_MPI
-        MPI_Abort(MPI_COMM_WORLD, -1);
+            MPI_Abort(MPI_COMM_WORLD, -1);
 #endif //WITH_MPI
-        return -1;
+            return -1;
+        }
     }
+    else {
+        try{
+            y0 = poet::initial_conditions(poet, grid, p, ws );
+        }catch ( std::exception& error){
+            DG_RANK0 std::cerr << "Error in input file\n ";
+            DG_RANK0 std::cerr << error.what();
+#ifdef WITH_MPI
+            MPI_Abort(MPI_COMM_WORLD, -1);
+#endif //WITH_MPI
+            return -1;
+        }
+    }
+    
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
     dg::ExplicitMultistep<std::array<dg::x::DVec, 2>> multistep;
     dg::Adaptive< dg::ERKStep< std::array<dg::x::DVec,2>>> adapt;
     double rtol = 0., atol = 0., dt = 0.;
     unsigned step = 0;
     double dt_out = p.dt*p.itstp;
-    double t_out = dt_out;
-
+    double t_out = time + dt_out;
     if( p.timestepper == "multistep")
     {
         std::string tableau = ws[ "timestepper"]["tableau"].asString("TVB-3-3");
@@ -204,7 +220,7 @@ int main( int argc, char* argv[])
         dg::file::NC_Error_Handle err;
         int ncid=-1;
         try{
-            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+            DG_RANK0 err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
         }catch( std::exception& e)
         {
             std::cerr << "ERROR creating file "<<outputfile<<std::endl;
@@ -232,17 +248,18 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
                 pair.first.data(), pair.second.size(), pair.second.data());
 
-        int dim_ids[3], tvarID;
-        std::map<std::string, int> id1d, id3d;
+        int dim_ids[3], restart_dim_ids[2], tvarID;
+        std::map<std::string, int> id1d, id3d, restart_ids;
         dg::x::CartesianGrid2d grid_out(  0, p.lx, 0, p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y
             #ifdef WITH_MPI
             , comm
             #endif //WITH_MPI
             );
         dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
-        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out,
+        DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out,
                 {"time", "y", "x"});
-
+        DG_RANK0 err = dg::file::define_dimensions( ncid, restart_dim_ids, grid,
+                {"yr", "xr"});
         //Create field IDs
         for( auto& record : poet::diagnostics2d_list)
         {
@@ -264,6 +281,16 @@ int main( int argc, char* argv[])
                 &id1d.at(name));
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
                     long_name.size(), long_name.data());
+        }
+        for( auto& record : poet::restart2d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            restart_ids[name] = 0;//creates a new entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, restart_dim_ids,
+                &restart_ids.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name), "long_name", long_name.size(),
+                long_name.data());
         }
         for( auto& record : poet::diagnostics1d_list)
         {
@@ -360,6 +387,12 @@ int main( int argc, char* argv[])
                 dg::blas2::gemv( projection, resultH, transferH);
                 dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
                 DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
+            }
+            for( auto& record : poet::restart2d_list)
+            {
+                record.function( resultD, var);
+                dg::assign( resultD, resultH);
+                dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
             }
             for( auto& record : poet::diagnostics1d_list)
             {
