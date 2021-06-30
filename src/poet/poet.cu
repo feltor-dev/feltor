@@ -193,8 +193,8 @@ int main( int argc, char* argv[])
                         multistep.step( poet, time, y0);
                 }
                 catch( dg::Fail& fail) {
-                    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                    std::cerr << "Does Simulation respect CFL condition?\n";
+                    DG_RANK0 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    DG_RANK0 std::cerr << "Does Simulation respect CFL condition?\n";
                     glfwSetWindowShouldClose( w, GL_TRUE);
                     break;
                 }
@@ -202,8 +202,8 @@ int main( int argc, char* argv[])
             }
             t_out += dt_out;
             ti.toc();
-            std::cout << "\n\t Step "<<step;
-            std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n";
+            DG_RANK0 std::cout << "\n\t Step "<<step;
+            DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n";
         }
         glfwTerminate();
     }
@@ -263,7 +263,7 @@ int main( int argc, char* argv[])
         //Create field IDs
         for( auto& record : poet::diagnostics2d_list)
         {
-            std::cout << record.name << std::endl;
+            DG_RANK0 std::cout << record.name << std::endl;
             std::string name = record.name;
             std::string long_name = record.long_name;
             id3d[name] = 0;
