@@ -52,12 +52,10 @@
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * @{
- *     @defgroup time ODE solvers
+ *     @defgroup time Time integration
  *      \f$ \dot y = f(y,t) \f$
- *     @{
- *          @defgroup time_utils Utilities for ODE solvers
- *     @}
- *     @defgroup integration Time integration
+ *     @defgroup time_utils Utilities for ODE solvers
+ *     @defgroup integration Quadrature
  *      \f$ \int_{t_0}^T u(t) dt \f$
  *     @defgroup extrapolation Extrapolation
  *     @defgroup invert Linear and nonlinear solvers
