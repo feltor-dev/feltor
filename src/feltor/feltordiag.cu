@@ -90,24 +90,20 @@ int main( int argc, char* argv[])
     unsigned npsi = 3, Npsi = 64, Neta = 640;//set number of psivalues (NPsi % 8 == 0)
     //std::cin >> npsi >> Npsi >> Neta;
     std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
-    std::cout << "Generate X-point flux-aligned grid!\n";
-    double R_X = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-    double Z_X = -1.1*mag.params().elongation()*mag.params().a();
-    dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
-    dg::geo::CylindricalSymmTensorLvl1 monitor_chi =
-        dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
+    std::cout << "Generate orthogonal flux-aligned grid ... \n";
     double R_O = mag.R0(), Z_O = 0;
     dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
     double psipO = mag.psip()(R_O, Z_O);
 
-    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO,
-            R_X, Z_X, mag.R0(), 0, 0, false);
     double fx_0 = 1./8.;
     double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
     std::cout << "psi max is            "<<psipmax<<"\n";
     psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
-    dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
+    dg::geo::SimpleOrthogonal generator(mag.get_psip(),
+            psipO, psipmax, mag.R0(), 0., 0.1*psipO, 1);
+    dg::geo::CurvilinearGrid2d gridX2d (generator,
+            npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
     std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
     std::cout << "DONE!\n";
     //Create 1d grid
@@ -121,7 +117,7 @@ int main( int argc, char* argv[])
 
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     /// Compute flux volume label
-    dg::Average<dg::HVec > poloidal_average( gridX2d.grid(), dg::coo2d::y);
+    dg::Average<dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
     dg::HVec dvdpsip;
     //metric and map
     dg::SparseTensor<dg::HVec> metricX = gridX2d.metric();

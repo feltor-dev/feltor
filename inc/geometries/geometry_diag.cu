@@ -176,28 +176,47 @@ int main( int argc, char* argv[])
     unsigned Npsi = js["grid"].get("Npsi", 32).asUInt();
     unsigned Neta = js["grid"].get("Neta", 640).asUInt();
     /// -------  Elements for fsa on X-point grid ----------------
-    std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
-    if( mag_description == dg::geo::description::standardX)
+    //std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
+    std::unique_ptr<dg::geo::CurvilinearGrid2d> gX2d;
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
-        std::cout << "Generate X-point flux-aligned grid ... \n";
-        double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-        double ZX = -1.1*mag.params().elongation()*mag.params().a();
-        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-        double psipX = mag.psip()(RX, ZX);
-        std::cout << "X-point found at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
-        if( fabs(psipX ) > 1e-10)
-        {
-            std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
-            return -1;
-        }
-        dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, true);
+        std::cout << "Generate orthogonal flux-aligned grid ... \n";
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipO;
         std::cout << "psi 1 is          "<<psipmax<<"\n";
-        gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR, dg::NEU);
+        // this one is actually slightly better than the X-point grid
+        dg::geo::SimpleOrthogonal generator(mag.get_psip(),
+                psipO, psipmax, mag.R0(), 0., 0.1*psipO, 1);
+        gX2d = std::make_unique<dg::geo::CurvilinearGrid2d>(generator,
+                npsi, Npsi, Neta, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";
-        dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
+    //    std::cout << "Generate X-point flux-aligned grid ... \n";
+    //    double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+    //    double ZX = -1.1*mag.params().elongation()*mag.params().a();
+    //    dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+    //    double psipX = mag.psip()(RX, ZX);
+    //    std::cout << "X-point found at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
+    //    if( fabs(psipX ) > 1e-10)
+    //    {
+    //        std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
+    //        return -1;
+    //    }
+    //    dg::geo::CylindricalSymmTensorLvl1 monitor_chi =
+    //        dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
+    //    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi,
+    //            psipO, RX, ZX, mag.R0(), 0, 0, true);
+    //    double fx_0 = 1./8.;
+    //    psipmax = -fx_0/(1.-fx_0)*psipO;
+    //    std::cout << "psi 1 is          "<<psipmax<<"\n";
+    //    gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0,
+    //            0., npsi, Npsi, Neta, dg::DIR, dg::NEU);
+    //    std::cout << "DONE! \n";
+        //dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
+        dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
         dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
@@ -207,7 +226,8 @@ int main( int argc, char* argv[])
         avg_eta( volX2d, dvdpsip, false);
         dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
         dg::Grid1d gX1d(psipO<psipmax ? psipO : psipmax,
-            psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
+            psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU);
+        //inner value is always zero
         dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d);
         map1d.emplace_back( "dvdpsip", dvdpsip,
             "Derivative of flux volume with respect to flux label psi");
@@ -222,7 +242,8 @@ int main( int argc, char* argv[])
         dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
         map1d.emplace_back( "psi_area", X_psi_area,
             "Flux area on X-point grid");
-        std::cout << "Total volume within separatrix is "<< dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
+        std::cout << "Total volume within separatrix is "
+              << dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
 
         //Compute FSA of cylindrical functions
         dg::HVec transferH, transferH1d;
@@ -318,10 +339,17 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    if( mag_description == dg::geo::description::standardX)
+    //if( mag_description == dg::geo::description::standardX)
+    //{
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
         int dim_idsX[2] = {0,0};
-        err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
+        //err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
+        err = dg::file::define_dimensions( ncid, dim_idsX, *gX2d, {"eta", "zeta"} );
         std::string long_name = "Flux surface label";
         err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
             long_name.size(), long_name.data());
