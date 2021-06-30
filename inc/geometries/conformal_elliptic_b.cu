@@ -103,7 +103,8 @@ int main(int argc, char**argv)
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "eps\tn\t Nx\t Ny \t # iterations \t error  \t time/iteration (s)\t hx_max\t hy_max\t hx_min\t hy_min \n";
     std::cout << "Orthogonal:\n";
-    dg::geo::SimpleOrthogonal generator0(c.get_psip(), psi_0, psi_1, gp.R_0, 0., 0);
+    dg::geo::SimpleOrthogonal generator0(c.get_psip(), psi_0, psi_1, gp.R_0,
+            0., psi_0, 0);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::geo::CurvilinearGrid2d g2d(generator0, n, Nx, Ny);
@@ -115,7 +116,8 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "Orthogonal Adapted:\n";
-    dg::geo::SimpleOrthogonal generator1(c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::SimpleOrthogonal generator1(c.get_psip(), psi_0, psi_1, gp.R_0,
+            0., psi_0, 1);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::geo::CurvilinearGrid2d g2d(generator1, n, Nx, Ny);

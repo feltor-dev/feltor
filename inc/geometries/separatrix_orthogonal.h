@@ -266,10 +266,14 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 
         thrust::host_vector<double> xIC, yIC, hIC, xOC,yOC,hOC;
         thrust::host_vector<double> xIF, yIF, hIF, xOF,yOF,hOF;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC,
+                xIC, yIC, hIC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC,
+                xOC, yOC, hOC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF,
+                xIF, yIF, hIF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF,
+                xOF, yOF, hOF);
         //now glue far and close back together
         thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size());
         thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);

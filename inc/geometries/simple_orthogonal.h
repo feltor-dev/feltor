@@ -36,7 +36,7 @@ struct Fpsi
         X_init = x0, Y_init = y0;
         while( fabs( psi.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psi.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.;
-        firstline_ = firstline;
+        m_firstline = firstline;
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0)
@@ -67,9 +67,9 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps, end_old = end; N*=2;
-            if( firstline_ == 0)
+            if( m_firstline == 0)
                 dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
-            if( firstline_ == 1)
+            if( m_firstline == 1)
                 dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
@@ -85,7 +85,7 @@ struct Fpsi
     }
 
     private:
-    int firstline_;
+    int m_firstline;
     double X_init, Y_init;
     CylindricalFunctorsLvl1 psip_;
     CylindricalSymmTensorLvl1 chi_;
@@ -217,9 +217,7 @@ void construct_rz( Nemov nemov,
         const thrust::host_vector<double>& z_init, //1d intial values of the first psi surface
         thrust::host_vector<double>& r,
         thrust::host_vector<double>& z,
-        thrust::host_vector<double>& h//,
-        //thrust::host_vector<double>& hr,
-        //thrust::host_vector<double>& hz
+        thrust::host_vector<double>& h
     )
 {
     unsigned N = 1;
@@ -232,36 +230,51 @@ void construct_rz( Nemov nemov,
     std::array<thrust::host_vector<double>,3> end(begin), temp(begin);
     unsigned sizeX = x_vec.size(), sizeY = r_init.size();
     unsigned size2d = x_vec.size()*r_init.size();
-    r.resize(size2d), z.resize(size2d), h.resize(size2d); //hr.resize(size2d), hz.resize(size2d);
+    r.resize(size2d), z.resize(size2d), h.resize(size2d);
     double x0=x_0, x1 = x_vec[0];
-    thrust::host_vector<double> r_old(r), r_diff( r), z_old(z), z_diff(z);
-    while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
+    thrust::host_vector<double> r_new(r_init), z_new(z_init), h_new(r_init);
+    thrust::host_vector<double> r_old(r_init), r_diff( r_init);
+    thrust::host_vector<double> z_old(z_init), z_diff(z_init);
+    for( unsigned i=0; i<sizeX; i++)
     {
-        r_old = r, z_old = z; eps_old = eps;
-        temp = begin;
-        //////////////////////////////////////////////////
-        for( unsigned i=0; i<sizeX; i++)
+        N = 1;
+        eps = 1e10, eps_old=2e10;
+        begin = temp;
+        while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
         {
+            r_old = r_new, z_old = z_new; eps_old = eps;
+            temp = begin;
+            //////////////////////////////////////////////////
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
             dg::stepperRK( "Feagin-17-8-10",  nemov, x0, temp, x1, end, N);
+            //dg::stepperRK( "Dormand-Prince-7-4-5",  nemov, x0, temp, x1, end, N);
             for( unsigned j=0; j<sizeY; j++)
             {
-                unsigned idx = j*sizeX+i;
-                 r[idx] = end[0][j],  z[idx] = end[1][j];
-                //hr[idx] = end[3][j], hz[idx] = end[4][j];
-                 h[idx] = end[2][j];
+                r_new[j] = end[0][j],  z_new[j] = end[1][j];
+                h_new[j] = end[2][j];
             }
             //////////////////////////////////////////////////
             temp = end;
+            dg::blas1::axpby( 1., r_new, -1., r_old, r_diff);
+            dg::blas1::axpby( 1., z_new, -1., z_old, z_diff);
+            dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
+            dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
+            try{
+                eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeY); //should be relative to the interpoint distances
+            } catch ( dg::Error& )
+            {
+                eps = eps_old;
+                r_new = r_old , z_new = z_old;
+            }
+            //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n";
+            N*=2;
         }
-        dg::blas1::axpby( 1., r, -1., r_old, r_diff);
-        dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-        dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
-        dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
-        eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeX/sizeY); //should be relative to the interpoint distances
-        //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n";
-        N*=2;
+        for( unsigned j=0; j<sizeY; j++)
+        {
+            unsigned idx = sizeX*j+i;
+            r[idx] = r_new[j],  z[idx] = z_new[j], h[idx] = h_new[j];
+        }
     }
 
 }
@@ -275,7 +288,16 @@ void construct_rz( Nemov nemov,
 /**
  * @brief Generate a simple orthogonal grid
  *
- * Psi is the radial coordinate and you can choose various discretizations of the first line
+ * First discretize a closed flux surface.
+ * Then each point is followed along the gradient of Psi to obtain
+ * the points on other flux surfaces.
+ * @note find more details in <a href =
+ * "https://doi.org/10.1016/j.jcp.2017.03.056"> M. Wiesenberger, M. Held, L.
+ * Einkemmer Streamline integration as a method for two-dimensional elliptic
+ * grid generation Journal of Computational Physics 340, 435-450 (2017) </a>
+ *
+ * Psi is the radial coordinate and you can choose various discretizations of
+ * the first line
  * @ingroup generators_geo
  * @snippet flux_t.cu doxygen
  */
@@ -285,15 +307,20 @@ struct SimpleOrthogonal : public aGenerator2d
      * @brief Construct a simple orthogonal grid
      *
      * @param psi \f$\psi(x,y)\f$ is the flux function and its derivatives in Cartesian coordinates (x,y)
-     * @param psi_0 first boundary
-     * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param mode This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param psi_0 first boundary (can be open)
+     * @param psi_1 second boundary (can be open)
+     * @param x0 a point on or close to the contour line given by psi_firstline
+     * @param y0 a point on or close to the contour line given by psi_firstline
+     * @param psi_firstline psi value for first line discretization (must be a
+     * closed flux surface)
+     * @param mode Indicate mode used to create
+     * the first line discretization: 0 is conformal, 1 is an equalarc adaption
      */
     SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double
-            psi_1, double x0, double y0, int mode =0): SimpleOrthogonal( psi,
-                CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, mode)
+            psi_1, double x0, double y0, double psi_firstline, int mode =0
+            ):
+        SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0,
+                psi_firstline, mode)
     {
         m_orthogonal = true;
     }
@@ -302,22 +329,29 @@ struct SimpleOrthogonal : public aGenerator2d
      *
      * @param psi \f$\psi(x,y)\f$ is the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param chi is the monitor tensor and its divergenc in Cartesian coordinates (x,y)
-     * @param psi_0 first boundary
-     * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param mode This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param psi_0 first boundary (can be open)
+     * @param psi_1 second boundary (can be open)
+     * @param x0 a point on or close to the contour line given by psi_firstline
+     * @param y0 a point on or close to the contour line given by psi_firstline
+     * @param psi_firstline psi value for first line discretization (must be a
+     * closed flux surface)
+     * @param mode Indicate mode used to create
+     * the first line discretization: 0 is conformal, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int mode =0):
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const
+            CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1,
+            double x0, double y0, double psi_firstline, int mode = 0
+            ):
         psi_(psi), chi_(chi)
     {
         assert( psi_1 != psi_0);
-        firstline_ = mode;
+        m_firstline = mode;
         orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, mode);
-        f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
+        f0_ = fabs( fpsi.construct_f( psi_firstline, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
         m_orthogonal = false;
+        m_zeta_first = f0_*(psi_firstline-psi_0);
     }
 
     /**
@@ -344,10 +378,12 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& etaY) const
     {
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov nemov(psi_, chi_, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init,
+                R0_, Z0_, f0_, m_firstline);
+        orthogonal::detail::Nemov nemov(psi_, chi_, f0_, m_firstline);
         thrust::host_vector<double> h;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
+        orthogonal::detail::construct_rz(nemov, m_zeta_first, zeta1d, r_init,
+                z_init, x, y, h);
         unsigned size = x.size();
         for( unsigned idx=0; idx<size; idx++)
         {
@@ -365,7 +401,8 @@ struct SimpleOrthogonal : public aGenerator2d
     CylindricalFunctorsLvl2 psi_;
     CylindricalSymmTensorLvl1 chi_;
     double f0_, lz_, R0_, Z0_;
-    int firstline_;
+    int m_firstline;
+    double m_zeta_first;
     bool m_orthogonal;
 };
 

@@ -80,15 +80,17 @@ int main( int argc, char* argv[])
                 mag.get_ipol(), psi_0, psi_1, mag.R0(), 0., mode, false);
     else if( type == "orthogonal")
     {
+        double psi_init = js["grid"]["generator"]["firstline"].asDouble();
         if( mode == 0 || mode == 1)
             generator = std::make_unique<dg::geo::SimpleOrthogonal>(
-                    mag.get_psip(), psi_0, psi_1, mag.R0(), 0., mode);
+                mag.get_psip(), psi_0, psi_1, mag.R0(), 0., psi_init, mode);
         if( mode > 1)
         {
             dg::geo::CylindricalSymmTensorLvl1 lc =
                 dg::geo::make_LiseikinCollective( mag.get_psip(), 0.1, 0.001);
             generator = std::make_unique<dg::geo::SimpleOrthogonal>(
-                    mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., mode%2);
+                mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., psi_init,
+                mode%2);
         }
     }
     else if( type == "ribeiro-flux")
@@ -156,7 +158,7 @@ int main( int argc, char* argv[])
     //////////////////////////////setup and write netcdf//////////////////
     int ncid;
     dg::file::NC_Error_Handle err;
-    std::string outfile = argc<2 ? "flux.nc" : argv[2];
+    std::string outfile = argc<3 ? "flux.nc" : argv[2];
     err = nc_create( outfile.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     err = dg::file::define_dimensions(  ncid, dim2d, g2d_periodic);
