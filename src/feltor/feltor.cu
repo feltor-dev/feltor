@@ -598,13 +598,15 @@ int main( int argc, char* argv[])
                 record.function( resultD, var);
                 dg::blas2::symv( projectD, resultD, transferD);
                 dg::assign( transferD, transferH);
-                dg::file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
+                dg::file::put_vara_double( ncid, id4d.at(record.name), start,
+                        g3d_out, transferH);
             }
             for( auto& record : feltor::restart3d_list)
             {
                 record.function( resultD, var);
                 dg::assign( resultD, resultH);
-                dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
+                dg::file::put_var_double( ncid, restart_ids.at(record.name),
+                        grid, resultH);
             }
             for( auto& record : feltor::diagnostics2d_list)
             {
@@ -613,12 +615,14 @@ int main( int argc, char* argv[])
                     std::string name = record.name+"_ta2d";
                     transferH2d = time_integrals.at(name).get_integral();
                     time_integrals.at(name).flush();
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
 
                     name = record.name+"_2d";
                     transferH2d = time_integrals.at(name).get_integral( );
                     time_integrals.at(name).flush( );
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
                 }
                 else // compute from scratch
                 {
@@ -628,13 +632,15 @@ int main( int argc, char* argv[])
                     std::string name = record.name+"_ta2d";
                     dg::assign( transferD, transferH);
                     toroidal_average( transferH, transferH2d, false);
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
 
                     // 2d data of plane varphi = 0
                     name = record.name+"_2d";
                     feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                     dg::assign( transferD2d, transferH2d);
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
                 }
             }
             DG_RANK0 err = nc_close(ncid);

@@ -1120,7 +1120,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         m_faST( dg::geo::einsMinus, m_divNUb[i], m_minus);
         // We always use NEU for the fluxes for now
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::blas1::axpby( 1., m_plus, -1., m_minus, m_divNUb[i]);
+        dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0, m_divNUb[i]);
         dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0, m_temp0);
         dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., m_divNUb[i]);
         dg::blas1::axpby( 1., m_divNUb[i], 1., yp[0][i]);
@@ -1131,7 +1131,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         m_faST( dg::geo::einsPlus,  m_temp0, m_plus);
         m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::blas1::axpbypgz( 0.5, m_plus, -0.5, m_minus, 1., yp[1][i]);
+        dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
 
         // Add density gradient and electric field
         double tau = m_p.tau[i], mu = m_p.mu[i];
@@ -1152,7 +1152,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
             m_fa( dg::geo::einsPlus, m_velocityST[i], m_plus);
             update_parallel_bc_2nd( m_minus, m_velocityST[i], m_plus, m_p.bcxU, 0.);
             dg::geo::dssd_centered( m_divb, m_fa, m_p.nu_parallel_u[i],
-                    m_minus, m_velocity[i], m_plus, 0., m_temp0);
+                    m_minus, m_velocityST[i], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
         }
     }

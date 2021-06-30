@@ -33,7 +33,6 @@ struct Parameters
     unsigned diff_order;
     double nu_perp_n, nu_perp_u;
     enum dg::direction diff_dir;
-    std::string parallel_advection;
     std::string slope_limiter;
 
     double source_rate, nwall, uwall, wall_rate;
@@ -105,8 +104,8 @@ struct Parameters
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
         //nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
         slope_limiter = js["advection"].get("slope_limiter", "none").asString();
-        if( (parallel_advection != "none") && (parallel_advection != "minmod")
-             && (parallel_advection != "vanLeer")
+        if( (slope_limiter != "none") && (slope_limiter != "minmod")
+             && (slope_limiter != "vanLeer")
                 )
             throw std::runtime_error( "ERROR: advection : slope_limiter "+slope_limiter+" not recognized!\n");
 

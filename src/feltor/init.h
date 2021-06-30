@@ -135,8 +135,8 @@ dg::x::HVec make_profile(
         double nbg      = js.get( "background", 1.0).asDouble();
         if( sigma == 0)
             throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in turbulence on gaussian\n");
-        dg::Gaussian prof( mag.R0()+posX*mag.params().a(), posY*mag.params().a(), sigma,
-            sigma, nprofamp);
+        dg::Gaussian prof( mag.R0()+posX*mag.params().a(),
+                posY*mag.params().a(), sigma, sigma, nprofamp);
         profile = dg::pullback( prof, grid);
         dg::blas1::plus( profile, nbg);
     }
@@ -213,7 +213,9 @@ dg::x::HVec make_ntilde(
         double posY  = js.get( "posY", 0.).asDouble();
         if( sigma == 0)
             throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in straight blob initial condition\n");
-        dg::Gaussian init0( mag.R0()+posX*mag.params().a(), posY*mag.params().a(), sigma, sigma, amp);
+        dg::Gaussian init0( mag.R0()+posX*mag.params().a(),
+                posY*mag.params().a(), sigma*mag.params().a(),
+                sigma*mag.params().a(), amp);
         if( grid.Nz() == 1 )
             ntilde = dg::pullback( init0, grid);
         else
@@ -221,16 +223,26 @@ dg::x::HVec make_ntilde(
             double rk4eps = js.get("rk4eps", 1e-6).asDouble();
             unsigned mx = js["refine"].get( 0u, 5).asUInt();
             unsigned my = js["refine"].get( 1u, 5).asUInt();
-            dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix, dg::x::HVec>
-                fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
-                dg::geo::NoLimiter(), rk4eps, mx, my);
+            dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
+                dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
+                        dg::geo::NoLimiter(), rk4eps, mx, my);
             //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
+            std::string parallel = js.get( "parallel", "gaussian").asString();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in blob initial condition\n");
-            dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
-            ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+            if( parallel == "gaussian")
+            {
+                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+            }
+            else if( parallel == "step")
+            {
+                dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+
+            }
         }
     }
     else if ( "turbulence" == type)
@@ -244,16 +256,26 @@ dg::x::HVec make_ntilde(
             double rk4eps = js.get("rk4eps", 1e-6).asDouble();
             unsigned mx = js["refine"].get( 0u, 2).asUInt();
             unsigned my = js["refine"].get( 1u, 2).asUInt();
-            dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix, dg::x::HVec>
-                fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
-                dg::geo::NoLimiter(), rk4eps, mx, my);
+            dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
+                dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
+                        dg::geo::NoLimiter(), rk4eps, mx, my);
             //evaluate should always be used with mx,my > 1 (but this takes more memory)
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
+            std::string parallel = js.get( "parallel", "gaussian").asString();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
-            dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
-            ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+            if( parallel == "gaussian")
+            {
+                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+            }
+            else if( parallel == "step")
+            {
+                dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
+                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+
+            }
         }
     }
     else if(  "zonal" == type)

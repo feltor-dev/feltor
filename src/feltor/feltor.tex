@@ -1248,14 +1248,20 @@ We can choose between several initial conditions for $\tilde n$:
 %\subsubsection{Blob}
 We initialize a blob in the R-Z plane
 \begin{align} \label{eq:initial_blob}
-  \tilde n_{blob}(R,Z,0) = \triangle n \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+  \tilde n_{blob}(R,Z,0) = \triangle n \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2 a^2} \right)
 \end{align}
-Then, we use fieldline integration modulated by
+Then, we use fieldline integration modulated by either
 \begin{align} \label{eq:modulation_blob}
-  m_{blob}(s) = \exp\left( -\frac{s^2 }{\pi^2\sigma_z^2} \right)
+    m_{\text{gaussian}}(\varphi) = \exp\left( -\frac{\varphi^2 }{\pi^2\sigma_z^2} \right)
 \end{align}
-to transform this blob to all other poloidal
-planes.
+or
+\begin{align} \label{eq:modulation_step}
+    m_{\text{step}}(\varphi) = \begin{cases}
+        1 &\text{for } -\pi\sigma_z < \varphi < \pi \sigma_z \\
+        0 & \text{else}
+    \end{cases}
+\end{align}
+to transform this blob to all other poloidal planes.
 We either follow fieldlines around the torus several times or only once.
 \begin{minted}[texcomments]{js}
 "density":
@@ -1271,7 +1277,9 @@ We either follow fieldlines around the torus several times or only once.
         "refine" : [5,5], // FCI should be used with high refinement but this
         // takes a lot of memory
         "revolutions" : 1, // times the blob is followed around the torus
-        "sigma_z" :  0.5 // $\sigma_z$ in Eq.\eqref{eq:modulation_blob}
+        "parallel" : "gaussian" // Eq.\eqref{eq:modulation_blob}
+        "parallel" : "step" // Eq.\eqref{eq:modulation_step}
+        "sigma_z" :  0.5 // $\sigma_z$ in Eq.\eqref{eq:modulation_blob} or \eqref{eq:modulation_step}
     }
 }
 \end{minted}
@@ -1296,7 +1304,9 @@ Again, we transform this to all poloidal planes along the magnetic field lines a
         "refine" : [5,5], // FCI should be used with high refinement but this
         // takes a lot of memory
         "revolutions" : 1, // times the bath is followed around the torus
-        "sigma_z" :  0.5 // $\sigma_z$ in Eq.\eqref{eq:modulation_blob}
+        "parallel" : "gaussian" // Eq.\eqref{eq:modulation_blob}
+        "parallel" : "step" // Eq.\eqref{eq:modulation_step}
+        "sigma_z" :  0.5 // $\sigma_z$ in Eq.\eqref{eq:modulation_blob} or \eqref{eq:modulation_step}
     }
 }
 \end{minted}
@@ -1638,9 +1648,9 @@ scheme. Here, we have some choices regarding the slope-limiter to use
 \begin{minted}[texcomments]{js}
 "advection":
 {
-    "slope-limiter" : "none", // no slope-limiter
-    "slope-limiter" : "minmod", // minmod has the highest dissipation
-    "slope-limiter" : "vanLeer", // an average slope-limiter
+    "slope_limiter" : "none", // no slope-limiter
+    "slope_limiter" : "minmod", // minmod has the highest dissipation
+    "slope_limiter" : "vanLeer", // an average slope-limiter
 }
 \end{minted}
 \begin{tcolorbox}[title=Note]
