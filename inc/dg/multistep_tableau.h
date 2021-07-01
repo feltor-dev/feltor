@@ -147,7 +147,7 @@ MultistepTableau<real_type> imex_koto_2_2()
     // stabilized 2nd order method
     unsigned steps = 2, order = 2;
     std::vector<real_type> am(steps,0), bm(steps, 0), cm(steps+1,0);
-    std::vector<real_type> ap(steps,0), bp(steps, 0), cp(steps+1,0);
+    std::vector<real_type> ap(steps+1,0), bp(steps+1, 0), cp(steps+1,0);
     //real_type a = 1.5, b = 1.5;
     real_type a = 20., b = 20.;
     ap[0] = a;
