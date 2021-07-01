@@ -340,8 +340,8 @@ void Poet<G,  M,  container>::operator()( double t, const std::array<container,2
         dg::blas1::transform( y[i], m_ype[i], dg::PLUS<double>(1.));
         if (i==0)
         {
-            dg::blas2::symv( m_centered[0], m_ype[i], m_gradn[0]); //dx n
-            dg::blas2::symv( m_centered[1], m_ype[i], m_gradn[0]); //dy n
+            dg::blas2::symv( m_centered[0], y[i], m_gradn[0]); //dx n
+            dg::blas2::symv( m_centered[1], y[i], m_gradn[1]); //dy n
         }
         //ExB drift  - v_y dy n - v_x dx n
         dg::blas2::symv( -1., m_centered[1], m_psi[i], 0., m_chi); //v_x
