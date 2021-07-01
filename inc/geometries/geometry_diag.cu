@@ -190,7 +190,7 @@ int main( int argc, char* argv[])
         std::cout << "psi 1 is          "<<psipmax<<"\n";
         // this one is actually slightly better than the X-point grid
         dg::geo::SimpleOrthogonal generator(mag.get_psip(),
-                psipO, psipmax, mag.R0(), 0., 0.1*psipO, 1);
+                psipO, psipmax, mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
         gX2d = std::make_unique<dg::geo::CurvilinearGrid2d>(generator,
                 npsi, Npsi, Neta, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";

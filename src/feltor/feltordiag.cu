@@ -101,7 +101,7 @@ int main( int argc, char* argv[])
     psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
     dg::geo::SimpleOrthogonal generator(mag.get_psip(),
-            psipO, psipmax, mag.R0(), 0., 0.1*psipO, 1);
+            psipO, psipmax, mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
     dg::geo::CurvilinearGrid2d gridX2d (generator,
             npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
     std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
