@@ -103,11 +103,11 @@ struct Parameters
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
         //nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
-        slope_limiter = js["advection"].get("slope_limiter", "none").asString();
+        slope_limiter = js["advection"].get("slope-limiter", "none").asString();
         if( (slope_limiter != "none") && (slope_limiter != "minmod")
              && (slope_limiter != "vanLeer")
                 )
-            throw std::runtime_error( "ERROR: advection : slope_limiter "+slope_limiter+" not recognized!\n");
+            throw std::runtime_error( "ERROR: advection : slope-limiter "+slope_limiter+" not recognized!\n");
 
         mu[0]       = js["physical"].get( "mu", -0.000272121).asDouble();
         mu[1]       = +1.;
