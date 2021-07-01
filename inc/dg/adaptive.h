@@ -554,6 +554,40 @@ int integrateERK( std::string name,
                   RHS& rhs,
                   get_value_type<ContainerType> t0,
                   const ContainerType& u0,
+                  get_value_type<ContainerType>& t1,
+                  ContainerType& u1,
+                  get_value_type<ContainerType> dt,
+                  ControlFunction control,
+                  ErrorNorm norm,
+                  get_value_type<ContainerType> rtol,
+                  get_value_type<ContainerType> atol=1e-10,
+                  const Domain& domain = EntireDomain()
+              )
+{
+    dg::Adaptive<dg::ERKStep<ContainerType>> pd( name,u0);
+    return integrateAdaptive( pd, rhs, t0, u0, t1, u1, dt, control, norm, rtol,
+            atol, domain);
+}
+/**
+ * @brief Shortcut for \c dg::integrateAdaptive with an embedded ERK class as timestepper
+ * @snippet adaptive_t.cu function
+ * @snippet adaptive_t.cu doxygen
+ * @param name name of an embedded method that \c ConvertsToButcherTableau
+ * @copydoc hide_integrateAdaptive
+ */
+template<class RHS,
+         class ContainerType,
+         class ErrorNorm = get_value_type<ContainerType>( const
+                 ContainerType&),
+         class ControlFunction = get_value_type<ContainerType>
+    (get_value_type<ContainerType>, get_value_type<ContainerType>,
+     get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned,
+     unsigned),
+         class Domain = EntireDomain>
+int integrateERK( std::string name,
+                  RHS& rhs,
+                  get_value_type<ContainerType> t0,
+                  const ContainerType& u0,
                   get_value_type<ContainerType> t1,
                   ContainerType& u1,
                   get_value_type<ContainerType> dt,
@@ -568,5 +602,6 @@ int integrateERK( std::string name,
     return integrateAdaptive( pd, rhs, t0, u0, t1, u1, dt, control, norm, rtol,
             atol, domain);
 }
+
 ///@}
 }//namespace dg
