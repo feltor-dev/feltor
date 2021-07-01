@@ -516,10 +516,14 @@ int main( int argc, char* argv[])
                     try{
                         if( p.timestepper == "adaptive")
                         {
-                            adapt.step( feltor, time, y0, time, y0, dt,
-                                    dg::pid_control, dg::l2norm, rtol, atol);
-                            if( adapt.failed())
-                                failed_counter++;
+                            do{
+                                adapt.step( feltor, time, y0, time, y0, dt,
+                                        dg::pid_control, dg::l2norm, rtol, atol);
+                                if( adapt.failed())
+                                    failed_counter++;
+                                if( dt < 1e-6)
+                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                            }while( adapt.failed());
                         }
                         if( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
@@ -743,10 +747,14 @@ int main( int argc, char* argv[])
                     try{
                         if( p.timestepper == "adaptive")
                         {
-                            adapt.step( feltor, time, y0, time, y0, dt,
-                                    dg::pid_control, dg::l2norm, rtol, atol);
-                            if( adapt.failed())
-                                failed_counter++;
+                            do{
+                                adapt.step( feltor, time, y0, time, y0, dt,
+                                        dg::pid_control, dg::l2norm, rtol, atol);
+                                if( adapt.failed())
+                                    failed_counter++;
+                                if( dt < 1e-6)
+                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                            }while( adapt.failed());
                         }
                         if( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);

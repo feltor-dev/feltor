@@ -83,7 +83,8 @@ int main( int argc, char* argv[])
         double RO = mag.R0(), ZO = 0.;
         int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         psipO = mag.psip()( RO, ZO);
-        std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
+        std::cout << "O-point found at "<<RO<<" "<<ZO
+                  <<" with Psip "<<psipO<<std::endl;
         if( point == 1 )
             std::cout << " (minimum)"<<std::endl;
         if( point == 2 )
@@ -226,7 +227,8 @@ int main( int argc, char* argv[])
         avg_eta( volX2d, dvdpsip, false);
         dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
         dg::Grid1d gX1d(psipO<psipmax ? psipO : psipmax,
-            psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU);
+                        psipO<psipmax ? psipmax : psipO,
+                        npsi, Npsi, dg::DIR_NEU);
         //inner value is always zero
         dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d);
         map1d.emplace_back( "dvdpsip", dvdpsip,

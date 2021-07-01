@@ -860,7 +860,7 @@ std::vector<Record> diagnostics2d_list = {
                     v.f.velocity(1), v.f.lapParU(1), 0., result);
         }
     },
-    {"divjeeparallel_tt", "Divergence of Parallel electron energy flux (Time average)", true,
+    {"divjeepar_tt", "Divergence of Parallel electron energy flux (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             // Multiply out divNUb to get implementable form
             double z = -1.;
@@ -878,7 +878,7 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( z*v.p.mu[0], v.tmp[0], v.f.dsU(0), 1., result);
         }
     },
-    {"divjeiparallel_tt", "Divergence of Parallel ion energy flux (Time average)", true,
+    {"divjeipar_tt", "Divergence of Parallel ion energy flux (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             // Multiply out divNUb to get implementable form
             double z = +1.;

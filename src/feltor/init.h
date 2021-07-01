@@ -241,7 +241,13 @@ dg::x::HVec make_ntilde(
             {
                 dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
                 ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
-
+            }
+            else if( parallel == "double-step")
+            {
+                ntilde = fieldaligned.evaluate( init0, [sigma_z](double s) {
+                        if( (s <  0) && (s > -sigma_z*M_PI)) return 0.5;
+                        if( (s >= 0) && (s < +sigma_z*M_PI)) return 1.0;
+                        return 0.;}, 0, revolutions);
             }
         }
     }

@@ -90,25 +90,31 @@ int main( int argc, char* argv[])
     unsigned npsi = 3, Npsi = 64, Neta = 640;//set number of psivalues (NPsi % 8 == 0)
     //std::cin >> npsi >> Npsi >> Neta;
     std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
-    std::cout << "Generate orthogonal flux-aligned grid ... \n";
-    double R_O = mag.R0(), Z_O = 0;
-    dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
-    double psipO = mag.psip()(R_O, Z_O);
-
+    double RO = mag.R0(), ZO = 0;
+    int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    double psipO = mag.psip()(RO, ZO);
+    std::cout << "O-point found at "<<RO<<" "<<ZO
+              <<" with Psip "<<psipO<<std::endl;
+    if( point == 1 )
+        std::cout << " (minimum)"<<std::endl;
+    if( point == 2 )
+        std::cout << " (maximum)"<<std::endl;
     double fx_0 = 1./8.;
-    double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
-    std::cout << "psi max is            "<<psipmax<<"\n";
-    psipmax = -fx_0/(1.-fx_0)*psipO;
-    std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
+    double psipmax = -fx_0/(1.-fx_0)*psipO;
+    std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
+    std::cout << "Generate orthogonal flux-aligned grid ... \n";
     dg::geo::SimpleOrthogonal generator(mag.get_psip(),
             psipO, psipmax, mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
     dg::geo::CurvilinearGrid2d gridX2d (generator,
             npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
-    std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
     std::cout << "DONE!\n";
     //Create 1d grid
-    dg::Grid1d g1d_out(psipO, psipmax, npsi, Npsi, dg::DIR_NEU); //inner value is always 0
-    std::cout << "Cell separatrix boundary is "<<Npsi*(1.-fx_0)*g1d_out.h()+g1d_out.x0()<<"\n";
+    dg::Grid1d g1d_out(psipO<psipmax ? psipO : psipmax,
+                       psipO<psipmax ? psipmax : psipO,
+                       npsi, Npsi, dg::DIR_NEU);
+    //inner value is always 0 (hence the boundary condition)
+    std::cout << "Cell separatrix boundary is "
+              <<Npsi*(1.-fx_0)*g1d_out.h()+g1d_out.x0()<<"\n";
     const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
@@ -167,7 +173,8 @@ int main( int argc, char* argv[])
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
-    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, npsi ,Npsi,dg::DIR_NEU);
+    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, npsi
+            ,Npsi,dg::DIR_NEU);
     qprofile = dg::evaluate( qprof, g1d_fine);
     dg::HVec w1d = dg::create::weights( g1d_fine);
     double psit_tot = dg::blas1::dot( w1d, qprofile);
