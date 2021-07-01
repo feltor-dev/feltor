@@ -101,7 +101,15 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             v.f.compute_vorticity( 1., v.f.potential(0), 0., result);
         }
-    }    
+    },
+    {"lperpinv", "Perpendicular density gradient length scale", 
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(1.0, v.f.gradn(0), v.f.gradn(0), 1.0, v.f.gradn(1), v.f.gradn(1), 0.0, result);
+            dg::blas1::pointwiseDivide( result, v.f.density(0), result);
+            dg::blas1::pointwiseDivide( result, v.f.density(0), result);
+            dg::blas1::transform( result, result, dg::SQRT<double>());
+        }
+    },    
 };
 
 std::vector<Record> restart2d_list = {

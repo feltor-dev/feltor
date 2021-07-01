@@ -19,6 +19,7 @@ struct Poet
     const container& potential( int i) const { return m_psi[i];}
     const container& density(   int i) const { return m_ype[i];}
     const container& psi2() const {return m_psi2;}
+    const container& gradn(int i) const { return m_gradn[i]; }
     const Geometry& grid() const {return m_multigrid.grid(0);}
     const container& volume() const {return m_volume;}
     void compute_vorticity ( double alpha, const container& in, double beta, container& result)
@@ -134,7 +135,7 @@ struct Poet
 
     container m_chi, m_omega, m_iota, m_gamma_n, m_psi1, m_psi2, m_rho_m1, m_phi_m1, m_gamma0sqrtinv_rho_m1, m_gamma0sqrt_phi_m1;
     const container m_binv; //magnetic field
-    std::array<container,2> m_psi, m_ype;
+    std::array<container,2> m_psi, m_ype, m_gradn;
     
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, container>  m_lapMperp; //contains normalized laplacian
@@ -168,7 +169,7 @@ Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p 
     m_volume( dg::create::volume(grid)), m_v2d( dg::create::inv_weights(grid)), m_one( dg::evaluate(dg::one, grid)),
     m_p(p)
 {
-    m_psi[0] = m_psi[1] = m_ype[0] = m_ype[1]  = m_chi; 
+    m_psi[0] = m_psi[1] = m_ype[0] = m_ype[1]  = m_gradn[0] = m_gradn[1] = m_chi; 
     m_multi_chi= m_multigrid.project( m_chi);
     m_multi_iota= m_multigrid.project( m_chi);
     m_multi_elliptic.resize(3);
@@ -333,10 +334,15 @@ void Poet<G,  M,  container>::operator()( double t, const std::array<container,2
     m_psi[0] = polarisation( t, y);
     m_psi[1] = compute_psi( t, m_psi[0]);
 
+
     for( unsigned i=0; i<y.size(); i++) 
     {
         dg::blas1::transform( y[i], m_ype[i], dg::PLUS<double>(1.));
-        
+        if (i==0)
+        {
+            dg::blas2::symv( m_centered[0], m_ype[i], m_gradn[0]); //dx n
+            dg::blas2::symv( m_centered[1], m_ype[i], m_gradn[0]); //dy n
+        }
         //ExB drift  - v_y dy n - v_x dx n
         dg::blas2::symv( -1., m_centered[1], m_psi[i], 0., m_chi); //v_x
         dg::blas2::symv( 1., m_centered[0], m_psi[i], 0., m_iota); //v_y
