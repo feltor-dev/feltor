@@ -282,7 +282,16 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
     double psipRZ = psi.dfxy()(X[0], X[1]);
     double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
     double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
-    double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+    double D0 =  (psipZZ*psipRR - psipRZ*psipRZ);
+    if(D0 == 0) // try to change initial guess slightly if we are very lucky
+    {
+        X[0] *= 1.0001, X[1]*=1.0001;
+        psipRZ = psi.dfxy()(X[0], X[1]);
+        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+        psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        D0 =  (psipZZ*psipRR - psipRZ*psipRZ);
+    }
+    double Dinv = 1./D0;
     while( (eps < eps_old || eps > 1e-7) && eps > 1e-10 && counter < 100)
     {
         //newton iteration
@@ -294,10 +303,12 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
         psipRZ = psi.dfxy()(X[0], X[1]);
         psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
         psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
-        Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        D0 = (psipZZ*psipRR - psipRZ*psipRZ);
+        Dinv = 1./D0;
+        if( D0 == 0) break;
         counter++;
     }
-    if ( counter >= 100 || std::isnan( Dinv) )
+    if ( counter >= 100 || D0 == 0|| std::isnan( Dinv) )
         return 0;
     RC = X[0], ZC = X[1];
     if( Dinv > 0 &&  psipRR > 0)
