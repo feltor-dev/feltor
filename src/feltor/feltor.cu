@@ -94,11 +94,11 @@ int main( int argc, char* argv[])
     const feltor::Parameters p( js);
     DG_RANK0 std::cout << js.asJson() <<  std::endl;
     std::string inputfile = js.asJson().toStyledString();
-    dg::geo::TokamakMagneticField mag, mod_mag;
+    dg::geo::TokamakMagneticField mag, mod_mag, unmod_mag;
     dg::geo::CylindricalFunctor wall, transition, sheath, sheath_coordinate =
         [](double x, double y){return 0.;};
     try{
-        mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
+        mag = unmod_mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
         mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
                 js["boundary"]["wall"], wall, transition);
     }catch(std::runtime_error& e)
@@ -131,11 +131,15 @@ int main( int argc, char* argv[])
         #endif //WITH_MPI
         );
 
-    //create RHS
+    if( p.periodify)
+    {
+        unmod_mag = dg::geo::periodify( unmod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+        mod_mag = dg::geo::periodify( mod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+    }
     if( p.modify_B)
         mag = mod_mag;
-    if( p.periodify)
-        mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+    else
+        mag = unmod_mag;
 
     DG_RANK0 std::cout << "# Constructing Feltor...\n";
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
@@ -148,11 +152,11 @@ int main( int argc, char* argv[])
     {
         DG_RANK0 std::cout << "# Compute Sheath coordinates \n";
         try{
-            // sheath is created on unmodified magnetic field
             dg::Grid2d sheath_walls( Rmin, Rmax, Zmin, Zmax, 1, 1, 1);
             dg::geo::createSheathRegion( js["boundary"]["sheath"],
                 dg::geo::createMagneticField(js["magnetic_field"]["params"]),
                 wall, sheath_walls, sheath);
+            // sheath is created on feltor magnetic field
             sheath_coordinate = dg::geo::WallFieldlineCoordinate(
                     dg::geo::createBHat( mag), sheath_walls,
                     p.sheath_max_angle, 1e-6, p.sheath_coord);
@@ -177,7 +181,7 @@ int main( int argc, char* argv[])
         dg::x::HVec ne_profile, source_profile;
         double minne = 0., minrate = 0., minalpha = 0.;
         source_profile = feltor::source_profiles(
-            fixed_profile, ne_profile, grid, mag, js["source"],
+            fixed_profile, ne_profile, grid, mag, unmod_mag, js["source"],
             minne, minrate, minalpha);
         feltor.set_source( fixed_profile,
                 dg::construct<dg::x::DVec>(ne_profile), p.source_rate,
@@ -213,7 +217,7 @@ int main( int argc, char* argv[])
     else
     {
         try{
-            y0 = feltor::initial_conditions(feltor, grid, p, mod_mag,
+            y0 = feltor::initial_conditions(feltor, grid, p, mag, unmod_mag,
                     js["init"], time, sheath_coordinate );
         }catch ( dg::Error& error){
             DG_RANK0 std::cerr << error.what();

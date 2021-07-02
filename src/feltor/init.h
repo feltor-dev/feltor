@@ -42,7 +42,7 @@ struct Radius : public dg::geo::aCylindricalFunctor<Radius>
 
 dg::x::HVec xpoint_damping(
     const dg::x::CylindricalGrid3d& grid,
-    const dg::geo::TokamakMagneticField& mag )
+    const dg::geo::TokamakMagneticField& mag ) // unmodified field
 {
     dg::x::HVec xpoint_damping = dg::evaluate( dg::one, grid);
     if( mag.params().getDescription() == dg::geo::description::standardX)
@@ -70,7 +70,7 @@ dg::x::HVec xpoint_damping(
 }
 dg::x::HVec pfr_damping(
     const dg::x::CylindricalGrid3d& grid,
-    const dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& mag, // unmodified field
     dg::file::WrappedJsonValue js
     )
 {
@@ -147,7 +147,7 @@ dg::x::HVec make_profile(
 
 dg::x::HVec make_damping(
     const dg::x::CylindricalGrid3d& grid,
-    const dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& mag, //unmodified field
     dg::file::WrappedJsonValue js, double& nbg )
 {
     //js = input["damping"]
@@ -307,7 +307,9 @@ dg::x::HVec make_ntilde(
 std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
     Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& feltor,
     const dg::x::CylindricalGrid3d& grid, const feltor::Parameters& p,
-    const dg::geo::TokamakMagneticField& mag, dg::file::WrappedJsonValue js,
+    const dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& unmod_mag,
+    dg::file::WrappedJsonValue js,
     double & time, dg::geo::CylindricalFunctor& sheath_coordinate )
 {
 #ifdef WITH_MPI
@@ -337,7 +339,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
                     js["density"]["ntilde"]);
             dg::x::HVec profile = detail::make_profile( grid, mag,
                     js["density"]["profile"]);
-            dg::x::HVec damping = detail::make_damping( grid, mag,
+            dg::x::HVec damping = detail::make_damping( grid, unmod_mag,
                     js["density"]["damping"], nbg);
             dg::x::HVec density = profile;
             dg::blas1::subroutine( [nbg]( double profile, double ntilde, double
@@ -421,6 +423,7 @@ dg::x::HVec source_profiles(
     dg::x::HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag,
+    const dg::geo::TokamakMagneticField& unmod_mag,
     const dg::file::WrappedJsonValue& js,
     double& minne, double& minrate, double& minalpha
     )
@@ -443,9 +446,9 @@ dg::x::HVec source_profiles(
     else if( "fixed_profile" == type)
     {
         fixed_profile = true;
-        ne_profile = detail::make_profile(grid,mag, js["profile"]);
+        ne_profile = detail::make_profile(grid, mag, js["profile"]);
         double nbg = 0;
-        source = detail::make_damping( grid, mag, js["damping"], nbg);
+        source = detail::make_damping( grid, unmod_mag, js["damping"], nbg);
     }
     else if("influx" == type)
     {
@@ -453,7 +456,7 @@ dg::x::HVec source_profiles(
         double nbg = 0.;
         source  = detail::make_ntilde(  grid, mag, js["ntilde"]);
         ne_profile = detail::make_profile( grid, mag, js["profile"]);
-        dg::x::HVec damping = detail::make_damping( grid, mag, js["damping"], nbg);
+        dg::x::HVec damping = detail::make_damping( grid, unmod_mag, js["damping"], nbg);
         dg::blas1::subroutine( [nbg]( double& profile, double& ntilde, double
                     damping) {
                     ntilde  = (profile+ntilde-nbg)*damping+nbg;
