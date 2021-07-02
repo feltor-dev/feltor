@@ -238,8 +238,10 @@ struct Explicit
                 dg::geo::dss_centered( m_fa, 1., m_minus,
                     m_velocity[i], m_plus, 0., m_dssU[i]);
                 // velocity m_dsU
-                dg::geo::ds_slope( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0.,
-                        m_dsU[i]);
+                //dg::geo::ds_slope( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0.,
+                //        m_dsU[i]);
+                dg::geo::ds_centered( m_fa, 1.,
+                        m_minus, m_velocity[i], m_plus, 0., m_dsU[i]);
                 // velocity source
                 dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
                             double sn, double u, double n){ return -u*sn/n;},

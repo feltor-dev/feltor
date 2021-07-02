@@ -9,7 +9,8 @@
         "rk4eps": 1e-06
     },
     "advection": {
-        "slope-limiter": "minmod"
+        "type": "velocity-staggered",
+        "slope-limiter": "vanLeer"
     },
     "boundary": {
         "bc": {
@@ -133,7 +134,7 @@
         "mu": -0.000272121,
         "nu_parallel": [
             0,
-            0
+            1
         ],
         "resistivity": 0.0001,
         "tau": 1.0,
