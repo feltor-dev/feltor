@@ -1123,7 +1123,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0, m_divNUb[i]);
         dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0, m_temp0);
         dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., m_divNUb[i]);
-        dg::blas1::axpby( 1., m_divNUb[i], 1., yp[0][i]);
+        dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
 
         // compute grad U2/2
         compute_parallel_flux( m_velocity[i], m_minusSTU[i], m_plusSTU[i],
