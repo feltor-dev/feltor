@@ -392,7 +392,13 @@ int main( int argc, char* argv[])
                     //2. Compute fsa and output fsa
                     dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    try{
+                        poloidal_average( transferH2dX, t1d, false); //average over eta
+                    } catch( dg::Error& e)
+                    {
+                        std::cerr << "WARNING: "<<record_name<<" contains NaN or Inf\n";
+                        dg::blas1::scal( t1d, NAN);
+                    }
                     dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
                     dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
                     if( record_name[0] != 'j')
@@ -487,7 +493,13 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDot( transferH2d, transferH2d, transferH2d);
                     dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    try{
+                        poloidal_average( transferH2dX, t1d, false); //average over eta
+                    } catch( dg::Error& e)
+                    {
+                        std::cerr << "WARNING: "<<record_name<<" contains NaN or Inf\n";
+                        dg::blas1::scal( t1d, NAN);
+                    }
                     dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
                     dg::blas1::transform ( fsa1d, fsa1d, dg::SQRT<double>() );
