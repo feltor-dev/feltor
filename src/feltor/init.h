@@ -128,15 +128,14 @@ dg::x::HVec make_profile(
     }
     else if ( "gaussian" == type )
     {
-        double posX     = js.get( "posX", 1.0).asDouble();
-        double posY     = js.get( "posY", 1.0).asDouble();
+        double x0  = mag.R0() + js.get( "posX", 0.).asDouble() *mag.params().a();
+        double y0  = mag.params().a()*js.get( "posY", 0.).asDouble();
         double sigma    = js.get( "sigma", 1.0).asDouble();
         double nprofamp = js.get( "amplitude", 1.0).asDouble();
         double nbg      = js.get( "background", 1.0).asDouble();
         if( sigma == 0)
             throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in turbulence on gaussian\n");
-        dg::Gaussian prof( mag.R0()+posX*mag.params().a(),
-                posY*mag.params().a(), sigma, sigma, nprofamp);
+        dg::Gaussian prof( x0, y0, sigma, sigma, nprofamp);
         profile = dg::pullback( prof, grid);
         dg::blas1::plus( profile, nbg);
     }
@@ -205,17 +204,22 @@ dg::x::HVec make_ntilde(
     if( "zero" == type)
     {
     }
-    else if( "blob" == type)
+    else if( "blob" == type || "circle" == type)
     {
         double amp   = js.get( "amplitude", 0.).asDouble();
-        double sigma = js.get( "sigma", 0.).asDouble();
-        double posX  = js.get( "posX", 0.).asDouble();
-        double posY  = js.get( "posY", 0.).asDouble();
+        double sigma = js.get( "sigma", 0.).asDouble() * mag.params().a();
+        double x0  = mag.R0() + js.get( "posX", 0.).asDouble() *mag.params().a();
+        double y0  = mag.params().a()*js.get( "posY", 0.).asDouble();
         if( sigma == 0)
             throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in straight blob initial condition\n");
-        dg::Gaussian init0( mag.R0()+posX*mag.params().a(),
-                posY*mag.params().a(), sigma*mag.params().a(),
-                sigma*mag.params().a(), amp);
+        dg::geo::CylindricalFunctor init0 = dg::Gaussian(
+                x0, y0, sigma, sigma, amp);
+        if( type == "circle")
+            init0 = [amp, sigma, x0, y0]( double x, double y) {
+                if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
+                    return amp;
+                return 0.;
+            };
         if( grid.Nz() == 1 )
             ntilde = dg::pullback( init0, grid);
         else
