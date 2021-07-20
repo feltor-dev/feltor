@@ -19,7 +19,7 @@ void simple_average( unsigned nx, unsigned ny, const container& in0, const conta
           double* out_ptr = thrust::raw_pointer_cast( out.data());
     dg::View<const container> in0_view( in0_ptr, nx), in1_view( in1_ptr, nx);
     dg::View<container> out_view( out_ptr, nx);
-    dg::blas1::pointwiseDot( 1., in0_view, in1_view, 0, out_view);
+    dg::blas1::pointwiseDot( in0_view, in1_view, out_view);
     for( unsigned i=1; i<ny; i++)
     {
         in0_view.construct( in0_ptr+i*nx, nx);

@@ -104,7 +104,7 @@ For example
 @code
 //Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( 100, false);
+thrust::device_vector<bool> boolvec ( x.size(), false);
 dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
 bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
