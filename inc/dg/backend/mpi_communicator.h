@@ -14,6 +14,8 @@ inline MPI_Datatype getMPIDataType<float>(){ return MPI_FLOAT;}
 template<>
 inline MPI_Datatype getMPIDataType<int>(){ return MPI_INT;}
 template<>
+inline MPI_Datatype getMPIDataType<bool>(){ return MPI_C_BOOL;}
+template<>
 inline MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;}
 ///@endcond
 
