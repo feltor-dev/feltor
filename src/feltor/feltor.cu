@@ -506,20 +506,55 @@ int main( int argc, char* argv[])
         t.tic();
         unsigned step = 0, failed_counter = 0;
         unsigned maxout = js["output"].get( "maxout", 0).asUInt();
+        double Tend = 0, deltaT = 0, t_output = 0;
+        std::string output_mode = "free";
         if( p.timestepper == "multistep")
             multistep.init( feltor, time, y0, dt);
+        else if( p.timestepper == "adaptive")
+        {
+            output_mode = js["timestepper"].get(
+                    "output-mode", "equidistant").asString();
+            if( output_mode == "equidistant")
+            {
+                Tend = js["timestepper"].get( "Tend", 1).asDouble();
+                deltaT = Tend/(double)(maxout*p.itstp);
+                t_output = time + deltaT;
+            }
+            else if( !(output_mode == "free"))
+                throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
+
+        }
         for( unsigned i=1; i<=maxout; i++)
         {
-
             dg::Timer ti;
             ti.tic();
             for( unsigned j=0; j<p.itstp; j++)
             {
-                for( unsigned k=0; k<p.inner_loop; k++)
+                try{
+                if( output_mode == "equidistant")
                 {
-                    try{
-                        if( p.timestepper == "adaptive")
+                    while( time < t_output)
+                    {
+                        if( time + dt > t_output)
+                            dt = t_output-time;
+                        adapt.step( feltor, time, y0, time, y0, dt,
+                                dg::pid_control, dg::l2norm, rtol, atol);
+                        std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<failed_counter<<"\n";
+                        if( dt < 1e-6)
+                            throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                        if( adapt.failed())
                         {
+                            failed_counter++;
+                            continue;
+                        }
+                        step++;
+                    }
+                    t_output += deltaT;
+                }
+                else
+                    for( unsigned k=0; k<p.inner_loop; k++)
+                    {
+                        if( p.timestepper == "adaptive")
                             do{
                                 adapt.step( feltor, time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol, atol);
@@ -528,21 +563,20 @@ int main( int argc, char* argv[])
                                 if( dt < 1e-6)
                                     throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                             }while( adapt.failed());
-                        }
-                        if( p.timestepper == "multistep")
+                        else
                             multistep.step( feltor, time, y0);
+                        step++;
                     }
-                    catch( dg::Fail& fail){ // a specific exception
-                        DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
-                        DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
-                        abort_program();
-                    }
-                    catch( std::exception& fail) { // more generic exception
-                        DG_RANK0 std::cerr << "ERROR in timestepper\n";
-                        DG_RANK0 std::cerr << fail.what()<<std::endl;
-                        abort_program();
-                    }
-                    step++;
+                }
+                catch( dg::Fail& fail){ // a specific exception
+                    DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
+                    DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
+                    abort_program();
+                }
+                catch( std::exception& fail) { // more generic exception
+                    DG_RANK0 std::cerr << "ERROR in timestepper\n";
+                    DG_RANK0 std::cerr << fail.what()<<std::endl;
+                    abort_program();
                 }
                 dg::Timer tti;
                 tti.tic();
@@ -577,25 +611,33 @@ int main( int argc, char* argv[])
                     DG_RANK0 std::cout << "\tfailed "<<failed_counter<<"\n";
                 }
 
-                //----------------Test if ampere equation holds
-                if( p.beta != 0)
-                {
-                    feltor.compute_lapMperpA( resultD);
-                    double norm  = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
-                    dg::blas1::pointwiseDot( -p.beta,
-                        feltor.density(0), feltor.velocity(0), p.beta,
-                        feltor.density(1), feltor.velocity(1), -1., resultD);
-                    double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
-                    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
-                }
                 tti.toc();
                 DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
             }
             ti.toc();
-            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "
-                        << p.inner_loop*p.itstp*maxout << " at time "<<time;
-            DG_RANK0 std::cout << "\n\t Average time for one step: "
-                        << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
+            //----------------Test if ampere equation holds
+            if( p.beta != 0)
+            {
+                feltor.compute_lapMperpA( resultD);
+                double norm  = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
+                dg::blas1::pointwiseDot( -p.beta,
+                    feltor.density(0), feltor.velocity(0), p.beta,
+                    feltor.density(1), feltor.velocity(1), -1., resultD);
+                double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
+                DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
+            }
+            if( output_mode == "free")
+            {
+                DG_RANK0 std::cout << "\n\t Step "<<step <<" of "
+                            << p.inner_loop*p.itstp*maxout << " at time "<<time;
+                DG_RANK0 std::cout << "\n\t Average time for one step: "
+                            << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
+            }
+            else
+                DG_RANK0 std::cout << "\n\t Time "<<time <<" of " << Tend;
+                DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
+                            << ti.diff()/(double)p.itstp<<"s";
+
             ti.tic();
             //////////////////////////write fields////////////////////////
             start = i;
@@ -661,7 +703,7 @@ int main( int argc, char* argv[])
         double second = t.diff() - hour*3600 - minute*60;
         DG_RANK0 std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
         DG_RANK0 std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-        DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/maxout/p.inner_loop<<"s/step\n";
+        DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/maxout<<"s/inner loop\n";
     }
 #ifndef WITHOUT_GLFW
     if( p.output == "glfw")

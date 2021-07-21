@@ -120,7 +120,7 @@
         "inner_loop": 2,
         "itstp": 5,
         "maxout": 10,
-        "type": "glfw",
+        "type": "netcdf",
         "window" :
         {
             "rows":  6,
@@ -154,6 +154,8 @@
         "atol": 1e-10,
         "rtol": 1e-07,
         "tableau": "Bogacki-Shampine-4-2-3",
-        "type": "adaptive"
+        "type": "adaptive",
+        "output-mode" : "equidistant",
+        "Tend" : 10
     }
 }
