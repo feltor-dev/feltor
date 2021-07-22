@@ -345,7 +345,7 @@ void Poet<G,  M,  container>::operator()( double t, const std::array<container,2
         }
         //ExB drift  - v_y dy n - v_x dx n
         dg::blas2::symv( -1., m_centered[1], m_psi[i], 0., m_chi); //v_x
-        dg::blas2::symv( 1., m_centered[0], m_psi[i], 0., m_iota); //v_y
+        dg::blas2::symv(  1., m_centered[0], m_psi[i], 0., m_iota); //v_y
         m_adv.upwind( -1., m_chi, m_iota, y[i], 0., yp[i]);   
         if(m_p.equations == "ff-lwl" || m_p.equations == "ff-O4" || m_p.equations == "ff-O2") {
             dg::blas1::pointwiseDot( m_binv, yp[i], yp[i]);
