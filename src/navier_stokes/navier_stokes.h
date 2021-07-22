@@ -149,6 +149,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
 
     }
+    //-------------Add regularization----------------------------//
+    compute_perp_diffusiveN( 1., m_density[1], m_temp0, m_temp1, 1.,
+            yp[0][1]);
+    compute_perp_diffusiveU( 1., m_velocityST[1], m_temp0, m_temp1, 1.,
+            yp[1][1]);
 
     //Add source terms
     // set m_s

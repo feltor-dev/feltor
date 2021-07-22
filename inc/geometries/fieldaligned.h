@@ -712,6 +712,103 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     m_deltaPhi = deltaPhi; // store for evaluate
 }
 
+
+template<class BinaryOp, class UnaryOp>
+thrust::host_vector<double> fieldaligned_evaluate(
+        const aProductGeometry3d& grid,
+        const CylindricalVectorLvl0& vec,
+        const BinaryOp& binary, const UnaryOp& unary, unsigned p0, unsigned rounds,
+        double eps = 1e-5)
+{
+    unsigned Nz = grid.Nz();
+    const dg::ClonePtr<aGeometry2d> g2d = grid.perp_grid();
+    // Construct for field-aligned output
+    dg::HVec tempP = dg::evaluate( dg::zero, *g2d), tempM( tempP);
+    std::vector<dg::HVec>  plus2d(Nz, tempP), minus2d(plus2d), result(plus2d);
+    dg::HVec vec3d = dg::evaluate( dg::zero, grid);
+    dg::HVec init2d = dg::pullback( binary, *g2d);
+    std::array<dg::HVec,3> yy0{
+        dg::pullback( dg::cooX2d, *g2d),
+        dg::pullback( dg::cooY2d, *g2d),
+        dg::evaluate( dg::zero, *g2d)}, yy1(yy0), xx0( yy0), xx1(yy0); //s
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
+    double deltaPhi = grid.hz();
+    double phiM0 = 0., phiP0 = 0.;
+    unsigned turns = rounds;
+    if( turns == 0) turns++;
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned  i0=0; i0<Nz; i0++)
+        {
+            unsigned rep = r*Nz + i0;
+            if( rep == 0)
+                tempM = tempP = init2d;
+            else
+            {
+                for( unsigned i=0; i<g2d->size(); i++)
+                {
+                    // minus direction needs positive integration!
+                    double phiM1 = phiM0 + deltaPhi;
+                    std::array<double,3>
+                        coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
+                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiM0,
+                            coords0, phiM1, coords1, 0., dg::pid_control,
+                            dg::geo::detail::ds_norm, eps, 1e-10, *g2d );
+                    yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
+                        coords1[2];
+                    tempM[i] = binary( yy1[0][i], yy1[1][i]);
+
+                    // plus direction needs negative integration!
+                    double phiP1 = phiP0 - deltaPhi;
+                    coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
+                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiP0,
+                            coords0, phiP1, coords1, 0., dg::pid_control,
+                            dg::geo::detail::ds_norm, eps, 1e-10, *g2d );
+                    xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
+                        coords1[2];
+                    tempP[i] = binary( xx1[0][i], xx1[1][i]);
+                }
+                std::swap( yy0, yy1);
+                std::swap( xx0, xx1);
+                phiM0 += deltaPhi;
+                phiP0 -= deltaPhi;
+            }
+            dg::blas1::scal( tempM, unary( -(double)rep*deltaPhi ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*deltaPhi ) );
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    if( rounds == 0) //there is a limiter
+    {
+        for( unsigned i0=0; i0<Nz; i0++)
+        {
+            int idx = (int)i0 - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() +
+                    i0*g2d->size());
+        }
+    }
+    else //sum up plus2d and minus2d
+    {
+        for( unsigned i0=0; i0<Nz; i0++)
+        {
+            unsigned revi0 = (Nz - i0)%Nz; //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for(unsigned i0=0; i0<Nz; i0++)
+        {
+            int idx = ((int)i0 -(int)p0 + Nz)%Nz; //shift index
+            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin()
+                    + i0*g2d->size());
+        }
+    }
+    return vec3d;
+}
 template<class G, class I, class container>
 template< class BinaryOp, class UnaryOp>
 container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary,

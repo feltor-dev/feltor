@@ -225,33 +225,37 @@ dg::x::HVec make_ntilde(
         else
         {
             double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-            unsigned mx = js["refine"].get( 0u, 5).asUInt();
-            unsigned my = js["refine"].get( 1u, 5).asUInt();
-            dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
-                dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
-                        dg::geo::NoLimiter(), rk4eps, mx, my);
+            //unsigned mx = js["refine"].get( 0u, 5).asUInt();
+            //unsigned my = js["refine"].get( 1u, 5).asUInt();
+            //dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
+            //    dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
+            //            dg::geo::NoLimiter(), rk4eps, mx, my);
             //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
             std::string parallel = js.get( "parallel", "gaussian").asString();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
+            auto bhat = dg::geo::createBHat(mag);
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in blob initial condition\n");
             if( parallel == "gaussian")
             {
                 dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+                ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
+                        gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "step")
             {
                 dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+                ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
+                        gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "double-step")
             {
-                ntilde = fieldaligned.evaluate( init0, [sigma_z](double s) {
+                ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
+                        [sigma_z](double s) {
                         if( (s <  0) && (s > -sigma_z*M_PI)) return 0.5;
                         if( (s >= 0) && (s < +sigma_z*M_PI)) return 1.0;
-                        return 0.;}, 0, revolutions);
+                        return 0.;}, 0, revolutions, rk4eps);
             }
         }
     }
@@ -264,26 +268,29 @@ dg::x::HVec make_ntilde(
         else
         {
             double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-            unsigned mx = js["refine"].get( 0u, 2).asUInt();
-            unsigned my = js["refine"].get( 1u, 2).asUInt();
-            dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
-                dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
-                        dg::geo::NoLimiter(), rk4eps, mx, my);
+            //unsigned mx = js["refine"].get( 0u, 2).asUInt();
+            //unsigned my = js["refine"].get( 1u, 2).asUInt();
+            //dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
+            //    dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
+            //            dg::geo::NoLimiter(), rk4eps, mx, my);
             //evaluate should always be used with mx,my > 1 (but this takes more memory)
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
             std::string parallel = js.get( "parallel", "gaussian").asString();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
+            auto bhat = dg::geo::createBHat(mag);
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
             if( parallel == "gaussian")
             {
                 dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+                ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
+                        gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "step")
             {
                 dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
-                ntilde = fieldaligned.evaluate( init0, gaussianZ, 0, revolutions);
+                ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
+                        gaussianZ, 0, revolutions, rk4eps);
 
             }
         }

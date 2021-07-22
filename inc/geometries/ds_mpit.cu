@@ -110,10 +110,21 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
     dg::GaussianZ modulate(0., M_PI/3., 1);
+    dg::Timer t;
+    t.tic();
     dg::MDVec aligned = dsFA.evaluate( init0, modulate, Nz/2, 2);
+    t.toc();
+    if(rank==0)std::cout << "# took "<<t.diff()<<"s\n";
     ds( aligned, derivative);
     double norm = dg::blas2::dot(vol3d, derivative);
-    if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
+    if(rank==0)std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
+    t.tic();
+    aligned = dg::geo::fieldaligned_evaluate( g3d, bhat, init0, modulate, Nz/2, 2);
+    t.toc();
+    if(rank==0)std::cout << "# took "<<t.diff()<<"s\n";
+    ds( aligned, derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    if(rank==0)std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
     ///##########################################################///
     if(rank==0)std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
     dg::MDVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
