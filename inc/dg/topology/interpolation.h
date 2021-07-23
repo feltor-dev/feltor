@@ -91,7 +91,7 @@ std::vector<real_type> lagrange( real_type x, const std::vector<real_type>& xi)
 }
 
 template<class real_type>
-std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_line, const RealGrid1d<real_type>& g, unsigned& col_begin)
+std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_line, const RealGrid1d<real_type>& g, const thrust::host_vector<real_type>& abs, unsigned& col_begin)
 {
     //determine which cell (X) lies in
     real_type xnn = (X-g.x0())/g.h();
@@ -101,7 +101,6 @@ std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_lin
         n-=1;
     }
     // look for closest abscissa
-    thrust::host_vector<real_type> abs = dg::create::abscissas( g);
     std::vector<real_type> xs( points_per_line, 0);
     // X <= *it
     auto it = std::lower_bound( abs.begin()+n*g.n(), abs.begin() + (n+1)*g.n(),
@@ -257,6 +256,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
         cusp::coo_matrix<int, real_type, cusp::host_memory> A(
                 x.size(), g.size(), x.size()*points_per_line);
         int number = 0;
+        thrust::host_vector<real_type> abs = dg::create::abscissas( g);
         for( unsigned i=0; i<x.size(); i++)
         {
             real_type X = x[i];
@@ -265,7 +265,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
 
             unsigned col_begin = 0;
             std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
-                    points_per_line, g, col_begin);
+                    points_per_line, g, abs, col_begin);
 
             std::vector<real_type> px = detail::lagrange( X, xs);
             if( negative)
@@ -429,6 +429,10 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             points_per_line = 4;
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
+        RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+        RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+        thrust::host_vector<real_type> absX = dg::create::abscissas( gx);
+        thrust::host_vector<real_type> absY = dg::create::abscissas( gy);
         for( unsigned i=0; i<x.size(); i++)
         {
             real_type X = x[i], Y = y[i];
@@ -436,12 +440,10 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
             g.shift( negative, X, Y, bcx, bcy);
 
             unsigned col_beginX = 0, col_beginY = 0;
-            RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
-            RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
             std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
-                    points_per_line, gx, col_beginX);
+                    points_per_line, gx, absX, col_beginX);
             std::vector<real_type> ys  = detail::choose_1d_abscissas( Y,
-                    points_per_line, gy, col_beginY);
+                    points_per_line, gy, absY, col_beginY);
 
             //evaluate 2d Legendre polynomials at (xn, yn)...
             std::vector<real_type> pxy( points_per_line*points_per_line);
