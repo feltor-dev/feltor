@@ -57,6 +57,20 @@ dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
     return (dg::IHMatrix)backward;
 
 }
+///@copydoc backscatter(const aRealTopology2d&)
+template<class real_type>
+dg::IHMatrix backscatter( const RealGrid1d<real_type>& g)
+{
+    typedef cusp::coo_matrix<int, real_type, cusp::host_memory> Matrix;
+    //create equidistant backward transformation
+    dg::Operator<real_type> backwardeq( g.dlt().backwardEQ());
+    dg::Operator<real_type> forward( g.dlt().forward());
+    dg::Operator<real_type> backward1d = backwardeq*forward;
+
+    Matrix backward = dg::tensorproduct( g.N(), backward1d);
+    return (dg::IHMatrix)backward;
+
+}
 
 ///@copydoc backscatter(const aRealTopology2d&)
 template<class real_type>

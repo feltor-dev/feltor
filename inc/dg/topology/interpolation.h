@@ -75,6 +75,97 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
     return px;
 }
 
+// evaluate n base polynomials for n given abscissas
+template<class real_type>
+std::vector<real_type> lagrange( real_type x, const std::vector<real_type>& xi)
+{
+    unsigned n = xi.size();
+    std::vector<real_type> l( n , 1.);
+    for( unsigned i=0; i<n; i++)
+        for( unsigned k=0; k<n; k++)
+        {
+            if ( k != i)
+                l[i] *= (x-xi[k])/(xi[i]-xi[k]);
+        }
+    return l;
+}
+
+template<class real_type>
+std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_line, const RealGrid1d<real_type>& g, unsigned& col_begin)
+{
+    //determine which cell (X) lies in
+    real_type xnn = (X-g.x0())/g.h();
+    unsigned n = (unsigned)floor(xnn);
+    //intervall correction
+    if (n==g.N()) {
+        n-=1;
+    }
+    // look for closest abscissa
+    thrust::host_vector<real_type> abs = dg::create::abscissas( g);
+    std::vector<real_type> xs( points_per_line, 0);
+    // X <= *it
+    auto it = std::lower_bound( abs.begin()+n*g.n(), abs.begin() + (n+1)*g.n(),
+            X);
+    col_begin = 0;
+    switch( points_per_line)
+    {
+        case 1: xs[0] = 1.;
+                if( it == abs.begin())
+                    col_begin = 0;
+                else if( it == abs.end())
+                    col_begin = it - abs.begin() - 1;
+                else
+                {
+                    if ( fabs(X - *it) < fabs( X - *(it-1)))
+                        col_begin = it - abs.begin();
+                    else
+                        col_begin = it - abs.begin() -1;
+                }
+                break;
+        case 2: if( it == abs.begin())
+                {
+                    xs[0] = *it;
+                    xs[1] = *(it+1);
+                    col_begin = 0;
+                }
+                else if( it == abs.end())
+                {
+                    xs[0] = *(it-2);
+                    xs[0] = *(it-1);
+                    col_begin = it - abs.begin() - 2;
+                }
+                else
+                {
+                    xs[0] = *(it-1);
+                    xs[1] = *it;
+                    col_begin = it - abs.begin() - 1;
+                }
+                break;
+        case 4: if( it <= abs.begin() +1)
+                {
+                    it = abs.begin();
+                    xs[0] = *it,     xs[1] = *(it+1);
+                    xs[2] = *(it+2), xs[3] = *(it+3);
+                    col_begin = 0;
+                }
+                else if( it >= abs.end() -2)
+                {
+                    it = abs.end();
+                    xs[0] = *(it-4), xs[1] = *(it-3);
+                    xs[2] = *(it-2), xs[3] = *(it-1);
+                    col_begin = it - abs.begin() - 4;
+                }
+                else
+                {
+                    xs[0] = *(it-2), xs[1] = *(it-1);
+                    xs[2] = *(it  ), xs[3] = *(it+1);
+                    col_begin = it - abs.begin() - 2;
+                }
+                break;
+    }
+    return xs;
+}
+
 }//namespace detail
 ///@endcond
 ///@addtogroup interpolation
@@ -86,67 +177,115 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
  * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
  * Note that if a point lies directly on the boundary between two grid cells, the value of the polynomial to the right is taken.
 */
+/*!@class hide_method
+ * @param method Several interpolation methods are available: **dg** uses the native
+ * dG interpolation scheme given by the grid, **nearest** searches for the
+ * nearest point and copies its value, **linear** searches for the two (in 2d
+ * four, etc.) closest points and linearly interpolates their values, **cubic**
+ * searches for the four (in 2d 16, etc) closest points and interpolates a
+ * cubic polynomial
+ */
 
 /**
  * @brief Create interpolation matrix
  *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses
- * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points.
- * The given boundary conditions determine how interpolation points outside the grid domain are treated.
+ * The created matrix has \c g.size() columns and \c x.size() rows. Per default
+ * it uses polynomial interpolation given by the dG polynomials, i.e. the
+ * interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the
+ * given interpolation points.  The given boundary conditions determine how
+ * interpolation points outside the grid domain are treated.
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
  * @copydoc hide_bcx_doc
+ * @copydoc hide_method
  *
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGrid1d<real_type>& g, dg::bc bcx = dg::NEU)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGrid1d<real_type>& g, dg::bc bcx = dg::NEU, std::string method = "dg")
 {
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
-
-    int number = 0;
-    dg::Operator<real_type> forward( g.dlt().forward());
-    for( unsigned i=0; i<x.size(); i++)
+    if( method == "dg")
     {
-        real_type X = x[i];
-        bool negative = false;
-        g.shift( negative, X, bcx);
+        cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
 
-        //determine which cell (x) lies in
-        real_type xnn = (X-g.x0())/g.h();
-        unsigned n = (unsigned)floor(xnn);
-        //determine normalized coordinates
-        real_type xn = 2.*xnn - (real_type)(2*n+1);
-        //intervall correction
-        if (n==g.N()) {
-            n-=1;
-            xn = 1.;
-        }
-        //evaluate 2d Legendre polynomials at (xn, yn)...
-        std::vector<real_type> px = detail::coefficients( xn, g.n());
-        //...these are the matrix coefficients with which to multiply
-        std::vector<real_type> pxF(px.size(),0);
-        for( unsigned l=0; l<g.n(); l++)
-            for( unsigned k=0; k<g.n(); k++)
-                pxF[l]+= px[k]*forward(k,l);
-        unsigned col_begin = n*g.n();
-        if( negative)
+        int number = 0;
+        dg::Operator<real_type> forward( g.dlt().forward());
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            real_type X = x[i];
+            bool negative = false;
+            g.shift( negative, X, bcx);
+
+            //determine which cell (x) lies in
+            real_type xnn = (X-g.x0())/g.h();
+            unsigned n = (unsigned)floor(xnn);
+            //determine normalized coordinates
+            real_type xn = 2.*xnn - (real_type)(2*n+1);
+            //intervall correction
+            if (n==g.N()) {
+                n-=1;
+                xn = 1.;
+            }
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<real_type> px = detail::coefficients( xn, g.n());
+            //...these are the matrix coefficients with which to multiply
+            std::vector<real_type> pxF(px.size(),0);
             for( unsigned l=0; l<g.n(); l++)
-                pxF[l]*=-1.;
-        detail::add_line( A, number, i,  col_begin, pxF);
+                for( unsigned k=0; k<g.n(); k++)
+                    pxF[l]+= px[k]*forward(k,l);
+            unsigned col_begin = n*g.n();
+            if( negative)
+                for( unsigned l=0; l<g.n(); l++)
+                    pxF[l]*=-1.;
+            detail::add_line( A, number, i,  col_begin, pxF);
+        }
+        return A;
     }
-    return A;
+    else
+    {
+        unsigned points_per_line = 1;
+        if( method == "nearest")
+            points_per_line = 1;
+        else if( method == "linear")
+            points_per_line = 2;
+        else if( method == "cubic")
+            points_per_line = 4;
+        else
+            throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
+        cusp::coo_matrix<int, real_type, cusp::host_memory> A(
+                x.size(), g.size(), x.size()*points_per_line);
+        int number = 0;
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            real_type X = x[i];
+            bool negative = false;
+            g.shift( negative, X, bcx);
+
+            unsigned col_begin = 0;
+            std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
+                    points_per_line, g, col_begin);
+
+            std::vector<real_type> px = detail::lagrange( X, xs);
+            if( negative)
+                for( unsigned l=0; l<points_per_line; l++)
+                    px[l]*=-1.;
+            detail::add_line( A, number, i,  col_begin, px);
+        }
+        return A;
+    }
 }
 
 /**
  * @brief Create interpolation matrix
  *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses
- * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points.
- * The given boundary conditions determine how interpolation points outside the grid domain are treated.
+ * The created matrix has \c g.size() columns and \c x.size() rows. Per default
+ * it uses polynomial interpolation given by the dG polynomials, i.e. the
+ * interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the
+ * given interpolation points.  The given boundary conditions determine how
+ * interpolation points outside the grid domain are treated.
  * @snippet topology/interpolation_t.cu doxygen
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
@@ -154,128 +293,184 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @param g The Grid on which to operate
  * @copydoc hide_bcx_doc
  * @param bcy analogous to \c bcx, applies to y direction
+ * @copydoc hide_method
  *
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopology2d<real_type>& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopology2d<real_type>& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, std::string method = "dg")
 {
     assert( x.size() == y.size());
-    std::vector<real_type> gauss_nodes = g.dlt().abscissas();
-    dg::Operator<real_type> forward( g.dlt().forward());
     cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
     cusp::array1d<int, cusp::host_memory> column_indices;
-
-    for( int i=0; i<(int)x.size(); i++)
+    if( method == "dg")
     {
-        real_type X = x[i], Y = y[i];
-        bool negative=false;
-        g.shift( negative,X,Y, bcx, bcy);
+        std::vector<real_type> gauss_nodes = g.dlt().abscissas();
+        dg::Operator<real_type> forward( g.dlt().forward());
 
-        //determine which cell (x,y) lies in
-        real_type xnn = (X-g.x0())/g.hx();
-        real_type ynn = (Y-g.y0())/g.hy();
-        unsigned nn = (unsigned)floor(xnn);
-        unsigned mm = (unsigned)floor(ynn);
-        //determine normalized coordinates
-        real_type xn =  2.*xnn - (real_type)(2*nn+1);
-        real_type yn =  2.*ynn - (real_type)(2*mm+1);
-        //interval correction
-        if (nn==g.Nx()) {
-            nn-=1;
-            xn = 1.;
-        }
-        if (mm==g.Ny()) {
-            mm-=1;
-            yn =1.;
-        }
-        //Test if the point is a Gauss point since then no interpolation is needed
-        int idxX =-1, idxY = -1;
-        for( unsigned k=0; k<g.n(); k++)
+
+        for( int i=0; i<(int)x.size(); i++)
         {
-            if( fabs( xn - gauss_nodes[k]) < 1e-14)
-                idxX = nn*g.n() + k; //determine which grid column it is
-            if( fabs( yn - gauss_nodes[k]) < 1e-14)
-                idxY = mm*g.n() + k;  //determine grid line
-        }
-        if( idxX < 0 && idxY < 0 ) //there is no corresponding point
-        {
-            //evaluate 2d Legendre polynomials at (xn, yn)...
-            std::vector<real_type> px = detail::coefficients( xn, g.n()),
-                                   py = detail::coefficients( yn, g.n());
-            std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
-            for( unsigned l=0; l<g.n(); l++)
-                for( unsigned k=0; k<g.n(); k++)
-                {
-                    pxF[l]+= px[k]*forward(k,l);
-                    pyF[l]+= py[k]*forward(k,l);
-                }
-            std::vector<real_type> pxy( g.n()*g.n());
-            //these are the matrix coefficients with which to multiply
-            for(unsigned k=0; k<pyF.size(); k++)
-                for( unsigned l=0; l<pxF.size(); l++)
-                    pxy[k*px.size()+l]= pyF[k]*pxF[l];
+            real_type X = x[i], Y = y[i];
+            bool negative=false;
+            g.shift( negative,X,Y, bcx, bcy);
+
+            //determine which cell (x,y) lies in
+            real_type xnn = (X-g.x0())/g.hx();
+            real_type ynn = (Y-g.y0())/g.hy();
+            unsigned nn = (unsigned)floor(xnn);
+            unsigned mm = (unsigned)floor(ynn);
+            //determine normalized coordinates
+            real_type xn =  2.*xnn - (real_type)(2*nn+1);
+            real_type yn =  2.*ynn - (real_type)(2*mm+1);
+            //interval correction
+            if (nn==g.Nx()) {
+                nn-=1;
+                xn = 1.;
+            }
+            if (mm==g.Ny()) {
+                mm-=1;
+                yn =1.;
+            }
+            //Test if the point is a Gauss point since then no interpolation is needed
+            int idxX =-1, idxY = -1;
             for( unsigned k=0; k<g.n(); k++)
+            {
+                if( fabs( xn - gauss_nodes[k]) < 1e-14)
+                    idxX = nn*g.n() + k; //determine which grid column it is
+                if( fabs( yn - gauss_nodes[k]) < 1e-14)
+                    idxY = mm*g.n() + k;  //determine grid line
+            }
+            if( idxX < 0 && idxY < 0 ) //there is no corresponding point
+            {
+                //evaluate 2d Legendre polynomials at (xn, yn)...
+                std::vector<real_type> px = detail::coefficients( xn, g.n()),
+                                       py = detail::coefficients( yn, g.n());
+                std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
+                for( unsigned l=0; l<g.n(); l++)
+                    for( unsigned k=0; k<g.n(); k++)
+                    {
+                        pxF[l]+= px[k]*forward(k,l);
+                        pyF[l]+= py[k]*forward(k,l);
+                    }
+                std::vector<real_type> pxy( g.n()*g.n());
+                //these are the matrix coefficients with which to multiply
+                for(unsigned k=0; k<pyF.size(); k++)
+                    for( unsigned l=0; l<pxF.size(); l++)
+                        pxy[k*px.size()+l]= pyF[k]*pxF[l];
+                for( unsigned k=0; k<g.n(); k++)
+                    for( unsigned l=0; l<g.n(); l++)
+                    {
+                        row_indices.push_back( i);
+                        column_indices.push_back( (mm*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
+                        if( !negative)
+                            values.push_back(  pxy[k*g.n()+l]);
+                        else
+                            values.push_back( -pxy[k*g.n()+l]);
+                    }
+            }
+            else if ( idxX < 0 && idxY >=0) //there is a corresponding line
+            {
+                std::vector<real_type> px = detail::coefficients( xn, g.n());
+                std::vector<real_type> pxF(g.n(),0);
+                for( unsigned l=0; l<g.n(); l++)
+                    for( unsigned k=0; k<g.n(); k++)
+                        pxF[l]+= px[k]*forward(k,l);
                 for( unsigned l=0; l<g.n(); l++)
                 {
                     row_indices.push_back( i);
-                    column_indices.push_back( (mm*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
+                    column_indices.push_back( (idxY)*g.Nx()*g.n() + nn*g.n() + l);
                     if( !negative)
-                        values.push_back(  pxy[k*g.n()+l]);
+                        values.push_back( pxF[l]);
                     else
-                        values.push_back( -pxy[k*g.n()+l]);
-                }
-        }
-        else if ( idxX < 0 && idxY >=0) //there is a corresponding line
-        {
-            std::vector<real_type> px = detail::coefficients( xn, g.n());
-            std::vector<real_type> pxF(g.n(),0);
-            for( unsigned l=0; l<g.n(); l++)
-                for( unsigned k=0; k<g.n(); k++)
-                    pxF[l]+= px[k]*forward(k,l);
-            for( unsigned l=0; l<g.n(); l++)
-            {
-                row_indices.push_back( i);
-                column_indices.push_back( (idxY)*g.Nx()*g.n() + nn*g.n() + l);
-                if( !negative)
-                    values.push_back( pxF[l]);
-                else
-                    values.push_back(-pxF[l]);
+                        values.push_back(-pxF[l]);
 
+                }
             }
-        }
-        else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
-        {
-            std::vector<real_type> py = detail::coefficients( yn, g.n());
-            std::vector<real_type> pyF(g.n(),0);
-            for( unsigned l=0; l<g.n(); l++)
+            else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
+            {
+                std::vector<real_type> py = detail::coefficients( yn, g.n());
+                std::vector<real_type> pyF(g.n(),0);
+                for( unsigned l=0; l<g.n(); l++)
+                    for( unsigned k=0; k<g.n(); k++)
+                        pyF[l]+= py[k]*forward(k,l);
                 for( unsigned k=0; k<g.n(); k++)
-                    pyF[l]+= py[k]*forward(k,l);
-            for( unsigned k=0; k<g.n(); k++)
+                {
+                    row_indices.push_back(i);
+                    column_indices.push_back((mm*g.n()+k)*g.Nx()*g.n() + idxX);
+                    if( !negative)
+                        values.push_back( pyF[k]);
+                    else
+                        values.push_back(-pyF[k]);
+
+                }
+            }
+            else //the point already exists
             {
                 row_indices.push_back(i);
-                column_indices.push_back((mm*g.n()+k)*g.Nx()*g.n() + idxX);
+                column_indices.push_back(idxY*g.Nx()*g.n() + idxX);
                 if( !negative)
-                    values.push_back( pyF[k]);
+                    values.push_back( 1.);
                 else
-                    values.push_back(-pyF[k]);
-
+                    values.push_back(-1.);
             }
-        }
-        else //the point already exists
-        {
-            row_indices.push_back(i);
-            column_indices.push_back(idxY*g.Nx()*g.n() + idxX);
-            if( !negative)
-                values.push_back( 1.);
-            else
-                values.push_back(-1.);
-        }
 
+        }
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), values.size());
-    A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
+    else
+    {
+        unsigned points_per_line = 1;
+        if( method == "nearest")
+            points_per_line = 1;
+        else if( method == "linear")
+            points_per_line = 2;
+        else if( method == "cubic")
+            points_per_line = 4;
+        else
+            throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            real_type X = x[i], Y = y[i];
+            bool negative = false;
+            g.shift( negative, X, Y, bcx, bcy);
+
+            unsigned col_beginX = 0, col_beginY = 0;
+            RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+            RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+            std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
+                    points_per_line, gx, col_beginX);
+            std::vector<real_type> ys  = detail::choose_1d_abscissas( Y,
+                    points_per_line, gy, col_beginY);
+
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<real_type> pxy( points_per_line*points_per_line);
+            std::vector<real_type> px = detail::lagrange( X, xs),
+                                   py = detail::lagrange( Y, ys);
+            for(unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
+                    pxy[k*px.size()+l]= py[k]*px[l];
+            for( unsigned k=0; k<points_per_line; k++)
+                for( unsigned l=0; l<points_per_line; l++)
+                {
+                    if( fabs(pxy[k*points_per_line +l]) > 1e-14)
+                    {
+                        row_indices.push_back( i);
+                        column_indices.push_back( (col_beginY+k)*g.n()*g.Nx() +
+                            col_beginX+l);
+                        if( !negative )
+                            values.push_back(  pxy[k*points_per_line+l]);
+                        else
+                            values.push_back( -pxy[k*points_per_line+l]);
+                    }
+                }
+        }
+    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(),
+            g.size(), values.size());
+    A.row_indices = row_indices;
+    A.column_indices = column_indices;
+    A.values = values;
 
     return A;
 }
@@ -285,9 +480,11 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
 /**
  * @brief Create interpolation matrix
  *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses
- * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points.
+ * The created matrix has \c g.size() columns and \c x.size() rows. Per default
+ * it uses polynomial interpolation given by the dG polynomials, i.e. the
+ * interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the
+ * given interpolation points.
  * @snippet topology/interpolation_t.cu doxygen3d
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
