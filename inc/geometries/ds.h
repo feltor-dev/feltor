@@ -293,8 +293,9 @@ struct DS
         dg::direction dir = dg::centered,
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi=-1):
-        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir )
+        double deltaPhi=-1, std::string interpolation_method = "dg"):
+        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi,
+                    interpolation_method), dir )
     {
     }
     /**
@@ -313,8 +314,9 @@ struct DS
         dg::direction dir = dg::centered,
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi=-1):
-        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi), dir)
+        double deltaPhi=-1, std::string interpolation_method = "dg"):
+        DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi,
+                    interpolation_method), dir)
     {
     }
     /**

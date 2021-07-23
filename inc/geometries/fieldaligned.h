@@ -311,7 +311,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply.
     * @param vec The vector field to integrate. Note that you can control how the boundary conditions are represented by changing vec outside the grid domain using e.g. the \c periodify function.
     * @param grid The grid on which to integrate fieldlines.
-    * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc) (see there for more details)
+    * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc,std::string) (see there for more details)
     * function and deterimens what happens when the endpoint of the fieldline integration leaves the domain boundaries of \c grid. Note that \c bcx and \c grid.bcx() have to be either both periodic or both not periodic.
     * @param bcy analogous to \c bcx, applies to y direction
     * @param limit Instance of the limiter class
@@ -330,9 +330,16 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     * or for a staggered grid.
     * @note  deltaPhi influences the interpolation matrices and the parallel
     * modulation in the evaluate() member function.
-    * @note If there is a limiter, the boundary condition on the first/last plane is set
-        by the \c grid.bcz() variable and can be changed by the set_boundaries function.
-        If there is no limiter, the boundary condition is periodic.
+    * @note If there is a limiter, the boundary condition on the first/last
+    * plane is set
+        by the \c grid.bcz() variable and can be changed by the set_boundaries
+        function.  If there is no limiter, the boundary condition is periodic.
+     * @param interpolation_method Several interpolation methods are available:
+     * **dg** uses the native dG interpolation scheme given by the grid,
+     * **nearest** searches for the nearest point and copies its value,
+     * **linear** searches for the two (in 2d four, etc.) closest points and
+     * linearly interpolates their values, **cubic** searches for the four (in
+     * 2d 16, etc) closest points and interpolates a cubic polynomial
     */
 //////////////////////////////FieldalignedCLASS////////////////////////////////////////////
 /**
@@ -364,9 +371,11 @@ struct Fieldaligned
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1):
+        double deltaPhi = -1,
+        std::string interpolation_method = "dg"
+        ):
             Fieldaligned( dg::geo::createBHat(vec),
-                grid, bcx, bcy, limit, eps, mx, my, deltaPhi)
+                grid, bcx, bcy, limit, eps, mx, my, deltaPhi, interpolation_method)
     {
     }
 
@@ -381,7 +390,8 @@ struct Fieldaligned
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1);
+        double deltaPhi = -1,
+        std::string interpolation_method = "dg");
     /**
     * @brief Perfect forward parameters to one of the constructors
     * @tparam Params deduced by the compiler
@@ -603,7 +613,7 @@ template <class Limiter>
 Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     const dg::geo::CylindricalVectorLvl0& vec, const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, double deltaPhi)
+    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method)
 {
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
@@ -657,9 +667,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 #endif //DG_BENCHMARK
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
-            *grid_coarse, bcx, bcy), plus, plusT;
+            *grid_coarse, bcx, bcy, interpolation_method), plus, plusT;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
-            *grid_coarse, bcx, bcy), minus, minusT;
+            *grid_coarse, bcx, bcy, interpolation_method), minus, minusT;
     if( mx == my && mx == 1)
     {
         plus = plusFine;

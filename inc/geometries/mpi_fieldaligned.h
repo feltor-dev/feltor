@@ -71,9 +71,9 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1):
-            Fieldaligned( dg::geo::createBHat(vec),
-                grid, bcx, bcy, limit, eps, mx, my, deltaPhi)
+        double deltaPhi = -1, std::string interpolation_method = "dg"):
+            Fieldaligned( dg::geo::createBHat(vec), grid, bcx, bcy, limit, eps,
+                    mx, my, deltaPhi, interpolation_method)
     {
     }
     template <class Limiter>
@@ -84,7 +84,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1);
+        double deltaPhi = -1, std::string interpolation_method = "dg");
     template<class ...Params>
     void construct( Params&& ...ps)
     {
@@ -190,7 +190,7 @@ template <class Limiter>
 Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::Fieldaligned(
     const dg::geo::CylindricalVectorLvl0& vec, const MPIGeometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, double deltaPhi)
+    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method)
 {
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
@@ -253,9 +253,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
 #endif
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
-            grid_coarse->global(), bcx, bcy), plus;
+            grid_coarse->global(), bcx, bcy, interpolation_method), plus;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
-            grid_coarse->global(), bcx, bcy), minus;
+            grid_coarse->global(), bcx, bcy, interpolation_method), minus;
     if( mx == my && mx == 1)
     {
         plus = plusFine;

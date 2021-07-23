@@ -11,6 +11,7 @@
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
+const std::string method = "cubic";
 
 int main(int argc, char * argv[])
 {
@@ -37,7 +38,8 @@ int main(int argc, char * argv[])
     const dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat(mag);
     //create Fieldaligned object and construct DS from it
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA(
-            bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
+            bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
+            -1, method);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
         ds( dsFA, dg::centered );
     //![doxygen]
@@ -91,7 +93,7 @@ int main(int argc, char * argv[])
     }
     ///##########################################################///
     std::cout << "# Reconstruct parallel derivative!\n";
-    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1]);
+    dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1], -1, method);
     ds.construct( dsFA, dg::centered);
     std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
@@ -143,7 +145,7 @@ int main(int argc, char * argv[])
     dg::DVec funST(fun);
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFAST(
             bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
-            g3d.hz()/2.);
+            g3d.hz()/2., method);
     for( auto bc : {dg::NEU, dg::DIR})
     {
         if( bc == dg::DIR)
