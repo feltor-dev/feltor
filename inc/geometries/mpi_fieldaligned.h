@@ -121,15 +121,6 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         m_bcz = bcz;
     }
 
-    template< class BinaryOp>
-    MPI_Vector<LocalContainer> evaluate( BinaryOp binary, unsigned p0=0) const
-    {
-        return evaluate( binary, dg::CONSTANT(1), p0, 0);
-    }
-
-    template< class BinaryOp, class UnaryOp>
-    MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
-
     void operator()(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
 
     const MPI_Vector<LocalContainer>& hm()const {
@@ -322,178 +313,6 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     m_deltaPhi = deltaPhi; // store for evaluate
 }
 
-template<class G, class M, class C, class container>
-template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
-{
-    //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
-    //unary function is always such that the p0 plane is at x=0
-    assert( p0 < m_g->global().Nz());
-    const dg::ClonePtr<aMPIGeometry2d> g2d = m_g->perp_grid();
-    MPI_Vector<container> init2d = dg::pullback( binary, *g2d);
-    MPI_Vector<container> zero2d = dg::evaluate( dg::zero, *g2d);
-    unsigned globalNz = m_g->global().Nz();
-
-    MPI_Vector<container> temp(init2d), tempP(init2d), tempM(init2d);
-    MPI_Vector<container> vec3d = dg::evaluate( dg::zero, *m_g);
-    std::vector<MPI_Vector<container> >  plus2d(globalNz, zero2d), minus2d(plus2d), result(plus2d);
-    unsigned turns = rounds;
-    if( turns ==0) turns++;
-    //first apply Interpolation many times, scale and store results
-    for( unsigned r=0; r<turns; r++)
-        for( unsigned i0=0; i0<globalNz; i0++)
-        {
-            dg::blas1::copy( init2d, tempP);
-            dg::blas1::copy( init2d, tempM);
-            unsigned rep = r*globalNz + i0;
-            for(unsigned k=0; k<rep; k++)
-            {
-                //!!! The value of f at the plus plane is I^- of the current plane
-                dg::blas2::symv( m_minus, tempP, temp);
-                temp.swap( tempP);
-                //!!! The value of f at the minus plane is I^+ of the current plane
-                dg::blas2::symv( m_plus, tempM, temp);
-                temp.swap( tempM);
-            }
-            dg::blas1::scal( tempP, unary(  (double)rep*m_deltaPhi ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*m_deltaPhi ) );
-            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
-            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
-        }
-    //now we have the plus and the minus filaments
-    if( rounds == 0) //there is a limiter
-    {
-        for( unsigned i0=0; i0<m_Nz; i0++)
-        {
-            int idx = (int)(i0+m_coords2*m_Nz)  - (int)p0;
-            if(idx>=0)
-                result[i0] = plus2d[idx];
-            else
-                result[i0] = minus2d[abs(idx)];
-            thrust::copy( result[i0].data().begin(), result[i0].data().end(),
-                    vec3d.data().begin() + i0*m_perp_size);
-        }
-    }
-    else //sum up plus2d and minus2d
-    {
-        for( unsigned i0=0; i0<globalNz; i0++)
-        {
-            unsigned revi0 = (globalNz - i0)%globalNz; //reverted index
-            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
-            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
-        }
-        dg::blas1::axpby( -1., init2d, 1., result[0]);
-        for(unsigned i0=0; i0<m_Nz; i0++)
-        {
-            int idx = ((int)i0 + m_coords2*m_Nz -(int)p0 + globalNz)%globalNz; //shift index
-            thrust::copy( result[idx].data().begin(), result[idx].data().end(),
-                    vec3d.data().begin() + i0*m_perp_size);
-        }
-    }
-    return vec3d;
-}
-
-template<class BinaryOp, class UnaryOp>
-MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
-        const aProductMPIGeometry3d& grid,
-        const CylindricalVectorLvl0& vec,
-        const BinaryOp& binary, const UnaryOp& unary, unsigned p0, unsigned rounds,
-        double eps = 1e-5)
-{
-    unsigned Nz = grid.Nz();
-    const dg::ClonePtr<aMPIGeometry2d> g2d = grid.perp_grid();
-    // Construct for field-aligned output
-    dg::MHVec vec3d = dg::evaluate( dg::zero, grid);
-    dg::MHVec tempP = dg::evaluate( dg::zero, *g2d), tempM( tempP);
-    std::vector<dg::MHVec>  plus2d(Nz, tempP), minus2d(plus2d), result(plus2d);
-    dg::MHVec init2d = dg::pullback( binary, *g2d);
-    std::array<dg::HVec,3> yy0{
-        dg::evaluate( dg::cooX2d, g2d->local()),
-        dg::evaluate( dg::cooY2d, g2d->local()),
-        dg::evaluate( dg::zero, g2d->local())}, yy1(yy0), xx0( yy0), xx1(yy0); //s
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
-    double deltaPhi = grid.hz();
-    double phiM0 = 0., phiP0 = 0.;
-    unsigned turns = rounds;
-    if( turns == 0) turns++;
-    for( unsigned r=0; r<turns; r++)
-        for( unsigned  i0=0; i0<Nz; i0++)
-        {
-            unsigned rep = r*Nz + i0;
-            if( rep == 0)
-                tempM = tempP = init2d;
-            else
-            {
-                for( unsigned i=0; i<g2d->local().size(); i++)
-                {
-                    // minus direction needs positive integration!
-                    double phiM1 = phiM0 + deltaPhi;
-                    std::array<double,3>
-                        coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
-                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiM0,
-                            coords0, phiM1, coords1, 0., dg::pid_control,
-                            dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
-                    yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
-                        coords1[2];
-                    tempM.data()[i] = binary( yy1[0][i], yy1[1][i]);
-
-                    // plus direction needs negative integration!
-                    double phiP1 = phiP0 - deltaPhi;
-                    coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
-                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiP0,
-                            coords0, phiP1, coords1, 0., dg::pid_control,
-                            dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
-                    xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
-                        coords1[2];
-                    tempP.data()[i] = binary( xx1[0][i], xx1[1][i]);
-                }
-                std::swap( yy0, yy1);
-                std::swap( xx0, xx1);
-                phiM0 += deltaPhi;
-                phiP0 -= deltaPhi;
-            }
-            dg::blas1::scal( tempM, unary( -(double)rep*deltaPhi ) );
-            dg::blas1::scal( tempP, unary(  (double)rep*deltaPhi ) );
-            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
-            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
-        }
-    //now we have the plus and the minus filaments
-    int dims[3], periods[3], coords[3];
-    MPI_Cart_get( grid.communicator(), 3, dims, periods, coords);
-    unsigned coords2 = coords[2];
-    if( rounds == 0) //there is a limiter
-    {
-        for( unsigned i0=0; i0<grid.local().Nz(); i0++)
-        {
-            int idx = (int)(i0+coords2*grid.local().Nz()) - (int)p0;
-            if(idx>=0)
-                result[i0] = plus2d[idx];
-            else
-                result[i0] = minus2d[abs(idx)];
-            thrust::copy( result[i0].data().begin(), result[i0].data().end(),
-                    vec3d.data().begin() + i0*g2d->local().size());
-        }
-    }
-    else //sum up plus2d and minus2d
-    {
-        for( unsigned i0=0; i0<Nz; i0++)
-        {
-            unsigned revi0 = (Nz - i0)%Nz; //reverted index
-            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
-            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
-        }
-        dg::blas1::axpby( -1., init2d, 1., result[0]);
-        for( unsigned i0=0; i0<grid.local().Nz(); i0++)
-        {
-            int idx = ((int)i0 +coords2*grid.local().Nz()-(int)p0 + Nz)%Nz;
-            //shift index
-            thrust::copy( result[idx].data().begin(), result[idx].data().end(),
-                    vec3d.data().begin() + i0*g2d->local().size());
-        }
-    }
-    return vec3d;
-}
-
 
 template<class G, class M, class C, class container>
 void Fieldaligned<G, MPIDistMat<M,C>, MPI_Vector<container> >::operator()(enum
@@ -631,9 +450,115 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_temp[i0]);
     }
 }
-
-
 ///@endcond
+
+
+///@brief %Evaluate a 2d functor and transform to all planes along the fieldlines (MPI Version)
+///@copydetails fieldaligned_evaluate(const aProductGeometry3d&,const CylindricalVectorLvl0&,const BinaryOp&,const UnaryOp&,unsigned,unsigned,double)
+///@ingroup fieldaligned
+template<class BinaryOp, class UnaryOp>
+MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
+        const aProductMPIGeometry3d& grid,
+        const CylindricalVectorLvl0& vec,
+        const BinaryOp& binary,
+        const UnaryOp& unary,
+        unsigned p0,
+        unsigned rounds,
+        double eps = 1e-5)
+{
+    unsigned Nz = grid.Nz();
+    const dg::ClonePtr<aMPIGeometry2d> g2d = grid.perp_grid();
+    // Construct for field-aligned output
+    dg::MHVec vec3d = dg::evaluate( dg::zero, grid);
+    dg::MHVec tempP = dg::evaluate( dg::zero, *g2d), tempM( tempP);
+    std::vector<dg::MHVec>  plus2d(Nz, tempP), minus2d(plus2d), result(plus2d);
+    dg::MHVec init2d = dg::pullback( binary, *g2d);
+    std::array<dg::HVec,3> yy0{
+        dg::evaluate( dg::cooX2d, g2d->local()),
+        dg::evaluate( dg::cooY2d, g2d->local()),
+        dg::evaluate( dg::zero, g2d->local())}, yy1(yy0), xx0( yy0), xx1(yy0); //s
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
+    double deltaPhi = grid.hz();
+    double phiM0 = 0., phiP0 = 0.;
+    unsigned turns = rounds;
+    if( turns == 0) turns++;
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned  i0=0; i0<Nz; i0++)
+        {
+            unsigned rep = r*Nz + i0;
+            if( rep == 0)
+                tempM = tempP = init2d;
+            else
+            {
+                for( unsigned i=0; i<g2d->local().size(); i++)
+                {
+                    // minus direction needs positive integration!
+                    double phiM1 = phiM0 + deltaPhi;
+                    std::array<double,3>
+                        coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
+                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiM0,
+                            coords0, phiM1, coords1, 0., dg::pid_control,
+                            dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
+                    yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
+                        coords1[2];
+                    tempM.data()[i] = binary( yy1[0][i], yy1[1][i]);
+
+                    // plus direction needs negative integration!
+                    double phiP1 = phiP0 - deltaPhi;
+                    coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
+                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiP0,
+                            coords0, phiP1, coords1, 0., dg::pid_control,
+                            dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
+                    xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
+                        coords1[2];
+                    tempP.data()[i] = binary( xx1[0][i], xx1[1][i]);
+                }
+                std::swap( yy0, yy1);
+                std::swap( xx0, xx1);
+                phiM0 += deltaPhi;
+                phiP0 -= deltaPhi;
+            }
+            dg::blas1::scal( tempM, unary( -(double)rep*deltaPhi ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*deltaPhi ) );
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( grid.communicator(), 3, dims, periods, coords);
+    unsigned coords2 = coords[2];
+    if( rounds == 0) //there is a limiter
+    {
+        for( unsigned i0=0; i0<grid.local().Nz(); i0++)
+        {
+            int idx = (int)(i0+coords2*grid.local().Nz()) - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].data().begin(), result[i0].data().end(),
+                    vec3d.data().begin() + i0*g2d->local().size());
+        }
+    }
+    else //sum up plus2d and minus2d
+    {
+        for( unsigned i0=0; i0<Nz; i0++)
+        {
+            unsigned revi0 = (Nz - i0)%Nz; //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for( unsigned i0=0; i0<grid.local().Nz(); i0++)
+        {
+            int idx = ((int)i0 +coords2*grid.local().Nz()-(int)p0 + Nz)%Nz;
+            //shift index
+            thrust::copy( result[idx].data().begin(), result[idx].data().end(),
+                    vec3d.data().begin() + i0*g2d->local().size());
+        }
+    }
+    return vec3d;
+}
 
 }//namespace geo
 }//namespace dg
