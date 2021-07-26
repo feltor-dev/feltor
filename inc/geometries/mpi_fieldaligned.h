@@ -256,6 +256,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
             grid_coarse->global(), bcx, bcy, interpolation_method), plus;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
             grid_coarse->global(), bcx, bcy, interpolation_method), minus;
+    //MW: here there is a difference between dg method and linear method
+    // in principle we need to multiply interpolate to the plusFine matrix
     if( mx == my && mx == 1)
     {
         plus = plusFine;

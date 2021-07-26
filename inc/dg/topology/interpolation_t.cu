@@ -13,7 +13,7 @@ double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
 const unsigned n = 3;
 const unsigned Nx = 9;
 const unsigned Ny = 5;
-const unsigned Nz = 2;
+const unsigned Nz = 4;
 
 typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
 
@@ -21,14 +21,15 @@ int main()
 {
 
     dg::Grid2d g( -M_PI, 0, -5*M_PI, -4*M_PI, n, Nx, Ny);
-    {
     std::cout << "First test grid set functions: \n";
+    {
     g.display( std::cout);
     g.set(2,2,3);
     g.display( std::cout);
     g.set(n, Nx, Ny);
     g.display( std::cout);
     }
+    std::cout << "\n1D TESTS:\n";
     {
     bool passed = true;
     dg::Grid1d g1d( -M_PI, 0, n, Nx);
@@ -95,9 +96,9 @@ int main()
 
     }
     }
+
+    std::cout << "\n2D TESTS:\n";
     {
-
-
     //![doxygen]
     //create equidistant values
     thrust::host_vector<double> x( g.size()), y(x);
@@ -110,28 +111,69 @@ int main()
             y[i*g.Nx()*g.n() + j] =
                     g.y0() + 2*g.ly() + (i+0.5)*g.hy()/(double)(g.n());
         }
-    std::vector<std::string> methods = {"nearest", "linear", "dg", "cubic"};
+    //use DIR because the coo.2d is zero on the right boundary
+    Matrix B = dg::create::interpolation( x, y, g, dg::DIR, dg::DIR, "dg");
+    //values outside the grid are mirrored back in
+
+    const thrust::host_vector<double> vec = dg::evaluate( function, g);
+    thrust::host_vector<double> inter(vec);
+    dg::blas2::symv( B, vec, inter);
+    //![doxygen]
+    //inter now contains the values of vec interpolated at equidistant points
+    Matrix A = dg::create::backscatter( g);
+    thrust::host_vector<double> inter1(vec);
+    dg::blas2::symv( A, vec, inter1);
+    dg::blas1::axpby( 1., inter1, +1., inter, inter1);//the mirror makes a sign!!
+    double error = dg::blas1::dot( inter1, inter1);
+    std::cout << "Error for method dg is "<<error<<" (should be small)!\n";
+    if( error > 1e-14)
+        std::cout<< "2D TEST FAILED!\n";
+    else
+        std::cout << "2D TEST PASSED!\n";
+    std::vector<std::string> methods = {"nearest", "linear", "cubic"};
+    dg::Grid2d g2d ( -1.5, 6.5, -1.5, 6.5, 1, 8, 8);
+    std::vector<double> x1d{ -1.4, -0.4, .1, 2.2, 2.8, 3, 3.1, 3.4, 4.9, 6.1};
+    std::vector<double> y1d{ -1.4, -0.4, .1, 2.2, 2.8, 3, 3.1, 3.4, 4.9, 6.1};
+    dg::HVec x2d( x1d.size()*y1d.size()), y2d(x2d);
+    for( unsigned k=0; k<y1d.size(); k++)
+    for( unsigned i=0; i<x1d.size(); i++)
+    {
+        x2d[k*x1d.size()+i] = x1d[i];
+        y2d[k*x1d.size()+i] = y1d[k];
+    }
     for( auto method : methods)
     {
         //use DIR because the coo.2d is zero on the right boundary
-        Matrix B = dg::create::interpolation( x, y, g, dg::DIR, dg::DIR, method);
-        //values outside the grid are mirrored back in
+        Matrix B = dg::create::interpolation( x2d, y2d, g2d, dg::DIR, dg::DIR,
+                method);
+        const std::vector<double> v1ec{0,0,0,0,1,1,1,1};
+        dg::HVec vec(v1ec.size()*v1ec.size());
+        for( unsigned k=0; k<v1ec.size(); k++)
+        for( unsigned i=0; i<v1ec.size(); i++)
+            vec[k*v1ec.size()+i] = v1ec[i]*v1ec[k];
+        const std::vector<double> s1ol0{0, 0,0,0,1,1,1,1,1,1};
+        const std::vector<double> s1ol1{0, 0,0,0.2,0.8,1,1,1,1,1};
+        const std::vector<double> s1ol3{0, 0,0,0.184,0.816,1.,1.0285,1.064,1,1};
+        dg::HVec sol0(x2d.size()), sol1(sol0), sol3(sol0);
+        for( unsigned k=0; k<s1ol0.size(); k++)
+        for( unsigned i=0; i<s1ol0.size(); i++)
+        {
+            sol0[k*s1ol0.size()+i] = s1ol0[k]*s1ol0[i];
+            sol1[k*s1ol0.size()+i] = s1ol1[k]*s1ol1[i];
+            sol3[k*s1ol0.size()+i] = s1ol3[k]*s1ol3[i];
+        }
 
-        const thrust::host_vector<double> vec = dg::evaluate( function, g);
-        thrust::host_vector<double> inter(vec);
+        thrust::host_vector<double> inter(x2d.size());
         dg::blas2::symv( B, vec, inter);
-        //inter now contains the values of vec interpolated at equidistant points
-        //![doxygen]
-        dg::Grid2d gequi( -M_PI, 0, -5*M_PI, -4*M_PI, 1, n*Nx, n*Ny);
-        thrust::host_vector<double> inter1 = dg::evaluate( function, gequi);
-        dg::blas1::axpby( 1., inter1, +1., inter, inter1);//the mirror makes a sign!!
-        double error = dg::blas1::dot( inter1, inter1);
+        if( method == "nearest") dg::blas1::axpby( 1., sol0, -1., inter);
+        if( method == "linear") dg::blas1::axpby( 1., sol1, -1., inter);
+        if( method == "cubic") dg::blas1::axpby( 1., sol3, -1., inter);
+        double error = dg::blas1::dot( inter, inter);
         std::cout << "Error for method "<<method<<" is "<<error<<" (should be small)!\n";
-        // Maybe we should get an exact test here ...
-        //if( error > 1e-14)
-        //    std::cout<< "2D TEST FAILED!\n";
-        //else
-        //    std::cout << "2D TEST PASSED!\n";
+        if( error > 1e-14)
+            std::cout<< "2D TEST FAILED!\n";
+        else
+            std::cout << "2D TEST PASSED!\n";
     }
 
 
@@ -159,12 +201,11 @@ int main()
         std::cout << "2D INTERPOLATE TEST PASSED!\n";
     }
     ////////////////////////////////////////////////////////////////////////////
+    std::cout << "\n3D TESTS:\n";
     {
     dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
     g.set( 2,2,2,3);
     g.set( n, Nx,Ny,Nz);
-    Matrix A = dg::create::backscatter( g);
-    //A.sort_by_row_and_column();
 
     //![doxygen3d]
     //create equidistant values
@@ -180,20 +221,26 @@ int main()
                 z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.z0() + (k+0.5)*g.hz();
             }
-    Matrix B = dg::create::interpolation( x, y, z, g);
-    const thrust::host_vector<double> vec = dg::evaluate( function, g);
-    thrust::host_vector<double> inter(vec);
-    dg::blas2::symv( B, vec, inter);
-    //![doxygen3d]
-    thrust::host_vector<double> inter1(vec);
-    dg::blas2::symv( A, vec, inter1);
-    dg::blas1::axpby( 1., inter1, -1., inter, inter1);
-    double error = dg::blas1::dot( inter1, inter1);
-    std::cout << "Error is "<<error<<" (should be small)!\n";
-    if( error > 1e-14)
-        std::cout<< "3D TEST FAILED!\n";
-    else
-        std::cout << "3D TEST PASSED!\n";
+    std::vector<std::string> methods = {"nearest", "linear", "dg", "cubic"};
+    for ( auto method : methods)
+    {
+        Matrix B = dg::create::interpolation( x, y, z, g, dg::DIR, dg::DIR, dg::PER,
+                method);
+        const thrust::host_vector<double> vec = dg::evaluate( function, g);
+        thrust::host_vector<double> inter(vec);
+        dg::blas2::symv( B, vec, inter);
+        //![doxygen3d]
+        dg::Grid3d gequi( -10, 10, -5, 5, -7, -3, 1, g.n()*g.Nx(),
+                g.n()*g.Ny(), g.Nz());
+        thrust::host_vector<double> inter1 = dg::evaluate( function, gequi);
+        dg::blas1::axpby( 1., inter1, -1., inter, inter1);
+        double error = dg::blas1::dot( inter1, inter1)/ dg::blas1::dot( inter,inter);
+        std::cout << "Error for method "<<method<<" is "<<sqrt(error)<<" (should be small)!\n";
+        //if( error > 1e-14)
+        //    std::cout<< "3D TEST FAILED!\n";
+        //else
+        //    std::cout << "3D TEST PASSED!\n";
+    }
     }
 
     return 0;

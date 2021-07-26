@@ -203,7 +203,11 @@ std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_lin
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGrid1d<real_type>& g, dg::bc bcx = dg::NEU, std::string method = "dg")
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
+        const thrust::host_vector<real_type>& x,
+        const RealGrid1d<real_type>& g,
+        dg::bc bcx = dg::NEU,
+        std::string method = "dg")
 {
     if( method == "dg")
     {
@@ -298,7 +302,12 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopology2d<real_type>& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, std::string method = "dg")
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
+        const thrust::host_vector<real_type>& x,
+        const thrust::host_vector<real_type>& y,
+        const aRealTopology2d<real_type>& g,
+        dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU,
+        std::string method = "dg")
 {
     assert( x.size() == y.size());
     cusp::array1d<real_type, cusp::host_memory> values;
@@ -496,133 +505,209 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @copydoc hide_bcx_doc
  * @param bcy analogous to \c bcx, applies to y direction
  * @param bcz analogous to \c bcx, applies to z direction
+ * @copydoc hide_method
  *
  * @return interpolation matrix
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealTopology3d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
+        const thrust::host_vector<real_type>& x,
+        const thrust::host_vector<real_type>& y,
+        const thrust::host_vector<real_type>& z,
+        const aRealTopology3d<real_type>& g,
+        dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER,
+        std::string method = "dg")
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
-    std::vector<real_type> gauss_nodes = g.dlt().abscissas();
-    dg::Operator<real_type> forward( g.dlt().forward());
     cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
     cusp::array1d<int, cusp::host_memory> column_indices;
 
-    for( int i=0; i<(int)x.size(); i++)
+    if( method == "dg")
     {
-        real_type X = x[i], Y = y[i], Z = z[i];
-        bool negative = false;
-        g.shift( negative,X,Y,Z, bcx, bcy, bcz);
+        std::vector<real_type> gauss_nodes = g.dlt().abscissas();
+        dg::Operator<real_type> forward( g.dlt().forward());
+        for( int i=0; i<(int)x.size(); i++)
+        {
+            real_type X = x[i], Y = y[i], Z = z[i];
+            bool negative = false;
+            g.shift( negative,X,Y,Z, bcx, bcy, bcz);
 
-        //determine which cell (x,y) lies in
-        real_type xnn = (X-g.x0())/g.hx();
-        real_type ynn = (Y-g.y0())/g.hy();
-        real_type znn = (Z-g.z0())/g.hz();
-        unsigned nn = (unsigned)floor(xnn);
-        unsigned mm = (unsigned)floor(ynn);
-        unsigned ll = (unsigned)floor(znn);
-        //determine normalized coordinates
-        real_type xn = 2.*xnn - (real_type)(2*nn+1);
-        real_type yn = 2.*ynn - (real_type)(2*mm+1);
-        //interval correction
-        if (nn==g.Nx()) {
-            nn-=1;
-            xn = 1.;
-        }
-        if (mm==g.Ny()) {
-            mm-=1;
-            yn =1.;
-        }
-        if (ll==g.Nz()) {
-            ll-=1;
-        }
-        //Test if the point is a Gauss point since then no interpolation is needed
-        int idxX =-1, idxY = -1;
-        for( unsigned k=0; k<g.n(); k++)
-        {
-            if( fabs( xn - gauss_nodes[k]) < 1e-14)
-                idxX = nn*g.n() + k; //determine which grid column it is
-            if( fabs( yn - gauss_nodes[k]) < 1e-14)
-                idxY = mm*g.n() + k;  //determine grid line
-        } //in z-direction we don't interpolate
-        if( idxX < 0 && idxY < 0 ) //there is no corresponding point
-        {
-            //evaluate 2d Legendre polynomials at (xn, yn)...
-            std::vector<real_type> px = detail::coefficients( xn, g.n()),
-                                py = detail::coefficients( yn, g.n());
-            std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
-            for( unsigned l=0; l<g.n(); l++)
-                for( unsigned k=0; k<g.n(); k++)
-                {
-                    pxF[l]+= px[k]*forward(k,l);
-                    pyF[l]+= py[k]*forward(k,l);
-                }
-            std::vector<real_type> pxyz( g.n()*g.n());
-            //these are the matrix coefficients with which to multiply
-            for(unsigned k=0; k<pyF.size(); k++)
-                for( unsigned l=0; l<pxF.size(); l++)
-                    pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
+            //determine which cell (x,y) lies in
+            real_type xnn = (X-g.x0())/g.hx();
+            real_type ynn = (Y-g.y0())/g.hy();
+            real_type znn = (Z-g.z0())/g.hz();
+            unsigned nn = (unsigned)floor(xnn);
+            unsigned mm = (unsigned)floor(ynn);
+            unsigned ll = (unsigned)floor(znn);
+            //determine normalized coordinates
+            real_type xn = 2.*xnn - (real_type)(2*nn+1);
+            real_type yn = 2.*ynn - (real_type)(2*mm+1);
+            //interval correction
+            if (nn==g.Nx()) {
+                nn-=1;
+                xn = 1.;
+            }
+            if (mm==g.Ny()) {
+                mm-=1;
+                yn =1.;
+            }
+            if (ll==g.Nz()) {
+                ll-=1;
+            }
+            //Test if the point is a Gauss point since then no interpolation is needed
+            int idxX =-1, idxY = -1;
             for( unsigned k=0; k<g.n(); k++)
+            {
+                if( fabs( xn - gauss_nodes[k]) < 1e-14)
+                    idxX = nn*g.n() + k; //determine which grid column it is
+                if( fabs( yn - gauss_nodes[k]) < 1e-14)
+                    idxY = mm*g.n() + k;  //determine grid line
+            } //in z-direction we don't interpolate
+            if( idxX < 0 && idxY < 0 ) //there is no corresponding point
+            {
+                //evaluate 2d Legendre polynomials at (xn, yn)...
+                std::vector<real_type> px = detail::coefficients( xn, g.n()),
+                                    py = detail::coefficients( yn, g.n());
+                std::vector<real_type> pxF(g.n(),0), pyF(g.n(), 0);
+                for( unsigned l=0; l<g.n(); l++)
+                    for( unsigned k=0; k<g.n(); k++)
+                    {
+                        pxF[l]+= px[k]*forward(k,l);
+                        pyF[l]+= py[k]*forward(k,l);
+                    }
+                std::vector<real_type> pxyz( g.n()*g.n());
+                //these are the matrix coefficients with which to multiply
+                for(unsigned k=0; k<pyF.size(); k++)
+                    for( unsigned l=0; l<pxF.size(); l++)
+                        pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
+                for( unsigned k=0; k<g.n(); k++)
+                    for( unsigned l=0; l<g.n(); l++)
+                    {
+                        row_indices.push_back( i);
+                        column_indices.push_back(
+                                ((ll*g.Ny()+mm)*g.n()+k)*g.n()*g.Nx()+nn*g.n()
+                                + l);
+                        if( !negative)
+                            values.push_back( pxyz[k*g.n()+l]);
+                        else
+                            values.push_back(-pxyz[k*g.n()+l]);
+                    }
+            }
+            else if ( idxX < 0 && idxY >=0) //there is a corresponding line
+            {
+                std::vector<real_type> px = detail::coefficients( xn, g.n());
+                std::vector<real_type> pxF(g.n(),0);
+                for( unsigned l=0; l<g.n(); l++)
+                    for( unsigned k=0; k<g.n(); k++)
+                        pxF[l]+= px[k]*forward(k,l);
                 for( unsigned l=0; l<g.n(); l++)
                 {
                     row_indices.push_back( i);
-                    column_indices.push_back( ((ll*g.Ny()+mm)*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
+                    column_indices.push_back( (ll*g.Ny()*g.n() +
+                                idxY)*g.Nx()*g.n() + nn*g.n() + l);
                     if( !negative)
-                        values.push_back( pxyz[k*g.n()+l]);
+                        values.push_back( pxF[l]);
                     else
-                        values.push_back(-pxyz[k*g.n()+l]);
+                        values.push_back(-pxF[l]);
                 }
-        }
-        else if ( idxX < 0 && idxY >=0) //there is a corresponding line
-        {
-            std::vector<real_type> px = detail::coefficients( xn, g.n());
-            std::vector<real_type> pxF(g.n(),0);
-            for( unsigned l=0; l<g.n(); l++)
-                for( unsigned k=0; k<g.n(); k++)
-                    pxF[l]+= px[k]*forward(k,l);
-            for( unsigned l=0; l<g.n(); l++)
-            {
-                row_indices.push_back( i);
-                column_indices.push_back( (ll*g.Ny()*g.n() + idxY)*g.Nx()*g.n() + nn*g.n() + l);
-                if( !negative)
-                    values.push_back( pxF[l]);
-                else
-                    values.push_back(-pxF[l]);
             }
-        }
-        else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
-        {
-            std::vector<real_type> py = detail::coefficients( yn, g.n());
-            std::vector<real_type> pyF(g.n(),0);
-            for( unsigned l=0; l<g.n(); l++)
+            else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
+            {
+                std::vector<real_type> py = detail::coefficients( yn, g.n());
+                std::vector<real_type> pyF(g.n(),0);
+                for( unsigned l=0; l<g.n(); l++)
+                    for( unsigned k=0; k<g.n(); k++)
+                        pyF[l]+= py[k]*forward(k,l);
                 for( unsigned k=0; k<g.n(); k++)
-                    pyF[l]+= py[k]*forward(k,l);
-            for( unsigned k=0; k<g.n(); k++)
+                {
+                    row_indices.push_back(i);
+                    column_indices.push_back(((ll*g.Ny()+mm)*g.n()+k)*g.Nx()*g.n() + idxX);
+                    if(!negative)
+                        values.push_back( pyF[k]);
+                    else
+                        values.push_back(-pyF[k]);
+                }
+            }
+            else //the point already exists
             {
                 row_indices.push_back(i);
-                column_indices.push_back(((ll*g.Ny()+mm)*g.n()+k)*g.Nx()*g.n() + idxX);
-                if(!negative)
-                    values.push_back( pyF[k]);
+                column_indices.push_back((ll*g.Ny()*g.n()+idxY)*g.Nx()*g.n() + idxX);
+                if( !negative)
+                    values.push_back( 1.);
                 else
-                    values.push_back(-pyF[k]);
+                    values.push_back(-1.);
+            }
+
+        }
+    }
+    else
+    {
+        unsigned points_per_line = 1;
+        if( method == "nearest")
+            points_per_line = 1;
+        else if( method == "linear")
+            points_per_line = 2;
+        else if( method == "cubic")
+            points_per_line = 4;
+        else
+            throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
+        RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+        RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+        RealGrid1d<real_type> gz(g.z0(), g.z1(), 1,     g.Nz());
+        thrust::host_vector<real_type> absX = dg::create::abscissas( gx);
+        thrust::host_vector<real_type> absY = dg::create::abscissas( gy);
+        thrust::host_vector<real_type> absZ = dg::create::abscissas( gz);
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            real_type X = x[i], Y = y[i], Z = z[i];
+            bool negative = false;
+            g.shift( negative, X, Y, Z, bcx, bcy, bcz);
+
+            unsigned col_beginX = 0, col_beginY = 0, col_beginZ = 0;
+            std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
+                    points_per_line, gx, absX, col_beginX);
+            std::vector<real_type> ys  = detail::choose_1d_abscissas( Y,
+                    points_per_line, gy, absY, col_beginY);
+            std::vector<real_type> zs  = detail::choose_1d_abscissas( Z,
+                    points_per_line, gz, absZ, col_beginZ);
+
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<real_type> pxyz( points_per_line*points_per_line
+                    *points_per_line);
+            std::vector<real_type> px = detail::lagrange( X, xs),
+                                   py = detail::lagrange( Y, ys),
+                                   pz = detail::lagrange( Z, zs);
+            for( unsigned m=0; m<pz.size(); m++)
+            for( unsigned k=0; k<py.size(); k++)
+            for( unsigned l=0; l<px.size(); l++)
+                pxyz[(m*py.size()+k)*px.size()+l]= pz[m]*py[k]*px[l];
+            for( unsigned m=0; m<points_per_line; m++)
+            for( unsigned k=0; k<points_per_line; k++)
+            for( unsigned l=0; l<points_per_line; l++)
+            {
+                if( fabs(pxyz[(m*points_per_line+k)*points_per_line +l]) > 1e-14)
+                {
+                    row_indices.push_back( i);
+                    column_indices.push_back( ((col_beginZ + m)*g.n()*g.Ny() +
+                                col_beginY+k)*g.n()*g.Nx() + col_beginX+l);
+                    if( !negative )
+                        values.push_back(
+                                pxyz[(m*points_per_line+k)*points_per_line+l]);
+                    else
+                        values.push_back(
+                               -pxyz[(m*points_per_line+k)*points_per_line+l]);
+                }
             }
         }
-        else //the point already exists
-        {
-            row_indices.push_back(i);
-            column_indices.push_back((ll*g.Ny()*g.n()+idxY)*g.Nx()*g.n() + idxX);
-            if( !negative)
-                values.push_back( 1.);
-            else
-                values.push_back(-1.);
-        }
-
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), values.size());
-    A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(),
+            values.size());
+    A.row_indices = row_indices;
+    A.column_indices = column_indices;
+    A.values = values;
 
     return A;
 }
