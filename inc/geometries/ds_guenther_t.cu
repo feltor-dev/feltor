@@ -17,6 +17,7 @@ int main( )
     std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
+    std::string method = "cubic";
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout <<"# You typed\n"
               <<"n:  "<<n<<"\n"
@@ -28,13 +29,18 @@ int main( )
     std::cout << "# You typed\n"
               <<"mx: "<<mx<<"\n"
               <<"my: "<<my<<std::endl;
+    std::cout << "# Type method (dg, nearest, linear, cubic) \n";
+    std::cin >> method;
+    method.erase( std::remove( method.begin(), method.end(), '"'), method.end());
+    std::cout << "# You typed\n"
+              <<"method: "<< method<<std::endl;
     std::cout << "# Create parallel Derivative!\n";
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
-        dg::centered, 1e-8, mx, my);
+        dg::centered, 1e-8, mx, my, -1, method);
 
     ///##########################################################///
     const dg::DVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
@@ -75,7 +81,7 @@ int main( )
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
         std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
-                  <<" "<<sqrt(norm/sol)<<"  \t"<<vol<<"\n";
+                  <<" "<<sqrt(norm/sol)<<" #  \t"<<vol<<"\n";
     }
     ///##########################################################///
     std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
@@ -83,7 +89,7 @@ int main( )
     dg::DVec funST(fun);
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFAST(
             mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my,
-            g3d.hz()/2.);
+            g3d.hz()/2., method);
     dsFAST( dg::geo::zeroMinus, fun, zMinus);
     dsFAST( dg::geo::einsPlus,  fun, ePlus);
     dg::geo::ds_slope( dsFAST, 1., zMinus, ePlus, 0., funST);
@@ -99,6 +105,6 @@ int main( )
     double norm = dg::blas2::dot( derivative, vol3d, derivative);
     std::string name  = "directLapST";
     std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
-              <<" "<<sqrt(norm/sol)<<"  \t"<<vol<<"\n";
+              <<" "<<sqrt(norm/sol)<<" #  \t"<<vol<<"\n";
     return 0;
 }

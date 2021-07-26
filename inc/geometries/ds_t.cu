@@ -11,13 +11,13 @@
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
-const std::string method = "cubic";
 
 int main(int argc, char * argv[])
 {
     std::cout << "# Test the parallel derivative DS in cylindrical coordinates for circular flux surfaces with DIR and NEU boundary conditions.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx[2], max_iter = 1e4;
+    std::string method = "cubic";
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout <<"# You typed\n"
               <<"n:  "<<n<<"\n"
@@ -29,6 +29,11 @@ int main(int argc, char * argv[])
     std::cout << "# You typed\n"
               <<"mx: "<<mx[0]<<"\n"
               <<"my: "<<mx[1]<<std::endl;
+    std::cout << "# Type method (dg, nearest, linear, cubic) \n";
+    std::cin >> method;
+    method.erase( std::remove( method.begin(), method.end(), '"'), method.end());
+    std::cout << "# You typed\n"
+              <<"method: "<< method<<std::endl;
     std::cout << "# Create parallel Derivative!\n";
 
     //![doxygen]

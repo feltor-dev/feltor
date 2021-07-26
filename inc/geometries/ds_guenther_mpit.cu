@@ -19,6 +19,8 @@ int main(int argc, char * argv[])
     MPI_Init( &argc, &argv);
     int rank;
     unsigned n, Nx, Ny, Nz, mx[2], max_iter = 1e4;
+    std::string method = "cubic";
+    unsigned letters = 0;
     MPI_Comm comm;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if(rank==0)std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
@@ -35,9 +37,18 @@ int main(int argc, char * argv[])
         std::cout << "# You typed\n"
                   <<"mx: "<<mx[0]<<"\n"
                   <<"my: "<<mx[1]<<std::endl;
+        std::cout << "# Type method (dg, nearest, linear, cubic) \n";
+        std::cin >> method;
+        method.erase( std::remove( method.begin(), method.end(), '"'), method.end());
+        letters = method.size();
+        std::cout << "# You typed\n"
+                  <<"method: "<< method<<std::endl;
         std::cout << "# Create parallel Derivative!\n";
     }
     MPI_Bcast( mx, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast( &letters, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    method.resize( letters);
+    MPI_Bcast( &method[0], letters, MPI_CHAR, 0, MPI_COMM_WORLD);
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalMPIGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
