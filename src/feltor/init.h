@@ -225,12 +225,6 @@ dg::x::HVec make_ntilde(
         else
         {
             double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-            //unsigned mx = js["refine"].get( 0u, 5).asUInt();
-            //unsigned my = js["refine"].get( 1u, 5).asUInt();
-            //dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
-            //    dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
-            //            dg::geo::NoLimiter(), rk4eps, mx, my);
-            //evaluate should always be used with mx,my > 1 (but this takes a lot of memory)
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
             std::string parallel = js.get( "parallel", "gaussian").asString();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
@@ -268,12 +262,6 @@ dg::x::HVec make_ntilde(
         else
         {
             double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-            //unsigned mx = js["refine"].get( 0u, 2).asUInt();
-            //unsigned my = js["refine"].get( 1u, 2).asUInt();
-            //dg::geo::Fieldaligned<dg::x::CylindricalGrid3d, dg::x::IHMatrix,
-            //    dg::x::HVec> fieldaligned( mag, grid, grid.bcx(), grid.bcy(),
-            //            dg::geo::NoLimiter(), rk4eps, mx, my);
-            //evaluate should always be used with mx,my > 1 (but this takes more memory)
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
             std::string parallel = js.get( "parallel", "gaussian").asString();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();

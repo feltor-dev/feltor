@@ -482,9 +482,9 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     if( !p.calibrate )
     {
         m_fa.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
-            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz );
+            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz , p.interpolation_method);
         m_faST.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
-            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2. );
+            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
     }
 
     // in Poisson we take EPhi except for the true curvmode

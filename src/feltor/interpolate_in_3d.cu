@@ -24,9 +24,10 @@ thrust::host_vector<float> append( const thrust::host_vector<float>& in, const d
 //convert all 3d variables of every TIME_FACTOR-th timestep to float
 //and interpolate to a FACTOR times finer grid in phi
 //also periodify in 3d and equidistant in RZ
-//input should probably come from another json file
+// Also plot in a fieldaligned coordinate system
 const unsigned INTERPOLATE = 6;
 const unsigned TIME_FACTOR = 1;
+//input should probably better come from another json file
 int main( int argc, char* argv[])
 {
     if( argc != 3)
@@ -180,7 +181,7 @@ int main( int argc, char* argv[])
         phi0 -= deltaPhi;
     }
     dg::IHMatrix big_matrix
-        = dg::create::interpolation( RR, ZZ, PP, g3d_in);
+        = dg::create::interpolation( RR, ZZ, PP, g3d_in, "linear");
 
 
     // define 4d dimension

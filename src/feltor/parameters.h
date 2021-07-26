@@ -23,6 +23,7 @@ struct Parameters
     unsigned stages;
     unsigned mx, my;
     double rk4eps;
+    std::string interpolation_method;
     double nbc;
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
@@ -94,6 +95,7 @@ struct Parameters
         mx          = js["FCI"]["refine"].get( 0u, 1).asUInt();
         my          = js["FCI"]["refine"].get( 1u, 1).asUInt();
         rk4eps      = js["FCI"].get( "rk4eps", 1e-6).asDouble();
+        interpolation_method = js["FCI"].get("interpolation-method", "dg").asString();
         periodify   = js["FCI"].get( "periodify", true).asBool();
         fci_bc      = js["FCI"].get( "bc", "along_field").asString();
 

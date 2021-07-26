@@ -6,7 +6,8 @@
             5,
             5
         ],
-        "rk4eps": 1e-06
+        "rk4eps": 1e-06,
+        "interpolation-method" : "linear"
     },
     "advection": {
         "type": "velocity-staggered",
@@ -120,7 +121,7 @@
         "inner_loop": 2,
         "itstp": 5,
         "maxout": 10,
-        "type": "netcdf",
+        "type": "glfw",
         "window" :
         {
             "rows":  6,
@@ -142,8 +143,8 @@
     },
     "regularization": {
         "direction": "centered",
-        "nu_perp_n": 1e-05,
-        "nu_perp_u": 1e-05,
+        "nu_perp_n": 0e-09,
+        "nu_perp_u": 0e-09,
         "order": 2
     },
     "source": {

@@ -326,7 +326,7 @@ int main( int argc, char* argv[])
     auto bhat = dg::geo::createBHat( mag);
     dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
         bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5);
+        p.rk4eps, 5, 5, -1, "dg");
     /////////////////////////////////////////////////////////////////////////
     size_t counter = 0;
     int ncid;
