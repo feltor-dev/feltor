@@ -6,7 +6,6 @@
 #include "grid.h"
 #include "evaluation.h"
 #include "functions.h"
-#include "creation.h"
 #include "operator_tensor.h"
 
 /*! @file
@@ -90,14 +89,20 @@ std::vector<real_type> lagrange( real_type x, const std::vector<real_type>& xi)
     return l;
 }
 
+//THERE IS A BUG FOR PERIODIC BC !!
 template<class real_type>
-std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_line, const RealGrid1d<real_type>& g, const thrust::host_vector<real_type>& abs, unsigned& col_begin)
+std::vector<real_type> choose_1d_abscissas( real_type X,
+        unsigned points_per_line, const RealGrid1d<real_type>& g,
+        const thrust::host_vector<real_type>& abs,
+        thrust::host_vector<unsigned>& cols)
 {
+    assert( abs.size() >= points_per_line && "There must be more points to interpolate\n");
+    dg::bc bcx = g.bcx();
     //determine which cell (X) lies in
     real_type xnn = (X-g.x0())/g.h();
     unsigned n = (unsigned)floor(xnn);
     //intervall correction
-    if (n==g.N()) {
+    if (n==g.N() && bcx != dg::PER) {
         n-=1;
     }
     // look for closest abscissa
@@ -105,60 +110,110 @@ std::vector<real_type> choose_1d_abscissas( real_type X, unsigned points_per_lin
     // X <= *it
     auto it = std::lower_bound( abs.begin()+n*g.n(), abs.begin() + (n+1)*g.n(),
             X);
-    col_begin = 0;
+    cols.resize( points_per_line, 0);
     switch( points_per_line)
     {
         case 1: xs[0] = 1.;
                 if( it == abs.begin())
-                    col_begin = 0;
+                    cols[0] = 0;
                 else if( it == abs.end())
-                    col_begin = it - abs.begin() - 1;
+                    cols[0] = it - abs.begin() - 1;
                 else
                 {
                     if ( fabs(X - *it) < fabs( X - *(it-1)))
-                        col_begin = it - abs.begin();
+                        cols[0] = it - abs.begin();
                     else
-                        col_begin = it - abs.begin() -1;
+                        cols[0] = it - abs.begin() -1;
                 }
                 break;
         case 2: if( it == abs.begin())
                 {
-                    xs[0] = *it;
-                    xs[1] = *(it+1);
-                    col_begin = 0;
+                    if( bcx == dg::PER)
+                    {
+                        xs[0] = *it;
+                        xs[1] = *(abs.end() -1)-g.lx();;
+                        cols[0] = 0, cols[1] = abs.end()-abs.begin()-1;
+                    }
+                    else
+                    {
+                        xs[0] = *it;
+                        xs[1] = *(it+1);
+                        cols[0] = 0, cols[1] = 1;
+                    }
                 }
                 else if( it == abs.end())
                 {
-                    xs[0] = *(it-2);
-                    xs[0] = *(it-1);
-                    col_begin = it - abs.begin() - 2;
+                    if( bcx == dg::PER)
+                    {
+                        xs[0] = *(abs.begin())+g.lx();
+                        xs[1] = *(it-1);
+                        cols[0] = 0, cols[1] = it-abs.begin()-1;
+                    }
+                    else
+                    {
+                        xs[0] = *(it-2);
+                        xs[0] = *(it-1);
+                        cols[0] = it - abs.begin() - 2;
+                        cols[1] = it - abs.begin() - 1;
+                    }
                 }
                 else
                 {
                     xs[0] = *(it-1);
                     xs[1] = *it;
-                    col_begin = it - abs.begin() - 1;
+                    cols[0] = it - abs.begin() - 1;
+                    cols[1] = cols[0]+1;
                 }
                 break;
         case 4: if( it <= abs.begin() +1)
                 {
-                    it = abs.begin();
-                    xs[0] = *it,     xs[1] = *(it+1);
-                    xs[2] = *(it+2), xs[3] = *(it+3);
-                    col_begin = 0;
+                    if( bcx == dg::PER)
+                    {
+                        xs[0] = *abs.begin(), cols[0] = 0;
+                        xs[1] = *(abs.begin()+1), cols[1] = 1;
+                        xs[2] = it == abs.begin() ? *(abs.end() -2) : *(abs.begin()+2);
+                        cols[2] = it == abs.begin() ? abs.end()-abs.begin() -2 : 2;
+                        xs[3] = *(abs.end() -1);
+                        cols[3] = abs.end()-abs.begin() -1;
+                    }
+                    else
+                    {
+                        it = abs.begin();
+                        xs[0] = *it,     xs[1] = *(it+1);
+                        xs[2] = *(it+2), xs[3] = *(it+3);
+                        cols[0] = 0, cols[1] = 1;
+                        cols[2] = 2, cols[3] = 3;
+                    }
                 }
-                else if( it >= abs.end() -2)
+                else if( it >= abs.end() -1)
                 {
-                    it = abs.end();
-                    xs[0] = *(it-4), xs[1] = *(it-3);
-                    xs[2] = *(it-2), xs[3] = *(it-1);
-                    col_begin = it - abs.begin() - 4;
+                    if( bcx == dg::PER)
+                    {
+                        xs[0] = *abs.begin(), cols[0] = 0;
+                        xs[1] = it == abs.end() ? *(abs.begin()+1) : *(abs.end() -3) ;
+                        cols[1] = it == abs.end() ? 1 :  abs.end()-abs.begin()-3 ;
+                        xs[2] = *(abs.end() - 2), cols[2] = abs.end()-abs.begin()-2;
+                        xs[3] = *(abs.end() - 1), cols[3] = abs.end()-abs.begin()-1;
+                    }
+                    else
+                    {
+                        it = abs.end();
+                        xs[0] = *(it-4), xs[1] = *(it-3);
+                        xs[2] = *(it-2), xs[3] = *(it-1);
+                        cols[0] = it - abs.begin() - 4;
+                        cols[1] = cols[0]+1;
+                        cols[2] = cols[1]+1;
+                        cols[3] = cols[2]+1;
+                    }
                 }
                 else
                 {
                     xs[0] = *(it-2), xs[1] = *(it-1);
                     xs[2] = *(it  ), xs[3] = *(it+1);
-                    col_begin = it - abs.begin() - 2;
+                    cols[0] = it - abs.begin() - 2;
+                    cols[1] = cols[0]+1;
+                    cols[2] = cols[1]+1;
+                    cols[3] = cols[2]+1;
                 }
                 break;
     }
@@ -209,11 +264,11 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
         dg::bc bcx = dg::NEU,
         std::string method = "dg")
 {
+    cusp::array1d<real_type, cusp::host_memory> values;
+    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> column_indices;
     if( method == "dg")
     {
-        cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
-
-        int number = 0;
         dg::Operator<real_type> forward( g.dlt().forward());
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -238,13 +293,17 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             for( unsigned l=0; l<g.n(); l++)
                 for( unsigned k=0; k<g.n(); k++)
                     pxF[l]+= px[k]*forward(k,l);
-            unsigned col_begin = n*g.n();
-            if( negative)
-                for( unsigned l=0; l<g.n(); l++)
-                    pxF[l]*=-1.;
-            detail::add_line( A, number, i,  col_begin, pxF);
+            unsigned cols = n*g.n();
+            for ( unsigned l=0; l<g.n(); l++)
+            {
+                if( fabs( pxF[l]) > 1e-14)
+                {
+                    row_indices.push_back(i);
+                    column_indices.push_back( cols + l);
+                    values.push_back(negative ? -pxF[l] : pxF[l]);
+                }
+            }
         }
-        return A;
     }
     else
     {
@@ -257,9 +316,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             points_per_line = 4;
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
-        cusp::coo_matrix<int, real_type, cusp::host_memory> A(
-                x.size(), g.size(), x.size()*points_per_line);
-        int number = 0;
         thrust::host_vector<real_type> abs = dg::create::abscissas( g);
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -267,18 +323,29 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             bool negative = false;
             g.shift( negative, X, bcx);
 
-            unsigned col_begin = 0;
+            thrust::host_vector<unsigned> cols;
+            dg::RealGrid1d<real_type> gx( g.x0(), g.x1(), g.n(), g.N(), bcx);
             std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
-                    points_per_line, g, abs, col_begin);
+                    points_per_line, gx, abs, cols);
 
             std::vector<real_type> px = detail::lagrange( X, xs);
-            if( negative)
-                for( unsigned l=0; l<points_per_line; l++)
-                    px[l]*=-1.;
-            detail::add_line( A, number, i,  col_begin, px);
+            for ( unsigned l=0; l<points_per_line; l++)
+            {
+                if( fabs( px[l]) > 1e-14)
+                {
+                    row_indices.push_back(i);
+                    column_indices.push_back( cols[l]);
+                    values.push_back(negative ? -px[l] : px[l]);
+                }
+            }
         }
-        return A;
     }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
+            x.size(), g.size(), values.size());
+    A.row_indices = row_indices;
+    A.column_indices = column_indices;
+    A.values = values;
+    return A;
 }
 
 /**
@@ -438,8 +505,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             points_per_line = 4;
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
-        RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
-        RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+        RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx(), bcx);
+        RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny(), bcy);
         thrust::host_vector<real_type> absX = dg::create::abscissas( gx);
         thrust::host_vector<real_type> absY = dg::create::abscissas( gy);
         for( unsigned i=0; i<x.size(); i++)
@@ -448,11 +515,11 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             bool negative = false;
             g.shift( negative, X, Y, bcx, bcy);
 
-            unsigned col_beginX = 0, col_beginY = 0;
+            thrust::host_vector<unsigned> colsX, colsY;
             std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
-                    points_per_line, gx, absX, col_beginX);
+                    points_per_line, gx, absX, colsX);
             std::vector<real_type> ys  = detail::choose_1d_abscissas( Y,
-                    points_per_line, gy, absY, col_beginY);
+                    points_per_line, gy, absY, colsY);
 
             //evaluate 2d Legendre polynomials at (xn, yn)...
             std::vector<real_type> pxy( points_per_line*points_per_line);
@@ -467,12 +534,10 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
                     if( fabs(pxy[k*points_per_line +l]) > 1e-14)
                     {
                         row_indices.push_back( i);
-                        column_indices.push_back( (col_beginY+k)*g.n()*g.Nx() +
-                            col_beginX+l);
-                        if( !negative )
-                            values.push_back(  pxy[k*points_per_line+l]);
-                        else
-                            values.push_back( -pxy[k*points_per_line+l]);
+                        column_indices.push_back( (colsY[k])*g.n()*g.Nx() +
+                            colsX[l]);
+                        values.push_back( negative ? - pxy[k*points_per_line+l]
+                                :  pxy[k*points_per_line+l]);
                     }
                 }
         }
@@ -654,9 +719,9 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             points_per_line = 4;
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
-        RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
-        RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
-        RealGrid1d<real_type> gz(g.z0(), g.z1(), 1,     g.Nz());
+        RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx(), bcx);
+        RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+        RealGrid1d<real_type> gz(g.z0(), g.z1(), 1,     g.Nz(), bcz);
         thrust::host_vector<real_type> absX = dg::create::abscissas( gx);
         thrust::host_vector<real_type> absY = dg::create::abscissas( gy);
         thrust::host_vector<real_type> absZ = dg::create::abscissas( gz);
@@ -666,13 +731,13 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             bool negative = false;
             g.shift( negative, X, Y, Z, bcx, bcy, bcz);
 
-            unsigned col_beginX = 0, col_beginY = 0, col_beginZ = 0;
+            thrust::host_vector<unsigned> colsX, colsY, colsZ;
             std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
-                    points_per_line, gx, absX, col_beginX);
+                    points_per_line, gx, absX, colsX);
             std::vector<real_type> ys  = detail::choose_1d_abscissas( Y,
-                    points_per_line, gy, absY, col_beginY);
+                    points_per_line, gy, absY, colsY);
             std::vector<real_type> zs  = detail::choose_1d_abscissas( Z,
-                    points_per_line, gz, absZ, col_beginZ);
+                    points_per_line, gz, absZ, colsZ);
 
             //evaluate 2d Legendre polynomials at (xn, yn)...
             std::vector<real_type> pxyz( points_per_line*points_per_line
@@ -691,14 +756,11 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
                 if( fabs(pxyz[(m*points_per_line+k)*points_per_line +l]) > 1e-14)
                 {
                     row_indices.push_back( i);
-                    column_indices.push_back( ((col_beginZ + m)*g.n()*g.Ny() +
-                                col_beginY+k)*g.n()*g.Nx() + col_beginX+l);
-                    if( !negative )
-                        values.push_back(
-                                pxyz[(m*points_per_line+k)*points_per_line+l]);
-                    else
-                        values.push_back(
-                               -pxyz[(m*points_per_line+k)*points_per_line+l]);
+                    column_indices.push_back( ((colsZ[m])*g.n()*g.Ny() +
+                                colsY[k])*g.n()*g.Nx() + colsX[l]);
+                    values.push_back( negative ?
+                            -pxyz[(m*points_per_line+k)*points_per_line+l]
+                          :  pxyz[(m*points_per_line+k)*points_per_line+l] );
                 }
             }
         }
@@ -867,15 +929,15 @@ real_type interpolate(
             px[k] = pxF[k];
     }
     //these are the matrix coefficients with which to multiply
-    unsigned col_begin = (n)*g.n();
+    unsigned cols = (n)*g.n();
     //multiply x
     real_type value = 0;
     for( unsigned j=0; j<g.n(); j++)
     {
         if(negative)
-            value -= v[col_begin + j]*px[j];
+            value -= v[cols + j]*px[j];
         else
-            value += v[col_begin + j]*px[j];
+            value += v[cols + j]*px[j];
     }
     return value;
 }
@@ -947,16 +1009,16 @@ real_type interpolate(
             px[k] = pxF[k], py[k] = pyF[k];
     }
     //these are the matrix coefficients with which to multiply
-    unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
+    unsigned cols = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
     //multiply x
     real_type value = 0;
     for( unsigned i=0; i<g.n(); i++)
         for( unsigned j=0; j<g.n(); j++)
         {
             if(negative)
-                value -= v[col_begin + i*g.Nx()*g.n() + j]*px[j]*py[i];
+                value -= v[cols + i*g.Nx()*g.n() + j]*px[j]*py[i];
             else
-                value += v[col_begin + i*g.Nx()*g.n() + j]*px[j]*py[i];
+                value += v[cols + i*g.Nx()*g.n() + j]*px[j]*py[i];
         }
     return value;
 }

@@ -68,7 +68,7 @@ int main()
     else
         std::cout << "1D TEST PASSED!\n";
     g1d = dg::Grid1d ( -1.5, 6.5, 1, 8);
-    x = std::vector<double>{ -1.4, -0.4, .1, 2.2, 2.8, 3, 3.1, 3.4, 4.9, 6.1};
+    x = std::vector<double>{ -1.6, -0.4, .1, 2.2, 2.8, 3, 3.1, 3.4, 4.9, 6.1};
     std::vector<std::string> methods = {"nearest", "linear", "cubic"};
     for ( auto method : methods)
     {
@@ -205,7 +205,7 @@ int main()
     {
     dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
     g.set( 2,2,2,3);
-    g.set( n, Nx,Ny,Nz);
+    g.set( n, Nx,Ny,2*Nz);
 
     //![doxygen3d]
     //create equidistant values
