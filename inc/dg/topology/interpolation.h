@@ -256,6 +256,7 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
  * @copydoc hide_method
  *
  * @return interpolation matrix
+ * @attention does **not** remove explicit zeros in the interpolation matrix
  */
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
@@ -296,12 +297,9 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             unsigned cols = n*g.n();
             for ( unsigned l=0; l<g.n(); l++)
             {
-                if( fabs( pxF[l]) > 1e-14)
-                {
-                    row_indices.push_back(i);
-                    column_indices.push_back( cols + l);
-                    values.push_back(negative ? -pxF[l] : pxF[l]);
-                }
+                row_indices.push_back(i);
+                column_indices.push_back( cols + l);
+                values.push_back(negative ? -pxF[l] : pxF[l]);
             }
         }
     }
@@ -331,12 +329,9 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             std::vector<real_type> px = detail::lagrange( X, xs);
             for ( unsigned l=0; l<points_per_line; l++)
             {
-                if( fabs( px[l]) > 1e-14)
-                {
-                    row_indices.push_back(i);
-                    column_indices.push_back( cols[l]);
-                    values.push_back(negative ? -px[l] : px[l]);
-                }
+                row_indices.push_back(i);
+                column_indices.push_back( cols[l]);
+                values.push_back(negative ? -px[l] : px[l]);
             }
         }
     }
@@ -367,6 +362,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * @copydoc hide_method
  *
  * @return interpolation matrix
+ * @attention removes explicit zeros in the interpolation matrix
  */
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
@@ -573,6 +569,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * @copydoc hide_method
  *
  * @return interpolation matrix
+ * @attention removes explicit zeros from the interpolation matrix
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
 template<class real_type>
@@ -784,6 +781,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * @param g_old The old grid
  *
  * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
+ * @attention The 1d version does **not** remove explicit zeros from the
+ * interpolation matrix, but the 2d and 3d versions do
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
  * @note also check the transformation matrix, which is the more general solution
