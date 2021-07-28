@@ -130,7 +130,7 @@ int main( int argc, char* argv[])
     dg::geo::detail::DSFieldCylindrical cyl_field(bhat);
     double eps = 1e-5;
     double deltaPhi = g3d_out_fieldaligned.hz();
-    double phi0 = 0.;
+    double phi0 = deltaPhi/2.;
     for( unsigned i=0; i<g2d.size(); i++)
     {
         RR[ Nz_out*g2d.size() + i] = yy0[0][i];
@@ -156,7 +156,7 @@ int main( int argc, char* argv[])
         std::swap( yy0, yy1);
         phi0 += deltaPhi;
     }
-    phi0 = 0;
+    phi0 = deltaPhi/2.;
     yy0 = std::array<thrust::host_vector<double>,3> {
         dg::evaluate( dg::cooX2d, g2d),
         dg::evaluate( dg::cooY2d, g2d),
@@ -181,7 +181,7 @@ int main( int argc, char* argv[])
         phi0 -= deltaPhi;
     }
     dg::IHMatrix big_matrix
-        = dg::create::interpolation( RR, ZZ, PP, g3d_in, "linear");
+        = dg::create::interpolation( RR, ZZ, PP, g3d_in, p.bcxN, p.bcyN, dg::PER, "linear");
 
 
     // define 4d dimension
