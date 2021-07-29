@@ -217,30 +217,28 @@ struct Explicit
                 // density m_dsN
                 m_fa( dg::geo::einsMinus, m_density[i], m_minus);
                 m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
-                update_parallel_bc_2nd( m_minus, m_density[i], m_plus,
+                update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
                         m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_density[i],
                         m_plus, 0., m_dsN[i]);
                 // potential m_dsP
                 m_fa( dg::geo::einsMinus, m_potential[i], m_minus);
                 m_fa( dg::geo::einsPlus,  m_potential[i], m_plus);
-                update_parallel_bc_2nd( m_minus, m_potential[i], m_plus,
+                update_parallel_bc_2nd( m_fa, m_minus, m_potential[i], m_plus,
                         m_p.bcxP, 0.);
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_potential[i],
                         m_plus, 0., m_dsP[i]);
                 // velocity m_dssU, m_lapParU
-                m_fa( dg::geo::einsMinus, m_velocity[i], m_minus);
-                m_fa( dg::geo::einsPlus,  m_velocity[i], m_plus);
-                update_parallel_bc_2nd( m_minus, m_velocity[i], m_plus,
+                m_fa_diff( dg::geo::einsMinus, m_velocity[i], m_minus);
+                m_fa_diff( dg::geo::einsPlus,  m_velocity[i], m_plus);
+                update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[i], m_plus,
                         m_p.bcxU, 0.);
-                dg::geo::dssd_centered( m_divb, m_fa, 1.,
+                dg::geo::dssd_centered( m_divb, m_fa_diff, 1.,
                         m_minus, m_velocity[i], m_plus, 0., m_lapParU[i]);
-                dg::geo::dss_centered( m_fa, 1., m_minus,
+                dg::geo::dss_centered( m_fa_diff, 1., m_minus,
                     m_velocity[i], m_plus, 0., m_dssU[i]);
                 // velocity m_dsU
-                //dg::geo::ds_slope( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0.,
-                //        m_dsU[i]);
-                dg::geo::ds_centered( m_fa, 1.,
+                dg::geo::ds_centered( m_fa_diff, 1.,
                         m_minus, m_velocity[i], m_plus, 0., m_dsU[i]);
                 // velocity source
                 dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
@@ -268,12 +266,13 @@ struct Explicit
             }
         }
     }
-    void update_parallel_bc_2nd( Container& minus, const Container& value0,
+    void update_parallel_bc_2nd( const dg::geo::Fieldaligned<Geometry, IMatrix,
+            Container>& fa, Container& minus, const Container& value0,
             Container& plus, dg::bc bcx, double value)
     {
         if( m_p.fci_bc == "along_field")
         {
-            dg::geo::assign_bc_along_field_2nd( m_fa, minus, value0,
+            dg::geo::assign_bc_along_field_2nd( fa, minus, value0,
                     plus, minus, plus, bcx, {value,value});
         }
         else
@@ -281,7 +280,7 @@ struct Explicit
             if( bcx == dg::DIR)
             {
                 dg::blas1::plus( minus, -value);
-                dg::geo::swap_bc_perp( m_fa, minus, plus,
+                dg::geo::swap_bc_perp( fa, minus, plus,
                         minus, plus);
                 dg::blas1::plus( minus, +value);
             }
@@ -398,7 +397,7 @@ struct Explicit
     //matrices and solvers
     Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
     Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_P, m_dy_A, m_dz;
-    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST;
+    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST, m_fa_diff;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
@@ -482,9 +481,14 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     if( !p.calibrate )
     {
         m_fa.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
-            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz , p.interpolation_method);
+            p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz, p.interpolation_method);
         m_faST.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
+        if( !(p.interpolation_method == "dg"))
+            m_fa_diff.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
+                p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz, "dg");
+        else
+            m_fa_diff = m_fa;
     }
 
     // in Poisson we take EPhi except for the true curvmode
@@ -1093,7 +1097,7 @@ void Explicit<Geometry, IMatrix, Matrix,
         m_fa( dg::geo::einsPlus, slope, m_plus);
         // Let's keep the default boundaries of NEU
         // boundary values are (probably?) never used in the slope limiter branches
-        update_parallel_bc_2nd( m_minus, slope, m_plus, dg::NEU, 0.);
+        update_parallel_bc_2nd( m_fa, m_minus, slope, m_plus, dg::NEU, 0.);
         if( slope_limiter == "minmod")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
@@ -1150,10 +1154,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[i] > 0)
         {
-            m_fa( dg::geo::einsMinus, m_velocityST[i], m_minus);
-            m_fa( dg::geo::einsPlus, m_velocityST[i], m_plus);
-            update_parallel_bc_2nd( m_minus, m_velocityST[i], m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_divb, m_fa, m_p.nu_parallel_u[i],
+            m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
+            m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
+            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
+                    m_plus, m_p.bcxU, 0.);
+            dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[i],
                     m_minus, m_velocityST[i], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
         }
@@ -1255,7 +1260,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
         {
             m_fa( dg::geo::einsMinus, m_density[i], m_minus);
             m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
-            update_parallel_bc_2nd( m_minus, m_density[i], m_plus,
+            update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
                     m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
             //The coordinate automatically sees the reversed field
             //but m_plus and m_minus are defined wrt the angle coordinate

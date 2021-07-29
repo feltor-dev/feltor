@@ -26,10 +26,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     if( "velocity-staggered" == advection)
     {
-        dg::blas1::copy( 1., m_density[0]),
-        dg::blas1::copy( y[0][1], m_density[1]),
+        dg::blas1::copy( y[0][1], m_density[0]);
+        dg::blas1::copy( y[0][1], m_density[1]);
 
-        dg::blas1::copy( 0., m_velocity[0]),
+        dg::blas1::copy( 0., m_velocity[0]);
+        dg::blas1::copy( y[1][1], m_velocityST[0]);
         dg::blas1::copy( y[1][1], m_velocityST[1]);
 
         dg::blas1::copy( 0., yp);
@@ -86,36 +87,41 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            update_parallel_bc_2nd( m_minus, m_velocityST[1], m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_divb, m_fa, m_p.nu_parallel_u[1],
+            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+                    m_plus, m_p.bcxU, 0.);
+            dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
     }
     else if( "centered" == advection || "centered-forward" == advection)
     {
-        dg::blas1::copy( 1., m_density[0]),
-        dg::blas1::copy( y[0][1], m_density[1]),
+        dg::blas1::copy( y[0][1], m_density[0]);
+        dg::blas1::copy( y[0][1], m_density[1]);
+        dg::blas1::copy( y[0][1], m_densityST[0]),
         dg::blas1::copy( y[0][1], m_densityST[1]),
-
+        dg::blas1::copy( y[1][1], m_velocity[0]);
         dg::blas1::copy( y[1][1], m_velocity[1]);
+
+        dg::blas1::copy( y[1][1], m_velocityST[0]);
         dg::blas1::copy( y[1][1], m_velocityST[1]);
 
         dg::blas1::copy( 0., yp);
         // Now compute divNUb and grad U^2/2
         m_fa( dg::geo::einsPlus, m_density[1], m_plus);
         m_fa( dg::geo::einsMinus, m_density[1], m_minus);
-        update_parallel_bc_2nd( m_minus, m_density[1], m_plus, m_p.bcxN, m_p.bcxN ==
-                dg::DIR ? m_p.nbc : 0.);
+        update_parallel_bc_2nd( m_fa, m_minus, m_density[1], m_plus, m_p.bcxN,
+                m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
         dg::geo::ds_centered( m_fa, 1., m_minus, m_density[1], m_plus, 0., m_dsN[1]);
         if( "centered-forward" == advection)
             dg::geo::ds_forward( m_fa, 1., m_density[1], m_plus, 0., m_temp0);
 
         m_fa( dg::geo::einsPlus, m_velocity[1], m_plus);
         m_fa( dg::geo::einsMinus, m_velocity[1], m_minus);
-        update_parallel_bc_2nd( m_minus, m_velocity[1], m_plus, m_p.bcxU, 0.);
+        update_parallel_bc_2nd( m_fa, m_minus, m_velocity[1], m_plus, m_p.bcxU,
+                0.);
         dg::geo::ds_centered( m_fa, 1., m_minus, m_velocity[1], m_plus, 0.,
                 m_dsU[1]);
         if( "centered-forward" == advection)
@@ -142,12 +148,34 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            dg::geo::dssd_centered( m_divb, m_fa, m_p.nu_parallel_u[1],
+            m_fa_diff( dg::geo::einsMinus, m_velocity[1], m_minus);
+            m_fa_diff( dg::geo::einsPlus, m_velocity[1], m_plus);
+            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[1],
+                    m_plus, m_p.bcxU, 0.);
+            dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[1],
                     m_minus, m_velocity[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_density[1], 1., yp[1][1]);
         }
 
 
+    }
+    else if( "diffusion" == advection)
+    {
+        // solve diffusion equation in density
+        dg::blas1::copy( y[0], m_density);
+        dg::blas1::copy( y[0], m_densityST);
+        dg::blas1::copy( 0., yp);
+        // Add parallel viscosity
+        if( m_p.nu_parallel_u[1] > 0)
+        {
+            // here we can try out difference between linear and cubic
+            m_fa( dg::geo::einsMinus, y[0][1], m_minus);
+            m_fa( dg::geo::einsPlus, y[0][1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_density[1], m_plus,
+                    m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+            dg::geo::dssd_centered( m_divb, m_fa, m_p.nu_parallel_u[1],
+                    m_minus, m_density[1], m_plus, 1., yp[0][1]);
+        }
     }
     //-------------Add regularization----------------------------//
     compute_perp_diffusiveN( 1., m_density[1], m_temp0, m_temp1, 1.,
