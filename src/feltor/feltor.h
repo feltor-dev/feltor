@@ -1241,7 +1241,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_rhs_penalization(
             }
             else if( m_p.penalize_sheath)
             {
-                dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
+                if( i!= 0) //only velocity has sheath bc
+                    dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
                         rhs *= (1.0-sheath); }, yp[i][j], m_sheath);
             }
         }
@@ -1255,24 +1256,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
     {
         ////density
         ////Here, we need to find out where "downstream" is
-        //!! Does not really work without
-        for( unsigned i=0; i<2; i++)
-        {
-            m_fa( dg::geo::einsMinus, m_density[i], m_minus);
-            m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
-            update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
-                    m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-            //The coordinate automatically sees the reversed field
-            //but m_plus and m_minus are defined wrt the angle coordinate
-            if( m_reversed_field) //bphi negative (exchange + and -)
-                dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, m_plus, m_minus);
-            else
-                dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, m_minus, m_plus);
-            dg::blas1::pointwiseDot( m_sheath_rate, m_temp0, m_sheath, 1.,
-                    yp[0][i]);
-        }
+        ////!! Does not really work without
+        //for( unsigned i=0; i<2; i++)
+        //{
+        //    m_fa( dg::geo::einsMinus, m_density[i], m_minus);
+        //    m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
+        //    update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
+        //            m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+        //    //The coordinate automatically sees the reversed field
+        //    //but m_plus and m_minus are defined wrt the angle coordinate
+        //    if( m_reversed_field) //bphi negative (exchange + and -)
+        //        dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
+        //             m_sheath_coordinate, m_plus, m_minus);
+        //    else
+        //        dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
+        //             m_sheath_coordinate, m_minus, m_plus);
+        //    dg::blas1::pointwiseDot( m_sheath_rate, m_temp0, m_sheath, 1.,
+        //            yp[0][i]);
+        //}
         //compute sheath velocity
 
         //velocity c_s
@@ -1316,7 +1317,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
     for( unsigned i=0; i<2; i++)
     {
         dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_density[i],
-                -m_sheath_rate, m_sheath, m_density[i], 1., yp[0][i]);
+                //-m_sheath_rate, m_sheath, m_density[i],
+                1., yp[0][i]);
         dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_velocityST[i],
                 -m_sheath_rate, m_sheath, m_velocityST[i], 1., yp[1][i]);
     }
