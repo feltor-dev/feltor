@@ -8,6 +8,10 @@
         "scaleR" :  [1.3,1.10],
         "scaleZ" :  [2.05,1.55]
     },
+    "advection":
+    {
+        "slope-limiter" : "none"
+    },
     "timestepper":
     {
         "type" : "multistep",
@@ -16,10 +20,11 @@
     },
     "FCI":
     {
-        "refine": [1,1],
+        "refine": [5,5],
         "rk4eps": 1e-6,
         "periodify": true,
-        "bc" : "along_field"
+        "bc" : "along_field",
+        "interpolation-method" : "linear"
     },
     "output":
     {
@@ -55,10 +60,9 @@
     "regularization":
     {
         "order" : 2,
-        "direction": "centered",
+        "direction": "forward",
         "nu_perp_n" : 1e-5,
-        "nu_perp_u" : 1e-5,
-        "nu_parallel_n" : 1000
+        "nu_perp_u" : 1e-5
     },
     "boundary":
     {

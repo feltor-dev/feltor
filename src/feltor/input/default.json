@@ -8,6 +8,10 @@
         "scaleR" : [1.15,1.2],
         "scaleZ" : [1.2, 1.15]
     },
+    "advection":
+    {
+        "slope-limiter" : "none"
+    },
     "timestepper":
     {
         "type" : "multistep",
@@ -17,10 +21,9 @@
     "regularization":
     {
         "order" : 2,
-        "direction": "centered",
+        "direction": "forward",
         "nu_perp_n" : 1e-5,
-        "nu_perp_u" : 1e-5,
-        "nu_parallel_n" : 1000
+        "nu_perp_u" : 1e-5
     },
     "elliptic":
     {
