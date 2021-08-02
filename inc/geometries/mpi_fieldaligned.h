@@ -497,7 +497,7 @@ MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
                     std::array<double,3>
                         coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
                     dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiM0,
-                            coords0, phiM1, coords1, 0., dg::pid_control,
+                            coords0, phiM1, coords1, deltaPhi, dg::pid_control,
                             dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
                     yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
                         coords1[2];
@@ -507,7 +507,7 @@ MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
                     double phiP1 = phiP0 - deltaPhi;
                     coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
                     dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiP0,
-                            coords0, phiP1, coords1, 0., dg::pid_control,
+                            coords0, phiP1, coords1, -deltaPhi, dg::pid_control,
                             dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
                     xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
                         coords1[2];

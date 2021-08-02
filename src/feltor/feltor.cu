@@ -148,8 +148,10 @@ int main( int argc, char* argv[])
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
                     wall, grid)), p.nwall, p.uwall );
+    dg::Timer t;
     if( p.sheath_bc != "none")
     {
+        t.tic();
         DG_RANK0 std::cout << "# Compute Sheath coordinates \n";
         try{
             dg::Grid2d sheath_walls( Rmin, Rmax, Zmin, Zmax, 1, 1, 1);
@@ -173,6 +175,8 @@ int main( int argc, char* argv[])
                 p.sheath_rate,
                 dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
                 coord3d);
+        t.toc();
+        DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
     }
 
     DG_RANK0 std::cout << "# Set Source \n";
@@ -203,7 +207,8 @@ int main( int argc, char* argv[])
         feltor, y0, p, mag, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid))
     };
-    DG_RANK0 std::cout << "# Set Initial conditions \n";
+    DG_RANK0 std::cout << "# Set Initial conditions ... \n";
+    t.tic();
     if( argc == 4 )
     {
         try{
@@ -225,6 +230,9 @@ int main( int argc, char* argv[])
             abort_program();
         }
     }
+    t.toc();
+    DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
+
 
     ///////////////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
@@ -502,7 +510,6 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
 
-        dg::Timer t;
         t.tic();
         unsigned step = 0, failed_counter = 0;
         unsigned maxout = js["output"].get( "maxout", 0).asUInt();
