@@ -184,7 +184,7 @@ int main( int argc, char* argv[])
         bool fixed_profile;
         dg::x::HVec ne_profile, source_profile;
         double minne = 0., minrate = 0., minalpha = 0.;
-        source_profile = feltor::source_profiles(
+        source_profile = feltor::source_profiles( feltor,
             fixed_profile, ne_profile, grid, mag, unmod_mag, js["source"],
             minne, minrate, minalpha);
         feltor.set_source( fixed_profile,

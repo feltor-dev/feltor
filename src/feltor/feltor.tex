@@ -1273,8 +1273,6 @@ We either follow fieldlines around the torus several times or only once.
         "posX" : 0, // $p_x$ in Eq.\eqref{eq:initial_blob}
         "posY" : 0, // $p_y$ in Eq.\eqref{eq:initial_blob}
         "sigma" : 1.0, // $\sigma$ in Eq.\eqref{eq:initial_blob}
-        "rk4eps" : 1e-2, //accuracy for fieldline integration (takes a long time,
-        // a low value is sufficient for most applications)
         "revolutions" : 1, // times the blob is followed around the torus
         "parallel" : "gaussian" // Eq.\eqref{eq:modulation_blob}
         "parallel" : "step" // Eq.\eqref{eq:modulation_step}
@@ -1299,8 +1297,6 @@ Again, we transform this to all poloidal planes along the magnetic field lines a
     {
         "type" : "turbulence", // Choose Eq.\eqref{eq:initial_turbulent}
         "amplitude": 1.0, //amplitude of perturbation in Eq.\eqref{eq:initial_turbulent}
-        "rk4eps" : 1e-2, //accuracy for fieldline integration (takes a long time,
-        // a low value is sufficient for most applications)
         "revolutions" : 1, // times the bath is followed around the torus
         "parallel" : "gaussian" // Eq.\eqref{eq:modulation_blob}
         "parallel" : "step" // Eq.\eqref{eq:modulation_step}

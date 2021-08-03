@@ -351,6 +351,10 @@ struct Explicit
     void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
     void add_rhs_penalization(      std::array<std::array<Container,2>,2>& yp);
     void add_wall_and_sheath_terms( std::array<std::array<Container,2>,2>& yp);
+    const dg::geo::Fieldaligned<Geometry, IMatrix, Container>& fieldaligned() const
+    {
+        return m_fa;
+    }
   private:
     void construct_mag( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);

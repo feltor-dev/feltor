@@ -194,6 +194,7 @@ dg::x::HVec make_damping(
     return damping;
 }
 dg::x::HVec make_ntilde(
+    Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& feltor,
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag,
     dg::file::WrappedJsonValue js )
@@ -224,9 +225,8 @@ dg::x::HVec make_ntilde(
             ntilde = dg::pullback( init0, grid);
         else
         {
-            double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-            unsigned revolutions = js.get( "revolutions", 1).asUInt();
             std::string parallel = js.get( "parallel", "gaussian").asString();
+            unsigned revolutions = js.get( "revolutions", 1).asUInt();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
             auto bhat = dg::geo::createBHat(mag);
             if( sigma_z == 0)
@@ -234,17 +234,26 @@ dg::x::HVec make_ntilde(
             if( parallel == "gaussian")
             {
                 dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                ntilde = feltor.fieldaligned().evaluate( init0,
+                        gaussianZ, 0, revolutions);
+            }
+            else if( parallel == "exact-gaussian")
+            {
+                double rk4eps = js.get("rk4eps", 1e-6).asDouble();
+                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "step")
             {
+                double rk4eps = js.get("rk4eps", 1e-6).asDouble();
                 dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "double-step")
             {
+                double rk4eps = js.get("rk4eps", 1e-6).asDouble();
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         [sigma_z](double s) {
                         if( (s <  0) && (s > -sigma_z*M_PI)) return 0.5;
@@ -261,9 +270,8 @@ dg::x::HVec make_ntilde(
             ntilde = dg::pullback( init0, grid);
         else
         {
-            double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-            unsigned revolutions = js.get( "revolutions", 1).asUInt();
             std::string parallel = js.get( "parallel", "gaussian").asString();
+            unsigned revolutions = js.get( "revolutions", 1).asUInt();
             double sigma_z = js.get( "sigma_z", 0.).asDouble();
             auto bhat = dg::geo::createBHat(mag);
             if( sigma_z == 0)
@@ -271,11 +279,19 @@ dg::x::HVec make_ntilde(
             if( parallel == "gaussian")
             {
                 dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                ntilde = feltor.fieldaligned().evaluate( init0,
+                        gaussianZ, 0, revolutions);
+            }
+            else if( parallel == "exact-gaussian")
+            {
+                double rk4eps = js.get("rk4eps", 1e-6).asDouble();
+                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "step")
             {
+                double rk4eps = js.get("rk4eps", 1e-6).asDouble();
                 dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
@@ -334,7 +350,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
         else if( "ne" == ntype || "ni" == ntype)
         {
             double nbg = 0.;
-            dg::x::HVec ntilde  = detail::make_ntilde(  grid, mag,
+            dg::x::HVec ntilde  = detail::make_ntilde(  feltor, grid, mag,
                     js["density"]["ntilde"]);
             dg::x::HVec profile = detail::make_profile( grid, mag,
                     js["density"]["profile"]);
@@ -418,6 +434,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
 };
 
 dg::x::HVec source_profiles(
+    Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& feltor,
     bool& fixed_profile, //indicate whether a profile should be forced (yes or no)
     dg::x::HVec& ne_profile,    // if fixed_profile is yes you need to construct something here, if no then you can ignore the parameter; if you construct something it will show in the output file
     const dg::x::CylindricalGrid3d& grid,
@@ -453,7 +470,7 @@ dg::x::HVec source_profiles(
     {
         fixed_profile = false;
         double nbg = 0.;
-        source  = detail::make_ntilde(  grid, mag, js["ntilde"]);
+        source  = detail::make_ntilde( feltor, grid, mag, js["ntilde"]);
         ne_profile = detail::make_profile( grid, mag, js["profile"]);
         dg::x::HVec damping = detail::make_damping( grid, unmod_mag, js["damping"], nbg);
         dg::blas1::subroutine( [nbg]( double& profile, double& ntilde, double
