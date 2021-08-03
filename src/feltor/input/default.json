@@ -76,6 +76,7 @@
             "rk4eps" : 1e-6,
             "refine" : [5,5],
             "revolutions" : 1,
+            "parallel" : "gaussian",
             "sigma_z" : 0.5
         },
         "profile":
