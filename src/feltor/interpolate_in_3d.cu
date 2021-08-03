@@ -25,7 +25,7 @@ thrust::host_vector<float> append( const thrust::host_vector<float>& in, const d
 //and interpolate to a FACTOR times finer grid in phi
 //also periodify in 3d and equidistant in RZ
 // Also plot in a fieldaligned coordinate system
-const unsigned INTERPOLATE = 6;
+const unsigned INTERPOLATE = 2;
 const unsigned TIME_FACTOR = 1;
 //input should probably better come from another json file
 int main( int argc, char* argv[])
@@ -243,9 +243,9 @@ int main( int argc, char* argv[])
     // for fieldaligned output (transform to Cartesian coords)
     {
     dg::HVec XXc(RR), YYc(RR), ZZc(ZZ);
-    dg::blas1::evaluate( XXc, dg::equals(), [](double R, double P){
+    dg::blas1::evaluate( XXc, dg::equals(),[] DG_DEVICE (double R, double P){
             return R*sin(P);}, RR, PP);
-    dg::blas1::evaluate( YYc, dg::equals(), [](double R, double P){
+    dg::blas1::evaluate( YYc, dg::equals(),[] DG_DEVICE (double R, double P){
             return R*cos(P);}, RR, PP);
     std::array<std::tuple<std::string, std::string, dg::x::HVec>, 3> list = {{
         { "xfc", "xf-coordinate in Cartesian coordinate system", XXc },
