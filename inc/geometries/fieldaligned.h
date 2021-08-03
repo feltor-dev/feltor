@@ -536,6 +536,40 @@ struct Fieldaligned
     */
     void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out );
 
+
+    /**
+     * @brief %Evaluate a 2d functor and transform to all planes along the fieldline
+
+     *
+     * The algorithm does the equivalent of the following:
+     *  - %Evaluate the given \c BinaryOp on a 2d plane
+     *  - Apply the plus and minus transformation each \f$ r N_z\f$ times where
+     *  \f$ N_z\f$ is the number of planes in the global 3d grid and \f$ r\f$ is the number of rounds.
+     *  - Scale the transformations with \f$ u ( \pm (iN_z + j)\Delta\varphi) \f$,
+     *  where \c u is the given \c UnarayOp, \c i in [0..r] is the round index and \c j in [0.  Nz] is the plane index
+     *  and \f$\Delta\varphi\f$ is the angular distance given in the constructor
+     *  (can be different from the actual grid distance hz!).
+     *  - %Sum all transformations with the same plane index \c j , where the minus transformations get the inverted index \f$ N_z - j\f$.
+     *  - Shift the index by \f$ p_0\f$
+     *  .
+     * @attention This version of the algorithm is less exact but much faster than
+     * dg::geo::fieldaligned_evaluate
+     * @tparam BinaryOp Binary Functor
+     * @tparam UnaryOp Unary Functor
+     * @param binary Functor to evaluate in x-y
+     * @param unary Functor to evaluate in z
+     * @note \c unary is evaluated such that \c p0 corresponds to z=0, p0+1 corresponds to z=hz, p0-1 to z=-hz, ...
+     * @param p0 The index of the plane to start
+     * @param rounds The number of rounds \c r to follow a fieldline; can be zero, then the fieldlines are only followed within the current box ( no periodicity)
+     * @attention It is recommended to use  \c mx>1 and \c my>1 when this function is used, else there might occur some unfavourable summation effects due to the repeated use of transformations especially for low perpendicular resolution.
+     *
+     * @return 3d vector
+     */
+    template< class BinaryOp, class UnaryOp>
+    container evaluate( BinaryOp binary, UnaryOp unary,
+            unsigned p0, unsigned rounds) const;
+
+
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -854,6 +888,75 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which,
     }
 }
 
+template<class G, class I, class container>
+template< class BinaryOp, class UnaryOp>
+container Fieldaligned<G, I,container>::evaluate( BinaryOp binary,
+        UnaryOp unary, unsigned p0, unsigned rounds) const
+{
+    //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
+    //unary function is always such that the p0 plane is at x=0
+    assert( p0 < m_g->Nz());
+    const dg::ClonePtr<aGeometry2d> g2d = m_g->perp_grid();
+    container init2d = dg::pullback( binary, *g2d);
+    container zero2d = dg::evaluate( dg::zero, *g2d);
+
+    container temp(init2d), tempP(init2d), tempM(init2d);
+    container vec3d = dg::evaluate( dg::zero, *m_g);
+    std::vector<container>  plus2d(m_Nz, zero2d), minus2d(plus2d), result(plus2d);
+    unsigned turns = rounds;
+    if( turns ==0) turns++;
+    //first apply Interpolation many times, scale and store results
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned i0=0; i0<m_Nz; i0++)
+        {
+            dg::blas1::copy( init2d, tempP);
+            dg::blas1::copy( init2d, tempM);
+            unsigned rep = r*m_Nz + i0;
+            for(unsigned k=0; k<rep; k++)
+            {
+                //!!! The value of f at the plus plane is I^- of the current plane
+                dg::blas2::symv( m_minus, tempP, temp);
+                temp.swap( tempP);
+                //!!! The value of f at the minus plane is I^+ of the current plane
+                dg::blas2::symv( m_plus, tempM, temp);
+                temp.swap( tempM);
+            }
+            dg::blas1::scal( tempP, unary(  (double)rep*m_deltaPhi ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_deltaPhi ) );
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    if( rounds == 0) //there is a limiter
+    {
+        for( unsigned i0=0; i0<m_Nz; i0++)
+        {
+            int idx = (int)i0 - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() + i0*m_perp_size);
+        }
+    }
+    else //sum up plus2d and minus2d
+    {
+        for( unsigned i0=0; i0<m_Nz; i0++)
+        {
+            unsigned revi0 = (m_Nz - i0)%m_Nz; //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for(unsigned i0=0; i0<m_Nz; i0++)
+        {
+            int idx = ((int)i0 -(int)p0 + m_Nz)%m_Nz; //shift index
+            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*m_perp_size);
+        }
+    }
+    return vec3d;
+}
+
 
 ///@endcond
 
@@ -869,6 +972,8 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which,
  *  - %Sum all transformations with the same plane index \c j , where the minus transformations get the inverted index \f$ N_z - j\f$.
  *  - Shift the index by \f$ p_0\f$
  *  .
+ * @attention This version of the algorithm is more exact but much slower than the
+ * %evaluate member contained in dg::geo::Fieldaligned
  * @tparam BinaryOp Binary Functor
  * @tparam UnaryOp Unary Functor
  * @param grid The grid on which to integrate fieldlines.

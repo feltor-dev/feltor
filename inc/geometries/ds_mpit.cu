@@ -130,6 +130,13 @@ int main(int argc, char* argv[])
     ds( aligned, derivative);
     double norm = dg::blas2::dot(vol3d, derivative);
     if(rank==0)std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
+    t.tic();
+    aligned = dsFA.evaluate( init0, modulate, Nz/2, 2);
+    t.toc();
+    if(rank==0)std::cout << "# took "<<t.diff()<<"s\n";
+    ds( aligned, derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    if(rank==0)std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
     ///##########################################################///
     if(rank==0)std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
     dg::MDVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
