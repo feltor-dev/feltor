@@ -95,6 +95,7 @@ int main( int argc, char* argv[])
         psipmax = -fx_0/(1.-fx_0)*psipO;
     }
 
+    double maxPhi = 2.*M_PI*js["boundary"]["sheath"].get("max_angle", 0.1).asDouble();
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
@@ -147,19 +148,19 @@ int main( int argc, char* argv[])
         {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( sheath_walls)) },
         {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, 4*2.*M_PI, 1e-6, "phi") },
+                    sheath_walls, maxPhi, 1e-6, "phi") },
         {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, -4*2.*M_PI, 1e-6, "phi") },
+                    sheath_walls, -maxPhi, 1e-6, "phi") },
         {"WallFieldlineSPDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, 4*2.*M_PI, 1e-6, "s") },
+                    sheath_walls, maxPhi, 1e-6, "s") },
         {"WallFieldlineSMDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, -4*2.*M_PI, 1e-6, "s") },
+                    sheath_walls, -maxPhi, 1e-6, "s") },
         {"Sheath", "Sheath region", sheath},
         {"SheathDirection", "Direction of magnetic field relative to sheath", dg::geo::WallDirection(mag, sheath_walls) },
-        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, 4*2.*M_PI, 1e-6, "s")},
+        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-6, "s")},
         //////////////////////////////////
         {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
         {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
@@ -195,27 +196,6 @@ int main( int argc, char* argv[])
         gX2d = std::make_unique<dg::geo::CurvilinearGrid2d>(generator,
                 npsi, Npsi, Neta, dg::DIR, dg::NEU);
         std::cout << "DONE! \n";
-    //    std::cout << "Generate X-point flux-aligned grid ... \n";
-    //    double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-    //    double ZX = -1.1*mag.params().elongation()*mag.params().a();
-    //    dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-    //    double psipX = mag.psip()(RX, ZX);
-    //    std::cout << "X-point found at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
-    //    if( fabs(psipX ) > 1e-10)
-    //    {
-    //        std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
-    //        return -1;
-    //    }
-    //    dg::geo::CylindricalSymmTensorLvl1 monitor_chi =
-    //        dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-    //    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi,
-    //            psipO, RX, ZX, mag.R0(), 0, 0, true);
-    //    double fx_0 = 1./8.;
-    //    psipmax = -fx_0/(1.-fx_0)*psipO;
-    //    std::cout << "psi 1 is          "<<psipmax<<"\n";
-    //    gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0,
-    //            0., npsi, Npsi, Neta, dg::DIR, dg::NEU);
-    //    std::cout << "DONE! \n";
         //dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
         dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
@@ -296,6 +276,21 @@ int main( int argc, char* argv[])
         dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
         map1d.emplace_back("q-profile", qprofile,
             "q-profile (Safety factor) using direct integration");
+        if( mag_description == dg::geo::description::standardX)
+        {
+            double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+            double ZX = -1.1*mag.params().elongation()*mag.params().a();
+            try{
+                dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+                dg::Grid2d grid2d_tmp(Rmin,Rmax,ZX,Zmax, n,Nx,Ny);
+                double width_factor = js.get("width-factor",1.0).asDouble();
+                dg::geo::SafetyFactorAverage qprof_avg(grid2d_tmp, mag, width_factor);
+                dg::HVec qprofile_avg( psi_vals);
+                dg::blas1::evaluate( qprofile_avg, dg::equals(), qprof_avg, psi_vals);
+                map1d.emplace_back("q-profile-avg", qprofile_avg,
+                    "q-profile (Safety factor) using average integration");
+            } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
+        }
         dg::HVec psit = dg::integrate( qprofile, grid1d);
         map1d.emplace_back("psit1d", psit,
             "Toroidal flux label psi_t integrated  on grid1d using direct q");
@@ -341,8 +336,6 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    //if( mag_description == dg::geo::description::standardX)
-    //{
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
         mag_description == dg::geo::description::square ||

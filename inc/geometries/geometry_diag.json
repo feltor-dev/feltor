@@ -21,12 +21,14 @@
         "sheath":
         {
             "boundary" : 0.0625,
-            "alpha" : 0.015625
+            "alpha" : 0.015625,
+            "max_angle": 1e-3
         }
     },
     "magnetic_field":
     {
         "input" : "file",
         "file": "geometry_params_Xpoint.json"
-    }
+    },
+    "width-factor" : 0.03
 }
