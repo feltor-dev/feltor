@@ -11,7 +11,7 @@
 #ifdef DG_BENCHMARK
 #include "backend/timer.h"
 #endif //DG_BENCHMARK
-
+#include <cusp/print.h>
 namespace dg
 {
 /**
@@ -257,7 +257,7 @@ struct KrylovSqrtCauchySolve
      * @param A Helmholtz operator
      * @param g grid
      * @param epsCG accuracy of conjugate gradient solver in Cauchy integral solver
-     * @param max_iterations Max iterations of Lanczos method
+     * @param max_iterations Max iterations of Lanczos method (e.g. 500)
      * @param iterCauchy iterations of cauchy integral
      * @param eps accuracy of lanczos method
      */
@@ -309,13 +309,16 @@ struct KrylovSqrtCauchySolve
         t.tic();
 #endif //DG_BENCHMARK
         value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
+        std::cout << "in krylovcauchysolve\n";
         if( xnorm == 0)
         {
+            std::cout << "xnorm==0\n";
             dg::blas1::copy( x,b);
             return {0, m_iterCauchy};
         }
         
         m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin)); 
+        std::cout << "after lanczos\n";
         unsigned iter = m_lanczos.get_iter();
 
         m_e1H.resize(iter, 0.);
@@ -538,10 +541,10 @@ class KrylovSqrtCauchyinvert
         //Compute x (with initODE with gemres replacing cg invert)
         m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
         unsigned iter = m_mcg.get_iter();
-        
         m_invtridiagH.resize(iter);
         m_TinvH = m_invtridiagH(m_TH); 
-        
+        cusp::print(m_TinvH );
+
         m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
         m_yH.resize( iter, 0.);

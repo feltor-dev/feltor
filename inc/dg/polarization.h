@@ -4,6 +4,7 @@
 #include "helmholtz.h"
 #include "multigrid.h"
 #include "matrixsqrt.h"
+#include "matrixfunction.h"
 #include "tensorelliptic.h"
 
 namespace dg
@@ -103,20 +104,29 @@ class PolCharge
         {
             m_ell.construct(g, bcx, bcy, m_no, dir, jfactor, chi_weight_jump );
             m_multi_gamma.resize(1);
-            m_multi_gamma_PER.resize(1);
+            m_multi_gamma.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
-            m_multi_gamma_PER[0].construct( g, dg::PER, bcy, m_alpha, dir, jfactor);
-            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, g.size(), 20, eps_gamma[0]);
-            m_sqrtG0inv_PER.construct(m_multi_gamma_PER[0], g,  m_temp,  1e-14, g.size(), 20, eps_gamma[0]);
+            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, 500, 40, eps_gamma[0]);
+                        
+//             m_sqrtG0inv.construct(m_temp, g.size());
+            
+            value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
+            value_type max_weights =   dg::blas1::reduce(m_multi_gamma[0].weights(), 0., dg::AbsMax<double>() );
+            value_type min_weights =  -dg::blas1::reduce(m_multi_gamma[0].weights(), max_weights, dg::AbsMin<double>() );
+            value_type kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
+            value_type EVmin = 1./(1.-m_multi_gamma[0].alpha()*hxhy*(1.0 + 1.0)); //EVs of Helmholtz
+            m_res_fac = kappa*sqrt(EVmin);
         }
         if (m_mode == "ffO4")
         {
             m_tensorell.construct(g, bcx, bcy, m_no, dir, jfactor); //not normed by default
             m_multi_gamma.resize(3);
+//             m_multi_gamma.resize(3);
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
             {
                 m_multi_gamma[u].construct( m_multi_g.grid(u), bcx, bcy, m_alpha, dir, jfactor);
+//                 m_multi_gamma[u].construct( m_multi_g.grid(u), inverse( bcx), inverse( bcy), m_alpha, dir, jfactor);
             }
         }
         
@@ -228,7 +238,7 @@ class PolCharge
      * i.e. \c y=M*x
      * @param x left-hand-side
      * @param y result
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     * @tparamm_ ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void operator()( const ContainerType0& x, ContainerType1& y){
@@ -310,9 +320,12 @@ class PolCharge
                 if (m_commute == false)
                 {
                     dg::blas1::scal(m_temp2, 0.0);
-//                     m_temp2_ex.extrapolate(m_temp2);
-                    m_sqrtG0inv( m_temp2, x);  //m_temp2 is normed
-//                     m_temp2_ex.update(m_temp2);
+                    std::cout << "before sqrt\n";
+
+                    std::array<unsigned,2> number = m_sqrtG0inv( m_temp2, x);  //m_temp2 is normed
+                    std::cout << "After sqrt\n";
+                    std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
+//                     m_sqrtG0inv( m_temp2, x, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);  //m_temp2 is normed
         
                     m_ell.symv(1.0, m_temp2, 0.0, m_temp); //m_temp is not normed or not normed
                     
@@ -321,9 +334,11 @@ class PolCharge
                         dg::blas1::pointwiseDot(m_temp, m_ell.inv_weights(), m_temp);
                     
                     dg::blas1::scal(m_temp2, 0.0);
-//                     m_temp_ex.extrapolate(m_temp2);
-                    m_sqrtG0inv( m_temp2, m_temp);  //m_temp2 is normed
-//                     m_temp_ex.update(m_temp2); 
+                    std::cout << "before sqrt2\n";
+                    number =m_sqrtG0inv( m_temp2, m_temp);  //m_temp2 is normed
+                    std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
+                    std::cout << "after sqrt2\n";
+//                     m_sqrtG0inv( m_temp2, m_temp, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);  //m_temp2 is normed
                     
                     if( m_no == normed)
                         dg::blas1::axpby(alpha, m_temp2, beta, y);  
@@ -340,6 +355,7 @@ class PolCharge
             {  
                 if (m_commute == false)
                 {      
+                    //check m_temp=0
                     m_temp2_ex.extrapolate(m_temp2);
                     std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, x, m_eps_gamma);
                     if(  number[0] == m_multi_g.max_iter())
@@ -373,12 +389,13 @@ class PolCharge
     dg::Elliptic<Geometry,  Matrix, Container> m_ell;
     dg::TensorElliptic<Geometry,  Matrix, Container> m_tensorell;
     
-    std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma, m_multi_gamma_PER;
+    std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
-    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, Container> m_sqrtG0inv, m_sqrtG0inv_PER;    
+    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, Container> m_sqrtG0inv;
+//     dg::KrylovFuncEigenInvert< Container> m_sqrtG0inv;        
     Container m_temp, m_temp2;
     norm m_no;
-    value_type  m_alpha;
+    value_type  m_alpha,  m_res_fac;
     std::vector<value_type> m_eps_gamma;
     std::string m_mode;
     dg::Extrapolation<Container> m_temp2_ex, m_temp_ex;

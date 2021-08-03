@@ -1,6 +1,3 @@
-// #undef DG_BENCHMARK
-// #define DG_DEBUG
-
 #include <iostream>
 #include <iomanip>
 
@@ -14,6 +11,7 @@
 #include <cusp/blas/blas.h>
 #include "cg.h"
 #include "lgmres.h"
+#include <cusp/print.h>
 
 using value_type = double;
 using memory_type = cusp::host_memory;
@@ -26,31 +24,38 @@ int main()
     unsigned size = 50;
     std::cout << "#Specify size of vectors (50)\n";
     std::cin >> size;
+    unsigned max_outer =300;
+    unsigned max_inner = 300;
+    unsigned restarts = 30000;
+//     std::cout << "# max_outer, max_inner and restarts of lgmres (30,10,10000) \n";
+//     std::cin >> max_outer >> max_inner >> restarts;
+    
     std::cout << "#Constructing and filling vectors\n";
     std::vector<value_type> a(size,1.);
     std::vector<value_type> b(size,1.);
     std::vector<value_type> c(size,1.);
     for (unsigned i=0;i<size; i++)
     {
-        a[i] = 3.+(1.+i);
+        a[i] = 3.1+(1.+i);
         b[i] = 3.+ 1./(1.+i);
-        c[i] = 3.+ (1.+i)+1./(1.+i);
+        c[i] = 3.2 + (1.+i)+1./(1.+i);
     }
     std::cout << "#Constructing and filling containers\n";
     const Container d(size,1.);
     Container x(size,0.), x_sol(x), err(x);
     std::cout << "#Constructing Matrix inversion and linear solvers\n";
-    value_type eps= 1e-14;
+    value_type eps= 1e-20;
     t.tic();
     dg::CG <Container> pcg( x,  size*size+1);
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();
-    dg::LGMRES <Container> lgmres( x, 1000, 50, 100*size);
+    
+    dg::LGMRES <Container> lgmres( x, max_outer, max_inner, restarts);
     t.toc();
     std::cout << "#Construction of LGMRES took "<< t.diff()<<"s \n";
     t.tic();
-    dg::InvTridiag<Container, DiaMatrix, CooMatrix> invtridiag(a);
+    dg::InvTridiag_FD<Container, DiaMatrix, CooMatrix> invtridiag(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion routine took "<< t.diff()<<"s \n";
     
@@ -91,6 +96,8 @@ int main()
     t.tic();
     Tsyminv = invtridiag(a,b,b);
     t.toc();
+//     cusp::print(Tsyminv);
+
     dg::blas2::gemv(Tsyminv, d, x);
     dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
     std::cout <<  "#Invtridiag with vectors took: "<< t.diff()<<"s \n";
@@ -99,13 +106,14 @@ int main()
     t.tic();
     Tsyminv = invtridiag(Tsym);
     t.toc();
+
     dg::blas2::gemv(Tsyminv, d, x);
     dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
     std::cout <<  "#Invtridiag with Matrix took: "<< t.diff()<<"s \n";
     std::cout <<  "#Relative error to CG: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_sol,x_sol)) << "\n";
     
 
-    std::cout << "####Compute inverse of non-symmetric tridiagonal matrix\n";
+    std::cout << "\n####Compute inverse of non-symmetric tridiagonal matrix\n";
     dg::blas1::scal(x_sol, 0.);
     t.tic();
     number = lgmres.solve( T, x_sol, d , d, d, eps, 1);    
@@ -115,6 +123,8 @@ int main()
     t.tic();
     Tinv = invtridiag(a,b,c);
     t.toc();
+//     cusp::print(Tinv);
+
     dg::blas2::gemv(Tinv, d, x);
     dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
     std::cout <<  "#Invtridiag with vectors took: "<< t.diff()<<"s \n";

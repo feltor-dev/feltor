@@ -192,7 +192,7 @@ int main(int argc, char * argv[])
         std::cout << "\nM-Lanczos+EIGEN:\n";  
         //EVs of Helmholtz
         double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
-        double EVmax =1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); 
+        double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); 
         double res_fac = kappa*sqrt(EVmin);
         
         dg::KrylovFuncEigenSolve<Container> krylovfunceigensolve(x,   max_iter);

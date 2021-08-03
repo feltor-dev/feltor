@@ -167,7 +167,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 
     unsigned totalRestarts = 0;
 
-    if(normRHS < 1.0E-5)
+    if(normRHS == 0)
         normRHS = 1.0;
 
     // Go through the requisite number of restarts.
