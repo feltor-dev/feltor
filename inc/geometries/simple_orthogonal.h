@@ -53,20 +53,19 @@ struct Fpsi
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
-        //std::cout << "In init function error: psi(R,Z)-psi0: "<<psip_(X_init, Y_init)-psi<<"\n";
     }
 
     //compute f for a given psi between psi0 and psi1
     double construct_f( double psi, double& R_0, double& Z_0)
     {
         find_initial( psi, R_0, Z_0);
-		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin);
         begin[0] = R_0, begin[1] = Z_0;
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
-            eps_old = eps, end_old = end; N*=2;
+            eps_old = eps; N*=2;
             if( m_firstline == 0)
                 dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
             if( m_firstline == 1)
@@ -74,8 +73,8 @@ struct Fpsi
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
-        //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
-        double f_psi = 2.*M_PI/end_old[2];
+        double f_psi = 2.*M_PI/end[2];
+        //std::cout <<"f_psi: "<<f_psi << " end "<<end[2] <<"\n";
         return f_psi;
     }
     double operator()( double psi)
@@ -110,7 +109,7 @@ void compute_rzy( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTenso
     r.resize( y_vec.size()), z.resize(y_vec.size());
     std::array<real_type,2> begin{ {0,0} }, end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
-    //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
+    //std::cout <<"f_psi "<<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);
     dg::geo::equalarc::FieldRZY fieldRZYequi(psi, chi);
     fieldRZYconf.set_f(f_psi);
