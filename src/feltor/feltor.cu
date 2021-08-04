@@ -531,6 +531,7 @@ int main( int argc, char* argv[])
                 throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
 
         }
+        bool abort = false;
         for( unsigned i=1; i<=maxout; i++)
         {
             dg::Timer ti;
@@ -578,12 +579,14 @@ int main( int argc, char* argv[])
                 catch( dg::Fail& fail){ // a specific exception
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
                     DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
-                    abort_program();
+                    DG_RANK0 std::cerr << "Writing last Output and exit..."<<std::endl;
+                    abort = true; // exit gracefully
                 }
                 catch( std::exception& fail) { // more generic exception
                     DG_RANK0 std::cerr << "ERROR in timestepper\n";
                     DG_RANK0 std::cerr << fail.what()<<std::endl;
-                    abort_program();
+                    DG_RANK0 std::cerr << "Writing last Output and exit..."<<std::endl;
+                    abort = true;
                 }
                 dg::Timer tti;
                 tti.tic();
@@ -620,10 +623,11 @@ int main( int argc, char* argv[])
 
                 tti.toc();
                 DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
+                if( abort) break;
             }
             ti.toc();
             //----------------Test if ampere equation holds
-            if( p.beta != 0)
+            if( p.beta != 0 && !abort)
             {
                 feltor.compute_lapMperpA( resultD);
                 double norm  = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
@@ -703,6 +707,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
+            if( abort) break;
         }
         t.toc();
         unsigned hour = (unsigned)floor(t.diff()/3600);
