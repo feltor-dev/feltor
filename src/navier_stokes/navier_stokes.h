@@ -183,11 +183,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_perp_diffusiveU( 1., m_velocityST[1], m_temp0, m_temp1, 1.,
             yp[1][1]);
 
+    add_rhs_penalization( yp);
+
     //Add source terms
     // set m_s
     add_source_terms( yp);
-
-    add_rhs_penalization( yp);
 
     add_wall_and_sheath_terms( yp);
 

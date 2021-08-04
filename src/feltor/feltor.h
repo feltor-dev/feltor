@@ -1438,11 +1438,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     }
 #endif
 
+    add_rhs_penalization( yp);
+
     //Add source terms
     // set m_s
     add_source_terms( yp );
-
-    add_rhs_penalization( yp);
 
     add_wall_and_sheath_terms( yp);
 
