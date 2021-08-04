@@ -1193,11 +1193,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
         dg::blas1::transform( m_density[0], m_temp0, dg::PolynomialHeaviside(
                     m_minne-m_minalpha/2., m_minalpha/2., -1) );
         dg::blas1::transform( m_density[0], m_temp1, dg::PLUS<double>( -m_minne));
-        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][0]);
-        dg::blas1::transform( m_density[1], m_temp0, dg::PolynomialHeaviside(
-                    m_minne-m_minalpha/2., m_minalpha/2., -1) );
-        dg::blas1::transform( m_density[1], m_temp1, dg::PLUS<double>( -m_minne));
-        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][1]);
+        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., m_s[0][0]);
+        //dg::blas1::transform( m_density[1], m_temp0, dg::PolynomialHeaviside(
+        //            m_minne-m_minalpha/2., m_minalpha/2., -1) );
+        //dg::blas1::transform( m_density[1], m_temp1, dg::PLUS<double>( -m_minne));
+        //dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][1]);
     }
 
     //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
