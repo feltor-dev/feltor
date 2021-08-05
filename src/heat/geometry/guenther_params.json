@@ -1,8 +1,7 @@
 {
     "equilibrium"       : "guenther",
-    "I_0"               :  20.,
-    "R_0"               :  10.,
-    "a"                 :  1,
+    "I_0"               :  10.0,
+    "R_0"               :  3.0,
     "description"              : "square"
 }
 
