@@ -1013,8 +1013,9 @@ an insulating condition where the total current $j_\parallel =  (N_i U_{\paralle
 
 \begin{align}
     U_{\parallel,i, sh} &= s\sqrt{1+\tau} \\
-    u_{\parallel,e, sh} &= s\sqrt{1+\tau}\exp(-\phi) \text{ "bohm" } \label{eq:bohm_sheath}\\
-    u_{\parallel,e, sh} &= U_{\parallel,i,sh}N_i/n_e \text{ "insulating" } \label{eq:insulating_sheath}
+    u_{\parallel,e, sh} &= s\sqrt{1+\tau}\exp(-\phi) &\text{ "bohm" } \label{eq:bohm_sheath}\\
+    u_{\parallel,e, sh} &= U_{\parallel,i,sh}N_i/n_e &\text{ "insulating" } \label{eq:insulating_sheath} \\
+    u_{\parallel,e, sh} &= U_{\parallel,i,sh} = 0 &\text{ "wall" } \label{eq:wall_sheath}
 \end{align}
 where "s" is a fieldline coordinate that equals $-1$ on the negative divertor and $+1$ on the positive divertor
 and varies linearly in-between.
@@ -1031,6 +1032,7 @@ and varies linearly in-between.
     {
         "type" : "bohm", // Eq.\eqref{eq:bohm_sheath}
         "type" : "insulating" // Eq.\eqref{eq:insulating_sheath}
+        "type" : "wall" // Eq.\eqref{eq:wall_sheath}
         "boundary" : 3/32, // Total width of the sheath $\eps_s$ away from the wall
         // in units of $2\pi$ in Eq.\eqref{eq:sheath}
         "alpha" : 2/32, // Transition width $\alpha$

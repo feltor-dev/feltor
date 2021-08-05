@@ -1190,14 +1190,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     if( m_minrate != 0.0)
     {
         // do not make lower forcing a velocity source
+        // MW I suspect that this form does not go well with the potential
         dg::blas1::transform( m_density[0], m_temp0, dg::PolynomialHeaviside(
                     m_minne-m_minalpha/2., m_minalpha/2., -1) );
         dg::blas1::transform( m_density[0], m_temp1, dg::PLUS<double>( -m_minne));
-        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., m_s[0][0]);
-        //dg::blas1::transform( m_density[1], m_temp0, dg::PolynomialHeaviside(
-        //            m_minne-m_minalpha/2., m_minalpha/2., -1) );
-        //dg::blas1::transform( m_density[1], m_temp1, dg::PLUS<double>( -m_minne));
-        //dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][1]);
+        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][0]);
+        dg::blas1::transform( m_density[1], m_temp0, dg::PolynomialHeaviside(
+                    m_minne-m_minalpha/2., m_minalpha/2., -1) );
+        dg::blas1::transform( m_density[1], m_temp1, dg::PLUS<double>( -m_minne));
+        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][1]);
     }
 
     //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
@@ -1278,33 +1279,43 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
                     yp[0][i]);
         }
         //compute sheath velocity
-
-        //velocity c_s
-        double cs = sqrt(1.+m_p.tau[1]), sheath_rate = m_sheath_rate;
-        if( "insulating" == m_p.sheath_bc)
+        if( "wall" == m_p.sheath_bc)
         {
-            // u_e,sh = s*sqrt(1+tau) Ni/ne
-            dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
+            for( unsigned i=0; i<2; i++)
+            {
+                //dg::blas1::axpby( +m_sheath_rate*m_nwall, m_sheath, 1., yp[0][i] );
+                dg::blas1::axpby( +m_sheath_rate*m_uwall, m_sheath, 1., yp[1][i] );
+            }
+        }
+        else
+        {
+            //velocity c_s
+            double cs = sqrt(1.+m_p.tau[1]), sheath_rate = m_sheath_rate;
+            if( "insulating" == m_p.sheath_bc)
+            {
+                // u_e,sh = s*sqrt(1+tau) Ni/ne
+                dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
+                        [cs, sheath_rate]DG_DEVICE( double sheath_coord, double
+                            sheath, double ne, double ni) {
+                            return cs*sheath_rate*sheath_coord*ni/ne*sheath;
+                        },
+                        m_sheath_coordinate, m_sheath, m_densityST[0],
+                        m_densityST[1]);
+            }
+            else // "bohm" == m_p.sheath_bc
+            {
+                //u_e,sh = s*sqrt(1+tau) exp(-phi)
+                dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
                     [cs, sheath_rate]DG_DEVICE( double sheath_coord, double
-                        sheath, double ne, double ni) {
-                        return cs*sheath_rate*sheath_coord*ni/ne*sheath;
+                        sheath, double phi) {
+                        return cs*sheath_rate*sheath_coord*sheath*exp(-phi);
                     },
-                    m_sheath_coordinate, m_sheath, m_densityST[0],
-                    m_densityST[1]);
+                    m_sheath_coordinate, m_sheath, m_potentialST[0]);
+            }
+            // u_i,sh = s*sqrt(1+tau)
+            dg::blas1::pointwiseDot( sheath_rate*cs,
+                    m_sheath, m_sheath_coordinate, 1.,  yp[1][1]);
         }
-        else // "bohm" == m_p.sheath_bc
-        {
-            //u_e,sh = s*sqrt(1+tau) exp(-phi)
-            dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
-                [cs, sheath_rate]DG_DEVICE( double sheath_coord, double
-                    sheath, double phi) {
-                    return cs*sheath_rate*sheath_coord*sheath*exp(-phi);
-                },
-                m_sheath_coordinate, m_sheath, m_potentialST[0]);
-        }
-        // u_i,sh = s*sqrt(1+tau)
-        dg::blas1::pointwiseDot( sheath_rate*cs,
-                m_sheath, m_sheath_coordinate, 1.,  yp[1][1]);
     }
     // add wall boundary conditions
     if( m_wall_rate != 0)

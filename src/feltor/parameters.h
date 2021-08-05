@@ -139,7 +139,7 @@ struct Parameters
             source_rate = js[ "source"].get( "rate", 0.).asDouble();
         sheath_bc = js["boundary"]["sheath"].get("type", "bohm").asString();
         if( (sheath_bc != "bohm") && (sheath_bc != "insulating") &&
-                (sheath_bc != "none"))
+                (sheath_bc != "none") && (sheath_bc != "wall"))
             throw std::runtime_error( "ERROR: Sheath bc "+sheath_bc+" not recognized!\n");
 
         bcxN = dg::str2bc(js["boundary"]["bc"][  "density"].get( 0, "").asString());
