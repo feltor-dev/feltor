@@ -10,7 +10,7 @@
         "interpolation-method" : "linear"
     },
     "advection": {
-        "type": "velocity-staggered",
+        "type": "staggered",
         "slope-limiter": "none"
     },
     "boundary": {
@@ -102,8 +102,8 @@
         "curvmode": "toroidal",
         "input": "params",
         "params": {
-            "I_0": 20.0,
-            "R_0": 10.0,
+            "I_0": 10.0,
+            "R_0": 3.0,
             "comment": "Sine functions; Guenter et al, J. Comput. Phys. 209 (2005) 354",
             "description": "square",
             "equilibrium": "guenther"
@@ -131,7 +131,7 @@
         "mu": -0.000272121,
         "nu_parallel": [
             0,
-            1
+            0.0
         ],
         "resistivity": 0.0001,
         "tau": 1.0,
