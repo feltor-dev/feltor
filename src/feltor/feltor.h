@@ -347,6 +347,13 @@ struct Explicit
         const Container& slope,
         Container& flux,
         std::string slope_limiter);
+    void compute_parallel_advection(
+        const Container& velocity,
+        const Container& minusST,
+        const Container& plusST,
+        const Container& slope,
+        Container& flux,
+        std::string slope_limiter);
     void compute_parallel(          std::array<std::array<Container,2>,2>& yp);
     void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
     void add_rhs_penalization(      std::array<std::array<Container,2>,2>& yp);
@@ -1112,6 +1119,38 @@ void Explicit<Geometry, IMatrix, Matrix,
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
                 dg::SlopeLimiterProduct<dg::VanLeer>(), velocity,
+                m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
+        }
+    }
+}
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix,
+     Container>::compute_parallel_advection( const Container& velocity,
+             const Container& minusST, const Container& plusST,
+             const Container& slope,
+             Container& flux,
+             std::string slope_limiter
+             )
+{
+    dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
+            velocity, minusST, plusST);
+    if(slope_limiter != "none" )
+    {
+        m_fa( dg::geo::einsMinus, slope, m_minus);
+        m_fa( dg::geo::einsPlus, slope, m_plus);
+        // Let's keep the default boundaries of NEU
+        // boundary values are (probably?) never used in the slope limiter branches
+        update_parallel_bc_2nd( m_fa, m_minus, slope, m_plus, dg::NEU, 0.);
+        if( slope_limiter == "minmod")
+        {
+            dg::blas1::evaluate( flux, dg::plus_equals(),
+                dg::SlopeLimiter<dg::MinMod>(), velocity,
+                m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
+        }
+        else if( slope_limiter == "vanLeer")
+        {
+            dg::blas1::evaluate( flux, dg::plus_equals(),
+                dg::SlopeLimiter<dg::VanLeer>(), velocity,
                 m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
         }
     }

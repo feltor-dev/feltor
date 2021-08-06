@@ -224,6 +224,17 @@ int main( int argc, char* argv[])
         try{
             y0 = feltor::initial_conditions(feltor, grid, p, mag, unmod_mag,
                     js["init"], time, sheath_coordinate );
+#ifdef WITH_NAVIER_STOKES
+            std::string advection = js["advection"].get("type", "velocity-staggered").asString();
+            if( advection == "log-staggered")
+                dg::blas1::transform( y0[0], y0[0], dg::LN<double>());
+            else if( advection == "staggered")
+            {
+                // MW: Not correct, density is not staggered,only
+                // works when velocity is zero
+                dg::blas1::pointwiseDot( y0[0], y0[1], y0[1]);
+            }
+#endif // WITH_NAVIER_STOKES
         }catch ( dg::Error& error){
             DG_RANK0 std::cerr << error.what();
             DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
@@ -249,7 +260,7 @@ int main( int argc, char* argv[])
         adapt.construct( p.tableau, y0);
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        dt = 1e-4; //that should be a small enough initial guess
+        dt = 1e-5; //that should be a small enough initial guess
     }
     else
     {
@@ -724,7 +735,7 @@ int main( int argc, char* argv[])
         unsigned step = 0, failed_counter=0;
 
         std::map<std::string, const dg::x::DVec* > v4d;
-        v4d["ne-1 / "] = &y0[0][0],  v4d["ni-1 / "] = &y0[0][1];
+        v4d["ne-1 / "] = &feltor.density(0),  v4d["ni-1 / "] = &feltor.density(1);
         v4d["Ue / "]   = &feltor.velocity(0), v4d["Ui / "]   = &feltor.velocity(1);
         v4d["Phi / "] = &feltor.potential(0); v4d["Apar / "] = &feltor.aparallel();
         /////////////////////////set up transfer for glfw
