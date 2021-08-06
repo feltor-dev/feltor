@@ -227,27 +227,39 @@ dg::x::HVec make_ntilde(
         {
             std::string parallel = js.get( "parallel", "gaussian").asString();
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
-            double sigma_z = js.get( "sigma_z", 0.).asDouble();
+            double sigma_z = js.get( "sigma_z", 0.).asDouble()*M_PI;
             auto bhat = dg::geo::createBHat(mag);
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in blob initial condition\n");
             if( parallel == "gaussian")
             {
-                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                dg::GaussianZ gaussianZ( 0., sigma_z, 1.0);
                 ntilde = feltor.fieldaligned().evaluate( init0,
                         gaussianZ, 0, revolutions);
             }
             else if( parallel == "exact-gaussian")
             {
                 double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                dg::GaussianZ gaussianZ( 0., sigma_z, 1.0);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
+            }
+            else if( parallel == "toroidal-gaussian")
+            {
+                std::function<double(double,double,double)> initT = dg::Gaussian3d(
+                        x0, y0, M_PI, sigma, sigma, sigma_z, amp);
+                if( type == "circle")
+                    initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double z) {
+                        if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
+                            return amp*exp( -(z-M_PI)*(z-M_PI)/2/sigma_z/sigma_z);
+                        return 0.;
+                    };
+                ntilde = dg::pullback( initT, grid);
             }
             else if( parallel == "step")
             {
                 double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-                dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
+                dg::Iris gaussianZ( -sigma_z, +sigma_z);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
             }
@@ -256,10 +268,12 @@ dg::x::HVec make_ntilde(
                 double rk4eps = js.get("rk4eps", 1e-6).asDouble();
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         [sigma_z](double s) {
-                        if( (s <  0) && (s > -sigma_z*M_PI)) return 0.5;
-                        if( (s >= 0) && (s < +sigma_z*M_PI)) return 1.0;
+                        if( (s <  0) && (s > -sigma_z)) return 0.5;
+                        if( (s >= 0) && (s < +sigma_z)) return 1.0;
                         return 0.;}, 0, revolutions, rk4eps);
             }
+            else
+                throw dg::Error(dg::Message()<< "Invalid parallel initial condition: "<<parallel<<"\n");
         }
     }
     else if ( "turbulence" == type)
@@ -272,31 +286,33 @@ dg::x::HVec make_ntilde(
         {
             std::string parallel = js.get( "parallel", "gaussian").asString();
             unsigned revolutions = js.get( "revolutions", 1).asUInt();
-            double sigma_z = js.get( "sigma_z", 0.).asDouble();
+            double sigma_z = js.get( "sigma_z", 0.).asDouble()*M_PI;
             auto bhat = dg::geo::createBHat(mag);
             if( sigma_z == 0)
                 throw dg::Error(dg::Message()<< "Invalid parameter: sigma_z must not be 0 in turbulence initial condition\n");
             if( parallel == "gaussian")
             {
-                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                dg::GaussianZ gaussianZ( 0., sigma_z, 1.0);
                 ntilde = feltor.fieldaligned().evaluate( init0,
                         gaussianZ, 0, revolutions);
             }
             else if( parallel == "exact-gaussian")
             {
                 double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-                dg::GaussianZ gaussianZ( 0., sigma_z*M_PI, 1.0);
+                dg::GaussianZ gaussianZ( 0., sigma_z, 1.0);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
             }
             else if( parallel == "step")
             {
                 double rk4eps = js.get("rk4eps", 1e-6).asDouble();
-                dg::Iris gaussianZ( -sigma_z*M_PI, +sigma_z*M_PI);
+                dg::Iris gaussianZ( -sigma_z, +sigma_z);
                 ntilde = dg::geo::fieldaligned_evaluate( grid, bhat, init0,
                         gaussianZ, 0, revolutions, rk4eps);
 
             }
+            else
+                throw dg::Error(dg::Message()<< "Invalid parallel initial condition for turbulence: "<<parallel<<"\n");
         }
     }
     else if(  "zonal" == type)
