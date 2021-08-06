@@ -80,14 +80,15 @@
         "profile":
         {
             "type" : "aligned",
-            "amplitude" : 1.0
+            "npeak" : 1.0,
+            "nsep" : 0.1,
+            "background" : 0.0
         },
         "damping":
         {
             "type": "alignedX",
             "alpha" : 0.2,
-            "boundary" : 0.55,
-            "background" : 1.0
+            "boundary" : 0.55
         }
     },
     "init":

@@ -106,16 +106,14 @@ dg::x::HVec pfr_damping(
 dg::x::HVec make_profile(
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag,
-    dg::file::WrappedJsonValue js )
+    dg::file::WrappedJsonValue js, double& nbg )
 {
     //js = input["profile"]
     std::string type = js.get("type","const").asString();
+    nbg      = js.get( "background", 1.0).asDouble();
     dg::x::HVec profile = dg::evaluate( dg::zero, grid);
     if( "const" == type)
-    {
-        double nbg = js.get("background", 0.1).asDouble();
         dg::blas1::plus( profile, nbg);
-    }
     else if( "aligned" == type)
     {
         double RO=mag.R0(), ZO=0.;
@@ -123,8 +121,13 @@ dg::x::HVec make_profile(
         double psipO = mag.psip()( RO, ZO);
         double npeak = js.get( "npeak", 1.0).asDouble();
         double nsep = js.get( "nsep", 1.0).asDouble();
-        profile = dg::pullback( dg::compose(dg::LinearX(
-                    (npeak-nsep)/psipO, nsep), mag.psip()), grid);
+        profile = dg::pullback( dg::compose(
+                [npeak,nsep,nbg, psipO]DG_DEVICE ( double psip){
+                    if( psip/psipO  > 0)
+                        return npeak*psip/psipO + nsep*(psipO-psip)/psipO;
+                    else
+                        return nbg + exp( (npeak-nsep)/psipO/(nsep-nbg)* psip) *( nsep-nbg);
+                }, mag.psip()), grid);
     }
     else if ( "gaussian" == type )
     {
@@ -132,7 +135,6 @@ dg::x::HVec make_profile(
         double y0  = mag.params().a()*js.get( "posY", 0.).asDouble();
         double sigma    = js.get( "sigma", 1.0).asDouble();
         double nprofamp = js.get( "amplitude", 1.0).asDouble();
-        double nbg      = js.get( "background", 1.0).asDouble();
         if( sigma == 0)
             throw dg::Error(dg::Message()<< "Invalid parameter: sigma must not be 0 in turbulence on gaussian\n");
         dg::Gaussian prof( x0, y0, sigma, sigma, nprofamp);
@@ -147,15 +149,13 @@ dg::x::HVec make_profile(
 dg::x::HVec make_damping(
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag, //unmodified field
-    dg::file::WrappedJsonValue js, double& nbg )
+    dg::file::WrappedJsonValue js)
 {
     //js = input["damping"]
     std::string type = js.get("type","none").asString();
     dg::x::HVec damping = dg::evaluate( dg::one, grid);
     if( "none" == type)
-    {
-        nbg = 0.;
-    }
+        ;
     else if( "aligned" == type || "alignedX" == type)
     {
         double damping_alpha = js.get("alpha", 0.2).asDouble();
@@ -163,7 +163,6 @@ dg::x::HVec make_damping(
             throw dg::Error(dg::Message()<< "Invalid parameter: damping alpha must not be 0\n");
         double damping_boundary = js.get("boundary", 0.2).asDouble();
         //we also need to avoid being too far in the PFR where psi can become very negative
-        nbg = js.get( "background", 0.1).asDouble();
         damping = dg::pullback(
             dg::compose(dg::PolynomialHeaviside(
                 damping_boundary-damping_alpha/2., damping_alpha/2., -1),
@@ -175,7 +174,6 @@ dg::x::HVec make_damping(
     else if( "alignedPFR" == type)
     {
         damping = pfr_damping( grid, mag, js);
-        nbg = js.get( "background", 0.1).asDouble();
     }
     else if ( "circular" == type)
     {
@@ -187,7 +185,6 @@ dg::x::HVec make_damping(
                 dg::PolynomialHeaviside( radius*mag.params().a(),
                     mag.params().a()*damping_alpha/2., -1),
                 Radius( mag.R0(), 0.)), grid);
-        nbg = js.get( "background", 0.1).asDouble();
     }
     else
         throw dg::Error(dg::Message()<< "Invalid damping type "<<type<<"\n");
@@ -369,9 +366,9 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             dg::x::HVec ntilde  = detail::make_ntilde(  feltor, grid, mag,
                     js["density"]["ntilde"]);
             dg::x::HVec profile = detail::make_profile( grid, mag,
-                    js["density"]["profile"]);
+                    js["density"]["profile"], nbg);
             dg::x::HVec damping = detail::make_damping( grid, unmod_mag,
-                    js["density"]["damping"], nbg);
+                    js["density"]["damping"]);
             dg::x::HVec density = profile;
             dg::blas1::subroutine( [nbg]( double profile, double ntilde, double
                         damping, double& density)
@@ -478,17 +475,17 @@ dg::x::HVec source_profiles(
     else if( "fixed_profile" == type)
     {
         fixed_profile = true;
-        ne_profile = detail::make_profile(grid, mag, js["profile"]);
         double nbg = 0;
-        source = detail::make_damping( grid, unmod_mag, js["damping"], nbg);
+        ne_profile = detail::make_profile(grid, mag, js["profile"], nbg);
+        source = detail::make_damping( grid, unmod_mag, js["damping"]);
     }
     else if("influx" == type)
     {
         fixed_profile = false;
         double nbg = 0.;
         source  = detail::make_ntilde( feltor, grid, mag, js["ntilde"]);
-        ne_profile = detail::make_profile( grid, mag, js["profile"]);
-        dg::x::HVec damping = detail::make_damping( grid, unmod_mag, js["damping"], nbg);
+        ne_profile = detail::make_profile( grid, mag, js["profile"], nbg);
+        dg::x::HVec damping = detail::make_damping( grid, unmod_mag, js["damping"]);
         dg::blas1::subroutine( [nbg]( double& profile, double& ntilde, double
                     damping) {
                     ntilde  = (profile+ntilde-nbg)*damping+nbg;

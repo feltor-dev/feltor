@@ -74,14 +74,14 @@
         {
             "type" : "aligned",
             "npeak" : 8.0,
-            "nsep" : 1.0
+            "nsep" : 1.0,
+            "background" : 0.5
         },
         "damping":
         {
             "type": "alignedX",
             "alpha" : 0.2,
-            "boundary" : 0.55,
-            "background" : 1.0
+            "boundary" : 0.55
         }
     },
     "init":
@@ -99,15 +99,15 @@
             "profile":
             {
                 "type" : "aligned",
-                "npeak" : 1.0,
-                "nsep" : 0.0
+                "npeak" : 8.0,
+                "nsep" : 1.0,
+                "background" : 0.5
             },
             "damping":
             {
                 "type": "alignedX",
                 "alpha" : 0.2,
-                "boundary" : 1.0,
-                "background" : 1.0
+                "boundary" : 1.0
             }
         },
         "potential" :
@@ -131,7 +131,7 @@
             "modify-B" : true,
             "penalization" : 1e+0,
             "penalize-rhs" : false,
-            "nwall" : 1.0,
+            "nwall" : 0.5,
             "uwall" : 0.0
         },
         "sheath":

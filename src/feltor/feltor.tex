@@ -1147,7 +1147,7 @@ The density can be initialized to the constant background value
     {
         "type" : "const"  // $n_e = N_i = const$, $\phi = 0$
         "background" : 0.1, // $const$
-        // same as choosing "const" profile with zero perturbation and no damping
+        // same as choosing "const" profile with zero ntilde and no damping
         //(see also nbc, minne and nwall)
     }
     //  "potential not needed
@@ -1238,7 +1238,7 @@ by integrating fieldlines towards the positive and negative divertor.
 }
 \end{minted}
 \noindent
-\subsubsection{ntilde} \label{sec:ntilde}
+\subsubsection{Ntilde} \label{sec:ntilde}
 We can choose between several initial conditions for $\tilde n$:
 \begin{minted}[texcomments]{js}
 "density":
@@ -1324,7 +1324,7 @@ wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 }
 \end{minted}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{profile} \label{sec:profile}
+\subsubsection{Profile} \label{sec:profile}
 We can have a constant (background) profile
 \begin{minted}[texcomments]{js}
 "density":
@@ -1340,8 +1340,14 @@ We can have a constant (background) profile
  \noindent
 We define a flux-aligned density profile as
 \begin{align} \label{eq:density_profile}
-    n_{\text{prof}}(R,Z)= n_{peak}\frac{\psi_p(R,Z) }{\psi_{p,O}} + n_{sep} \frac{\psi_{p,O} - \psi_p(R,Z)}{\psi_{p,O}}
+    n_{\text{prof}}(R,Z)= \begin{cases}
+        n_{peak}\frac{\psi_p(R,Z) }{\psi_{p,O}} + n_{sep} \frac{\psi_{p,O} - \psi_p(R,Z)}{\psi_{p,O}} &\text{ for } \frac{\psi_p}{\psi_{p,O}} > 0\\
+        n_{\text{bg}} + \exp\left( \frac{n_{peak} - n_{sep}}{(n_{sep}-n_{bg})\psi_{p,O}}\psi_p\right) ( n_\text{sep} - n_{\text{bg}})&\text{ else }
+    \end{cases}
 \end{align}
+This profile is linear in $\psi_p$ in the closed fieldline region and exponentially
+decreases in the SOL to a constant background value.
+The function is once continuously differentiable at $\psi_p =0$.
 Typically this profile is used in combination with an aligned damping profile~\eqref{eq:aligned_damping}.
 \begin{minted}[texcomments]{js}
 "density":
@@ -1350,14 +1356,17 @@ Typically this profile is used in combination with an aligned damping profile~\e
     {
         "type" : "aligned",
         "npeak" : 10.0, // Profile peak density $n_{peak}$ in Eq.\eqref{eq:density_profile}
-        "nsep" : 1.0 // Profile separatrix density $n_{sep}$ in Eq.\eqref{eq:density_profile}
+        "nsep" : 1.0, // Profile separatrix density $n_{sep}$ in Eq.\eqref{eq:density_profile}
+        "background" : 0.2 // $n_{bg}$ in Eq.~\eqref{eq:density_profile},
+        //also value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
+        //(see also nbc, minne and nwall)
     }
 }
 \end{minted}
 \noindent
 Instead of the flux-aligned profile we can also choose a toroidally symmetric Gaussian profile
 \begin{align} \label{eq:profile_blob}
-    n_{prof}(R,Z) = B + A \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+    n_{prof}(R,Z) = n_{bg} + A \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
 \end{align}
 \begin{minted}[texcomments]{js}
 "density":
@@ -1365,7 +1374,8 @@ Instead of the flux-aligned profile we can also choose a toroidally symmetric Ga
     "profile" :
     {
         "type" : "gaussian",
-        "background" : 1.0, // $B$ in Eq.\eqref{eq:profile_blob}
+        "background" : 1.0, // $n_{bg}$ in Eq.~\eqref{eq:profile_blob},
+        //also value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
         //(see also nbc, minne and nwall)
         "amplitude": 1.0, // $A$ in Eq.\eqref{eq:profile_blob}
         "posX" : 0, // $p_x$ in Eq.\eqref{eq:profile_blob}
@@ -1375,7 +1385,7 @@ Instead of the flux-aligned profile we can also choose a toroidally symmetric Ga
 }
 \end{minted}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{damping} \label{sec:damping}
+\subsubsection{Damping} \label{sec:damping}
 We can have no damping
 \begin{minted}[texcomments]{js}
 "density":
@@ -1410,7 +1420,6 @@ zone that avoids numerical oscillations.
         // (should be small but cannot be too small if $\tau_i > 0$ else
         // $\Delta_\perp n_e$ explodes, must not be zero)
         "boundary" : 1.0    // $\rho_{p,b}$ in Eq.\eqref{eq:aligned_damping}
-        "background" : 0.1 // $n_{bg}$ value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
         //(see also nbc, minne and nwall)
     }
 }
@@ -1430,8 +1439,6 @@ profile requiring two boundaries and alphas
         "boundary" : [0.7, 1.1],    // $\rho_{p,b}$ in Eq.\eqref{eq:aligned_damping}
         // first one is for main region, second one for PFR
         // second values should be $\alpha+\rho_b \leq 1$
-        "background" : 0.1 // $n_{bg}$ value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
-        //(see also nbc, minne and nwall)
     }
 }
 \end{minted}
@@ -1447,8 +1454,6 @@ Finally, we can have a circular damping profile
         "type" : "circular", // Choose Eq.\eqref{eq:circular_damping}
         "alpha" : 0.2,      // $\alpha_p$ in Eq.\eqref{eq:circular_damping}, must not be zero
         "boundary" : 1.0    // $r$ in Eq.\eqref{eq:circular_damping}
-        "background" : 0.1 // $n_{bg}$ value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
-        //(see also nbc, minne and nwall)
     }
 }
 \end{minted}
@@ -1568,7 +1573,7 @@ or a Torpex inspired source profile
     \exp\left( - \frac{(R-R_0)^2}{a^2 }- \frac{(Z-Z_0)^2}{b^2}\right) \text{ if} R > R_0 \\
     \frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} -2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \\
   +\frac{1}{2}\exp\left( - \frac{(R-R_0)^2}{a^2} +2c(R-R_0)(Z-Z_0)- \frac{(Z-Z_0)^2}{b^2} \right) \text{ else}
-              \end{cases}
+  \end{cases}
 \end{align}
 with $a=0.0335$m, $b=0.05$m, $c=565m^{-2}$, $R_0=0.98$m and $Z_0=-0.02$m.
 \begin{minted}[texcomments]{js}
