@@ -13,9 +13,9 @@
 
 int main( int argc, char* argv[])
 {
-    if( argc < 3)
+    if( argc < 4)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input0.nc ... inputN.nc] [output.nc]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [config.json] [input0.nc ... inputN.nc] [output.nc]\n";
         return -1;
     }
     for( int i=1; i<argc-1; i++)
@@ -25,7 +25,7 @@ int main( int argc, char* argv[])
     //------------------------open input nc file--------------------------------//
     dg::file::NC_Error_Handle err;
     int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+    err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
     size_t length;
     err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
     std::string inputfile(length, 'x');
@@ -36,6 +36,15 @@ int main( int argc, char* argv[])
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.asJson() <<  std::endl;
+    dg::file::WrappedJsonValue config( dg::file::error::is_warning);
+    try{
+        dg::file::file2Json( argv[1], config.asJson(),
+                dg::file::comments::are_discarded, dg::file::error::is_warning);
+    } catch( std::exception& e) {
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        DG_RANK0 std::cerr << e.what()<<std::endl;
+        return -1;
+    }
 
     //-------------------Construct grids-------------------------------------//
 
@@ -47,7 +56,7 @@ int main( int argc, char* argv[])
                 js["boundary"]["wall"], wall, transition);
     }catch(std::runtime_error& e)
     {
-        std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        std::cerr << "ERROR in input file "<<argv[2]<<std::endl;
         std::cerr <<e.what()<<std::endl;
         return -1;
     }
@@ -56,7 +65,7 @@ int main( int argc, char* argv[])
     const double Zmin=-p.boxscaleZm*mag.params().a();
     const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
     const double Zmax=p.boxscaleZp*mag.params().a();
-    const unsigned FACTOR=10;
+    const unsigned FACTOR=config.get( "Kphi", 10).asUInt();
 
     unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
     unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
@@ -84,12 +93,11 @@ int main( int argc, char* argv[])
     ///--------------- Construct X-point grid ---------------------//
 
 
-    //std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
     //we use so many Neta so that we get close to the X-point
-    std::cout << "Using default X-point grid resolution (n(3), Npsi(64), Neta(640))\n";
-    unsigned npsi = 3, Npsi = 64, Neta = 640;//set number of psivalues (NPsi % 8 == 0)
-    //std::cin >> npsi >> Npsi >> Neta;
-    std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
+    unsigned npsi = config.get("n",3).asUInt();
+    unsigned Npsi = config.get("Npsi", 64).asUInt();
+    unsigned Neta = config.get("Neta", 640).asUInt();
+    std::cout << "Using X-point grid resolution (n("<<npsi<<"), Npsi("<<Npsi<<"), Neta("<<Neta<<"))\n";
     double RO = mag.R0(), ZO = 0;
     int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     double psipO = mag.psip()(RO, ZO);
@@ -330,7 +338,8 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     size_t counter = 0;
     int ncid;
-    for( int j=1; j<argc-1; j++)
+    std::string fsa_mode = config.get( "fsa", "convoluted-toroidal-average").asString();
+    for( int j=2; j<argc-1; j++)
     {
         int timeID;
 
@@ -350,7 +359,7 @@ int main( int argc, char* argv[])
         //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
-            if( j > 1 && i == 0)
+            if( j > 2 && i == 0)
                 continue; // else we duplicate the first timestep
             start2d[0] = i;
             size_t start2d_out[3] = {counter, 0,0};
@@ -387,10 +396,12 @@ int main( int argc, char* argv[])
                         start2d, count2d, transferH2d.data());
                     dg::DVec transferD2d = transferH2d;
                     fieldaligned.integrate_between_coarse_grid( g3d, transferD2d, transferD2d);
-                    transferH2d = transferD2d;
-                    t2d_mp = transferH2d; //save toroidal average
+                    t2d_mp = transferD2d; //save toroidal average
                     //2. Compute fsa and output fsa
-                    dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
+                    if( fsa_mode == "convoluted-toroidal-average")
+                        dg::blas2::symv( grid2gridX2d, t2d_mp, transferH2dX); //interpolate convoluted average onto X-point grid
+                    else
+                        dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate simple average onto X-point grid
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
                     try{
                         poloidal_average( transferH2dX, t1d, false); //average over eta

@@ -25,22 +25,20 @@ thrust::host_vector<float> append( const thrust::host_vector<float>& in, const d
 //and interpolate to a FACTOR times finer grid in phi
 //also periodify in 3d and equidistant in RZ
 // Also plot in a fieldaligned coordinate system
-const unsigned INTERPOLATE = 2;
-const unsigned TIME_FACTOR = 1;
 //input should probably better come from another json file
 int main( int argc, char* argv[])
 {
-    if( argc != 3)
+    if( argc != 4)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.nc]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [config.json] [input.nc] [output.nc]\n";
         return -1;
     }
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+    std::cout << argv[1]<< " "<<argv[2]<< " -> "<<argv[3]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
     dg::file::NC_Error_Handle err;
     int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+    err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
     size_t length;
     err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
     std::string inputfile(length, 'x');
@@ -49,19 +47,30 @@ int main( int argc, char* argv[])
     dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
     const feltor::Parameters p(js);
     std::cout << js.asJson().toStyledString() << std::endl;
+    dg::file::WrappedJsonValue config( dg::file::error::is_warning);
+    try{
+        dg::file::file2Json( argv[1], config.asJson(),
+                dg::file::comments::are_discarded, dg::file::error::is_warning);
+    } catch( std::exception& e) {
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        DG_RANK0 std::cerr << e.what()<<std::endl;
+        return -1;
+    }
+    const unsigned INTERPOLATE = config.get( "fine-grid-factor", 2).asUInt();
+    const unsigned TIME_FACTOR = config.get( "time-reduction-factor", 1).asUInt();
     dg::geo::TokamakMagneticField mag;
     try{
         mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
     }catch(std::runtime_error& e)
     {
-        std::cerr << "ERROR in geometry file "<<argv[1]<<std::endl;
+        std::cerr << "ERROR in geometry file "<<argv[2]<<std::endl;
         std::cerr <<e.what()<<std::endl;
         return -1;
     }
 
     //-----------------Create Netcdf output file with attributes----------//
     int ncid_out;
-    err = nc_create(argv[2],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
+    err = nc_create(argv[3],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
 
     /// Set global attributes
     std::map<std::string, std::string> att;
