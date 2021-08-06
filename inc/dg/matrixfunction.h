@@ -223,7 +223,7 @@ class KrylovFuncEigenInvert
             } 
             catch(boost::exception& e) //catch boost overflow error
             {
-            return 0.;
+                return 0.;
             }
         });  //f(Lambda)^{-1}
         dg::blas1::pointwiseDot(m_e1H, m_yH, m_e1H);

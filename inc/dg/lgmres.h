@@ -79,13 +79,13 @@ class LGMRES
         }
         //Declare s that minimizes the residual... something like that.
         //s(krylovDimension+1);
-        s.assign(krylovDimension,0);
+        s.assign(krylovDimension+1,0);
 
         //The residual which will be used to calculate the solution.
         V.assign(krylovDimension+1,copyable);
         W.assign(krylovDimension,copyable);
         //In principle we don't need this many... but just to be on board with the algorithm
-        outer_v.assign(outer_k,copyable);
+        outer_v.assign(outer_k+1,copyable);
         z = copyable;
         dx = copyable;
         residual = copyable;
@@ -94,7 +94,7 @@ class LGMRES
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned LGMRES method
      *
-     * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
+     * The iteration stops if \f$ ||Ax-b||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
      * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
      * @param A A matrix
      * @param x Contains an initial value on input and the solution on output.
@@ -116,7 +116,6 @@ class LGMRES
   private:
     template < class Hess, class HessContainerType1, class HessContainerType2, class HessContainerType3  >
     void Update(HessContainerType1 &dx, HessContainerType1 &x, unsigned dimension, Hess &H, HessContainerType2 &s, HessContainerType3 &V);
-    value_type tolerance;
     std::vector<std::vector<value_type>> H, givens;
     ContainerType z, dx, residual;
     std::vector<ContainerType> V, W, outer_v;
@@ -155,25 +154,27 @@ template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
 unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
+    value_type nrmb = sqrt( blas2::dot( S, b));
+    value_type tol = eps*(nrmb + nrmb_correction);
+    if( nrmb == 0)
+    {
+        blas1::copy( 0., x);
+        return 0;
+    }
     dg::blas2::symv(A,x,residual);
     dg::blas1::axpby(1.,b,-1.,residual);
+    value_type normres = sqrt(dg::blas2::dot(S,residual));
+    if( normres < tol) //if x happens to be the solution
+        return 0;
     dg::blas2::symv(P,residual,residual);
     value_type rho = sqrt(dg::blas1::dot(residual,residual));
-    value_type normres = sqrt(dg::blas2::dot(S,residual));
-    value_type normRHS = sqrt(dg::blas1::dot(b,b));
-    value_type normedRHS = sqrt(dg::blas2::dot(S,b));
-
-    tolerance = eps;
 
     unsigned totalRestarts = 0;
-
-    if(normRHS == 0)
-        normRHS = 1.0;
 
     // Go through the requisite number of restarts.
 	unsigned iteration = 0;
 
-    while( (totalRestarts < numberRestarts) && (normres > tolerance*normedRHS))
+    while( (totalRestarts < numberRestarts) && (normres > tol))
 	{
         // The first vector in the Krylov subspace is the normalized residual.
         dg::blas1::axpby(1.0/rho,residual,0.,V[0]);
@@ -267,15 +268,12 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 #endif //MPI
             std::cout << "# rho = " << rho << std::endl;
 #endif //DG_DEBUG
-			if(rho < tolerance*normRHS)
+            if( rho < tol)
 			{
-
                 Update(dx,x,iteration,H,s,W);
-                dg::blas2::symv(A,x,residual);
-                dg::blas1::axpby(1.,b,-1.,residual);
-#ifdef DG_DEBUG
-                std::cout << sqrt(dg::blas2::dot(S,residual) )<< std::endl;
-#endif
+                //dg::blas2::symv(A,x,residual);
+                //dg::blas1::axpby(1.,b,-1.,residual);
+                //std::cout << sqrt(dg::blas2::dot(S,residual) )<< std::endl;
                 return(iteration+totalRestarts*krylovDimension);
             }
         }

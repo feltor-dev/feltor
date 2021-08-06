@@ -200,9 +200,7 @@ int main()
         std::cout << "ffO2-nested-nocommute:" << std::endl;
 
         dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_ff;    
-        std::cout << "before construct\n";
         pol_ff.construct(alpha, {eps_gamma}, grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1., false, "ff");        
-        std::cout << "after construct\n";
         pol_ff.set_commute(false);
         pol_ff.set_chi(chi);
         dg::blas1::scal(x, 0.0);    
@@ -240,7 +238,7 @@ int main()
         dg::blas1::scal(x_gamma, 0.0);
         dg::blas1::scal(temp, 0.0);
         dg::blas1::scal(x, 0.0);
-        dg::KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, Container> sqrtsolve( gamma0inv, grid2d, x,  1e-12, 400, 40,  eps_gamma);
+        dg::KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, Container> sqrtsolve( gamma0inv, grid2d, x,  1e-14, 400, 40,  eps_gamma);
 
 //         dg::KrylovFuncEigenSolve<Container> sqrtsolve(  x, grid2d.size());
         double max_weights =   dg::blas1::reduce(gamma0inv.weights(), 0., dg::AbsMax<double>() );
@@ -273,69 +271,70 @@ int main()
     }
 //     
 //   ff polarization charge of order 4 with nested inversions (Note: converges for eps_gamma <=  machine precision and if BC fo outer helmholtz are changed to PER, )
-//     {        
-//         std::cout << "#####ff polarization charge of order 4 with nested inversions  (commute = false)\n";   
-//         std::cout << "ffO4-nested-nocommute:" << std::endl;
-//         dg::PolCharge<dg::CartesianGrid2d, Matrix, Container> pol_ffO4;
-//         eps_gamma_vec = {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma};
-// 
-//         pol_ffO4.construct(beta, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(),  dg::not_normed, dg::centered, 1., false, "ffO4");
-//         pol_ffO4.set_chi(chi);
-//         pol_ffO4.set_iota(chi);
-//    
-//         dg::blas1::scal(x, 0.0);
-//         
-//         t.tic();
-//         dg::blas1::pointwiseDot(pol_ffO4.weights(), rho_FFO4, temp);
-//         unsigned number = pcg(pol_ffO4, x, temp, eps_pol);
-//         if(  number == pcg.get_max())
-//                 throw dg::Fail( eps_pol);
-//         t.toc();
-// 
-//         dg::blas1::axpby( 1., sol_FF, -1., x, error);        
-//         res.d = sqrt( dg::blas2::dot( w2d, error));
-//         std::cout << "    time: "<<t.diff() << "s \n";
-//         std::cout << "    iter:  "<<number<<std::endl;
-//         std::cout << "    error_abs: " << res.d<<std::endl;
-//         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
-//         
-// 
-//     }
-// 
-// //  ff polarization charge of order 4 without nested inversions
-//     {
-//         std::cout << "#####ff polarization charge of order 4 without nested inversion (commute = false)\n";
-//         std::cout << "ffO4-notnested-nocommute:" << std::endl;
-//         const std::vector<Container> multi_chi = multigrid.project( chi);
-// 
-//         std::vector<dg::TensorElliptic<dg::CartesianGrid2d, Matrix, Container> > multi_tensorelliptic( stages);
-//         for(unsigned u=0; u<stages; u++)
-//         {        
-//             multi_tensorelliptic[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, 1.);
-//             multi_tensorelliptic[u].set_chi( multi_chi[u]);
-//             multi_tensorelliptic[u].set_iota( multi_chi[u]);
-//         }
-//         dg::Helmholtz< dg::CartesianGrid2d,  Matrix, Container > gamma1inv(grid2d, grid2d.bcx(),grid2d.bcy(), beta, dg::centered, 1.);
-//         dg::blas1::scal(x, 0.0);
-//         eps_pol_vec = {eps_pol, 0.1*eps_pol, 0.1*eps_pol};
-//         
-//         t.tic();
-//         dg::blas2::symv(gamma1inv, rho_FFO4, temp); //fullfills no DIR bc conditions/only PER on [0,2 pi]!
-//         dg::blas1::pointwiseDot(v2d, temp, temp); //should be normed for multigrid
-//         std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, temp, eps_pol_vec);
-//         dg::blas2::symv(gamma1inv, x, temp); 
-//         dg::blas1::pointwiseDot(v2d, temp, x); 
-//         t.toc();
-//         
-//         dg::blas1::axpby( 1., sol_FF, -1., x, error);        
-//         res.d = sqrt( dg::blas2::dot( w2d, error));
-//         std::cout << "    time: "<<t.diff() << "s \n";
-//         for( unsigned u=0; u<number.size(); u++)
-//             std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
-//         std::cout << "    error_abs: " << res.d<<std::endl;
-//         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
-//     }
-//    
+    {        
+        std::cout << "#####ff polarization charge of order 4 with nested inversions  (commute = false)\n";   
+        std::cout << "ffO4-nested-nocommute:" << std::endl;
+        dg::PolCharge<dg::CartesianGrid2d, Matrix, Container> pol_ffO4;
+        eps_gamma_vec = {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma};
+
+        pol_ffO4.construct(beta, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(),  dg::not_normed, dg::centered, 1., false, "ffO4");
+        pol_ffO4.set_chi(chi);
+        pol_ffO4.set_iota(chi);
+   
+        dg::blas1::scal(x, 0.0);
+        
+        t.tic();
+        dg::blas1::pointwiseDot(pol_ffO4.weights(), rho_FFO4, temp);
+        unsigned number = pcg(pol_ffO4, x, temp, eps_pol);
+        if(  number == pcg.get_max())
+                throw dg::Fail( eps_pol);
+        t.toc();
+
+        dg::blas1::axpby( 1., sol_FF, -1., x, error);        
+        res.d = sqrt( dg::blas2::dot( w2d, error));
+        std::cout << "    time: "<<t.diff() << "s \n";
+        std::cout << "    iter:  "<<number<<std::endl;
+        std::cout << "    error_abs: " << res.d<<std::endl;
+        std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
+        
+
+    }
+
+//  ff polarization charge of order 4 without nested inversions
+    {
+        std::cout << "#####ff polarization charge of order 4 without nested inversion (commute = false)\n";
+        std::cout << "ffO4-notnested-nocommute:" << std::endl;
+        const std::vector<Container> multi_chi = multigrid.project( chi);
+
+        std::vector<dg::TensorElliptic<dg::CartesianGrid2d, Matrix, Container> > multi_tensorelliptic( stages);
+        for(unsigned u=0; u<stages; u++)
+        {        
+            multi_tensorelliptic[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, 1.);
+            multi_tensorelliptic[u].set_chi( multi_chi[u]);
+            multi_tensorelliptic[u].set_iota( multi_chi[u]);
+        }
+        dg::Helmholtz< dg::CartesianGrid2d,  Matrix, Container > gamma1inv(grid2d, grid2d.bcx(),grid2d.bcy(), beta, dg::centered, 1.);
+        dg::blas1::scal(x, 0.0);
+        eps_pol_vec = {eps_pol, 0.1*eps_pol, 0.1*eps_pol};
+        
+        t.tic();
+        dg::blas2::symv(gamma1inv, rho_FFO4, temp); //fullfills no DIR bc conditions/only PER on [0,2 pi]!
+        dg::blas1::pointwiseDot(v2d, temp, temp); //should be normed for multigrid
+        std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, temp, eps_pol_vec);
+        dg::blas2::symv(gamma1inv, x, temp); 
+        dg::blas1::pointwiseDot(v2d, temp, x); 
+        t.toc();
+        
+        dg::blas1::axpby( 1., sol_FF, -1., x, error);        
+        res.d = sqrt( dg::blas2::dot( w2d, error));
+        std::cout << "    time: "<<t.diff() << "s \n";
+        for( unsigned u=0; u<number.size(); u++)
+            std::cout << " # iter["<<u<<"] "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
+        std::cout << "    iter:  "<<iter[0]+iter[1]+iter[2]<<std::endl;
+        std::cout << "    error_abs: " << res.d<<std::endl;
+        std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
+    }
+   
     
     return 0;
 }

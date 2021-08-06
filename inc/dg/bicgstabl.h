@@ -75,7 +75,7 @@ class BICGSTABl
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned BICGSTABl method
      *
-     * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
+     * The iteration stops if \f$ ||Ax-b||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
      * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
      * @param A A matrix
      * @param x Contains an initial value on input and the solution on output.
@@ -109,13 +109,22 @@ template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
 unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
-    value_type normb = sqrt(dg::blas2::dot(S,b));
+    value_type nrmb = sqrt(dg::blas2::dot(S,b));
+    value_type tol = eps*(nrmb + nrmb_correction);
+    if( nrmb == 0)
+    {
+        blas1::copy( 0., x);
+        return 0;
+    }
 
     dg::blas1::scal(u,0);
 
     dg::blas2::symv(A,x,r);
     dg::blas1::axpby(1.,b,-1.,r);
-    dg::blas2::symv(P,r,r);
+    if( sqrt( blas2::dot(S,r) ) < tol) //if x happens to be the solution
+        return 0;
+    dg::blas2::symv(P,r,r); // MW: Technically this is not allowed symv must store
+    // output in a separate vector (also check lgmres.h)
 
     dg::blas1::copy(b,rtilde);
 
@@ -142,7 +151,10 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
             }
             dg::blas2::symv(A,uhat[j],uhat[j+1]);
             dg::blas2::symv(P,uhat[j+1],uhat[j+1]);
-            alpha = rho_0/dg::blas1::dot(uhat[j+1],rtilde);
+            if( rho_0 == 0)
+                alpha = 0;
+            else
+                alpha = rho_0/dg::blas1::dot(uhat[j+1],rtilde);
             for(unsigned i = 0; i<=j; i++)
             {
                 dg::blas1::axpby(-1.0*alpha,uhat[i+1],1.,rhat[i]);
@@ -191,21 +203,21 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
         dg::blas1::copy(rhat[0],r);
         dg::blas1::copy(xhat,x);
 
-        value_type err = dg::blas2::dot(S,r);
+        value_type err = sqrt(dg::blas2::dot(S,r));
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank==0)
 #endif //MPI
-        std::cout << "# Error is now : " << sqrt(err) << " Against " << sqrt(eps*eps*normb*normb) << std::endl;
+        std::cout << "# Error is now : " << err << " Against " << tol << std::endl;
 #endif //DG_DEBUG
-        if(err < eps*eps*normb*normb){
+        if( err < tol){
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     if(rank==0)
 #endif //MPI
-            std::cout << "# Exited with error : " << sqrt(err) << " After " << k << " Iterations." << std::endl;
+            std::cout << "# Exited with error : " << err << " After " << k << " Iterations." << std::endl;
 #endif //DG_DEBUG
             return k;
         }

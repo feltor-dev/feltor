@@ -320,10 +320,8 @@ class PolCharge
                 if (m_commute == false)
                 {
                     dg::blas1::scal(m_temp2, 0.0);
-                    std::cout << "before sqrt\n";
 
                     std::array<unsigned,2> number = m_sqrtG0inv( m_temp2, x);  //m_temp2 is normed
-                    std::cout << "After sqrt\n";
                     std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
 //                     m_sqrtG0inv( m_temp2, x, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);  //m_temp2 is normed
         
@@ -334,10 +332,8 @@ class PolCharge
                         dg::blas1::pointwiseDot(m_temp, m_ell.inv_weights(), m_temp);
                     
                     dg::blas1::scal(m_temp2, 0.0);
-                    std::cout << "before sqrt2\n";
                     number =m_sqrtG0inv( m_temp2, m_temp);  //m_temp2 is normed
                     std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
-                    std::cout << "after sqrt2\n";
 //                     m_sqrtG0inv( m_temp2, m_temp, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);  //m_temp2 is normed
                     
                     if( m_no == normed)
@@ -355,7 +351,6 @@ class PolCharge
             {  
                 if (m_commute == false)
                 {      
-                    //check m_temp=0
                     m_temp2_ex.extrapolate(m_temp2);
                     std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, x, m_eps_gamma);
                     if(  number[0] == m_multi_g.max_iter())
