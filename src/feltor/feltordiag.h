@@ -182,6 +182,8 @@ struct Variables{
     const std::array<dg::x::DVec, 3>& gradPsip;
     std::array<dg::x::DVec, 3> tmp;
     dg::x::DVec hoo; //keep hoo there to avoid pullback
+    double duration;
+    unsigned nfailed;
 };
 
 struct Record{
@@ -189,6 +191,12 @@ struct Record{
     std::string long_name;
     bool integral; //indicates whether the function should be time-integrated
     std::function<void( dg::x::DVec&, Variables&)> function;
+};
+
+struct Record1d{
+    std::string name;
+    std::string long_name;
+    std::function<double( Variables&)> function;
 };
 
 struct Record_static{
@@ -1337,6 +1345,25 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( v.f.density_source(0), v.hoo, result);
         }
     },
+};
+
+// Here is a list of useful 1d variables of general interest
+std::vector<Record1d> diagnostics1d_list = {
+    {"failed", "Accumulated Number of failed steps",
+        []( Variables& v ) {
+            return v.nfailed;
+        }
+    },
+    {"duration", "Computation time between the latest 3d outputs (without the output time itself)",
+        []( Variables& v ) {
+            return v.duration;
+        }
+    },
+    {"nsteps", "Accumulated Number of calls to the timestepper (including failed steps)",
+        [](Variables& v) {
+            return v.f.called();
+        }
+    }
 };
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

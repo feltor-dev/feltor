@@ -205,7 +205,9 @@ int main( int argc, char* argv[])
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
     feltor::Variables var{
         feltor, y0, p, mag, gradPsip, gradPsip,
-        dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid))
+        dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
+        0., // duration
+        0 // nfailed
     };
     DG_RANK0 std::cout << "# Set Initial conditions ... \n";
     t.tic();
@@ -417,7 +419,7 @@ int main( int argc, char* argv[])
 
         //Create field IDs
         // the vector ids
-        std::map<std::string, int> id3d, id4d, restart_ids;
+        std::map<std::string, int> id1d, id3d, id4d, restart_ids;
         for( auto& record : feltor::diagnostics3d_list)
         {
             std::string name = record.name;
@@ -454,6 +456,16 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
                 &id3d.at(name));
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
+        for( auto& record : feltor::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id1d[name] = 0;
+            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
+                    &id1d.at(name));
+            err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
                 long_name.data());
         }
         DG_RANK0 err = nc_enddef(ncid);
@@ -517,12 +529,17 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
+        for( auto& record : feltor::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
+        }
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
 
         t.tic();
-        unsigned step = 0, failed_counter = 0;
+        unsigned step = 0;
         unsigned maxout = js["output"].get( "maxout", 0).asUInt();
         double Tend = 0, deltaT = 0, t_output = 0;
         std::string output_mode = "free";
@@ -558,12 +575,12 @@ int main( int argc, char* argv[])
                             dt = t_output-time;
                         adapt.step( feltor, time, y0, time, y0, dt,
                                 dg::pid_control, dg::l2norm, rtol, atol);
-                        std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<failed_counter<<"\n";
+                        std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
                         if( dt < 1e-6)
                             throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                         if( adapt.failed())
                         {
-                            failed_counter++;
+                            var.nfailed++;
                             continue;
                         }
                         step++;
@@ -578,7 +595,7 @@ int main( int argc, char* argv[])
                                 adapt.step( feltor, time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol, atol);
                                 if( adapt.failed())
-                                    failed_counter++;
+                                    var.nfailed++;
                                 if( dt < 1e-6)
                                     throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                             }while( adapt.failed());
@@ -629,7 +646,7 @@ int main( int argc, char* argv[])
                 if( p.timestepper == "adaptive")
                 {
                     DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
-                    DG_RANK0 std::cout << "\tfailed "<<failed_counter<<"\n";
+                    DG_RANK0 std::cout << "\tfailed "<<var.nfailed<<"\n";
                 }
 
                 tti.toc();
@@ -637,6 +654,7 @@ int main( int argc, char* argv[])
                 if( abort) break;
             }
             ti.toc();
+            var.duration = ti.diff();
             //----------------Test if ampere equation holds
             if( p.beta != 0 && !abort)
             {
@@ -653,12 +671,12 @@ int main( int argc, char* argv[])
                 DG_RANK0 std::cout << "\n\t Step "<<step <<" of "
                             << p.inner_loop*p.itstp*maxout << " at time "<<time;
                 DG_RANK0 std::cout << "\n\t Average time for one step: "
-                            << ti.diff()/(double)p.itstp/(double)p.inner_loop<<"s";
+                            << var.duration/(double)p.itstp/(double)p.inner_loop<<"s";
             }
             else
                 DG_RANK0 std::cout << "\n\t Time "<<time <<" of " << Tend;
                 DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
-                            << ti.diff()/(double)p.itstp<<"s";
+                            << var.duration/(double)p.itstp<<"s";
 
             ti.tic();
             //////////////////////////write fields////////////////////////
@@ -714,6 +732,11 @@ int main( int argc, char* argv[])
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
                 }
+            }
+            for( auto& record : feltor::diagnostics1d_list)
+            {
+                double result = record.function( var);
+                DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
             DG_RANK0 err = nc_close(ncid);
             ti.toc();

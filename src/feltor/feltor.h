@@ -204,6 +204,8 @@ struct Explicit
             dg::blas1::scal( result, beta);
     }
 
+    unsigned called() const { return m_called;}
+
     /// //////////////////////DIAGNOSTICS END////////////////////////////////
     void update_diag(){
         // assume m_density, m_potential, m_velocity, m_velocityST, m_apar
@@ -426,6 +428,7 @@ struct Explicit
     double m_nwall = 0., m_uwall = 0.;
     bool m_fixed_profile = true, m_reversed_field = false;
     bool m_upToDate = false;
+    unsigned m_called = 0;
 
 };
 
@@ -1184,12 +1187,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
 
         // Add density gradient and electric field
         double tau = m_p.tau[i], mu = m_p.mu[i];
-        dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& gradN,
+        dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& WDot,
                     double dsP, double dsN, double QN, double PN, double hm,
                     double hp){
 
-                    gradN -= 1./mu*dsP;
-                    gradN -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
+                    WDot -= 1./mu*dsP;
+                    WDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
                 },
                 yp[1][i], m_dsP[i], m_dsN[i], m_minusSTN[i], m_plusSTN[i],
                 m_faST.hm(), m_faST.hp()
@@ -1384,6 +1387,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
+    m_called++;
     m_upToDate = false;
 #ifdef MPI_VERSION
     int rank;
