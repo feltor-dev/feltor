@@ -173,6 +173,7 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
+    std::cout <<  "    #error_rel in T_{m,1}: " << abs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/abs(Tsyminv_sol.values[size-1]) << "\n";
     std::cout << "InvtridiagD(v_sym):" << std::endl;
     t.tic();
     Tsyminv = tridiaginvD(a_sym,b_sym,b_sym);
@@ -189,6 +190,7 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
+    std::cout <<  "    #error_rel in T_{m,1}: " << abs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/abs(Tsyminv_sol.values[size-1]) << "\n";
     
 
     std::cout << "\n####Compute inverse of non-symmetric tridiagonal matrix\n";

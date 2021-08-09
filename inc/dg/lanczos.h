@@ -149,6 +149,8 @@ class Lanczos
     {
         value_type xnorm = sqrt(dg::blas1::dot(x, x));
         value_type residual;
+        dg::blas2::symv(A,x, m_v);        
+        value_type r0norm = sqrt(dg::blas1::dot(m_v,  m_v));
 
         dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         value_type betaip = 0.;
@@ -172,7 +174,7 @@ class Lanczos
             m_TH.values(i,2) = betaip;  // +1 diagonal
             m_tridiaginvH.resize(i+1);
             m_TinvH = m_tridiaginvH(m_TH);
-            residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of TinvH
+            residual = r0norm*betaip*abs(m_TinvH.values[i]); //used symmetry of TinvH
 #ifdef DG_DEBUG
             std::cout << "# ||r||_2 =  " << residual << " at i = " << i << "\n";
 #endif //DG_DEBUG
@@ -216,6 +218,9 @@ class Lanczos
         value_type xnorm = sqrt(dg::blas2::dot(x, M, x));
         value_type residual;
         
+        dg::blas2::symv(A,x, m_v);        
+        value_type r0norm = sqrt(dg::blas2::dot(m_v, M, m_v));
+        
         dg::blas1::axpby(1./xnorm, x, 0.0, m_v); //m_v[1] = x/||x||
         value_type betaip = 0.;
         value_type alphai = 0.;
@@ -231,6 +236,8 @@ class Lanczos
             dg::blas1::axpby(-alphai, m_w, 1.0, m_wp);     
             dg::blas2::symv(Minv,m_wp,m_vp);
             betaip = sqrt(dg::blas1::dot(m_wp, m_vp)); 
+//             std::cout << " a " << alphai <<" b " << betaip << std::endl;
+
             if (betaip == 0) {
 #ifdef DG_DEBUG
                 std::cout << "beta["<<i+1 <<"]=0 encountered\n";
@@ -241,7 +248,8 @@ class Lanczos
             m_TH.values(i,2) =  betaip;  // +1 diagonal
             m_tridiaginvH.resize(i+1);
             m_TinvH = m_tridiaginvH(m_TH); 
-            residual = xnorm*betaip*abs(m_TinvH.values[i]); //used symmetry of m_TinvH
+
+            residual = r0norm*betaip*abs(m_TinvH.values[i]); //used symmetry of m_TinvH
 #ifdef DG_DEBUG
             std::cout << "# res_fac*||r||_M =  " << res_fac*residual << "  at i = " << i << "\n";
 #endif //DG_DEBUG
@@ -271,7 +279,7 @@ class Lanczos
     HDiaMatrix m_TH;
     HCooMatrix m_TinvH;
     unsigned m_iter, m_max_iter;
-    TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> m_tridiaginvH;
+    dg::TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> m_tridiaginvH;
 };
 
 /*! 
@@ -394,7 +402,6 @@ class MCG
 #endif //MPI
         {
         std::cout << "# Norm of b "<<nrmb <<"\n";
-        std::cout << "# Residual errors: \n";
         }
 #endif //DG_DEBUG
         if( nrmb == 0)
@@ -413,6 +420,9 @@ class MCG
         {
             dg::blas2::symv( A, m_p, m_ap);
             alpha = nrmzr_old /dg::blas1::dot( m_p, m_ap);
+//                     blas1::axpby( alpha, m_p, 1.,x);
+ 
+                
             dg::blas1::axpby( -alpha, m_ap, 1., m_r);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
@@ -439,6 +449,9 @@ class MCG
             dg::blas2::symv(Minv, m_r, m_ap);
             nrmzr_new = dg::blas1::dot( m_ap, m_r);
             beta = nrmzr_new/nrmzr_old;
+//             if (i==0) std::cout << " a " << 1.0/alpha << " b " << sqrt(beta)/alpha <<std::endl;
+//             else std::cout << " a " << 1.0/alpha - m_TH.values(i-1,2) <<" b " << sqrt(beta)/alpha << std::endl;
+
             dg::blas1::axpby(1., m_ap, beta, m_p );
             m_TH.values(i,2)   = -beta/alpha;
             m_TH.values(i,1)   =  1./alpha;
@@ -455,17 +468,8 @@ class MCG
             HVec weights(get_iter(), 1.);
             e1H[0] = 1.;
             dg::TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> tridiaginv(yH);
-//             cusp::print(m_TH);
-//             dg::LGMRES <HVec> lgmres( yH, 1000, 50, 100*get_iter()*get_iter());
-//             lgmres.solve( m_TH, yH, e1H , weights, weights, 1e-14, 1);
-            
-            
             HCooMatrix TinvH = tridiaginv(m_TH); //Compute on Host!            
             dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1   
-            //             cusp::print(TinvH);
-
-//             ContainerType y(get_iter(), 0.);
-//             dg::assign(yH, y); //transfer to device
             Ry(A, m_TH, Minv, M, yH, x, b,  get_iter());  // x =  R T^(-1) e_1  
         }
         return m_TH;

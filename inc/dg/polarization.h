@@ -106,7 +106,7 @@ class PolCharge
             m_multi_gamma.resize(1);
             m_multi_gamma.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
-            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, 500, 40, eps_gamma[0]);
+            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, 2000, 40, eps_gamma[0]);
                         
 //             m_sqrtG0inv.construct(m_temp, g.size());
             
