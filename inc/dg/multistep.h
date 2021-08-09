@@ -31,8 +31,8 @@ namespace dg{
     The return type of these member functions must be useable in blas2 functions together with the ContainerType type.
    @note If Explicit is a class then the suggested way of implementing Implicit is as a **friend** to the
    Explicit class. This is because the only reason to write the implicit part separate from the
-   explicit part is the interface to the timestepper. The friend construct helps to avoid
-   duplicate code and increase memory consumption by making Implicit essentially an extension of Explicit.
+   explicit part is the interface to the timestepper. The friend construct helps to reduce
+   duplicate code and memory consumption by making Implicit essentially an extension of Explicit.
  * @param ex explic part
  * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
  */
@@ -149,7 +149,11 @@ struct ImExMultistep
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
+     * @note the implementation is such that on return the last call is the
+     * explicit part \c ex at \c (t0,u0).  This is useful if \c ex holds
+     * state, which is then updated to that timestep and/or if \c im changes
+     * the state of \c ex through the friend construct.
+     * This might be interesting if the call to \c ex changes its state.
      */
     template< class Explicit, class Implicit>
     void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt);
@@ -158,9 +162,12 @@ struct ImExMultistep
     * @brief Advance one timestep
     *
     * @copydoc hide_explicit_implicit
-    * @param t (write-only), contains timestep corresponding to \c u on output
-    * @param u (write-only), contains next step of time-integration on output
-    * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
+    * @param t (write-only), contains timestep corresponding to \c u on return
+    * @param u (write-only), contains next step of time-integration on return
+    * @note the implementation is such that on return the last call is the
+    * explicit part \c ex at the new \c (t,u).  This is useful if \c ex holds
+    * state, which is then updated to the new timestep and/or if \c im changes
+    * the state of \c ex through the friend construct.
     * @attention The first few steps after the call to the init function are performed with a semi-implicit Runge-Kutta method to initialize the multistepper
     */
     template< class Explicit, class Implicit>
@@ -183,10 +190,10 @@ void ImExMultistep<ContainerType, SolverType>::init( RHS& f, Diffusion& diff, va
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
     blas1::copy(  u0, m_u[s-1]);
-    f( t0, u0, m_ex[s-1]); //f may not destroy u0
     m_counter = 0;
     if( s-1-m_counter < m_im.size())
         diff( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
+    f( t0, u0, m_ex[s-1]); //f may not destroy u0
 }
 
 template<class ContainerType, class SolverType>
@@ -211,10 +218,10 @@ void ImExMultistep<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, va
         m_counter++;
         m_tu = t;
         dg::blas1::copy( u, m_u[s-1-m_counter]);
-        f( m_tu, m_u[s-1-m_counter], m_ex[s-1-m_counter]);
         //only assign to f if we actually need to store it
         if( s-1-m_counter < m_im.size())
             diff( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
+        f( m_tu, m_u[s-1-m_counter], m_ex[s-1-m_counter]);
         m_solver = ark.solver(); // store the state of the solver
         return;
     }
@@ -242,9 +249,9 @@ void ImExMultistep<ContainerType, SolverType>::step( RHS& f, Diffusion& diff, va
     m_solver.solve( -m_dt*m_t.im(0), diff, t, u, m_tmp);
 
     blas1::copy( u, m_u[0]); //store result
-    f(m_tu, m_u[0], m_ex[0]); //call f on new point
     if( 0 < m_im.size())
         diff( m_tu, m_u[0], m_im[0]); //call diff on new point
+    f(m_tu, m_u[0], m_ex[0]); //call f on new point (AFTER diff!)
 
 }
 ///@endcond
@@ -601,7 +608,8 @@ struct FilteredExplicitMultistep
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
+     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
+     * This might be interesting if the call to \c ex changes its state.
      */
     template< class RHS, class Limiter>
     void init( RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type dt);
@@ -613,9 +621,10 @@ struct FilteredExplicitMultistep
     * @copydoc hide_limiter
     * @param rhs The rhs functor
     * @param limiter The limiter or filter to use
-    * @param t (write-only), contains timestep corresponding to \c u on output
-    * @param u (write-only), contains next step of time-integration on output
-    * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
+    * @param t (write-only), contains timestep corresponding to \c u on return
+    * @param u (write-only), contains next step of time-integration on return
+    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
+    * This might be interesting if the call to \c ex changes its state.
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method
     */
     template< class RHS, class Limiter>
@@ -739,7 +748,8 @@ struct ExplicitMultistep
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on output the last call to the explicit part \c ex is at \c (t0,u0). This might be interesting if the call to \c ex changes its state.
+     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
+     * This might be interesting if the call to \c ex changes its state.
      */
     template< class RHS>
     void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
@@ -752,9 +762,10 @@ struct ExplicitMultistep
     *
     * @copydoc hide_rhs
     * @param rhs The rhs functor
-    * @param t (write-only), contains timestep corresponding to \c u on output
-    * @param u (write-only), contains next step of time-integration on output
-    * @note the implementation is such that on output the last call to the explicit part \c ex is at the new \c (t,u). This might be interesting if the call to \c ex changes its state.
+    * @param t (write-only), contains timestep corresponding to \c u on return
+    * @param u (write-only), contains next step of time-integration on return
+    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
+    * This might be interesting if the call to \c ex changes its state.
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
     */
     template< class RHS>

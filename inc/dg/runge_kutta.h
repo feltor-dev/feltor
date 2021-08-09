@@ -80,7 +80,7 @@ struct ERKStep
     void enable_fsal(){ m_ignore_fsal = false;}
 
     ///@copydoc RungeKutta::step()
-    ///@param delta Contains error estimate (u1 - tilde u1) on output (must have equal size as \c u0)
+    ///@param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     template<class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///global order of the method given by the current Butcher Tableau
@@ -358,11 +358,15 @@ struct ARKStep
     * @copydoc hide_explicit_implicit
     * @param t0 start time
     * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
-    * @param u1 (write only) contains result on output (may alias u0)
+    * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
+    * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
-    * @param delta Contains error estimate (u1 - tilde u1) on output (must have equal size as \c u0)
-    * @note on return \c ex(t1, u1) will be the last call to \c ex (this is useful if \c Explicit holds state, which is then updated to the current timestep)
+    * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
+    * @note the implementation is such that on return the last call is the
+    * explicit part \c ex at the new \c (t1,u1).
+    * This is useful if \c ex holds
+    * state, which is then updated to the new timestep and/or if \c im changes
+    * the state of \c ex through the friend construct.
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
@@ -533,12 +537,12 @@ struct RungeKutta
     * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
-    * @param u1 (write only) contains result on output (may alias u0)
+    * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
+    * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     * @note About the first same as last property (fsal): Some Butcher tableaus
-    * (e.g. Dormand-Prince) have the property that the last value k_s of a
+    * (e.g. Dormand-Prince or Bogacki-Shampine) have the property that the last value k_s of a
     * timestep is the same as the first value k_0 of the next timestep. This
     * means that we can save one call to the right hand side. This property is
     * automatically activated if \c tableau.isFsal() returns \c true and \c t0
@@ -647,8 +651,8 @@ struct ShuOsher
     * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
-    * @param u1 (write only) contains result on output (may alias u0)
+    * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
+    * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     */
@@ -780,11 +784,11 @@ struct DIRKStep
     * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on output
+    * @param t1 (write only) end time ( equals \c t0+dt on return
     *   may alias \c t0)
-    * @param u1 (write only) contains result on output (may alias u0)
+    * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
-    * @param delta Contains error estimate (u1 - tilde u1) on output (must have equal size as \c u0)
+    * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     */
     template< class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
@@ -949,9 +953,9 @@ struct ImplicitRungeKutta
     * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on output
+    * @param t1 (write only) end time ( equals \c t0+dt on return
     *   may alias \c t0)
-    * @param u1 (write only) contains result on output (may alias u0)
+    * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     */
     template<class RHS>
@@ -984,7 +988,7 @@ struct ImplicitRungeKutta
  * @param t_begin initial time
  * @param begin initial condition
  * @param t_end final time
- * @param end (write-only) contains solution at \c t_end on output (may alias begin)
+ * @param end (write-only) contains solution at \c t_end on return (may alias begin)
  * @param N number of steps
  */
 template< class RHS, class ContainerType>
