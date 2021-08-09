@@ -6,6 +6,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
+    m_called++;
     m_upToDate = false;
 #ifdef MPI_VERSION
     int rank;
@@ -24,7 +25,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     std::string advection = m_js["advection"].get("type",
             "velocity-staggered").asString();
 
-    if( "velocity-staggered" == advection)
+    if( "velocity-staggered" == advection ||
+        "velocity-staggered-implicit" == advection)
     {
         dg::blas1::copy( y[0][1], m_density[0]);
         dg::blas1::copy( y[0][1], m_density[1]);
@@ -75,15 +77,18 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 0, yp[1][1]);
 
         // Add density gradient
-        double tau = m_p.tau[1], mu = m_p.mu[1];
-        dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& gradN,
-                    double dsN, double QN, double PN, double hm, double hp)
-                {
-                    gradN -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
-                },
-                yp[1][1], m_dsN[1], m_minusSTN[1], m_plusSTN[1], m_faST.hm(),
-                m_faST.hp()
-        );
+        if( advection == "velocity-staggered")
+        {
+            double tau = m_p.tau[1], mu = m_p.mu[1];
+            dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& UDot,
+                        double dsN, double QN, double PN, double hm, double hp)
+                    {
+                        UDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
+                    },
+                    yp[1][1], m_dsN[1], m_minusSTN[1], m_plusSTN[1], m_faST.hm(),
+                    m_faST.hp()
+            );
+        }
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
@@ -247,7 +252,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
     }
-    else if( "staggered" == advection)
+    else if( "staggered" == advection || "staggered-implicit" == advection)
     {
         dg::blas1::copy( y[0][1], m_density[0]);
         dg::blas1::copy( y[0][1], m_density[1]);
@@ -300,7 +305,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::axpby( -1., m_temp0, 1., yp[1][1]);
 
         // Add density gradient
-        dg::blas1::axpby( -m_p.tau[1] /m_p.mu[1], m_dsN[1], 1., yp[1][1]);
+        if( advection == "staggered")
+            dg::blas1::axpby( -m_p.tau[1] /m_p.mu[1], m_dsN[1], 1., yp[1][1]);
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
@@ -340,4 +346,52 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     accu += timer.diff();
     DG_RANK0 std::cout << "## Add parallel dynamics and sources took "
                        << timer.diff()<<"s\t A: "<<accu<<"\n";
+}
+
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::implicit(
+        double t,
+        const std::array<std::array<Container,2>,2> & y,
+        std::array<std::array<Container,2>,2>& yp)
+{
+    dg::blas1::copy( 0., yp);
+    std::string advection = m_js["advection"].get("type",
+        "velocity-staggered").asString();
+    // ghost cells are shifted by 2
+    if( advection == "staggered-implicit")
+    {
+        std::cout << "Staggered-implicit\n";
+        dg::blas1::copy( y[0], m_density),
+        // Compute dsN and staggered density
+        m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
+        m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
+        update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
+                dg::DIR ? m_p.nbc : 0.);
+        dg::geo::ds_slope( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_dsN[1]);
+        dg::geo::ds_average( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_densityST[1]);
+        // Add density gradient
+        dg::blas1::axpby( -m_p.tau[1] /m_p.mu[1], m_dsN[1], 1., yp[1][1]);
+    }
+    else if( advection == "velocity-staggered-implicit")
+    {
+        std::cout << "vel-Staggered-implicit\n";
+        dg::blas1::copy( y[0], m_density),
+
+        // Compute dsN and staggered density
+        m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
+        m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
+        update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
+                dg::DIR ? m_p.nbc : 0.);
+        dg::geo::ds_slope( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_dsN[1]);
+        dg::geo::ds_average( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_densityST[1]);
+
+        double tau = m_p.tau[1], mu = m_p.mu[1];
+        dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& UDot,
+                double dsN, double QN, double PN, double hm, double hp)
+            {
+                UDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
+            },
+            yp[1][1], m_dsN[1], m_minusSTN[1], m_plusSTN[1], m_faST.hm(),
+            m_faST.hp());
+    }
 }

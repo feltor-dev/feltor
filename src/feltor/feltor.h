@@ -13,10 +13,13 @@
 
 namespace feltor
 {
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct Implicit;
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
+    friend class feltor::Implicit<Geometry, IMatrix, Matrix, Container>;
     using vector = std::array<std::array<Container,2>,2>;
     using container = Container;
     Explicit( const Geometry& g, feltor::Parameters p,
@@ -28,6 +31,9 @@ struct Explicit
     void initializeni( const Container& ne, Container& ni, std::string initphi);
 
     void operator()( double t,
+        const std::array<std::array<Container,2>,2>& y,
+        std::array<std::array<Container,2>,2>& yp);
+    void implicit( double t,
         const std::array<std::array<Container,2>,2>& y,
         std::array<std::array<Container,2>,2>& yp);
     /// ///////////////////RESTART    MEMBERS //////////////////////
@@ -1526,8 +1532,55 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     std::cout << "## Add parallel dynamics and sources took "<<timer.diff()
               << "s\t A: "<<accu<<"\n";
 }
+
 #else // WITH_NAVIER_STOKES
 #include "../navier_stokes/navier_stokes.h"
 #endif // WITH_NAVIER_STOKES
+
+// The following is still for the NavierStokes project
+// (turns out doing the parallel force implicitly does not help with anything)
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct Implicit
+{
+    Implicit() {}
+    Implicit( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
+    void operator() ( double t,
+            const std::array<std::array<Container,2>,2> & y,
+            std::array<std::array<Container,2>,2>& yp)
+    {
+        m_ex->implicit( t, y, yp);
+    }
+    private:
+    Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
+};
+
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct ImplicitSolver
+{
+    ImplicitSolver() {}
+    ImplicitSolver( const Geometry& g) {
+        dg::assign( dg::evaluate( dg::zero, g), m_tmp[0][0] );
+        m_tmp[0][1] = m_tmp[0][0];
+        m_tmp[1] = m_tmp[0];
+    }
+    const std::array<std::array<dg::DVec,2>,2>& copyable() const{
+        return m_tmp;
+    }
+    // solve (y + alpha I(t,y) = rhs
+    void solve( double alpha,
+            Implicit<Geometry,IMatrix,Matrix,Container>& im,
+            double t,
+            std::array<std::array<Container,2>,2>& y,
+            const std::array<std::array<Container,2>,2>& rhs)
+    {
+        std::cout << "Implicit Solver "<<alpha<<"\n";
+        dg::blas1::copy( rhs[0], y[0]);// I_n = 0
+        im( t, y, m_tmp); //ignores y[1], solves Poisson at time t for y[0] and
+        // writes 0 in m_tmp[0] and updates m_tmp[1]
+        dg::blas1::axpby( 1., rhs[1], -alpha, m_tmp[1], y[1]); // u = rhs_u - alpha I_u
+    }
+    private:
+    std::array<std::array<Container,2>,2> m_tmp;
+};
 
 } //namespace feltor

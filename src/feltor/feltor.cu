@@ -144,6 +144,8 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "# Constructing Feltor...\n";
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
+    feltor::Implicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+        dg::x::DMatrix, dg::x::DVec> implicit( feltor);
     DG_RANK0 std::cout << "# Done!\n";
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
@@ -250,16 +252,34 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
     dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
+    dg::ImExMultistep< std::array<std::array<dg::x::DVec,2>,2>,
+        feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+        dg::x::DMatrix, dg::x::DVec> > multistep_imex;
     dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
+    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::DVec,2>,2>,
+        feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+            dg::x::DMatrix, dg::x::DVec> > > adapt_ark;
     double rtol = 0., atol = 0., dt = 0.;
     if( p.timestepper == "multistep")
     {
         multistep.construct( p.tableau, y0);
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
     }
+    else if( p.timestepper == "multistep-imex")
+    {
+        multistep_imex.construct( p.tableau, grid);
+        dt = js[ "timestepper"]["dt"].asDouble( 0.01);
+    }
     else if (p.timestepper == "adaptive")
     {
         adapt.construct( p.tableau, y0);
+        rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
+        atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
+        dt = 1e-5; //that should be a small enough initial guess
+    }
+    else if (p.timestepper == "adaptive-imex")
+    {
+        adapt_ark.construct( p.tableau, grid);
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
@@ -545,7 +565,9 @@ int main( int argc, char* argv[])
         std::string output_mode = "free";
         if( p.timestepper == "multistep")
             multistep.init( feltor, time, y0, dt);
-        else if( p.timestepper == "adaptive")
+        if( p.timestepper == "multistep-imex")
+            multistep_imex.init( feltor, implicit, time, y0, dt);
+        else if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
         {
             output_mode = js["timestepper"].get(
                     "output-mode", "equidistant").asString();
@@ -573,8 +595,12 @@ int main( int argc, char* argv[])
                     {
                         if( time + dt > t_output)
                             dt = t_output-time;
-                        adapt.step( feltor, time, y0, time, y0, dt,
+                        if( p.timestepper == "adaptive")
+                            adapt.step( feltor, time, y0, time, y0, dt,
                                 dg::pid_control, dg::l2norm, rtol, atol);
+                        else if ( p.timestepper == "adaptive-imex")
+                            adapt_ark.step( feltor, implicit, time, y0, time,
+                                y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
                         std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
                         if( dt < 1e-6)
                             throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
@@ -593,14 +619,27 @@ int main( int argc, char* argv[])
                         if( p.timestepper == "adaptive")
                             do{
                                 adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol, atol);
+                                        dg::pid_control, dg::l2norm, rtol,
+                                        atol);
                                 if( adapt.failed())
                                     var.nfailed++;
                                 if( dt < 1e-6)
                                     throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                             }while( adapt.failed());
-                        else
+                        else if( p.timestepper == "adaptive-imex")
+                            do{
+                                adapt_ark.step( feltor, implicit, time, y0,
+                                        time, y0, dt, dg::pid_control,
+                                        dg::l2norm, rtol, atol);
+                                if( adapt_ark.failed())
+                                    var.nfailed++;
+                                if( dt < 1e-6)
+                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                            }while( adapt_ark.failed());
+                        else if ( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
+                        else if ( p.timestepper == "multistep-imex")
+                            multistep_imex.step( feltor, implicit, time, y0);
                         step++;
                     }
                 }
@@ -643,7 +682,7 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive")
+                if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
                 {
                     DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
                     DG_RANK0 std::cout << "\tfailed "<<var.nfailed<<"\n";
@@ -755,7 +794,7 @@ int main( int argc, char* argv[])
     if( p.output == "glfw")
     {
         dg::Timer t;
-        unsigned step = 0, failed_counter=0;
+        unsigned step = 0;
 
         std::map<std::string, const dg::x::DVec* > v4d;
         v4d["ne-1 / "] = &feltor.density(0),  v4d["ni-1 / "] = &feltor.density(1);
@@ -832,24 +871,37 @@ int main( int argc, char* argv[])
             t.tic();
             if( p.timestepper == "multistep")
                 multistep.init( feltor, time, y0, dt);
+            if( p.timestepper == "multistep-imex")
+                multistep_imex.init( feltor, implicit, time, y0, dt);
             for( unsigned i=0; i<p.itstp; i++)
             {
                 for( unsigned k=0; k<p.inner_loop; k++)
                 {
                     try{
                         if( p.timestepper == "adaptive")
-                        {
                             do{
                                 adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol, atol);
+                                        dg::pid_control, dg::l2norm, rtol,
+                                        atol);
                                 if( adapt.failed())
-                                    failed_counter++;
+                                    var.nfailed++;
                                 if( dt < 1e-6)
                                     throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                             }while( adapt.failed());
-                        }
-                        if( p.timestepper == "multistep")
+                        else if( p.timestepper == "adaptive-imex")
+                            do{
+                                adapt_ark.step( feltor, implicit, time, y0,
+                                        time, y0, dt, dg::pid_control,
+                                        dg::l2norm, rtol, atol);
+                                if( adapt_ark.failed())
+                                    var.nfailed++;
+                                if( dt < 1e-6)
+                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                            }while( adapt_ark.failed());
+                        else if ( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
+                        else if ( p.timestepper == "multistep-imex")
+                            multistep_imex.step( feltor, implicit, time, y0);
                     }
                     catch( dg::Fail& fail) {
                         std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -867,7 +919,7 @@ int main( int argc, char* argv[])
                 if( p.timestepper == "adaptive")
                 {
                     std::cout << "\tdt "<<dt<<"\n";
-                    std::cout << "\tfailed "<<failed_counter<<"\n";
+                    std::cout << "\tfailed "<<var.nfailed<<"\n";
                 }
                 //----------------Test if ampere equation holds
                 if( p.beta != 0)
