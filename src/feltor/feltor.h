@@ -1450,6 +1450,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //Compute m_velocity, m_dsU and m_apar
     update_velocity_and_apar( t, m_velocityST, m_aparST);
 
+    timer.toc();
+    accu += timer.diff();
+    DG_RANK0 std::cout << "## Compute Apar and staggered        took "
+                       << timer.diff()<<"s\t A: "<<accu<<"s\n";
+    timer.tic( );
+
 #if FELTORPERP == 1
 
     // Set perpendicular dynamics in yp
@@ -1466,7 +1472,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     timer.toc();
     accu += timer.diff();
-    DG_RANK0 std::cout << "## Compute Apar and perp dynamics    took "
+    DG_RANK0 std::cout << "## Compute perp dynamics             took "
                        << timer.diff() << "s\t A: "<<accu<<"s\n";
     timer.tic();
 
