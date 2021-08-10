@@ -256,7 +256,7 @@ int main( int argc, char* argv[])
         feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> > multistep_imex;
     dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
-    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::DVec,2>,2>,
+    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>,
         feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
             dg::x::DMatrix, dg::x::DVec> > > adapt_ark;
     double rtol = 0., atol = 0., dt = 0.;

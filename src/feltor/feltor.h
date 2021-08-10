@@ -1538,6 +1538,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     std::cout << "## Add parallel dynamics and sources took "<<timer.diff()
               << "s\t A: "<<accu<<"\n";
 }
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::implicit(
+    double t,
+    const std::array<std::array<Container,2>,2>& y,
+    std::array<std::array<Container,2>,2>& yp)
+{
+    dg::blas1::copy( 0., yp);
+}
 
 #else // WITH_NAVIER_STOKES
 #include "../navier_stokes/navier_stokes.h"
@@ -1569,7 +1577,7 @@ struct ImplicitSolver
         m_tmp[0][1] = m_tmp[0][0];
         m_tmp[1] = m_tmp[0];
     }
-    const std::array<std::array<dg::DVec,2>,2>& copyable() const{
+    const std::array<std::array<Container,2>,2>& copyable() const{
         return m_tmp;
     }
     // solve (y + alpha I(t,y) = rhs
