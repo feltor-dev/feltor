@@ -455,10 +455,10 @@ int main( int argc, char* argv[])
             std::string name = record.name;
             std::string long_name = record.long_name;
             restart_ids[name] = 0;//creates a new entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, restart_dim_ids,
-                &restart_ids.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name), "long_name", long_name.size(),
-                long_name.data());
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    restart_dim_ids, &restart_ids.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
+                    "long_name", long_name.size(), long_name.data());
         }
         for( auto& record : feltor::diagnostics2d_list)
         {
@@ -467,26 +467,26 @@ int main( int argc, char* argv[])
             id3d[name] = 0;//creates a new id3d entry for all processes
             DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
                 &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
-                long_name.data());
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
 
             name = record.name + "_2d";
             long_name = record.long_name + " (Evaluated on phi = 0 plane)";
             id3d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-                &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
-                long_name.data());
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
         }
         for( auto& record : feltor::diagnostics1d_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
             id1d[name] = 0;
-            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
-                    &id1d.at(name));
-            err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
-                long_name.data());
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1,
+                    &dim_ids[0], &id1d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
+                    long_name.size(), long_name.data());
         }
         DG_RANK0 err = nc_enddef(ncid);
         ///////////////////////////////////first output/////////////////////////
