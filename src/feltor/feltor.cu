@@ -601,7 +601,7 @@ int main( int argc, char* argv[])
                         else if ( p.timestepper == "adaptive-imex")
                             adapt_ark.step( feltor, implicit, time, y0, time,
                                 y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
-                        std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
+                        DG_RANK0 std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
                         if( dt < 1e-6)
                             throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                         if( adapt.failed())
@@ -713,7 +713,7 @@ int main( int argc, char* argv[])
                             << var.duration/(double)p.itstp/(double)p.inner_loop<<"s";
             }
             else
-                DG_RANK0 std::cout << "\n\t Time "<<time <<" of " << Tend;
+                DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << Tend;
                 DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
                             << var.duration/(double)p.itstp<<"s";
 
