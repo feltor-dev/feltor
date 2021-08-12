@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     /// ////////////// Initialize timestepper ///////////////////////
     std::string stepper = ws[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
     std::string tableau = ws[ "timestepper"].get( "tableau", "ImEx-BDF-3-3").asString();
-    std::string regularization = ws[ "regularization"].get( "type", "moddal").asString();
+    std::string regularization = ws[ "regularization"].get( "type", "modal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter identity;
     bool apply_filter = true;

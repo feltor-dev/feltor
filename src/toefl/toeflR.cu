@@ -76,6 +76,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
+    unsigned failed_counter = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
@@ -126,9 +127,10 @@ int main( int argc, char* argv[])
             }
             //try{ stepper.step( ex, im, time, y0);}
             try{
-                //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
                 stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                if ( stepper.failed() ) failed_counter ++;
                 //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                std::cout << "Time "<<time<<" dt "<<dt<<" failed counter "<<failed_counter<<"\n";
             }
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

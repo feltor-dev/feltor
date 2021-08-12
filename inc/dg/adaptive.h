@@ -134,43 +134,59 @@ struct Tolerance
  *
  * In order to build an adaptive Time integrator you basically need three
  * ingredients: a \c Stepper, a \c ControlFunction and an \c ErrorNorm.
- * The \c Stepper does the actual computation and advances the solution one step further
- * with a given timestep \c dt. Furthermore, it has to come up with an estimate
- * of the error of the solution and indicate the order of that error.
- * With the \c ErrorNorm the error estimate can be converted to a scalar that
- * can be compared to given relative and absolute error tolerances \c rtol and \c atol.
- * Based on the comparison the step is either accepted or rejected. In both cases
- * the \c ControlFunction then comes up with an adapted
+ * The \c Stepper does the actual computation and advances the solution one
+ * step further with a given timestep \c dt. Furthermore, it has to come up
+ * with an estimate of the error of the solution and indicate the order of that
+ * error.  With the \c ErrorNorm the error estimate can be converted to a
+ * scalar that can be compared to given relative and absolute error tolerances
+ * \c rtol and \c atol.  Based on the comparison the step is either accepted or
+ * rejected. In both cases the \c ControlFunction then comes up with an adapted
  * suggestion for the timestep in the next step, however, if the step was
- * rejected, we make the stepsize decrease by at least 10\%.
- * For more information on these concepts we recommend
+ * rejected, we make the stepsize decrease by at least 10\%.  For more
+ * information on these concepts we recommend
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> of the ARKode library.
  *
- * For an example on how to use this class in a practical example consider the following code snippet:
+ * For an example on how to use this class in a practical example consider the
+ * following code snippet:
  * @snippet multistep_t.cu adaptive
  * @copydoc hide_stepper
- * @note On step rejection, choosing timesteps and introducing restrictions on the controller: here is a quote from professor G. Söderlind (the master of control functions) from a private e-mail conversation:
+ * @note On step rejection, choosing timesteps and introducing restrictions on
+ * the controller: here is a quote from professor G. Söderlind (the master of
+ * control functions) from a private e-mail conversation:
  *
-@note "The issue is that most controllers are best left to do their work without interference. Each time one interferes with the control loop, one creates a transient that has to be dealt with by the controller.
+@note "The issue is that most controllers are best left to do their work
+without interference. Each time one interferes with the control loop, one
+creates a transient that has to be dealt with by the controller.
 
-@note It is indeed necessary to reject steps every once in a while, but I usually try to avoid it to the greatest possible extent. In my opinion, the fear of having a too large error on some steps is vastly exaggerated. You see, in some steps the error is too large, and in others it is too small, and all controllers I constructed are designed to be “expectation value correct” in the sense that if the errors are random, the too large and too small errors basically cancel in the long run.
+@note It is indeed necessary to reject steps every once in a while, but I
+usually try to avoid it to the greatest possible extent. In my opinion, the
+fear of having a too large error on some steps is vastly exaggerated. You see,
+in some steps the error is too large, and in others it is too small, and all
+controllers I constructed are designed to be “expectation value correct” in the
+sense that if the errors are random, the too large and too small errors
+basically cancel in the long run.
 
-@note Even so, there are times when the error is way out of proportion. But I usually accept an error that is up to, say 2*TOL, which typically won’t cause any problems. Of course, if one hits a sharp change in the solution, the error may be much larger, and the step recomputed. But then one must “reset" the controller, i.e., the controller keeps back information, and it is better to restart the controller to avoid back information to affect the next step."
+@note Even so, there are times when the error is way out of proportion. But I
+usually accept an error that is up to, say 2*TOL, which typically won’t cause
+any problems. Of course, if one hits a sharp change in the solution, the error
+may be much larger, and the step recomputed. But then one must “reset" the
+controller, i.e., the controller keeps back information, and it is better to
+restart the controller to avoid back information to affect the next step."
 @attention Should you use this class instead of a fixed stepsize Multistep say?
-The thing to consider especially when solving
-partial differential equations, is that the right hand side might be very costly
-to evaluate. An adaptive stepper (especially one-step methods) usually calls this right hand side more often than a multistep (only one call per step). The additional
-computation of the error norm in the Adaptive step might also be important since
-the norm requires global communication in a parallel program (bad for scaling
-to many nodes).
-So does the Adaptive timestepper make up for its increased cost throught the
-adaption of the stepsize? In some cases the answer might be a sound Yes.
-Especially when
-there are velocity peaks in the solution the multistep timestep might be restricted
-too much. In other cases when the timestep does not need to be adapted much, a multistep method can be faster.
-In any case the big advantage of Adaptive is that it usually just works (even though
-it is not fool-proof) and you do not have to spend time finding a suitable timestep
-like in the multistep method.
+The thing to consider especially when solving partial differential equations,
+is that the right hand side might be very costly to evaluate. An adaptive
+stepper (especially one-step methods) usually calls this right hand side more
+often than a multistep (only one call per step). The additional computation of
+the error norm in the Adaptive step might also be important since the norm
+requires global communication in a parallel program (bad for scaling to many
+nodes).  So does the Adaptive timestepper make up for its increased cost
+throught the adaption of the stepsize? In some cases the answer might be a
+sound Yes.  Especially when there are velocity peaks in the solution the
+multistep timestep might be restricted too much. In other cases when the
+timestep does not need to be adapted much, a multistep method can be faster.
+In any case the big advantage of Adaptive is that it usually just works (even
+though it is not fool-proof) and you do not have to spend time finding a
+suitable timestep like in the multistep method.
 @ingroup time
  */
 template<class Stepper>
@@ -183,9 +199,8 @@ struct Adaptive
     /*!@brief Allocate workspace and construct stepper
      * @param ps All parameters are forwarded to the constructor of \c Stepper
      * @tparam StepperParams Type of parameters (deduced by the compiler)
-     * @note The workspace for Adaptive is constructed from the \c copyable member
-     * of Stepper
-     * @note If you do not provide any parameters this will be the default constructor, doing nothing
+     * @note The workspace for Adaptive is constructed from the \c copyable
+     * member of Stepper
      */
     template<class ...StepperParams>
     Adaptive(StepperParams&& ...ps): m_stepper(std::forward<StepperParams>(ps)...),
@@ -285,6 +300,27 @@ struct Adaptive
     bool failed() const {
         return m_failed;
     }
+
+    /*!@ brief Set the limit above which a step is rejected
+     *
+     * "It is indeed necessary to reject steps every once in a while, but I
+     * usually try to avoid it to the greatest possible extent. In my
+     * opinion, the fear of having a too large error on some steps is vastly
+     * exaggerated. You see, in some steps the error is too large, and in
+     * others it is too small, and all controllers I constructed are designed
+     * to be “expectation value correct” in the sense that if the errors are
+     * random, the too large and too small errors basically cancel in the
+     * long run." G. Söderlind Even so, there are times when the error is way
+     * out of proportion. But I usually accept an error that is up to, say
+     * 2*TOL, which typically won’t cause any problems."
+     * This function is when it does cause problems i.e. when you see that
+     * the timestepper fails very often even though there are no sharp edges
+     * in the solution (e.g. in turbulence simulations)
+     * @param new_reject_limit the default value is 2, so increase it
+    */
+    void set_reject_limit( value_type new_reject_limit) {
+        m_reject_limit = new_reject_limit;
+    }
     private:
     template<   class ControlFunction = value_type (value_type, value_type,
             value_type, value_type, unsigned, unsigned),
@@ -351,33 +387,48 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
 /*!@class hide_adaptive_params
  * @param t0 initial time
  * @param u0 initial value at \c t0
- * @param t1 (write only) end time ( equals \c t0+dt on output if the step was accepted, otherwise equals \c t0, may alias \c t0)
- * @param u1 (write only) contains the updated result on output if the step was accepted, otherwise a copy of \c u0 (may alias \c u0)
- * @param dt on input: timestep (see dg::Adaptive::guess_stepsize() for an initial stepsize).
- * On output: stepsize proposed by the controller that can be used to continue the integration in the next step.
- * @param control The control function. Usually \c dg::pid_control is a good choice. The task of the control function is to compute a new timestep size based on the old timestep size, the order of the method and the past error(s)
+ * @param t1 (write only) end time ( equals \c t0+dt on output if the step was
+ * accepted, otherwise equals \c t0, may alias \c t0)
+ * @param u1 (write only) contains the updated result on output if the step was
+ * accepted, otherwise a copy of \c u0 (may alias \c u0)
+ * @param dt on input: timestep (see dg::Adaptive::guess_stepsize() for an
+ * initial stepsize).
+ * On output: stepsize proposed by the controller that can be used to continue
+ * the integration in the next step.
+ * @param control The control function. Usually \c dg::pid_control is a good
+ * choice. The task of the control function is to compute a new timestep size
+ * based on the old timestep size, the order of the method and the past
+ * error(s)
  * @param norm The error norm. Usually \c dg::l2norm is a good choice, but for
- * very small vector sizes the time for the binary reproducible dot product might become
- * a performance bottleneck. Then it's time for your own implementation.
+ * very small vector sizes the time for the binary reproducible dot product
+ * might become a performance bottleneck. Then it's time for your own
+ * implementation.
  * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
  * @param atol the desired absolute accuracy. Usually 1e-10 is a good choice.
- * @note Try not to mess with dt. The controller is best left alone and it does a very good job choosing timesteps. But how do I output my solution at certain (equidistant) timesteps? First, think about if you really, really need that. Why is it so bad to have
- * output at non-equidistant timesteps? If you are still firm, then consider
- * using an interpolation scheme (cf. \c dg::Extrapolation). Let choosing the timestep
- * yourself be the very last option if the others are not viable
- * @note For partial differential equations the exact value of \c rtol and \c atol might
- * not be important. Due to the CFL condition there might be a sharp barrier in the
- * range of possible stepsizes and the controller usually does a good job finding
- * it and keeping the timestep "just right". However, don't make \c rtol too small, \c 1e-1 say, since then the controller might
- * get too close to the CFL barrier. The timestepper is still able
- * to crash, mind, even though the chances of that happening are
- * somewhat lower than in a fixed stepsize method.
+ * @note Try not to mess with dt. The controller is best left alone and it does
+ * a very good job choosing timesteps. But how do I output my solution at
+ * certain (equidistant) timesteps? First, think about if you really, really
+ * need that. Why is it so bad to have output at non-equidistant timesteps? If
+ * you are still firm, then consider using an interpolation scheme (cf.
+ * \c dg::Extrapolation). Let choosing the timestep yourself be the very last
+ * option if the others are not viable
+ * @note For partial differential equations the exact value of \c rtol and \c
+ * atol might not be important. Due to the CFL condition there might be a sharp
+ * barrier in the range of possible stepsizes and the controller usually does a
+ * good job finding it and keeping the timestep "just right". However, don't
+ * make \c rtol too large, \c 1e-1 say, since then the controller might get too
+ * close to the CFL barrier. The timestepper is still able to crash, mind, even
+ * though the chances of that happening are somewhat lower than in a fixed
+ * stepsize method.
  */
 
 /*!@class hide_control_error
  *
- * @tparam ControlFunction function or Functor called as dt' = control( dt, eps0, eps1, eps2, order, embedded_order), where all parameters are of type value_type except the last two, which are unsigned.
- * @tparam ErrorNorm function or Functor of type value_type( const ContainerType&)
+ * @tparam ControlFunction function or Functor called as dt' = control( dt,
+ * eps0, eps1, eps2, order, embedded_order), where all parameters are of type
+ * value_type except the last two, which are unsigned.
+ * @tparam ErrorNorm function or Functor of type value_type( const
+ * ContainerType&)
  */
 
 /**
