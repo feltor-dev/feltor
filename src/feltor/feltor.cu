@@ -276,6 +276,8 @@ int main( int argc, char* argv[])
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
+        double reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
+        adapt.set_reject_limit( reject_limit);
     }
     else if (p.timestepper == "adaptive-imex")
     {
@@ -283,6 +285,8 @@ int main( int argc, char* argv[])
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
+        double reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
+        adapt.set_reject_limit( reject_limit);
     }
     else
     {

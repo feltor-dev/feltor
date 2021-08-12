@@ -1797,7 +1797,9 @@ The second option is an adaptive explicit embedded Runge-Kutta scheme
     "type"    : "adaptive", //Choose an explicit adaptive RK scheme
     "tableau" : "Bogacki-Shampine-4-2-3", // Any explicit embedded RK tableau *
     "rtol"    : 1e-7, // The relative tolerance in the timestep
-    "atol"    : 1e-10 // The absolute tolerance in the timestep
+    "atol"    : 1e-10, // The absolute tolerance in the timestep
+    "reject-limit" : 2 // factor over tolarance by which a timestep is rejected
+    // if the timestepper fails very often you might want to increase this limit
 }
 \end{minted}
 *See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_e_r_k_step.html}{dg documentation} for what tableaus are available.
