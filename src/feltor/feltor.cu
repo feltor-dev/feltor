@@ -216,9 +216,9 @@ int main( int argc, char* argv[])
     if( argc == 4 )
     {
         try{
-            y0 = feltor::init_from_file(argv[4], grid, p, time);
+            y0 = feltor::init_from_file(argv[3], grid, p, time);
         }catch (std::exception& e){
-            DG_RANK0 std::cerr << "ERROR occured initializing from file "<<argv[4]<<std::endl;
+            DG_RANK0 std::cerr << "ERROR occured initializing from file "<<argv[3]<<std::endl;
             DG_RANK0 std::cerr << e.what()<<std::endl;
             abort_program();
         }
