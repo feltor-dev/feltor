@@ -236,13 +236,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add density gradient
         dg::blas1::axpby( -m_p.tau[1] /m_p.mu[1], m_dsN[1], 1., yp[1][1]);
         // Add parallel viscosity
-        m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
-        m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
-        update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
-                dg::DIR ? m_p.nbc : 0.);
-        dg::geo::ds_average( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_densityST[1]);
         if( m_p.nu_parallel_u[1] > 0)
         {
+            m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
+            m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
+            update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
+                    dg::DIR ? m_p.nbc : 0.);
+            dg::geo::ds_average( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_densityST[1]);
             m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
             m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
             update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
@@ -328,8 +328,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     else
         compute_perp_diffusiveN( 1., m_density[1], m_temp0, m_temp1, 1.,
             yp[0][1]);
-    compute_perp_diffusiveU( 1., m_velocityST[1], m_densityST[1],
-        m_temp0, m_temp1, 1., yp[1][1]);
+    compute_perp_diffusiveU( 1., m_velocityST[1], m_temp0, m_temp1, 1.,
+            yp[1][1]);
 
     add_rhs_penalization( yp);
 
