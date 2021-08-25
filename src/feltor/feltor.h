@@ -41,10 +41,10 @@ struct Explicit
         return m_density[i];
     }
     const Container& restart_velocity(int i)const{
-        return m_velocityST[i];
+        return m_velocity[i];
     }
     const Container& restart_aparallel() const {
-        return m_aparST;
+        return m_apar;
     }
 
 
@@ -193,7 +193,6 @@ struct Explicit
     void compute_perp_diffusiveU( double alpha, const Container& velocity,
             Container& temp0, Container& temp1, double beta, Container& result)
     {
-        // density = full N
         // result = alpha Lambda_U + beta result
         if( m_p.nu_perp_u > 0)
         {
@@ -214,7 +213,7 @@ struct Explicit
 
     /// //////////////////////DIAGNOSTICS END////////////////////////////////
     void update_diag(){
-        // assume m_density, m_potential, m_velocity, m_velocityST, m_apar
+        // assume m_density, m_potential, m_velocity, m_apar
         // compute dsN, dsU, dsP, lapParU, dssU and perp derivatives
         if( !m_upToDate)
         {
@@ -320,17 +319,10 @@ struct Explicit
         dg::blas1::copy( sheath, m_sheath);
         dg::blas1::copy( sheath_coordinate, m_sheath_coordinate);
     }
-    void compute_aparST( double t, const std::array<Container,2>&,
+    void compute_apar( double t, const std::array<Container,2>&,
             std::array<Container,2>&);
     void compute_phi( double t, const std::array<Container,2>& y);
     void compute_psi( double t);
-    void update_staggered_density_and_phi( double t,
-        const std::array<Container,2>& density,
-        const std::array<Container,2>& potential);
-    void update_velocity_and_apar( double t,
-        const std::array<Container,2>& velocityST,
-        const Container& aparST);
-
     void update_perp_derivatives(
         const std::array<Container,2>& density,
         const std::array<Container,2>& velocity,
@@ -379,7 +371,7 @@ struct Explicit
         dg::geo::TokamakMagneticField);
 
 #ifdef DG_MANUFACTURED
-    Container m_R, m_Z, m_P, m_PST; //coordinates
+    Container m_R, m_Z, m_P; //coordinates
 #endif //DG_MANUFACTURED
 
     //these should be considered const // m_curv is full curvature
@@ -392,8 +384,8 @@ struct Explicit
     // Only set once every call to operator()
     std::array<Container,2> m_density, m_densityST;
     std::array<Container,2> m_velocity, m_velocityST;
-    std::array<Container,2> m_potential, m_potentialST;
-    Container m_apar, m_aparST;
+    std::array<Container,2> m_potential;
+    Container m_apar;
 
     Container m_UE2;
     std::array<Container,2> m_divNUb;
@@ -594,7 +586,6 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_R( dg::pullback( dg::cooX3d, g)),
     m_Z( dg::pullback( dg::cooY3d, g)),
     m_P( dg::pullback( dg::cooZ3d, g)),
-    m_PST( dg::pullback( dg::cooZ3d, g)),
 #endif //DG_MANUFACTURED
     m_dxF_N( dg::create::dx( g, p.bcxN, dg::forward) ),
     m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
@@ -614,19 +605,16 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
     m_p(p), m_js(js)
 {
-#ifdef DG_MANUFACTURED
-    dg::blas1::plus(m_PST, g.hz()/2.);
-#endif //DG_MANUFACTURED
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_source = m_sheath_coordinate = m_UE2 = m_temp1 = m_temp0;
-    m_apar = m_aparST = m_profne = m_wall = m_sheath = m_temp0;
+    m_apar = m_profne = m_wall = m_sheath = m_temp0;
     m_plus = m_minus = m_temp0;
 
     m_potential[0] = m_potential[1] = m_temp0;
     m_plusSTN = m_minusSTN = m_minusSTU = m_plusSTU = m_potential;
     m_divNUb = m_density = m_densityST = m_velocity = m_potential;
-    m_velocityST = m_potentialST = m_potential;
+    m_velocityST = m_potential;
     m_dsN = m_dsP = m_dsU = m_dssU = m_lapParU = m_potential;
 
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
@@ -796,29 +784,29 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
-    double time, const std::array<Container,2>& densityST,
-    std::array<Container,2>& velocityST)
+void Explicit<Geometry, IMatrix, Matrix, Container>::compute_apar(
+    double time, const std::array<Container,2>& density,
+    std::array<Container,2>& velocity)
 {
     //on input
-    //densityST[0] = n_e, velocityST[0]:= w_e
-    //densityST[1] = N_i, velocityST[1]:= W_i
+    //density[0] = n_e, velocity[0]:= w_e
+    //density[1] = N_i, velocity[1]:= W_i
     //----------Compute and set chi----------------------------//
-    dg::blas1::axpby(  m_p.beta/m_p.mu[1], densityST[1],
-                      -m_p.beta/m_p.mu[0], densityST[0], m_temp0);
+    dg::blas1::axpby(  m_p.beta/m_p.mu[1], density[1],
+                      -m_p.beta/m_p.mu[0], density[0], m_temp0);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_ampere[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    dg::blas1::pointwiseDot(  m_p.beta, densityST[1], velocityST[1],
-                             -m_p.beta, densityST[0], velocityST[0],
+    dg::blas1::pointwiseDot(  m_p.beta, density[1], velocity[1],
+                             -m_p.beta, density[0], velocity[0],
                               0., m_temp0);
     //----------Invert Induction Eq----------------------------//
-    m_old_apar.extrapolate( time, m_aparST);
+    m_old_apar.extrapolate( time, m_apar);
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_ampere, m_aparST, m_temp0, m_p.eps_ampere);
-    m_old_apar.update( time, m_aparST);
+        m_multi_ampere, m_apar, m_temp0, m_p.eps_ampere);
+    m_old_apar.update( time, m_apar);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol[0]);
 #ifdef DG_MANUFACTURED
@@ -826,15 +814,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     //    m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
     //    m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
     //here we cheat (a bit)
-    dg::blas1::evaluate( m_aparST, dg::equals(), manufactured::A{
+    dg::blas1::evaluate( m_apar, dg::equals(), manufactured::A{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
-        m_R,m_Z,m_PST,time);
+        m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
 
     //----------Compute Velocities-----------------------------//
-    dg::blas1::axpby( 1., velocityST[0], -1./m_p.mu[0], m_aparST, velocityST[0]);
-    dg::blas1::axpby( 1., velocityST[1], -1./m_p.mu[1], m_aparST, velocityST[1]);
+    dg::blas1::axpby( 1., velocity[0], -1./m_p.mu[0], m_apar, velocity[0]);
+    dg::blas1::axpby( 1., velocity[1], -1./m_p.mu[1], m_apar, velocity[1]);
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::update_perp_derivatives(
@@ -867,54 +855,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_perp_derivatives(
         dg::blas2::symv( m_dy_A, apar, m_dA[1]);
         if( !m_p.symmetric) dg::blas2::symv( m_dz, apar, m_dA[2]);
     }
-}
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_and_phi(
-    double t,
-    const std::array<Container,2>& density,
-    const std::array<Container,2>& potential)
-{
-    for( unsigned i=0; i<2; i++)
-    {
-        m_faST( dg::geo::zeroMinus, m_density[i], m_minusSTN[i]);
-        m_faST( dg::geo::einsPlus,  m_density[i], m_plusSTN[i]);
-        update_parallel_bc_1st( m_minusSTN[i], m_plusSTN[i],
-                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minusSTN[i], m_plusSTN[i], 0.,
-                m_dsN[i]);
-        dg::geo::ds_average( m_faST, 1., m_minusSTN[i], m_plusSTN[i], 0.,
-                m_densityST[i]);
-        m_faST( dg::geo::zeroMinus, m_potential[i], m_minus);
-        m_faST( dg::geo::einsPlus,  m_potential[i], m_plus);
-        update_parallel_bc_1st( m_minus, m_plus,
-                m_p.bcxP, 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0.,
-                m_dsP[i]);
-        dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0.,
-                m_potentialST[i]);
-    }
-}
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
-    double t,
-    const std::array<Container,2>& velocityST,
-    const Container& aparST)
-{
-    for( unsigned i=0; i<2; i++)
-    {
-        // Compute dsU and velocity
-        m_faST( dg::geo::einsMinus, m_velocityST[i], m_minusSTU[i]);
-        m_faST( dg::geo::zeroPlus,  m_velocityST[i], m_plusSTU[i]);
-        update_parallel_bc_1st( m_minusSTU[i], m_plusSTU[i], m_p.bcxU, 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0., m_dsU[i]);
-        dg::geo::ds_average( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0.,
-                m_velocity[i]);
-    }
-    // Compute apar
-    m_faST( dg::geo::einsMinus, m_aparST, m_minus);
-    m_faST( dg::geo::zeroPlus,  m_aparST, m_plus);
-    update_parallel_bc_1st( m_minus, m_plus, m_p.bcxU, 0.);
-    dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0., m_apar);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1171,6 +1111,22 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
 {
     for( unsigned i=0; i<2; i++)
     {
+        { // Compute staggered quantities
+        m_faST( dg::geo::zeroMinus, m_density[i], m_minusSTN[i]);
+        m_faST( dg::geo::einsPlus,  m_density[i], m_plusSTN[i]);
+        update_parallel_bc_1st( m_minusSTN[i], m_plusSTN[i], m_p.bcxN, m_p.bcxN ==
+                dg::DIR ? m_p.nbc : 0.);
+        dg::geo::ds_slope( m_faST, 1., m_minusSTN[i], m_plusSTN[i], 0.,
+                m_dsN[i]);
+        dg::geo::ds_average( m_faST, 1., m_minusSTN[i], m_plusSTN[i], 0.,
+                m_densityST[i]);
+        m_faST( dg::geo::zeroMinus, m_velocity[i], m_minusSTU[i]);
+        m_faST( dg::geo::einsPlus,  m_velocity[i], m_plusSTU[i]);
+        update_parallel_bc_1st( m_minusSTU[i], m_plusSTU[i], m_p.bcxU, 0.);
+        dg::geo::ds_slope( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0., m_dsU[i]);
+        dg::geo::ds_average( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0.,
+                m_velocityST[i]);
+        }
         // compute divNUb
         compute_parallel_flux( m_velocityST[i], m_minusSTN[i], m_plusSTN[i],
                 m_dsN[i], m_divNUb[i], m_p.slope_limiter);
@@ -1184,35 +1140,48 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
 
         // compute grad U2/2
-        compute_parallel_flux( m_velocity[i], m_minusSTU[i], m_plusSTU[i],
+        compute_parallel_flux( m_velocityST[i], m_minusSTU[i], m_plusSTU[i],
                 m_dsU[i], m_temp0, m_p.slope_limiter);
-        m_faST( dg::geo::einsPlus,  m_temp0, m_plus);
-        m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
+        m_faST( dg::geo::zeroPlus,  m_temp0, m_plus);
+        m_faST( dg::geo::einsMinus, m_temp0, m_minus);
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
+        dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 1, yp[1][i]);
 
         // Add density gradient and electric field
-        double tau = m_p.tau[i], mu = m_p.mu[i];
-        dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& WDot,
-                    double dsP, double dsN, double QN, double PN, double hm,
-                    double hp){
+        {
+            // density m_dsN
+            m_fa( dg::geo::einsMinus, m_density[i], m_minusSTN[i]);
+            m_fa( dg::geo::einsPlus,  m_density[i], m_plusSTN[i]);
+            update_parallel_bc_2nd( m_fa, m_minusSTN[i], m_density[i], m_plusSTN[i],
+                    m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+            dg::geo::ds_centered( m_fa, 1., m_minusSTN[i], m_density[i],
+                    m_plusSTN[i], 0., m_dsN[i]);
+            // potential m_dsP
+            m_fa( dg::geo::einsMinus, m_potential[i], m_minus);
+            m_fa( dg::geo::einsPlus,  m_potential[i], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_potential[i], m_plus,
+                    m_p.bcxP, 0.);
+            dg::geo::ds_centered( m_fa, 1., m_minus, m_potential[i],
+                    m_plus, 0., m_dsP[i]);
+            double tau = m_p.tau[i], mu = m_p.mu[i];
+            dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& WDot,
+                        double dsP, double dsN, double N){
 
-                    WDot -= 1./mu*dsP;
-                    WDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
-                },
-                yp[1][i], m_dsP[i], m_dsN[i], m_minusSTN[i], m_plusSTN[i],
-                m_faST.hm(), m_faST.hp()
-        );
+                        WDot += -1./mu*dsP - tau/mu*dsN/N;
+                    },
+                    yp[1][i], m_dsP[i], m_dsN[i], m_density[i]
+            );
+        }
         // Add parallel viscosity
         if( m_p.nu_parallel_u[i] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
+            m_fa_diff( dg::geo::einsMinus, m_velocity[i], m_minus);
+            m_fa_diff( dg::geo::einsPlus, m_velocity[i], m_plus);
+            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[i],
                     m_plus, m_p.bcxU, 0.);
             dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[i],
-                    m_minus, m_velocityST[i], m_plus, 0., m_temp0);
-            dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
+                    m_minus, m_velocity[i], m_plus, 0., m_temp0);
+            dg::blas1::pointwiseDivide( 1., m_temp0, m_density[i], 1., yp[1][i]);
         }
     }
 }
@@ -1258,17 +1227,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     m_lapperpP.symv( 1., m_potential[0], 1., m_s[0][1]);
 
     // S_U = - U S_N/N
-    for(int i=0; i<2; i++)
-    {
-        // transform to adjoint plane and add to velocity source
-        m_faST( dg::geo::zeroMinus, m_s[0][i], m_minus);
-        m_faST( dg::geo::einsPlus,  m_s[0][i], m_plus);
-        update_parallel_bc_1st( m_minus, m_plus, m_p.bcxN, 0.);
-        dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0., m_temp0);
-        dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
-                    double sn, double u, double n){ return -u*sn/n;},
-                m_temp0, m_velocityST[i], m_densityST[i]);
-    }
+    dg::blas1::evaluate( m_s[1], dg::equals(), []DG_DEVICE(
+                double sn, double u, double n){ return -u*sn/n;},
+            m_s[0], m_velocity, m_density);
     //Add all to the right hand side
     dg::blas1::axpby( 1., m_s, 1.0, yp);
 }
@@ -1311,18 +1272,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
         //!! Does not really work without
         for( unsigned i=0; i<2; i++)
         {
-            m_fa( dg::geo::einsMinus, m_density[i], m_minus);
-            m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
-            update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
-                    m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
             //The coordinate automatically sees the reversed field
             //but m_plus and m_minus are defined wrt the angle coordinate
             if( m_reversed_field) //bphi negative (exchange + and -)
                 dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, m_plus, m_minus);
+                     m_sheath_coordinate, m_plusSTN[i], m_minusSTN[i]);
             else
                 dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, m_minus, m_plus);
+                     m_sheath_coordinate, m_minusSTN[i], m_plusSTN[i]);
             dg::blas1::pointwiseDot( m_sheath_rate, m_temp0, m_sheath, 1.,
                     yp[0][i]);
         }
@@ -1347,8 +1304,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
                             sheath, double ne, double ni) {
                             return cs*sheath_rate*sheath_coord*ni/ne*sheath;
                         },
-                        m_sheath_coordinate, m_sheath, m_densityST[0],
-                        m_densityST[1]);
+                        m_sheath_coordinate, m_sheath, m_density[0],
+                        m_density[1]);
             }
             else // "bohm" == m_p.sheath_bc
             {
@@ -1358,7 +1315,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
                         sheath, double phi) {
                         return cs*sheath_rate*sheath_coord*sheath*exp(-phi);
                     },
-                    m_sheath_coordinate, m_sheath, m_potentialST[0]);
+                    m_sheath_coordinate, m_sheath, m_potential[0]);
             }
             // u_i,sh = s*sqrt(1+tau)
             dg::blas1::pointwiseDot( sheath_rate*cs,
@@ -1380,8 +1337,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
     {
         dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_density[i],
                 -m_sheath_rate, m_sheath, m_density[i], 1., yp[0][i]);
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_velocityST[i],
-                -m_sheath_rate, m_sheath, m_velocityST[i], 1., yp[1][i]);
+        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_velocity[i],
+                -m_sheath_rate, m_sheath, m_velocity[i], 1., yp[1][i]);
     }
 
 }
@@ -1439,16 +1396,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                        << timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic( );
 
-    //Compute m_densityST, m_dsN and m_potentialST, m_dsP
-    update_staggered_density_and_phi( t, m_density, m_potential);
 
-    // Compute m_aparST and m_U if necessary --- reads and updates m_velocity
-    dg::blas1::copy( y[1], m_velocityST);
+    // Compute m_apar and m_U if necessary
+    dg::blas1::copy( y[1], m_velocity);
     if( m_p.beta != 0)
-        compute_aparST( t, m_densityST, m_velocityST);
-
-    //Compute m_velocity, m_dsU and m_apar
-    update_velocity_and_apar( t, m_velocityST, m_aparST);
+        compute_apar( t, m_density, m_velocity);
 
     timer.toc();
     accu += timer.diff();
@@ -1461,8 +1413,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     // Set perpendicular dynamics in yp
     compute_perp_density(  t, m_density, m_velocity, m_potential, m_apar,
             yp[0]);
-    compute_perp_velocity( t, m_densityST, m_velocityST, m_potentialST,
-            m_aparST, yp[1]);
+    compute_perp_velocity( t, m_density, m_velocity, m_potential, m_apar,
+            yp[1]);
 
 #else
 
@@ -1492,14 +1444,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 dtUe += -eta/mu0 * current;
                 dtUi += -eta/mu1 * ne/ni * current;
             },
-        m_densityST[0], m_densityST[1],
-        m_velocityST[0], m_velocityST[1], yp[1][0], yp[1][1]);
+        m_density[0], m_density[1],
+        m_velocity[0], m_velocity[1], yp[1][0], yp[1][1]);
     //-------------Add regularization----------------------------//
     for( unsigned i=0; i<2; i++)
     {
         compute_perp_diffusiveN( 1., m_density[i], m_temp0, m_temp1, 1.,
                 yp[0][i]);
-        compute_perp_diffusiveU( 1., m_velocityST[i], m_temp0, m_temp1, 1.,
+        compute_perp_diffusiveU( 1., m_velocity[i], m_temp0, m_temp1, 1.,
                 yp[1][i]);
     }
 #endif
@@ -1524,11 +1476,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::blas1::evaluate( yp[1][0], dg::plus_equals(), manufactured::SWe{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
-        m_R,m_Z,m_PST,t);
+        m_R,m_Z,m_P,t);
     dg::blas1::evaluate( yp[1][1], dg::plus_equals(), manufactured::SWi{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
-        m_R,m_Z,m_PST,t);
+        m_R,m_Z,m_P,t);
 #endif //DG_MANUFACTURED
     timer.toc();
     accu += timer.diff();

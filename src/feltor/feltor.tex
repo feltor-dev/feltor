@@ -1471,6 +1471,10 @@ also never happens due to wall-recycling etc.
     S_{n_e} = -\omega_{\min} ( n - n_{\min}) \Theta_{\alpha/2}( n_{\min}-\alpha/2 -n)
     \label{eq:minimumne}
 \end{align}
+\begin{tcolorbox}[title=Note]
+    We do not add Eq.~\eqref{eq:minimumne} as a source in the file output or in
+    the expression for the velocity source later on.
+\end{tcolorbox}
 The Heaviside function ensures that this source term only acts when the density
 is below the lower limit. $n_{\min}=0$ disables this term.
 \begin{minted}[texcomments]{js}
@@ -1597,6 +1601,13 @@ so that $\np^2 S_{n_e}$ is well defined.
 Also note that with our definition of $\Lambda_{n_e}$ and $\Lambda_{N_i}$ and
 the polarisation equation we have $\Lambda_{n_e} = \Gamma_{1,i}\Lambda_{N_i} + \nc\left( \frac{\mu_i \Lambda_{N_i}}{B^2}\np \phi\right)$ in the long wavelength limit (swap the operators).
 This means that diffusion does not generate potential either.
+
+The velocity source is chosen such that the density source does not introduce
+net momentum
+\begin{align}
+    S_U = -\frac{U_\parallel}{N} S_N
+\end{align}
+for both electrons and ions.
 
 \subsection{Advection}
 We implemented an upwind-advection scheme for the perpendicular terms.
