@@ -68,15 +68,17 @@ int main( int argc, char* argv[])
     dg::x::DVec R = dg::pullback( dg::cooX3d, grid);
     dg::x::DVec Z = dg::pullback( dg::cooY3d, grid);
     dg::x::DVec P = dg::pullback( dg::cooZ3d, grid);
+    dg::x::DVec PST = dg::pullback( dg::cooZ3d, grid);
+    dg::blas1::plus(PST, grid.hz()/2.);
 
     std::array<dg::x::DVec,2> phi{R,R}, sol_phi{phi};
     std::array<std::array<dg::x::DVec,2>,2> y0{phi,phi}, sol{y0};
     dg::x::DVec apar{R}, sol_apar{apar};
     dg::blas1::evaluate( y0[0][0], dg::equals(), ne, R,Z,P,0);
     dg::blas1::evaluate( y0[0][1], dg::equals(), ni, R,Z,P,0);
-    dg::blas1::evaluate( y0[1][0], dg::equals(), ue, R,Z,P,0);
-    dg::blas1::evaluate( y0[1][1], dg::equals(), ui, R,Z,P,0);
-    dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,P,0);
+    dg::blas1::evaluate( y0[1][0], dg::equals(), ue, R,Z,PST,0);
+    dg::blas1::evaluate( y0[1][1], dg::equals(), ui, R,Z,PST,0);
+    dg::blas1::evaluate( apar, dg::equals(), aa, R,Z,PST,0);
     dg::blas1::axpby(1./p.mu[0], apar, 1., y0[1][0]); //we=ue+1/mA
     dg::blas1::axpby(1./p.mu[1], apar, 1., y0[1][1]); //Wi=Ui+1/mA
 
