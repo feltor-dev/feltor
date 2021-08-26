@@ -519,11 +519,13 @@ std::vector<Record> diagnostics2d_list = {
             v.f.compute_lapMperpP(0, result);
         }
     },
-    {"apar_vorticity", "Minus Lap_perp of magnetic potential", false,
-        []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_lapMperpA( result);
-        }
-    },
+    // Does not work due to direct application of Laplace
+    // The Laplacian of Aparallel looks smooth in paraview
+    //{"apar_vorticity", "Minus Lap_perp of magnetic potential", false,
+    //    []( dg::x::DVec& result, Variables& v ) {
+    //        v.f.compute_lapMperpA( result);
+    //    }
+    //},
     {"dssue", "2nd parallel derivative of electron velocity", false,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::copy( v.f.dssU( 0), result);

@@ -698,17 +698,19 @@ int main( int argc, char* argv[])
             }
             ti.toc();
             var.duration = ti.diff();
-            //----------------Test if ampere equation holds
-            if( p.beta != 0 && !abort)
-            {
-                feltor.compute_lapMperpA( resultD);
-                double norm  = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
-                dg::blas1::pointwiseDot( -p.beta,
-                    feltor.density(0), feltor.velocity(0), p.beta,
-                    feltor.density(1), feltor.velocity(1), -1., resultD);
-                double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
-                DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
-            }
+            // Does not work due to direct application of Laplace
+            // The Laplacian of Aparallel looks smooth in paraview
+            ////----------------Test if ampere equation holds
+            //if( p.beta != 0 && !abort)
+            //{
+            //    feltor.compute_lapMperpA( resultD);
+            //    double norm  = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
+            //    dg::blas1::pointwiseDot( -p.beta,
+            //        feltor.density(0), feltor.velocity(0), p.beta,
+            //        feltor.density(1), feltor.velocity(1), -1., resultD);
+            //    double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
+            //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
+            //}
             if( output_mode == "free")
             {
                 DG_RANK0 std::cout << "\n\t Step "<<step <<" of "
@@ -926,16 +928,18 @@ int main( int argc, char* argv[])
                     std::cout << "\tfailed "<<var.nfailed<<"\n";
                 }
                 //----------------Test if ampere equation holds
-                if( p.beta != 0)
-                {
-                    feltor.compute_lapMperpA( dvisual);
-                    double norm  = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
-                    dg::blas1::pointwiseDot( -p.beta,
-                        feltor.density(0), feltor.velocity(0), p.beta,
-                        feltor.density(1), feltor.velocity(1), -1., dvisual);
-                    double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
-                    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
-                }
+                // Does not work due to direct application of Laplace
+                // The Laplacian of Aparallel looks smooth in paraview
+                //if( p.beta != 0)
+                //{
+                //    feltor.compute_lapMperpA( dvisual);
+                //    double norm  = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
+                //    dg::blas1::pointwiseDot( -p.beta,
+                //        feltor.density(0), feltor.velocity(0), p.beta,
+                //        feltor.density(1), feltor.velocity(1), -1., dvisual);
+                //    double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
+                //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
+                //}
 
             }
             t.toc();

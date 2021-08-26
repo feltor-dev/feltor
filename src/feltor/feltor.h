@@ -913,7 +913,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
     // Compute apar
     m_faST( dg::geo::einsMinus, m_aparST, m_minus);
     m_faST( dg::geo::zeroPlus,  m_aparST, m_plus);
-    update_parallel_bc_1st( m_minus, m_plus, m_p.bcxU, 0.);
+    update_parallel_bc_1st( m_minus, m_plus, m_p.bcxA, 0.);
     dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0., m_apar);
 }
 
