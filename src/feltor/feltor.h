@@ -321,9 +321,9 @@ struct Explicit
         dg::blas1::copy( sheath_coordinate, m_sheath_coordinate);
     }
     void compute_aparST( double t, const std::array<Container,2>&,
-            std::array<Container,2>&);
-    void compute_phi( double t, const std::array<Container,2>& y);
-    void compute_psi( double t);
+            std::array<Container,2>&, Container&);
+    void compute_phi( double t, const std::array<Container,2>&, Container&, bool);
+    void compute_psi( double t, const Container& phi, Container& psi, bool);
     void update_staggered_density_and_phi( double t,
         const std::array<Container,2>& density,
         const std::array<Container,2>& potential);
@@ -424,6 +424,7 @@ struct Explicit
 
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
+    dg::Extrapolation<Container> m_old_phiST, m_old_psiST, m_old_gammaNST, m_old_aparST;
 
     dg::SparseTensor<Container> m_hh;
 
@@ -612,6 +613,8 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
+    m_old_phiST( 2, dg::evaluate( dg::zero, g)),
+    m_old_psiST( m_old_phi), m_old_gammaNST( m_old_phi), m_old_aparST( m_old_phi),
     m_p(p), m_js(js)
 {
 #ifdef DG_MANUFACTURED
@@ -706,7 +709,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
-    double time, const std::array<Container,2>& density)
+    double time, const std::array<Container,2>& density,
+    Container& phi, bool staggered
+    )
 {
     //density[0]:= n_e
     //density[1]:= N_i
@@ -725,7 +730,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     {
         dg::blas1::transform( density[1], m_temp1, dg::PLUS<double>(-m_p.nbc));
         //compute Gamma N_i - n_e
-        m_old_gammaN.extrapolate( time, m_temp0);
+        if( staggered)
+            m_old_gammaNST.extrapolate( time, m_temp0);
+        else
+            m_old_gammaN.extrapolate( time, m_temp0);
 #ifdef DG_MANUFACTURED
         dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -734,7 +742,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
 #endif //DG_MANUFACTURED
         std::vector<unsigned> numberG = m_multigrid.direct_solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
-        m_old_gammaN.update( time, m_temp0); // store N - nbc
+        if( staggered)
+            m_old_gammaNST.update( time, m_temp0); // store N - nbc
+        else
+            m_old_gammaN.update( time, m_temp0); // store N - nbc
         if(  numberG[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
         dg::blas1::transform( density[0], m_temp1, dg::PLUS<double>(-m_p.nbc));
@@ -747,49 +758,68 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
-    m_old_phi.extrapolate( time, m_potential[0]);
+    if( staggered)
+        m_old_phiST.extrapolate( time, phi);
+    else
+        m_old_phi.extrapolate( time, phi);
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_pol, m_potential[0], m_temp0, m_p.eps_pol);
-    m_old_phi.update( time, m_potential[0]);
+        m_multi_pol, phi, m_temp0, m_p.eps_pol);
+    if( staggered)
+        m_old_phiST.update( time, phi);
+    else
+        m_old_phi.update( time, phi);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol[0]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
-    double time)
+    double time, const Container& phi, Container& psi, bool staggered)
 {
     //-----------Solve for Gamma Phi---------------------------//
     if (m_p.tau[1] == 0.) {
-        dg::blas1::copy( m_potential[0], m_potential[1]);
+        dg::blas1::copy( phi, psi);
     } else {
-        m_old_psi.extrapolate( time, m_potential[1]);
+        if( staggered)
+            m_old_psiST.extrapolate( time, psi);
+        else
+            m_old_psi.extrapolate( time, psi);
 #ifdef DG_MANUFACTURED
-        dg::blas1::copy( m_potential[0], m_temp0);
+        dg::blas1::copy( phi, m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
             m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
         std::vector<unsigned> number = m_multigrid.direct_solve(
-            m_multi_invgammaP, m_potential[1], m_temp0, m_p.eps_gamma);
+            m_multi_invgammaP, psi, m_temp0, m_p.eps_gamma);
 #else
         std::vector<unsigned> number = m_multigrid.direct_solve(
-            m_multi_invgammaP, m_potential[1], m_potential[0], m_p.eps_gamma);
+            m_multi_invgammaP, psi, phi, m_p.eps_gamma);
 #endif //DG_MANUFACTURED
-        m_old_psi.update( time, m_potential[1]);
+        if( staggered)
+            m_old_psiST.update( time, psi);
+        else
+            m_old_psi.update( time, psi);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma);
     }
     //-------Compute Psi and derivatives
-    dg::blas2::symv( m_dx_P, m_potential[0], m_dP[0][0]);
-    dg::blas2::symv( m_dy_P, m_potential[0], m_dP[0][1]);
-    if( !m_p.symmetric) dg::blas2::symv( m_dz, m_potential[0], m_dP[0][2]);
-    dg::tensor::scalar_product3d( 1., m_binv,
-        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
-        m_dP[0][0], m_dP[0][1], m_dP[0][2], 0., m_UE2);
-    //m_UE2 now contains u_E^2
-    dg::blas1::axpby( -0.5, m_UE2, 1., m_potential[1]);
+    dg::blas2::symv( m_dx_P, phi, m_dP[0][0]);
+    dg::blas2::symv( m_dy_P, phi, m_dP[0][1]);
+    if( !m_p.symmetric) dg::blas2::symv( m_dz, phi, m_dP[0][2]);
+    if( staggered)
+        dg::tensor::scalar_product3d( 1., m_binv,
+            m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
+            m_dP[0][0], m_dP[0][1], m_dP[0][2], 1., psi);
+    else
+    {
+        dg::tensor::scalar_product3d( 1., m_binv,
+            m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
+            m_dP[0][0], m_dP[0][1], m_dP[0][2], 0., m_UE2);
+        //m_UE2 now contains u_E^2
+        dg::blas1::axpby( -0.5, m_UE2, 1., psi);
+    }
 #ifdef DG_MANUFACTURED
-    dg::blas1::evaluate( m_potential[1], dg::plus_equals(), manufactured::SPhii{
+    dg::blas1::evaluate( psi, dg::plus_equals(), manufactured::SPhii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
@@ -798,7 +828,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     double time, const std::array<Container,2>& densityST,
-    std::array<Container,2>& velocityST)
+    std::array<Container,2>& velocityST, Container& aparST)
 {
     //on input
     //densityST[0] = n_e, velocityST[0]:= w_e
@@ -815,10 +845,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
                              -m_p.beta, densityST[0], velocityST[0],
                               0., m_temp0);
     //----------Invert Induction Eq----------------------------//
-    m_old_apar.extrapolate( time, m_aparST);
+    m_old_aparST.extrapolate( time, aparST);
     std::vector<unsigned> number = m_multigrid.direct_solve(
-        m_multi_ampere, m_aparST, m_temp0, m_p.eps_ampere);
-    m_old_apar.update( time, m_aparST);
+        m_multi_ampere, aparST, m_temp0, m_p.eps_ampere);
+    m_old_aparST.update( time, aparST);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_pol[0]);
 #ifdef DG_MANUFACTURED
@@ -826,16 +856,17 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     //    m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
     //    m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
     //here we cheat (a bit)
-    dg::blas1::evaluate( m_aparST, dg::equals(), manufactured::A{
+    dg::blas1::evaluate( aparST, dg::equals(), manufactured::A{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
         m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
         m_R,m_Z,m_PST,time);
 #endif //DG_MANUFACTURED
 
     //----------Compute Velocities-----------------------------//
-    dg::blas1::axpby( 1., velocityST[0], -1./m_p.mu[0], m_aparST, velocityST[0]);
-    dg::blas1::axpby( 1., velocityST[1], -1./m_p.mu[1], m_aparST, velocityST[1]);
+    dg::blas1::axpby( 1., velocityST[0], -1./m_p.mu[0], aparST, velocityST[0]);
+    dg::blas1::axpby( 1., velocityST[1], -1./m_p.mu[1], aparST, velocityST[1]);
 }
+
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::update_perp_derivatives(
     const std::array<Container,2>& density,
@@ -915,6 +946,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
     m_faST( dg::geo::zeroPlus,  m_aparST, m_plus);
     update_parallel_bc_1st( m_minus, m_plus, m_p.bcxA, 0.);
     dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0., m_apar);
+    m_old_apar.update( t, m_apar);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1414,9 +1446,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #if FELTORPERP == 1
 
     // set m_potential[0]
-    compute_phi( t, m_density);
+    compute_phi( t, m_density, m_potential[0], false);
     // set m_potential[1] and m_UE2 --- needs m_potential[0]
-    compute_psi( t);
+    compute_psi( t, m_potential[0], m_potential[1], false);
 
 #else
 
@@ -1442,11 +1474,21 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //Compute m_densityST, m_dsN and m_potentialST, m_dsP
     update_staggered_density_and_phi( t, m_density, m_potential);
 
+    // Now refine potential on staggered grid
+    // set m_potentialST[0]
+    compute_phi( t, m_densityST, m_potentialST[0], true);
+    // set m_potentialST[1]  --- needs m_potentialST[0]
+    compute_psi( t, m_potentialST[0], m_potentialST[1], true);
+    timer.toc();
+    accu += timer.diff();
+    DG_RANK0 std::cout << "## Compute phi and psi 2nd           took "
+                       << timer.diff()<<"s\t A: "<<accu<<"s\n";
+    timer.tic( );
+
     // Compute m_aparST and m_U if necessary --- reads and updates m_velocity
     dg::blas1::copy( y[1], m_velocityST);
     if( m_p.beta != 0)
-        compute_aparST( t, m_densityST, m_velocityST);
-
+        compute_aparST( t, m_densityST, m_velocityST, m_aparST);
     //Compute m_velocity, m_dsU and m_apar
     update_velocity_and_apar( t, m_velocityST, m_aparST);
 
