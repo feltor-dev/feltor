@@ -2,6 +2,12 @@
 
 \input{../header.tex}
 \input{../newcommands.tex}
+%\newcommand{\RR}{{R'}}
+%\newcommand{\ZZ}{{Z'}}
+%\newcommand{\PP}{{\varphi'}}
+\newcommand{\RR}{{\rho}}
+\newcommand{\ZZ}{{\zeta}}
+\newcommand{\PP}{{\Phi}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -448,6 +454,87 @@ Numerically, this is true if we have
 \left(\Tp\right)^\dagger B^\varphi  = \left(\Tm\right)^\dagger B^\varphi = B^\varphi
 \end{align}
 
+\subsection{Fieldaligned coordinate system}
+The idea is to construct a locally fieldaligned coordinate system that
+for a given poloidal plane coincides with the existing coordinate system.
+We construct coordinates by integrating the fieldline equation with
+ the poloidal grid coordinates $R_0$, $Z_0$, $\varphi_0$ as initial conditions.
+ We call the resulting coordinates $\RR$, $\ZZ$, $\PP$.
+ We parameterize the fieldline with the toroidal angle $\varphi$ such that $\PP = \varphi-\varphi_0$.
+ We thus have the base vectors
+ \begin{align}
+ \partial_\RR &= R_\RR \partial_R + Z_\RR\partial_Z \\
+ \partial_\ZZ &= R_\ZZ \partial_R + Z_\ZZ\partial_Z \\
+ \partial_\PP &= R_\PP \partial_R + Z_\PP\partial_Z + \partial_\varphi
+ \end{align}
+ By definition we have
+ \begin{align}
+ R_\PP &= v^R/v^\varphi(R,Z) \\
+ Z_\PP &= v^Z/v^\varphi(R,Z) \\
+ \varphi_\PP &= 1
+ \end{align}
+ We have the covariant base vectors
+ \begin{align}
+\d \RR &= \RR_R\d R  + \RR_Z \d Z + \RR_\varphi \d\varphi \\
+\d \ZZ &= \ZZ_R\d R  + \ZZ_Z \d Z + \ZZ_\varphi \d\varphi \\
+\d \PP &=  \d\varphi
+\end{align}
+Note that the elements of the forward and backward transformation are related through the
+inverse of the Jacobian
+\begin{align}
+\begin{pmatrix}
+R_\RR & R_\ZZ & R_\PP \\
+Z_\RR & Z_\ZZ & Z_\PP \\
+\varphi_\RR & \varphi_\ZZ & \varphi_\PP
+\end{pmatrix}
+=
+\begin{pmatrix}
+\RR_R & \RR_Z & \RR_\varphi \\
+\ZZ_R & \ZZ_Z & \ZZ_\varphi \\
+0 & 0 & 1
+\end{pmatrix}^{-1}
+=
+\frac{1}{\RR_R \ZZ_Z - \ZZ_R \RR_Z}
+\begin{pmatrix}
+ \ZZ_Z & -\RR_Z & (\RR_Z \ZZ_\varphi - \ZZ_Z\RR_\varphi) \\
+ -\ZZ_R & \RR_R &  (\RR_\varphi \ZZ_R - \ZZ_\varphi \RR_R) \\
+0 & 0 & (\RR_R \ZZ_Z - \ZZ_R \RR_Z)
+\end{pmatrix}
+\end{align}
+We immediately see that the determinant of the Jacobian (relevant for the
+volume form) is given by $\det J = \RR_R \ZZ_Z  - \ZZ_R\RR_Z)$.
+In order to integrate the elements of the Jacobian we employ Nemov's algorithm.
+Notice first that $\d \RR/ \d\PP = \d \ZZ / \d\PP  = 0$.
+In words, if we go along a streamline of $\partial_\PP$ (i.e. a fieldline) we
+stay on the same value of $\RR$. (This is basically the definition of a coordinate line).
+Next, we can write $\d / \d\PP = \vec v / v^\varphi \cdot \nabla $ and thus
+$\vec v / v^\varphi \cdot \nabla \RR = 0$. If we derive this we get
+\begin{align}
+\partial_R ( \vec v/ v^\varphi\cdot\nabla \RR ) = (\vec v/ v^\varphi)_R \cdot \nabla\RR + \vec v/ v^\varphi\cdot \nabla \RR_R = 0
+\end{align}
+and analogous for the other elements. We thus find
+\begin{align}
+\frac{\d R}{\d\PP} = v^R/ v^\varphi \quad
+\frac{\d Z}{\d\PP} = v^Z/ v^\varphi \\
+\frac{\d \RR_R}{\d\PP} = - (\vec v/ v^\varphi)_R \cdot \nabla\RR \quad
+\frac{\d \RR_Z}{\d\PP} = - (\vec v/ v^\varphi)_Z \cdot \nabla\RR \\
+\frac{\d \ZZ_R}{\d\PP} = - (\vec v/ v^\varphi)_R \cdot \nabla\ZZ \quad
+\frac{\d \ZZ_Z}{\d\PP} = - (\vec v/ v^\varphi)_Z \cdot \nabla\ZZ  \\
+\frac{\d (\RR_R \ZZ_Z - \ZZ_R \RR_Z)}{\d\PP} = - \nabla\cdot (\vec v/ v^\varphi) ( \RR_R\ZZ_Z - \RR_Z\ZZ_R)
+\end{align}
+As initial conditions we use that the coordinate system is supposed to coincide with $R$, $Z$
+at the origin, that is $\RR_R = 1$, $\RR_Z = 0$, $\ZZ_R = 0$, $\ZZ_Z = 1$.
+The last identity is particularly interesting if we are only interested in the volume element in the
+new coordinate system $\sqrt{g'} = \det J \sqrt{g}$.
+
+The fieldaligned gradient, divergence and Laplacian in the fieldaligned coordinate system read
+with $v^\PP(\RR,\ZZ,\PP) = v^\varphi( R(\RR,\ZZ,\PP), Z(\RR,\ZZ,\PP), \PP)$
+\begin{align}
+\nabla_\parallel f (\RR,\ZZ,\PP) =  \vec v \cdot\nabla f = v^\PP \partial_\PP f \\
+\nabla\cdot (\vec v f) (\RR,\ZZ,\PP) =  \frac{1}{\sqrt{g}} \partial_\PP\left(\sqrt{g} v^\PP f \right)\\
+\Delta_\parallel f (\RR,\ZZ,\PP) =  \nabla\cdot (\vec v\vec v\cdot \nabla f)  = \frac{1}{\sqrt{g}}
+    \partial_\PP\left(\sqrt{g} v^\PP v^\PP \partial_\PP f\right)
+\end{align}
 
 \section{Algorithm}
 Given are the components $v^i(R,Z)$ for $i\in\{R,Z,\varphi\}$ and a compuational grid (in the following the ``coarse grid``)
