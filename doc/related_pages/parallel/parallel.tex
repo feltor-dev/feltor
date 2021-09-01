@@ -502,7 +502,7 @@ Z_\RR & Z_\ZZ & Z_\PP \\
 \end{pmatrix}
 \end{align}
 We immediately see that the determinant of the Jacobian (relevant for the
-volume form) is given by $\det J = \RR_R \ZZ_Z  - \ZZ_R\RR_Z)$.
+volume form) is given by $\det J = (\RR_R \ZZ_Z  - \ZZ_R\RR_Z)$.
 In order to integrate the elements of the Jacobian we employ Nemov's algorithm.
 Notice first that $\d \RR/ \d\PP = \d \ZZ / \d\PP  = 0$.
 In words, if we go along a streamline of $\partial_\PP$ (i.e. a fieldline) we
@@ -520,7 +520,8 @@ and analogous for the other elements. We thus find
 \frac{\d \RR_Z}{\d\PP} = - (\vec v/ v^\varphi)_Z \cdot \nabla\RR \\
 \frac{\d \ZZ_R}{\d\PP} = - (\vec v/ v^\varphi)_R \cdot \nabla\ZZ \quad
 \frac{\d \ZZ_Z}{\d\PP} = - (\vec v/ v^\varphi)_Z \cdot \nabla\ZZ  \\
-\frac{\d (\RR_R \ZZ_Z - \ZZ_R \RR_Z)}{\d\PP} = - \nabla\cdot (\vec v/ v^\varphi) ( \RR_R\ZZ_Z - \RR_Z\ZZ_R)
+\frac{\d (\RR_R \ZZ_Z - \ZZ_R \RR_Z)}{\d\PP} = - \nabla\cdot (\vec v/ v^\varphi) ( \RR_R\ZZ_Z - \RR_Z\ZZ_R) \\
+\frac{\d (R_\RR Z_\ZZ - R_\ZZ Z_\RR)}{\d\PP} = + \nabla\cdot (\vec v/ v^\varphi) ( R_\RR Z_\ZZ - Z_\RR R_\ZZ)
 \end{align}
 As initial conditions we use that the coordinate system is supposed to coincide with $R$, $Z$
 at the origin, that is $\RR_R = 1$, $\RR_Z = 0$, $\ZZ_R = 0$, $\ZZ_Z = 1$.
