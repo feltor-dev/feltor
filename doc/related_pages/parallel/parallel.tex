@@ -8,6 +8,7 @@
 \newcommand{\RR}{{\rho}}
 \newcommand{\ZZ}{{\zeta}}
 \newcommand{\PP}{{\Phi}}
+\newcommand{\CC}{s}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -81,7 +82,8 @@ Let us characterize the solution $(R(\varphi_k\pm \Delta \varphi), Z(\varphi_k\p
     \Tpm\vec z \equiv \Tpm[R, Z, \varphi]:= ( R(\pm \Delta\varphi), Z( \pm \Delta\varphi), \varphi\pm\Delta \varphi),
     \label{}
 \end{align}
-Obviously we have $\Tm\circ\Tp = \Eins$, but $\Tpm$ is not necessarily unitary since $\vec v/v^\varphi$ is in general
+Obviously we have $\Tm\circ\Tp = \Eins$ (and this is in general well fulfilled
+numerically ), but $\Tpm$ is not necessarily unitary since $\vec v/v^\varphi$ is in general
 not divergence free.
 
 We now fit a second order polynomial through $(R,Z,\varphi)$, $\Tp [R,Z,\varphi]$ and $\Tm[R,Z,\varphi]$. We approximate the first and second derivative at $(R,Z,\varphi)$ by evaluating the derivative of the
@@ -352,6 +354,153 @@ in that case.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Fieldaligned coordinate system}
+\subsection{Constructing the coordinate map and the metric elements}
+The idea is to construct a locally fieldaligned coordinate system that
+for a given poloidal plane coincides with the existing coordinate system.
+We construct coordinates by integrating the fieldline equation with
+ the poloidal grid coordinates $R_0$, $Z_0$ as initial conditions.
+ We call the resulting coordinates $\RR$, $\ZZ$, $\PP$.
+ We parameterize the fieldline with the toroidal angle $\PP$.
+ We thus have the base vectors
+ \begin{align}
+ \partial_\RR &= R_\RR \partial_R + Z_\RR\partial_Z \\
+ \partial_\ZZ &= R_\ZZ \partial_R + Z_\ZZ\partial_Z \\
+ \partial_\PP &= R_\PP \partial_R + Z_\PP\partial_Z + \varphi_\PP\partial_\varphi
+ \end{align}
+ By definition we have
+ \begin{align}
+ R_\PP &= v^R(R,Z) \\
+ Z_\PP &= v^Z(R,Z) \\
+ \varphi_\PP &= 1
+ \end{align}
+ We have the covariant base vectors
+ \begin{align}
+\d \RR &= \RR_R\d R  + \RR_Z \d Z + \RR_\varphi \d\varphi \\
+\d \ZZ &= \ZZ_R\d R  + \ZZ_Z \d Z + \ZZ_\varphi \d\varphi \\
+\d \PP &=  \d\varphi
+\end{align}
+Note that the elements of the forward and backward transformation are related through the
+Jacobian
+\begin{align}
+\begin{pmatrix}
+R_\RR & R_\ZZ & R_\PP \\
+Z_\RR & Z_\ZZ & Z_\PP \\
+\varphi_\RR & \varphi_\ZZ & \varphi_\PP
+\end{pmatrix}
+&=
+\begin{pmatrix}
+\RR_R & \RR_Z & \RR_\varphi \\
+\ZZ_R & \ZZ_Z & \ZZ_\varphi \\
+0 & 0 & 1
+\end{pmatrix}^{-1}
+\nonumber\\
+&=
+\begin{pmatrix}
+ \ZZ_Z & -\RR_Z & (\RR_Z \ZZ_\varphi - \ZZ_Z\RR_\varphi) \\
+ -\ZZ_R & \RR_R &  (\RR_\varphi \ZZ_R - \ZZ_\varphi \RR_R) \\
+0 & 0 & (\RR_R \ZZ_Z - \ZZ_R \RR_Z)
+\end{pmatrix}
+\frac{1}{(\RR_R \ZZ_Z - \ZZ_R \RR_Z)}
+\end{align}
+% J is defined such that the volume transformation comes out like it does
+We immediately see that the determinant of the Jacobian (relevant for the
+volume form) is given by $\det J = (R_\RR Z_\ZZ - Z_\RR R_\ZZ) = 1/(\RR_R \ZZ_Z - \ZZ_R \RR_Z)$.
+In order to integrate the elements of the Jacobian we employ Nemov's algorithm.
+Notice first that $\d \RR/ \d\PP = \d \ZZ / \d\PP  = 0$.
+In words, if we go along a streamline of $\partial_\PP$ (i.e. a fieldline) we
+stay on the same value of $\RR$. (This is basically the definition of a coordinate line).
+Next, we can write $\d / \d\PP = (\vec v/v^\varphi) \cdot \nabla $ and thus
+$\vec v \cdot \nabla \RR = 0$. If we derive this we get
+\begin{align}
+\partial_R ( (\vec v/v^\varphi)\cdot\nabla \RR ) = \vec v_R \cdot \nabla\RR/v^\varphi + (\vec v/v^\varphi)\cdot \nabla \RR_R = 0
+\end{align}
+and analogous for the other elements. We thus find
+\begin{align}
+\frac{\d R}{\d\PP} = \frac{v^R}{ v^\varphi} \quad
+\frac{\d Z}{\d\PP} = \frac{v^Z}{ v^\varphi} \\
+\frac{\d \RR_R}{\d\PP} =
+- \left(\frac{v^R}{ v^\varphi}\right)_R \RR_R
+- \left(\frac{v^Z}{ v^\varphi}\right)_R \RR_Z
+\qquad
+\frac{\d \RR_Z}{\d\PP} =
+- \left(\frac{v^R}{ v^\varphi}\right)_Z \RR_R
+- \left(\frac{v^Z}{ v^\varphi}\right)_Z \RR_Z
+\\
+\frac{\d \ZZ_R}{\d\PP} =
+- \left(\frac{v^R}{ v^\varphi}\right)_R \ZZ_R
+- \left(\frac{v^Z}{ v^\varphi}\right)_R \ZZ_Z
+\qquad
+\frac{\d \ZZ_Z}{\d\PP} =
+- \left(\frac{v^R}{ v^\varphi}\right)_Z \ZZ_R
+- \left(\frac{v^Z}{ v^\varphi}\right)_Z \ZZ_Z
+\end{align}
+As initial conditions we use that the coordinate system is supposed to coincide with $R$, $Z$
+at the origin, that is $\RR_R = 1$, $\RR_Z = 0$, $\ZZ_R = 0$, $\ZZ_Z = 1$.
+From these identities we can derive further
+\begin{align}
+\frac{\d (\RR_R \ZZ_Z - \ZZ_R \RR_Z)}{\d\PP} =
+- \left(\left(\frac{v^R}{v^\varphi}\right)_R
+      + \left(\frac{v^Z}{v^\varphi}\right)_Z\right) ( \RR_R\ZZ_Z - \RR_Z\ZZ_R) \\
+\frac{\d  (R_\RR Z_\ZZ - R_\ZZ Z_\RR)}{\d\PP} =
++\left(\left(\frac{v^R}{v^\varphi}\right)_R
+      +\left(\frac{v^Z}{v^\varphi}\right)_Z\right) ( R_\RR Z_\ZZ - Z_\RR R_\ZZ)
+\end{align}
+The last identity is particularly interesting if we are only interested in the volume element in the
+new coordinate system $\sqrt{G} = \det J \sqrt{g}$.
+In order to obtain the volume element directly (without integrating all the
+elements of the Jacobian separately) we compute
+\begin{align}
+\frac{\d \sqrt{G}}{\d\PP} &=
+\frac{\d \sqrt{g}\det J}{\d\PP} =
+\left[\frac{v^R}{v^\varphi}\sqrt{g}_R + \frac{v^Z}{v^\varphi}\sqrt{g}_Z + \left(\frac{v^R}{v^\varphi}\right)_R
+      +\left(\frac{v^Z}{v^\varphi}\right)_Z\right]\det J \nonumber\\
+      &= \left[\partial_R\left( \sqrt{g}\frac{v^R}{v^\varphi}\right) + \partial_Z\left(\sqrt{g}\frac{v^Z}{v^\varphi}\right) \right]\det J
+          = \nc\left(\frac{\vec v}{v^\varphi}\right) \sqrt{g}\det J = \nc\left(\frac{\vec v}{v^\varphi}\right)\sqrt{G}
+\label{eq:volume_integration}
+\end{align}
+
+The fieldaligned gradient, divergence and Laplacian in the fieldaligned coordinate system read
+with $v^\PP(\RR,\ZZ,\PP) = v^\varphi( R(\RR,\ZZ,\PP), Z(\RR,\ZZ,\PP), \PP)$
+\begin{align}
+\nabla_\parallel f (\RR,\ZZ,\PP) =  \vec v \cdot\nabla f &= v^\PP\partial_\PP f \\
+\nabla\cdot (\vec v f) (\RR,\ZZ,\PP) &=  \frac{1}{\sqrt{G}} \partial_\PP\left(\sqrt{G} v^\PP f \right)\label{eq:div_aligned}\\
+\Delta_\parallel f (\RR,\ZZ,\PP) =  \nabla\cdot (\vec v\vec v\cdot \nabla f)  &= \frac{1}{\sqrt{G}}
+    \partial_\PP\left(\sqrt{G} v^\PP v^\PP \partial_\PP f\right)
+\end{align}
+Note that Eq.~\eqref{eq:div_aligned} with $f=1$ is probably the easiest way to derive Eq.~\eqref{eq:volume_integration}
+and a good consistency test.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Discrete operators in the fieldaligned coordinate system}
+For a function $f$ given in a non-aligned coordinate system we can pull-back
+$f$ into the (locally) fieldaligned coordinate system via
+\begin{align}
+    f_{k+1} := \Tm f( \RR,\ZZ,\PP_{k+1}) := f( \Tp \vec z) \\
+    f_{k-1} := \Tp f( \RR,\ZZ,\PP_{k-1}) := f( \Tm \vec z)
+\end{align}
+Once transformed it is straightforward to discretize derivatives
+\begin{align}
+    \nabla_\parallel^{FW} &\rightarrow v^\PP_k \frac{f_{k+1} - f_k}{\Delta\PP} \label{eq:forward}\\
+    \nabla_\parallel^{BW} &\rightarrow v^\PP_k \frac{f_{k} - f_{k-1}}{\Delta\PP} \label{eq:backward} \\
+    \nabla_\parallel^{CC} &\rightarrow v^\PP_k \frac{f_{k+1} - f_{k-1}}{2\Delta\PP}\label{eq:centered} \\
+    \nc(\vec v f)^{FW} &\rightarrow\frac{\sqrt{G^{k+1}} v^\PP_{k+1} f_{k+1} - \sqrt{G^k} v^\PP_k f_k}{\sqrt{G^k}\Delta\PP} \label{eq:divForward}\\
+    \nc(\vec v f)^{BW} &\rightarrow \frac{\sqrt{G^{k}} v^\PP_{k} f_{k} - \sqrt{G^{k-1}} v^\PP_{k-1} f_{k-1}}{\sqrt{G^k}\Delta\PP}\label{eq:divBackward}\\
+    \nc(\vec v f)^{CC} &\rightarrow \frac{\sqrt{G^{k+1}} v^\PP_{k+1} f_{k+1} - \sqrt{G^{k-1}} v^\PP_{k-1} f_{k-1}}{2\sqrt{G^k}\Delta\PP} \label{eq:divCentered}\\
+    \Delta_\parallel &\rightarrow \frac{1}{\sqrt{G^k}\Delta\PP^2}\left[\sqrt{G^{k+1/2}} v^\PP_{k+1/2} v^\PP_{k+1/2}(f_{k+1}-f_k)
+    \right.   \nonumber\\ &\left.
+    - \sqrt{G^{k-1/2}}v^\PP_{k-1/2}v^\PP_{k-1/2}(f_k- f_{k-1})\right] \label{eq:laplace}
+\end{align}
+where we define
+\begin{align}
+    \sqrt{G^{k+1/2}} := 0.5\left( \sqrt{G^{k+1}} + \sqrt{G^k}\right)
+    \qquad
+    \sqrt{G^{k-1/2}} := 0.5\left( \sqrt{G^{k-1}} + \sqrt{G^k}\right)\\
+    v^\PP_{k+1/2} := 0.5\left( v^\PP_{k+1} + v^\PP_k\right)
+    \qquad
+    v^\PP_{k-1/2} := 0.5\left( v^\PP_{k-1} + v^\PP_k\right)
+\end{align}
+Notice that only the relative quantities $\sqrt{G^{k+1}}/\sqrt{G^k}$ and $\sqrt{G^{k-1}}/\sqrt{G^k}$ need to be stored.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The adjoint methods}
 \subsection{A grid refinement approach}
 The idea is to discretize the operation $\nabla\cdot( \vec v .)$ by
@@ -396,146 +545,88 @@ the diagonal $v^\varphi/\Delta \varphi$ matrix does not commute with $Q$ or $P$)
 
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Some Thoughts}
-In order to understand what the adjoint operators do let us denote $\Tp$ as the push-forwward operator. Then we have
+\subsection{Adjoint operators}
+In order to understand what the adjoint operators do let us denote $\Tp$ as the push-forward operator. Then we have
 \begin{align}
     \int f(\vec x) \Tp h(\vec x) \sqrt{g(\vec x)}\d^3x% \\
-    %=  \int f(\vec x) h(\Tm \vec x)\sqrt{g(\vec x)}\d^3x \\
-    %=  \int f(\Tp \vec x') h(\vec x')\sqrt{g(\Tp \vec x')}J^{-1}( \Tp\vec x') \d^3x' \\
-    =  \int \frac{1}{\sqrt{g(\vec x')}}\Tm\left[J^{-1}(\vec x')\sqrt{g(\vec x')}f(\vec x')\right] h(\vec x')\sqrt{g(\vec x')}   \d^3x' \nonumber \\
-    \equiv  \int (\Tp)^\dagger\left[f(\vec x)\right] h(\vec x)\sqrt{g(\vec x)}   \d^3x
+    &=  \int f(\vec x) h(\Tm \vec x)\sqrt{g(\vec x)}\d^3x \nonumber\\
+    &=  \int f(\Tp \vec x') h(\vec x')\sqrt{g(\Tp \vec x')}\det J( \Tp\vec x') \d^3x' \nonumber\\
+    &=  \int \frac{1}{\sqrt{g(\vec x')}}\Tm\left[\det J(\vec x')\sqrt{g(\vec x')}f(\vec x')\right] h(\vec x')\sqrt{g(\vec x')}   \d^3x' \nonumber \\
+    &\equiv  \int (\Tp)^\dagger\left[f(\vec x)\right] h(\vec x)\sqrt{g(\vec x)}   \d^3x
     \label{}
 \end{align}
-$J$ is the determinant of the Jacobian $\partial(\vec x')/\partial(\vec x)$ with $\vec x' = \Tm \vec x$.
+$\det J$ is the determinant of the Jacobian $\partial(\vec x)/\partial(\vec x')$ with $\vec x' = \Tm \vec x$.
 In the last step we simply replaced the dummy variable $\vec x'$ with $\vec x$ again and identified the relevant terms
 as the adjoint operator:
 \begin{align}
-    (\Tp)^\dagger f(\vec x ) := \frac{1}{\sqrt{g(\vec x)}} \Tm\left[\sqrt{g(\vec x)} J^{-1}(\vec x) f(\vec x) \right]
-    \label{}
+    (\Tp)^\dagger f(\vec x ) :=& \frac{1}{\sqrt{g(\vec x)}} \Tm\left[\sqrt{g(\vec x)} \det J(\vec x) f(\vec x) \right]
+    = \frac{1}{\sqrt{g(\vec x)}} \Tm\left[\sqrt{G(\vec x)}f(\vec x) \right]
+    \nonumber\\
+    =& \frac{\sqrt{G(\Tp \vec x)}}{\sqrt{g(\vec x)}} \Tm f(\vec x)
+    \label{eq:adjoint_operator}
 \end{align}
 This means that numerically the adjoint of the push-forward
 operator should be a valid discretization of its inverse.
-Note that $\sqrt{g}J^{-1}(\vec x) = \sqrt{g'(\Tm \vec x)}$.
-With this we can write
-\begin{align}
-    (\Tp)^\dagger f(\vec x ) := \sqrt{\frac{g'(\vec x)}{g(\vec x)}} \Tm\left[f(\vec x) \right]
-    \label{}
-\end{align}
 Note that $\Tp [fh] = \Tp f \Tp h$ might not
-hold on the discrete level. Also the question is how $J$ enters
-on the discrete level. We have to multiply $\sqrt{g}$ artificially when we form the adjoint.
-Theoretically $J$ could be hidden somehow when we integrate the fieldlines, so the information could be contained in the discrete version? (Maybe in the back-projection?)
+hold on the discrete level.
 
-If we integrate streamlines of the any vector field $\vec v$, then we have
-\begin{align}
-    \frac{\d J}{\d \varphi} = J(\vec x ) \nabla\cdot\vec v
-    \label{}
+Eq.~\eqref{eq:adjoint_operator} can be used to show that \eqref{eq:divBackward}
+is indeed the adjoint of \eqref{eq:forward}.
+
+We use \eqref{eq:adjoint_operator} to derive a relation on the discrete level
+between the transpose of the interpolation matrices:
+\begin{align*}
+    \vec f\cdot \sqrt{g} I^{-} \vec h
+    =
+    \frac{1}{\sqrt{g}} (I^{-})^\mathrm{T} \sqrt{g} \vec f \cdot \sqrt{g}  \vec h
+    =
+    \frac{\sqrt{G^+}}{\sqrt{g}} I^{+} \vec f \cdot \sqrt{g}  \vec h
+\end{align*}
+where for the first identity we used the definition of the transpose in linear
+algebra and for the second we inserted \eqref{eq:adjoint_operator}.
+From this relation we find
+\begin{align} \label{eq:unitary}
+    \frac{1}{\sqrt{G^+}}(I^{-})^\mathrm{T}\sqrt{g} = I^+
 \end{align}
-along these streamlines~\cite{something}.
-If the streamlines are divergence free, we have $J=1$.
-A numerical test could be ( if we neglect the volume form in the adjoint)
+which is in fact a unitary relation between the transpose of an operator and
+its inverse.
+\subsection{Polar decomposition}
+Eq.~\eqref{eq:unitary} does not necessarily hold numerically but may be close.
+That is $I^{-}$ might not be exactly unitary in the sense of Eq.~\eqref{eq:unitary}.
+In order to find the matrix that is the closest unitary matrix we use an algorithm
+by Bj\"orck and Bowie. If $A$ is almost unitary than the closest unitary matrix
+is given by the polar decomposition (and derived from the singular value decomposition of $A$):
 \begin{align}
-    (\Tp)^\dagger \left[J(\vec x)\Tp f(\vec x)\right] - f(\vec x) = 0
-    \label{}
+    U = A( \Eins - (\Eins - A^\dagger A))^{-1/2} = A \left( \Eins + \frac{1}{2}Q
+   +\frac{3}{8}Q^2 + \ldots\right)
 \end{align}
-The numerical computation of $J$ might a bit tricky at the boundaries.
-In a flux-aligned $\zeta, \eta$ it should be feasible but in cylindrical coordinates I don't know how. Maybe we can simply cut the last few cells before the boundary.
-Even easier might be
+where  $Q=\Eins-A^\dagger A$ and the last identity is given by the Taylor expansion of the square root.
+In this case the adjoint is defined differently from before
 \begin{align}
-    \left(\Tp\right)^\dagger J(\vec x ) = 1
-    \label{}
+    A^\dagger  = \frac{1}{\sqrt{G^+}}A^\mathrm{T}\sqrt{g}
 \end{align}
 
-Finally, let us assume that $\vec v = \bhat$ is the magnetic field
-unit vector. Then we have analytically $\nabla\cdot \vec B= \nabla_\parallel^\dagger B = 0$.
-Numerically, this is true if we have
-\begin{align}
-\left(\Tp\right)^\dagger B^\varphi  = \left(\Tm\right)^\dagger B^\varphi = B^\varphi
-\end{align}
 
-\subsection{Fieldaligned coordinate system}
-The idea is to construct a locally fieldaligned coordinate system that
-for a given poloidal plane coincides with the existing coordinate system.
-We construct coordinates by integrating the fieldline equation with
- the poloidal grid coordinates $R_0$, $Z_0$, $\varphi_0$ as initial conditions.
- We call the resulting coordinates $\RR$, $\ZZ$, $\PP$.
- We parameterize the fieldline with the toroidal angle $\varphi$ such that $\PP = \varphi-\varphi_0$.
- We thus have the base vectors
- \begin{align}
- \partial_\RR &= R_\RR \partial_R + Z_\RR\partial_Z \\
- \partial_\ZZ &= R_\ZZ \partial_R + Z_\ZZ\partial_Z \\
- \partial_\PP &= R_\PP \partial_R + Z_\PP\partial_Z + \partial_\varphi
- \end{align}
- By definition we have
- \begin{align}
- R_\PP &= v^R/v^\varphi(R,Z) \\
- Z_\PP &= v^Z/v^\varphi(R,Z) \\
- \varphi_\PP &= 1
- \end{align}
- We have the covariant base vectors
- \begin{align}
-\d \RR &= \RR_R\d R  + \RR_Z \d Z + \RR_\varphi \d\varphi \\
-\d \ZZ &= \ZZ_R\d R  + \ZZ_Z \d Z + \ZZ_\varphi \d\varphi \\
-\d \PP &=  \d\varphi
-\end{align}
-Note that the elements of the forward and backward transformation are related through the
-inverse of the Jacobian
-\begin{align}
-\begin{pmatrix}
-R_\RR & R_\ZZ & R_\PP \\
-Z_\RR & Z_\ZZ & Z_\PP \\
-\varphi_\RR & \varphi_\ZZ & \varphi_\PP
-\end{pmatrix}
-=
-\begin{pmatrix}
-\RR_R & \RR_Z & \RR_\varphi \\
-\ZZ_R & \ZZ_Z & \ZZ_\varphi \\
-0 & 0 & 1
-\end{pmatrix}^{-1}
-=
-\frac{1}{\RR_R \ZZ_Z - \ZZ_R \RR_Z}
-\begin{pmatrix}
- \ZZ_Z & -\RR_Z & (\RR_Z \ZZ_\varphi - \ZZ_Z\RR_\varphi) \\
- -\ZZ_R & \RR_R &  (\RR_\varphi \ZZ_R - \ZZ_\varphi \RR_R) \\
-0 & 0 & (\RR_R \ZZ_Z - \ZZ_R \RR_Z)
-\end{pmatrix}
-\end{align}
-We immediately see that the determinant of the Jacobian (relevant for the
-volume form) is given by $\det J = (\RR_R \ZZ_Z  - \ZZ_R\RR_Z)$.
-In order to integrate the elements of the Jacobian we employ Nemov's algorithm.
-Notice first that $\d \RR/ \d\PP = \d \ZZ / \d\PP  = 0$.
-In words, if we go along a streamline of $\partial_\PP$ (i.e. a fieldline) we
-stay on the same value of $\RR$. (This is basically the definition of a coordinate line).
-Next, we can write $\d / \d\PP = \vec v / v^\varphi \cdot \nabla $ and thus
-$\vec v / v^\varphi \cdot \nabla \RR = 0$. If we derive this we get
-\begin{align}
-\partial_R ( \vec v/ v^\varphi\cdot\nabla \RR ) = (\vec v/ v^\varphi)_R \cdot \nabla\RR + \vec v/ v^\varphi\cdot \nabla \RR_R = 0
-\end{align}
-and analogous for the other elements. We thus find
-\begin{align}
-\frac{\d R}{\d\PP} = v^R/ v^\varphi \quad
-\frac{\d Z}{\d\PP} = v^Z/ v^\varphi \\
-\frac{\d \RR_R}{\d\PP} = - (\vec v/ v^\varphi)_R \cdot \nabla\RR \quad
-\frac{\d \RR_Z}{\d\PP} = - (\vec v/ v^\varphi)_Z \cdot \nabla\RR \\
-\frac{\d \ZZ_R}{\d\PP} = - (\vec v/ v^\varphi)_R \cdot \nabla\ZZ \quad
-\frac{\d \ZZ_Z}{\d\PP} = - (\vec v/ v^\varphi)_Z \cdot \nabla\ZZ  \\
-\frac{\d (\RR_R \ZZ_Z - \ZZ_R \RR_Z)}{\d\PP} = - \nabla\cdot (\vec v/ v^\varphi) ( \RR_R\ZZ_Z - \RR_Z\ZZ_R) \\
-\frac{\d (R_\RR Z_\ZZ - R_\ZZ Z_\RR)}{\d\PP} = + \nabla\cdot (\vec v/ v^\varphi) ( R_\RR Z_\ZZ - Z_\RR R_\ZZ)
-\end{align}
-As initial conditions we use that the coordinate system is supposed to coincide with $R$, $Z$
-at the origin, that is $\RR_R = 1$, $\RR_Z = 0$, $\ZZ_R = 0$, $\ZZ_Z = 1$.
-The last identity is particularly interesting if we are only interested in the volume element in the
-new coordinate system $\sqrt{g'} = \det J \sqrt{g}$.
-
-The fieldaligned gradient, divergence and Laplacian in the fieldaligned coordinate system read
-with $v^\PP(\RR,\ZZ,\PP) = v^\varphi( R(\RR,\ZZ,\PP), Z(\RR,\ZZ,\PP), \PP)$
-\begin{align}
-\nabla_\parallel f (\RR,\ZZ,\PP) =  \vec v \cdot\nabla f = v^\PP \partial_\PP f \\
-\nabla\cdot (\vec v f) (\RR,\ZZ,\PP) =  \frac{1}{\sqrt{g}} \partial_\PP\left(\sqrt{g} v^\PP f \right)\\
-\Delta_\parallel f (\RR,\ZZ,\PP) =  \nabla\cdot (\vec v\vec v\cdot \nabla f)  = \frac{1}{\sqrt{g}}
-    \partial_\PP\left(\sqrt{g} v^\PP v^\PP \partial_\PP f\right)
-\end{align}
+%A numerical test could be ( if we neglect the volume form in the adjoint)
+%\begin{align}
+%    (\Tp)^\dagger \left[J(\vec x)\Tp f(\vec x)\right] - f(\vec x) = 0
+%    \label{}
+%\end{align}
+%Even easier might be
+%\begin{align}
+%    \left(\Tp\right)^\dagger \det J^{-1}(\vec x ) = 1
+%    \label{}
+%\end{align}
+%
+%Finally, let us assume that $\vec v = \bhat$ is the magnetic field
+%unit vector. Then we have analytically $\nabla\cdot \vec B= \nabla_\parallel^\dagger B = 0$.
+%Numerically, this is true if we have
+%\begin{align}
+%\left(\Tp\right)^\dagger B^\varphi  = \left(\Tm\right)^\dagger B^\varphi = B^\varphi
+%\end{align}
+%
 
 \section{Algorithm}
 Given are the components $v^i(R,Z)$ for $i\in\{R,Z,\varphi\}$ and a compuational grid (in the following the ``coarse grid``)
