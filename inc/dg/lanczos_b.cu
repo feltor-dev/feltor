@@ -1,4 +1,4 @@
-// #define DG_DEBUG
+#define DG_DEBUG
 #include <iostream>
 #include <iomanip>
 #include "backend/timer.h"
@@ -87,11 +87,17 @@ int main(int argc, char * argv[])
         dg::MCG<Container> mcg(x, max_iter);
         t.toc();
         std::cout << "#    M-CG creation took "<< t.diff()<<"s   \n";
-        dg::blas1::scal(x, 0.0); //initialize with zero
+//         dg::blas1::scal(x, 0.0); //initialize with zero
+//         dg::blas1::scal(x, 0.0); //initialize with zero
+        x =    dg::evaluate(dg::one, grid);
+        dg::blas1::scal(x,1000.0); //initialize not with zero
+
         dg::blas2::symv(w2d, bexac, b); //multiply weights
         t.tic();
         HDiaMatrix T = mcg(A, x, b, v2d, w2d, eps, 1., true); 
         t.toc();
+        
+
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
         std::cout << "    iter: "<< mcg.get_iter() << "\n";

@@ -547,7 +547,8 @@ class KrylovSqrtCauchyinvert
         m_cauchysqrtH.new_size(iter); //resize  vectors in sqrtODE solver
         m_cauchysqrtH.set_A(m_TinvH);
         
-        m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated
+        m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated // y= T^(-1/2) e_1  
+
         m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1  
 
         m_mcg.set_iter(m_max_iter);

@@ -6,49 +6,31 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
-\title{The poet project}
+\title{The esol project}
 \author{M.~Held}
 \maketitle
 
 \begin{abstract}
-  This is a program for 2d isothermal delta-f and full-f gyro-fluid simulations with different treatments of the polarization charge
+  This is a program for 2d isothermal delta-f and full-f gyro-fluid turbulence simulations that cover the edge and scrape off layer and include different treatments of the polarization charge
 \end{abstract}
 
 \section{Equations}
-Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density. $\phi$ is the electric potential. We
+Currently we implemented $4$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density. $\phi$ is the electric potential. We
 use Cartesian coordinates $x$, $y$.
 \subsection{Models}
-\subsubsection{Delta-F gyro-fluid models}
-The two delta-f models ("df-lwl" \& "df-O2") share the same evolution equations\footnote{The densities are for delta-f models are understood as fluctuating quantities with respect to a background} 
-\begin{subequations}
-\begin{align}
- \frac{\partial n}{\partial t}     &= 
-    \{ n, \phi\} 
-  + \kappa \frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
-  - \nu \Delta_{\perp}^2 n  \\
-  \frac{\partial N}{\partial t} &=
-  \{ N, \psi\} 
-  + \kappa \frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} -\nu\Delta_{\perp}^2 N \\
-   \vec{\nabla}\cdot \vec{P}_2 &=  \Gamma_1 N -n, 
-\end{align}
-\end{subequations}
-and differ only in the polarization equation given in Section~\ref{sec:polarization}:
-%%%%%%%%%
 \subsubsection{Full-F gyro-fluid models}
-Likewise the full-f models ("ff-lwl" \& "ff-O2" \& "ff-O4") share the same evolution equations
+The full-f models ("ff-O2-OB" \& "ff-lwl-OB" \& "ff-lwl" \& "ff-O2") share the same evolution equations
 \begin{subequations}
 \begin{align}
  \frac{\partial n}{\partial t}     &= 
     \frac{1}{B}\{ n, \phi\} 
   + \kappa n\frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
+  -\kappa \frac{\partial n}{\partial y} + \Lambda_{n,\parallel}
   - \nu \Delta_\perp^2 n  \\
   \frac{\partial N}{\partial t} &=
   \frac{1}{B}\{ N, \psi\} 
   + \kappa N\frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} -\nu \Delta_\perp^2 N \\
+  + \tau \kappa\frac{\partial N}{\partial y} + \Lambda_{N,\parallel}-\nu \Delta_\perp^2 N \\
    \vec{\nabla}\cdot \vec{P}_2 &= \Gamma_1 N-n
 \end{align}
 \end{subequations}
@@ -67,20 +49,18 @@ The operators and gyro-fluid potential are
  \Gamma_0 &= ( 1- \tau\Delta_{\perp})^{-1} &
    \psi = \Gamma_1 \phi + \psi_2 
 \end{align}
-The  (negative) polarization charge is 
+The  (negative) polarization charge is~\cite{Held2020} 
 \begin{align}
   \vec{\nabla}\cdot \vec{P}_2 &=    
 \begin{cases}
--\Delta_{\perp} \phi , 
-        &\ \text{if "df-lwl"} \\
--\Gamma_0\Delta_{\perp} \phi, 
-      &\ \text{if "df-O2"} \\
+-\frac{N_0}{B^2}\Delta_{\perp} \phi , 
+        &\ \text{if "ff-lwl-OB"} \\
+-\frac{N_0}{B^2}\Gamma_0\Delta_{\perp} \phi, 
+      &\ \text{if "ff-O2-OB"} \\
 -\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right)
        &\ \text{if "ff-lwl"} \\
 -\sqrt{\Gamma_0}\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\sqrt{\Gamma_0} \phi\right) 
-         &\ \text{if "ff-O2"} \\
--\Gamma_1 \left[\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\right)-2   \nabla\cdot\nabla\cdot \left(\frac{\tau N}{B^4} \nabla_\perp^2\right)+  \Delta_{\perp} \left(\frac{\tau N}{B^4} \Delta_{\perp}\right)\right]\Gamma_1 \phi 
-        &\ \text{if "ff-O4"} \\
+         &\ \text{if "ff-O2"} 
 \end{cases}
 \end{align}
 The polarization part of the gyro-fluid potential is
@@ -88,17 +68,64 @@ The polarization part of the gyro-fluid potential is
 \psi_2&=    
 \begin{cases}
 0 , 
-        &\ \text{if "df-lwl"} \\
+        &\ \text{if "ff-lwl-OB"} \\
 0, 
-      &\ \text{if "df-O2"} \\
+      &\ \text{if "ff-O2-OB"} \\
 - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}
        &\ \text{if "ff-lwl"} \\
 - \frac{1}{2} \frac{(\nabla\sqrt{\Gamma_0}\phi)^2}{B^2}
-         &\ \text{if "ff-O2"} \\
-- \frac{1}{2 B^2} \left[|\nabla_\perp \Gamma_1\phi|^2 + \frac{\tau}{2 B^2} \left[|\nabla_\perp^2 \Gamma_1\phi |^2 - (\Delta_{\perp} \Gamma_1\phi)^2 /2 \right]\right]
-        &\ \text{if "ff-O4"} \\
+         &\ \text{if "ff-O2"} 
 \end{cases}
 \end{align}
+\subsubsection{Closure of the parallel dynamics}
+\label{sec:parallelclosure}
+The closure terms for the parallel dynamics exploit a two region approach~\cite{HeldPhD}: a closed field line and an open field line region. The transition between this regions is mimiced by the damping function
+\begin{align}
+ h_{\pm}(x) := \frac{1}{2}\left[1 \pm \tanh\left((x-x_s)/\sigma_s\right)\right]
+\end{align}
+Here, \(x_s\) represents the position of the separatrix and \(\sigma_s\) is the width of the transition. The complete parallel closure consists then of two contributions:
+\begin{align}
+ \Lambda_{n,\parallel} &= \sum_{b \in \left\{+,-\right\} }\Lambda_{n,\parallel,b} &
+ \Lambda_{N,\parallel} &= \sum_{b \in \left\{+,-\right\} } \Lambda_{N,\parallel,b}
+\end{align}
+
+\paragraph{Edge:} In the edge region we take the modified Hasegawa-Waktani closure~\cite{Held2018}
+\begin{align}
+ \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\widetilde{\phi} - \widetilde{\ln(n)} \right] \\
+ \Lambda_{N,\parallel,-} &= 0
+\end{align}
+with the fluctuation given by \(\widetilde{f} := f - \langle f\rangle_y\) and the y-average \(\langle f\rangle_y:= \int dy f / L_y\). The adiabaticity parameter is defined as \(\alpha := T_{e,\parallel} k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )\).
+
+\paragraph{Scrape-off-Layer:} In the scrape off layer we assume Bohm sheath boundary conditions~\cite{Mosetto2015}~\footnote{Note that strictly speaking the boundary conditions for the density and electric potential are Neumann, in particular \(\partial_s n_e (\vec{x}) |_{\pm L_\parallel /2 } =0 \) and \(\partial_s  n_e (\vec{x}) |_{\pm L_\parallel /2 } = 0\).}
+\begin{align}
+n_e (x,y,\pm L_\parallel /2 ) &= n_e (\vec{x}) &
+\phi (x,y,\pm L_\parallel /2 ) &= \phi (\vec{x})\\
+ u_e (x,y,\pm L_\parallel /2 ) &= \pm \exp{(\Lambda_{sh} - \phi)} &
+ U_i (x,y,\pm L_\parallel /2 ) &= \pm\sqrt{1+\tau}
+\end{align}
+where we introduced the constant (also known as sheath or Bohm potential) \(\Lambda_{sh} := \ln \sqrt{m_i/(2 \pi m_e)} = \ln  (1/\sqrt{|\mu_e| 2 \pi})\). With this we obtain for the closure terms~\cite{HeldPhD}
+\begin{align}
+ \Lambda_{n,\parallel,+} &:= -h_{+}(x) n \lambda \exp{(\Lambda_{sh} - \phi)} \\
+ \Lambda_{N,\parallel,+} &:=  -\sqrt{1 + \tau} \lambda \Gamma_1^{-1} ( h_{+}(x)  n)
+\end{align}
+with the so called sheath dissipation parameter \(\lambda = \rho_s/L_\parallel\).
+Note that this results into the following term in the vorticity density equation
+\begin{align}
+ \Lambda_{\mathcal{W},\parallel,+} := \Gamma_1\Lambda_{N,\parallel,+} - \Lambda_{n,\parallel,+} = -\lambda  h_{+}(x)  n \sqrt{1 + \tau} \left[1  -  \frac{1}{\sqrt{1 + \tau}}\exp{(\Lambda_{sh} - \phi)} \right]
+\end{align}
+\subsubsection{Sources}
+Regardless of the particle source is related to the the ion gyro-center source and the electric potential via the transformation rule
+\begin{align}
+ S_n =\Gamma_1 S_N + \vec{\nabla} \cdot \left(\frac{S_N}{B^2} \vec{\nabla}_\perp \phi\right)
+\end{align}
+Instead, we could use the long wavelength approximation \(
+S_N =(1+\tau/2 \Delta_\perp) S_n + \vec{\nabla} \cdot \left(\frac{S_n}{B^2} \vec{\nabla}_\perp \phi\right)\). However this transformation rule is not exact and care has to be taken when short wavelength structures arise!
+\paragraph{flux}
+\begin{align}
+ S_n := \omega_s n_{G} 
+\end{align}
+with \(n_{G}:= \exp\left[-\frac{(x-x_s)^2}{2 \sigma_s^2}\right]\)
+with \(x_s:= l_x * f_s\)
 \subsection{Initialization}
 We follow the strategy to enforce the initial fields of the physical variables, the electron density \(n\) and the electric potential \(\phi\), in order to compute the initial ion gyro-center density.
 \subsubsection{Non-rotating Gaussian ("blob")}
@@ -123,36 +150,6 @@ where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coord
     N &= n 
 \end{align}
 so that the total polarization charge vanishes  \(\vec{\nabla}\cdot \vec{P}=0\).
-
-\subsubsection{Double Rotating Gaussian }
-We initialize two blobs
-\begin{align}
-    n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
-    \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= \delta \hspace{1mm} (n-1)
-\end{align}
-where \(\delta = 10\) is a parameter for the rotation.
-Thus we have
-\begin{align}
-  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E 
-\end{align}
-
-the ion gyro-center density follows from the respective polarization equation.
-
-\subsubsection{Shear flow (double shear layer)}
-\begin{align}
- n(x,y) &= n_{e0}\\
-    \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= A
-    \begin{cases}
-        \delta \cos(2 \pi y/l_y) - \frac{1}{\rho} \text{sech}^2 \left(\frac{2 \pi x/l_x-\pi/2}{\rho}\right),\ x \leq l_x/2 \\
-        \delta \cos(2 \pi y/l_y) + \frac{1}{\rho} \text{sech}^2 \left(\frac{3 \pi /2-2 \pi x/l_x}{\rho}\right),\ x > l_x/2 \\
-    \end{cases}
-%  \phi(x,y) &= \dots \\
-\end{align}
-where \(\rho=\pi/15\) is the width of the shear layer and \(\delta=0.05\). The A parameter serves to control the magnitude.
-\begin{align}
-  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E
-\end{align}
-the ion gyro-center density follows from the respective polarization equation, which requires a non-linear solve \(f(N,\phi) = n_e\). An initial guess for the ion gyro-cente rdensity \(N\) is obtained via the lwl approximated polarization equation.
 
 \subsection{Diagnostics}
 Diagnostics are the mass \(M\), the center of mass position \(\vec{X}_{com}\) and the (non-normalized) compactness \(I_c\)
@@ -182,15 +179,15 @@ time &  adaptive explicit RK or explicit multistep  &  \\
 \end{longtable}
 
 \section{Compilation and useage}
-There are two programs poet.cu and poet\_hpc.cu . Compilation with
+There are two programs esol.cu and esol\_hpc.cu . Compilation with
 \begin{verbatim}
-make <poet poet_hpc poet_mpi> device = <omp gpu>
+make <esol esol_hpc esol_mpi> device = <omp gpu>
 \end{verbatim}
 Run with
 \begin{verbatim}
-path/to/feltor/src/poet/poet input.json
-path/to/feltor/src/poet/poet_hpc input.json output.nc
-echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/poet/poet_mpi\
+path/to/feltor/src/esol/esol input.json
+path/to/feltor/src/esol/esol_hpc input.json output.nc
+echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/esol/esol_mpi/
     input.json output.nc
 \end{verbatim}
 All programs write performance informations to std::cout.
@@ -247,8 +244,13 @@ Input file format: json
 "physical":
 {
     "curvature"  : 0.00015, //$\kappa$
-    "tau"  : 4.0,           //$\tau_i = T_{i0}/T_{e0}$
-    "equations": "ff-O2"    //model $\in$ ("df-lwl" ,"df-O2" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
+    "tau"  : 4.0,           //$\tau_i = T_{i0}/(T_{e0} Z_i)$
+    "alpha"  : 0.005,           //adiabaticity $\alpha:= T_{e,\parallel} k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )$
+    "lambda"  : 0.000001,           //sheath dissipation $\lambda:= \rho_{s0}/L_\parallel$
+    "mu_e"  : -0.000272121,     //$\mu_e:=m_e/(Z_e m_i)$: negative electron to ion mass ratio$    
+    "equations": "ff-O2",    //model $\in$ ("df-lwl" ,"df-O2" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
+    "xfac_sep"  : 0.3,     //$f_s$: x-position of separatrix in units of $l_x$ 
+    "sigma_sep"  : 0.5,     //$sigma_s$: width of damping function $h_{pm}$ of separatrix in units of $\rho_{s0}$    
 },
 "init":
 {
@@ -269,7 +271,7 @@ Output file format: netcdf-4/hdf5
 %---|---|---|---|
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
-\rowcolor{gray!50}\textbf{Name} &
+\rowcolor{gray!50}\textbf{Name} & 
  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &             text attribute & 1 & verbose input file as a string \\
 energy\_time             & Dataset & 1 & timesteps at which 1d variables are written \\
@@ -290,6 +292,6 @@ lperpinv                 & Dataset & 3 (time, y, x) & inverse perp gradient leng
 %..................................................................
 \bibliography{../../doc/related_pages/references}
 %..................................................................
-
+\bibliographystyle{aipnum4-1.bst}
 
 \end{document}

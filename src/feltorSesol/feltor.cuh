@@ -390,8 +390,8 @@ void Explicit<G, Matrix, container>::operator()( double ttt, const std::vector<c
         //dt ne
         dg::blas1::pointwiseDot(neavg,lhso,omega); //lambda =lhs*(ne)
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = omega_source*(ne) 
-        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
-        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+        dg::blas1::axpby(1., one, 1., logn[0], chi); //chi = (1+lnN)
+        dg::blas1::axpby(1., phi[0], p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
         sourceenergy =  z[0]*p.omega_source*dg::blas2::dot(chi, w2d, omega); 	
 	
         //dt Ni

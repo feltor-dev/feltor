@@ -353,7 +353,7 @@ class MCG
     template< class MatrixType, class DiaMatrixType, class SquareNorm1, class SquareNorm2, class ContainerType0, class ContainerType1, class ContainerType2>
     void Ry( MatrixType& A, DiaMatrixType& T,  SquareNorm1& Minv, SquareNorm2& M, ContainerType0& y, ContainerType1& x, ContainerType2& b,  unsigned iter)
     {
-        dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
+//         dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
 
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
@@ -363,7 +363,7 @@ class MCG
 
         for ( unsigned i=0; i<iter; i++)
         {
-            dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute b= R y
+            dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute x=x + R y
             
             dg::blas2::symv( A, m_p, m_ap);
             dg::blas1::axpby( 1./T.values(i+1,0), m_ap, 1., m_r);
@@ -402,6 +402,7 @@ class MCG
 #endif //MPI
         {
         std::cout << "# Norm of b "<<nrmb <<"\n";
+        std::cout << "# Residual errors: \n";
         }
 #endif //DG_DEBUG
         if( nrmb == 0)
@@ -420,9 +421,6 @@ class MCG
         {
             dg::blas2::symv( A, m_p, m_ap);
             alpha = nrmzr_old /dg::blas1::dot( m_p, m_ap);
-//                     blas1::axpby( alpha, m_p, 1.,x);
- 
-                
             dg::blas1::axpby( -alpha, m_ap, 1., m_r);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
@@ -465,12 +463,11 @@ class MCG
         {
             HVec e1H(get_iter(), 0.);
             HVec yH(get_iter(), 0.);
-            HVec weights(get_iter(), 1.);
             e1H[0] = 1.;
             dg::TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> tridiaginv(yH);
             HCooMatrix TinvH = tridiaginv(m_TH); //Compute on Host!            
             dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1   
-            Ry(A, m_TH, Minv, M, yH, x, b,  get_iter());  // x =  R T^(-1) e_1  
+            Ry(A, m_TH, Minv, M, yH, x, b,  get_iter());  // x = x_0+ R T^(-1) e_1  
         }
         return m_TH;
     }

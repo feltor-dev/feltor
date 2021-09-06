@@ -223,7 +223,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
         return 0;
     }
     blas2::symv( A,x,r);
-    blas1::axpby( 1., b, -1., r);
+    blas1::axpby( 1., b, -1., r, r);
+
     //note that dot does automatically synchronize
     if( sqrt( blas2::dot(S,r) ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
         return 0;
@@ -251,7 +252,7 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Con
                 if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction))
                     return i;
         }
-        blas2::symv(P,r,ap);
+        blas2::symv(P, r, ap);
         nrmzr_new = blas1::dot( ap, r);
         blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
         nrmzr_old=nrmzr_new;
