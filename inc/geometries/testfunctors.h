@@ -288,7 +288,8 @@ unsigned max_iter = 1e4, double eps = 1e-6)
         dg::geo::TestInvertDS< DS, container> rhs(ds);
         dg::Timer t;
         t.tic();
-        unsigned number = invert.solve( rhs, out, in, (const double)1., ds.weights(), eps);
+        double precond = 1.;
+        unsigned number = invert.solve( rhs, out, in, precond, ds.weights(), eps);
         t.toc();
         std::cout << "#Number of BICGSTABl iterations: "<<number<<"\n";
         std::cout << "#Took                          : "<<t.diff()<<"\n";

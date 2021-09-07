@@ -71,14 +71,11 @@ struct DSFieldCylindrical4
         double vx = m_v.x()(R,Z);
         double vy = m_v.y()(R,Z);
         double vz = m_v.z()(R, Z);
-        double vxx = m_v.xx()(R,Z);
-        double vyy = m_v.yy()(R,Z);
-        double vzx = m_v.zx()(R,Z);
-        double vzy = m_v.zy()(R,Z);
+        double div = m_v.div()(R,Z);
+        double gradz = m_v.gradz()(R,Z);
         yp[0] = vx/vz;
         yp[1] = vy/vz;
-        //yp[2] = m_v.div()( R,Z)/vz*y[2]; // integrate volume
-        yp[2] = ((vx/R + vxx + vyy)/vz - (vx*vzx + vy*vzy)/vz/vz)*y[2];
+        yp[2] = (div/vz - gradz/vz/vz)*y[2];
     }
 
     private:
@@ -94,23 +91,19 @@ struct DSField
     {
         dg::HVec v_zeta, v_eta;
         dg::pushForwardPerp( v.x(), v.y(), v_zeta, v_eta, g);
-        dg::HVec x = dg::pullback( dg::cooX2d, g);
         dg::HVec vx = dg::pullback( v.x(), g);
         dg::HVec vy = dg::pullback( v.y(), g);
         dg::HVec vz = dg::pullback( v.z(), g);
-        dg::HVec vxx = dg::pullback( v.xx(), g);
-        dg::HVec vyy = dg::pullback( v.yy(), g);
-        dg::HVec vzx = dg::pullback( v.zx(), g);
-        dg::HVec vzy = dg::pullback( v.zy(), g);
+        dg::HVec div = dg::pullback( v.div(), g);
+        dg::HVec gradz = dg::pullback( v.gradz(), g);
         dg::blas1::pointwiseDivide(v_zeta,  vz, v_zeta);
         dg::blas1::pointwiseDivide(v_eta,   vz, v_eta);
         dg::HVec divv_phi(vx);
-        dg::blas1::evaluate( divv_phi, dg::equals(), []( double x, double vx,
-                    double vy, double vz, double vxx, double vyy, double vzx,
-                    double vzy)
+        dg::blas1::evaluate( divv_phi, dg::equals(), [](
+                    double vz, double div, double gradz)
             {
-            return ((vx/x + vxx + vyy)/vz - (vx*vzx + vy*vzy)/vz/vz);
-            }, x, vx, vy, vz, vxx, vyy, vzx, vzy);
+                return (div/vz - gradz/vz/vz);
+            }, vz, div, gradz);
         dg::blas1::pointwiseDivide(1.,      vz, vz);
         dzetadphi_  = dg::forward_transform( v_zeta, g );
         detadphi_   = dg::forward_transform( v_eta, g );
@@ -141,6 +134,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     const dg::aRealGeometry2d<real_type>& grid_field,
     const dg::aRealGeometry2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp,
+    const thrust::host_vector<double>& vol0,
     thrust::host_vector<real_type>& yp2b,
     thrust::host_vector<bool>& in_boxp,
     real_type deltaPhi, real_type eps)
@@ -706,10 +700,13 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 #endif //DG_BENCHMARK
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
+    thrust::host_vector<double> vol = dg::create::volume(grid), vol2d0;
+    auto vol2d = dg::split( vol, grid);
+    dg::assign( vol2d[0], vol2d0);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            yp_coarse, hbp, in_boxp, deltaPhi, eps);
+            yp_coarse, vol2d0, hbp, in_boxp, deltaPhi, eps);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            ym_coarse, hbm, in_boxm, -deltaPhi, eps);
+            ym_coarse, vol2d0, hbm, in_boxm, -deltaPhi, eps);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine,
             *grid_coarse);  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine));
@@ -775,7 +772,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 
     dg::assign3dfrom2d( yp_coarse[2], m_Gp, grid);
     dg::assign3dfrom2d( ym_coarse[2], m_Gm, grid);
-    m_G = dg::create::volume( grid);
+    m_G = vol;
     container weights = dg::create::weights( grid);
     dg::blas1::pointwiseDot( m_Gp, weights, m_Gp);
     dg::blas1::pointwiseDot( m_Gm, weights, m_Gm);

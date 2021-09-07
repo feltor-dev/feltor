@@ -890,6 +890,26 @@ struct BHatPZ: public aCylindricalFunctor<BHatPZ>
     BZ m_bz;
 };
 
+///@brief \f$ (b^R\partial_R + b^Z\partial_Z) \hat b^\varphi\f$
+struct GradBHatP: public aCylindricalFunctor<GradBHatP>
+{
+    GradBHatP( const TokamakMagneticField& mag): m_mag(mag), m_divb(mag),
+        m_bhatP(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z),
+               ipolZ  = m_mag.ipolZ()(R,Z);
+        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
+        return  m_divb(R,Z)*m_bhatP(R,Z) +
+              (psipZ*(ipolR/R - 2.*ipol/R/R) - ipolZ/R*psipR)/
+                     (ipol*ipol + psipR*psipR + psipZ*psipZ);
+    }
+    private:
+    TokamakMagneticField m_mag;
+    Divb m_divb;
+    BHatP m_bhatP;
+};
+
 /**
  * @brief Contravariant components of the magnetic unit vector field
  * and its Jacobian in cylindrical coordinates.
@@ -898,8 +918,8 @@ struct BHatPZ: public aCylindricalFunctor<BHatPZ>
  * BHatPR, BHatPZ, constructed from mag
  */
 inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
-    return CylindricalVectorLvl1( BHatR(mag), BHatZ(mag), BHatP(mag), BHatRR(mag),
-            BHatRZ(mag), BHatZR(mag), BHatZZ(mag), BHatPR(mag), BHatPZ(mag)
+    return CylindricalVectorLvl1( BHatR(mag), BHatZ(mag), BHatP(mag),
+            Divb(mag), GradBHatP(mag)
            );
 }
 

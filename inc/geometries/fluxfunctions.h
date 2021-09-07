@@ -445,31 +445,21 @@ struct CylindricalVectorLvl1
     CylindricalVectorLvl1(  CylindricalFunctor v_x,
         CylindricalFunctor v_y,
         CylindricalFunctor v_z,
-        CylindricalFunctor v_xx,
-        CylindricalFunctor v_xy,
-        CylindricalFunctor v_yx,
-        CylindricalFunctor v_yy,
-        CylindricalFunctor v_zx,
-        CylindricalFunctor v_zy
+        CylindricalFunctor div,
+        CylindricalFunctor gradz
         ): f0{v_x, v_y, v_z},
-        m_xx(v_xx), m_xy(v_xy),
-        m_yx(v_yx), m_yy(v_yy),
-        m_zx(v_zx), m_zy(v_zy) {}
+        m_div(div), m_gradz(gradz) {}
     ///replace with given functors
     void reset(  CylindricalFunctor v_x,
         CylindricalFunctor v_y,
         CylindricalFunctor v_z,
-        CylindricalFunctor v_xx,
-        CylindricalFunctor v_xy,
-        CylindricalFunctor v_yx,
-        CylindricalFunctor v_yy,
-        CylindricalFunctor v_zx,
-        CylindricalFunctor v_zy)
+        CylindricalFunctor div,
+        CylindricalFunctor gradz
+        )
     {
         f0.reset( v_x,v_y,v_z);
-        m_xx = v_xx, m_xy = v_xy;
-        m_yx = v_yx, m_yy = v_yy;
-        m_zx = v_zx, m_zy = v_zy;
+        m_div = div;
+        m_gradz = gradz;
     }
     ///type conversion: Lvl2 can also be used as Lvl1
     operator CylindricalVectorLvl0 ()const {return f0;}
@@ -479,21 +469,13 @@ struct CylindricalVectorLvl1
     const CylindricalFunctor& y()const{return f0.y();}
     /// z-component of the vector
     const CylindricalFunctor& z()const{return f0.z();}
-    /// \f$\partial_R x(R,Z)\f$
-    const CylindricalFunctor& xx()const{return m_xx;}
-    /// \f$\partial_Z x(R,Z)\f$
-    const CylindricalFunctor& xy()const{return m_xy;}
-    /// \f$\partial_R y(R,Z)\f$
-    const CylindricalFunctor& yx()const{return m_yx;}
-    /// \f$\partial_Z y(R,Z)\f$
-    const CylindricalFunctor& yy()const{return m_yy;}
-    /// \f$\partial_R z(R,Z)\f$
-    const CylindricalFunctor& zx()const{return m_zx;}
-    /// \f$\partial_Z z(R,Z)\f$
-    const CylindricalFunctor& zy()const{return m_zy;}
+    /// \f$\nabla\cdot v\f$
+    const CylindricalFunctor& div()const{return m_div;}
+    /// \f$v\cdot\nabla z\f$
+    const CylindricalFunctor& gradz()const{return m_gradz;}
     private:
     CylindricalVectorLvl0 f0;
-    CylindricalFunctor m_xx, m_xy, m_yx, m_yy, m_zx, m_zy;
+    CylindricalFunctor m_div, m_gradz;
 };
 
 /**

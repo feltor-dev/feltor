@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
     std::cout << "# Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU);
     std::cout << "# Constructing Fieldlines..."<<std::endl;
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::centered, 1e-8, mx, my);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), 1e-8, mx, my);
 
     t.toc();
     std::cout << "# Construction took "<<t.diff()<<"s\n";
@@ -75,7 +75,7 @@ int main(int argc, char * argv[])
         std::string name = std::get<0>(tuple);
         const dg::DVec& function = *std::get<1>(tuple)[0];
         const dg::DVec& solution = *std::get<1>(tuple)[1];
-        callDS( ds, name, function, derivative, divb, g3d.size(),1e-8);
+        callDS( ds, name, function, derivative, g3d.size(),1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
