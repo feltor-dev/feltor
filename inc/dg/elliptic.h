@@ -214,6 +214,22 @@ class Elliptic
         return m_precond;
     }
     /**
+     * @brief Determine if weights are multiplied to make operator symmetric or not
+     *
+     * @param new_norm new setting
+     */
+    void set_norm( dg::norm new_norm) {
+        m_no = new_norm;
+    }
+    /**
+     * @brief Determine if weights are multiplied to make operator symmetric or not
+     *
+     * @return current norm
+     */
+    dg::norm get_norm( ) const{
+        return m_no;
+    }
+    /**
      * @brief Set the currently used jfactor (\f$ \alpha \f$)
      * @param new_jfactor The new scale factor for jump terms
      */
@@ -349,14 +365,6 @@ class Elliptic
     }
 
 
-    /**
-     * @brief Determine if weights are multiplied to make operator symmetric or not
-     *
-     * @param new_norm new setting
-     */
-    void set_norm( dg::norm new_norm) {
-        m_no = new_norm;
-    }
     private:
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
@@ -522,6 +530,14 @@ class Elliptic3d
     const Container& precond()const {
         return m_precond;
     }
+    ///@copydoc Elliptic::set_norm(dg::norm)
+    void set_norm( dg::norm new_norm) {
+        m_no = new_norm;
+    }
+    ///@copydoc Elliptic::get_norm()
+    dg::norm get_norm( ) const{
+        return m_no;
+    }
     ///@copydoc Elliptic::set_jfactor()
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     ///@copydoc Elliptic::get_jfactor()
@@ -616,10 +632,6 @@ class Elliptic3d
         dg::tensor::scalar_product3d(alpha, lambda,  m_tempx, m_tempy, m_tempz, m_chi, lambda, m_tempx, m_tempy, m_tempz, beta, sigma);
     }
 
-    ///@copydoc Elliptic::set_norm(dg::norm)
-    void set_norm( dg::norm new_norm) {
-        m_no = new_norm;
-    }
     private:
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
     Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
