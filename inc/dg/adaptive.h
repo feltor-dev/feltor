@@ -354,8 +354,16 @@ struct Adaptive
         }
         else
         {
-            dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(),
-                    m_stepper.order());
+            if( eps0 < 1e-20) // small and close to zero
+            {
+                dt = 1e14*dt; // a very large number
+                eps0 = 1e-20;
+            }
+            else
+            {
+                dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(),
+                        m_stepper.order());
+            }
             m_eps2 = m_eps1;
             m_eps1 = eps0;
             dg::blas1::copy( m_next, u1);
