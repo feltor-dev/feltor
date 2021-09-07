@@ -57,14 +57,15 @@ int main(int argc, char * argv[])
     if(rank==0)std::cout << "# Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductMPIGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU, dg::PER, dg::PER, comm);
     if(rank==0)std::cout << "# Constructing Fieldlines..."<<std::endl;
-    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(), dg::centered, 1e-8, mx[0], mx[1]);
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix,
+        dg::MDVec> ds( mag, g3d, dg::NEU, dg::PER, dg::geo::FullLimiter(),
+                1e-8, mx[0], mx[1]);
 
     t.toc();
     if(rank==0)std::cout << "# Construction took "<<t.diff()<<"s\n";
     ///##########################################################///
     //(MIND THE PULLBACK!)
     const dg::MDVec fun = dg::pullback( dg::geo::TestFunctionPsi2(mag), g3d);
-    const dg::MDVec divb = dg::pullback( dg::geo::Divb(mag), g3d);
     dg::MDVec derivative(fun);
     dg::MDVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::MDVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
@@ -75,11 +76,7 @@ int main(int argc, char * argv[])
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
-         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
-         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
-         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
-         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
-         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}},
          {"invCenteredLap",{&sol4,&fun}}
     };
     ///##########################################################///
@@ -90,7 +87,7 @@ int main(int argc, char * argv[])
         std::string name = std::get<0>(tuple);
         const dg::MDVec& function = *std::get<1>(tuple)[0];
         const dg::MDVec& solution = *std::get<1>(tuple)[1];
-        callDS( ds, name, function, derivative, divb, g3d.size(),1e-8);
+        callDS( ds, name, function, derivative, g3d.size(),1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);

@@ -291,8 +291,17 @@ unsigned max_iter = 1e4, double eps = 1e-6)
         double precond = 1.;
         unsigned number = invert.solve( rhs, out, in, precond, ds.weights(), eps);
         t.toc();
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
+    {
+#endif //MPI
         std::cout << "#Number of BICGSTABl iterations: "<<number<<"\n";
         std::cout << "#Took                          : "<<t.diff()<<"\n";
+#ifdef MPI_VERSION
+    }
+#endif //MPI
     }
 
 }

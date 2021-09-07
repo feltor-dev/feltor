@@ -44,7 +44,6 @@ int main( )
 
     ///##########################################################///
     const dg::DVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
-    const dg::DVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
     dg::DVec derivative(fun);
     dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);

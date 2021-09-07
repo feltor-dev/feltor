@@ -53,7 +53,6 @@ int main(int argc, char * argv[])
     ///##########################################################///
     //(MIND THE PULLBACK!)
     const dg::DVec fun = dg::pullback( dg::geo::TestFunctionPsi2(mag), g3d);
-    const dg::DVec divb = dg::pullback( dg::geo::Divb(mag), g3d);
     dg::DVec derivative(fun);
     dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);

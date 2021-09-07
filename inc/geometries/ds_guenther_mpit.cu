@@ -54,11 +54,10 @@ int main(int argc, char * argv[])
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
-        dg::centered, 1e-8, mx[0], mx[1]);
+        1e-8, mx[0], mx[1]);
 
     ///##########################################################///
     const dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
-    const dg::MDVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
     dg::MDVec derivative(fun);
     dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
     dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
@@ -71,12 +70,7 @@ int main(int argc, char * argv[])
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
          {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
-         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
-         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
-         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
-         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
-         {"directLap_bc_along",{&fun,&sol3}},
-         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}},
          {"invCenteredLap",{&sol4,&fun}}
     };
     ///##########################################################///
@@ -88,7 +82,7 @@ int main(int argc, char * argv[])
         std::string name = std::get<0>(tuple);
         const dg::MDVec& function = *std::get<1>(tuple)[0];
         const dg::MDVec& solution = *std::get<1>(tuple)[1];
-        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        callDS( ds, name, function, derivative, max_iter,1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);

@@ -40,9 +40,12 @@ int main(int argc, char **argv)
     const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::geo::CylindricalVectorLvl0 vec( dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1));
+    dg::geo::CylindricalVectorLvl1 vec( dg::geo::Constant(0),
+            dg::geo::Constant(0), dg::geo::Constant(1), dg::geo::Constant(0),
+            dg::geo::Constant(0));
 
-    dg::geo::DS<dg::CartesianMPIGrid3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), dg::centered);
+    dg::geo::DS<dg::CartesianMPIGrid3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec>
+        ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter());
     t.toc();
     if(rank==0)std::cout << "# Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
@@ -52,7 +55,7 @@ int main(int argc, char **argv)
     const dg::MDVec constsolution = dg::evaluate( cosine, g3d);
     t.tic();
     ds.set_boundaries( dg::DIR, sin(g3d.z0()),sin(g3d.z1()));
-    ds( constfunc, derivative);
+    ds.ds( dg::centered, constfunc, derivative);
     t.toc();
     if(rank==0)std::cout << "Straight:\n";
     if(rank==0)std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
@@ -62,7 +65,7 @@ int main(int argc, char **argv)
     if(rank==0)std::cout << "    DIR const:   "<< diff<<"\n";
     t.tic();
     ds.set_boundaries( dg::NEU, cos(g3d.z0()),cos(g3d.z1()));
-    ds( constfunc, derivative);
+    ds.ds( dg::centered, constfunc, derivative);
     t.toc();
     if(rank==0)std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., constsolution, -1., derivative);
@@ -74,7 +77,7 @@ int main(int argc, char **argv)
     dg::blas1::scal( left, sin(g3d.z0()));
     dg::blas1::scal( right, sin(g3d.z1()));
     ds.set_boundaries( dg::DIR, left,right);
-    ds( function, derivative);
+    ds.ds( dg::centered, function, derivative);
     t.toc();
     if(rank==0)std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
@@ -83,7 +86,7 @@ int main(int argc, char **argv)
     t.tic();
     dg::MDVec global = dg::evaluate( r2z, g3d);
     ds.set_boundaries( dg::DIR, global, sin(g3d.z0())/(g3d.z0()+g3d.hz()/2.), sin(g3d.z1())/(g3d.z1()-g3d.hz()/2.));
-    ds( function, derivative);
+    ds.ds( dg::centered, function, derivative);
     t.toc();
     if(rank==0)std::cout << "# Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);

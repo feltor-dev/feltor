@@ -132,7 +132,7 @@ inline real_type ds_norm( const std::array<real_type,3>& x0){
 template<class real_type>
 void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     const dg::aRealGeometry2d<real_type>& grid_field,
-    const dg::aRealGeometry2d<real_type>& grid_evaluate,
+    const dg::aRealTopology2d<real_type>& grid_evaluate,
     std::array<thrust::host_vector<real_type>,3>& yp,
     const thrust::host_vector<double>& vol0,
     thrust::host_vector<real_type>& yp2b,
@@ -144,10 +144,8 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     std::array<thrust::host_vector<real_type>,3> y{
         dg::evaluate( dg::cooX2d, grid_evaluate),
         dg::evaluate( dg::cooY2d, grid_evaluate),
-        dg::tensor::volume2d( grid_evaluate.metric()) // sqrt{g_2D}
+        vol0
     };
-    thrust::host_vector<real_type> R = dg::pullback( dg::cooX2d, grid_evaluate);
-    dg::blas1::pointwiseDot( y[2], R, y[2]); // sqrt{g_3D} = R\sqrt{g_2D}
     yp.fill(dg::evaluate( dg::zero, grid_evaluate));
     yp2b = dg::evaluate( dg::zero, grid_evaluate); //allocate memory for output
     in_boxp.resize( yp2b.size());
@@ -700,7 +698,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 #endif //DG_BENCHMARK
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
-    thrust::host_vector<double> vol = dg::create::volume(grid), vol2d0;
+    thrust::host_vector<double> vol = dg::tensor::volume(grid.metric()), vol2d0;
     auto vol2d = dg::split( vol, grid);
     dg::assign( vol2d[0], vol2d0);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
@@ -772,14 +770,14 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 
     dg::assign3dfrom2d( yp_coarse[2], m_Gp, grid);
     dg::assign3dfrom2d( ym_coarse[2], m_Gm, grid);
-    m_G = vol;
+    m_G = dg::create::volume(grid);
     container weights = dg::create::weights( grid);
     dg::blas1::pointwiseDot( m_Gp, weights, m_Gp);
     dg::blas1::pointwiseDot( m_Gm, weights, m_Gm);
 
     dg::assign( dg::evaluate( dg::zero, grid), m_hbm);
     m_f     = dg::split( (const container&)m_hbm, grid);
-    m_temp  = dg::split( m_hbm, *m_g);
+    m_temp  = dg::split( m_hbm, grid);
     dg::assign3dfrom2d( hbp, m_hbp, grid);
     dg::assign3dfrom2d( hbm, m_hbm, grid);
     dg::blas1::scal( m_hbm, -1.);
