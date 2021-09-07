@@ -173,13 +173,18 @@ struct DssFunction
 {
     DssFunction( TokamakMagneticField c):f_(c), c_(c),
         bhatR_(c), bhatZ_(c), bhatP_(c),
-        gradbhatR_(c), gradbhatZ_(c), gradbhatP_(c){}
+        bhatRR_(c), bhatZR_(c), bhatPR_(c),
+        bhatRZ_(c), bhatZZ_(c), bhatPZ_(c){}
     double operator()(double R, double Z, double phi) const {
         double bhatR = bhatR_(R,Z), bhatZ = bhatZ_(R,Z), bhatP = bhatP_(R,Z);
+        double bhatRR = bhatRR_(R,Z), bhatZR = bhatZR_(R,Z), bhatPR = bhatPR_(R,Z);
+        double bhatRZ = bhatRZ_(R,Z), bhatZZ = bhatZZ_(R,Z), bhatPZ = bhatPZ_(R,Z);
         double fR = f_.dR(R,Z,phi), fZ = f_.dZ(R,Z,phi), fP = f_.dP(R,Z,phi);
         double fRR = f_.dRR(R,Z,phi), fRZ = f_.dRZ(R,Z,phi), fZZ = f_.dZZ(R,Z,phi);
         double fRP = f_.dRP(R,Z,phi), fZP = f_.dZP(R,Z,phi), fPP = f_.dPP(R,Z,phi);
-        double gradbhatR = gradbhatR_(R,Z), gradbhatZ = gradbhatZ_(R,Z), gradbhatP = gradbhatP_(R,Z);
+        double gradbhatR = bhatR*bhatRR+bhatZ*bhatRZ,
+               gradbhatZ = bhatR*bhatZR+bhatZ*bhatZZ,
+               gradbhatP = bhatR*bhatPR+bhatZ*bhatPZ;
         return bhatR*bhatR*fRR + bhatZ*bhatZ*fZZ + bhatP*bhatP*fPP
             +2.*(bhatR*bhatZ*fRZ + bhatR*bhatP*fRP + bhatZ*bhatP*fZP)
             + gradbhatR*fR + gradbhatZ*fZ + gradbhatP*fP;
@@ -190,9 +195,12 @@ struct DssFunction
     dg::geo::BHatR bhatR_;
     dg::geo::BHatZ bhatZ_;
     dg::geo::BHatP bhatP_;
-    dg::geo::GradBHatR gradbhatR_;
-    dg::geo::GradBHatZ gradbhatZ_;
-    dg::geo::GradBHatP gradbhatP_;
+    dg::geo::BHatRR bhatRR_;
+    dg::geo::BHatZR bhatZR_;
+    dg::geo::BHatPR bhatPR_;
+    dg::geo::BHatRZ bhatRZ_;
+    dg::geo::BHatZZ bhatZZ_;
+    dg::geo::BHatPZ bhatPZ_;
 };
 
 //positive Laplacian \Delta_\parallel

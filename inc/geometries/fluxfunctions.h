@@ -435,6 +435,68 @@ struct CylindricalVectorLvl0
 };
 
 /**
+* @brief This struct bundles a vector field and its divergence
+*/
+struct CylindricalVectorLvl1
+{
+    ///the access functions are undefined as long as the class remains empty
+    CylindricalVectorLvl1(){}
+    ///Copy given Functors
+    CylindricalVectorLvl1(  CylindricalFunctor v_x,
+        CylindricalFunctor v_y,
+        CylindricalFunctor v_z,
+        CylindricalFunctor v_xx,
+        CylindricalFunctor v_xy,
+        CylindricalFunctor v_yx,
+        CylindricalFunctor v_yy,
+        CylindricalFunctor v_zx,
+        CylindricalFunctor v_zy
+        ): f0{v_x, v_y, v_z},
+        m_xx(v_xx), m_xy(v_xy),
+        m_yx(v_yx), m_yy(v_yy),
+        m_zx(v_zx), m_zy(v_zy) {}
+    ///replace with given functors
+    void reset(  CylindricalFunctor v_x,
+        CylindricalFunctor v_y,
+        CylindricalFunctor v_z,
+        CylindricalFunctor v_xx,
+        CylindricalFunctor v_xy,
+        CylindricalFunctor v_yx,
+        CylindricalFunctor v_yy,
+        CylindricalFunctor v_zx,
+        CylindricalFunctor v_zy)
+    {
+        f0.reset( v_x,v_y,v_z);
+        m_xx = v_xx, m_xy = v_xy;
+        m_yx = v_yx, m_yy = v_yy;
+        m_zx = v_zx, m_zy = v_zy;
+    }
+    ///type conversion: Lvl2 can also be used as Lvl1
+    operator CylindricalVectorLvl0 ()const {return f0;}
+    /// x-component of the vector
+    const CylindricalFunctor& x()const{return f0.x();}
+    /// y-component of the vector
+    const CylindricalFunctor& y()const{return f0.y();}
+    /// z-component of the vector
+    const CylindricalFunctor& z()const{return f0.z();}
+    /// \f$\partial_R x(R,Z)\f$
+    const CylindricalFunctor& xx()const{return m_xx;}
+    /// \f$\partial_Z x(R,Z)\f$
+    const CylindricalFunctor& xy()const{return m_xy;}
+    /// \f$\partial_R y(R,Z)\f$
+    const CylindricalFunctor& yx()const{return m_yx;}
+    /// \f$\partial_Z y(R,Z)\f$
+    const CylindricalFunctor& yy()const{return m_yy;}
+    /// \f$\partial_R z(R,Z)\f$
+    const CylindricalFunctor& zx()const{return m_zx;}
+    /// \f$\partial_Z z(R,Z)\f$
+    const CylindricalFunctor& zy()const{return m_zy;}
+    private:
+    CylindricalVectorLvl0 f0;
+    CylindricalFunctor m_xx, m_xy, m_yx, m_yy, m_zx, m_zy;
+};
+
+/**
  * @brief Return scalar product of two vector fields \f$ v_0w_0 + v_1w_1 + v_2w_2\f$
  */
 struct ScalarProduct : public aCylindricalFunctor<ScalarProduct>
