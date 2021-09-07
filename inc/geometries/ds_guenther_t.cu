@@ -97,7 +97,7 @@ int main( )
     dsFAST( dg::geo::einsMinus, funST, eMinus);
     dg::geo::ds_average( dsFAST, 1., eMinus, zPlus, 0., derivative);
     dg::blas1::pointwiseDot( derivative, divb, derivative);
-    ds.dss( 1., fun, 1., derivative);
+    //ds.dss( 1., fun, 1., derivative);
 
     double sol = dg::blas2::dot( vol3d, sol3);
     double vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, fun));
@@ -106,5 +106,29 @@ int main( )
     std::string name  = "directLapST";
     std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
               <<" "<<sqrt(norm/sol)<<" #  \t"<<vol<<"\n";
+    ///##########################################################///
+    std::cout << "# TEST VOLUME FORMS\n";
+    double volume = dg::blas1::dot( 1., dsFAST.sqrtG());
+    double volumeM = dg::blas1::dot( 1., dsFAST.sqrtGm());
+    double volumeP = dg::blas1::dot( 1., dsFAST.sqrtGp());
+    std::cout << "volume_error:\n";
+    std::cout <<"    minus:"<<std::setw(13)<<" "<<fabs(volumeM-volume)/volume<<"\n";
+    std::cout <<"    plus:" <<std::setw(14)<<" "<<fabs(volumeP-volume)/volume<<"\n";
+
+
+    dg::DVec f(g3d.size(), 1.), temp1(f), temp2(f), temp3(f);
+    dsFAST(dg::geo::einsPlus, f, temp1);
+
+    dg::blas1::pointwiseDot( dsFAST.sqrtG(), temp1, temp3);
+    dsFAST(dg::geo::einsPlusT, temp3, temp2);
+    dg::blas1::pointwiseDivide( temp2, dsFAST.sqrtGm(), temp2);
+    dg::blas1::axpby( 1., temp2, -1., 1., temp2);
+    dsFAST(dg::geo::einsPlus, temp2, temp3);
+
+    double error = dg::blas2::dot( temp3, vol, temp3);
+    //norm = dg::blas2::dot( 1., vol, 1.);
+    norm = dg::blas2::dot( temp1, vol, temp1);
+    std::cout <<"    Inv:"<<std::setw(15)<<" "<<sqrt(error/norm)<<"\n";
+
     return 0;
 }

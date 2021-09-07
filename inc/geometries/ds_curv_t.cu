@@ -87,5 +87,12 @@ int main(int argc, char * argv[])
                   <<" "<<sqrt(norm/sol)<<"\n";
     }
     ///##########################################################///
+    std::cout << "# TEST VOLUME FORMS\n";
+    double volume = dg::blas1::dot( 1., ds.fieldaligned().sqrtG());
+    double volumeM = dg::blas1::dot( 1., ds.fieldaligned().sqrtGm());
+    double volumeP = dg::blas1::dot( 1., ds.fieldaligned().sqrtGp());
+    std::cout << "volume_error:\n";
+    std::cout <<"    minus:"<<std::setw(13)<<" "<<fabs(volumeM-volume)/volume<<"\n";
+    std::cout <<"    plus:" <<std::setw(14)<<" "<<fabs(volumeP-volume)/volume<<"\n";
     return 0;
 }

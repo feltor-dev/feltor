@@ -67,6 +67,72 @@ namespace geo{
  * of memory consumption.
  */
 
+///@cond
+namespace detail
+{
+struct DSCentered
+{
+    DSCentered( double alpha, double beta) : m_alpha(alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dsf, double fm, double fo, double fp, double hm,
+            double hp)
+    {
+        dsf = m_alpha*(
+            fm*( 1./(hp+hm) - 1./hm) +
+            fo*( 1./hm - 1./hp) +
+            fp*( 1./hp - 1./(hp+hm))
+            ) + m_beta*dsf;
+    };
+
+    private:
+    double m_alpha, m_beta;
+};
+struct DSSCentered
+{
+    DSSCentered( double alpha, double beta) : m_alpha(alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dssf, double fm, double fo, double fp, double hm,
+            double hp)
+    {
+        dssf = m_alpha*(
+                    2.*fm/(hp+hm)/hm - 2.*fo/hp/hm + 2.*fp/(hp+hm)/hp
+               ) + m_beta*dssf;
+    };
+
+    private:
+    double m_alpha, m_beta;
+};
+struct DSSDCentered
+{
+    DSSDCentered( double alpha, double beta) : m_ds(1.,0.), m_dss(1., 0.),
+        m_alpha( alpha), m_beta(beta){}
+    DG_DEVICE
+    void operator()( double& dssdf, double fm, double fo, double fp, double hm,
+            double hp, double Gm, double Go, double Gp, double bPm, double bP0, double bPp)
+    {
+        // various combinations of bP do not seem to matter
+        double bP2 = (bPp+bP0)/2.;
+        double bM2 = (bPm+bP0)/2.;
+        double fm2 = (fo-fm)/hm;
+        double fp2 = (fp-fo)/hp;
+        double gp2 = (Gp + Go)/Go/2.;
+        double gm2 = (Gm + Go)/Go/2.;
+
+        dssdf = m_alpha*( gp2*fp2*bP2*bP2 - bM2*bM2*gm2*fm2)/(hp+hm)*2. + m_beta*dssdf;
+
+        // does not seem to conserve nicely
+        //dssdf = m_alpha*( fp*gp2*bP2*bP2 - 2*bP0*bP0*fo + bM2*bM2*gm2*fm)/(hp)/(hm) + m_beta*dssdf;
+        //dssdf = m_alpha*( fp*Gp/Go*bPp*bPp - 2*bP0*bP0*fo + bPm*bPm*Gm/Go*fm)/(hp)/(hm) + m_beta*dssdf;
+    };
+
+    private:
+    DSCentered m_ds;
+    DSSCentered m_dss;
+    double m_alpha, m_beta;
+};
+
+}//namespace detail
+///@endcond
 
 /**
  * @brief Assign boundary conditions along magnetic field lines
@@ -307,7 +373,7 @@ struct DS
      * @sa \c Fieldaligned
      */
     template<class Limiter>
-    DS(const dg::geo::CylindricalVectorLvl0& vec, const ProductGeometry& grid,
+    DS(const dg::geo::CylindricalVectorLvl1& vec, const ProductGeometry& grid,
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
@@ -695,30 +761,62 @@ template<class G, class I, class M, class container>
 void DS<G,I,M,container>::do_divBackward( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
-    dg::blas1::pointwiseDivide( m_temp0, m_fa.hp(), m_temp0);
-    m_fa(einsPlusT, m_temp0, m_tempP);
-    dg::blas1::pointwiseDot( alpha, m_temp0, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
+    //m_fa(einsMinus, f, m_tempM);
+    //dg::blas1::subroutine( [alpha,beta] DG_DEVICE( double& dsf, double f0, double f1,
+    //            double hm, double Gm, double G0){
+    //            dsf = alpha*(G0*f0 - Gm*f1 )/G0/hm + beta*dsf; },
+    //        dsf, f, m_tempM, m_fa.hm(), m_fa.sqrtGm(), m_fa.sqrtG());
+    //adjoint
+    //dg::blas1::pointwiseDot( f, m_fa.sqrtGp(), m_tempP);
+    //dg::blas1::pointwiseDivide( m_tempP, m_fa.hp(), m_tempP);
+    //m_fa(einsPlusT, m_tempP, m_tempM);
+    //dg::blas1::pointwiseDivide( m_tempM, m_fa.sqrtG(), m_tempM);
+    //dg::blas1::pointwiseDivide( f, m_fa.hp(), m_temp0);
+    //dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
+    //adjoint2
+    dg::blas1::pointwiseDivide( f, m_fa.hm(), m_temp0);
+    m_fa(einsMinus, m_temp0, m_tempM);
+    dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
 }
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_divForward( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
-    dg::blas1::pointwiseDivide( m_temp0, m_fa.hm(), m_temp0);
-    m_fa(einsMinusT, m_temp0, m_tempM);
-    dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_temp0, m_inv3d, beta, dsf);
+    //m_fa(einsPlus, f, m_tempP);
+    //dg::blas1::subroutine( [alpha,beta] DG_DEVICE( double& dsf, double f0, double f1,
+    //            double hp, double Gp, double G0){
+    //            dsf = alpha*(Gp*f1 - G0*f0)/G0/hp + beta*dsf; },
+    //        dsf, f, m_tempP, m_fa.hp(), m_fa.sqrtGp(), m_fa.sqrtG());
+    m_fa(einsPlus, f, m_tempP);
+    dg::blas1::subroutine( [alpha,beta] DG_DEVICE( double& dsf, double f0, double f1,
+                double hp, double Gp, double G0, double bPp, double bP0){
+                dsf = alpha*(bPp*Gp*f1 - bP0*G0*f0)/G0/hp + beta*dsf; },
+            dsf, f, m_tempP, m_fa.deltaPhi(), m_fa.sqrtGp(), m_fa.sqrtG(), m_fa.bphiP(), m_fa.bphi());
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_divCentered( double alpha, const container& f, double beta, container& dsf)
 {
     //adjoint discretisation
-    dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
-    dg::blas1::axpby( 1., m_fa.hp(), 1., m_fa.hm(), m_tempP);
-    dg::blas1::pointwiseDivide( m_temp0, m_tempP, m_temp0);
-    m_fa(einsPlusT,  m_temp0, m_tempP);
-    m_fa(einsMinusT, m_temp0, m_tempM);
-    dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
+    //dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
+    //dg::blas1::axpby( 1., m_fa.hp(), 1., m_fa.hm(), m_tempP);
+    //dg::blas1::pointwiseDivide( m_temp0, m_tempP, m_temp0);
+    //m_fa(einsPlusT,  m_temp0, m_tempP);
+    //m_fa(einsMinusT, m_temp0, m_tempM);
+    //dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
+    m_fa(einsMinus, f, m_tempM);
+    m_fa(einsPlus,  f, m_tempP);
+    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& dsf, double fm,
+                double fo, double fp, double hm, double hp, double Gm,
+                double Gp, double G0, double bPm, double bP0, double bPp)
+        {
+            dsf = alpha*(
+                fm*Gm*bPm*( 1./(hp+hm) - 1./hm) +
+                fo*G0*bP0*( 1./hm - 1./hp) +
+                fp*Gp*bPp*( 1./hp - 1./(hp+hm))
+                )/G0 + beta*dsf;
+            //dsf = 0.5*alpha*( (Gp*fp - G0*fo)/hp + (G0*fo-Gm*fm)/hm )/G0 + beta*dsf;
+        }, dsf, m_tempM, f, m_tempP, m_fa.deltaPhi(), m_fa.deltaPhi(), m_fa.sqrtGm(),
+        m_fa.sqrtGp(), m_fa.sqrtG(), m_fa.bphiM(), m_fa.bphi(), m_fa.bphiP());
 
 }
 
@@ -784,10 +882,10 @@ void ds_forward(const FieldAligned& fa, double alpha, const container& f, const 
 {
     //direct
     dg::blas1::subroutine( [ alpha, beta]DG_DEVICE(
-            double& dsf, double fo, double fp, double hp){
-                dsf = alpha*( fp - fo)/hp + beta*dsf;
+            double& dsf, double fo, double fp, double bphi, double hp){
+                dsf = alpha*bphi*( fp - fo)/hp + beta*dsf;
             },
-            g, f, fp, fa.hp());
+            g, f, fp, fa.bphi(), fa.deltaPhi());
 }
 /**
 * @brief 2nd order forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -855,64 +953,6 @@ void ds_backward2( const FieldAligned& fa, double alpha, const container& fmm, c
 
 }
 
-///@cond
-namespace detail
-{
-struct DSCentered
-{
-    DSCentered( double alpha, double beta) : m_alpha(alpha), m_beta(beta){}
-    DG_DEVICE
-    void operator()( double& dsf, double fm, double fo, double fp, double hm,
-            double hp)
-    {
-        dsf = m_alpha*(
-            fm*( 1./(hp+hm) - 1./hm) +
-            fo*( 1./hm - 1./hp) +
-            fp*( 1./hp - 1./(hp+hm))
-            ) + m_beta*dsf;
-    };
-
-    private:
-    double m_alpha, m_beta;
-};
-struct DSSCentered
-{
-    DSSCentered( double alpha, double beta) : m_alpha(alpha), m_beta(beta){}
-    DG_DEVICE
-    void operator()( double& dssf, double fm, double fo, double fp, double hm,
-            double hp)
-    {
-        dssf = m_alpha*(
-                    2.*fm/(hp+hm)/hm - 2.*fo/hp/hm + 2.*fp/(hp+hm)/hp
-               ) + m_beta*dssf;
-    };
-
-    private:
-    double m_alpha, m_beta;
-};
-struct DSSDCentered
-{
-    DSSDCentered( double alpha, double beta) : m_ds(1.,0.), m_dss(1., 0.),
-        m_alpha( alpha), m_beta(beta){}
-    DG_DEVICE
-    void operator()( double& dssdf, double fm, double fo, double fp, double hm,
-            double hp, double divv)
-    {
-        // Delta_par = divv * ds + dss
-        double ds = 0., dss = 0.;
-        m_ds(   ds, fm, fo, fp, hm, hp);
-        m_dss( dss, fm, fo, fp, hm, hp);
-        dssdf = m_alpha*( ds*divv + dss) + m_beta*dssdf;
-    };
-
-    private:
-    DSCentered m_ds;
-    DSSCentered m_dss;
-    double m_alpha, m_beta;
-};
-
-}//namespace detail
-///@endcond
 
 /**
 * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -973,7 +1013,8 @@ void dssd_centered( const container& divv, const FieldAligned& fa, double
         double beta, container& g)
 {
     dg::blas1::subroutine( detail::DSSDCentered( alpha, beta),
-        g, fm, f, fp, fa.hm(), fa.hp(), divv);
+        g, fm, f, fp, fa.deltaPhi(), fa.deltaPhi(), fa.sqrtGm(), fa.sqrtG(), fa.sqrtGp(),
+        fa.bphiM(), fa.bphi(), fa.bphiP());
 }
 
 /**
