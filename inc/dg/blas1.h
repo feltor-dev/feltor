@@ -493,7 +493,7 @@ dg::blas1::transform( two, result, dg::EXP<double>());
 @endcode
  * @param x ContainerType x may alias y
  * @param y (write-only) ContainerType y contains result, may alias x
- * @param op unary Operator to use on every element
+ * @param op unary %Operator to use on every element
  * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_naninf
