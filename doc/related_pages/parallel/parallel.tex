@@ -599,13 +599,13 @@ In order to find the matrix that is the closest unitary matrix we use an algorit
 by Bj\"orck and Bowie. If $A$ is almost unitary than the closest unitary matrix
 is given by the polar decomposition (and derived from the singular value decomposition of $A$):
 \begin{align}
-    U = A( \Eins - (\Eins - A^\dagger A))^{-1/2} = A \left( \Eins + \frac{1}{2}Q
+    U = A( \Eins - (\Eins - A^{ad} A))^{-1/2} = A \left( \Eins + \frac{1}{2}Q
    +\frac{3}{8}Q^2 + \ldots\right)
 \end{align}
-where  $Q=\Eins-A^\dagger A$ and the last identity is given by the Taylor expansion of the square root.
+where  $Q=\Eins-A^{ad} A$ and the last identity is given by the Taylor expansion of the square root.
 In this case the adjoint is defined differently from before
 \begin{align}
-    A^\dagger  = \frac{1}{\sqrt{G^+}}A^\mathrm{T}\sqrt{g}
+    A^{ad}  = \frac{1}{\sqrt{G^+}}A^\mathrm{T}\sqrt{g}
 \end{align}
 
 

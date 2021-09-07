@@ -44,9 +44,6 @@ namespace geo{
  * @param fp fieldaligned(einsPlus, f, fp)
  * @param fpp twice apply fieldaligned(einsPlus, f, fp)
  */
-/*!@class hide_ds_dir
- * @param dir indicate the direction in the bracket operator and in symv
- */
 /*!@class hide_ds_freestanding
  * @note This function computes the same as the corresponding member function
  * of \c dg::geo::DS but you have to compute the einsPlus and einsMinus
@@ -89,7 +86,7 @@ struct DSCentered
 };
 struct DSSCentered
 {
-    DSSCentered( double alpha, double beta) : m_alpha(alpha), m_beta(beta){}
+    DSSCentered( double alpha, double beta, double delta) : m_alpha(alpha), m_beta(beta), m_delta(delta){}
     DG_DEVICE
     void operator()( double& dssf, double fm, double fo, double fp, double hm,
             double hp)
@@ -98,27 +95,37 @@ struct DSSCentered
                     2.*fm/(hp+hm)/hm - 2.*fo/hp/hm + 2.*fp/(hp+hm)/hp
                ) + m_beta*dssf;
     };
+    void operator()( double& dssf, double fm, double fo, double fp,
+        double bPm, double bP0, double bPp)
+    {
+        double bP2 = (bPp+bP0)/2.;
+        double bM2 = (bPm+bP0)/2.;
+        double fm2 = (fo-fm)/m_delta;
+        double fp2 = (fp-fo)/m_delta;
+
+        dssf = m_alpha*bP0*( bP2*fp2 - bM2*fm2)/m_delta + m_beta*dssf;
+    }
 
     private:
-    double m_alpha, m_beta;
+    double m_alpha, m_beta, m_delta;
 };
 struct DSSDCentered
 {
-    DSSDCentered( double alpha, double beta) : m_ds(1.,0.), m_dss(1., 0.),
-        m_alpha( alpha), m_beta(beta){}
+    DSSDCentered( double alpha, double beta, double delta) :
+        m_alpha( alpha), m_beta(beta), m_delta(delta){}
     DG_DEVICE
-    void operator()( double& dssdf, double fm, double fo, double fp, double hm,
-            double hp, double Gm, double Go, double Gp, double bPm, double bP0, double bPp)
+    void operator()( double& dssdf, double fm, double fo, double fp, double Gm,
+        double Go, double Gp, double bPm, double bP0, double bPp)
     {
         // various combinations of bP do not seem to matter
         double bP2 = (bPp+bP0)/2.;
         double bM2 = (bPm+bP0)/2.;
-        double fm2 = (fo-fm)/hm;
-        double fp2 = (fp-fo)/hp;
+        double fm2 = (fo-fm)/m_delta;
+        double fp2 = (fp-fo)/m_delta;
         double gp2 = (Gp + Go)/Go/2.;
         double gm2 = (Gm + Go)/Go/2.;
 
-        dssdf = m_alpha*( gp2*fp2*bP2*bP2 - bM2*bM2*gm2*fm2)/(hp+hm)*2. + m_beta*dssdf;
+        dssdf = m_alpha*( gp2*fp2*bP2*bP2 - bM2*bM2*gm2*fm2)/m_delta + m_beta*dssdf;
 
         // does not seem to conserve nicely
         //dssdf = m_alpha*( fp*gp2*bP2*bP2 - 2*bP0*bP0*fo + bM2*bM2*gm2*fm)/(hp)/(hm) + m_beta*dssdf;
@@ -126,9 +133,7 @@ struct DSSDCentered
     };
 
     private:
-    DSCentered m_ds;
-    DSSCentered m_dss;
-    double m_alpha, m_beta;
+    double m_alpha, m_beta, m_delta;
 };
 
 }//namespace detail
@@ -167,13 +172,16 @@ void assign_bc_along_field_2nd( const FieldAligned& fa, const container& fm,
         const container& f, const container& fp, container& fmg, container& fpg,
         dg::bc bound, std::array<double,2> boundary_value = {0,0})
 {
+    double delta = fa.deltaPhi();
     if( bound == dg::NEU)
     {
         double dbm = boundary_value[0], dbp = boundary_value[1];
-        dg::blas1::subroutine( [dbm, dbp]DG_DEVICE( double fm, double fo,
-                    double fp, double& fmg, double& fpg, double hm, double hp,
+        dg::blas1::subroutine( [dbm, dbp, delta]DG_DEVICE( double fm, double fo,
+                    double fp, double& fmg, double& fpg,
                     double hbm, double hbp, double bbm, double bbo, double bbp
                     ){
+            //formula derived for non-equidistant grid
+            double hm = delta, hp = delta;
             double plus=0, minus=0, bothP=0, bothM = 0;
             plus = dbp*hp*(hm+hp)/(2.*hbp+hm) +
                 fo*(2.*hbp+hm-hp)*(hm+hp)/hm/(2.*hbp+hm) + fm*hp*(-2.*hbp +
@@ -187,16 +195,18 @@ void assign_bc_along_field_2nd( const FieldAligned& fa, const container& fm,
                 dbm*hp*(2.*hbp-hp)/2./(hbm+hbp);
             fmg = (1.-bbo-bbm)*fm + bbm*minus + bbo*bothM;
             fpg = (1.-bbo-bbp)*fp + bbp*plus  + bbo*bothP;
-        }, fm, f, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
+        }, fm, f, fp, fmg, fpg, fa.hbm(), fa.hbp(), fa.bbm(),
                 fa.bbo(), fa.bbp() );
     }
     else// if( bound == dg:DIR)
     {
         double fbm = boundary_value[0], fbp = boundary_value[1];
-        dg::blas1::subroutine( [fbm, fbp]DG_DEVICE( double fm, double fo,
-                    double fp, double& fmg, double& fpg, double hm, double hp,
+        dg::blas1::subroutine( [fbm, fbp, delta]DG_DEVICE( double fm, double fo,
+                    double fp, double& fmg, double& fpg,
                     double hbm, double hbp, double bbm, double bbo, double bbp
                     ){
+            //formula derived for non-equidistant grid
+            double hm = delta, hp = delta;
             double plus=0, minus=0, bothP=0, bothM = 0;
             plus  = fm*hp*(-hbp + hp)/hm/(hbp+hm) + fo*(hbp-hp)*(hm+hp)/hbp/hm
                 +fbp*hp*(hm+hp)/hbp/(hbp+hm);
@@ -208,7 +218,7 @@ void assign_bc_along_field_2nd( const FieldAligned& fa, const container& fm,
                 fbp*hp*(hbm+hp)/hbp/(hbm+hbp) + fbm*hp*(-hbp+hp)/hbm/(hbm+hbp);
             fmg = (1.-bbo-bbm)*fm + bbm*minus + bbo*bothM;
             fpg = (1.-bbo-bbp)*fp + bbp*plus  + bbo*bothP;
-        }, fm, f, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
+        }, fm, f, fp, fmg, fpg, fa.hbm(), fa.hbp(), fa.bbm(),
                 fa.bbo(), fa.bbp());
     }
 
@@ -220,8 +230,8 @@ void assign_bc_along_field_2nd( const FieldAligned& fa, const container& fm,
  * @tparam FieldAligned
  * @tparam container
  * @param fa
- * @param fm
- * @param fp
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
  * @param fmg result (can alias fm)
  * @param fpg result (can alias fp)
  * @param bound either dg::NEU or dg::DIR (rest not implemented yet)
@@ -234,27 +244,29 @@ void assign_bc_along_field_1st( const FieldAligned& fa, const container& fm,
         const container& fp, container& fmg, container& fpg,
         dg::bc bound, std::array<double,2> boundary_value = {0,0})
 {
+    double delta = fa.deltaPhi();
     if( bound == dg::NEU)
     {
         double dbm = boundary_value[0], dbp = boundary_value[1];
-        dg::blas1::subroutine( [dbm, dbp]DG_DEVICE( double fm, double fp,
-                    double& fmg, double& fpg, double hm, double hp,
-                    double bbm, double bbp
+        dg::blas1::subroutine( [dbm, dbp, delta]DG_DEVICE( double fm, double fp,
+                    double& fmg, double& fpg, double bbm, double bbp
                     ){
+            double hm = delta, hp = delta;
             double plus=0, minus=0;
             plus = fm + dbp*(hp+hm);
             minus = fp - dbm*(hp+hm);
             fmg = (1.-bbm)*fm + bbm*minus;
             fpg = (1.-bbp)*fp + bbp*plus;
-        }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.bbm(), fa.bbp() );
+        }, fm, fp, fmg, fpg, fa.bbm(), fa.bbp() );
     }
     else// if( bound == dg:DIR)
     {
         double fbm = boundary_value[0], fbp = boundary_value[1];
-        dg::blas1::subroutine( [fbm, fbp]DG_DEVICE( double fm, double fp,
-                    double& fmg, double& fpg, double hm, double hp, double hbm,
+        dg::blas1::subroutine( [fbm, fbp, delta]DG_DEVICE( double fm, double fp,
+                    double& fmg, double& fpg, double hbm,
                     double hbp, double bbm, double bbo, double bbp
                     ){
+            double hm = delta, hp = delta;
             double plus=0, minus=0, bothP=0, bothM = 0;
             plus  = fm + (fbp-fm)/(hbp+hm)*(hp+hm) ;
             minus = fp - (hp+hm)*(fp-fbm)/(hp+hbm);
@@ -262,7 +274,7 @@ void assign_bc_along_field_1st( const FieldAligned& fa, const container& fm,
             bothP = fbp - (fbp-fbm)/(hbp+hbm)*(hbp+hm);
             fmg = (1.-bbo-bbm)*fm + bbm*minus + bbo*bothM;
             fpg = (1.-bbo-bbp)*fp + bbp*plus  + bbo*bothP;
-        }, fm, fp, fmg, fpg, fa.hm(), fa.hp(), fa.hbm(), fa.hbp(), fa.bbm(),
+        }, fm, fp, fmg, fpg, fa.hbm(), fa.hbp(), fa.bbm(),
                 fa.bbo(), fa.bbp());
     }
 }
@@ -307,10 +319,8 @@ void swap_bc_perp( const FieldAligned& fa, const container& fm,
 }
 
 /*!@class hide_ds_attention
-@attention The \c div and \c symv member functions reliably converge only if fieldlines
-do not(!) intersect the boundary and then only if the \c mx and \c my
-    parameters are sufficiently high
-*/
+@note The \c div and \c symv member functions are close to but not exactly volume conserving
+(at least if not the linear interpolation is chosen in Fieldaligned)*/
 
 /**
 * @brief Class for the evaluation of parallel derivatives
@@ -323,9 +333,8 @@ in arbitrary coordinates
 @snippet ds_t.cu doxygen
  * @note The parallel Laplacian cannot be inverted as long as there are
  * closed fieldlines somewhere in the domain (which is virtually always true). There is therefore no norm parameter in the class.
-@attention The \c div and \c symv member functions reliably work only if fieldlines
-do not(!) intersect the boundary and then only if the \c mx and \c my
-    parameters are sufficiently high
+@note The \c div and \c symv member functions are close to but not exactly volume conserving
+(at least if not the linear interpolation is chosen in Fieldaligned)
 * @ingroup fieldaligned
 * @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
@@ -347,7 +356,6 @@ struct DS
      * @brief Create the magnetic unit vector field and construct
 
      * @copydoc hide_fieldaligned_physics_parameters
-     * @copydoc hide_ds_dir
      * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
      */
@@ -356,19 +364,17 @@ struct DS
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
-        dg::direction dir = dg::centered,
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
         double deltaPhi=-1, std::string interpolation_method = "dg"):
         DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi,
-                    interpolation_method), dir )
+                    interpolation_method) )
     {
     }
     /**
      * @brief Use the given vector field to construct
      *
      * @copydoc hide_fieldaligned_physics_parameters
-     * @copydoc hide_ds_dir
      * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
      */
@@ -377,21 +383,19 @@ struct DS
         dg::bc bcx = dg::NEU,
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
-        dg::direction dir = dg::centered,
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
         double deltaPhi=-1, std::string interpolation_method = "dg"):
         DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi,
-                    interpolation_method), dir)
+                    interpolation_method))
     {
     }
     /**
      * @brief Re-construct from a given \c Fieldaligned object
      *
      * @param fieldaligned this object will be used in all further member calls
-     * @copydoc hide_ds_dir
      */
-    DS( FA fieldaligned, dg::direction dir = dg::centered);
+    DS( FA fieldaligned);
     /**
     * @brief Perfect forward parameters to one of the constructors
     * @tparam Params deduced by the compiler
@@ -402,13 +406,6 @@ struct DS
     {
         //construct and swap
         *this = DS( std::forward<Params>( ps)...);
-    }
-
-    /*!@brief Set the direction used in the operator() and symv member
-     * @param dir new direction
-     */
-    void set_direction( dg::direction dir){
-        m_dir = dir;
     }
 
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
@@ -479,7 +476,7 @@ struct DS
     void centered( double alpha, const container& f, double beta, container& g){
         m_fa(einsPlus,  f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        ds_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        ds_centered( m_fa, alpha, m_tempM, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::ds_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void centered_bc_along_field(
@@ -489,13 +486,13 @@ struct DS
         m_fa(einsMinus, f, m_tempM);
         assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
-        ds_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        ds_centered( m_fa, alpha, m_tempM, m_tempP, beta, g);
 
     }
     /**
     * @brief backward derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * backward derivative \f$ g_i = \frac{1}{h_z^-}(f_{i} - f_{i-1}) \f$
+    * backward derivative \f$ g_i = \frac{v^\varphi}{\Delta\varphi}(f_{i} - f_{i-1}) \f$
     * @copydoc hide_ds_parameters2
     */
     void backward( const container& f, container& g){
@@ -504,7 +501,7 @@ struct DS
     /**
     * @brief forward derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * forward derivative \f$ g_i = \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * forward derivative \f$ g_i = \frac{v^\varphi}{\Delta\varphi}(f_{i+1} - f_{i})\f$
     * @copydoc hide_ds_parameters2
     */
     void forward( const container& f, container& g){
@@ -513,7 +510,7 @@ struct DS
     /**
     * @brief centered derivative \f$ g = \vec v \cdot \nabla f \f$
     *
-    * The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
+    * centered derivative \f$ g_i = \frac{v^\varphi}{2\Delta\varphi}(f_{i+1} - f_{i-1})\f$
     * @copydoc hide_ds_parameters2
     */
     void centered( const container& f, container& g){
@@ -523,72 +520,43 @@ struct DS
     ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
-    ///@note divForward is the negative adjoint of backward
     void divForward( double alpha, const container& f, double beta, container& g){
-        do_divForward( alpha, f, beta, g);
+        m_fa(einsPlus,  f, m_tempP);
+        ds_divForward( m_fa, alpha, f, m_tempP, beta, g);
     }
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
-    ///@note divBackward is the negative adjoint of forward
     void divBackward( double alpha, const container& f, double beta, container& g){
-        do_divBackward( alpha, f, beta, g);
+        m_fa(einsMinus,  f, m_tempM);
+        ds_divBackward( m_fa, alpha, m_tempM, f, beta, g);
     }
     ///@brief centered divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
-    ///@note divCentered is the negative adjoint of centered
     void divCentered(double alpha, const container& f, double beta, container& g){
-        do_divCentered( alpha, f, beta, g);
+        m_fa(einsPlus,  f, m_tempP);
+        m_fa(einsMinus, f, m_tempM);
+        ds_divCentered( m_fa, alpha, m_tempM, m_tempP, beta, g);
     }
     ///@brief forward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@copydoc hide_ds_attention
-    ///@note divForward is the negative adjoint of backward
     void divForward(const container& f, container& g){
-        do_divForward( 1.,f,0.,g);
+        divForward( 1.,f,0.,g);
     }
     ///@brief backward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@copydoc hide_ds_attention
-    ///@note divBackward is the negative adjoint of forward
     void divBackward(const container& f, container& g){
-        do_divBackward( 1.,f,0.,g);
+        divBackward( 1.,f,0.,g);
     }
     ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@copydoc hide_ds_attention
-    ///@note divCentered is the negative adjoint of centered
     void divCentered(const container& f, container& g){
-        do_divCentered( 1.,f,0.,g);
+        divCentered( 1.,f,0.,g);
     }
-    /// Same as \c dg::geo::divDirectCentered
-    void divDirect( double alpha, const container& divv, const
-            container& f, double beta, container& g){
-        m_fa(einsPlus,  f, m_tempP);
-        m_fa(einsMinus, f, m_tempM);
-        divDirectCentered( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g);
-    }
-
-    /**
-    * @brief Discretizes \f$ g = \vec v\cdot \nabla f \f$
-    *
-    * dependent on dir given in constructor redirects to either \c forward(), \c backward() or \c centered()
-    * @copydoc hide_ds_parameters2
-    */
-    void operator()( const container& f, container& g){
-        ds( m_dir, 1., f, 0., g);
-    }
-    /**
-    * @brief Discretizes \f$ g = \alpha \vec v\cdot \nabla f + \beta g \f$
-    *
-    * dependent on dir given in constructor redirects to either \c forward(), \c backward() or \c centered()
-    * @copydoc hide_ds_parameters4
-    */
-    void operator()(double alpha, const container& f, double beta, container& g){
-        ds(m_dir, alpha, f, beta, g);
-    }
-
 
     /**
     * @brief Discretizes \f$ g = \vec v\cdot \nabla f \f$
@@ -628,7 +596,6 @@ struct DS
     /**
      * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$
      *
-     * If direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters2
      * @copydoc hide_ds_attention
      */
@@ -636,7 +603,6 @@ struct DS
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
-     * if direction given in constructor is centered then centered followed by divCentered and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
      * @copydoc hide_ds_parameters4
      * @copydoc hide_ds_attention
      */
@@ -673,31 +639,36 @@ struct DS
         dss_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::dssd_centered
-    void dssd( double alpha, const container& divv, const container& f, double
+    void dssd( double alpha, const container& f, double
             beta, container& g){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dssd_centered( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        dssd_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::dssd_centered after \c dg::geo::ds_assign_bc_along_field_2nd
-    void dssd_bc_along_field( double alpha, const container& divv, const
+    void dssd_bc_along_field( double alpha, const
             container& f, double beta, container& g, dg::bc bound,
             std::array<double,2> boundary_value = {0,0}){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
-        dssd_centered( divv, m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        dssd_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
+    /**
+     * @brief Set the currently used jfactor (\f$ \alpha \f$)
+     * @param new_jfactor The new scale factor for jump terms
+     */
+    void set_jfactor( double new_jfactor) {m_jfactor = new_jfactor;}
+    /**
+     * @brief Get the currently used jfactor (\f$ \alpha \f$)
+     * @return  The current scale factor for jump terms
+     */
+    double get_jfactor() const {return m_jfactor;}
 
+    /// The volume form with dG weights
     const container& weights()const {
-        return m_vol3d;
-    }
-    const container& inv_weights()const {
-        return m_inv3d;
-    }
-    const container& precond()const {
-        return m_inv3d;
+        return m_fa.sqrtG();
     }
 
     /**
@@ -707,34 +678,26 @@ struct DS
     */
     const FA& fieldaligned() const{return m_fa;}
     private:
-    void do_divForward(double alpha, const container& f, double beta, container& dsf);
-    void do_divBackward(double alpha, const container& f, double beta, container& dsf);
-    void do_divCentered(double alpha, const container& f, double beta, container& dsf);
-
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
-    container m_temp;
-    container m_tempP, m_temp0, m_tempM;
-    container m_vol3d, m_inv3d, m_weights_wo_vol;
-    dg::direction m_dir;
+    container m_tempP, m_tempM;
     Matrix m_jumpX, m_jumpY;
+    double m_jfactor = 1.;
 };
 
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa, dg::direction dir): m_fa(fa), m_dir(dir)
+DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa): m_fa(fa)
 {
-    dg::assign( dg::create::volume(     fa.grid()), m_vol3d);
-    dg::assign( dg::create::weights(    fa.grid()), m_weights_wo_vol);
-    dg::assign( dg::create::inv_volume( fa.grid()), m_inv3d);
     dg::blas2::transfer( dg::create::jumpX( fa.grid(), fa.bcx()), m_jumpX);
     dg::blas2::transfer( dg::create::jumpY( fa.grid(), fa.bcy()), m_jumpY);
-    m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;
+    m_tempP = fa.sqrtG(), m_tempM = m_tempP;
 }
 
 template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::ds( dg::direction dir, double alpha, const container& f, double beta, container& dsf) {
+inline void DS<G,I,M,container>::ds( dg::direction dir, double alpha,
+    const container& f, double beta, container& dsf) {
     switch( dir){
         case dg::centered:
         return centered( alpha, f, beta, dsf);
@@ -745,7 +708,8 @@ inline void DS<G,I,M,container>::ds( dg::direction dir, double alpha, const cont
     }
 }
 template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::div( dg::direction dir, double alpha, const container& f, double beta, container& dsf) {
+inline void DS<G,I,M,container>::div( dg::direction dir, double alpha,
+    const container& f, double beta, container& dsf) {
     switch( dir){
         case dg::centered:
         return divCentered( alpha, f, beta, dsf);
@@ -757,120 +721,23 @@ inline void DS<G,I,M,container>::div( dg::direction dir, double alpha, const con
 }
 
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::do_divBackward( double alpha, const container& f, double beta, container& dsf)
-{
-    //adjoint discretisation
-    //m_fa(einsMinus, f, m_tempM);
-    //dg::blas1::subroutine( [alpha,beta] DG_DEVICE( double& dsf, double f0, double f1,
-    //            double hm, double Gm, double G0){
-    //            dsf = alpha*(G0*f0 - Gm*f1 )/G0/hm + beta*dsf; },
-    //        dsf, f, m_tempM, m_fa.hm(), m_fa.sqrtGm(), m_fa.sqrtG());
-    //adjoint
-    //dg::blas1::pointwiseDot( f, m_fa.sqrtGp(), m_tempP);
-    //dg::blas1::pointwiseDivide( m_tempP, m_fa.hp(), m_tempP);
-    //m_fa(einsPlusT, m_tempP, m_tempM);
-    //dg::blas1::pointwiseDivide( m_tempM, m_fa.sqrtG(), m_tempM);
-    //dg::blas1::pointwiseDivide( f, m_fa.hp(), m_temp0);
-    //dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
-    //adjoint2
-    dg::blas1::pointwiseDivide( f, m_fa.hm(), m_temp0);
-    m_fa(einsMinus, m_temp0, m_tempM);
-    dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
-}
-template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_divForward( double alpha, const container& f, double beta, container& dsf)
-{
-    //adjoint discretisation
-    //m_fa(einsPlus, f, m_tempP);
-    //dg::blas1::subroutine( [alpha,beta] DG_DEVICE( double& dsf, double f0, double f1,
-    //            double hp, double Gp, double G0){
-    //            dsf = alpha*(Gp*f1 - G0*f0)/G0/hp + beta*dsf; },
-    //        dsf, f, m_tempP, m_fa.hp(), m_fa.sqrtGp(), m_fa.sqrtG());
-    m_fa(einsPlus, f, m_tempP);
-    dg::blas1::subroutine( [alpha,beta] DG_DEVICE( double& dsf, double f0, double f1,
-                double hp, double Gp, double G0, double bPp, double bP0){
-                dsf = alpha*(bPp*Gp*f1 - bP0*G0*f0)/G0/hp + beta*dsf; },
-            dsf, f, m_tempP, m_fa.deltaPhi(), m_fa.sqrtGp(), m_fa.sqrtG(), m_fa.bphiP(), m_fa.bphi());
-}
-template<class G, class I, class M, class container>
-void DS<G, I,M,container>::do_divCentered( double alpha, const container& f, double beta, container& dsf)
-{
-    //adjoint discretisation
-    //dg::blas1::pointwiseDot(  m_vol3d, f, m_temp0);
-    //dg::blas1::axpby( 1., m_fa.hp(), 1., m_fa.hm(), m_tempP);
-    //dg::blas1::pointwiseDivide( m_temp0, m_tempP, m_temp0);
-    //m_fa(einsPlusT,  m_temp0, m_tempP);
-    //m_fa(einsMinusT, m_temp0, m_tempM);
-    //dg::blas1::pointwiseDot( alpha, m_tempM, m_inv3d, -alpha, m_tempP, m_inv3d, beta, dsf);
-    m_fa(einsMinus, f, m_tempM);
-    m_fa(einsPlus,  f, m_tempP);
-    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& dsf, double fm,
-                double fo, double fp, double hm, double hp, double Gm,
-                double Gp, double G0, double bPm, double bP0, double bPp)
-        {
-            dsf = alpha*(
-                fm*Gm*bPm*( 1./(hp+hm) - 1./hm) +
-                fo*G0*bP0*( 1./hm - 1./hp) +
-                fp*Gp*bPp*( 1./hp - 1./(hp+hm))
-                )/G0 + beta*dsf;
-            //dsf = 0.5*alpha*( (Gp*fp - G0*fo)/hp + (G0*fo-Gm*fm)/hm )/G0 + beta*dsf;
-        }, dsf, m_tempM, f, m_tempP, m_fa.deltaPhi(), m_fa.deltaPhi(), m_fa.sqrtGm(),
-        m_fa.sqrtGp(), m_fa.sqrtG(), m_fa.bphiM(), m_fa.bphi(), m_fa.bphiP());
-
-}
-
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
-    //CUDA LAMBDAS CANNOT BE CONTAINED IN A PRIVATE OR PROTECTED METHOD
-    if(m_dir == dg::centered) //does not converge with BC!!
-    {
-        m_fa(einsPlus, f, m_tempP);
-        m_fa(einsMinus, f, m_tempM);
-        dg::blas1::subroutine( []DG_DEVICE(
-            double& fp, double fm, double hp, double hm,  double vol3d){
-                fp = ( fp-fm)/(hp+hm);
-                fp = vol3d*fp/(hp+hm);
-            }, m_tempP, m_tempM, m_fa.hp(), m_fa.hm(), m_vol3d);
-        m_fa(einsPlusT,  m_tempP, m_temp);
-        m_fa(einsMinusT, m_tempP, m_tempM);
-        dg::blas1::subroutine([]DG_DEVICE (
-            double& fm, double fp, double weights) { fm = ( fp-fm)/weights; },
-                m_temp, m_tempM, m_weights_wo_vol);
-    }
-    else
-    {
-        m_fa(einsPlus, f, m_tempP);
-        m_fa(einsMinus, f, m_tempM);
-        dg::blas1::subroutine( []DG_DEVICE(
-            double& fp, double& fm, double f0, double hp, double hm, double vol3d) {
-                fp = ( fp-f0)/hp;
-                fp = 0.5*vol3d*fp/hp;
-                fm = ( f0-fm)/hm;
-                fm = 0.5*vol3d*fm/hm;
-            }, m_tempP, m_tempM, f, m_fa.hp(), m_fa.hm(), m_vol3d);
-        m_fa(einsPlusT, m_tempP, m_temp0);
-        m_fa(einsMinusT, m_tempM, m_temp);
-        dg::blas1::subroutine( []DG_DEVICE (
-            double& efm, double fm, double fp, double efp, double weights){
-                efm = ( efm- fm + fp -efp)/weights;
-            }, m_temp, m_tempM, m_tempP, m_temp0, m_weights_wo_vol);
-    }
-
+    dssd( alpha, f, beta, dsTdsf);
     //     add jump terms
-    dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
-    dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
-    //now volume without weights is missing
-
-    dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);
+    if( m_jfactor !=0)
+    {
+        dg::blas2::symv( -m_jfactor*alpha, m_jumpX, f, 1., dsTdsf);
+        dg::blas2::symv( -m_jfactor*alpha, m_jumpY, f, 1., dsTdsf);
+    }
 };
 ///@endcond
 
 /**
 * @brief forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
-* forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
+* forward derivative \f$ g_i = \alpha \frac{v^\varphi}{\Delta\varphi}(f_{i+1} - f_{i}) + \beta g_i\f$
 * @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fp
@@ -878,19 +745,21 @@ void DS<G,I,M,container>::symv( double alpha, const container& f, double beta, c
 * @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
-void ds_forward(const FieldAligned& fa, double alpha, const container& f, const container& fp, double beta, container& g)
+void ds_forward(const FieldAligned& fa, double alpha, const container& f,
+    const container& fp, double beta, container& g)
 {
     //direct
-    dg::blas1::subroutine( [ alpha, beta]DG_DEVICE(
-            double& dsf, double fo, double fp, double bphi, double hp){
-                dsf = alpha*bphi*( fp - fo)/hp + beta*dsf;
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [ alpha, beta, delta]DG_DEVICE(
+            double& dsf, double fo, double fp, double bphi){
+                dsf = alpha*bphi*( fp - fo)/delta + beta*dsf;
             },
-            g, f, fp, fa.bphi(), fa.deltaPhi());
+            g, f, fp, fa.bphi());
 }
 /**
 * @brief 2nd order forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
-* forward derivative \f$ g_i = \alpha \frac{1}{2h_z^+}(-f_{i+2} + 4f_{i+1} - 3f_{i}) + \beta g_i\f$
+* forward derivative \f$ g_i = \alpha \frac{v^\varphi}{2\Delta\varphi}(-f_{i+2} + 4f_{i+1} - 3f_{i}) + \beta g_i\f$
 * @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fpp
@@ -898,21 +767,23 @@ void ds_forward(const FieldAligned& fa, double alpha, const container& f, const 
 * @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
-void ds_forward2(const FieldAligned& fa, double alpha, const container& f, const container& fp, const container& fpp, double beta, container& g)
+void ds_forward2(const FieldAligned& fa, double alpha, const container& f,
+    const container& fp, const container& fpp, double beta, container& g)
 {
     //direct
-    dg::blas1::subroutine( [ alpha, beta]DG_DEVICE(
-            double& dsf, double fo, double fp, double fpp, double hp){
-                dsf = alpha*( -3.*fo + 4.*fp - fpp)/2./hp
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [ alpha, beta, delta]DG_DEVICE(
+            double& dsf, double fo, double fp, double fpp, double bphi){
+                dsf = alpha*bphi*( -3.*fo + 4.*fp - fpp)/2./delta
                      + beta*dsf;
             },
-            g, f, fp, fpp, fa.hp());
+            g, f, fp, fpp, fa.bphi());
 }
 
 /**
 * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
-* backward derivative \f$ g_i = \alpha \frac{1}{h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
+* backward derivative \f$ g_i = \alpha \frac{v^\varphi}{\Delta\varphi}(f_{i} - f_{i-1}) + \beta g_i \f$
 * @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fm
@@ -920,20 +791,22 @@ void ds_forward2(const FieldAligned& fa, double alpha, const container& f, const
 * @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
-void ds_backward( const FieldAligned& fa, double alpha, const container& fm, const container& f, double beta, container& g)
+void ds_backward( const FieldAligned& fa, double alpha, const container& fm,
+    const container& f, double beta, container& g)
 {
     //direct
-    dg::blas1::subroutine( [ alpha, beta] DG_DEVICE(
-            double& dsf, double fo, double fm, double hm){
-                dsf = alpha*( fo - fm)/hm + beta*dsf;
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [ alpha, beta, delta] DG_DEVICE(
+            double& dsf, double fo, double fm, double bphi){
+                dsf = alpha*bphi*( fo - fm)/delta + beta*dsf;
             },
-            g, f, fm, fa.hm());
+            g, f, fm, fa.bphi());
 
 }
 /**
 * @brief 2nd order backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
-* backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(3f_{i} - 4f_{i-1} + f_{i-2}) + \beta g_i \f$
+* backward derivative \f$ g_i = \alpha \frac{v^\varphi}{2\Delta\varphi}(3f_{i} - 4f_{i-1} + f_{i-2}) + \beta g_i \f$
 * @param fa this object will be used to get grid distances
 * @copydoc hide_ds_parameters4
 * @copydoc hide_ds_fmm
@@ -944,12 +817,13 @@ template<class FieldAligned, class container>
 void ds_backward2( const FieldAligned& fa, double alpha, const container& fmm, const container& fm, const container& f, double beta, container& g)
 {
     //direct
-    dg::blas1::subroutine( [ alpha, beta] DG_DEVICE(
-            double& dsf, double fo, double fm,  double fmm, double hm){
-                dsf = alpha*( 3.*fo - 4.*fm + fmm)/2./hm
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [ alpha, beta, delta] DG_DEVICE(
+            double& dsf, double fo, double fm,  double fmm, double bphi){
+                dsf = alpha*bphi*( 3.*fo - 4.*fm + fmm)/2./delta
                     + beta*dsf;
             },
-            g, f, fm, fmm, fa.hm());
+            g, f, fm, fmm, fa.bphi());
 
 }
 
@@ -957,21 +831,27 @@ void ds_backward2( const FieldAligned& fa, double alpha, const container& fmm, c
 /**
 * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
 *
-* The centered derivative is constructed by fitting a polynomial through the plus point the minus point and the center point and evaluating its derivative at the center point. For the exact resulting formula consult the <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
+* The formula used is
+* \f$ g_i = \alpha \frac{v^\varphi}{2\Delta\varphi}(f_{i+1} - f_{i-1}) + \beta g_i \f$
 * @param fa this object will be used to get grid distances
-* @copydoc hide_ds_parameters4
+* @param alpha Scalar
 * @copydoc hide_ds_fm
 * @copydoc hide_ds_fp
+* @param beta Scalar
+* @param g contains result on output (may alias input vectors)
 * @ingroup fieldaligned
 * @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
 void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
-        const container& f, const container& fp, double beta, container& g)
+        const container& fp, double beta, container& g)
 {
     //direct discretisation
-    dg::blas1::subroutine( detail::DSCentered(alpha, beta),
-            g, fm, f, fp, fa.hm(), fa.hp());
+    double delta=fa.deltaPhi();
+    dg::blas1::subroutine( [alpha,beta,delta]DG_DEVICE( double& g, double fm,
+        double fp, double bphi){
+            g = alpha*bphi*(fp-fm)/2./delta + beta*g;
+            }, g, fm, fp, fa.bphi());
 }
 /**
  * @brief Centered derivative \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
@@ -992,14 +872,13 @@ template<class FieldAligned, class container>
 void dss_centered( const FieldAligned& fa, double alpha, const container& fm,
         const container& f, const container& fp, double beta, container& g)
 {
-    dg::blas1::subroutine( detail::DSSCentered( alpha, beta),
-        g, fm, f, fp, fa.hm(), fa.hp());
+    dg::blas1::subroutine( detail::DSSCentered( alpha, beta, fa.deltaPhi()),
+        g, fm, f, fp, fa.bphiM(), fa.bphi(), fa.bphiP());
 }
 /**
  * @brief Centered derivative \f$ g = \alpha \nabla\cdot(\vec v \vec v\cdot \nabla) f + \beta g \f$
  *
  * The formula used is \f[ \Delta_\parallel f = \nabla\cdot \vec v \nabla_\parallel f + \nabla_\parallel^2 f \f]
- * @param divv The divergence of the vector field
  * @param fa this object will be used to get grid distances
  * @copydoc hide_ds_parameters4
  * @copydoc hide_ds_fm
@@ -1008,44 +887,91 @@ void dss_centered( const FieldAligned& fa, double alpha, const container& fm,
  * @copydoc hide_ds_freestanding
  */
 template<class FieldAligned, class container>
-void dssd_centered( const container& divv, const FieldAligned& fa, double
-        alpha, const container& fm, const container& f, const container& fp,
-        double beta, container& g)
+void dssd_centered( const FieldAligned& fa, double alpha, const container& fm,
+    const container& f, const container& fp, double beta, container& g)
 {
-    dg::blas1::subroutine( detail::DSSDCentered( alpha, beta),
-        g, fm, f, fp, fa.deltaPhi(), fa.deltaPhi(), fa.sqrtGm(), fa.sqrtG(), fa.sqrtGp(),
+    dg::blas1::subroutine( detail::DSSDCentered( alpha, beta, fa.deltaPhi()),
+        g, fm, f, fp, fa.sqrtGm(), fa.sqrtG(), fa.sqrtGp(),
         fa.bphiM(), fa.bphi(), fa.bphiP());
 }
 
 /**
- * @brief centered derivative \f$ g = \alpha \nabla \cdot \vec v f + \beta g\f$
+ * @brief backward derivative \f$ g = \alpha \nabla \cdot \vec v f + \beta g\f$
  *
- * This is the direct derivative (i.e. product rule) \f$ \nabla \cdot \vec v
- * f = \vec v \cdot \nabla f + f \nabla\cdot \vec v\f$ where for the first
- * derivative
- * we use a centered derivative and for the second f we use the average
- * along the fieldline. ( This has advantageous conservative properties)
- * @param divv The divergence of the vector field
+ * backward derivative \f$ g_i = \alpha \frac{1}{\Delta\varphi\sqrt{G_i}}(\sqrt{G_{i}}v^\varphi_{i}f_{i} - \sqrt{G_{i-1}}v^\varphi_{i-1}f_{i-1}) + \beta g_i\f$
  * @param fa this object will be used to get grid distances
- * @copydoc hide_ds_parameters4
+ * @param alpha Scalar
  * @copydoc hide_ds_fm
- * @copydoc hide_ds_fp
+ * @param f The vector to derive
+ * @param beta Scalar
+ * @param g contains result on output (may alias input vectors)
  * @ingroup fieldaligned
  * @copydoc hide_ds_freestanding
 */
 template<class FieldAligned, class container>
-void divDirectCentered( const container& divv, const FieldAligned& fa, double
-        alpha, const container& fm, const container& f, const container& fp,
-        double beta, container& g){
-    ds_centered( fa, alpha, fm, f, fp, beta, g);
-    dg::blas1::subroutine( [alpha]DG_DEVICE( double& g, double minus,
-                double plus, double hp, double hm, double divv){
-            g += alpha*(hm*plus+hp*minus)/(hp+hm)*divv;
-            }, g, fm, fp, fa.hp(), fa.hm(), divv);
+void ds_divBackward( const FieldAligned& fa, double alpha, const container& fm,
+    const container& f, double beta, container& g)
+{
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [alpha,beta,delta] DG_DEVICE( double& dsf, double f0,
+            double f1, double Gm, double G0, double bPm, double bP0){
+                dsf = alpha*(bP0*G0*f0 - bPm*Gm*f1)/G0/delta + beta*dsf; },
+            g, f, fm, fa.sqrtGm(), fa.sqrtG(), fa.bphiM(), fa.bphi());
 }
 
 /**
- * @brief Compute average along a fieldline \f$ g = \alpha \frac{h^- f_{k+1} + h^+ f_{k-1}}{h^- + h^+} + \beta g\f$
+ * @brief forward derivative \f$ g = \alpha \nabla \cdot \vec v f + \beta g\f$
+ *
+ * forward derivative \f$ g_i = \alpha \frac{1}{\Delta\varphi\sqrt{G_i}}(\sqrt{G_{i+1}}v^\varphi_{i+1}f_{i+1} - \sqrt{G_{i}}v^\varphi_{i}f_{i}) + \beta g_i\f$
+ * @param fa this object will be used to get grid distances
+ * @param alpha Scalar
+ * @param f The vector to derive
+ * @copydoc hide_ds_fp
+ * @param beta Scalar
+ * @param g contains result on output (may alias input vectors)
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_freestanding
+*/
+template<class FieldAligned, class container>
+void ds_divForward( const FieldAligned& fa, double alpha, const container& f,
+    const container& fp, double beta, container& g)
+{
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [alpha,beta,delta] DG_DEVICE( double& dsf, double f0,
+            double f1, double Gp, double G0, double bPp, double bP0){
+                dsf = alpha*(bPp*Gp*f1 - bP0*G0*f0)/G0/delta + beta*dsf; },
+            g, f, fp, fa.sqrtGp(), fa.sqrtG(), fa.bphiP(), fa.bphi());
+}
+/**
+ * @brief centered derivative \f$ g = \alpha \nabla \cdot \vec v f + \beta g\f$
+ *
+ * centered derivative \f$ g_i = \alpha \frac{1}{2\Delta\varphi\sqrt{G_i}}(\sqrt{G_{i+1}}v^\varphi_{i+1}f_{i+1} - \sqrt{G_{i-1}}v^\varphi_{i-1}f_{i-1}) + \beta g_i\f$
+ * @param fa this object will be used to get grid distances
+ * @param alpha Scalar
+ * @copydoc hide_ds_fm
+ * @copydoc hide_ds_fp
+ * @param beta Scalar
+ * @param g contains result on output (may alias input vectors)
+ * @ingroup fieldaligned
+ * @copydoc hide_ds_freestanding
+*/
+template<class FieldAligned, class container>
+void ds_divCentered( const FieldAligned& fa, double alpha, const container& fm, const container& fp,
+    double beta, container& g)
+{
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [alpha,beta,delta]DG_DEVICE( double& dsf, double fm,
+        double fp, double Gm, double Gp, double G0,
+        double bPm, double bP0, double bPp)
+        {
+            dsf = alpha*( fp*Gp*bPp - fm*Gm*bPm )/G0/2./delta + beta*dsf;
+        }, g, fm, fp, fa.sqrtGm(),
+        fa.sqrtGp(), fa.sqrtG(), fa.bphiM(), fa.bphi(), fa.bphiP());
+
+}
+
+/**
+ * @brief Compute average along a fieldline \f$ g = \alpha \frac{f_{k+1} + f_{k-1}}{2} + \beta g\f$
  *
  * @note The idea is to use this function on staggered grid implementations. There
  * it can be used to convert a function from one grid to the staggered grid and
@@ -1063,13 +989,14 @@ template<class FieldAligned, class container>
 void ds_average( const FieldAligned& fa, double alpha,
         const container& fm, const container& fp, double beta, container& g)
 {
-    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp,
-                double hp, double hm){
-            g = alpha*(hm*fp+hp*fm)/(hp+hm) + beta*g;
-            }, g, fm, fp, fa.hp(), fa.hm());
+    double delta = fa.deltaPhi();
+    dg::blas1::subroutine( [alpha,beta,delta]DG_DEVICE( double& g, double fm, double fp
+                ){
+            g = alpha*(fp+fm)/2. + beta*g;
+            }, g, fm, fp);
 }
 /**
- * @brief Compute simple slope along a fieldline \f$ g = \alpha \frac{f_{k+1} - f_{k-1}}{h^- + h^+} + \beta g\f$
+ * @brief Compute simple slope along a fieldline \f$ g = \alpha v^\varphi\frac{f_{k+1} - f_{k-1}}{2\Delta\varphi} + \beta g\f$
  *
  * @note The idea is to use this function on staggered grid implementations. There
  * it can be used to compute the gradient from one grid onto the staggered grid
@@ -1082,15 +1009,13 @@ void ds_average( const FieldAligned& fa, double alpha,
  * @param g contains result on output (may alias input vectors)
  * @ingroup fieldaligned
  * @copydoc hide_ds_freestanding
+ * @sa Does exactly the same as \c ds_centered
  */
 template<class FieldAligned, class container>
 void ds_slope( const FieldAligned& fa, double alpha,
         const container& fm, const container& fp, double beta, container& g)
 {
-    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp,
-                double hp, double hm){
-            g = alpha*(fp-fm)/(hp+hm) + beta*g;
-            }, g, fm, fp, fa.hp(), fa.hm());
+    ds_centered( fa, alpha, fm, fp, beta, g);
 }
 
 

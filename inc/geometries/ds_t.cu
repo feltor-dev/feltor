@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
             bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
             -1, method);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
-        ds( dsFA, dg::centered );
+        ds( dsFA );
     //![doxygen]
     ///##########################################################///
     const dg::DVec fun = dg::pullback( dg::geo::TestFunctionDirNeu(mag), g3d);
@@ -60,16 +60,11 @@ int main(int argc, char * argv[])
     std::vector<std::pair<std::string, std::array<const dg::DVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},
-         {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
-         {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
+         {"centered",{&fun,&sol0}},         {"centered_bc_along",{&fun,&sol0}},
+         {"dss",{&fun,&sol1}},              {"dss_bc_along",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
-         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
-         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
-         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
-         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
-         {"directLap_bc_along",{&fun,&sol3}},
-         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
-         {"invCenteredLap",{&sol4,&fun}}
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}},
+         {"directLap_bc_along",{&fun,&sol3}}, {"invCenteredLap",{&sol4,&fun}}
     };
     std::cout << "# TEST NEU Boundary conditions!\n";
     std::cout << "# TEST ADJOINT derivatives do unfortunately not fulfill Neumann BC!\n";
@@ -83,12 +78,12 @@ int main(int argc, char * argv[])
         const dg::DVec& solution = *std::get<1>(tuple)[1];
         if( name.find("inv") != std::string::npos ||
                 name.find( "div") != std::string::npos)
-            callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+            callDS( ds, name, function, derivative, max_iter,1e-8);
         else
         {
             // test aliasing
             dg::blas1::copy( function, derivative);
-            callDS( ds, name, derivative, derivative, divb, max_iter,1e-8);
+            callDS( ds, name, derivative, derivative, max_iter,1e-8);
         }
         double sol = dg::blas2::dot( vol3d, solution);
         dg::blas1::axpby( 1., solution, -1., derivative);
@@ -99,7 +94,7 @@ int main(int argc, char * argv[])
     ///##########################################################///
     std::cout << "# Reconstruct parallel derivative!\n";
     dsFA.construct( bhat, g3d, dg::DIR, dg::DIR, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1], -1, method);
-    ds.construct( dsFA, dg::centered);
+    ds.construct( dsFA);
     std::cout << "# TEST DIR Boundary conditions!\n";
     ///##########################################################///
     std::cout << "Dirichlet: \n";
@@ -110,12 +105,12 @@ int main(int argc, char * argv[])
         const dg::DVec& solution = *std::get<1>(tuple)[1];
         if( name.find("inv") != std::string::npos ||
                 name.find( "div") != std::string::npos)
-            callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+            callDS( ds, name, function, derivative, max_iter,1e-8);
         else
         {
             // test aliasing
             dg::blas1::copy( function, derivative);
-            callDS( ds, name, derivative, derivative, divb, max_iter,1e-8);
+            callDS( ds, name, derivative, derivative, max_iter,1e-8);
         }
 
         double sol = dg::blas2::dot( vol3d, solution);
@@ -134,14 +129,14 @@ int main(int argc, char * argv[])
     dg::DVec aligned = dg::geo::fieldaligned_evaluate( g3d, bhat, init0, modulate, Nz/2, 2);
     t.toc();
     std::cout << "# took "<<t.diff()<<"s\n";
-    ds( aligned, derivative);
+    ds.ds( dg::centered, aligned, derivative);
     double norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
     t.tic();
     aligned = dsFA.evaluate( init0, modulate, Nz/2, 2);
     t.toc();
     std::cout << "# took "<<t.diff()<<"s\n";
-    ds( aligned, derivative);
+    ds.ds( dg::centered, aligned, derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "# Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpit)\n";
     ///##########################################################///

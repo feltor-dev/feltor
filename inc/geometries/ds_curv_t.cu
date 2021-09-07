@@ -64,11 +64,7 @@ int main(int argc, char * argv[])
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
-         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
-         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
-         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
-         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
-         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}},
          {"invCenteredLap",{&sol4,&fun}}
     };
     ///##########################################################///

@@ -40,7 +40,7 @@ int main( )
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
-        dg::centered, 1e-8, mx, my, -1, method);
+        1e-8, mx, my, -1, method);
 
     ///##########################################################///
     const dg::DVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
@@ -57,12 +57,7 @@ int main( )
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
          {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
-         {"divCentered",{&fun,&sol2}},      {"divDirectForward",{&fun,&sol2}},
-         {"divDirectBackward",{&fun,&sol2}},{"divDirectCentered",{&fun,&sol2}},
-         {"forwardLap",{&fun,&sol3}},       {"backwardLap",{&fun,&sol3}},
-         {"centeredLap",{&fun,&sol3}},      {"directLap",{&fun,&sol3}},
-         {"directLap_bc_along",{&fun,&sol3}},
-         {"invForwardLap",{&sol4,&fun}},    {"invBackwardLap",{&sol4,&fun}},
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}},
          {"invCenteredLap",{&sol4,&fun}}
     };
 
@@ -75,7 +70,7 @@ int main( )
         std::string name = std::get<0>(tuple);
         const dg::DVec& function = *std::get<1>(tuple)[0];
         const dg::DVec& solution = *std::get<1>(tuple)[1];
-        callDS( ds, name, function, derivative, divb, max_iter,1e-8);
+        callDS( ds, name, function, derivative, max_iter,1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
         double vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, function)); // using function in denominator makes entries comparable
         dg::blas1::axpby( 1., solution, -1., derivative);
@@ -96,14 +91,12 @@ int main( )
     dsFAST( dg::geo::zeroPlus, funST, zPlus);
     dsFAST( dg::geo::einsMinus, funST, eMinus);
     dg::geo::ds_average( dsFAST, 1., eMinus, zPlus, 0., derivative);
-    dg::blas1::pointwiseDot( derivative, divb, derivative);
-    //ds.dss( 1., fun, 1., derivative);
 
-    double sol = dg::blas2::dot( vol3d, sol3);
+    double sol = dg::blas2::dot( vol3d, sol0);
     double vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, fun));
-    dg::blas1::axpby( 1., sol3, -1., derivative);
+    dg::blas1::axpby( 1., sol0, -1., derivative);
     double norm = dg::blas2::dot( derivative, vol3d, derivative);
-    std::string name  = "directLapST";
+    std::string name  = "centeredST";
     std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
               <<" "<<sqrt(norm/sol)<<" #  \t"<<vol<<"\n";
     ///##########################################################///

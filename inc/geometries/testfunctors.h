@@ -250,11 +250,7 @@ struct TestInvertDS{
     {
         dg::blas2::symv( 1., m_ds, x, 0., y);
         dg::blas1::axpby( 1., x, m_alpha, y, y);
-        dg::blas2::symv( m_ds.weights(), y,y);
     }
-    const container& weights(){return m_ds.weights();}
-    const container& inv_weights(){return m_ds.inv_weights();}
-    const container& precond(){return m_ds.precond();}
     private:
     DS& m_ds;
     double m_alpha;
@@ -263,7 +259,6 @@ struct TestInvertDS{
 //////////////function to call DS////////////////////
 template<class DS, class container>
 void callDS( DS& ds, std::string name, const container& in, container& out,
-const container& divb,
 unsigned max_iter = 1e4, double eps = 1e-6)
 {
     if( name == "forward") ds.ds( dg::forward, in, out);
@@ -281,52 +276,22 @@ unsigned max_iter = 1e4, double eps = 1e-6)
     else if( name == "divForward") ds.div( dg::forward, in, out);
     else if( name == "divBackward") ds.div( dg::backward, in, out);
     else if( name == "divCentered") ds.div( dg::centered, in, out);
-    else if( name == "divDirectForward"){
-        ds.ds( dg::forward, in, out);
-        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
-    }
-    else if( name == "divDirectBackward"){
-        ds.ds( dg::backward, in, out);
-        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
-    }
-    else if( name == "divDirectCentered"){
-        ds.divDirect( 1., divb, in, 0., out);
-    }
-    else if( name == "forwardLap") {
-        ds.set_direction( dg::forward);
-        ds.symv( in, out);
-    }
-    else if( name == "backwardLap"){
-        ds.set_direction( dg::backward);
-        ds.symv( in, out);
-    }
-    else if( name == "centeredLap"){
-        ds.set_direction( dg::centered);
-        ds.symv( in, out);
-    }
     else if( name == "directLap") {
-        ds.dssd( 1., divb, in, 0., out);
+        ds.dssd( 1., in, 0., out);
     }
     else if( name == "directLap_bc_along") {
-        ds.dssd_bc_along_field( 1., divb, in, 0., out, ds.fieldaligned().bcx(), {0,0});
-    }
-    else if( name == "invForwardLap"){
-        dg::Invert<container> invert( in, max_iter, eps, 1);
-        ds.set_direction( dg::forward);
-        dg::geo::TestInvertDS< DS, container> rhs(ds);
-        invert( rhs, out, in);
-    }
-    else if( name == "invBackwardLap"){
-        dg::Invert<container> invert( in, max_iter, eps, 1);
-        ds.set_direction( dg::backward);
-        dg::geo::TestInvertDS< DS, container> rhs(ds);
-        invert( rhs, out, in);
+        ds.dssd_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
     }
     else if( name == "invCenteredLap"){
-        dg::Invert<container> invert( in, max_iter, eps, 1);
-        ds.set_direction( dg::centered);
+        //dg::LGMRES<container> invert( in, 30,8,10000);
+        dg::BICGSTABl<container> invert( in, 30000,3);
         dg::geo::TestInvertDS< DS, container> rhs(ds);
-        invert( rhs, out, in);
+        dg::Timer t;
+        t.tic();
+        unsigned number = invert.solve( rhs, out, in, (const double)1., ds.weights(), eps);
+        t.toc();
+        std::cout << "#Number of BICGSTABl iterations: "<<number<<"\n";
+        std::cout << "#Took                          : "<<t.diff()<<"\n";
     }
 
 }
