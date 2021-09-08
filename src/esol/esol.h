@@ -364,7 +364,6 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
         solveSne(t, m_chi, m_psi[0], y[0], m_omega);
     }
     dg::blas1::axpby( m_p.omega_s, m_omega, 1.0, yp[0]);
-    
     return;
 }
 
