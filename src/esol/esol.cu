@@ -32,7 +32,7 @@ int main( int argc, char* argv[])
     {
         dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded);
     }
-    const poet::Parameters p( js);
+    const esol::Parameters p( js);
     dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);  
     
 #ifdef WITH_MPI
@@ -53,8 +53,8 @@ int main( int argc, char* argv[])
         #endif //WITH_MPI
     );
     ///////MAKE MODEL///////////////////////////////////////////////
-    DG_RANK0 std::cout << "Constructing Poet...\n";
-    poet::Poet<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> poet( grid, p);
+    DG_RANK0 std::cout << "Constructing Esol...\n";
+    esol::Esol<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> esol( grid, p);
     DG_RANK0 std::cout << "Done!\n";
 
     //////////////////create initial fields///////////////////////////////////////
@@ -63,7 +63,7 @@ int main( int argc, char* argv[])
     if( argc == 4 )
     {
         try{
-            y0 = poet::init_from_file(argv[3], grid, p, time);
+            y0 = esol::init_from_file(argv[3], grid, p, time);
         }catch (std::exception& error){
             DG_RANK0 std::cerr << "ERROR occured initializing from file "<<argv[3]<<std::endl;
             DG_RANK0 std::cerr << error.what()<<std::endl;
@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     }
     else {
         try{
-            y0 = poet::initial_conditions(poet, grid, p, ws );
+            y0 = esol::initial_conditions(esol, grid, p, ws );
         }catch ( std::exception& error){
             DG_RANK0 std::cerr << "Error in input file\n ";
             DG_RANK0 std::cerr << error.what();
@@ -98,7 +98,7 @@ int main( int argc, char* argv[])
         std::string tableau = ws[ "timestepper"]["tableau"].asString("TVB-3-3");
         multistep.construct( tableau, y0);
         dt = p.dt;
-        multistep.init( poet, time, y0, dt);
+        multistep.init( esol, time, y0, dt);
     }
     else if (p.timestepper == "adaptive")
     {
@@ -119,12 +119,12 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "Done!\n";
 
     /// ////////////Init diagnostics ////////////////////
-    poet::Variables var = {poet, p, y0};
+    esol::Variables var = {esol, p, y0};
     dg::Timer t;
     t.tic();
     {
         std::array<dg::x::DVec,2>y1 = y0;
-        poet( 0., y0, y1);
+        esol( 0., y0, y1);
     }
     t.toc();
     var.duration = t.diff();
@@ -149,16 +149,18 @@ int main( int argc, char* argv[])
         dg::IDMatrix equidistant = dg::create::backscatter( grid );
         // the things to plot:
         std::map<std::string, const dg::DVec* > v2d;
-        v2d["ne-1 / "] = &y0[0],  v2d["ni-1 / "] = &y0[1];
-        v2d["Phi / "] = &poet.potential(0); 
-        v2d["Vor / "] = &poet.potential(0); 
+        v2d["ne / "] = &esol.density(0);
+        v2d["Ni / "] = &esol.density(1);
+        v2d["Phi / "] = &esol.potential(0); 
+        v2d["Vor / "] = &esol.potential(0); 
+
         while ( !glfwWindowShouldClose( w ))
         {
             for( auto pair : v2d)
             {
                 if( pair.first == "Vor / " )
                 {
-                    poet.compute_vorticity( 1., *pair.second, 0., temp);
+                    esol.compute_vorticity( 1., *pair.second, 0., temp);
                     dg::blas2::gemv( equidistant, temp, visual);
                 }
                 else
@@ -188,9 +190,9 @@ int main( int argc, char* argv[])
                     dt = t_out-time;
                 try{
                     if( p.timestepper == "adaptive")
-                        adapt.step( poet, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                        adapt.step( esol, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
                     if( p.timestepper == "multistep")
-                        multistep.step( poet, time, y0);
+                        multistep.step( esol, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -213,7 +215,7 @@ int main( int argc, char* argv[])
         std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc==1 || argc == 2 )
-            outputfile = "poet.nc";
+            outputfile = "esol.nc";
         else
             outputfile = argv[2];
         /// //////////////////////set up netcdf/////////////////////////////////////
@@ -229,7 +231,7 @@ int main( int argc, char* argv[])
         }
         /// Set global attributes
         std::map<std::string, std::string> att;
-        att["title"] = "Output file of feltor/src/poet/poet.cu";
+        att["title"] = "Output file of feltor/src/esol/esol.cu";
         att["Conventions"] = "CF-1.7";
         ///Get local time and begin file history
         auto ttt = std::time(nullptr);
@@ -240,7 +242,7 @@ int main( int argc, char* argv[])
         oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
         for( int i=0; i<argc; i++) oss << " "<<argv[i];
         att["history"] = oss.str();
-        att["comment"] = "Find more info in feltor/src/poet/poet.tex";
+        att["comment"] = "Find more info in feltor/src/esol/esol.tex";
         att["source"] = "FELTOR";
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
@@ -261,7 +263,7 @@ int main( int argc, char* argv[])
         DG_RANK0 err = dg::file::define_dimensions( ncid, restart_dim_ids, grid,
                 {"yr", "xr"});
         //Create field IDs
-        for( auto& record : poet::diagnostics2d_list)
+        for( auto& record : esol::diagnostics2d_list)
         {
             DG_RANK0 std::cout << record.name << std::endl;
             std::string name = record.name;
@@ -272,7 +274,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        for( auto& record : poet::diagnostics2d_list)
+        for( auto& record : esol::diagnostics2d_list)
         {
             std::string name = record.name + "_1d";
             std::string long_name = record.long_name + " (Volume integrated)";
@@ -282,7 +284,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        for( auto& record : poet::restart2d_list)
+        for( auto& record : esol::restart2d_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
@@ -292,7 +294,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name), "long_name", long_name.size(),
                 long_name.data());
         }
-        for( auto& record : poet::diagnostics1d_list)
+        for( auto& record : esol::diagnostics1d_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
@@ -306,7 +308,7 @@ int main( int argc, char* argv[])
         dg::x::DVec resultD = volume;
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
-        for( auto& record : poet::diagnostics2d_static_list)
+        for( auto& record : esol::diagnostics2d_static_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
@@ -326,7 +328,7 @@ int main( int argc, char* argv[])
         size_t start = {0};
         size_t count = {1};
         ///////////////////////////////////first output/////////////////////////
-        for( auto& record : poet::diagnostics2d_list)
+        for( auto& record : esol::diagnostics2d_list)
         {
             record.function( resultD, var);
             double result = dg::blas1::dot( volume, resultD);
@@ -337,7 +339,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"),
                     &start, &count, &result);
         }
-        for( auto& record : poet::diagnostics1d_list)
+        for( auto& record : esol::diagnostics1d_list)
         {
             double result = record.function( var);
             DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
@@ -355,9 +357,9 @@ int main( int argc, char* argv[])
                     dt = t_out-time;
                 try{
                     if( p.timestepper == "adaptive")
-                        adapt.step( poet, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+                        adapt.step( esol, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
                     if( p.timestepper == "multistep")
-                        multistep.step( poet, time, y0);
+                        multistep.step( esol, time, y0);
                 }
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -379,7 +381,7 @@ int main( int argc, char* argv[])
             start = i;
             DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            for( auto& record : poet::diagnostics2d_list)
+            for( auto& record : esol::diagnostics2d_list)
             {
                 record.function( resultD, var);
                 double result = dg::blas1::dot( volume, resultD);
@@ -388,13 +390,13 @@ int main( int argc, char* argv[])
                 dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
                 DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
             }
-            for( auto& record : poet::restart2d_list)
+            for( auto& record : esol::restart2d_list)
             {
                 record.function( resultD, var);
                 dg::assign( resultD, resultH);
                 dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
             }
-            for( auto& record : poet::diagnostics1d_list)
+            for( auto& record : esol::diagnostics1d_list)
             {
                 double result = record.function( var);
                 DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);

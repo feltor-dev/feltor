@@ -75,7 +75,6 @@ int main( int argc, char* argv[])
     feltor.initializene( y0[1], y0[0]);    
     std::cout << "Done!\n";
 
-
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);

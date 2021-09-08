@@ -5,7 +5,7 @@
 // #include "dg/algorithm.h"
 #include "json/json.h"
 // #include "dg/file/json_utilities.h"
-namespace poet{
+namespace esol{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -28,15 +28,17 @@ struct Parameters
     double mu[2];
     double kappa,  nu;
     double lambda, alpha;
+    double omega_s, xfac_s, sigma_s;
     
-    double xfac_sep, sigma_sep;
+    double xfac_sep, sigma_sep, xfac_d, sigma_d;
+    double bgprofamp, profamp, sigma_p;
     
     double amp, sigma, posX, posY;
 
     double lx, ly;
     dg::bc bc_x, bc_y;
 
-    std::string init, equations, output, timestepper;
+    std::string init, equations, output, timestepper, source_rel, source_type;
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
         n  = ws["grid"].get("n", 5).asUInt();
@@ -83,13 +85,23 @@ struct Parameters
         mu[0] = ws["physical"].get("mu_e", -0.000272121).asDouble();
         mu[1] = 1.;
         
+        source_type = ws["source"].get("source_type", "zero-pol").asString();        
+        source_rel = ws["source"].get("source_rel", "zero-pol").asString();        
+        omega_s = ws["source"].get("omega_s", 0.05).asDouble();
+        xfac_s = ws["source"].get("xfac_s", 0.1).asDouble();
+        sigma_s = ws["source"].get("sigma_s", 0.5).asDouble();
         
+        bgprofamp = ws["profile"].get("bgprofamp", 1.0).asDouble();
+        profamp = ws["profile"].get("profamp", 9.0).asDouble();
+        sigma_p = ws["profile"].get("sigma_p", 10.0).asDouble();
         
         init = ws["init"].get("type", "blob").asString();
         amp = ws["init"].get("amplitude", 1.0).asDouble();
         sigma = ws["init"].get("sigma", 5.0).asDouble();
         posX = ws["init"].get("posX", 0.25).asDouble();
-        posY = ws["init"].get("posY", 0.5).asDouble();        
+        posY = ws["init"].get("posY", 0.5).asDouble();    
+        xfac_d = ws["init"].get("xfac_d", 0.05).asDouble();
+        sigma_d = ws["init"].get("sigma_d", 2.0).asDouble();
 
         nu = ws["nu_perp"].asDouble();
         bc_x = dg::str2bc(ws["bc_x"].asString());

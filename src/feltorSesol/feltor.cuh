@@ -182,7 +182,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
         if(  numberG[0] == invert_invgamma.get_max())
             throw dg::Fail( p.eps_gamma);
     }
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
+    dg::blas1::axpby( -1., y[0], 1., chi, chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
     old_phi.extrapolate( phi[0]);
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);

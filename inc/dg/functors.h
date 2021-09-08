@@ -799,6 +799,48 @@ struct Cauchy
 };
 
 /**
+ * @brief
+ * \f$
+   f(x,y) = \begin{cases}
+   Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}} \text{ if } \frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} < 1\\
+   0 \text{ else}
+   \end{cases}
+   \f$
+
+   A bump that drops to zero and is infinitely continuously differentiable
+ */
+struct CauchyX
+{
+    /**
+     * @brief A 1D-blob that drops to zero
+     *
+     * @param x0 x-center-coordinate
+     * @param sigma_x radius in x (must be !=0)
+     * @param amp Amplitude
+     */
+    CauchyX( double x0,  double sigma_x, double amp): x0_(x0), sigmaX_(sigma_x),  amp_(amp){
+        assert( sigma_x != 0  &&  "sigma_x must be !=0 in Cauchy");
+    }
+    DG_DEVICE
+    double operator()(double x, double y )const{
+        double xbar = (x-x0_)/sigmaX_;
+        if( xbar*xbar  < 1.)
+            return amp_*exp( 1. +  1./( xbar*xbar -1.) );
+        return 0.;
+    }
+    bool inside( double x, double y)const
+    {
+        double xbar = (x-x0_)/sigmaX_;
+        if( xbar*xbar < 1.)
+            return true;
+        return false;
+    }
+    private:
+    double x0_, sigmaX_,  amp_;
+};
+
+
+/**
 * @brief
 * \f$
 f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)}
@@ -1343,10 +1385,15 @@ struct PolynomialHeaviside {
                *(a + x - x0)*(a + x - x0)
                *(a + x - x0)*(a + x - x0))/(32.*a*a*a * a*a*a*a);
     }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
     double x0, a;
     int m_s;
 };
+
 /**
  * @brief
      \f$ f(x) = \begin{cases}
@@ -1383,6 +1430,10 @@ struct PolynomialRectangle {
     {
         return m_hl(x)*m_hr(x);
     }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
     PolynomialHeaviside m_hl, m_hr;
 };
