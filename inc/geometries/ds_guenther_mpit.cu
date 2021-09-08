@@ -84,10 +84,13 @@ int main(int argc, char * argv[])
         const dg::MDVec& solution = *std::get<1>(tuple)[1];
         callDS( ds, name, function, derivative, max_iter,1e-8);
         double sol = dg::blas2::dot( vol3d, solution);
+        double vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, function)); // using function in denominator makes entries comparable
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
         if(rank==0)std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
-                  <<" "<<sqrt(norm/sol)<<"\n";
+                  <<" "<<sqrt(norm/sol)<<"\n"
+                  <<"    "<<name+"_vol:"<<std::setw(30-name.size())
+                  <<" "<<vol<<"\n";
     }
     ///##########################################################///
     MPI_Finalize();

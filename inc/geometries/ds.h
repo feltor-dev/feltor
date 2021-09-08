@@ -95,6 +95,8 @@ struct DSSCentered
                     2.*fm/(hp+hm)/hm - 2.*fo/hp/hm + 2.*fp/(hp+hm)/hp
                ) + m_beta*dssf;
     };
+
+    DG_DEVICE
     void operator()( double& dssf, double fm, double fo, double fp,
         double bPm, double bP0, double bPp)
     {

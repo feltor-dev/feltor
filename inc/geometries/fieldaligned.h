@@ -99,12 +99,9 @@ struct DSField
         dg::blas1::pointwiseDivide(v_zeta,  vz, v_zeta);
         dg::blas1::pointwiseDivide(v_eta,   vz, v_eta);
         dg::HVec divv_phi(vx);
-        dg::blas1::evaluate( divv_phi, dg::equals(), [](
-                    double vz, double div, double gradz)
-            {
-                return (div/vz - gradz/vz/vz);
-            }, vz, div, gradz);
         dg::blas1::pointwiseDivide(1.,      vz, vz);
+        dg::blas1::pointwiseDot( gradz, vz, gradz);
+        dg::blas1::pointwiseDot( 1., div, vz, -1., gradz, vz, 0., divv_phi);
         dzetadphi_  = dg::forward_transform( v_zeta, g );
         detadphi_   = dg::forward_transform( v_eta, g );
         dsdphi_     = dg::forward_transform( vz, g );
@@ -747,10 +744,11 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     //this is a pullback bphi( R(zeta, eta), Z(zeta, eta)):
     if( dynamic_cast<const dg::CartesianGrid2d*>( grid_coarse.get()))
     {
-        dg::blas1::evaluate( hbphiP, dg::equals(), vec.z(), yp_coarse[0],
-                yp_coarse[1]);
-        dg::blas1::evaluate( hbphiM, dg::equals(), vec.z(), ym_coarse[0],
-                ym_coarse[1]);
+        for( unsigned i=0; i<hbphiP.size(); i++)
+        {
+            hbphiP[i] = vec.z()(yp_coarse[0][i], yp_coarse[1][i]);
+            hbphiM[i] = vec.z()(ym_coarse[0][i], ym_coarse[1][i]);
+        }
     }
     else
     {

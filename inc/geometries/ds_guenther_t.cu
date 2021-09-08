@@ -75,7 +75,9 @@ int main( )
         dg::blas1::axpby( 1., solution, -1., derivative);
         double norm = dg::blas2::dot( derivative, vol3d, derivative);
         std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
-                  <<" "<<sqrt(norm/sol)<<" #  \t"<<vol<<"\n";
+                  <<" "<<sqrt(norm/sol)<<std::endl
+                  <<"    "<<name+"_vol:"<<std::setw(30-name.size())
+                  <<" "<<vol<<"\n";
     }
     ///##########################################################///
     std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";

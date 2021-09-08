@@ -305,10 +305,11 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     //this is a pullback bphi( R(zeta, eta), Z(zeta, eta)):
     if( dynamic_cast<const dg::CartesianGrid2d*>( grid_coarse.get()))
     {
-        dg::blas1::evaluate( hbphiP, dg::equals(), vec.z(), yp_coarse[0],
-                yp_coarse[1]);
-        dg::blas1::evaluate( hbphiM, dg::equals(), vec.z(), ym_coarse[0],
-                ym_coarse[1]);
+        for( unsigned i=0; i<hbphiP.size(); i++)
+        {
+            hbphiP[i] = vec.z()(yp_coarse[0][i], yp_coarse[1][i]);
+            hbphiM[i] = vec.z()(ym_coarse[0][i], ym_coarse[1][i]);
+        }
     }
     else
     {
