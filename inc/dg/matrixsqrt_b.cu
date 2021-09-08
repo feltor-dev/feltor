@@ -78,155 +78,155 @@ int main(int argc, char * argv[])
     double min_weights =  -dg::blas1::reduce(A.weights(), max_weights, dg::AbsMin<double>() );
     double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
     ////////////////////////Direct Cauchy integral solve
-//     {
-//         std::cout << "\nCauchy: \n";
-//         dg::DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, g, epsCG, max_iterC);
-// 
-//         t.tic();
-//         iter_arr[1] = directsqrtcauchysolve(b, bs);
-//         t.toc();   
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));  
-//         double time = t.diff();
-// 
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
-// 
-//         std::cout << "\nCauchy+CG: \n";
-//         t.tic();
-//         iter_arr[0] = invert(A,x,bs);
-//         t.toc();
-//         time+=t.diff();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";   
-//     }
-//     //////////////////////Direct sqrt ODE solve
-//     {
-//         std::cout << "\nODE:\n";
-//         dg::DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, g, epsCG, epsTrel, epsTabs);
-//         t.tic();
-//         iter_arr[1] = directsqrtodesolve(b, bs);
-//         t.toc();
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
-//         double time = t.diff();
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
-//         
-//         std::cout << "\nODE+CG:\n";
-//         t.tic();
-//         iter_arr[0] = invert(A,x,bs);
-//         t.toc();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac)); 
-//         time+=t.diff();
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";     
-//         
-//     }
-//     
-//     //////////////////Krylov solve via Lanczos method and Cauchy solve
-//     {
-//         std::cout << "\nM-Lanczos+Cauchy:\n";
-//         dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, g, x,  epsCG, max_iter, max_iterC, eps);
-//         t.tic();
-//         iter_arr = krylovsqrtcauchysolve(b, bs); 
-//         t.toc();
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//         double time = t.diff();
-// 
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
-//         std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
-// 
-//         std::cout << "\nM-Lanczos+Cauchy+CG:\n";
-//         t.tic();
-//         iter_arr[0] = invert(A,x,bs);
-//         t.toc();
-//         time += t.diff();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";   
-//     }
-//     
-//     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
-//     {
-//         std::cout << "\nM-Lanczos+ODE:\n";  
-//         dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodesolve(A, g, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
-//         b = dg::evaluate(rhsHelmholtzsqrt, g);
-//         t.tic();
-//         iter_arr = krylovsqrtodesolve(b, bs); //overwrites b
-//         t.toc();
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//         double time = t.diff();
-// 
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
-//         std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
-//         
-//         std::cout << "\nM-Lanczos+ODE+CG:\n";
-//         t.tic();
-//         iter_arr[0] = invert(A,x,bs);
-//         t.toc();
-//         time += t.diff();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
-//     }
-//     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
-//     {
-//         std::cout << "\nM-Lanczos+EIGEN:\n";  
-//         //EVs of Helmholtz
-//         double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
-//         double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); 
-//         double res_fac = kappa*sqrt(EVmin);
-//         
-//         dg::KrylovFuncEigenSolve<Container> krylovfunceigensolve(x,   max_iter);
-//         b = dg::evaluate(rhsHelmholtzsqrt, g);
-//         t.tic();
-//         iter_arr[0] = krylovfunceigensolve(b, bs, dg::SQRT<double>(), A, A.inv_weights(), A.weights(),  eps, res_fac); 
-//         t.toc();
-//         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
-//         double time = t.diff();
-// 
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
-//         
-//         std::cout << "\nM-Lanczos+EIGEN+CG:\n";
-//         t.tic();
-//         iter_arr[0] = invert(A,x,bs);
-//         t.toc();
-//         time += t.diff();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
-//         std::cout << "    time: "<<time<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
-//     }
+    {
+        std::cout << "\nCauchy: \n";
+        dg::DirectSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> directsqrtcauchysolve(A, g, epsCG, max_iterC);
+
+        t.tic();
+        iter_arr[1] = directsqrtcauchysolve(b, bs);
+        t.toc();   
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));  
+        double time = t.diff();
+
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
+
+        std::cout << "\nCauchy+CG: \n";
+        t.tic();
+        iter_arr[0] = invert(A,x,bs);
+        t.toc();
+        time+=t.diff();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";   
+    }
+    //////////////////////Direct sqrt ODE solve
+    {
+        std::cout << "\nODE:\n";
+        dg::DirectSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> directsqrtodesolve(A, g, epsCG, epsTrel, epsTabs);
+        t.tic();
+        iter_arr[1] = directsqrtodesolve(b, bs);
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
+        double time = t.diff();
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
+        
+        std::cout << "\nODE+CG:\n";
+        t.tic();
+        iter_arr[0] = invert(A,x,bs);
+        t.toc();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac)); 
+        time+=t.diff();
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";     
+        
+    }
+    
+    //////////////////Krylov solve via Lanczos method and Cauchy solve
+    {
+        std::cout << "\nM-Lanczos+Cauchy:\n";
+        dg::KrylovSqrtCauchySolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtcauchysolve(A, g, x,  epsCG, max_iter, max_iterC, eps);
+        t.tic();
+        iter_arr = krylovsqrtcauchysolve(b, bs); 
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+        double time = t.diff();
+
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
+
+        std::cout << "\nM-Lanczos+Cauchy+CG:\n";
+        t.tic();
+        iter_arr[0] = invert(A,x,bs);
+        t.toc();
+        time += t.diff();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";   
+    }
+    
+    //////////////////Krylov solve via Lanczos method and ODE sqrt solve
+    {
+        std::cout << "\nM-Lanczos+ODE:\n";  
+        dg::KrylovSqrtODESolve<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodesolve(A, g, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
+        b = dg::evaluate(rhsHelmholtzsqrt, g);
+        t.tic();
+        iter_arr = krylovsqrtodesolve(b, bs); //overwrites b
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+        double time = t.diff();
+
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
+        
+        std::cout << "\nM-Lanczos+ODE+CG:\n";
+        t.tic();
+        iter_arr[0] = invert(A,x,bs);
+        t.toc();
+        time += t.diff();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
+    }
+    //////////////////Krylov solve via Lanczos method and ODE sqrt solve
+    {
+        std::cout << "\nM-Lanczos+EIGEN:\n";  
+        //EVs of Helmholtz
+        double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
+        double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); 
+        double res_fac = kappa*sqrt(EVmin);
+        
+        dg::KrylovFuncEigenSolve<Container> krylovfunceigensolve(x,   max_iter);
+        b = dg::evaluate(rhsHelmholtzsqrt, g);
+        t.tic();
+        iter_arr[0] = krylovfunceigensolve(b, bs, dg::SQRT<double>(), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        t.toc();
+        dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));   
+        double time = t.diff();
+
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
+        
+        std::cout << "\nM-Lanczos+EIGEN+CG:\n";
+        t.tic();
+        iter_arr[0] = invert(A,x,bs);
+        t.toc();
+        time += t.diff();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));   
+        std::cout << "    time: "<<time<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
+    }
     //sqrt invert schemes
     {
         std::cout << "\nM-CG+Cauchy:\n";
-//         dg::blas1::scal(x, 0.0);  //must be initialized with zero
+        dg::blas1::scal(x, 0.0);  //must be initialized with zero
 
         dg::KrylovSqrtCauchyinvert<dg::CartesianGrid2d, Matrix,  Container> krylovsqrtcauchyinvert(A, g, x,  epsCG, max_iter, max_iterC, eps);
-        x =    dg::evaluate(dg::one, g);
-        dg::blas1::scal(x,0.0001);
+//         x =    dg::evaluate(dg::one, g);
+//         dg::blas1::scal(x,0.0001);
         t.tic();
         iter_arr = krylovsqrtcauchyinvert( x, b_exac);
         t.toc();
@@ -237,38 +237,38 @@ int main(int argc, char * argv[])
         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
         std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
     }
-//     {
-//         std::cout << "\nM-CG+ODE:\n";
-//         dg::blas1::scal(x, 0.0); //must be initialized with zero
-//         dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodeinvert(A, g, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
-//         t.tic();
-//         iter_arr= krylovsqrtodeinvert( x, b_exac);
-//         t.toc();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-//         std::cout << "    time: "<<t.diff()<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
-//         std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
-//     }
-//     {
-//         std::cout << "\nM-CG+EIGEN:\n";
-//         //EVs of inverse Helmholtz
-//         double EVmin = 1./(1.-A.alpha()*hxhy*(1.0 + 1.0));
-//         double EVmax = 1./(1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()))); 
-//         double res_fac = kappa*sqrt(EVmin);
-//         
-//         dg::blas1::scal(x, 0.0); //must be initialized with zero
-//         dg::KrylovFuncEigenInvert< Container> krylovfunceigeninvert( x, max_iter);
-//         t.tic();
-//         iter_arr[0]  = krylovfunceigeninvert( x, b_exac, dg::SQRT<double>(), A, A.inv_weights(), A.weights(),  eps, res_fac);
-//         t.toc();
-//         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-//         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-//         std::cout << "    time: "<<t.diff()<<"s \n"; 
-//         std::cout << "    error: "<<erel  << "\n"; 
-//         std::cout << "    iter: "<<std::setw(3)<<iter_arr[0]  << "\n"; 
-//     }
+    {
+        std::cout << "\nM-CG+ODE:\n";
+        dg::blas1::scal(x, 0.0); //must be initialized with zero
+        dg::KrylovSqrtODEinvert<dg::CartesianGrid2d, Matrix, Container> krylovsqrtodeinvert(A, g, x,  epsCG, epsTrel, epsTabs, max_iter, eps);
+        t.tic();
+        iter_arr= krylovsqrtodeinvert( x, b_exac);
+        t.toc();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
+        std::cout << "    time: "<<t.diff()<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n"; 
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
+    }
+    {
+        std::cout << "\nM-CG+EIGEN:\n";
+        //EVs of inverse Helmholtz
+        double EVmin = 1./(1.-A.alpha()*hxhy*(1.0 + 1.0));
+        double EVmax = 1./(1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()))); 
+        double res_fac = kappa*sqrt(EVmin);
+        
+        dg::blas1::scal(x, 0.0); //must be initialized with zero
+        dg::KrylovFuncEigenInvert< Container> krylovfunceigeninvert( x, max_iter);
+        t.tic();
+        iter_arr[0]  = krylovfunceigeninvert( x, b_exac, dg::SQRT<double>(), A, A.inv_weights(), A.weights(),  eps, res_fac);
+        t.toc();
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
+        std::cout << "    time: "<<t.diff()<<"s \n"; 
+        std::cout << "    error: "<<erel  << "\n"; 
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0]  << "\n"; 
+    }
 
     return 0;
 }

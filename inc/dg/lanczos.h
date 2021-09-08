@@ -353,7 +353,7 @@ class MCG
     template< class MatrixType, class DiaMatrixType, class SquareNorm1, class SquareNorm2, class ContainerType0, class ContainerType1, class ContainerType2>
     void Ry( MatrixType& A, DiaMatrixType& T,  SquareNorm1& Minv, SquareNorm2& M, ContainerType0& y, ContainerType1& x, ContainerType2& b,  unsigned iter)
     {
-//         dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
+        dg::blas1::scal(x, 0.); //could be removed if x is correctly initialized
 
         dg::blas2::symv( A, x, m_r);
         dg::blas1::axpby( 1., b, -1., m_r);
@@ -363,7 +363,7 @@ class MCG
 
         for ( unsigned i=0; i<iter; i++)
         {
-            dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute x=x + R y
+            dg::blas1::axpby( y[i], m_ap, 1.,x); //Compute x=0 + R y
             
             dg::blas2::symv( A, m_p, m_ap);
             dg::blas1::axpby( 1./T.values(i+1,0), m_ap, 1., m_r);
@@ -467,7 +467,7 @@ class MCG
             dg::TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> tridiaginv(yH);
             HCooMatrix TinvH = tridiaginv(m_TH); //Compute on Host!            
             dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1   
-            Ry(A, m_TH, Minv, M, yH, x, b,  get_iter());  // x = x_0+ R T^(-1) e_1  
+            Ry(A, m_TH, Minv, M, yH, x, b,  get_iter());  // x = 0 + R T^(-1) e_1  
         }
         return m_TH;
     }

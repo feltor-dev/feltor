@@ -310,7 +310,6 @@ struct KrylovSqrtCauchySolve
         value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
         if( xnorm == 0)
         {
-            std::cout << "xnorm==0\n";
             dg::blas1::copy( x,b);
             return {0, m_iterCauchy};
         }
