@@ -880,7 +880,7 @@ void dss_centered( const FieldAligned& fa, double alpha, const container& fm,
 /**
  * @brief Centered derivative \f$ g = \alpha \nabla\cdot(\vec v \vec v\cdot \nabla) f + \beta g \f$
  *
- * The formula used is \f[ \Delta_\parallel f = \nabla\cdot \vec v \nabla_\parallel f + \nabla_\parallel^2 f \f]
+ * The formula used is \f[ \Delta_\parallel f = \nabla\cdot (\vec v \nabla_\parallel f )\f]
  * @param fa this object will be used to get grid distances
  * @copydoc hide_ds_parameters4
  * @copydoc hide_ds_fm

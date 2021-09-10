@@ -724,15 +724,16 @@ struct BHatP: public aCylindricalFunctor<BHatP>
 
 /**
  * @brief Contravariant components of the unit vector field (0, 0, +/- 1/R)
+ * and its Divergence and derivative (0,0)
  * in cylindrical coordinates.
  * @param sign indicate positive or negative unit vector
- * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$
+ * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$, Constant(0), Constant(0)
  * @note This is equivalent to inserting a toroidal magnetic field into the \c dg::geo::createBHat function.
  */
-inline CylindricalVectorLvl0 createEPhi( int sign ){
+inline CylindricalVectorLvl1 createEPhi( int sign ){
     if( sign > 0)
-        return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return 1./x;});
-    return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return -1./x;});
+        return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double y){ return 1./x;}, Constant(0), Constant(0));
+    return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double y){ return -1./x;}, Constant(0), Constant(0));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
@@ -912,10 +913,9 @@ struct GradBHatP: public aCylindricalFunctor<GradBHatP>
 
 /**
  * @brief Contravariant components of the magnetic unit vector field
- * and its Jacobian in cylindrical coordinates.
+ * and its Divergence and derivative in cylindrical coordinates.
  * @param mag the tokamak magnetic field
- * @return the tuple BHatR, BHatZ, BHatP, BHatRR, BHatRZ, BHatZR, BHatZZ,
- * BHatPR, BHatPZ, constructed from mag
+ * @return the tuple BHatR, BHatZ, BHatP, Divb, GradBHatP constructed from mag
  */
 inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
     return CylindricalVectorLvl1( BHatR(mag), BHatZ(mag), BHatP(mag),
