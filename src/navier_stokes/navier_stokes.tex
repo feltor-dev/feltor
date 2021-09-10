@@ -225,5 +225,45 @@ The flux is discretized according to
         \text{ if } \frac{1}{2}(\bar u^\dagger_{k+1}+\bar u^\dagger_k) < 0
     \end{cases}
 \end{align}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{2nd Elevating the scheme to three-dimensions}
+A second possibility is to first center the coordinate system on the fluxes on the staggered grid and then
+in a second step center on the time-derivative:
+\begin{align}
+n_k^\dagger =& \frac{1}{2}\left( \QQ n_k + \PP n_{k+1}\right) \\
+u_k =& \frac{1}{2}\left( \QQ u^\dagger_{k-1} + \PP u_{k}^\dagger\right)\\
+\left[\partial_\parallel u^\dagger \right]_k =& \left( \PP u^\dagger_{k} - \QQ
+u^\dagger_{k-1}\right) \\
+\left[\partial_\parallel n\right]^\dagger_k =& \left( \PP n_{k+1} - \QQ
+n_k\right)
+\end{align}
+Such that in total we have
+\begin{align}
+    \frac{n_k^{n+1} - n_k^n}{\Delta t} = &-\frac{1}{\Delta\varphi \sqrt{G^k}}
+    \left( \sqrt{G^{k+1/2}}b^\varphi_{k+1/2}  \PP \hat q_{k}^\dagger
+    -\sqrt{G^{k-1/2}}b^\varphi_{k-1/2}  \QQ \hat q_{k-1}^\dagger \right)
+     \\
+    \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &-
+ \frac{b^\varphi_k}{\Delta\varphi}\left( \PP\hat f_{k+1} - \QQ\hat f_k\right)
+ -\frac{\tau}{\mu}\frac{b^\varphi_k}{\Delta\varphi} \frac{[\partial_\parallel
+ n]^\dagger_k}{2}\left( \frac{1}{\PP n_{k+1}} + \frac{1}{\QQ n_k} \right)
+    \nonumber\\
+    &+ \frac{\nu_u
+        \left(\sqrt{G^{k+1/2}}b^\varphi_{k+1/2}b^\varphi_{k+1/2} (I^+ u^\dagger_{k+1} - u^\dagger_k)
+        - \sqrt{G^{k-1/2}}b^\varphi_{k-1/2}b^\varphi_{k-1/2} ( u^\dagger_k - I^- u^\dagger_{k-1})\right)
+    }{n^\dagger_{k} \sqrt{G^k}(\Delta \varphi)^2}
+\end{align}
+The fluxes are discretized according to
+\begin{align}
+    \hat q^\dagger_k &:= u^\dagger_k \begin{cases}
+        \QQ n_k     + \frac{1}{2}\Lambda\left( (\partial_\parallel n)^\dagger_k, I^- (\partial_\parallel n)^\dagger_{k-1}\right)&\text{ if } u^\dagger_k \geq 0 \\
+        \PP n_{k+1} - \frac{1}{2}\Lambda\left( I^+(\partial_\parallel n)^\dagger_{k+1}, (\partial_\parallel n)^\dagger_k\right) &\text{ if } u^\dagger_k < 0
+    \end{cases}
+    \\
+    \hat f_k &:= \frac{1}{2}u_k\begin{cases}
+        \QQ u^\dagger_{k-1} + \frac{1}{2}\Lambda\left( (\partial_\parallel u^\dagger )_k, I^- (\partial_\parallel u^\dagger)_{k-1}\right)&\text{ if } u_k \geq 0 \\
+        \PP u^\dagger_{k}   - \frac{1}{2}\Lambda\left( I^+(\partial_\parallel u^\dagger)_{k+1}, (\partial_\parallel u^\dagger)_k\right) &\text{ if } u_k < 0 \\
+    \end{cases}
+\end{align}
 
 \end{document}
