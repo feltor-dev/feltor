@@ -99,7 +99,28 @@ int main( )
     double norm = dg::blas2::dot( derivative, vol3d, derivative);
     std::string name  = "centeredST";
     std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
-              <<" "<<sqrt(norm/sol)<<" #  \t"<<vol<<"\n";
+              <<" "<<sqrt(norm/sol)<<"\n"
+              <<"    "<<name+"_vol:"<<std::setw(30-name.size())
+              <<" "<<vol<<"\n";
+
+    ds.fieldaligned()(dg::geo::einsPlus, fun, ePlus);
+    ds.fieldaligned()(dg::geo::einsMinus, fun, eMinus);
+    dg::blas1::pointwiseDot ( 1./2./dsFAST.deltaPhi(), dsFAST.bphiM(),
+            fun, -1./2./dsFAST.deltaPhi(), dsFAST.bphiM(),
+            eMinus, 0., eMinus);
+    dg::blas1::pointwiseDot( 1./2./dsFAST.deltaPhi(), ePlus,
+            dsFAST.bphiP(), -1./2./dsFAST.deltaPhi(), fun,
+            dsFAST.bphiP(), 0., ePlus);
+    dg::geo::ds_divCentered( dsFAST, 1., eMinus, ePlus, 0., derivative);
+    sol = dg::blas2::dot( vol3d, sol3);
+    vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, fun));
+    dg::blas1::axpby( 1., sol3, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    name  = "directLapST"; // works as well as directLap
+    std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+              <<" "<<sqrt(norm/sol)<<"\n"
+              <<"    "<<name+"_vol:"<<std::setw(30-name.size())
+              <<" "<<vol<<"\n";
     ///##########################################################///
     std::cout << "# TEST VOLUME FORMS\n";
     double volume = dg::blas1::dot( 1., dsFAST.sqrtG());
