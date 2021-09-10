@@ -364,6 +364,18 @@ struct Explicit
              Container& fluxM,
              Container& fluxP,
              std::string slope_limiter);
+    void compute_parallel_flux(
+        const Container& velocity,
+        const Container& minusST,
+        const Container& plusST,
+        Container& flux,
+        std::string slope_limiter);
+    void compute_parallel_advection(
+        const Container& velocity,
+        const Container& minusST,
+        const Container& plusST,
+        Container& flux,
+        std::string slope_limiter);
     void compute_parallel(          std::array<std::array<Container,2>,2>& yp);
     void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
     void add_rhs_penalization(      std::array<std::array<Container,2>,2>& yp);
@@ -1225,6 +1237,51 @@ void Explicit<Geometry, IMatrix, Matrix,
             fluxM, fluxP, slope_limiter);
     dg::blas1::pointwiseDot( fluxM, velocityKM, fluxM);
     dg::blas1::pointwiseDot( fluxP, velocityKP, fluxP);
+}
+
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix,
+     Container>::compute_parallel_flux( const Container& velocity,
+             const Container& minusST, const Container& plusST,
+             Container& flux,
+             std::string slope_limiter
+             )
+{
+    compute_parallel_advection( velocity, minusST, plusST, flux, slope_limiter);
+    dg::blas1::pointwiseDot( velocity, flux, flux);
+}
+
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix,
+     Container>::compute_parallel_advection( const Container& velocity,
+             const Container& minusST, const Container& plusST,
+             Container& flux,
+             std::string slope_limiter
+             )
+{
+    dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
+            velocity, minusST, plusST);
+    if(slope_limiter != "none" )
+    {
+        dg::blas1::axpby( 1., plusST, -1., minusST, m_temp0);
+        m_fa( dg::geo::einsMinus, m_temp0, m_minus);
+        m_fa( dg::geo::einsPlus, m_temp0, m_plus);
+        // Let's keep the default boundaries of NEU
+        // boundary values are (probably?) never used in the slope limiter branches
+        update_parallel_bc_2nd( m_fa, m_minus, m_temp0, m_plus, dg::NEU, 0.);
+        if( slope_limiter == "minmod")
+        {
+            dg::blas1::evaluate( flux, dg::plus_equals(),
+                dg::SlopeLimiter<dg::MinMod>(), velocity,
+                m_minus, m_temp0, m_plus, 0.5, 0.5);
+        }
+        else if( slope_limiter == "vanLeer")
+        {
+            dg::blas1::evaluate( flux, dg::plus_equals(),
+                dg::SlopeLimiter<dg::VanLeer>(), velocity,
+                m_minus, m_temp0, m_plus, 0.5, 0.5);
+        }
+    }
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>

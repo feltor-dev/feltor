@@ -72,7 +72,7 @@ When $\bhat = \xhat$ the system reduces to the one-dimensional Navier-Stokes equ
 \begin{align}
     \
     \frac{\partial}{\partial t} n &= - \frac{\partial}{\partial x}\left( nu\right) \\
-    \frac{\partial}{\partial t} u &= - \frac{\partial}{\partial x}\left(\frac{u^2}{2} - \frac{\tau}{\mu} \ln n\right) + \nu_u \frac{1}{n}\frac{\partial^2}{\partial x^2} u
+    \frac{\partial}{\partial t} u &= - \frac{\partial}{\partial x}\left(\frac{u^2}{2} + \frac{\tau}{\mu} \ln n\right) + \nu_u \frac{1}{n}\frac{\partial^2}{\partial x^2} u
 \end{align}
 
 We here choose a class of schemes known as staggered grids. The main is to discretize
@@ -139,7 +139,7 @@ The best scheme that we found in this formulation is
 \begin{align}
     \frac{n_k^{n+1} - n_k^n}{\Delta t} = &- \frac{1}{\Delta x}(q^\dagger_k  - q^\dagger_{k-1}) \\
     \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &- \frac{1}{\Delta
-    x} \left[ \hat f_{k+1} -\hat f_k -
+    x} \left( \hat f_{k+1} -\hat f_k\right) - \frac{1}{\Delta x}\left[
         \frac{\tau}{\mu} \left(n_{k+1} - n_k\right) \frac{1}{2}\left(\frac{1}{n_{k+1}}
     +\frac{1}{n_k}\right)\right]
     \nonumber\\
@@ -206,8 +206,8 @@ Next, we denote quantities transformed into the coordinate system centered on th
 Such that for the velocity equation we have
 \begin{align}
     \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &- \frac{b^\varphi_k}{\Delta
-    \varphi} \left[ \bar f^\dagger_{k+1/2} -\bar f^\dagger_{k-1/2} -
-        \frac{\tau}{\mu} \left(\bar n^\dagger_{k+1/2} - \bar n^\dagger_{k-1/2}\right) \frac{1}{2}\left(\frac{1}{\bar n^\dagger_{k+1/2}}
+    \varphi} \left( \bar f^\dagger_{k+1/2} -\bar f^\dagger_{k-1/2}\right) -\frac{b^\varphi_k}{\Delta\varphi}
+        \left[\frac{\tau}{\mu} \left(\bar n^\dagger_{k+1/2} - \bar n^\dagger_{k-1/2}\right) \frac{1}{2}\left(\frac{1}{\bar n^\dagger_{k+1/2}}
     +\frac{1}{\bar n^\dagger_{k-1/2}}\right)\right]
     \nonumber\\
     &+ \frac{2\nu_u
@@ -245,8 +245,7 @@ Such that in total we have
      \\
     \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &-
  \frac{b^\varphi_k}{\Delta\varphi}\left( \PP\hat f_{k+1} - \QQ\hat f_k\right)
- -\frac{\tau}{\mu}\frac{b^\varphi_k}{\Delta\varphi} \frac{[\partial_\parallel
- n]^\dagger_k}{2}\left( \frac{1}{\PP n_{k+1}} + \frac{1}{\QQ n_k} \right)
+ -\frac{\tau}{\mu}\frac{b^\varphi_k}{\Delta\varphi} \frac{\PP n_{k+1} - \QQ n_k}{2}\left( \frac{1}{\PP n_{k+1}} + \frac{1}{\QQ n_k} \right)
     \nonumber\\
     &+ \frac{\nu_u
         \left(\sqrt{G^{k+1/2}}b^\varphi_{k+1/2}b^\varphi_{k+1/2} (I^+ u^\dagger_{k+1} - u^\dagger_k)
