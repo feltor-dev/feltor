@@ -227,27 +227,25 @@ struct Explicit
                 m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
                 update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
                         m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-                dg::geo::ds_centered( m_fa, 1., m_minus, m_density[i],
-                        m_plus, 0., m_dsN[i]);
+                dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsN[i]);
                 // potential m_dsP
                 m_fa( dg::geo::einsMinus, m_potential[i], m_minus);
                 m_fa( dg::geo::einsPlus,  m_potential[i], m_plus);
                 update_parallel_bc_2nd( m_fa, m_minus, m_potential[i], m_plus,
                         m_p.bcxP, 0.);
-                dg::geo::ds_centered( m_fa, 1., m_minus, m_potential[i],
-                        m_plus, 0., m_dsP[i]);
+                dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsP[i]);
                 // velocity m_dssU, m_lapParU
                 m_fa_diff( dg::geo::einsMinus, m_velocity[i], m_minus);
                 m_fa_diff( dg::geo::einsPlus,  m_velocity[i], m_plus);
                 update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[i], m_plus,
                         m_p.bcxU, 0.);
-                dg::geo::dssd_centered( m_divb, m_fa_diff, 1.,
+                dg::geo::dssd_centered( m_fa_diff, 1.,
                         m_minus, m_velocity[i], m_plus, 0., m_lapParU[i]);
                 dg::geo::dss_centered( m_fa_diff, 1., m_minus,
                     m_velocity[i], m_plus, 0., m_dssU[i]);
                 // velocity m_dsU
-                dg::geo::ds_centered( m_fa_diff, 1.,
-                        m_minus, m_velocity[i], m_plus, 0., m_dsU[i]);
+                dg::geo::ds_centered( m_fa_diff, 1., m_minus, m_plus, 0.,
+                        m_dsU[i]);
                 // velocity source
                 dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
                             double sn, double u, double n){ return -u*sn/n;},
@@ -349,19 +347,23 @@ struct Explicit
         const Container& apar,
         std::array<Container,2>& velocityDOT);
     void compute_parallel_flux(
-        const Container& velocity,
-        const Container& minusST,
-        const Container& plusST,
-        const Container& slope,
-        Container& flux,
-        std::string slope_limiter);
+             const Container& velocityKM,
+             const Container& velocityKP,
+             const Container& densityM,
+             const Container& density,
+             const Container& densityP,
+             Container& fluxM,
+             Container& fluxP,
+             std::string slope_limiter);
     void compute_parallel_advection(
-        const Container& velocity,
-        const Container& minusST,
-        const Container& plusST,
-        const Container& slope,
-        Container& flux,
-        std::string slope_limiter);
+             const Container& velocityKM,
+             const Container& velocityKP,
+             const Container& densityM,
+             const Container& density,
+             const Container& densityP,
+             Container& fluxM,
+             Container& fluxP,
+             std::string slope_limiter);
     void compute_parallel(          std::array<std::array<Container,2>,2>& yp);
     void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
     void add_rhs_penalization(      std::array<std::array<Container,2>,2>& yp);
@@ -397,6 +399,7 @@ struct Explicit
 
     Container m_UE2;
     std::array<Container,2> m_divNUb;
+    std::array<Container,2> m_plusN, m_minusN, m_plusU, m_minusU;
     std::array<Container,2> m_plusSTN, m_minusSTN, m_plusSTU, m_minusSTU;
     std::vector<Container> m_multi_chi;
 
@@ -412,6 +415,7 @@ struct Explicit
     // Helper variables
     Container m_temp0, m_temp1;
     Container m_minus, m_plus;
+    Container m_fluxM, m_fluxP;
 
     //matrices and solvers
     Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
@@ -625,9 +629,11 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_source = m_sheath_coordinate = m_UE2 = m_temp1 = m_temp0;
     m_apar = m_aparST = m_profne = m_wall = m_sheath = m_temp0;
     m_plus = m_minus = m_temp0;
+    m_fluxM = m_fluxP = m_temp0;
 
     m_potential[0] = m_potential[1] = m_temp0;
     m_plusSTN = m_minusSTN = m_minusSTU = m_plusSTU = m_potential;
+    m_plusN = m_minusN = m_minusU = m_plusU = m_potential;
     m_divNUb = m_density = m_densityST = m_velocity = m_potential;
     m_velocityST = m_potentialST = m_potential;
     m_dsN = m_dsP = m_dsU = m_dssU = m_lapParU = m_potential;
@@ -1134,67 +1140,91 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_velocity(
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix,
-     Container>::compute_parallel_flux( const Container& velocity,
-             const Container& minusST, const Container& plusST,
-             const Container& slope,
-             Container& flux,
+     Container>::compute_parallel_advection(
+             const Container& velocityKM,
+             const Container& velocityKP,
+             const Container& densityM,
+             const Container& density,
+             const Container& densityP,
+             Container& fluxM,
+             Container& fluxP,
              std::string slope_limiter
              )
 {
-    dg::blas1::evaluate( flux, dg::equals(), dg::UpwindProduct(),
-            velocity, minusST, plusST);
+    dg::blas1::evaluate( fluxM, dg::equals(), dg::Upwind(),
+            velocityKM, densityM, density);
+    dg::blas1::evaluate( fluxP, dg::equals(), dg::Upwind(),
+            velocityKP, density, densityP);
     if(slope_limiter != "none" )
     {
-        m_fa( dg::geo::einsMinus, slope, m_minus);
-        m_fa( dg::geo::einsPlus, slope, m_plus);
+        m_fa( dg::geo::einsMinus, densityM, m_minus);
+        m_fa( dg::geo::einsPlus, densityP, m_plus);
         // Let's keep the default boundaries of NEU
         // boundary values are (probably?) never used in the slope limiter branches
-        update_parallel_bc_2nd( m_fa, m_minus, slope, m_plus, dg::NEU, 0.);
+        dg::blas1::copy(density, m_temp0);
+        update_parallel_bc_2nd( m_fa, m_temp0, densityP, m_plus, dg::NEU, 0.);
+        dg::blas1::copy(density, m_temp0);
+        update_parallel_bc_2nd( m_fa, m_minus, densityM, m_temp0, dg::NEU, 0.);
+        dg::blas1::axpby( 1., densityP, -1., density, m_temp0);
+        dg::blas1::axpby( 1., density, -1., densityM, m_temp1);
+        dg::blas1::axpby( 1., densityM, -1., densityM, m_temp1);
         if( slope_limiter == "minmod")
         {
-            dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiterProduct<dg::MinMod>(), velocity,
-                m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
+            dg::MinMod minmod;
+            dg::blas1::subroutine( [minmod] DG_DEVICE(
+                        double& fluxM, double& fluxP, double vKM, double vKP,
+                        double dKMM, double dKM, double dK, double dKP, double dKPP)
+                    {
+                        if( vKP >= 0.)
+                            fluxP += 0.5*minmod( dKP-dK, dK-dKM);
+                        else
+                            fluxP -= 0.5*minmod( dKPP-dKP, dKP-dK);
+                        if( vKM >= 0.)
+                            fluxM += 0.5*minmod( dK-dKM, dKM-dKMM);
+                        else
+                            fluxM -= 0.5*minmod( dKP-dK, dK-dKM);
+
+                    }, fluxM, fluxP, velocityKM, velocityKP, m_minus, densityM,
+                    density, densityP, m_plus);
         }
         else if( slope_limiter == "vanLeer")
         {
-            dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiterProduct<dg::VanLeer>(), velocity,
-                m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
+            dg::VanLeer vanLeer;
+            dg::blas1::subroutine( [vanLeer] DG_DEVICE(
+                        double& fluxM, double& fluxP, double vKM, double vKP,
+                        double dKMM, double dKM, double dK, double dKP, double dKPP)
+                    {
+                        if( vKP >= 0.)
+                            fluxP += 0.5*vanLeer( dKP-dK, dK-dKM);
+                        else
+                            fluxP -= 0.5*vanLeer( dKPP-dKP, dKP-dK);
+                        if( vKM >= 0.)
+                            fluxM += 0.5*vanLeer( dK-dKM, dKM-dKMM);
+                        else
+                            fluxM -= 0.5*vanLeer( dKP-dK, dK-dKM);
+
+                    }, fluxM, fluxP, velocityKM, velocityKP, m_minus, densityM,
+                    density, densityP, m_plus);
         }
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix,
-     Container>::compute_parallel_advection( const Container& velocity,
-             const Container& minusST, const Container& plusST,
-             const Container& slope,
-             Container& flux,
+     Container>::compute_parallel_flux(
+             const Container& velocityKM,
+             const Container& velocityKP,
+             const Container& densityM,
+             const Container& density,
+             const Container& densityP,
+             Container& fluxM,
+             Container& fluxP,
              std::string slope_limiter
              )
 {
-    dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
-            velocity, minusST, plusST);
-    if(slope_limiter != "none" )
-    {
-        m_fa( dg::geo::einsMinus, slope, m_minus);
-        m_fa( dg::geo::einsPlus, slope, m_plus);
-        // Let's keep the default boundaries of NEU
-        // boundary values are (probably?) never used in the slope limiter branches
-        update_parallel_bc_2nd( m_fa, m_minus, slope, m_plus, dg::NEU, 0.);
-        if( slope_limiter == "minmod")
-        {
-            dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::MinMod>(), velocity,
-                m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
-        }
-        else if( slope_limiter == "vanLeer")
-        {
-            dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::VanLeer>(), velocity,
-                m_minus, slope, m_plus, m_faST.hm(), m_faST.hp());
-        }
-    }
+    compute_parallel_advection( velocityKM, velocityKP, densityM, density, densityP,
+            fluxM, fluxP, slope_limiter);
+    dg::blas1::pointwiseDot( fluxM, velocityKM, fluxM);
+    dg::blas1::pointwiseDot( fluxP, velocityKP, fluxP);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1203,49 +1233,49 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
 {
     for( unsigned i=0; i<2; i++)
     {
-        // compute divNUb
-        compute_parallel_flux( m_velocityST[i], m_minusSTN[i], m_plusSTN[i],
-                m_dsN[i], m_divNUb[i], m_p.slope_limiter);
-        m_faST( dg::geo::zeroPlus,  m_divNUb[i], m_plus);
-        m_faST( dg::geo::einsMinus, m_divNUb[i], m_minus);
-        // We always use NEU for the fluxes for now
-        update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0, m_divNUb[i]);
-        dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0, m_temp0);
-        dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., m_divNUb[i]);
-        dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
+        //// compute divNUb
+        //compute_parallel_flux( m_velocityST[i], m_minusSTN[i], m_plusSTN[i],
+        //        m_dsN[i], m_divNUb[i], m_p.slope_limiter);
+        //m_faST( dg::geo::zeroPlus,  m_divNUb[i], m_plus);
+        //m_faST( dg::geo::einsMinus, m_divNUb[i], m_minus);
+        //// We always use NEU for the fluxes for now
+        //update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
+        //dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0, m_divNUb[i]);
+        //dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0, m_temp0);
+        //dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., m_divNUb[i]);
+        //dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
 
-        // compute grad U2/2
-        compute_parallel_flux( m_velocity[i], m_minusSTU[i], m_plusSTU[i],
-                m_dsU[i], m_temp0, m_p.slope_limiter);
-        m_faST( dg::geo::einsPlus,  m_temp0, m_plus);
-        m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
-        update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
+        //// compute grad U2/2
+        //compute_parallel_flux( m_velocity[i], m_minusSTU[i], m_plusSTU[i],
+        //        m_dsU[i], m_temp0, m_p.slope_limiter);
+        //m_faST( dg::geo::einsPlus,  m_temp0, m_plus);
+        //m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
+        //update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
+        //dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
 
-        // Add density gradient and electric field
-        double tau = m_p.tau[i], mu = m_p.mu[i];
-        dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& WDot,
-                    double dsP, double dsN, double QN, double PN, double hm,
-                    double hp){
+        //// Add density gradient and electric field
+        //double tau = m_p.tau[i], mu = m_p.mu[i];
+        //dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& WDot,
+        //            double dsP, double dsN, double QN, double PN, double hm,
+        //            double hp){
 
-                    WDot -= 1./mu*dsP;
-                    WDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
-                },
-                yp[1][i], m_dsP[i], m_dsN[i], m_minusSTN[i], m_plusSTN[i],
-                m_faST.hm(), m_faST.hp()
-        );
-        // Add parallel viscosity
-        if( m_p.nu_parallel_u[i] > 0)
-        {
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
-                    m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[i],
-                    m_minus, m_velocityST[i], m_plus, 0., m_temp0);
-            dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
-        }
+        //            WDot -= 1./mu*dsP;
+        //            WDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
+        //        },
+        //        yp[1][i], m_dsP[i], m_dsN[i], m_minusSTN[i], m_plusSTN[i],
+        //        m_faST.hm(), m_faST.hp()
+        //);
+        //// Add parallel viscosity
+        //if( m_p.nu_parallel_u[i] > 0)
+        //{
+        //    m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
+        //    m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
+        //    update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
+        //            m_plus, m_p.bcxU, 0.);
+        //    dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[i],
+        //            m_minus, m_velocityST[i], m_plus, 0., m_temp0);
+        //    dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
+        //}
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1474,11 +1504,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //Compute m_densityST, m_dsN and m_potentialST, m_dsP
     update_staggered_density_and_phi( t, m_density, m_potential);
 
-    // Now refine potential on staggered grid
-    // set m_potentialST[0]
-    compute_phi( t, m_densityST, m_potentialST[0], true);
-    // set m_potentialST[1]  --- needs m_potentialST[0]
-    compute_psi( t, m_potentialST[0], m_potentialST[1], true);
+    //// Now refine potential on staggered grid
+    //// set m_potentialST[0]
+    //compute_phi( t, m_densityST, m_potentialST[0], true);
+    //// set m_potentialST[1]  --- needs m_potentialST[0]
+    //compute_psi( t, m_potentialST[0], m_potentialST[1], true);
     timer.toc();
     accu += timer.diff();
     DG_RANK0 std::cout << "## Compute phi and psi 2nd           took "
