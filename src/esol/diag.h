@@ -18,7 +18,7 @@ struct RadialEnergyDiff
     private:
     double m_tau, m_z;
 };
-struct RadialEnergyDiffDeltaF
+struct RadialEnergyDiffDeltaF //TODO recalculate for Boussi
 {
     RadialEnergyDiffDeltaF(double tau, double z): m_tau(tau), m_z(z){}
 
@@ -122,14 +122,6 @@ std::vector<Record1d> diagnostics1d_list = {
           return dg::blas1::dot( v.f.volume(), v.tmp[0]);
         }
     },
-    /// ------------------- Mass   terms ------------------------//
-    {"lneperp", "Perpendicular electron diffusion",
-        [](  Variables& v ) {
-            dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1.0*(v.p.bgprofamp + v.p.profamp)));
-            v.f.compute_diff( 1., v.tmp[0], 0., v.tmp[1]);
-            return dg::blas1::dot( v.f.volume(), v.tmp[1]);
-        }
-    },
     /// ------------------- Energy terms ------------------------//
     {"ene", "Entropy electrons", //nelnne or (delta ne)^2
         []( Variables& v ) {
@@ -180,7 +172,7 @@ std::vector<Record1d> diagnostics1d_list = {
                     v.f.density(0),  v.f.potential(0), v.tmp[0]
                 );
             }
-            else {
+            else { //TODO recalculate
                 dg::blas1::evaluate( v.tmp[1], dg::equals(),
                     routines::RadialEnergyDiffDeltaF( v.p.tau[0], -1),
                     v.f.density(0),  v.f.potential(0), v.tmp[0]
@@ -199,7 +191,7 @@ std::vector<Record1d> diagnostics1d_list = {
                     v.f.density(1),  v.f.potential(1), v.tmp[0]
                 );
             }
-            else {
+            else { //TODO recalculate for Boussi
                  dg::blas1::evaluate( v.tmp[1], dg::equals(),
                     routines::RadialEnergyDiffDeltaF(  v.p.tau[1], 1),
                     v.f.density(1),  v.f.potential(1), v.tmp[0]

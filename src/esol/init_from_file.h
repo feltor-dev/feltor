@@ -84,8 +84,8 @@ std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::Ca
             );
         dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec[i]);
         
-        dg::blas1::plus( transferOUTvec[i], -1.0);
         dg::assign( transferOUTvec[i], y0[i]); //ne-nbc
+        dg::blas1::plus(y0[i],-1.0*(pIN.bgprofamp + pIN.profamp));
     }
     errIN = nc_close(ncidIN);
     /// ///////////////Now Construct initial fields ////////////////////////

@@ -1,6 +1,6 @@
 {
 "grid": 
-    {"n": 3, "Nx": 64, "Ny": 32, "lx": 64, "ly": 64}, 
+    {"n": 3, "Nx": 64, "Ny": 32, "lx": 64, "ly": 32}, 
 "timestepper": 
     {"type": "adaptive", 
      "tableau": "Bogacki-Shampine-4-2-3", 
@@ -20,8 +20,8 @@
     {
     "curvature": 0.00015, 
     "tau"  : 1.0,  
-    "alpha"  : 0.0000, 
-    "lambda"  : 0.0000000, 
+    "alpha"  : 0.0005, 
+    "lambda"  : 0.000001, 
     "mu_e"  : -0.000272121, 
     "equations": "ff-lwl-O2", 
     "xfac_sep"  : 0.5, 
@@ -31,20 +31,20 @@
     {
      "source_type" : "flux", 
      "source_rel" : "zero-pol", 
-     "omega_s" : 0.1,
+     "omega_s" : 0.05,
      "xfac_s": 0.3,
      "sigma_s" : 3.0
     },
 "profile":
     {
      "bgprofamp" : 1.0,
-     "profamp": 0.0,
+     "profamp": 9.0,
      "sigma_p": 20.0
      },
 "init": 
     {
     "type": "bath", 
-    "amplitude": 0.00, 
+    "amplitude": 0.01, 
     "sigma": 5.0, 
     "posX": 0.5, 
     "posY": 0.5,

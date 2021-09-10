@@ -12,7 +12,6 @@
 #ifndef WITHOUT_GLFW
 #include "draw/host_window.h"
 #endif // WITHOUT_GLFW
-
 #include "dg/file/file.h"
 
 #include "esol.h"
