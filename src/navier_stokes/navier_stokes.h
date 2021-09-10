@@ -117,19 +117,19 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::copy( 0., yp);
 
         // Compute transformed fieldaligned grid
-        m_faST( dg::geo::einsMinus, m_velocityST[1], m_minusU[1]);
-        m_faST( dg::geo::zeroPlus,  m_velocityST[1], m_plusU[1]);
-        update_parallel_bc_1st( m_minusU[1], m_plusU[1], m_p.bcxU, 0.);
-        dg::blas1::axpby( 0.5, m_minusU[1], 0.5, m_plusU[1], m_velocity[1]);
+        m_faST( dg::geo::einsMinus, m_velocityST[1], m_minusSTU[1]);
+        m_faST( dg::geo::zeroPlus,  m_velocityST[1], m_plusSTU[1]);
+        update_parallel_bc_1st( m_minusSTU[1], m_plusSTU[1], m_p.bcxU, 0.);
+        dg::blas1::axpby( 0.5, m_minusSTU[1], 0.5, m_plusSTU[1], m_velocity[1]);
         m_fa( dg::geo::einsMinus, m_density[1], m_minusN[1]);
         m_fa( dg::geo::einsPlus,  m_density[1], m_plusN[1]);
         update_parallel_bc_2nd( m_fa, m_minusN[1], m_density[1], m_plusN[1],
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
         // compute qhat
-        compute_parallel_flux( m_minusU[1], m_plusU[1],
+        compute_parallel_flux( m_minusSTU[1], m_plusSTU[1],
                 m_minusN[1], m_density[1], m_plusN[1],
                 m_fluxM, m_fluxP, m_p.slope_limiter);
-        // Now compute divNUb and grad U^2/2
+        // Now compute divNUb
         dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
                 m_divNUb[1]);
         dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
@@ -138,19 +138,19 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Compute transformed fieldaligned ADJOINT grid
         m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
         m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
-        update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
-                dg::DIR ? m_p.nbc : 0.);
+        update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1],
+                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
         dg::blas1::axpby( 0.5, m_minusSTN[1], 0.5, m_plusSTN[1], m_densityST[1]);
-        m_fa( dg::geo::einsMinus, m_velocityST[1], m_minusSTU[1]);
-        m_fa( dg::geo::einsPlus,  m_velocityST[1], m_plusSTU[1]);
-        update_parallel_bc_2nd( m_fa, m_minusSTU[1], m_velocityST[1],
-                m_plusSTU[1], m_p.bcxU, 0.);
+        m_fa( dg::geo::einsMinus, m_velocityST[1], m_minusU[1]);
+        m_fa( dg::geo::einsPlus,  m_velocityST[1], m_plusU[1]);
+        update_parallel_bc_2nd( m_fa, m_minusU[1], m_velocityST[1],
+                m_plusU[1], m_p.bcxU, 0.);
 
         // compute fhat
-        dg::blas1::axpby( 0.25, m_minusSTU[1], 0.25, m_velocityST[1], m_minusU[1]);
-        dg::blas1::axpby( 0.25, m_velocityST[1], 0.25, m_plusSTU[1], m_plusU[1]);
-        compute_parallel_flux( m_minusU[1], m_plusU[1],
-                m_minusSTU[1], m_velocityST[1], m_plusSTU[1],
+        dg::blas1::axpby( 0.25, m_minusU[1], 0.25, m_velocityST[1], m_minusSTU[1]);
+        dg::blas1::axpby( 0.25, m_velocityST[1], 0.25, m_plusU[1], m_plusSTU[1]);
+        compute_parallel_flux( m_minusSTU[1], m_plusSTU[1],
+                m_minusU[1], m_velocityST[1], m_plusU[1],
                 m_fluxM, m_fluxP,
                 m_p.slope_limiter);
         dg::geo::ds_centered( m_faST, -1., m_fluxM, m_fluxP, 1., yp[1][1]);

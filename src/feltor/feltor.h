@@ -929,18 +929,19 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_an
         m_faST( dg::geo::einsPlus,  m_density[i], m_plusSTN[i]);
         update_parallel_bc_1st( m_minusSTN[i], m_plusSTN[i],
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minusSTN[i], m_plusSTN[i], 0.,
-                m_dsN[i]);
-        dg::geo::ds_average( m_faST, 1., m_minusSTN[i], m_plusSTN[i], 0.,
-                m_densityST[i]);
+        dg::blas1::axpby( 0.5, m_minusSTN[i], 0.5, m_plusSTN[i], m_densityST[i]);
+
+        m_fa( dg::geo::einsMinus, m_density[i], m_minusN[i]);
+        m_fa( dg::geo::einsPlus,  m_density[i], m_plusN[i]);
+        update_parallel_bc_2nd( m_fa, m_minusN[i], m_density[i], m_plusN[i],
+                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+
         m_faST( dg::geo::zeroMinus, m_potential[i], m_minus);
         m_faST( dg::geo::einsPlus,  m_potential[i], m_plus);
         update_parallel_bc_1st( m_minus, m_plus,
                 m_p.bcxP, 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0.,
-                m_dsP[i]);
-        dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0.,
-                m_potentialST[i]);
+        dg::geo::ds_centered( m_faST, 1., m_minus, m_plus, 0., m_dsP[i]);
+        dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_potentialST[i]);
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -955,15 +956,18 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
         m_faST( dg::geo::einsMinus, m_velocityST[i], m_minusSTU[i]);
         m_faST( dg::geo::zeroPlus,  m_velocityST[i], m_plusSTU[i]);
         update_parallel_bc_1st( m_minusSTU[i], m_plusSTU[i], m_p.bcxU, 0.);
-        dg::geo::ds_slope( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0., m_dsU[i]);
-        dg::geo::ds_average( m_faST, 1., m_minusSTU[i], m_plusSTU[i], 0.,
-                m_velocity[i]);
+        dg::blas1::axpby( 0.5, m_minusSTU[i], 0.5, m_plusSTU[i], m_velocity[i]);
+
+        m_fa( dg::geo::einsMinus, m_velocityST[i], m_minusU[i]);
+        m_fa( dg::geo::einsPlus,  m_velocityST[i], m_plusU[i]);
+        update_parallel_bc_2nd( m_fa, m_minusU[i], m_velocityST[i],
+                m_plusU[i], m_p.bcxU, 0.);
     }
     // Compute apar
     m_faST( dg::geo::einsMinus, m_aparST, m_minus);
     m_faST( dg::geo::zeroPlus,  m_aparST, m_plus);
     update_parallel_bc_1st( m_minus, m_plus, m_p.bcxA, 0.);
-    dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0., m_apar);
+    dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_apar);
     m_old_apar.update( t, m_apar);
 }
 
@@ -1241,18 +1245,6 @@ void Explicit<Geometry, IMatrix, Matrix,
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix,
-     Container>::compute_parallel_flux( const Container& velocity,
-             const Container& minusST, const Container& plusST,
-             Container& flux,
-             std::string slope_limiter
-             )
-{
-    compute_parallel_advection( velocity, minusST, plusST, flux, slope_limiter);
-    dg::blas1::pointwiseDot( velocity, flux, flux);
-}
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix,
      Container>::compute_parallel_advection( const Container& velocity,
              const Container& minusST, const Container& plusST,
              Container& flux,
@@ -1285,54 +1277,63 @@ void Explicit<Geometry, IMatrix, Matrix,
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix,
+     Container>::compute_parallel_flux( const Container& velocity,
+             const Container& minusST, const Container& plusST,
+             Container& flux,
+             std::string slope_limiter
+             )
+{
+    compute_parallel_advection( velocity, minusST, plusST, flux, slope_limiter);
+    dg::blas1::pointwiseDot( velocity, flux, flux);
+}
+
+
+template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     std::array<std::array<Container,2>,2>& yp)
 {
     for( unsigned i=0; i<2; i++)
     {
-        //// compute divNUb
-        //compute_parallel_flux( m_velocityST[i], m_minusSTN[i], m_plusSTN[i],
-        //        m_dsN[i], m_divNUb[i], m_p.slope_limiter);
-        //m_faST( dg::geo::zeroPlus,  m_divNUb[i], m_plus);
-        //m_faST( dg::geo::einsMinus, m_divNUb[i], m_minus);
-        //// We always use NEU for the fluxes for now
-        //update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        //dg::geo::ds_slope( m_faST, 1., m_minus, m_plus, 0, m_divNUb[i]);
-        //dg::geo::ds_average( m_faST, 1., m_minus, m_plus, 0, m_temp0);
-        //dg::blas1::pointwiseDot( 1., m_divb, m_temp0, 1., m_divNUb[i]);
-        //dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
+        // compute qhat
+        compute_parallel_flux( m_minusSTU[i], m_plusSTU[i],
+                m_minusN[i], m_density[i], m_plusN[i],
+                m_fluxM, m_fluxP, m_p.slope_limiter);
+        // Now compute divNUb
+        dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
+                m_divNUb[i]);
+        dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
 
-        //// compute grad U2/2
-        //compute_parallel_flux( m_velocity[i], m_minusSTU[i], m_plusSTU[i],
-        //        m_dsU[i], m_temp0, m_p.slope_limiter);
-        //m_faST( dg::geo::einsPlus,  m_temp0, m_plus);
-        //m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
-        //update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        //dg::geo::ds_slope( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
+        // compute grad U2/2
+        dg::blas1::axpby( 0.25, m_minusU[i], 0.25, m_velocityST[i], m_minusSTU[i]);
+        dg::blas1::axpby( 0.25, m_velocityST[i], 0.25, m_plusU[i], m_plusSTU[i]);
+        compute_parallel_flux( m_minusSTU[i], m_plusSTU[i],
+                m_minusU[i], m_velocityST[i], m_plusU[i],
+                m_fluxM, m_fluxP,
+                m_p.slope_limiter);
+        dg::geo::ds_centered( m_faST, -1., m_fluxM, m_fluxP, 1., yp[1][i]);
 
-        //// Add density gradient and electric field
-        //double tau = m_p.tau[i], mu = m_p.mu[i];
-        //dg::blas1::subroutine( [tau, mu ]DG_DEVICE ( double& WDot,
-        //            double dsP, double dsN, double QN, double PN, double hm,
-        //            double hp){
-
-        //            WDot -= 1./mu*dsP;
-        //            WDot -= tau/mu*dsN/(hm+hp)*(hm/PN + hp/QN);
-        //        },
-        //        yp[1][i], m_dsP[i], m_dsN[i], m_minusSTN[i], m_plusSTN[i],
-        //        m_faST.hm(), m_faST.hp()
-        //);
-        //// Add parallel viscosity
-        //if( m_p.nu_parallel_u[i] > 0)
-        //{
-        //    m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
-        //    m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
-        //    update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
-        //            m_plus, m_p.bcxU, 0.);
-        //    dg::geo::dssd_centered( m_divb, m_fa_diff, m_p.nu_parallel_u[i],
-        //            m_minus, m_velocityST[i], m_plus, 0., m_temp0);
-        //    dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
-        //}
+        // Add density gradient and electric field
+        double tau = m_p.tau[i], mu = m_p.mu[i], delta = m_fa.deltaPhi();
+        dg::blas1::subroutine( [tau, mu, delta ]DG_DEVICE ( double& WDot,
+                    double dsP, double QN, double PN, double bphi)
+                {
+                    WDot -= 1./mu*dsP;
+                    WDot -= tau/mu*bphi*(PN-QN)/delta/2.*(1/PN + 1/QN);
+                },
+                yp[1][i], m_dsP[i], m_minusSTN[i], m_plusSTN[i], m_fa.bphi()
+        );
+        // Add parallel viscosity
+        if( m_p.nu_parallel_u[i] > 0)
+        {
+            m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
+            m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
+            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
+                    m_plus, m_p.bcxU, 0.);
+            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[i],
+                    m_minus, m_velocityST[i], m_plus, 0., m_temp0);
+            dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
+        }
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1430,18 +1431,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
         //!! Does not really work without
         for( unsigned i=0; i<2; i++)
         {
-            m_fa( dg::geo::einsMinus, m_density[i], m_minus);
-            m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
-            update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
-                    m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
             //The coordinate automatically sees the reversed field
             //but m_plus and m_minus are defined wrt the angle coordinate
             if( m_reversed_field) //bphi negative (exchange + and -)
                 dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, m_plus, m_minus);
+                     m_sheath_coordinate, m_plusN[i], m_minusN[i]);
             else
                 dg::blas1::evaluate( m_temp0, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, m_minus, m_plus);
+                     m_sheath_coordinate, m_minusN[i], m_plusN[i]);
             dg::blas1::pointwiseDot( m_sheath_rate, m_temp0, m_sheath, 1.,
                     yp[0][i]);
         }
@@ -1558,7 +1555,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                        << timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic( );
 
-    //Compute m_densityST, m_dsN and m_potentialST, m_dsP
+    //Compute m_densityST and m_potentialST
     update_staggered_density_and_phi( t, m_density, m_potential);
 
     //// Now refine potential on staggered grid
@@ -1568,7 +1565,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //compute_psi( t, m_potentialST[0], m_potentialST[1], true);
     timer.toc();
     accu += timer.diff();
-    DG_RANK0 std::cout << "## Compute phi and psi 2nd           took "
+    DG_RANK0 std::cout << "## Compute phi and psi ST            took "
                        << timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic( );
 
@@ -1576,7 +1573,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::blas1::copy( y[1], m_velocityST);
     if( m_p.beta != 0)
         compute_aparST( t, m_densityST, m_velocityST, m_aparST);
-    //Compute m_velocity, m_dsU and m_apar
+    //Compute m_velocity and m_apar
     update_velocity_and_apar( t, m_velocityST, m_aparST);
 
     timer.toc();
