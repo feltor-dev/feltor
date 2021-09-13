@@ -44,6 +44,10 @@ int main()
         std::cout << "Original vector  "<<dg::blas2::dot( onen, w1dn, w) << "\n";
         std::cout << "Interpolated vec "<<dg::blas2::dot( oneo, w1do, v) << "\n";
         std::cout << "Difference       "<<dg::blas2::dot( oneo, w1do, v) - dg::blas2::dot( onen, w1dn, w) << " (Must be 0)\n"<<std::endl;
+        dg::DVec wP( w);
+        dg::blas2::symv( proj, v, wP);
+        dg::blas1::axpby( 1., wP, -1., w);
+        std::cout << "Difference       "<<dg::blas2::dot( w, w1dn, w) << " (Must be 0)\n"<<std::endl;
 
         std::cout << "TEST 2D and 3D\n";
 
