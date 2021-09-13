@@ -94,6 +94,27 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealT
 }
 
 /**
+ * @brief Create a diagonal matrix
+ *
+ * This matrix is given by \f$ D_{ij} = d_i \delta_{ij}\f$
+ * @param diagonal The diagonal elements d_i
+ * @return diagonal matrix
+ */
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::host_vector<real_type>& diagonal)
+{
+    unsigned size = diagonal.size();
+    cusp::coo_matrix<int, real_type, cusp::host_memory> W( size, size, size);
+    for( unsigned i=0; i<size; i++)
+    {
+        W.row_indices[i] = W.column_indices[i] = i;
+        W.values[i] = diagonal[i];
+    }
+    return W;
+}
+
+
+/**
  * @brief Create a projection between two grids
  *
  * This matrix can be applied to vectors defined on the old (fine) grid to obtain
@@ -120,20 +141,10 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 {
     if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
     //form the adjoint
-    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
-    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
+        dg::create::diagonal( dg::create::weights( g_old));
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
+        dg::create::diagonal( dg::create::inv_weights( g_new));
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     //!!! cusp::multiply removes explicit zeros in the output
     cusp::multiply( A, Wf, temp);
@@ -150,20 +161,10 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
-    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
-    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
+        dg::create::diagonal( dg::create::weights( g_old));
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
+        dg::create::diagonal( dg::create::inv_weights( g_new));
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
@@ -178,20 +179,10 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
-    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
-    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
+        dg::create::diagonal( dg::create::weights( g_old));
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
+        dg::create::diagonal( dg::create::inv_weights( g_new));
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
