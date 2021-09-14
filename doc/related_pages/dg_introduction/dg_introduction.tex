@@ -7,6 +7,7 @@
 
 \title{DG methods on structured grids}
 \author{M.~Wiesenberger}
+\tableofcontents
 
 \section{ Introduction to discontinuous Galerkin methods} \label{sec:discretization}
 This writeup is based on Reference~\cite{WiesenbergerPhD}. A useful book to consult
@@ -94,7 +95,6 @@ Then, using Eq.~\eqref{eq:ex2}, we get
     f_j = \sum_{k=0}^{P-1} B_{jk}\bar f^k,
 \end{align}
 \end{subequations}
-We call $\bar f^k$ the values of $f$ in $L$-space and $f_j$ the values of $f$ in $X$-space.
 
 Let us now consider an interval $[a,b]$ and an equidistant discretization
 by $N$ cells with cell center $x_n$ and grid size $h=\frac{b-a}{N}$; in addition, we set $x_{nj}^a := x_n + \frac{h}{2}x^a_j$.
@@ -335,7 +335,7 @@ We define
     D^0_{x,per} := (\Eins\otimes F^T)\circ \bar D^0_{x,per}\circ (\Eins\otimes F).
     \label{}
 \end{align*}
-If our coefficients are given in $X$-space, we note with the help of Eq.~\eqref{eq:transformation}
+If our coefficients are nodal values, we note with the help of Eq.~\eqref{eq:transformation}
 \begin{align}
 	\mathbf f_x %&= (\Eins\otimes V) (\Eins\otimes F^{\mathrm{T}}) 
     %\bar M_x^{per}
@@ -407,9 +407,9 @@ matrices derived above can readily be extended via the appropriate Kronecker pro
 The space complexity of 
 the matrices derived is $\mathcal{O}(P^2 N)$ in one and $\mathcal{O}(P^3N^2)$ in two dimensions.
 
-Finally, let us remark that we found it practical to always operate on 
-coefficients in $X$-space, i.e.~we use Eq.~\eqref{eq:matrix_xspace}
-for our implementations and thus use $\vec f$ rather than $\bar{\vec f}$ to represent the approximation. Function products are easily computed coefficient-wise in $X$-space, i.e.~we use
+Finally, let us remark that we found it practical to always operate on nodal
+coefficients, i.e.~we use Eq.~\eqref{eq:matrix_xspace}
+for our implementations and thus use $\vec f$ rather than $\bar{\vec f}$ to represent the approximation. Function products are easily computed coefficient-wise, i.e.~we use
 \begin{align}
     (fg)_{ni}=f_{ni}g_{ni}
     \label{}
@@ -424,7 +424,6 @@ We are now ready to discretize the one-dimensional general elliptic equation
     \label{eq:elliptic}
 \end{align}
 on the interval $[a,b]$. Here, $\chi(x)$ and $\rho(x)$ are given functions.
-%We assume that the function $\chi(x)$ is given in dG coefficients $\chi^{in}$ in X-space.
 
 We either choose periodic, Dirichlet, or Von-Neumann boundary conditions on the 
 left and right border for $\phi$. 
@@ -626,6 +625,64 @@ In this way we get the forward and backward transformation matrices
 \end{align}
 If the least common grid reduces to either grid (a) or (b) the
 transformation matrix reduces to either $P_{a2b}$ or $Q_{a2b}$ as expected.
+
+
+\section{Relation to finite element space}
+The list of nodal values $f_i$ gives a direct possibility to convert from dG to a finite element space (with linear elements):
+\begin{align} \label{eq:fem}
+    f_{\text{FE}}(x) = f_{i} v_{i}(x)
+\end{align}
+where the linear elements $v_i(x)$ are given by
+\begin{align}\label{eq:linear_fem}
+    v_{i}(x) = \begin{cases}
+        \frac{x_{i+1} - x}{x_{i+1} - x_{i}} \text{ if } x_{i}\leq x<x_{i+1} \\
+        \frac{x - x_{i-1} }{x_{i} - x_{i-1}} \text{ if } x_{i-1}\leq x<x_{i} \\
+         0 \text{ else}
+    \end{cases}
+\end{align}
+We have $f_{\text{FE}}(x_{i}) = f_{i}$. Eq.~\eqref{eq:fem} gives an alternative
+interpolation method, which amounts to linear interpolation between the two nearest
+points. Unfortunately, the linear base functions~\eqref{eq:linear_fem} are not
+orthogonal, that is the "mass" matrix of projection integrals $S_{ij} = \int \dx v_i(x)v_j(x)$ is a banded matrix with three diagonals.
+Let us first compute the entries on a reference element $[-1,1]$
+with the dG absicssas $x_j^a$, scaled by $h/2$
+\begin{align}
+    S_{\text{ref}} := \frac{h}{2}\frac{1}{6}\begin{pmatrix}
+        (x_0-(2-x_{P-1})) & 2(x_1 - (2-x_{P-1})) & (x_1 - x_0) & 0 & 0 \\
+        0 & (x_{k} - x_{k-1}) & 2(x_{k+1}-x_{k-1}) & (x_{k+1} - x_k) & 0 \\
+        0 & 0 & (x_{P-1} - x_{P-2}) & 2( (x_0+2) - x_{P-2}) & ((x_0+2)- x_{P-1})
+    \end{pmatrix}
+\end{align}
+Thus reference element consists of the $P\times(P+2)$ blocks $hS_{\text{ref}}/2$.
+The weights of the fem discretization consist of the base elements
+$h_k = (x_{k+1}-x_{k-1})2$.
+\begin{align}
+    W_k = \frac{h}{4}\left( (x_1 - (2-x_{P-1})),\ \ldots, (x_{k+1}-x_{k-1}),\ \ldots, ( (x_0+2) - x_{P-2})\right) \\
+    W_k = \sum_j S_{kj}\leftarrow W = S\cdot \Eins
+\end{align}
+We here realize that $W^{-1}S$  is a smoothing kernel that represents the
+integration $w_k^{-1} \int f(x) v_k(x)\dx$.
+Also note that for an equidistant grid the stencil of $S$ reads $(1,4,1)$, which
+corresponds to Simpson's integration formula.
+Similar to how we derived the dG derivative, we can derive a discretization of the
+simple derivative in the finite element framework:
+\begin{align}
+    \partial_x f = \rho \nonumber\\
+    \int v_i(x) \partial_x f \dx = f_k [v_i(x) v_k(x)]_{x_a}^{x_b} - f_k \int v_k(x)\partial_x v_i(x) \dx = \rho_l \int v_l(x) v_i(x)\dx \nonumber \\
+    \bar D_x^0 f = S\rho \\
+    \bar D_x^0 = \begin{pmatrix}
+        -1/2 & 0 & 1/2
+        \end{pmatrix}
+\end{align}
+We find that the derivative matrix resembles the centered differences.
+We can compute the stiffness matrix $M=\int\dx \partial_x v_i(x)\partial_x v_j(x)$
+\begin{align}
+    M_{\text{ref}} := \frac{2}{h}\begin{pmatrix}
+        0 & -\frac{1}{(x_{k} - x_{k-1})} & \frac{(x_{k+1}-x_{k-1})}{(x_{k} - x_{k-1})(x_{k+1} - x_k)} & -\frac{1}{(x_{k+1} - x_k)} & 0 \\
+    \end{pmatrix}
+\end{align}
+
+The adjoint of the interpolation matrix yields a projection integral $\bar f_j = \int \dx v_j(x) g(x)$, which must be inverted with $f_i = S_{ij}^{-1} \bar f_j$.
 
 
 \section{Spectral and modal filtering techniques}
