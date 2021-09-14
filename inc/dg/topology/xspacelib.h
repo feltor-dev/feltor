@@ -48,12 +48,6 @@ dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
     Matrix transformY = dg::tensorproduct( g.Ny(), backward1d);
     Matrix backward = dg::dgtensor( g.n(), transformY, transformX);
 
-    //thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
-    //Matrix p = gather( map);
-    //Matrix scatter( p);
-    //cusp::multiply( p, backward, scatter);
-    //choose vector layout
-    //return scatter;
     return (dg::IHMatrix)backward;
 
 }

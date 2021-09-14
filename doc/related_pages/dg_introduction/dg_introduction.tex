@@ -634,12 +634,26 @@ The list of nodal values $f_i$ gives a direct possibility to convert from dG to 
 \end{align}
 where the linear elements $v_i(x)$ are given by
 \begin{align}\label{eq:linear_fem}
-    v_{i}(x) = \begin{cases}
-        \frac{x_{i+1} - x}{x_{i+1} - x_{i}} \text{ if } x_{i}\leq x<x_{i+1} \\
+    v_0(x) &= \begin{cases}
+        1 \text{ if } x_{a}\leq x<x_{0} \\
+        \frac{x_{1} - x}{x_{1} - x_{0}} \text{ if } x_{0}\leq x<x_{1} \\
+         0 \text{ else}
+    \end{cases}
+    \\
+    v_{i}(x) &= \begin{cases}
         \frac{x - x_{i-1} }{x_{i} - x_{i-1}} \text{ if } x_{i-1}\leq x<x_{i} \\
+        \frac{x_{i+1} - x}{x_{i+1} - x_{i}} \text{ if } x_{i}\leq x<x_{i+1} \\
+         0 \text{ else}
+    \end{cases}
+    \\
+    v_{N-1}(x) &= \begin{cases}
+        \frac{x - x_{N-2} }{x_{N-1} - x_{N-2}} \text{ if } x_{N-2}\leq x<x_{N-1} \\
+        1 \text{ if } x_{N-1}\leq x<x_{b} \\
          0 \text{ else}
     \end{cases}
 \end{align}
+The first and the last element begin/end in a constant rather than a linear function
+seeing that these points have no left /right neighbor to interpolate towards.
 We have $f_{\text{FE}}(x_{i}) = f_{i}$. Eq.~\eqref{eq:fem} gives an alternative
 interpolation method, which amounts to linear interpolation between the two nearest
 points. Unfortunately, the linear base functions~\eqref{eq:linear_fem} are not
@@ -647,18 +661,29 @@ orthogonal, that is the "mass" matrix of projection integrals $S_{ij} = \int \dx
 Let us first compute the entries on a reference element $[-1,1]$
 with the dG absicssas $x_j^a$, scaled by $h/2$
 \begin{align}
-    S_{\text{ref}} := \frac{h}{2}\frac{1}{6}\begin{pmatrix}
-        (x_0-(2-x_{P-1})) & 2(x_1 - (2-x_{P-1})) & (x_1 - x_0) & 0 & 0 \\
-        0 & (x_{k} - x_{k-1}) & 2(x_{k+1}-x_{k-1}) & (x_{k+1} - x_k) & 0 \\
-        0 & 0 & (x_{P-1} - x_{P-2}) & 2( (x_0+2) - x_{P-2}) & ((x_0+2)- x_{P-1})
+    S_{0j} &:= \frac{h}{2} \frac{1}{6}\begin{pmatrix}
+        6(x^a_0+1) + 2(x^a_1-x^a_0) & (x^a_1-x^a_0) & 0 \ldots
+    \end{pmatrix}
+    \nonumber\\
+    S_{\text{ref}} &:= \frac{h}{2}\frac{1}{6}\begin{pmatrix}
+        (x^a_0-(x^a_{P-1}-2)) & 2(x^a_1 - (2-x^a_{P-1})) & (x^a_1 - x^a_0) & 0 & 0 \\
+        0 & (x^a_{k} - x^a_{k-1}) & 2(x^a_{k+1}-x^a_{k-1}) & (x^a_{k+1} - x^a_k) & 0 \\
+        0 & 0 & (x^a_{P-1} - x^a_{P-2}) & 2( (x^a_0+2) - x^a_{P-2}) & ((x^a_0+2)- x^a_{P-1})
+    \end{pmatrix}
+    \nonumber\\
+    S_{(N-1)j} &:= \frac{h}{2} \frac{1}{6}\begin{pmatrix}
+        \ldots 0 &(x^a_{P-1} - x^a_{P-2}) & 2(x^a_{P-1} - x^a_{P-2}) + 6( 1 - x^a_{P-1})
     \end{pmatrix}
 \end{align}
 Thus reference element consists of the $P\times(P+2)$ blocks $hS_{\text{ref}}/2$.
-The weights of the fem discretization consist of the base elements
-$h_k = (x_{k+1}-x_{k-1})2$.
-\begin{align}
-    W_k = \frac{h}{4}\left( (x_1 - (2-x_{P-1})),\ \ldots, (x_{k+1}-x_{k-1}),\ \ldots, ( (x_0+2) - x_{P-2})\right) \\
-    W_k = \sum_j S_{kj}\leftarrow W = S\cdot \Eins
+The weights of the finite element discretization consist of the base elements
+$h_k = (x^a_{k+1}-x^a_{k-1})2$.
+\begin{align} \label{eq:fem_weights}
+    W_k &= \sum_j S_{kj}\leftarrow W = S\cdot \Eins \\
+    W_0 &= \frac{h}{4}\left( 2(x^a_0+1) + (x^a_1-x^a_0)\right) \nonumber\\
+    W_k &= \frac{h}{4}\left( (x^a_1 - (x^a_{P-1}-2)),\ \ldots, (x^a_{k+1}-x^a_{k-1}),\ \ldots, ( (x^a_0+2) - x^a_{P-2})\right)
+    \nonumber\\
+    W_{N-1} &= \frac{h}{4}\left( 2(1-x^a_{P-1}) + (x^a_{P-1}-x^a_{P-2})\right) \nonumber
 \end{align}
 We here realize that $W^{-1}S$  is a smoothing kernel that represents the
 integration $w_k^{-1} \int f(x) v_k(x)\dx$.
@@ -668,12 +693,13 @@ Similar to how we derived the dG derivative, we can derive a discretization of t
 simple derivative in the finite element framework:
 \begin{align}
     \partial_x f = \rho \nonumber\\
-    \int v_i(x) \partial_x f \dx = f_k [v_i(x) v_k(x)]_{x_a}^{x_b} - f_k \int v_k(x)\partial_x v_i(x) \dx = \rho_l \int v_l(x) v_i(x)\dx \nonumber \\
+    \int v_i(x) \partial_x f \dx = [v_i(x) \hat f(x)]_{x_a}^{x_b} - f_k \int v_k(x)\partial_x v_i(x) \dx = \rho_l \int v_l(x) v_i(x)\dx \nonumber \\
     \bar D_x^0 f = S\rho \\
     \bar D_x^0 = \begin{pmatrix}
         -1/2 & 0 & 1/2
         \end{pmatrix}
 \end{align}
+We introduce $\hat f$ to account for various boundary conditions.
 We find that the derivative matrix resembles the centered differences.
 We can compute the stiffness matrix $M=\int\dx \partial_x v_i(x)\partial_x v_j(x)$
 \begin{align}

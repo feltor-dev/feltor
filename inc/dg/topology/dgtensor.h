@@ -96,15 +96,9 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
     cusp::array1d< int, cusp::host_memory> dI( I); // row indices
     cusp::array1d< int, cusp::host_memory> dJ( J); // column indices
     cusp::array1d< T,   cusp::host_memory> dV( V); // values
-#ifdef DG_DEBUG
-    //std::cout << "Values ready! Now sort...\n";
-#endif //DG_DEBUG
     // sort triplets by (i,j) index using two stable sorts (first by J, then by I)
     thrust::stable_sort_by_key(dJ.begin(), dJ.end(), thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dV.begin())));
     thrust::stable_sort_by_key(dI.begin(), dI.end(), thrust::make_zip_iterator(thrust::make_tuple(dJ.begin(), dV.begin())));
-#ifdef DG_DEBUG
-    //std::cout << "Sort ready! Now compute unique number of values with different (i,j) index ...\n";
-#endif //DG_DEBUG
     // compute unique number of ( values with different (i,j) index)  in the output
     int num_entries = thrust::inner_product(thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())),
                                             thrust::make_zip_iterator(thrust::make_tuple(dI.end (),  dJ.end()))   - 1,
@@ -115,9 +109,6 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
 
     // allocate output matrix
     cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
-#ifdef DG_DEBUG
-    //std::cout << "Computation ready! Now sum values with same (i,j) index ...\n";
-#endif //DG_DEBUG
     // sum values with the same (i,j) index
     thrust::reduce_by_key(thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())),
                           thrust::make_zip_iterator(thrust::make_tuple(dI.end(),   dJ.end())),
