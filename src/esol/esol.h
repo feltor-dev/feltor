@@ -97,10 +97,6 @@ struct Esol
         }
         if (m_p.source_rel == "finite-pol")
         {
-            if ( m_p.equations == "ff-lwl-OB" || m_p.equations == "ff-lwl-O2" ) 
-            {
-                dg::blas1::axpbypgz(1.0, y0, -1.0, m_gamma_n, 1.0, Sne); //equals pol charge contribution
-            }
             else if (m_p.equations == "ff-lwl")
             {
                 dg::blas1::pointwiseDot(1.0, m_binv, m_binv, SNi, 0.0, m_chi); //\chi = SNi / B^2
