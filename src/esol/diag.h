@@ -95,6 +95,12 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::transform( result, result, dg::SQRT<double>());
         }
     },    
+    {"lperpinvphi", "Perpendicular electric potential gradient length scale", 
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(1.0, v.f.gradphi(0), v.f.gradphi(0), 1.0, v.f.gradphi(1), v.f.gradphi(1), 0.0, result);
+            dg::blas1::transform( result, result, dg::SQRT<double>());
+        }
+    },
 };
 
 std::vector<Record> restart2d_list = {

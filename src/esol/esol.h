@@ -20,6 +20,7 @@ struct Esol
     const container& density(   int i) const { return m_N[i];}
     const container& psi2() const {return m_psi2;}
     const container& gradn(int i) const { return m_gradn[i]; }
+    const container& gradphi(int i) const { return m_gradphi[i]; }
     const Geometry& grid() const {return m_multigrid.grid(0);}
     const container& volume() const {return m_volume;}
     void compute_vorticity ( double alpha, const container& in, double beta, container& result)
@@ -127,7 +128,7 @@ struct Esol
 
     container m_chi, m_omega, m_iota, m_gamma_n, m_psi1, m_psi2, m_rho_m1, m_phi_m1, m_gamma0sqrtinv_rho_m1, m_gamma0sqrt_phi_m1,  m_logn, m_rh, m_lh, m_source, m_prof;
     const container m_binv; //magnetic field
-    std::array<container,2> m_psi, m_N, m_gradn;
+    std::array<container,2> m_psi, m_N, m_gradn, m_gradphi;
     
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, container>  m_lapMperp; //contains normalized laplacian
@@ -172,7 +173,7 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     else if (p.source_type == "forced") {
         m_source = dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, -1), grid);
     }
-    m_psi[0] = m_psi[1] = m_N[0] = m_N[1]  = m_gradn[0] = m_gradn[1] = m_chi; 
+    m_psi[0] = m_psi[1] = m_N[0] = m_N[1]  = m_gradn[0] = m_gradn[1] = m_gradphi[0] = m_gradphi[1]= m_chi; 
     m_multi_chi= m_multigrid.project( m_chi);
     m_multi_iota= m_multigrid.project( m_chi);
     m_multi_elliptic.resize(3);
@@ -304,19 +305,25 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
     {
         dg::blas1::transform( y[i], m_N[i], dg::PLUS<double>(m_p.bgprofamp + m_p.profamp) );
 
-        if (i==0)
-        {
-            dg::blas2::symv( m_centered[0], y[i], m_gradn[0]); //dx n
-            dg::blas2::symv( m_centered[1], y[i], m_gradn[1]); //dy ns
-        }
         //ExB drift  - v_y dy n - v_x dx n
         dg::blas2::symv( -1., m_centered[1], m_psi[i], 0., m_chi); //v_x
         dg::blas2::symv(  1., m_centered[0], m_psi[i], 0., m_iota); //v_y
+        if (i==0)
+        {
+            dg::blas1::copy(m_iota, m_gradphi[0]);
+            dg::blas1::copy(m_chi, m_gradphi[1]);
+            dg:.blas1:.scal(m_gradnphi[1], -1.0);
+        }
         m_adv.upwind( -1., m_chi, m_iota, y[i], 0., yp[i]);   
         dg::blas1::pointwiseDot( m_binv, yp[i], yp[i]);
         
         //Grad-B drift and ExB compression
         dg::blas2::symv( m_centered[1], y[i], m_iota);
+        if (i==0)
+        {
+            dg::blas2::symv( m_centered[0], y[i], m_gradn[0]); //dx n
+            dg::blas1::copy(m_iota, m_gradn[1]);
+        }
         dg::blas2::symv( m_centered[1], m_psi[i], m_omega);
         dg::blas1::pointwiseDot( m_omega, m_N[i], m_omega);        
         dg::blas1::axpbypgz( m_p.kappa, m_omega, m_p.tau[i]*m_p.kappa, m_iota, 1., yp[i]);
