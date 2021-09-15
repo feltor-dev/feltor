@@ -675,16 +675,17 @@ with the dG absicssas $x_j^a$, scaled by $h/2$
         \ldots 0 &(x^a_{P-1} - x^a_{P-2}) & 2(x^a_{P-1} - x^a_{P-2}) + 6( 1 - x^a_{P-1})
     \end{pmatrix}
 \end{align}
+Note that $S$ is diagonally dominant (the diagonal entry is twice as large as the sum of the two entries on the same row).
+%What to do for periodic boundaries? or Dirichlet?
 Thus reference element consists of the $P\times(P+2)$ blocks $hS_{\text{ref}}/2$.
 The weights of the finite element discretization consist of the base elements
 $h_k = (x^a_{k+1}-x^a_{k-1})2$.
 \begin{align} \label{eq:fem_weights}
     W_k &= \sum_j S_{kj}\leftarrow W = S\cdot \Eins \\
-    W_0 &= \frac{h}{4}\left( 2(x^a_0+1) + (x^a_1-x^a_0)\right) \nonumber\\
     W_k &= \frac{h}{4}\left( (x^a_1 - (x^a_{P-1}-2)),\ \ldots, (x^a_{k+1}-x^a_{k-1}),\ \ldots, ( (x^a_0+2) - x^a_{P-2})\right)
-    \nonumber\\
-    W_{N-1} &= \frac{h}{4}\left( 2(1-x^a_{P-1}) + (x^a_{P-1}-x^a_{P-2})\right) \nonumber
 \end{align}
+Note that the formula for the left and right internal cell boundaries hold for the domain boundaries as well
+due to the equidistance in the dG cells $x^a_{P-1} = -x^a_0 $.
 We here realize that $W^{-1}S$  is a smoothing kernel that represents the
 integration $w_k^{-1} \int f(x) v_k(x)\dx$.
 Also note that for an equidistant grid the stencil of $S$ reads $(1,4,1)$, which

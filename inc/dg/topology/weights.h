@@ -16,19 +16,19 @@ namespace create{
 ///@{
 
 /*!@class hide_weights_doc
-* @brief create host vector containing X-space weight coefficients
+* @brief create host vector containing nodal weight coefficients
 * @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_inv_weights_doc
-* @brief create host_vector containing inverse X-space weight coefficients
+* @brief create host_vector containing inverse nodal weight coefficients
 * @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_weights_coo_doc
-* @brief create host vector containing X-space weight coefficients
+* @brief create host vector containing nodal weight coefficients
 * @param g The grid
 * @param coo The coordinate for which to generate the weights (in 2d only \c dg::x and \c dg::y are allowed)
 * @return Host Vector with full grid size

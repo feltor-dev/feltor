@@ -108,7 +108,7 @@ struct RealIdentityRefinement : public aRealRefinement1d<real_type>
 };
 
 /**
- * @brief RealLinear refinement consists of multiplying every cell in the grid by a factor
+ * @brief Multiply every cell in the grid by a factor
  */
 template<class real_type>
 struct RealLinearRefinement : public aRealRefinement1d<real_type>
@@ -137,7 +137,7 @@ struct RealLinearRefinement : public aRealRefinement1d<real_type>
 };
 
 /**
- * @brief RealEquidistant cell refinement around a given node
+ * @brief Cell refinement around a given node
  */
 template<class real_type>
 struct RealEquidistRefinement : public aRealRefinement1d<real_type>
