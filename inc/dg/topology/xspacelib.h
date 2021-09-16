@@ -46,7 +46,7 @@ dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
 
     Matrix transformX = dg::tensorproduct( g.Nx(), backward1d);
     Matrix transformY = dg::tensorproduct( g.Ny(), backward1d);
-    Matrix backward = dg::dgtensor( g.n(), transformY, transformX);
+    Matrix backward = dg::tensorproduct( transformY, transformX);
 
     return (dg::IHMatrix)backward;
 
@@ -72,7 +72,7 @@ dg::IHMatrix backscatter( const aRealTopology3d<real_type>& g)
 {
     Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,real_type, cusp::host_memory> back2d = backscatter( g2d);
-    return (dg::IHMatrix)dgtensor<real_type>( 1, tensorproduct<real_type>( g.Nz(), delta<real_type>(1)), back2d);
+    return (dg::IHMatrix)tensorproduct<real_type>( tensorproduct<real_type>( g.Nz(), delta<real_type>(1)), back2d);
 }
 ///@}
 

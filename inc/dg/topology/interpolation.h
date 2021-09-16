@@ -315,6 +315,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
         thrust::host_vector<real_type> abs = dg::create::abscissas( g);
+        dg::RealGrid1d<real_type> gx( g.x0(), g.x1(), g.n(), g.N(), bcx);
         for( unsigned i=0; i<x.size(); i++)
         {
             real_type X = x[i];
@@ -322,7 +323,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             g.shift( negative, X, bcx);
 
             thrust::host_vector<unsigned> cols;
-            dg::RealGrid1d<real_type> gx( g.x0(), g.x1(), g.n(), g.N(), bcx);
             std::vector<real_type> xs  = detail::choose_1d_abscissas( X,
                     points_per_line, gx, abs, cols);
 

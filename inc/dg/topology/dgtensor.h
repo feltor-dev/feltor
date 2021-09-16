@@ -22,14 +22,12 @@ namespace dg
 namespace detail{
 
 struct AddIndex2d{
-    AddIndex2d( size_t M, size_t n, size_t m):M(M), n(n), m(m), number(0) {}
+    AddIndex2d( size_t M ):M(M), number(0) {}
 
     void operator() ( cusp::array1d< int, cusp::host_memory>& Idx,
-                      unsigned i, unsigned j, unsigned k, unsigned l)
+                      unsigned i, unsigned k)
     {
-        //choose vector layout, old or new
-        //Idx[ number] = M*n*m*i + n*m*j + m*k + l;
-        Idx[ number] = M*m*(i*n+k) + m*j + l;
+        Idx[ number] = M*i + k ;
         number ++;
     }
     template<class T>
@@ -39,7 +37,7 @@ struct AddIndex2d{
         number ++;
     }
   private:
-    size_t M, n, m;
+    size_t M;
     unsigned number;
 };
 
@@ -47,20 +45,19 @@ struct AddIndex2d{
 ///@endcond
 
 /**
-* @brief Form the DG tensor product between two DG matrices
+* @brief \f$ L\otimes R\f$ Form the tensor (Kronecker) product between two matrices
 *
 * @ingroup lowlevel
 * Takes care of correct permutation of indices.
 * @tparam T value type
-* @param n # of Legendre coefficients per dimension
 * @param lhs The left hand side (1D )
 * @param rhs The right hand side (1D )
 *
 * @return A newly allocated cusp matrix containing the tensor product
-* @note use cusp::add and cups::multiply to add and multiply matrices
+* @note use \c cusp::add and \c cusp::multiply to add and multiply matrices
 */
 template< class T>
-cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
+cusp::coo_matrix< int, T, cusp::host_memory> tensorproduct(
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
 {
@@ -68,10 +65,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
     assert( lhs.num_rows == lhs.num_cols);
     assert( rhs.num_rows == rhs.num_cols);
     //assert dg matrices
-    assert( lhs.num_rows%n == 0);
-    assert( rhs.num_rows%n == 0);
-    unsigned Nx = rhs.num_rows/n;
-    //unsigned Ny = lhs.num_rows/n;
+    unsigned Nx = rhs.num_rows;
     //taken from the cusp examples:
     //dimensions of the matrix
     int num_rows     = lhs.num_rows*rhs.num_rows;
@@ -82,15 +76,15 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
     cusp::array1d< int,     cusp::host_memory> J( num_triplets); // column indices
     cusp::array1d< T,  cusp::host_memory> V( num_triplets); // values
     //fill triplet arrays
-    detail::AddIndex2d addIndexRow( Nx, n,n );
-    detail::AddIndex2d addIndexCol( Nx, n,n );
-    detail::AddIndex2d addIndexVal( Nx, n,n );
+    detail::AddIndex2d addIndexRow( Nx);
+    detail::AddIndex2d addIndexCol( Nx);
+    detail::AddIndex2d addIndexVal( Nx);
     //LHS x RHS
     for( unsigned i=0; i<lhs.num_entries; i++)
         for( unsigned j=0; j<rhs.num_entries; j++)
         {
-            addIndexRow( I, lhs.row_indices[i]/n, rhs.row_indices[j]/n, lhs.row_indices[i]%n, rhs.row_indices[j]%n);
-            addIndexCol( J, lhs.column_indices[i]/n, rhs.column_indices[j]/n, lhs.column_indices[i]%n, rhs.column_indices[j]%n);
+            addIndexRow( I, lhs.row_indices[i], rhs.row_indices[j]);
+            addIndexCol( J, lhs.column_indices[i], rhs.column_indices[j]);
             addIndexVal( V, lhs.values[i]*rhs.values[j]);
         }
     cusp::array1d< int, cusp::host_memory> dI( I); // row indices
