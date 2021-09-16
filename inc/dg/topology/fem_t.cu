@@ -6,8 +6,6 @@
 #include "fem_weights.h"
 
 double function( double x, double y){return sin(x)*cos(y);}
-double derivative( double x) { return cos(x);}
-double zero( double x) { return 0;}
 
 typedef dg::HVec Vector;
 typedef cusp::coo_matrix<int,double,cusp::host_memory> Matrix;
@@ -58,7 +56,7 @@ int main ()
     Matrix fem_mass = dg::create::fem_mass( gDIR);
     //std::cout << "S matrix\n";
     //cusp::print( fem_mass);
-    unsigned number = cg.solve( fem_mass, test, barfunc, v2d, v2d, eps);
+    unsigned number = cg.solve( fem_mass, test, barfunc, v2d, eps);
     dg::blas1::axpby( 1., func, -1., test);
     double norm = sqrt(dg::blas2::dot( w2d, test) );
     double func_norm = sqrt(dg::blas2::dot( w2d, func) );
