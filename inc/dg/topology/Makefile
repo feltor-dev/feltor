@@ -16,13 +16,13 @@ backscatter_t: backscatter_t.cu xspacelib.h
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
 
 %_mpit: %_mpit.cu
-	$(MPICC) $(OPT) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
+	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) $< -o $@ -g
 
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE)
 
 %_t: %_t.cu
-	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ -g
+	$(CC) $(OPT) $(INCLUDE) $(CFLAGS) $< -o $@ -g
 
 %_b: %_b.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g

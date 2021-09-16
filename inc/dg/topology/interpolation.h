@@ -136,9 +136,13 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
                     }
                     else
                     {
+                        //xs[0] = *it;
+                        //xs[1] = *(it+1);
+                        //cols[0] = 0, cols[1] = 1;
+                        // This makes it consistent with fem_t
+                        xs.resize(1);
                         xs[0] = *it;
-                        xs[1] = *(it+1);
-                        cols[0] = 0, cols[1] = 1;
+                        cols[0] = 0;
                     }
                 }
                 else if( it == abs.end())
@@ -151,10 +155,14 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
                     }
                     else
                     {
-                        xs[0] = *(it-2);
+                        //xs[0] = *(it-2);
+                        //xs[0] = *(it-1);
+                        //cols[0] = it - abs.begin() - 2;
+                        //cols[1] = it - abs.begin() - 1;
+                        // This makes it consistent with fem_t
+                        xs.resize(1);
                         xs[0] = *(it-1);
-                        cols[0] = it - abs.begin() - 2;
-                        cols[1] = it - abs.begin() - 1;
+                        cols[0] = it-abs.begin()-1;
                     }
                 }
                 else
@@ -327,7 +335,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
                     points_per_line, gx, abs, cols);
 
             std::vector<real_type> px = detail::lagrange( X, xs);
-            for ( unsigned l=0; l<points_per_line; l++)
+            // px may have size != points_per_line (at boundary)
+            for ( unsigned l=0; l<px.size(); l++)
             {
                 row_indices.push_back(i);
                 column_indices.push_back( cols[l]);
@@ -521,19 +530,20 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             std::vector<real_type> pxy( points_per_line*points_per_line);
             std::vector<real_type> px = detail::lagrange( X, xs),
                                    py = detail::lagrange( Y, ys);
+            // note: px , py may have size != points_per_line at boundary
             for(unsigned k=0; k<py.size(); k++)
                 for( unsigned l=0; l<px.size(); l++)
                     pxy[k*px.size()+l]= py[k]*px[l];
-            for( unsigned k=0; k<points_per_line; k++)
-                for( unsigned l=0; l<points_per_line; l++)
+            for( unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
                 {
-                    if( fabs(pxy[k*points_per_line +l]) > 1e-14)
+                    if( fabs(pxy[k*px.size() +l]) > 1e-14)
                     {
                         row_indices.push_back( i);
                         column_indices.push_back( (colsY[k])*g.n()*g.Nx() +
                             colsX[l]);
-                        values.push_back( negative ? - pxy[k*points_per_line+l]
-                                :  pxy[k*points_per_line+l]);
+                        values.push_back( negative ? - pxy[k*px.size()+l]
+                                :  pxy[k*px.size()+l]);
                     }
                 }
         }
@@ -742,22 +752,23 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             std::vector<real_type> px = detail::lagrange( X, xs),
                                    py = detail::lagrange( Y, ys),
                                    pz = detail::lagrange( Z, zs);
+            // note: px, py, pz may have size != points_per_line at boundary
             for( unsigned m=0; m<pz.size(); m++)
             for( unsigned k=0; k<py.size(); k++)
             for( unsigned l=0; l<px.size(); l++)
                 pxyz[(m*py.size()+k)*px.size()+l]= pz[m]*py[k]*px[l];
-            for( unsigned m=0; m<points_per_line; m++)
-            for( unsigned k=0; k<points_per_line; k++)
-            for( unsigned l=0; l<points_per_line; l++)
+            for( unsigned m=0; m<pz.size(); m++)
+            for( unsigned k=0; k<py.size(); k++)
+            for( unsigned l=0; l<px.size(); l++)
             {
-                if( fabs(pxyz[(m*points_per_line+k)*points_per_line +l]) > 1e-14)
+                if( fabs(pxyz[(m*py.size()+k)*px.size() +l]) > 1e-14)
                 {
                     row_indices.push_back( i);
                     column_indices.push_back( ((colsZ[m])*g.n()*g.Ny() +
                                 colsY[k])*g.n()*g.Nx() + colsX[l]);
                     values.push_back( negative ?
-                            -pxyz[(m*points_per_line+k)*points_per_line+l]
-                          :  pxyz[(m*points_per_line+k)*points_per_line+l] );
+                            -pxyz[(m*py.size()+k)*px.size()+l]
+                          :  pxyz[(m*py.size()+k)*px.size()+l] );
                 }
             }
         }

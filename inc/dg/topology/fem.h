@@ -47,7 +47,8 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> fem_mass(
                 A.column_indices[1] = 1;
                 A.values[1] = g.h()/12*(x[1]-x[0]);
                 A.row_indices[2] = 0;
-                A.column_indices[2] = g.size()-1;
+                //A.column_indices[2] = g.size()-1;
+                A.column_indices[2] = 2; // dummy entry to simplify assembly
                 A.values[2] = 0.;
                 //A.values[2] = g.h()/12.*(x[0]-x[-1]);
                 continue;
@@ -63,7 +64,8 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> fem_mass(
                 A.values[I+1] = g.h()/12*(-4*x[k]+6-2*x[k-1]);
                 //A.values[I+1] = g.h()/6*(x[k+1]-x[k-1]);
                 A.row_indices[I+2] = g.size()-1;
-                A.column_indices[I+2] = 0;
+                //A.column_indices[I+2] = 0;
+                A.column_indices[I+2] = g.size()-3; // dummy entry to simplify assembly
                 A.values[I+2] = 0.;
                 //A.values[I+2] = g.h()/12.*(x[k+1]-x[k]);
                 continue;

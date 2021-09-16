@@ -94,7 +94,8 @@ int main ()
     double error = dg::blas2::dot( vec_c, w2d_c, vec_c);
     std::cout << "error of derivative is "<<error<<std::endl;
 
-    dg::CartesianRefinedGrid3d g3d_f( lin,lin,lin, 0., 2*M_PI, 0., 2*M_PI, 0., 2*M_PI, 5, 20, 20, 20);
+    dg::CartesianRefinedGrid3d g3d_f( lin,lin,lin, 0., 2*M_PI, 0., 2*M_PI, 0.,
+            2*M_PI, 5, 20, 20, 20);
     g3d_f.display();
     std::cout << "TEST finite element REFINEMENT\n";
     //std::cout << "Type n Nx Ny \n";
@@ -104,11 +105,13 @@ int main ()
     {
         std::cout << "Refinement factor = "<<m<<"\n";
         dg::FemRefinement fem_ref( m);
-        dg::CartesianRefinedGrid2d g2d_f( fem_ref, fem_ref, 0.1, 0.1+2*M_PI, 0.1, 0.1+2*M_PI, n, Nx,Ny);
+        dg::CartesianRefinedGrid2d g2d_f( fem_ref, fem_ref, 0.1, 0.1+2*M_PI,
+                0.1, 0.1+2*M_PI, n, Nx,Ny);
         dg::HVec vec = dg::pullback( function, g2d_f);
         dg::HVec w2d = dg::create::volume( g2d_f);
         double integral = dg::blas2::dot( vec, w2d, vec);
-        std::cout << "error of fine integral is "<<(integral-M_PI*M_PI)/M_PI/M_PI<<std::endl;
+        std::cout << "error of fine integral is "
+                  <<(integral-M_PI*M_PI)/M_PI/M_PI<<std::endl;
     }
 
     return 0;
