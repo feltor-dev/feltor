@@ -137,6 +137,123 @@ struct RealLinearRefinement : public aRealRefinement1d<real_type>
 };
 
 /**
+ * @brief Insert equidistant points in between dG nodes
+ *
+ * If multiple equals M, then M-1 equidistant points are inserted in between the old dG nodes
+ * The result consists of M*N*n points in total: the old dG nodes plus the new points.
+ * The overall grid is **not equidistant** since the old dG nodes are not. At the boundaries we
+ * insert M/2 points each.
+ * The weights are made to model Simpson's 1/3 rule.
+ * If M is uneven then the last point has Simpson's 3/8 rule. For the boundary cells we
+ * use the trapezoidal rule.
+ * @sa For an explanation of Simpson's rule: https://en.wikipedia.org/wiki/Simpson%27s_rule
+ */
+template<class real_type>
+struct RealFemRefinement : public aRealRefinement1d<real_type>
+{
+    /**
+     * @brief Refine every cell in the grid by an integer number of new cells
+     * @param multiple multiply every cell
+     */
+    RealFemRefinement( unsigned multiple): m_M(multiple){
+        assert( multiple>= 1);
+    }
+    virtual RealFemRefinement* clone()const{return new RealFemRefinement(*this);}
+    private:
+    unsigned m_M;
+    std::vector<real_type> simpsons_weights( unsigned N, double h) const
+    {
+        // Create weights for Simpson's integration on an equidistant subgrid with N cells (including end points)
+        // N >= 2
+        std::vector<real_type> simpson( N, h);
+        if( N == 2)
+        {
+            simpson[0] = simpson[1] = h/2.;
+            return simpson;
+        }
+        simpson[0]=1./3. * h;
+        for( unsigned i=0; i<(N-3)/2; i++)
+        {
+            simpson[2*i+1] = 4./3. * h;
+            simpson[2*i+2] = 2./3. * h;
+        }
+        if( N%2 != 0)
+        {
+            simpson[N-2] = 4./3. * h;
+            simpson[N-1] = 1./3. * h;
+        }
+        else
+        {
+            simpson[N-4] = N==4 ? 3./8.*h : (1./3.+3./8.)*h;
+            simpson[N-3] = (9./8.)*h;
+            simpson[N-2] = (9./8.)*h;
+            simpson[N-1] = (3./8.)*h;
+        }
+        return simpson;
+    }
+    virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
+    {
+        thrust::host_vector<real_type> old = dg::create::abscissas(g);
+        if( m_M == 1)
+        {
+            abscissas = old;
+            weights = dg::evaluate( dg::one, g);
+            return;
+        }
+        abscissas.resize( g.size()*m_M);
+        weights.resize( g.size()*m_M);
+        dg::blas1::copy( 0., weights);
+        unsigned NLeft = m_M/2;
+        double hxleft = (old[0] - g.x0())/(double)(NLeft+1);
+        abscissas[0] = g.x0()+hxleft;
+        weights[0] = hxleft;
+        unsigned idx = 0;
+        std::vector<real_type> sim = simpsons_weights( NLeft+1, hxleft);
+        weights[idx] += sim[0];
+        for( unsigned k=1; k<=NLeft; k++)
+        {
+            idx++;
+            abscissas[idx] = abscissas[idx-1]+hxleft;
+            weights[idx] += sim[k];
+        }
+        // now abs is at old[0]
+        unsigned NMiddle = m_M;
+        for( unsigned i=0; i<old.size()-1; i++)
+        {
+            double hxmiddle = (old[i+1] - old[i])/(double)NMiddle;
+            sim = simpsons_weights( NMiddle+1, hxmiddle);
+            weights[idx] += sim[0];
+            for( unsigned k=1; k<=NMiddle; k++)
+            {
+                idx++;
+                abscissas[idx] = abscissas[idx-1]+hxmiddle;
+                weights[idx] += sim[k];
+            }
+        }
+        unsigned NRight = m_M - 1 - m_M/2;
+        double hxright = (g.x1() - old[g.size()-1] )/(double)(NRight+1);
+        if( NRight > 0)
+        {
+            sim = simpsons_weights( NRight+1, hxright);
+            weights[idx] += sim[0];
+            for( unsigned k=1; k<=NRight; k++)
+            {
+                idx++;
+                abscissas[idx] = abscissas[idx-1]+hxright;
+                weights[idx] += sim[k];
+            }
+        }
+        weights[idx] += hxright;
+        RealGrid1d<real_type> nGrid( g.x0(), g.x1(), g.n(), g.N()*m_M);
+        thrust::host_vector<real_type> wrong_weights = dg::create::weights(nGrid);
+        dg::blas1::pointwiseDivide( wrong_weights, weights, weights);
+    }
+    virtual unsigned do_N_new( unsigned N_old, bc bcx) const override final{
+        return N_old*m_M;
+    }
+};
+
+/**
  * @brief Cell refinement around a given node
  */
 template<class real_type>
@@ -286,6 +403,7 @@ struct RealExponentialRefinement : public aRealRefinement1d<real_type>
 
 using aRefinement1d         = dg::aRealRefinement1d<double>;
 using IdentityRefinement    = dg::RealIdentityRefinement<double>;
+using FemRefinement         = dg::RealFemRefinement<double>;
 using LinearRefinement      = dg::RealLinearRefinement<double>;
 using EquidistRefinement    = dg::RealEquidistRefinement<double>;
 using ExponentialRefinement = dg::RealExponentialRefinement<double>;
