@@ -4,6 +4,7 @@
 #include "dg/blas.h"
 #include "dg/functors.h"
 #include "dg/cg.h"
+#include "fem.h"
 #include "fem_dx.h"
 #include "fem_weights.h"
 

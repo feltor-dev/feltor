@@ -105,6 +105,7 @@
  *           \f$ \sqrt{g} \f$
  *         @defgroup generators Grid Generator classes
  *     @}
+ *     @defgroup fem Finite Element Method
  *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes

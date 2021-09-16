@@ -30,24 +30,25 @@ std::vector<real_type> fem_weights( const DLT<real_type>& dlt)
 }//namespace detail
 ///@endcond
 
-///@addtogroup highlevel
+///@addtogroup fem
 ///@{
 
 /*!@class hide_fem_weights_doc
-* @brief create host vector containing fem weight coefficients
+* @brief finite element weight coefficients
+*
+ * These will emulate the trapezoidal rule for integration
 * @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_fem_inv_weights_doc
-* @brief create host_vector containing inverse fem weight coefficients
+* @brief inverse finite element weight coefficients
 * @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 
 ///@copydoc hide_fem_weights_doc
-///@copydoc hide_code_evaluate1d
 template<class real_type>
 thrust::host_vector<real_type> fem_weights( const RealGrid1d<real_type>& g)
 {
@@ -69,7 +70,6 @@ thrust::host_vector<real_type> fem_inv_weights( const RealGrid1d<real_type>& g)
 }
 
 ///@copydoc hide_fem_weights_doc
-///@copydoc hide_code_evaluate2d
 template<class real_type>
 thrust::host_vector<real_type> fem_weights( const aRealTopology2d<real_type>& g)
 {
@@ -92,7 +92,6 @@ thrust::host_vector<real_type> fem_inv_weights( const aRealTopology2d<real_type>
 }
 
 ///@copydoc hide_fem_weights_doc
-///@copydoc hide_code_evaluate3d
 template<class real_type>
 thrust::host_vector<real_type> fem_weights( const aRealTopology3d<real_type>& g)
 {
@@ -114,5 +113,6 @@ thrust::host_vector<real_type> fem_inv_weights( const aRealTopology3d<real_type>
         v[i] = 1./v[i];
     return v;
 }
+///@}
 }//namespace create
 }//namespace dg
