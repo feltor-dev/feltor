@@ -19,7 +19,8 @@ namespace dg{
 template<class real_type>
 using IHMatrix_t = cusp::csr_matrix<int, real_type, cusp::host_memory>;
 template<class real_type>
-using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
+//using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
+using IDMatrix_t = cusp::ell_matrix<int, real_type, cusp::device_memory>;
 using IHMatrix = IHMatrix_t<double>;
 using IDMatrix = IDMatrix_t<double>;
 //typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
