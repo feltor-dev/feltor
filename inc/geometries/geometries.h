@@ -11,6 +11,7 @@
 #include "hector.h"
 #include "polar.h"
 #include "ribeiroX.h"
+#include "ds_generator.h"
 //include grids
 #include "curvilinear.h"
 #include "curvilinearX.h"

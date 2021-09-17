@@ -14,9 +14,9 @@ namespace geo
  * @brief Construct a 3D grid
  *
  * the coordinates of the computational space are called x,y,z
- * @param generator generates the perpendicular grid
+ * @param generator generate the perpendicular grid: the grid boundaries are [0, generator.width()] x [0, generator.height()] x [0, 2Pi]
  * @param n number of %Gaussian nodes in x and y
- *  (1<=n<=20, note that the library is optimized for n=3 )
+ *  (1<=n<=20 )
  * @attention # of polynomial coefficients in z direction is always 1
  * @param Nx number of cells in x
  * @param Ny number of cells in y
@@ -29,10 +29,10 @@ namespace geo
 /*!@class hide_grid_parameters2d
  * @brief Construct a 2D grid
  *
- * the coordinates of the computational space are called x,y,z
- * @param generator generates the grid
+ * the coordinates of the computational space are called x,y
+ * @param generator generate the grid: the grid boundaries are [0, generator.width()] x [0, generator.height()]
  * @param n number of %Gaussian nodes in x and y
- *  (1<=n<=20, note that the library is optimized for n=3 )
+ *  (1<=n<=20 )
  * @param Nx number of cells in x
  * @param Ny number of cells in y
  * @param bcx boundary condition in x
