@@ -3,18 +3,7 @@
 #include <array>
 #include <cusp/csr_matrix.h>
 
-#include "dg/backend/transpose.h"
-#include "dg/blas.h"
-#include "dg/topology/grid.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/projection.h"
-#include "dg/topology/functions.h"
-#include "dg/topology/split_and_join.h"
-
-#include "dg/topology/geometry.h"
-#include "dg/functors.h"
-#include "dg/nullstelle.h"
-#include "dg/adaptive.h"
+#include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "fluxfunctions.h"
 #include "curvilinear.h"
