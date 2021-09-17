@@ -98,7 +98,7 @@ struct Esol
         }
         if (m_p.source_rel == "finite-pol")
         {
-            else if (m_p.equations == "ff-lwl")
+            if (m_p.equations == "ff-lwl")
             {
                 dg::blas1::pointwiseDot(1.0, m_binv, m_binv, SNi, 0.0, m_chi); //\chi = SNi / B^2
                 m_lapMperp.set_chi( m_chi);
@@ -312,7 +312,7 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
         {
             dg::blas1::copy(m_iota, m_gradphi[0]);
             dg::blas1::copy(m_chi, m_gradphi[1]);
-            dg:.blas1:.scal(m_gradnphi[1], -1.0);
+            dg::blas1::scal(m_gradphi[1], -1.0);
         }
         m_adv.upwind( -1., m_chi, m_iota, y[i], 0., yp[i]);   
         dg::blas1::pointwiseDot( m_binv, yp[i], yp[i]);
