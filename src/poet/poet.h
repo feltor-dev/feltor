@@ -348,7 +348,7 @@ void Poet<G,  M,  container>::operator()( double t, const std::array<container,2
         {
             dg::blas1::copy(m_iota, m_gradphi[0]);
             dg::blas1::copy(m_chi, m_gradphi[1]);
-            dg:.blas1:.scal(m_gradnphi[1], -1.0);
+	    dg::blas1::scal(m_gradphi[1], -1.0);
         }
 
         m_adv.upwind( -1., m_chi, m_iota, y[i], 0., yp[i]);   
