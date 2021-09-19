@@ -87,34 +87,34 @@ int main( )
     std::cout << "# mass before: "<<mass_before<<"\n";
     double mass_after = dg::blas1::dot( ds.fieldaligned().sqrtGp(), derivative);
     std::cout << "# mass after   "<<mass_after<<"\n";
-    std::cout << "# Difference   "<<fabs(mass_before-mass_after)/mass_before<<"\n";
+    std::cout << "    Tp_mass_err:   "<<(mass_after-mass_before)/mass_before<<"\n";
     mass_before = sqrt(dg::blas2::dot( vol3d, fun));
     std::cout << "# l2 norm before: "<<mass_before<<"\n";
     mass_after = sqrt(dg::blas2::dot( ds.fieldaligned().sqrtGp(), derivative));
     std::cout << "# l2 norm after   "<<mass_after<<"\n";
-    std::cout << "# Difference   "<<fabs(mass_before-mass_after)/mass_before<<"\n";
+    std::cout << "    Tp_l2_err:   "<<(mass_after-mass_before)/mass_before<<"\n";
 
-    dg::geo::DSPGenerator generator( mag, g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.hz());
+    dg::geo::DSPGenerator generator( mag, g3d.x0(), g3d.x1(), g3d.y0(),
+            g3d.y1(), g3d.hz());
     dg::geo::CurvilinearProductGrid3d g3dP( generator, g3d.n(), g3d.Nx(),
         g3d.Ny(), g3d.Nz(), g3d.bcx(), g3d.bcy(), g3d.bcz());
     dg::DVec vol3dP = dg::create::volume( g3dP);
 
-    std::cout << "# Volume on original    grid: "<<dg::blas1::dot( 1., vol3d)<<"\n";
-    std::cout << "# Volume on curvilinear grid: "<<dg::blas1::dot( 1., vol3dP)<<"\n";
-    std::cout << "# Difference                : "<<dg::blas1::dot( 1., vol3d) - dg::blas1::dot( 1., vol3dP)<<"\n";
     dg::Elliptic<dg::aProductGeometry3d, dg::DMatrix, dg::DVec> elliptic(g3d,
         dg::normed);
     dg::DVec variation(fun);
     elliptic.variation( fun, variation);
-    dg::blas1::transform( variation, variation, []DG_DEVICE( double var){ return var/sqrt(var);});
+    dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
+            return var/sqrt(var);});
     double var_before = dg::blas1::dot( vol3d, variation);
     std::cout << "# variation before: "<<var_before<<"\n";
     elliptic.construct(g3dP, dg::normed);
     elliptic.variation( derivative, variation);
-    dg::blas1::transform( variation, variation, []DG_DEVICE( double var){ return var/sqrt(var);});
+    dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
+            return var/sqrt(var);});
     double var_after = dg::blas1::dot( vol3d, variation);
     std::cout << "# variation after   "<<var_after<<"\n";
-    std::cout << "# Difference (Af-Be)"<<var_after-var_before<<"\n";
+    std::cout << "    Tp_TV_err: "<<(var_after-var_before)/var_before<<"\n";
     ///##########################################################///
     std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
     dg::DVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
@@ -162,9 +162,11 @@ int main( )
     double volume = dg::blas1::dot( 1., dsFAST.sqrtG());
     double volumeM = dg::blas1::dot( 1., dsFAST.sqrtGm());
     double volumeP = dg::blas1::dot( 1., dsFAST.sqrtGp());
+    double volumeG = dg::blas1::dot( 1., vol3dP);
     std::cout << "volume_error:\n";
     std::cout <<"    minus:"<<std::setw(13)<<" "<<fabs(volumeM-volume)/volume<<"\n";
     std::cout <<"    plus:" <<std::setw(14)<<" "<<fabs(volumeP-volume)/volume<<"\n";
+    std::cout <<"    grid:" <<std::setw(14)<<" "<<fabs(volumeG-volume)/volume<<"\n";
 
 
     dg::DVec f(g3d.size(), 1.), temp1(f), temp2(f), temp3(f);
