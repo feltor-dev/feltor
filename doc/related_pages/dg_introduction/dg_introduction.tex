@@ -658,24 +658,25 @@ We have $f_{\text{FE}}(x_{i}) = f_{i}$. Eq.~\eqref{eq:fem} gives an alternative
 interpolation method, which amounts to linear interpolation between the two nearest
 points. Unfortunately, the linear base functions~\eqref{eq:linear_fem} are not
 orthogonal, that is the "mass" matrix of projection integrals $S_{ij} = \int \dx v_i(x)v_j(x)$ is a banded matrix with three diagonals.
-Let us first compute the entries on a reference element $[-1,1]$
+We can compute the entries from a reference element $[-1,1]$
 with the dG absicssas $x_j^a$, scaled by $h/2$
 \begin{align}
-    S_{0j} &:= \frac{h}{2} \frac{1}{6}\begin{pmatrix}
+    &S_{ij} := \int v_i(x)v_j(x)\dx\\
+    &S_{0j} := \frac{h}{2} \frac{1}{6}\begin{pmatrix}
         6(x^a_0+1) + 2(x^a_1-x^a_0) & (x^a_1-x^a_0) & 0 \ldots
     \end{pmatrix}
     \nonumber\\
-    S_{\text{ref}} &:= \frac{h}{2}\frac{1}{6}\begin{pmatrix}
+    S &:= \frac{h}{2}\frac{1}{6}\begin{pmatrix}
         (x^a_0-(x^a_{P-1}-2)) & 2(x^a_1 - (2-x^a_{P-1})) & (x^a_1 - x^a_0) & 0 & 0 \\
         0 & (x^a_{k} - x^a_{k-1}) & 2(x^a_{k+1}-x^a_{k-1}) & (x^a_{k+1} - x^a_k) & 0 \\
         0 & 0 & (x^a_{P-1} - x^a_{P-2}) & 2( (x^a_0+2) - x^a_{P-2}) & ((x^a_0+2)- x^a_{P-1})
     \end{pmatrix}
     \nonumber\\
-    S_{(N-1)j} &:= \frac{h}{2} \frac{1}{6}\begin{pmatrix}
+    &S_{(N-1)j} := \frac{h}{2} \frac{1}{6}\begin{pmatrix}
         \ldots 0 &(x^a_{P-1} - x^a_{P-2}) & 2(x^a_{P-1} - x^a_{P-2}) + 6( 1 - x^a_{P-1})
     \end{pmatrix}
 \end{align}
-Note that $S$ is diagonally dominant (the diagonal entry is twice as large as the sum of the two entries on the same row).
+Note that $S$ is diagonally dominant (on an equidistant grid the diagonal entry is twice as large as the sum of the two entries on the same row).
 %What to do for periodic boundaries? or Dirichlet?
 Thus reference element consists of the $P\times(P+2)$ blocks $hS_{\text{ref}}/2$.
 The weights of the finite element discretization consist of the base elements
@@ -690,26 +691,19 @@ We here realize that $W^{-1}S$  is a smoothing kernel that represents the
 integration $w_k^{-1} \int f(x) v_k(x)\dx$.
 Also note that for an equidistant grid the stencil of $S$ reads $(1,4,1)$, which
 corresponds to Simpson's integration formula.
-Similar to how we derived the dG derivative, we can derive a discretization of the
-simple derivative in the finite element framework:
-\begin{align}
-    \partial_x f = \rho \nonumber\\
-    \int v_i(x) \partial_x f \dx = [v_i(x) \hat f(x)]_{x_a}^{x_b} - f_k \int v_k(x)\partial_x v_i(x) \dx = \rho_l \int v_l(x) v_i(x)\dx \nonumber \\
-    \bar D_x^0 f = S\rho \\
-    \bar D_x^0 = \begin{pmatrix}
-        -1/2 & 0 & 1/2
-        \end{pmatrix}
-\end{align}
-We introduce $\hat f$ to account for various boundary conditions.
-We find that the derivative matrix resembles the centered differences.
-We can compute the stiffness matrix $M=\int\dx \partial_x v_i(x)\partial_x v_j(x)$
-\begin{align}
-    M_{\text{ref}} := \frac{2}{h}\begin{pmatrix}
-        0 & -\frac{1}{(x_{k} - x_{k-1})} & \frac{(x_{k+1}-x_{k-1})}{(x_{k} - x_{k-1})(x_{k+1} - x_k)} & -\frac{1}{(x_{k+1} - x_k)} & 0 \\
-    \end{pmatrix}
-\end{align}
 
-The adjoint of the interpolation matrix yields a projection integral $\bar f_j = \int \dx v_j(x) g(x)$, which must be inverted with $f_i = S_{ij}^{-1} \bar f_j$.
+\subsection{Interpolation and projection}
+Eq.~\eqref{eq:fem} gives a direct interpolation formula. If we take the existing
+nodes $x_i$, we can refine the grid by inserting points in between the existing points.
+Let us call the resulting interpolation matrix $I$. Then
+it can be shown that
+\begin{align}
+    I^\mathrm{T} W_f I = S
+\end{align}
+where $W_f$ are the integration weights (Simpson's 1/3 or 3/8 rule) on the fine grid.
+Thus, the adjoint of the interpolation matrix yields a projection integral $\bar f_j = \int \dx v_j(x) g(x)$, which must be inverted with $f_i = S_{ij}^{-1} \bar f_j$.
+This inversion is the main downside of the FEM method compared to the dG method
+as it can take a significant amount of time.
 
 
 \section{Spectral and modal filtering techniques}
