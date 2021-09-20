@@ -20,8 +20,6 @@ template<class real_type>
 using MIDMatrix_t = MPIDistMat< IDMatrix_t<real_type>, GeneralComm< dg::iDVec, thrust::device_vector<real_type>> >;
 using MIHMatrix = MIHMatrix_t<double>;
 using MIDMatrix = MIDMatrix_t<double>;
-//typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
-//typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
 namespace x{
 //introduce into namespace x
 using IHMatrix = MIHMatrix;

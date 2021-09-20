@@ -19,12 +19,15 @@ namespace dg{
 template<class real_type>
 using IHMatrix_t = cusp::csr_matrix<int, real_type, cusp::host_memory>;
 template<class real_type>
-//using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+//Ell matrix can be almost 3x faster than csr for GPU
 using IDMatrix_t = cusp::ell_matrix<int, real_type, cusp::device_memory>;
+#else
+// csr matrix can be much faster than ell for CPU (we have our own symv implementation!)
+using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
+#endif
 using IHMatrix = IHMatrix_t<double>;
 using IDMatrix = IDMatrix_t<double>;
-//typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
-//typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 #ifndef MPI_VERSION
 namespace x{
 //introduce into namespace x
