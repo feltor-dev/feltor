@@ -303,7 +303,7 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     auto tmp = dg::pullback( vec.z(), *grid_coarse);
     hbphi = tmp.data();
     //this is a pullback bphi( R(zeta, eta), Z(zeta, eta)):
-    if( dynamic_cast<const dg::CartesianGrid2d*>( grid_coarse.get()))
+    if( dynamic_cast<const dg::CartesianMPIGrid2d*>( grid_coarse.get()))
     {
         for( unsigned i=0; i<hbphiP.size(); i++)
         {
