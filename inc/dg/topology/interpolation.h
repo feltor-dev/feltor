@@ -21,7 +21,9 @@ using IHMatrix_t = cusp::csr_matrix<int, real_type, cusp::host_memory>;
 template<class real_type>
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 //Ell matrix can be almost 3x faster than csr for GPU
-using IDMatrix_t = cusp::ell_matrix<int, real_type, cusp::device_memory>;
+//However, sometimes matrices contain outlier rows that do not fit in ell
+//then ell is useful for most rows and for the rest coo is used
+using IDMatrix_t = cusp::hyb_matrix<int, real_type, cusp::device_memory>;
 #else
 // csr matrix can be much faster than ell for CPU (we have our own symv implementation!)
 using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
