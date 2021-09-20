@@ -1468,11 +1468,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
             }
             else // "bohm" == m_p.sheath_bc
             {
-                //u_e,sh = s*sqrt(1+tau) exp(-phi)
+                //u_e,sh = s*1/sqrt(|mu_e|2pi) exp(-phi)
+                double mue = fabs(m_p.mu[0]);
                 dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
-                    [cs, sheath_rate]DG_DEVICE( double sheath_coord, double
+                    [mue, sheath_rate]DG_DEVICE( double sheath_coord, double
                         sheath, double phi) {
-                        return cs*sheath_rate*sheath_coord*sheath*exp(-phi);
+                        return sheath_rate*sheath_coord*sheath*exp(-phi)/sqrt( mue*2.*M_PI);
                     },
                     m_sheath_coordinate, m_sheath, m_potentialST[0]);
             }
