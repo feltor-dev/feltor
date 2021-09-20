@@ -146,6 +146,14 @@ int main(int argc, char * argv[])
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFAST(
             bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
             g3d.hz()/2., method);
+    std::cout <<"Time: ";
+    t.tic();
+    for( unsigned i=0; i<10; i++)
+        ds.centered( fun, derivative);
+    t.toc();
+    double gbytes=fun.size()*sizeof(double)/1e9;
+    std::cout << t.diff()/10 << " #\t "<<gbytes*83*10/t.diff()<<"GB/s\n" ;
+
     for( auto bc : {dg::NEU, dg::DIR})
     {
         if( bc == dg::DIR)
