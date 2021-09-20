@@ -133,8 +133,6 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
         vol0
     };
     yp.fill(dg::evaluate( dg::zero, grid_evaluate));
-    yp2b = dg::evaluate( dg::zero, grid_evaluate); //allocate memory for output
-    in_boxp.resize( yp2b.size());
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
@@ -156,7 +154,8 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
                     eps,1e-10);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
     }
-    yp2b = yp[2];
+    yp2b.assign( grid_evaluate.size(), deltaPhi); //allocate memory for output
+    in_boxp.resize( yp2b.size());
     //Now integrate again but this time find the boundary distance
     for( unsigned i=0; i<size; i++)
     {
