@@ -91,15 +91,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
             update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::blas1::pointwiseDot ( 1./m_fa.deltaPhi(), m_faST.bphiM(),
-                    m_velocityST[1], -1./m_fa.deltaPhi(), m_faST.bphiM(),
-                    m_minus, 0., m_minus);
-            dg::blas1::pointwiseDot( 1./m_fa.deltaPhi(), m_plus,
-                    m_faST.bphiP(), -1./m_fa.deltaPhi(), m_velocityST[1],
-                    m_faST.bphiP(), 0., m_plus);
-
-            dg::geo::ds_divCentered( m_faST, m_p.nu_parallel_u[1],
-                    m_minus, m_plus, 0., m_temp0);
+            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+                    m_minus, m_velocityST[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
     }
@@ -173,15 +166,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
             update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::blas1::pointwiseDot ( 1./m_fa.deltaPhi(), m_faST.bphiM(),
-                    m_velocityST[1], -1./m_fa.deltaPhi(), m_faST.bphiM(),
-                    m_minus, 0., m_minus);
-            dg::blas1::pointwiseDot( 1./m_fa.deltaPhi(), m_plus,
-                    m_faST.bphiP(), -1./m_fa.deltaPhi(), m_velocityST[1],
-                    m_faST.bphiP(), 0., m_plus);
-
-            dg::geo::ds_divCentered( m_faST, m_p.nu_parallel_u[1],
-                    m_minus, m_plus, 0., m_temp0);
+            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+                    m_minus, m_velocityST[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
     }
