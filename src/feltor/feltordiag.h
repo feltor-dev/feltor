@@ -836,7 +836,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             v.f.compute_perp_diffusiveN( 1., v.f.density(0), result, v.tmp[2],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(0), result, v.tmp[2],
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(0), v.f.density(0), result, v.tmp[2],
                     0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
@@ -849,7 +849,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             v.f.compute_perp_diffusiveN( 1., v.f.density(1), result, v.tmp[2],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), result, v.tmp[2],
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
                     0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
@@ -1255,7 +1255,7 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             v.f.compute_perp_diffusiveN( 1., v.f.density(1), result, v.tmp[2],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), result, v.tmp[2],
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
                     0., v.tmp[1]);
             dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.velocity(1),
                     1., v.tmp[1], v.f.density(1), 0., result);

@@ -191,6 +191,7 @@ struct Explicit
             dg::blas1::scal( result, beta);
     }
     void compute_perp_diffusiveU( double alpha, const Container& velocity,
+            const Container& density,
             Container& temp0, Container& temp1, double beta, Container& result)
     {
         // density = full N
@@ -204,7 +205,7 @@ struct Explicit
                 swap( temp0, temp1);
                 dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
             }
-            dg::blas1::axpby( -alpha*m_p.nu_perp_u, temp0, beta, result);
+            dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
         }
         else
             dg::blas1::scal( result, beta);
@@ -1626,7 +1627,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     {
         compute_perp_diffusiveN( 1., m_density[i], m_temp0, m_temp1, 1.,
                 yp[0][i]);
-        compute_perp_diffusiveU( 1., m_velocityST[i], m_temp0, m_temp1, 1.,
+        compute_perp_diffusiveU( 1., m_velocityST[i], m_densityST[i], m_temp0, m_temp1, 1.,
                 yp[1][i]);
     }
 #endif

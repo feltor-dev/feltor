@@ -455,7 +455,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     else
         compute_perp_diffusiveN( 1., m_density[1], m_temp0, m_temp1, 1.,
             yp[0][1]);
-    compute_perp_diffusiveU( 1., m_velocityST[1], m_temp0, m_temp1, 1.,
+    compute_perp_diffusiveU( 1., m_velocityST[1], m_densityST[1], m_temp0, m_temp1, 1.,
             yp[1][1]);
 
     add_rhs_penalization( yp);
