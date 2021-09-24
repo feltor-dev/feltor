@@ -267,7 +267,8 @@ int main( int argc, char* argv[])
     }
     else if( p.timestepper == "multistep-imex")
     {
-        multistep_imex.construct( p.tableau, grid);
+        double eps_time = js[ "timestepper"]["eps_time"].asDouble( 1e-10);
+        multistep_imex.construct( p.tableau, feltor, eps_time);
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
     }
     else if (p.timestepper == "adaptive")
@@ -281,7 +282,8 @@ int main( int argc, char* argv[])
     }
     else if (p.timestepper == "adaptive-imex")
     {
-        adapt_ark.construct( p.tableau, grid);
+        double eps_time = js[ "timestepper"]["eps_time"].asDouble( 1e-10);
+        adapt_ark.construct( p.tableau, feltor, eps_time);
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess

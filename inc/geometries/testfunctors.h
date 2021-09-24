@@ -283,7 +283,7 @@ unsigned max_iter = 1e4, double eps = 1e-6)
         ds.dssd_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
     }
     else if( name == "invCenteredLap"){
-        //dg::LGMRES<container> invert( in, 30,8,10000);
+        //dg::LGMRES<container> invert( in, 30,3,10000);
         dg::BICGSTABl<container> invert( in, 30000,3);
         dg::geo::TestInvertDS< DS, container> rhs(ds);
         dg::Timer t;

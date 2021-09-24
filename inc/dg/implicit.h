@@ -8,11 +8,12 @@ namespace detail{
 
 //compute: y + alpha f(y,t)
 template< class LinearOp, class ContainerType>
-struct Implicit
+struct ImplicitWithWeights
 {
     using value_type = get_value_type<ContainerType>;
-    Implicit(){}
-    Implicit( value_type alpha, value_type t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
+    ImplicitWithWeights(){}
+    ImplicitWithWeights( value_type alpha, value_type t, LinearOp& f):
+        f_(f), alpha_(alpha), t_(t){}
     void construct( value_type alpha, value_type t, LinearOp& f){
         f_ = f; alpha_=alpha; t_=t;
     }
@@ -23,13 +24,34 @@ struct Implicit
         blas1::axpby( 1., x, alpha_, y, y);
         blas2::symv( f_.weights(), y, y);
     }
-    //compute without weights
-    void operator()( const ContainerType& x, ContainerType& y)
+    void operator()( const ContainerType& x, ContainerType& y){ symv(x,y);}
+
+    value_type& alpha( ){  return alpha_;}
+    value_type alpha( ) const  {return alpha_;}
+    value_type& time( ){  return t_;}
+    value_type time( ) const  {return t_;}
+  private:
+    LinearOp& f_;
+    value_type alpha_;
+    value_type t_;
+};
+template< class LinearOp, class ContainerType>
+struct ImplicitWithoutWeights
+{
+    using value_type = get_value_type<ContainerType>;
+    ImplicitWithoutWeights(){}
+    ImplicitWithoutWeights( value_type alpha, value_type t, LinearOp& f):
+        f_(f), alpha_(alpha), t_(t){}
+    void construct( value_type alpha, value_type t, LinearOp& f){
+        f_ = f; alpha_=alpha; t_=t;
+    }
+    void symv( const ContainerType& x, ContainerType& y)
     {
         if( alpha_ != 0)
             f_(t_,x,y);
         blas1::axpby( 1., x, alpha_, y, y);
     }
+    void operator()( const ContainerType& x, ContainerType& y){ symv(x,y);}
     value_type& alpha( ){  return alpha_;}
     value_type alpha( ) const  {return alpha_;}
     value_type& time( ){  return t_;}
@@ -42,7 +64,13 @@ struct Implicit
 
 }//namespace detail
 template< class M, class V>
-struct TensorTraits< detail::Implicit<M, V> >
+struct TensorTraits< detail::ImplicitWithWeights<M, V> >
+{
+    using value_type = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
+};
+template< class M, class V>
+struct TensorTraits< detail::ImplicitWithoutWeights<M, V> >
 {
     using value_type = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
@@ -96,7 +124,8 @@ struct DefaultSolver
     template< class Implicit>
     void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
-        detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
+        detail::ImplicitWithWeights<Implicit, ContainerType> implicit( alpha,
+                t, im);
         blas2::symv( im.weights(), rhs, m_rhs);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
@@ -227,7 +256,8 @@ struct AndersonSolver
     void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
         //dg::WhichType<Implicit> {};
-        detail::Implicit<Implicit, ContainerType> implicit( alpha, t, im);
+        detail::ImplicitWithoutWeights<Implicit, ContainerType> implicit(
+                alpha, t, im);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         int rank;
@@ -235,14 +265,16 @@ struct AndersonSolver
 #endif//MPI
         Timer ti;
         ti.tic();
-        unsigned number = m_acc.solve( implicit, y, rhs, im.weights(), m_eps, m_eps, m_max, m_damp, m_restart, false);
+        unsigned number = m_acc.solve( implicit, y, rhs, im.weights(), m_eps,
+                m_eps, m_max, m_damp, m_restart, false);
         ti.toc();
 #ifdef MPI_VERSION
         if(rank==0)
 #endif//MPI
         std::cout << "# of Anderson iterations time solver: "<<number<<"/"<<m_max<<" took "<<ti.diff()<<"s\n";
 #else
-        m_acc.solve( implicit, y, rhs, im.weights(), m_eps, m_eps, m_max, m_damp, m_restart, false);
+        m_acc.solve( implicit, y, rhs, im.weights(), m_eps, m_eps, m_max,
+                m_damp, m_restart, false);
 #endif //DG_BENCHMARK
     }
     private:
