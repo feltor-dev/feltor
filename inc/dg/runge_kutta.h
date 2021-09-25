@@ -68,8 +68,7 @@ struct ERKStep
         { }
     ///@copydoc RungeKutta::construct()
     void construct( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable ){
-        m_rk = tableau;
-        m_k.assign(m_rk.num_stages(), copyable);
+        *this = ERKStep( tableau, copyable);
     }
     ///@copydoc RungeKutta::copyable()
     const ContainerType& copyable()const{ return m_k[0];}
@@ -524,8 +523,7 @@ struct RungeKutta
      the \c step method can only be called with vectors of the same size)
     */
     void construct(ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable){
-        m_erk = ERKStep<ContainerType>( tableau, copyable);
-        m_delta = copyable;
+        *this = RungeKutta( tableau, copyable);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -634,10 +632,7 @@ struct ShuOsher
         { }
     ///@copydoc RungeKutta::construct()
     void construct(dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable){
-        m_t = tableau;
-        m_u.assign(m_t.num_stages(), copyable);
-        m_k.assign(m_t.num_stages(), copyable);
-        m_temp = copyable;
+        *this = ShuOsher( tableau, copyable);
     }
     ///@copydoc RungeKutta::copyable()
     const ContainerType& copyable()const{ return m_temp;}
@@ -763,10 +758,7 @@ struct DIRKStep
              SolverParams&& ...ps
              )
     {
-        m_rkI = im_tableau;
-        m_solver = SolverType( std::forward<SolverParams>(ps)...);
-        m_rhs = m_solver.copyable();
-        m_kI.assign(m_rkI.num_stages(), m_rhs);
+        *this = DIRKStep( im_tableau, std::forward<SolverParams>(ps)...);
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -939,6 +931,14 @@ struct ImplicitRungeKutta
              SolverParams&& ...ps
              ): m_dirk( im_tableau, std::forward<SolverParams>(ps)...), m_delta(m_dirk.copyable())
              {}
+    ///@copydoc DIRKStep::construct()
+    template<class ...SolverParams>
+    void construct( ConvertsToButcherTableau<value_type> im_tableau,
+             SolverParams&& ...ps
+             )
+    {
+        *this = ImplicitRungeKutta( im_tableau, std::forward<SolverParams>(ps)...);
+    }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_delta;}
