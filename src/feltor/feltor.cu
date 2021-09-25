@@ -259,6 +259,9 @@ int main( int argc, char* argv[])
     dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>,
         feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
             dg::x::DMatrix, dg::x::DVec> > > adapt_ark;
+    dg::ImplicitRungeKutta< std::array<std::array<dg::x::DVec,2>,2>,
+        feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+            dg::x::DMatrix, dg::x::DVec> > dirk;
     double rtol = 0., atol = 0., dt = 0.;
     if( p.timestepper == "multistep")
     {
@@ -274,6 +277,9 @@ int main( int argc, char* argv[])
     else if (p.timestepper == "adaptive")
     {
         adapt.construct( p.tableau, y0);
+        adapt.stepper().ignore_fsal();
+        double eps_time = js[ "timestepper"]["eps_time"].asDouble( 1e-10);
+        dirk.construct( "Midpoint (implicit)", feltor, eps_time);
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
@@ -602,28 +608,10 @@ int main( int argc, char* argv[])
                         if( time + dt > t_output)
                             dt = t_output-time;
                         if( p.timestepper == "adaptive")
-                            adapt.step( feltor, time, y0, time, y0, dt,
-                                dg::pid_control, dg::l2norm, rtol, atol);
-                        else if ( p.timestepper == "adaptive-imex")
-                            adapt_ark.step( feltor, implicit, time, y0, time,
-                                y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
-                        DG_RANK0 std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
-                        if( dt < 1e-6)
-                            throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                        if( adapt.failed())
                         {
-                            var.nfailed++;
-                            continue;
-                        }
-                        step++;
-                    }
-                    t_output += deltaT;
-                }
-                else
-                    for( unsigned k=0; k<p.inner_loop; k++)
-                    {
-                        if( p.timestepper == "adaptive")
+                            double dt_old;
                             do{
+                                dt_old = dt;
                                 adapt.step( feltor, time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
                                         atol);
@@ -632,6 +620,41 @@ int main( int argc, char* argv[])
                                 if( dt < 1e-6)
                                     throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                             }while( adapt.failed());
+                            dirk.step( implicit, time-dt_old, y0, time, y0, dt_old);
+                        }
+                        else if ( p.timestepper == "adaptive-imex")
+                            do{
+                                adapt_ark.step( feltor, implicit, time, y0,
+                                        time, y0, dt, dg::pid_control,
+                                        dg::l2norm, rtol, atol);
+                                if( adapt_ark.failed())
+                                    var.nfailed++;
+                                if( dt < 1e-6)
+                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                            }while( adapt_ark.failed());
+                        DG_RANK0 std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
+                        step++;
+                    }
+                    t_output += deltaT;
+                }
+                else
+                    for( unsigned k=0; k<p.inner_loop; k++)
+                    {
+                        if( p.timestepper == "adaptive")
+                        {
+                            double dt_old;
+                            do{
+                                dt_old = dt;
+                                adapt.step( feltor, time, y0, time, y0, dt,
+                                        dg::pid_control, dg::l2norm, rtol,
+                                        atol);
+                                if( adapt.failed())
+                                    var.nfailed++;
+                                if( dt < 1e-6)
+                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
+                            }while( adapt.failed());
+                            dirk.step( implicit, time-dt_old, y0, time, y0, dt_old);
+                        }
                         else if( p.timestepper == "adaptive-imex")
                             do{
                                 adapt_ark.step( feltor, implicit, time, y0,
@@ -887,7 +910,10 @@ int main( int argc, char* argv[])
                 {
                     try{
                         if( p.timestepper == "adaptive")
+                        {
+                            double dt_old;
                             do{
+                                dt_old = dt;
                                 adapt.step( feltor, time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
                                         atol);
@@ -896,6 +922,8 @@ int main( int argc, char* argv[])
                                 if( dt < 1e-6)
                                     throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
                             }while( adapt.failed());
+                            dirk.step( implicit, time-dt_old, y0, time, y0, dt_old);
+                        }
                         else if( p.timestepper == "adaptive-imex")
                             do{
                                 adapt_ark.step( feltor, implicit, time, y0,
@@ -924,7 +952,7 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive")
+                if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
                 {
                     std::cout << "\tdt "<<dt<<"\n";
                     std::cout << "\tfailed "<<var.nfailed<<"\n";
