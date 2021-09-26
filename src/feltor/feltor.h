@@ -1625,6 +1625,29 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             },
         m_densityST[0], m_densityST[1],
         m_velocityST[0], m_velocityST[1], yp[1][0], yp[1][1]);
+
+    // add diffusion if explicit
+    if( m_p.explicit_diffusion)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            compute_perp_diffusiveN( 1., m_density[i], m_temp0,
+                    m_temp1, 1., yp[0][i]);
+            compute_perp_diffusiveU( 1., m_velocityST[i], m_densityST[i], m_temp0,
+                    m_temp1, 1., yp[1][i]);
+            // Add parallel viscosity
+            if( m_p.nu_parallel_u[i] > 0)
+            {
+                m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
+                m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
+                update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
+                        m_plus, m_p.bcxU, 0.);
+                dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[i],
+                        m_minus, m_velocityST[i], m_plus, 0., m_temp0);
+                dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
+            }
+        }
+    }
 #endif
 
     add_rhs_penalization( yp);
