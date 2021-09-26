@@ -1754,9 +1754,9 @@ struct ImplicitVelocity
         dg::blas1::copy( y, m_ex->m_velocityST);
         m_ex->implicit_velocityST( t, m_ex->m_densityST, m_ex->m_velocityST, yp);
     }
-    void update(){
+    void update(double time){
         if( m_ex->m_p.beta != 0)
-            m_ex->m_old_apar.update( m_ex->m_apar);
+            m_ex->m_old_aparST.update( time, m_ex->m_aparST);
     }
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
@@ -1797,7 +1797,7 @@ struct ImplicitSolver
                     m_imvelo);
         unsigned number = m_lgmres.solve( implicit, y[1], rhs[1],
                 m_imdens.precond(), m_imdens.weights(), m_eps_time);
-        m_imvelo.update();
+        m_imvelo.update(t);
         ti.toc();
         DG_RANK0 std::cout << "# of LGMRES iterations time solver: "<<number
                   <<" took "<<ti.diff()<<"s\n";
@@ -1824,7 +1824,7 @@ struct Implicit
         m_imdens( t, y[0], yp[0]);
         m_imvelo.set_density( y[0]);
         m_imvelo( t, y[1], yp[1]);
-        m_imvelo.update();
+        m_imvelo.update(t);
     }
     private:
     ImplicitDensity < Geometry, IMatrix, Matrix, Container> m_imdens;
