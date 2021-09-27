@@ -61,8 +61,10 @@ struct MultiMatrix
     }
 
 
-    void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}
-    void symv(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y) const{ symv( 1., x,0,y);}
+    template<class ContainerType0, class ContainerType1>
+    void symv(real_type alpha, const ContainerType0& x, real_type beta, ContainerType1& y) const
     {
         int dims = inter_.size();
         if( dims == 1)
