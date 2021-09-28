@@ -242,6 +242,17 @@ struct OMDsDivDsFunction
     DsDivDsFunction<Function> df_;
 };
 
+template<class Function>
+struct Variation
+{
+    Variation( const TokamakMagneticField& c): f_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return sqrt(f_.dR(R,Z,phi)*f_.dR(R,Z,phi) + f_.dZ(R,Z,phi)*f_.dZ(R,Z,phi));
+    }
+    private:
+    Function f_;
+};
+
 template<class DS, class container>
 struct TestInvertDS{
     TestInvertDS( DS& ds, double alpha = -1.):

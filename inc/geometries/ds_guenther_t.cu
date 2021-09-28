@@ -108,12 +108,23 @@ int main( )
             return var/sqrt(var);});
     double var_before = dg::blas1::dot( vol3d, variation);
     std::cout << "# variation before: "<<var_before<<"\n";
+    dg::DVec var0 = dg::evaluate( dg::geo::Variation<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::blas1::axpby( 1., variation, -1., var0);
+    double errVar0 = dg::blas2::dot( vol3d, var0)/ dg::blas2::dot( vol3d, variation);
+    std::cout << "# error variation before: "<<sqrt(errVar0)<<"\n";
+    // convergence: converges order P
     elliptic.construct(g3dP, dg::normed);
     elliptic.variation( derivative, variation);
     dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
             return var/sqrt(var);});
-    double var_after = dg::blas1::dot( vol3d, variation);
+    double var_after = dg::blas1::dot( vol3dP, variation);
     std::cout << "# variation after   "<<var_after<<"\n";
+    var0 = dg::pullback( dg::geo::Variation<dg::geo::TestFunctionPsi2>(mag), g3dP);
+    dg::blas1::axpby( 1., variation, -1., var0);
+    errVar0 = dg::blas2::dot( vol3dP, var0)/dg::blas2::dot( vol3dP, variation);
+    std::cout << "# error variation after : "<<sqrt(errVar0)<<"\n";
+    // supraconvergence: converges order P-1 for dg interpolation
+    // supraconvergence: converges order 1/2 for linear interpolation
     std::cout << "    Tp_TV_err: "<<(var_after-var_before)/var_before<<"\n";
     ///##########################################################///
     std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
