@@ -14,6 +14,7 @@
 #include "make_field.h"
 #include "flux.h"
 #include "simple_orthogonal.h"
+#include "ds_generator.h"
 #include "ribeiro.h"
 #include "hector.h"
 
@@ -73,7 +74,9 @@ int main( int argc, char* argv[])
             js["magnetic_field"]["params"]);
     //create a grid generator
     std::string type = js["grid"]["generator"]["type"].asString();
-    int mode = js["grid"]["generator"]["mode"].asInt();
+    int mode = 0;
+    if( type != "dsp")
+        mode = js["grid"]["generator"]["mode"].asInt();
     std::cout << "Constructing "<<type<<" grid ... \n";
     if( type == "flux")
         generator = std::make_unique<dg::geo::FluxGenerator>( mag.get_psip(),
@@ -92,6 +95,19 @@ int main( int argc, char* argv[])
                 mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., psi_init,
                 mode%2);
         }
+    }
+    else if ( type == "dsp")
+    {
+        double boxscaleRm  = js["grid"][ "scaleR"].get( 0u, 1.05).asDouble();
+        double boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
+        double boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
+        double boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
+        const double Rmin=mag.R0()-boxscaleRm*mag.params().a();
+        const double Zmin=-boxscaleZm*mag.params().a();
+        const double Rmax=mag.R0()+boxscaleRp*mag.params().a();
+        const double Zmax=boxscaleZp*mag.params().a();
+        generator = std::make_unique<dg::geo::DSPGenerator>( mag,
+            Rmin, Rmax, Zmin, Zmax, 2.*M_PI/(double)Nz);
     }
     else if( type == "ribeiro-flux")
         generator = std::make_unique<dg::geo::RibeiroFluxGenerator>( mag.get_psip(),
