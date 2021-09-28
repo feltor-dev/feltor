@@ -59,12 +59,11 @@ struct DSFieldCylindrical4
         double R = y[0], Z = y[1];
         double vx = m_v.x()(R,Z);
         double vy = m_v.y()(R,Z);
-        double vz = m_v.z()(R, Z);
-        double div = m_v.div()(R,Z);
-        double gradz = m_v.gradz()(R,Z);
+        double vz = m_v.z()(R,Z);
+        double divvvz = m_v.divvvz()(R,Z);
         yp[0] = vx/vz;
         yp[1] = vy/vz;
-        yp[2] = (div/vz - gradz/vz/vz)*y[2];
+        yp[2] = divvvz*y[2];
     }
 
     private:
@@ -73,6 +72,7 @@ struct DSFieldCylindrical4
 
 struct DSField
 {
+    DSField() = default;
     //z component of v may not vanish
     DSField( const dg::geo::CylindricalVectorLvl1& v,
             const dg::aGeometry2d& g ):
@@ -83,18 +83,12 @@ struct DSField
         dg::HVec vx = dg::pullback( v.x(), g);
         dg::HVec vy = dg::pullback( v.y(), g);
         dg::HVec vz = dg::pullback( v.z(), g);
-        dg::HVec div = dg::pullback( v.div(), g);
-        dg::HVec gradz = dg::pullback( v.gradz(), g);
+        dg::HVec divvvz = dg::pullback( v.divvvz(), g);
         dg::blas1::pointwiseDivide(v_zeta,  vz, v_zeta);
         dg::blas1::pointwiseDivide(v_eta,   vz, v_eta);
-        dg::HVec divv_phi(vx);
-        dg::blas1::pointwiseDivide(1.,      vz, vz);
-        dg::blas1::pointwiseDot( gradz, vz, gradz);
-        dg::blas1::pointwiseDot( 1., div, vz, -1., gradz, vz, 0., divv_phi);
         dzetadphi_  = dg::forward_transform( v_zeta, g );
         detadphi_   = dg::forward_transform( v_eta, g );
-        dsdphi_     = dg::forward_transform( vz, g );
-        dvdphi_     = dg::forward_transform( divv_phi, g );
+        dvdphi_     = dg::forward_transform( divvvz, g );
     }
     //interpolate the vectors given in the constructor on the given point
     void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
@@ -105,7 +99,7 @@ struct DSField
         yp[2] = interpolate(dg::lspace, dvdphi_,    y[0], y[1], *m_g)*y[2];
     }
     private:
-    thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_, dvdphi_;
+    thrust::host_vector<double> dzetadphi_, detadphi_, dvdphi_;
     dg::ClonePtr<dg::aGeometry2d> m_g;
 };
 
@@ -134,7 +128,10 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     };
     yp.fill(dg::evaluate( dg::zero, grid_evaluate));
     //construct field on high polynomial grid, then integrate it
-    dg::geo::detail::DSField field( vec, grid_field);
+    dg::geo::detail::DSField field;
+    if( !dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
+        field = dg::geo::detail::DSField( vec, grid_field);
+
     //field in case of cartesian grid
     dg::geo::detail::DSFieldCylindrical4 cyl_field(vec);
     const unsigned size = grid_evaluate.size();

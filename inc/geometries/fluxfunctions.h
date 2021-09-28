@@ -446,20 +446,20 @@ struct CylindricalVectorLvl1
         CylindricalFunctor v_y,
         CylindricalFunctor v_z,
         CylindricalFunctor div,
-        CylindricalFunctor gradz
+        CylindricalFunctor divvvz
         ): f0{v_x, v_y, v_z},
-        m_div(div), m_gradz(gradz) {}
+        m_div(div), m_divvvz(divvvz) {}
     ///replace with given functors
     void reset(  CylindricalFunctor v_x,
         CylindricalFunctor v_y,
         CylindricalFunctor v_z,
         CylindricalFunctor div,
-        CylindricalFunctor gradz
+        CylindricalFunctor divvvz
         )
     {
         f0.reset( v_x,v_y,v_z);
         m_div = div;
-        m_gradz = gradz;
+        m_divvvz = divvvz;
     }
     ///type conversion: Lvl2 can also be used as Lvl1
     operator CylindricalVectorLvl0 ()const {return f0;}
@@ -472,10 +472,10 @@ struct CylindricalVectorLvl1
     /// \f$\nabla\cdot v\f$
     const CylindricalFunctor& div()const{return m_div;}
     /// \f$v\cdot\nabla z\f$
-    const CylindricalFunctor& gradz()const{return m_gradz;}
+    const CylindricalFunctor& divvvz()const{return m_divvvz;}
     private:
     CylindricalVectorLvl0 f0;
-    CylindricalFunctor m_div, m_gradz;
+    CylindricalFunctor m_div, m_divvvz;
 };
 
 /**
