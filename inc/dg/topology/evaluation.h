@@ -179,15 +179,25 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real
  * This function computes the indefinite integral of a given input
  * @param in Host vector discretized on g
  * @param g The grid
- * @return integral of in on the grid g
+ * @param dir If dg::backward then the integral starts at the right boundary (i.e. goes in the reverse direction)
+ * \f[ F_h(x) = \int_b^x f_h(x') dx' = \int_a^x f_h(x') dx' - \int_a^b f_h(x') dx' \f]
+ * @return integral of \c in on the grid \c g
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  */
 template<class real_type>
-thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& in, const RealGrid1d<real_type>& g)
+thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& in, const RealGrid1d<real_type>& g, dg::direction dir = dg::forward)
 {
     double h = g.h();
     unsigned n = g.n();
-    thrust::host_vector<real_type> out(g.size(), 0.);
+    thrust::host_vector<real_type> to_out(g.size(), 0.);
+    thrust::host_vector<real_type> to_in(in);
+    if( dir == dg::backward ) //reverse input vector
+    {
+        for( unsigned i=0; i<in.size(); i++)
+            to_in[i] = in[ in.size()-1-i];
+    }
+
+
     dg::Operator<real_type> forward = g.dlt().forward();
     dg::Operator<real_type> backward = g.dlt().backward();
     dg::Operator<real_type> ninj = create::ninj<real_type>( n );
@@ -201,11 +211,17 @@ thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& 
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                out[ i*n + k] += ninj(k,l)*in[ i*n + l];
-            out[ i*n + k] += constant;
+                to_out[ i*n + k] += ninj(k,l)*to_in[ i*n + l];
+            to_out[ i*n + k] += constant;
         }
         for( unsigned l=0; l<n; l++)
-            constant += h*forward(0,l)*in[i*n+l];
+            constant += h*forward(0,l)*to_in[i*n+l];
+    }
+    thrust::host_vector<real_type> out(to_out);
+    if( dir == dg::backward ) //reverse output
+    {
+        for( unsigned i=0; i<in.size(); i++)
+            out[i] = -to_out[ in.size()-1-i]; // minus from reversing!
     }
     return out;
 }
@@ -218,21 +234,23 @@ thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& 
  *  and returns its indefinite integral
  * @param f The function to evaluate and then integrate
  * @param g The grid
- * @return integral of f on the grid g
+ * @param dir If dg::backward then the integral starts at the right boundary (i.e. goes in the reverse direction)
+ * \f[ F_h(x) = \int_b^x f_h(x') dx' = \int_a^x f_h(x') dx' - \int_a^b f_h(x') dx' \f]
+ * @return integral of \c f on the grid \c g
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  */
 template< class UnaryOp,class real_type>
-thrust::host_vector<real_type> integrate( UnaryOp f, const RealGrid1d<real_type>& g)
+thrust::host_vector<real_type> integrate( UnaryOp f, const RealGrid1d<real_type>& g, dg::direction dir = dg::forward)
 {
     thrust::host_vector<real_type> vector = evaluate( f, g);
-    return integrate<real_type>(vector, g);
+    return integrate<real_type>(vector, g, dir);
 }
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> integrate( real_type (f)(real_type), const RealGrid1d<real_type>& g)
+thrust::host_vector<real_type> integrate( real_type (f)(real_type), const RealGrid1d<real_type>& g, dg::direction dir = dg::forward)
 {
     thrust::host_vector<real_type> vector = evaluate( f, g);
-    return integrate<real_type>(vector, g);
+    return integrate<real_type>(vector, g, dir);
 };
 ///@endcond
 

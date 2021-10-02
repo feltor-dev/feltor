@@ -118,12 +118,18 @@ int main()
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
 
     //TEST OF INTEGRAL
-    dg::HVec integral_num = dg::integrate( cos, g1d);
+    dg::HVec integral_num = dg::integrate( cos, g1d, dg::forward);
     dg::HVec integral_ana = dg::evaluate( sin, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x0()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
-    std::cout << " Error norm of  1d integral function "<<norm<<"\n";
+    std::cout << " Error norm of  1d integral function (forward) "<<norm<<"\n";
+    integral_num = dg::integrate( cos, g1d, dg::backward);
+    integral_ana = dg::evaluate( sin, g1d);
+    dg::blas1::plus( integral_ana, -sin(g1d.x1()));
+    dg::blas1::axpby( 1., integral_ana, -1., integral_num);
+    norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
+    std::cout << " Error norm of  1d integral function (backward) "<<norm<<"\n";
     // TEST if dot throws on NaN
     std::cout << "TEST if dot throws on Inf or Nan:\n";
     dg::blas1::transform( x,x, dg::LN<double>());
