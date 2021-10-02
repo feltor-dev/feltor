@@ -112,17 +112,17 @@ int main( int argc, char* argv[])
     std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
     std::cout << "Generate orthogonal flux-aligned grid ... \n";
     dg::geo::SimpleOrthogonal generator(mag.get_psip(),
-            psipO, psipmax, mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
+            psipO<psipmax ? psipO : psipmax,
+            psipO<psipmax ? psipmax : psipO,
+            mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
     dg::geo::CurvilinearGrid2d gridX2d (generator,
-            npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
+            npsi, Npsi, Neta, dg::DIR, dg::PER);
     std::cout << "DONE!\n";
-    //Create 1d grid
     dg::Grid1d g1d_out(psipO<psipmax ? psipO : psipmax,
                        psipO<psipmax ? psipmax : psipO,
-                       npsi, Npsi, dg::DIR_NEU);
-    //inner value is always 0 (hence the boundary condition)
-    std::cout << "Cell separatrix boundary is "
-              <<Npsi*(1.-fx_0)*g1d_out.h()+g1d_out.x0()<<"\n";
+                       npsi, Npsi, psipO < psipmax ? dg::DIR_NEU : dg::NEU_DIR);
+    //O-point fsa value is always 0 (hence the DIR boundary condition)
+    //f0 makes a - sign if psipmax < psipO
     const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
@@ -143,7 +143,8 @@ int main( int argc, char* argv[])
     dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
     map1d.emplace_back( "dvdpsi", dvdpsip,
         "Derivative of flux volume with respect to flux label psi");
-    dg::HVec X_psi_vol = dg::integrate( dvdpsip, g1d_out);
+    dg::direction integration_dir = psipO < psipmax ? dg::forward : dg::backward;
+    dg::HVec X_psi_vol = dg::integrate( dvdpsip, g1d_out, integration_dir);
     map1d.emplace_back( "psi_vol", X_psi_vol,
         "Flux volume evaluated with X-point grid");
 
@@ -177,7 +178,7 @@ int main( int argc, char* argv[])
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
         "Poloidal flux label psi (same as coordinate)");
-    dg::HVec psit = dg::integrate( qprofile, g1d_out);
+    dg::HVec psit = dg::integrate( qprofile, g1d_out, integration_dir);
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
@@ -247,7 +248,9 @@ int main( int argc, char* argv[])
 
     dg::HVec dvdpsip2d = dg::evaluate( dg::zero, g2d_out);
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
-    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+    if( psipO > psipmax)
+        dpsi = dg::create::dx( g1d_out, dg::forward);
     //although the first point outside LCFS is still wrong
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
@@ -339,6 +342,7 @@ int main( int argc, char* argv[])
     size_t counter = 0;
     int ncid;
     std::string fsa_mode = config.get( "fsa", "convoluted-toroidal-average").asString();
+    std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
     for( int j=2; j<argc-1; j++)
     {
         int timeID;
@@ -469,7 +473,7 @@ int main( int argc, char* argv[])
                     else
                     {
                         dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
-                        transfer1d = dg::integrate( t1d, g1d_out);
+                        transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
 
                         result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out); //make sure to take inner cell for interpolation
                     }
@@ -485,7 +489,7 @@ int main( int argc, char* argv[])
                         dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
                         dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
-                        transfer1d = dg::integrate( t1d, g1d_out);
+                        transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
                         result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
                         result = sqrt(result);
                     }
@@ -493,7 +497,7 @@ int main( int argc, char* argv[])
                     {
                         dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
-                        transfer1d = dg::integrate( t1d, g1d_out);
+                        transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
 
                         result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
                         result = sqrt(result);

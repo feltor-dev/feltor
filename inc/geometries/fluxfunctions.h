@@ -471,7 +471,7 @@ struct CylindricalVectorLvl1
     const CylindricalFunctor& z()const{return f0.z();}
     /// \f$\nabla\cdot v\f$
     const CylindricalFunctor& div()const{return m_div;}
-    /// \f$v\cdot\nabla z\f$
+    /// \f$\nabla\cdot (v/z)\f$
     const CylindricalFunctor& divvvz()const{return m_divvvz;}
     private:
     CylindricalVectorLvl0 f0;

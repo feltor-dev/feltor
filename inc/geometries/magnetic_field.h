@@ -252,6 +252,18 @@ static inline TokamakMagneticField periodify( const TokamakMagneticField& mag, d
             periodify( mag.get_ipol(), R0, R1, Z0, Z1, bcx, bcy), mag.params());
 }
 
+///@brief \f$   \Delta\psi_p = \psi_R/R + \psi_{RR}+\psi_{ZZ}   \f$
+struct LaplacePsip : public aCylindricalFunctor<LaplacePsip>
+{
+    LaplacePsip( const TokamakMagneticField& mag): m_mag(mag)  { }
+    double do_compute(double R, double Z) const
+    {
+        return m_mag.psipR()(R,Z)/R+ m_mag.psipRR()(R,Z) + m_mag.psipZZ()(R,Z);
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
 ///@brief \f$   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f$
 struct Bmodule : public aCylindricalFunctor<Bmodule>
 {

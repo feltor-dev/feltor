@@ -94,6 +94,11 @@ int main( int argc, char* argv[])
         double fx_0 = 1./8.;
         psipmax = -fx_0/(1.-fx_0)*psipO;
     }
+    double width_factor = js.get("width-factor",1.0).asDouble();
+    dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag, width_factor);
+    double deltaPsi = fsi.get_deltapsi();
+    if( deltaPsi < 1e-14) // protect against toroidal
+        deltaPsi = 0.1;
 
     double maxPhi = 2.*M_PI*js["boundary"]["sheath"].get("max_angle", 0.1).asDouble();
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
@@ -109,6 +114,7 @@ int main( int argc, char* argv[])
         {"IpolR", "Poloidal current derivative in R", mag.ipolR()},
         {"IpolZ", "Poloidal current derivative in Z", mag.ipolZ()},
         {"Rho_p", "Normalized Poloidal flux label", dg::geo::RhoP(mag)},
+        {"LaplacePsip", "Laplace of flux function", dg::geo::LaplacePsip(mag)},
         {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
         {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
         {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
@@ -143,6 +149,7 @@ int main( int argc, char* argv[])
         {"BHatZZ", "Z derivative of BHatZ", dg::geo::BHatZZ(mag)},
         {"BHatPZ", "Z derivative of BHatP", dg::geo::BHatPZ(mag)},
         {"NormGradPsip", "Norm of gradient of Psip", dg::geo::SquareNorm( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
+        {"SquareGradPsip", "Norm of gradient of Psip", dg::geo::ScalarProduct( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
         {"CurvatureNablaBGradPsip", "(Toroidal) Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureNablaB(mag, +1), dg::geo::createGradPsip(mag))},
         {"CurvatureKappaGradPsip", "(Toroidal) Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureKappa(mag, +1), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
@@ -170,19 +177,19 @@ int main( int argc, char* argv[])
         {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
         {"Wall", "Penalization region that acts as the wall", wall },
         {"MagneticTransition", "The region where the magnetic field is modified", transition},
-        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
+        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, deltaPsi, 1./(sqrt(2.*M_PI)*deltaPsi)), mag.psip())},
         ////
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
     };
 
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
-    unsigned npsi = 3;
+    unsigned npsi = js["grid"].get("npsi", 3).asUInt();
     //set number of psivalues (NPsi % 8 == 0)
     unsigned Npsi = js["grid"].get("Npsi", 32).asUInt();
     unsigned Neta = js["grid"].get("Neta", 640).asUInt();
     /// -------  Elements for fsa on X-point grid ----------------
-    //std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
     std::unique_ptr<dg::geo::CurvilinearGrid2d> gX2d;
+    dg::direction integration_dir = psipO<psipmax ? dg::forward : dg::backward;
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
         mag_description == dg::geo::description::square ||
@@ -195,25 +202,31 @@ int main( int argc, char* argv[])
         std::cout << "psi 1 is          "<<psipmax<<"\n";
         // this one is actually slightly better than the X-point grid
         dg::geo::SimpleOrthogonal generator(mag.get_psip(),
-                psipO, psipmax, mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
+                psipO<psipmax ? psipO : psipmax,
+                psipO<psipmax ? psipmax : psipO,
+                mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
         gX2d = std::make_unique<dg::geo::CurvilinearGrid2d>(generator,
-                npsi, Npsi, Neta, dg::DIR, dg::NEU);
+                npsi, Npsi, Neta, dg::DIR, dg::PER);
         std::cout << "DONE! \n";
-        //dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
         dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
         dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
+
+        // f0 makes a - sign if psipmax < psipO
         const double f0 = (gX2d->x1()-gX2d->x0())/ ( psipmax - psipO);
         dg::HVec dvdpsip;
         avg_eta( volX2d, dvdpsip, false);
         dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
         dg::Grid1d gX1d(psipO<psipmax ? psipO : psipmax,
                         psipO<psipmax ? psipmax : psipO,
-                        npsi, Npsi, dg::DIR_NEU);
-        //inner value is always zero
-        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d);
+                        npsi, Npsi, psipO < psipmax ? dg::DIR_NEU : dg::NEU_DIR);
+        dg::HMatrix dpsi = dg::create::dx( gX1d, dg::NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+        if( psipO > psipmax)
+            dpsi = dg::create::dx( gX1d, dg::NEU, dg::forward);
+        //O-point fsa value is always zero
+        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d, integration_dir);
         map1d.emplace_back( "dvdpsip", dvdpsip,
             "Derivative of flux volume with respect to flux label psi");
         map1d.emplace_back( "psi_vol", X_psi_vol,
@@ -231,7 +244,7 @@ int main( int argc, char* argv[])
               << dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
 
         //Compute FSA of cylindrical functions
-        dg::HVec transferH, transferH1d;
+        dg::HVec transferH, transferH1d, integral1d;
         for( auto tp : map)
         {
             if( std::get<0>(tp).find("Wall") != std::string::npos)
@@ -246,9 +259,14 @@ int main( int argc, char* argv[])
             map1d.emplace_back( std::get<0>(tp)+"_fsa", transferH1d,
                 std::get<1>(tp)+" (Flux surface average)");
             dg::blas1::pointwiseDot( transferH1d, dvdpsip, transferH1d );
-            transferH1d = dg::integrate( transferH1d, gX1d);
-            map1d.emplace_back( std::get<0>(tp)+"_ifs", transferH1d,
+            integral1d = dg::integrate( transferH1d, gX1d, integration_dir);
+            map1d.emplace_back( std::get<0>(tp)+"_ifs", integral1d,
                 std::get<1>(tp)+" (Flux surface integral)");
+            dg::blas2::symv( dpsi, transferH1d, integral1d);
+            dg::blas1::pointwiseDivide( integral1d, dvdpsip, integral1d);
+            map1d.emplace_back( std::get<0>(tp)+"_dfs", integral1d,
+                std::get<1>(tp)+" (Flux current derivative)");
+
 
         }
     }
@@ -279,22 +297,46 @@ int main( int argc, char* argv[])
         dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
         map1d.emplace_back("q-profile", qprofile,
             "q-profile (Safety factor) using direct integration");
-        if( mag_description == dg::geo::description::standardX)
+        if( mag_description == dg::geo::description::standardX
+            || mag_description == dg::geo::description::doubleX)
         {
             double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
             double ZX = -1.1*mag.params().elongation()*mag.params().a();
             try{
                 dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-                dg::Grid2d grid2d_tmp(Rmin,Rmax,ZX,Zmax, n,Nx,Ny);
+                double Z2X = Zmax;
+                if( mag_description == dg::geo::description::doubleX)
+                {
+                    Z2X = -ZX;
+                    dg::geo::findXpoint( mag.get_psip(), RX, Z2X);
+                }
+                dg::Grid2d grid2d_tmp(Rmin,Rmax,ZX,Z2X, n,Nx,Ny);
                 double width_factor = js.get("width-factor",1.0).asDouble();
                 dg::geo::SafetyFactorAverage qprof_avg(grid2d_tmp, mag, width_factor);
                 dg::HVec qprofile_avg( psi_vals);
                 dg::blas1::evaluate( qprofile_avg, dg::equals(), qprof_avg, psi_vals);
                 map1d.emplace_back("q-profile-avg", qprofile_avg,
                     "q-profile (Safety factor) using average integration");
+                dg::HVec curvVec = dg::evaluate( dg::geo::ScalarProduct(
+                            dg::geo::createCurvatureNablaB(mag, +1),
+                            dg::geo::createGradPsip(mag)), grid2d_tmp);
+                dg::geo::FluxSurfaceAverage<dg::HVec> fsa_avg( grid2d_tmp, mag,
+                        curvVec, dg::evaluate( dg::cooX2d, grid2d_tmp), width_factor);
+                dg::blas1::evaluate( qprofile_avg, dg::equals(), fsa_avg, psi_vals);
+                map1d.emplace_back("CurvatureNablaBGradPsip_fsa-avg", qprofile_avg,
+                    "using average integration");
+                curvVec = dg::evaluate( dg::geo::ScalarProduct(
+                            dg::geo::createCurvatureKappa(mag, +1),
+                            dg::geo::createGradPsip(mag)), grid2d_tmp);
+                fsa_avg.set_container( curvVec);
+                dg::blas1::evaluate( qprofile_avg, dg::equals(), fsa_avg, psi_vals);
+                map1d.emplace_back("CurvatureKappaGradPsip_fsa-avg", qprofile_avg,
+                    "using average integration");
+
+
             } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
         }
-        dg::HVec psit = dg::integrate( qprofile, grid1d);
+        dg::HVec psit = dg::integrate( qprofile, grid1d, integration_dir);
         map1d.emplace_back("psit1d", psit,
             "Toroidal flux label psi_t integrated  on grid1d using direct q");
         //we need to avoid integrating outside closed fieldlines
