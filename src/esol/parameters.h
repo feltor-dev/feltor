@@ -31,14 +31,14 @@ struct Parameters
     double omega_s, xfac_s, sigma_s;
     
     double xfac_sep, sigma_sep, xfac_d, sigma_d;
-    double bgprofamp, profamp, sigma_p;
+    double bgprofamp, profamp, ln;
     
-    double amp, bamp, ky, sigma, posX, posY;
+    double amp, bamp, my, sigma, posX, posY;
 
     double lx, ly;
     dg::bc bc_x, bc_y;
 
-    std::string init, equations, output, timestepper, source_rel, source_type;
+    std::string init, equations, output, timestepper, source_rel, source_type, bgproftype;
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
         n  = ws["grid"].get("n", 5).asUInt();
@@ -91,14 +91,14 @@ struct Parameters
         xfac_s = ws["source"].get("xfac_s", 0.1).asDouble();
         sigma_s = ws["source"].get("sigma_s", 0.5).asDouble();
         
+        bgproftype = ws["profile"].get("bgproftype", "tanh").asString();
         bgprofamp = ws["profile"].get("bgprofamp", 1.0).asDouble();
         profamp = ws["profile"].get("profamp", 9.0).asDouble();
-        sigma_p = ws["profile"].get("sigma_p", 10.0).asDouble();
+        ln = ws["profile"].get("ln", 128.0).asDouble();
         
         init = ws["init"].get("type", "blob").asString();
         amp = ws["init"].get("amplitude", 1.0).asDouble();
-        bamp = ws["init"].get("backgroundamp", 0.0).asDouble();
-        ky = ws["init"].get("ky", 0.0).asDouble();
+        my = ws["init"].get("my", 0.0).asDouble();
         sigma = ws["init"].get("sigma", 5.0).asDouble();
         posX = ws["init"].get("posX", 0.25).asDouble();
         posY = ws["init"].get("posY", 0.5).asDouble();    
