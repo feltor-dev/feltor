@@ -33,7 +33,7 @@ struct Parameters
     double xfac_sep, sigma_sep, xfac_d, sigma_d;
     double bgprofamp, profamp, ln;
     
-    double amp, bamp, my, sigma, posX, posY;
+    double amp, my, sigma, posX, posY;
 
     double lx, ly;
     dg::bc bc_x, bc_y;

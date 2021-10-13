@@ -155,8 +155,7 @@ struct Esol
 template< class Geometry, class M, class container>
 Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p ):
     m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_psi1(m_chi), m_psi2(m_chi), m_rho_m1(m_chi), m_phi_m1(m_chi), m_logn(m_chi), m_gamma0sqrtinv_rho_m1(m_chi), m_gamma0sqrt_phi_m1(m_chi),
-    m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
-    m_prof(dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp, p.profamp), grid)), 
+    m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
     m_lapMperp( grid, dg::normed, dg::centered),
     m_multigrid( grid, 3),
     m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), m_gamma0sqrtinv_rho_ex(2, m_chi), m_gamma_SNi_ex(2, m_chi),
@@ -184,11 +183,18 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_centered[1] = dg::create::dy( grid, grid.bcy(), dg::centered);
     for( unsigned u=0; u<3; u++)
     {
-        m_multi_elliptic[u].construct(       m_multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
+        m_multi_elliptic[u].construct( m_multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
         m_multi_g0[u].construct( m_multigrid.grid(u), -p.tau[1], dg::centered, p.jfactor);
         m_multi_g1[u].construct( m_multigrid.grid(u), -0.5*p.tau[1], dg::centered, p.jfactor);     
     }
     m_sqrtsolve.construct( m_multi_g0[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma0);
+    
+    if(p.bgproftype == "tanh"){
+           m_prof = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+    }
+    else if(p.bgproftype == "exp"){
+           m_prof = dg::evaluate( dg::ExpProfX(p.bgprofamp, 0.0, p.ln), grid);
+    }
 }
 
 template< class G,  class M, class container>

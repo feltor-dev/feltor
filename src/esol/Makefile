@@ -7,7 +7,6 @@ include ../../config/devices/devices.mk
 
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
-INCLUDE+= -L/usr/lib/x86_64-linux-gnu/hdf5/serial
 
 all: esol esol_hpc esol_mpi
 
