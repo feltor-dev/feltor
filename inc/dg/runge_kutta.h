@@ -366,6 +366,8 @@ struct ARKStep
     * This is useful if \c ex holds
     * state, which is then updated to the new timestep and/or if \c im changes
     * the state of \c ex through the friend construct.
+    * @note After a \c solve we immediately
+    * call both \c ex and \im on the solution
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
@@ -443,7 +445,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     for( unsigned i=4; i<s; i++)
     {
         dg::blas1::copy( u0, m_rhs);
-        for( unsigned j=0; j<s; j++)
+        for( unsigned j=0; j<i; j++)
             dg::blas1::axpbypgz( dt*m_rkE.a(i,j), m_kE[j],
                                  dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
         tu = DG_FMA( m_rkI.c(i),dt, t0);
@@ -781,6 +783,7 @@ struct DIRKStep
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
+    * @note after a \c solve, we call the \c rhs immediately on the solution
     */
     template< class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
