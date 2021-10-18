@@ -113,7 +113,7 @@ int main()
             std::array<double,2>, dg::FixedPointSolver<std::array<double,2> > > >
                 pd( name, u_start, 100, 1e-14);
         counter = integrateAdaptive( pd, functor, t_start, u_start, t_end,
-            u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
+            u_end, dt, dg::im_control, dg::l2norm, 1e-6, 1e-10);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1.,sol  , -1., u_end);

@@ -367,7 +367,7 @@ struct ARKStep
     * state, which is then updated to the new timestep and/or if \c im changes
     * the state of \c ex through the friend construct.
     * @note After a \c solve we immediately
-    * call both \c ex and \im on the solution
+    * call both \c ex and \c im on the solution
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);

@@ -168,7 +168,11 @@ struct ImExMultistep
     * explicit part \c ex at the new \c (t,u).  This is useful if \c ex holds
     * state, which is then updated to the new timestep and/or if \c im changes
     * the state of \c ex through the friend construct.
-    * @attention The first few steps after the call to the init function are performed with a semi-implicit Runge-Kutta method to initialize the multistepper
+    * @note after a \c solve, we call both \c im (if the tableau necessitates it)
+    * and \c ex on the solution
+    * @attention The first few steps after the call to the init function are
+    * performed with a semi-implicit Runge-Kutta method to initialize the
+    * multistepper
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);

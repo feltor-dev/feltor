@@ -160,11 +160,24 @@ int main()
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
     }
+    std::cout << "### Test semi-implicit ARK methods with 40 steps\n";
+    std::vector<std::string> ark_names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
+    for( auto name : ark_names)
+    {
+        dg::ARKStep< std::array<double,2>, ImplicitSolver > imex( name, nu);
+        std::array<double,2> delta{0,0};
+        time = 0., y0 = init;
+        //main time loop (NT = 20)
+        for( unsigned k=0; k<NT; k++)
+            imex.step( ex, im, time, y0, time, y0, dt, delta ); //inplace step
+        dg::blas1::axpby( -1., sol, 1., y0);
+        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
+    }
 
-    std::cout << "### Test semi-implicit ARK methods\n";
-    std::vector<std::string> names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
+    std::cout << "### Test adaptive semi-implicit ARK methods\n";
     double rtol = 1e-7, atol = 1e-10;
-    for( auto name : names)
+    for( auto name : ark_names)
     {
         //![adaptive]
         time = 0., y0 = init;
@@ -176,7 +189,7 @@ int main()
         {
             if( time + dt > T)
                 dt = T-time;
-            adapt.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, rtol, atol);
+            adapt.step( ex, im, time, y0, time, y0, dt, dg::imex_control, dg::l2norm, rtol, atol);
             counter ++;
         }
         //![adaptive]

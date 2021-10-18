@@ -8,7 +8,7 @@ namespace dg
 
 ///@addtogroup time_utils
 ///@{
-/*! @brief Compute \f[ \sqrt{\sum_i x_i^2}\f] using \c dg::blas1::dot
+/*! @brief Compute \f$ \sqrt{\sum_i x_i^2}\f$ using \c dg::blas1::dot
  *
  * The intention of this function is to used in the \c Adaptive timestepping class.
  * @param x Vector to take the norm of
@@ -20,74 +20,100 @@ get_value_type<ContainerType> l2norm( const ContainerType& x)
 {
     return sqrt( dg::blas1::dot( x,x));
 }
+///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
+template<class value_type>
+value_type i_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+{
+    return dt_0*pow( eps_0, -1./(value_type)order);
+}
+///\f$ h_{n+1}= h_n \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f$
+template<class value_type>
+value_type pi_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+{
+    if( dt_1 == 0)
+        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+                embedded_order, order);
+    value_type m_k1 = -0.8, m_k2 = 0.31;
+    value_type factor = pow( eps_0, m_k1/(value_type)order)
+                     * pow( eps_1, m_k2/(value_type)order);
+    return dt_0*factor;
+}
 /**
- * @brief \f[ h'= h \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f]
+ * @brief \f$ h_{n+1}= h_n \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f$
  *
  * PID stands for "Proportional" (the present error), "Integral" (the past error), "Derivative" (the future error). See a good tutorial here https://www.youtube.com/watch?v=UR0hOmjaHp0
+ * and further information in
+ * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> in the ARKode library.
  * The PID controller is a good controller to start with, it does not overshoot
  * too much, is smooth, has no systematic over- or under-estimation and
  * converges very quickly to the desired timestep
  * @tparam value_type
- * @param dt_old the old (present) timestep
+ * @param dt_0 the present (old) timestep h_n
+ * @param dt_1 the previous timestep
+ * @param dt_2 the second previous timestep
  * @param eps_0 the error relative to the tolerance of the present timestep
  * @param eps_1 the error relative to the tolerance of the previous timestep
  * @param eps_2 the error relative to the tolerance of the second previous timestep
- * @param embedded_order order of the embedded timestepper
- * @param order order of the timestepper
+ * @param embedded_order order \c q of the embedded timestep
+ * @param order order \c p  of the timestep
  *
  * @return the new timestep
  */
 template<class value_type>
-value_type pid_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type pid_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
+    if( dt_1 == 0)
+        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+                embedded_order, order);
+    if( dt_2 == 0)
+        return pi_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+                embedded_order, order);
     value_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
     value_type factor = pow( eps_0, m_k1/(value_type)order)
                      * pow( eps_1, m_k2/(value_type)order)
                      * pow( eps_2, m_k3/(value_type)order);
-    return dt_old*factor;
+    return dt_0*factor;
 }
-///\f[ h'= h \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f]
+
+/// \f$ h_{n+1} = h_n \epsilon_n^{-0.367/p}(\epsilon_n/\epsilon_{n-1})^{0.268/p} \f$
 template<class value_type>
-value_type pi_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type ex_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
-    value_type m_k1 = -0.8, m_k2 = 0.31;
+    if( dt_1 == 0)
+        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+                embedded_order, order);
+    value_type m_k1 = -0.367, m_k2 = 0.268;
     value_type factor = pow( eps_0, m_k1/(value_type)order)
-                     * pow( eps_1, m_k2/(value_type)order);
-    return dt_old*factor;
+                      * pow( eps_0/eps_1, m_k2/(value_type)order);
+    return dt_0*factor;
 }
-///\f[ h'= h \epsilon_n^{-1/p}\f]
+/// \f$ h_{n+1} = h_n (h_n/h_{n-1}) \epsilon_n^{-0.98/p}(\epsilon_n/\epsilon_{n-1})^{-0.95/p} \f$
 template<class value_type>
-value_type i_control( value_type dt_old, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type im_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
-    value_type m_k1 = -1.;
-    value_type factor = pow( eps_0, m_k1/(value_type)order);
-    return dt_old*factor;
+    if( dt_1 == 0)
+        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+                embedded_order, order);
+    value_type m_k1 = -0.98, m_k2 = -0.95;
+    value_type factor = pow( eps_0, m_k1/(value_type)order)
+                     *  pow( eps_0/eps_1, m_k2/(value_type)order);
+    return dt_0*dt_0/dt_1*factor;
 }
+/// h_{n+1} = |ex_control| < |im_control| ? ex_control : im_control
+template<class value_type>
+value_type imex_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+{
+    value_type h1 = ex_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+            embedded_order, order);
+    value_type h2 = im_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
+            embedded_order, order);
+    // find value closest to zero
+    return fabs( h1) < fabs( h2) ? h1 : h2;
+}
+
 ///@}
 
 ///@cond
-template<class value_type>
-struct PIDController
-{
-    PIDController( ){}
-    value_type operator()( value_type dt_old, value_type eps_n, value_type eps_n1, value_type eps_n2, unsigned embedded_order, unsigned order)const
-    {
-        value_type factor = pow( eps_n,  m_k1/(value_type)order)
-                         * pow( eps_n1, m_k2/(value_type)order)
-                         * pow( eps_n2, m_k3/(value_type)order);
-        value_type dt_new = dt_old*std::max( m_lower_limit, std::min( m_upper_limit, factor) );
-        return dt_new;
-    }
-    void set_lower_limit( value_type lower_limit) {
-        m_lower_limit = lower_limit;
-    }
-    void set_upper_limit( value_type upper_limit) {
-        m_upper_limit = upper_limit;
-    }
-    private:
-    value_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
-    value_type m_lower_limit = 0, m_upper_limit = 1e300;
-};
 namespace detail{
 template<class value_type>
 struct Tolerance
@@ -253,7 +279,8 @@ struct Adaptive
      */
     template< class RHS,
               class ControlFunction = value_type (value_type, value_type,
-                      value_type, value_type, unsigned, unsigned),
+                      value_type, value_type, value_type, value_type,
+                      unsigned, unsigned),
               class ErrorNorm = value_type( const container_type&)>
     void step( RHS& rhs,
               value_type t0,
@@ -279,7 +306,8 @@ struct Adaptive
     template< class Explicit,
               class Implicit,
               class ControlFunction = value_type (value_type, value_type,
-                      value_type, value_type, unsigned, unsigned),
+                      value_type, value_type, value_type, value_type,
+                      unsigned, unsigned),
               class ErrorNorm = value_type( const container_type&)>
     void step( Explicit& ex,
               Implicit& im,
@@ -322,8 +350,9 @@ struct Adaptive
         m_reject_limit = new_reject_limit;
     }
     private:
-    template<   class ControlFunction = value_type (value_type, value_type,
-            value_type, value_type, unsigned, unsigned),
+    template< class ControlFunction = value_type (value_type, value_type,
+                      value_type, value_type, value_type, value_type,
+                      unsigned, unsigned),
                 class ErrorNorm = value_type( const container_type&)>
     void update( value_type t0,
                 const container_type& u0,
@@ -339,14 +368,16 @@ struct Adaptive
         dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
                     m_size), u0, m_delta);
         value_type eps0 = norm(m_delta);
+        value_type dt0 = dt;
         if( eps0 > m_reject_limit || std::isnan( eps0) )
         {
-            value_type dt_old = dt;
-            dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(),
+            // if stepper fails, restart controller
+            dt = control( dt0, 0., m_dt2, eps0, m_eps1, m_eps2,
+                    m_stepper.embedded_order(),
                     m_stepper.order());
-            if( fabs( dt) > 0.9*fabs(dt_old))
-                dt = 0.9*dt_old;
-            //0.9*dt_old is a safety limit
+            if( fabs( dt) > 0.9*fabs(dt0))
+                dt = 0.9*dt0;
+            //0.9*dt0 is a safety limit
             //that prevents an increase of the timestep in case the stepper fails
             m_failed = true;
             dg::blas1::copy( u0, u1);
@@ -354,18 +385,21 @@ struct Adaptive
         }
         else
         {
-            if( eps0 < 1e-20) // small and close to zero
+            if( eps0 < 1e-20) // small or zero
             {
-                dt = 1e14*dt; // a very large number
-                eps0 = 1e-20;
+                dt = 1e14*dt0; // a very large number
+                eps0 = 1e-20; // prevent storing zero
             }
             else
             {
-                dt = control( dt, eps0, m_eps1, m_eps2, m_stepper.embedded_order(),
+                dt = control( dt0, m_dt1, m_dt2, eps0, m_eps1, m_eps2,
+                        m_stepper.embedded_order(),
                         m_stepper.order());
             }
             m_eps2 = m_eps1;
             m_eps1 = eps0;
+            m_dt2 = m_dt1;
+            m_dt1 = dt0;
             dg::blas1::copy( m_next, u1);
             t1 = m_t_next;
             m_failed = false;
@@ -377,6 +411,7 @@ struct Adaptive
     value_type m_reject_limit = 2;
     value_type m_size, m_eps1=1, m_eps2=1;
     value_type m_t_next = 0;
+    value_type m_dt1 = 0., m_dt2 = 0.;
 };
 template<class Stepper>
 template<class Explicit, class ErrorNorm>
@@ -432,8 +467,8 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
 
 /*!@class hide_control_error
  *
- * @tparam ControlFunction function or Functor called as dt' = control( dt,
- * eps0, eps1, eps2, order, embedded_order), where all parameters are of type
+ * @tparam ControlFunction function or Functor called as dt' = \c control( dt0, dt1, dt2,
+ * eps0, eps1, eps2, embedded_order, order), where all parameters are of type
  * value_type except the last two, which are unsigned.
  * @tparam ErrorNorm function or Functor of type value_type( const
  * ContainerType&)
@@ -506,8 +541,9 @@ template< class Adaptive,
           class ErrorNorm = get_value_type<ContainerType>( const ContainerType&),
           class ControlFunction = get_value_type<ContainerType>
     (get_value_type<ContainerType>, get_value_type<ContainerType>,
-     get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned,
-     unsigned),
+     get_value_type<ContainerType>, get_value_type<ContainerType>,
+     get_value_type<ContainerType>, get_value_type<ContainerType>,
+     unsigned, unsigned),
           class Domain = EntireDomain>
 int integrateAdaptive(
                       Adaptive& adaptive,
@@ -607,8 +643,9 @@ template<class RHS,
                  ContainerType&),
          class ControlFunction = get_value_type<ContainerType>
     (get_value_type<ContainerType>, get_value_type<ContainerType>,
-     get_value_type<ContainerType>, get_value_type<ContainerType>, unsigned,
-     unsigned),
+     get_value_type<ContainerType>, get_value_type<ContainerType>,
+     get_value_type<ContainerType>, get_value_type<ContainerType>,
+     unsigned, unsigned),
          class Domain = EntireDomain>
 int integrateERK( std::string name,
                   RHS& rhs,
