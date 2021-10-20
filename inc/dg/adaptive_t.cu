@@ -65,7 +65,11 @@ int main()
     std::cout << "Explicit Methods \n";
     std::vector<std::string> names{
         "Heun-Euler-2-1-2",
+        "Cavaglieri-3-1-2 (explicit)",
+        "Fehlberg-3-2-3",
+        "Fehlberg-4-2-3",
         "Bogacki-Shampine-4-2-3",
+        "Cavaglieri-4-2-3 (explicit)",
         "ARK-4-2-3 (explicit)",
         "Zonneveld-5-3-4",
         "ARK-6-3-4 (explicit)",
@@ -73,9 +77,13 @@ int main()
         "Cash-Karp-6-4-5",
         "Fehlberg-6-4-5",
         "Dormand-Prince-7-4-5",
+        "Tsitouras09-7-4-5",
+        "Tsitouras11-7-4-5",
         "ARK-8-4-5 (explicit)",
-        "Verner-8-5-6",
+        "Verner-9-5-6",
+        "Verner-10-6-7",
         "Fehlberg-13-7-8",
+        "Dormand-Prince-13-7-8",
         "Feagin-17-8-10"
     };
     for( auto name : names)
@@ -94,9 +102,11 @@ int main()
     std::cout << "Implicit Methods \n";
     std::vector<std::string> implicit_names{
         "SDIRK-2-1-2",
+        "Cavaglieri-3-1-2 (implicit)",
         "Billington-3-3-2",
         "TRBDF2-3-3-2",
         "Kvaerno-4-2-3",
+        "Cavaglieri-4-2-3 (implicit)",
         "ARK-4-2-3 (implicit)",
         "Cash-5-2-4",
         "Cash-5-3-4",

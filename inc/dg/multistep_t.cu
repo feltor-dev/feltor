@@ -161,7 +161,7 @@ int main()
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
     }
     std::cout << "### Test semi-implicit ARK methods with 40 steps\n";
-    std::vector<std::string> ark_names{"ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
+    std::vector<std::string> ark_names{"Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
     for( auto name : ark_names)
     {
         dg::ARKStep< std::array<double,2>, ImplicitSolver > imex( name, nu);

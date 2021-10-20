@@ -351,6 +351,43 @@ ButcherTableau<real_type> heun_euler_2_1_2()
     return ButcherTableau<real_type>(2,1,2, a, b, bt, c);
 }
 template<class real_type>
+ButcherTableau<real_type> cavaglieri_exp_3_1_2()
+{
+    real_type a[3*3] = {
+        0,0,0,
+        2./5.,0, 0.,
+        0., 1., 0.};
+    real_type b[3] = {0., 5./6., 1./6.};
+    real_type bt[3] = {0., 4./5., 1./5.};
+    real_type c[3] = {0.,2./5., 1.};
+    return ButcherTableau<real_type>(3,1,2, a, b, bt, c);
+}
+template<class real_type>
+ButcherTableau<real_type> fehlberg_3_2_3()
+{
+    real_type a[3*3] = {
+        0,0,0,
+        1.,0,0,
+        0.25, 0.25, 0.};
+    real_type b[3] = {1./2., 1./2., 0.};
+    real_type bt[3] = {1./6., 1./6., 2./3.};
+    real_type c[3] = {0.,1., 0.5};
+    return ButcherTableau<real_type>(3,2,3, a, b, bt, c);
+}
+template<class real_type>
+ButcherTableau<real_type> fehlberg_4_2_3()
+{
+    real_type a[4*4] = {
+        0,0,0,0,
+        0.25,0,0,0,
+        -189./800.,729./800.,0,0,
+        214./891., 1./33., 650./891., 0.};
+    real_type b[4] = {214./891., 1./33., 650./891., 0.};
+    real_type bt[4] = {41./162., 0.,800./1053.,-1./78.};
+    real_type c[4] = {0.,0.25,27./40.,1.0};
+    return ButcherTableau<real_type>(4,2,3, a, b, bt, c);
+}
+template<class real_type>
 ButcherTableau<real_type> bogacki_shampine_4_2_3()
 {
     real_type a[4*4] = {
@@ -362,6 +399,35 @@ ButcherTableau<real_type> bogacki_shampine_4_2_3()
     real_type bt[4] = {7./24., 1./4.,1./3.,1./8.};
     real_type c[4] = {0.,0.5,3./4.,1.};
     return ButcherTableau<real_type>(4,2,3, a, b, bt, c);
+}
+template<class real_type>
+ButcherTableau<real_type> cavaglieri_exp_4_2_3()
+{
+    // IMEXRKCB3c
+    real_type b[4] = {0., 673488652607./2334033219546., 493801219040./853653026979., 184814777513./1389668723319.};
+    real_type c[4] = {0., 3375509829940./4525919076317., 272778623835./1039454778728., 1.0 };
+    real_type a[4*4] = {
+        0,0,0,0,
+        c[1],0, 0.,0,
+        b[0] , c[2], 0.,0.,
+        b[0],b[1],c[3]-b[0]-b[1],0};
+    real_type bt[4] = { 449556814708./1155810555193, 0., 210901428686./1400818478499., 480175564215./1042748212601.};
+    return ButcherTableau<real_type>(4,2,3, a, b, bt, c);
+    //// IMEXRKCB3f
+    //real_type b[4] = {
+    //-2179897048956./603118880443.,99189146040./891495457793.,6064140186914./1415701440113,146791865627./668377518349.
+    //};
+    //real_type c[4] = {0., 49./50., 1./25., 1.0 };
+    //real_type a[4*4] = {
+    //    0,0,0,0,
+    //    c[1],0, 0.,0,
+    //    13244205847./647648310246., 13419997131./686433909488., 0.,0.,
+    //    b[0], 231677526244./1085522130027., 3007879347537./683461566472., 0};
+    //real_type bt[4] = {
+    //    0,0,25./48., 23./48.
+    //};
+    //return ButcherTableau<real_type>(4,2,3, a, b, bt, c);
+
 }
 template<class real_type>
 ButcherTableau<real_type> ark324l2sa_erk_4_2_3()
@@ -394,13 +460,13 @@ ButcherTableau<real_type> ark436l2sa_erk_6_3_4()
 {
     real_type data[] = {
     0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-  0.5 , 0.5 , 0 , 0 , 0 , 0 , 0 ,
-  83./250. , 13861./62500. , 6889./62500. , 0 , 0 , 0 , 0 ,
-  31./50. , -116923316275./2393684061468. , -2731218467317./15368042101831. , 9408046702089./11113171139209. , 0 , 0 , 0 ,
-  17./20. , -451086348788./2902428689909. , -2682348792572./7519795681897. , 12662868775082./11960479115383. , 3355817975965./11060851509271. , 0 , 0 ,
-  1 , 647845179188./3216320057751. , 73281519250./8382639484533. , 552539513391./3454668386233. , 3354512671639./8306763924573. , 4040./17871. , 0 ,
-  4 , 82889./524892. , 0 , 15625./83664. , 69875./102672. , -2260./8211. , 0.25 ,
-  3 , 4586570599./29645900160. , 0 , 178811875./945068544. , 814220225./1159782912. , -3700637./11593932. , 61727./225920.
+    0.5 , 0.5 , 0 , 0 , 0 , 0 , 0 ,
+    83./250. , 13861./62500. , 6889./62500. , 0 , 0 , 0 , 0 ,
+    31./50. , -116923316275./2393684061468. , -2731218467317./15368042101831. , 9408046702089./11113171139209. , 0 , 0 , 0 ,
+    17./20. , -451086348788./2902428689909. , -2682348792572./7519795681897. , 12662868775082./11960479115383. , 3355817975965./11060851509271. , 0 , 0 ,
+    1 , 647845179188./3216320057751. , 73281519250./8382639484533. , 552539513391./3454668386233. , 3354512671639./8306763924573. , 4040./17871. , 0 ,
+    4 , 82889./524892. , 0 , 15625./83664. , 69875./102672. , -2260./8211. , 0.25 ,
+    3 , 4586570599./29645900160. , 0 , 178811875./945068544. , 814220225./1159782912. , -3700637./11593932. , 61727./225920.
     };
     return ButcherTableau<real_type>(6,data);
 }
@@ -503,12 +569,15 @@ ButcherTableau<real_type> tsitouras09_7_4_5()
 template<class real_type>
 ButcherTableau<real_type> tsitouras11_7_4_5()
 {
+    // useful website
+    //http://www.peterstone.name
     real_type b[7] = {
         0.09646076681806523,0.01,0.4798896504144996,
         1.379008574103742,-3.290069515436081,2.324710524099774,0.,
     };
+    // There is a misprint in the original paper that prints b - bt instead of bt
     real_type bt[7] = {
-        0.001780011052226,0.000816434459657,-0.007880878010262,0.144711007173263,-0.582357165452555,0.458082105929187,1./66.
+        0.001780011052226,0.000816434459657,-0.007880878010262,0.144711007173263,-0.582357165452555,0.458082105929187,-1./66.
     };
     real_type c[7] = {
         0.,0.161,0.327,0.9,0.9800255409045097,1.,1.
@@ -530,7 +599,10 @@ ButcherTableau<real_type> tsitouras11_7_4_5()
         a[i*7] = c[i] - tmp;
     }
     for( unsigned j=0; j<7; j++)
+    {
         a[6*7+j] = b[j];
+        bt[j] = b[j] - bt[j];
+    }
     return ButcherTableau<real_type>(7,4,5,a,b,bt,c);
 }
 
@@ -538,37 +610,69 @@ template<class real_type>
 ButcherTableau<real_type> ark548l2sa_erk_8_4_5()
 {
     real_type data[] = {
-        0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-  41./100. , 41./100. , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-  2935347310677./11292855782101. , 367902744464./2072280473677. , 677623207551./8224143866563. , 0 , 0 , 0 , 0 , 0 , 0 ,
-  1426016391358./7196633302097. , 1268023523408./10340822734521. , 0 , 1029933939417./13636558850479. , 0 , 0 , 0 , 0 , 0 ,
-  92./100. , 14463281900351./6315353703477. , 0 , 66114435211212./5879490589093. , -54053170152839./4284798021562. , 0 , 0 , 0 , 0 ,
-  24./100. , 14090043504691./34967701212078. , 0 , 15191511035443./11219624916014. , -18461159152457./12425892160975. , -281667163811./9011619295870. , 0 , 0 , 0 ,
-  3./5. , 19230459214898./13134317526959. , 0 , 21275331358303./2942455364971. , -38145345988419./4862620318723. , -1./8. , -1./8. , 0 , 0 ,
-  1 , -19977161125411./11928030595625. , 0 , -40795976796054./6384907823539. , 177454434618887./12078138498510. , 782672205425./8267701900261. , -69563011059811./9646580694205. , 7356628210526./4942186776405. , 0 ,
-  5 , -872700587467./9133579230613. , 0 , 0 , 22348218063261./9555858737531. , -1143369518992./8141816002931. , -39379526789629./19018526304540. , 32727382324388./42900044865799. , 41./200. ,
-  4 , -975461918565./9796059967033. , 0 , 0 , 78070527104295./32432590147079. , -548382580838./3424219808633. , -33438840321285./15594753105479. , 3629800801594./4656183773603. , 4035322873751./18575991585200.
+0,0,0,0,0,0,0,0,0,
+4./9.,4./9.,0,0,0,0,0,0,0,
+6456083330201./8509243623797.,1./9.,1183333538310./1827251437969.,0,0,0,0,0,0,
+1632083962415./14158861528103.,895379019517./9750411845327.,477606656805./13473228687314.,-112564739183./9373365219272.,0,0,0,0,0,
+6365430648612./17842476412687.,-4458043123994./13015289567637.,-2500665203865./9342069639922.,983347055801./8893519644487.,2185051477207./2551468980502.,0,0,0,0,
+18./25.,-167316361917./17121522574472.,1605541814917./7619724128744.,991021770328./13052792161721.,2342280609577./11279663441611.,3012424348531./12792462456678.,0,0,0,
+191./200.,6680998715867./14310383562358.,5029118570809./3897454228471.,2415062538259./6382199904604.,-3924368632305./6964820224454.,-4331110370267./15021686902756.,-3944303808049./11994238218192.,0,0,
+1,2193717860234./3570523412979.,2193717860234./3570523412979.,5952760925747./18750164281544.,-4412967128996./6196664114337.,4151782504231./36106512998704.,572599549169./6265429158920.,-457874356192./11306498036315.,0,
+5,0,0,3517720773327./20256071687669.,4569610470461./17934693873752.,2819471173109./11655438449929.,3296210113763./10722700128969.,-1142099968913./5710983926999.,2./9.,
+4,0,0,520639020421./8300446712847.,4550235134915./17827758688493.,1482366381361./6201654941325.,5551607622171./13911031047899.,-5266607656330./36788968843917.,1074053359553./5740751784926.
     };
+
     return ButcherTableau<real_type>( 8, data);
 }
 template<class real_type>
-ButcherTableau<real_type> verner_8_5_6()
+ButcherTableau<real_type> verner_9_5_6()
 {
-  //From ARKode docu (seems to be different from Verner1978 paper)
-    real_type data[] = {
-        0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-  1./6. , 1./6. , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-  4./15. , 4./75. , 16./75. , 0 , 0 , 0 , 0 , 0 , 0 ,
-  2./3. , 5./6. , -8./3. , 5./2. , 0 , 0 , 0 , 0 , 0 ,
-  5./6. , -165./64. , 55./6. , -425./64. , 85./96. , 0 , 0 , 0 , 0 ,
-  1 , 12./5. , -8 , 4015./612. , -11./36. , 88./255. , 0 , 0 , 0 ,
-  1./15. , -8263./15000. , 124./75. , -643./680. , -81./250. , 2484./10625. , 0 , 0 , 0 ,
-  1 , 3501./1720. , -300./43. , 297275./52632. , -319./2322. , 24068./84065. , 0 , 3850./26703. , 0 ,
-  6 , 3./40. , 0 , 875./2244. , 23./72. , 264./1955. , 0 , 125./11592. , 43./616. ,
-  5 , 13./160. , 0 , 2375./5984. , 5./16. , 12./85. , 3./44. , 0 , 0
-    };
-    return ButcherTableau<real_type>( 8, data);
+     /*
+    coefficients copied from:
+        http://people.math.sfu.ca/~jverner/
+        http://people.math.sfu.ca/~jverner/RKV65.IIIXb.Efficient.00000144617.081204.CoeffsOnlyFLOAT
+    */
+    real_type c[9] = {0, 0.06, 0.09593333333333333333333333333333333333333, 0.1439, 0.4973, 0.9725, 0.9995, 1.0, 1.0};
+    real_type a[9*9] = {
+    0, 0,0,0,0,0,0,0,0,
+    0.06, 0,0,0,0,0,0,0,0,
+    0.01923996296296296296296296296296296296296, 0.07669337037037037037037037037037037037037,0,0,0,0,0,0,0,
+     0.035975, 0, 0.107925, 0, 0, 0, 0, 0, 0,
+     1.318683415233148260919747276431735612861, 0, -5.042058063628562225427761634715637693344, 4.220674648395413964508014358283902080483, 0, 0, 0, 0, 0,
+     -41.87259166432751461803757780644346812905, 0, 159.4325621631374917700365669070346830453, -122.1192135650100309202516203389242140663, 5.531743066200053768252631238332999150076, 0, 0, 0, 0,
+     -54.43015693531650433250642051294142461271, 0, 207.0672513650184644273657173866509835987, -158.6108137845899991828742424365058599469, 6.991816585950242321992597280791793907096, -0.01859723106220323397765171799549294623692, 0, 0, 0,
+     -54.66374178728197680241215648050386959351, 0, 207.9528062553893734515824816699834244238, -159.2889574744995071508959805871426654216, 7.018743740796944434698170760964252490817, -0.01833878590504572306472782005141738268361, -0.0005119484997882099077875432497245168395840, 0, 0,
+      0.03438957868357036009278820124728322386520, 0, 0, 0.2582624555633503404659558098586120858767, 0.4209371189673537150642551514069801967032, 4.405396469669310170148836816197095664891, -176.4831190242986576151740942499002125029, 172.3641334014150730294022582711902413315, 0};
+
+    real_type b[9] = { 0.03438957868357036009278820124728322386520, 0, 0, 0.2582624555633503404659558098586120858767, 0.4209371189673537150642551514069801967032, 4.405396469669310170148836816197095664891, -176.4831190242986576151740942499002125029, 172.3641334014150730294022582711902413315, 0 };
+    real_type bt[9] = { 0.04909967648382489730906854927971225836479, 0, 0, 0.2251112229516524153401395320539875329485, 0.4694682253029562039431948525047387412553, 0.8065792249988867707634161808995217981443, 0., -0.6071194891777959797672951465256217122488, 0.05686113944047569241147603178766138153594};
+    return ButcherTableau<real_type>(9,5,6,a,b,bt,c);
 }
+template<class real_type>
+ButcherTableau<real_type> verner_10_6_7()
+{
+   /*
+    coefficients copied from:
+        http://people.math.sfu.ca/~jverner/
+        http://people.math.sfu.ca/~jverner/RKV76.IIa.Efficient.00001675585.081206.CoeffsOnlyFLOAT
+    */
+    real_type c[10] = { 0,  0.005, 0.1088888888888888888888888888888888888889, 0.1633333333333333333333333333333333333333, 0.4555000000000000000000000000000000000000, 0.6095094489978381317087004421486024949638, 0.884, 0.925, 1.0, 1.0};
+    real_type a[10*10]={
+        0, 0,0,0,0,0,0,0,0,0,
+        0.005, 0,0,0,0,0,0,0,0,0,
+     -1.076790123456790123456790123456790123457, 1.185679012345679012345679012345679012346, 0, 0, 0, 0, 0, 0, 0, 0,
+    0.04083333333333333333333333333333333333333, 0, 0.1225, 0, 0, 0, 0, 0, 0, 0,
+      0.6389139236255726780508121615993336109954, 0, -2.455672638223656809662640566430653894211, 2.272258714598084131611828404831320283215, 0, 0, 0, 0, 0, 0,
+     -2.661577375018757131119259297861818119279, 0, 10.80451388645613769565396655365532838482, -8.353914657396199411968048547819291691541, 0.8204875949566569791420417341743839209619, 0, 0, 0, 0, 0,
+      6.067741434696770992718360183877276714679, 0, -24.71127363591108579734203485290746001803, 20.42751793078889394045773111748346612697, -1.906157978816647150624096784352757010879, 1.006172249242068014790040335899474187268, 0, 0, 0, 0,
+      12.05467007625320299509109452892778311648, 0, -49.75478495046898932807257615331444758322, 41.14288863860467663259698416710157354209, -4.461760149974004185641911603484815375051, 2.042334822239174959821717077708608543738, -0.09834843665406107379530801693870224403537, 0, 0, 0,
+      10.13814652288180787641845141981689030769, 0, -42.64113603171750214622846006736635730625, 35.76384003992257007135021178023160054034, -4.348022840392907653340370296908245943710, 2.009862268377035895441943593011827554771, 0.3487490460338272405953822853053145879140, -0.2714390051048312842371587140910297407572, 0, 0,
+     -45.03007203429867712435322405073769635151, 0, 187.3272437654588840752418206154201997384, -154.0288236935018690596728621034510402582, 18.56465306347536233859492332958439136765, -7.141809679295078854925420496823551192821, 1.308808578161378625114762706007696696508, 0, 0, 0};
+    real_type b[10] = {  0.04715561848627222170431765108838175679569, 0, 0, 0.2575056429843415189596436101037687580986, 0.2621665397741262047713863095764527711129, 0.1521609265673855740323133199165117535523, 0.4939969170032484246907175893227876844296, -0.2943031171403250441557244744092703429139, 0.08131747232495109999734599440136761892478, 0};
+    real_type bt[10] = { 0.04460860660634117628731817597479197781432, 0, 0, 0.2671640378571372680509102260943837899738, 0.2201018300177293019979715776650753096323, 0.2188431703143156830983120833512893824578, 0.2289871705411202883378173889763552365362, 0, 0, 0.02029518466335628222767054793810430358554};
+    return ButcherTableau<real_type>(10,6,7, a,b,bt,c);
+}
+
 template<class real_type>
 ButcherTableau<real_type> fehlberg_13_7_8()
 {
@@ -588,6 +692,30 @@ ButcherTableau<real_type> fehlberg_13_7_8()
   1,   -1777./4100., 0, 0, -341./164., 4496./1025., -289./82., 2193./4100., 51./82., 33./164., 12./41., 0, 1, 0,
   8, 0, 0, 0, 0, 0, 34./105., 9./35., 9./35., 9./280., 9./280., 0, 41./840., 41./840. ,
   7, 41./840., 0, 0, 0, 0, 34./105., 9./35., 9./35., 9./280., 9./280., 41./840., 0, 0
+    };
+    return ButcherTableau<real_type>( 13, data);
+}
+template<class real_type>
+ButcherTableau<real_type> dormand_prince_13_7_8()
+{
+    // only accurate to 18 significant figures
+    // https://github.com/markmbaum/libode/blob/master/src/ode_dopri_87.cc
+    real_type data[] = {
+       0,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       1.0/18, 1.0/18,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       1.0/12, 1.0/48, 1.0/16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       1.0/8,  1.0/32, 0, 3.0/32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       5.0/16, 5.0/16, 0,-75.0/64, 75.0/64, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       3.0/8,  3.0/80, 0,   0, 3.0/16, 3.0/20, 0, 0, 0, 0, 0, 0, 0, 0,
+       59.0/400, 29443841.0/614563906,0,0,  77736538.0/692538347, -28693883.0/1125000000,  23124283.0/1800000000, 0,0,0,0,0,0,0,
+       93.0/200, 16016141.0/946692911,0,0, 61564180.0/158732637, 22789713.0/633445777,  545815736.0/2771057229,  -180193667.0/1043307555, 0,0,0,0,0,0,
+       5490023248.0/9719169821, 39632708.0/573591083,0,0, -433636366.0/683701615, -421739975.0/2616292301,  100302831.0/723423059, 790204164.0/839813087, 800635310.0/3783071287, 0,0,0,0,0,
+       13.0/20,  246121993.0/1340847787, 0,0, -37695042795.0/15268766246,-309121744.0/1061227803, -12992083.0/490766935,  6005943493.0/2108947869, 393006217.0/1396673457,  123872331.0/1001029789, 0,0,0,0,
+      1201146811.0/1299019798,  -1028468189.0/846180014, 0,0, 8478235783.0/508512852, 1311729495.0/1432422823, -10304129995.0/1701304382, -48777925059.0/3047939560, 15336726248.0/1032824649, -45442868181.0/3398467696,  3065993473.0/597172653, 0,0,0,
+      1.0, 185892177.0/718116043, 0,0, -3185094517.0/667107341,-477755414.0/1098053517, -703635378.0/230739211,  5731566787.0/1027545527, 5232866602.0/850066563, -4093664535.0/808688257, 3962137247.0/1805957418, 65686358.0/487910083, 0,0,
+      1.0, 403863854.0/491063109, 0,0, -5068492393.0/434740067, -411421997.0/543043805, 652783627.0/914296604, 11173962825.0/925320556, -13158990841.0/6184727034, 3936647629.0/1978049680, -160528059.0/685178525, 248638103.0/1413531060,0,0,
+      8,  14005451.0/335480064,0,0, 0,0, -59238493.0/1068277825, 181606767.0/758867731,  561292985.0/797845732, -1041891430.0/1371343529, 760417239.0/1151165299,  118820643.0/751138087, -528747749.0/2220607170, 1.0/4,
+      7,  13451932.0/455176632,0,0, 0,0, -808719846.0/976000145, 1757004468.0/5645159321, 656045339.0/265891186, -3867574721.0/1518517206, 465885868.0/322736535, 53011238.0/667516719, 2.0/45,0
     };
     return ButcherTableau<real_type>( 13, data);
 }
@@ -833,6 +961,18 @@ ButcherTableau<real_type> sdirk_2_1_2()
     return ButcherTableau<real_type>( 2, data);
 }
 template<class real_type>
+ButcherTableau<real_type> cavaglieri_imp_3_1_2()
+{
+    real_type a[3*3] = {
+        0,0,0,
+        0., 2./5., 0.,
+        0., 5./6., 1./6.};
+    real_type b[3] = {0., 5./6., 1./6.};
+    real_type bt[3] = {0., 4./5., 1./5.};
+    real_type c[3] = {0.,2./5., 1.};
+    return ButcherTableau<real_type>(3,1,2, a, b, bt, c);
+}
+template<class real_type>
 ButcherTableau<real_type> billington_3_3_2()
 {
     real_type data[] = {
@@ -847,12 +987,13 @@ ButcherTableau<real_type> billington_3_3_2()
 template<class real_type>
 ButcherTableau<real_type> trbdf2_3_3_2()
 {
+    real_type s2 = sqrt(2.);
     real_type data[] = {
-          0 , 0 , 0 , 0 ,
-  2-sqrt(2) , (2-sqrt(2))/2. , (2-sqrt(2))/2. , 0 ,
-  1 , sqrt(2)/4. , sqrt(2)/4. , (2-sqrt(2))/2. ,
-  2 , sqrt(2)/4. , sqrt(2.)/4. , (2-sqrt(2))/2. ,
-  3 , (1-sqrt(2)/4.)/3. , (3*sqrt(2)/4.+1.)/3. , (2-sqrt(2))/6.
+      0, 0, 0, 0,
+      2-s2, (2-s2)/2., (2-s2)/2., 0 ,
+      1, s2/4., s2/4., (2-s2)/2.,
+      2, s2/4., s2/4., (2-s2)/2.,
+      3, (1-s2/4.)/3., (3*s2/4.+1.)/3., (2-s2)/6.
     };
     return ButcherTableau<real_type>( 3, data);
 }
@@ -868,6 +1009,33 @@ ButcherTableau<real_type> kvaerno_4_2_3()
   2 , 0.490563388419108 , 0.073570090080892 , 0.4358665215 , 0
     };
     return ButcherTableau<real_type>( 4, data);
+}
+template<class real_type>
+ButcherTableau<real_type> cavaglieri_imp_4_2_3()
+{
+    // IMEXRKCB3c
+    real_type b[4] = {0., 673488652607./2334033219546., 493801219040./853653026979., 184814777513./1389668723319.};
+    real_type c[4] = {0., 3375509829940./4525919076317., 272778623835./1039454778728., 1.0 };
+    real_type a[4*4] = {
+        0,0,0,0,
+        0., 3375509829940./4525919076317., 0.,0,
+        b[0] , -11712383888607531889907./32694570495602105556248., 566138307881./912153721139., 0.,
+        b[0],b[1], b[2],b[3]};
+    real_type bt[4] = { 0., 366319659506./ 1093160237145., 270096253287./ 480244073137., 104228367309./ 1017021570740. };
+    //// IMEXRKCB3f
+    //real_type b[4] = {
+    //-2179897048956./603118880443.,99189146040./891495457793.,6064140186914./1415701440113,146791865627./668377518349.
+    //};
+    //real_type c[4] = {0., 49./50., 1./25., 1.0 };
+    //real_type a[4*4] = {
+    //    0,0,0,0,
+    //    c[1]/2.,c[1]/2., 0.,0,
+    //    -785157464198./1093480182337.,-30736234873./978681420651.,983779726483./1246172347126.,0,
+    //    b[0], b[1], b[2], b[3]};
+    //real_type bt[4] = {
+    //    0.,337712514207./759004992869.,311412265155./608745789881.,52826596233./1214539205236.
+    //};
+    return ButcherTableau<real_type>(4,2,3, a, b, bt, c);
 }
 template<class real_type>
 ButcherTableau<real_type> ark324l2sa_dirk_4_2_3()
@@ -973,16 +1141,16 @@ template<class real_type>
 ButcherTableau<real_type> ark548l2sa_dirk_8_4_5()
 {
     real_type data[] = {
-        0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-  41./100. , 41./200. , 41./200. , 0 , 0 , 0 , 0 , 0 , 0 ,
-  2935347310677./11292855782101. , 41./400. , -567603406766./11931857230679. , 41./200. , 0 , 0 , 0 , 0 , 0 ,
-  1426016391358./7196633302097. , 683785636431./9252920307686. , 0 , -110385047103./1367015193373. , 41./200. , 0 , 0 , 0 , 0 ,
-  92./100. , 3016520224154./10081342136671. , 0 , 30586259806659./12414158314087. , -22760509404356./11113319521817. , 41./200. , 0 , 0 , 0 ,
-  24./100. , 218866479029./1489978393911. , 0 , 638256894668./5436446318841. , -1179710474555./5321154724896. , -60928119172./8023461067671. , 41./200. , 0 , 0 ,
-  3./5. , 1020004230633./5715676835656. , 0 , 25762820946817./25263940353407. , -2161375909145./9755907335909. , -211217309593./5846859502534. , -4269925059573./7827059040749. , 41./200. , 0 ,
-  1 , -872700587467./9133579230613. , 0 , 0 , 22348218063261./9555858737531. , -1143369518992./8141816002931. , -39379526789629./19018526304540. , 32727382324388./42900044865799. , 41./200. ,
-  5 , -872700587467./9133579230613. , 0 , 0 , 22348218063261./9555858737531. , -1143369518992./8141816002931. , -39379526789629./19018526304540. , 32727382324388./42900044865799. , 41./200. ,
-  4 , -975461918565./9796059967033. , 0 , 0 , 78070527104295./32432590147079. , -548382580838./3424219808633. , -33438840321285./15594753105479. , 3629800801594./4656183773603. , 4035322873751./18575991585200.
+0,0,0,0,0,0,0,0,0,
+4./9.,2./9.,2./9.,0,0,0,0,0,0,
+6456083330201./8509243623797.,2366667076620./8822750406821.,2366667076620./8822750406821.,2./9.,0,0,0,0,0,
+1632083962415./14158861528103.,-257962897183./4451812247028.,-257962897183./4451812247028.,128530224461./14379561246022.,2./9.,0,0,0,0,
+6365430648612./17842476412687.,-486229321650./11227943450093.,-486229321650./11227943450093.,-225633144460./6633558740617.,1741320951451./6824444397158.,2./9.,0,0,0,
+18./25.,621307788657./4714163060173.,621307788657./4714163060173.,-125196015625./3866852212004.,940440206406./7593089888465.,961109811699./6734810228204.,2./9.,0,0,
+191./200.,2036305566805./6583108094622.,2036305566805./6583108094622.,-3039402635899./4450598839912.,-1829510709469./31102090912115.,-286320471013./6931253422520.,8651533662697./9642993110008.,2./9.,0,
+1,0,0,3517720773327./20256071687669.,4569610470461./17934693873752.,2819471173109./11655438449929.,3296210113763./10722700128969.,-1142099968913./5710983926999.,2./9.,
+5,0,0,3517720773327./20256071687669.,4569610470461./17934693873752.,2819471173109./11655438449929.,3296210113763./10722700128969.,-1142099968913./5710983926999.,2./9.,
+4,0,0,520639020421./8300446712847.,4550235134915./17827758688493.,1482366381361./6201654941325.,5551607622171./13911031047899.,-5266607656330./36788968843917.,1074053359553./5740751784926.
     };
     return ButcherTableau<real_type>( 8, data);
 }
@@ -1080,29 +1248,36 @@ enum tableau_identifier{
     CLASSIC_4_4,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Runge-Kutta-4-4</a>
     //ARKode tableaus
     HEUN_EULER_2_1_2,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
-    BOGACKI_SHAMPINE_4_2_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine-4-2-3</a>
+    CAVAGLIERI_3_1_2, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2
+    FEHLBERG_3_2_3,//!<  The original method uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
+    FEHLBERG_4_2_3,//!< The original method uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987] (fsal)
+    BOGACKI_SHAMPINE_4_2_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine-4-2-3</a> (fsal)
+    CAVAGLIERI_4_2_3, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (explicit part)
     ARK324L2SA_ERK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
     ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
     ARK436L2SA_ERK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
     SAYFY_ABURUB_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy-Aburub-6-3-4</a>
     CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
     FEHLBERG_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Fehlberg-6-4-5</a>
-    DORMAND_PRINCE_7_4_5,//!< <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince-7-4-5</a>
+    DORMAND_PRINCE_7_4_5,//!< <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince-7-4-5</a> (fsal)
     TSITOURAS09_7_4_5,//!< <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
-    TSITOURAS11_7_4_5,//!< <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal), Further improves Tsitouras09
-    ARK548L2SA_ERK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (explicit)</a>
-    VERNER_8_5_6,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
+    TSITOURAS11_7_4_5,//!< <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal), Further improves Tsitouras09 (Note that in the paper b-bt is printed instead of bt)
+    ARK548L2SA_ERK_8_4_5,//!< <a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (explicit part)
+    VERNER_9_5_6,//!< <a href="http://people.math.sfu.ca/~jverner/RKV65.IIIXb.Efficient.00000144617.081204.CoeffsOnlyFLOAT">Verner-9-5-6</a> (fsal)
+    VERNER_10_6_7,//!< <a href="http://people.math.sfu.ca/~jverner/RKV76.IIa.Efficient.00001675585.081206.CoeffsOnlyFLOAT">Verner-10-6-7</a>
     FEHLBERG_13_7_8,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
-    //high order feagin
+    DORMAND_PRINCE_13_7_8,//!< [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
     FEAGIN_17_8_10,//!< <a href="http://sce.uhcl.edu/rungekutta/">Feagin-17-8-10</a>
     //implicit ARKode tableaus
     IMPLICIT_EULER_1_1,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler (implicit)</a>
     IMPLICIT_MIDPOINT_1_2, //!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">implicit Midpoint</a>
     TRAPEZOIDAL_2_2,//!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a>
     SDIRK_2_1_2, //!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a>
+    CAVAGLIERI_IMPLICIT_3_1_2, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a>
     BILLINGTON_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
     TRBDF2_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
     KVAERNO_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+    CAVAGLIERI_IMPLICIT_4_2_3, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part)
     ARK324L2SA_DIRK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
     CASH_5_2_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
     CASH_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
@@ -1110,7 +1285,7 @@ enum tableau_identifier{
     KVAERNO_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
     ARK436L2SA_DIRK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
     KVAERNO_7_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
-    ARK548L2SA_DIRK_8_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+    ARK548L2SA_DIRK_8_4_5,//!< <a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part)
     // SSP RK tableaus
     SSPRK_2_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
     SSPRK_3_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
@@ -1130,7 +1305,11 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"Runge-Kutta-4-4", CLASSIC_4_4},
     //Embedded explicit methods
     {"Heun-Euler-2-1-2", HEUN_EULER_2_1_2},
+    {"Cavaglieri-3-1-2 (explicit)", CAVAGLIERI_3_1_2},
+    {"Fehlberg-3-2-3", FEHLBERG_3_2_3},
+    {"Fehlberg-4-2-3", FEHLBERG_4_2_3},
     {"Bogacki-Shampine-4-2-3", BOGACKI_SHAMPINE_4_2_3},
+    {"Cavaglieri-4-2-3 (explicit)", CAVAGLIERI_4_2_3},
     {"ARK-4-2-3 (explicit)", ARK324L2SA_ERK_4_2_3},
     {"Zonneveld-5-3-4", ZONNEVELD_5_3_4},
     {"ARK-6-3-4 (explicit)", ARK436L2SA_ERK_6_3_4},
@@ -1141,17 +1320,21 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"Tsitouras09-7-4-5", TSITOURAS09_7_4_5},
     {"Tsitouras11-7-4-5", TSITOURAS11_7_4_5},
     {"ARK-8-4-5 (explicit)", ARK548L2SA_ERK_8_4_5},
-    {"Verner-8-5-6", VERNER_8_5_6},
+    {"Verner-9-5-6", VERNER_9_5_6},
+    {"Verner-10-6-7", VERNER_10_6_7},
     {"Fehlberg-13-7-8", FEHLBERG_13_7_8},
+    {"Dormand-Prince-13-7-8", DORMAND_PRINCE_13_7_8},
     {"Feagin-17-8-10", FEAGIN_17_8_10},
     //Implicit methods
     {"Euler (implicit)", IMPLICIT_EULER_1_1},
     {"Midpoint (implicit)", IMPLICIT_MIDPOINT_1_2},
     {"Trapezoidal-2-2", TRAPEZOIDAL_2_2},
     {"SDIRK-2-1-2", SDIRK_2_1_2},
+    {"Cavaglieri-3-1-2 (implicit)", CAVAGLIERI_IMPLICIT_3_1_2},
     {"Billington-3-3-2", BILLINGTON_3_3_2},
     {"TRBDF2-3-3-2", TRBDF2_3_3_2},
     {"Kvaerno-4-2-3", KVAERNO_4_2_3},
+    {"Cavaglieri-4-2-3 (implicit)", CAVAGLIERI_IMPLICIT_4_2_3},
     {"ARK-4-2-3 (implicit)", ARK324L2SA_DIRK_4_2_3},
     {"Cash-5-2-4", CASH_5_2_4},
     {"Cash-5-3-4", CASH_5_3_4},
@@ -1218,8 +1401,16 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::classic_4_4<real_type>();
         case HEUN_EULER_2_1_2:
             return dg::tableau::heun_euler_2_1_2<real_type>();
+        case CAVAGLIERI_3_1_2:
+            return dg::tableau::cavaglieri_exp_3_1_2<real_type>();
+        case FEHLBERG_3_2_3:
+            return dg::tableau::fehlberg_3_2_3<real_type>();
+        case FEHLBERG_4_2_3:
+            return dg::tableau::fehlberg_4_2_3<real_type>();
         case BOGACKI_SHAMPINE_4_2_3:
             return dg::tableau::bogacki_shampine_4_2_3<real_type>();
+        case CAVAGLIERI_4_2_3:
+            return dg::tableau::cavaglieri_exp_4_2_3<real_type>();
         case ARK324L2SA_ERK_4_2_3:
             return dg::tableau::ark324l2sa_erk_4_2_3<real_type>();
         case ZONNEVELD_5_3_4:
@@ -1240,10 +1431,14 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::tsitouras11_7_4_5<real_type>();
         case ARK548L2SA_ERK_8_4_5:
             return dg::tableau::ark548l2sa_erk_8_4_5<real_type>();
-        case VERNER_8_5_6:
-            return dg::tableau::verner_8_5_6<real_type>();
+        case VERNER_9_5_6:
+            return dg::tableau::verner_9_5_6<real_type>();
+        case VERNER_10_6_7:
+            return dg::tableau::verner_10_6_7<real_type>();
         case FEHLBERG_13_7_8:
             return dg::tableau::fehlberg_13_7_8<real_type>();
+        case DORMAND_PRINCE_13_7_8:
+            return dg::tableau::dormand_prince_13_7_8<real_type>();
         case FEAGIN_17_8_10:
             return dg::tableau::feagin_17_8_10<real_type>();
         case IMPLICIT_EULER_1_1:
@@ -1254,12 +1449,16 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::trapezoidal_2_2<real_type>();
         case SDIRK_2_1_2:
             return dg::tableau::sdirk_2_1_2<real_type>();
+        case CAVAGLIERI_IMPLICIT_3_1_2:
+            return dg::tableau::cavaglieri_imp_3_1_2<real_type>();
         case BILLINGTON_3_3_2:
             return dg::tableau::billington_3_3_2<real_type>();
         case TRBDF2_3_3_2:
             return dg::tableau::trbdf2_3_3_2<real_type>();
         case KVAERNO_4_2_3:
             return dg::tableau::kvaerno_4_2_3<real_type>();
+        case CAVAGLIERI_IMPLICIT_4_2_3:
+            return dg::tableau::cavaglieri_imp_4_2_3<real_type>();
         case ARK324L2SA_DIRK_4_2_3:
             return dg::tableau::ark324l2sa_dirk_4_2_3<real_type>();
         case CASH_5_2_4:
@@ -1311,7 +1510,11 @@ ButcherTableau<real_type> tableau( std::string name)
  *   SSPRK-5-3              | dg::SSPRK_5_3                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,3)</a> CFL_eff = 0.5 "Shu-Osher-Form"
  *   SSPRK-5-4              | dg::SSPRK_5_4                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,4)</a> CFL_eff = 0.37 "Shu-Osher-Form"
  *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
+ *   Cavaglieri-3-1-2 (explicit) | dg::CAVAGLIERI_3_1_2 |<a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2 scheme
+ *   Fehlberg-3-2-3 | dg::FEHLBERG_3_2_3 | The original uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
+ *   Fehlberg-4-2-3 | dg::FEHLBERG_4_2_3 | The original uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987] (fsal)
  *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
+ *   Cavaglieri-4-2-3 (explicit) | dg::CAVAGLIERI_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (explicit part)
  *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
  *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
  *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
@@ -1320,10 +1523,12 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
  *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a> (fsal)
  *   Tsitouras09-7-4-5   | dg::TSITOURAS09_7_4_5   | <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
- *   Tsitouras11-7-4-5   | dg::TSITOURAS11_7_4_5   | <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal) Further improves Tsitouras09
- *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
- *   Verner-8-5-6           | dg::VERNER_8_5_6           | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Verner-8-5-6</a>
+ *   Tsitouras11-7-4-5   | dg::TSITOURAS11_7_4_5   | <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal) Further improves Tsitouras09 (Note that in the paper b-bt is printed instead of bt)
+ *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   |<a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (explicit part)
+ *   Verner-9-5-6           | dg::VERNER_9_5_6           |<a href="http://people.math.sfu.ca/~jverner/RKV65.IIIXb.Efficient.00000144617.081204.CoeffsOnlyFLOAT">Verner-9-5-6</a> (fsal)
+ *   Verner-10-6-7          | dg::VERNER_10_6_7           |<a href="http://people.math.sfu.ca/~jverner/RKV76.IIa.Efficient.00001675585.081206.CoeffsOnlyFLOAT">Verner-10-6-7</a>
  *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
+ *   Dormand-Prince-13-7-8   | dg::DORMAND_PRINCE_13_7_8   | [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
  *   Feagin-17-8-10         | dg::FEAGIN_17_8_10         | <a href="http://sce.uhcl.edu/rungekutta/">Feagin</a> (The RK10(8) method)
  *
  */
@@ -1336,9 +1541,11 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Midpoint (implicit)     | dg::IMPLICIT_MIDPOINT_1_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">implicit Midpoint</a>
  *   Trapezoidal-2-2     | dg::TRAPEZOIDAL_2_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a>
  *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a>
+ *   Cavaglieri-3-1-2 (implicit) | dg::CAVAGLIERI_IMPLICIT_3_1_2 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2 scheme
  *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
  *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
  *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+ *   Cavaglieri-4-2-3 (implicit) | dg::CAVAGLIERI_IMPLICIT_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part)
  *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
  *   Cash-5-2-4           | dg::CASH_5_2_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
  *   Cash-5-3-4           | dg::CASH_5_3_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
@@ -1346,7 +1553,7 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Kvaerno-5-3-4        | dg::KVAERNO_5_3_4          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
  *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
  *   Kvaerno-7-4-5        | dg::KVAERNO_7_4_5          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
- *   ARK-8-4-5 (implicit) | dg::ARK548L2SA_DIRK_8_4_5  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-8-4-5 (implicit)</a>
+ *   ARK-8-4-5 (implicit)   | dg::ARK548L2SA_DIRK_8_4_5   |<a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part)
  *
 */
 

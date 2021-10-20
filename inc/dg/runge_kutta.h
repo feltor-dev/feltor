@@ -253,13 +253,19 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
  *
  * Currently, the possible Butcher Tableaus for a fully implicit-explicit scheme
- * are the "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
- * So far we did not implement the use of a mass matrix \c M.
+ * are the "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
+ * A mass matrix \c M has to be manually included in the evaluation of the
+ * explicit and implicit parts.
+ * @note A mass matrix in the implicit solve should be multiplied, else it entails a
+ * nested implicit equation where in every outer iteration the mass matrix has
+ * to be solved: Mu + a I = Mr instead of u + aM^{-1} I = r
+ * @note All currently possible schemes enjoy the FSAL qualitiy in the sense that
+ * only \c s-1 implicit solves are needed per step; some methods additionally do require only \c s-1 evaluations of the implicit part per step
  * @attention When you use the ARKStep in combination with the Adaptive time
  * step algorithm pay attention to solve the implicit part with sufficient
  * accuracy. Else, the error propagates into the time controller, which will
  * then choose the timestep as if the implicit part was explicit i.e. far too
- * small (don't really know fully why though).
+ * small (don't really know fully why though, maybe it has to do with stiffness-leakage).
  *
  * @copydoc hide_SolverType
  * @copydoc hide_ContainerType
@@ -283,26 +289,17 @@ struct ARKStep
          m_solver( std::forward<SolverParams>(ps)...),
          m_rhs( m_solver.copyable())
     {
-        if( name == "ARK-4-2-3" )
-        {
-            m_rkE = ConvertsToButcherTableau<value_type>( "ARK-4-2-3 (explicit)");
-            m_rkI = ConvertsToButcherTableau<value_type>( "ARK-4-2-3 (implicit)");
-        }
-        else if( name == "ARK-6-3-4" )
-        {
-            m_rkE = ConvertsToButcherTableau<value_type>( "ARK-6-3-4 (explicit)");
-            m_rkI = ConvertsToButcherTableau<value_type>( "ARK-6-3-4 (implicit)");
-        }
-        else if( name == "ARK-8-4-5" )
-        {
-            m_rkE = ConvertsToButcherTableau<value_type>( "ARK-8-4-5 (explicit)");
-            m_rkI = ConvertsToButcherTableau<value_type>( "ARK-8-4-5 (implicit)");
-        }
-        else
-            throw dg::Error( dg::Message()<<"Unknown name");
+        std::string exp_name = name+" (explicit)";
+        std::string imp_name = name+" (implicit)";
+        m_rkE = ConvertsToButcherTableau<value_type>( exp_name);
+        m_rkI = ConvertsToButcherTableau<value_type>( imp_name);
         assert( m_rkE.num_stages() == m_rkI.num_stages());
         m_kE.assign(m_rkE.num_stages(), m_rhs);
         m_kI.assign(m_rkI.num_stages(), m_rhs);
+        // check fsal
+        assert( m_rkI.a(0,0) == 0);
+        assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
+        check_implicit_fsal();
     }
     ///@copydoc construct()
     template<class ...SolverParams>
@@ -318,6 +315,10 @@ struct ARKStep
          m_kI(m_rkI.num_stages(), m_rhs)
     {
         assert( m_rkE.num_stages() == m_rkI.num_stages());
+        // check fsal
+        assert( m_rkI.a(0,0) == 0);
+        assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
+        check_implicit_fsal();
     }
     /*!@brief Construct with two Butcher Tableaus
      *
@@ -389,6 +390,13 @@ struct ARKStep
     ButcherTableau<value_type> m_rkE, m_rkI;
     std::vector<ContainerType> m_kE, m_kI;
     value_type m_t1 = 1e300;
+    bool m_implicit_fsal = false;
+    void check_implicit_fsal(){
+        m_implicit_fsal = true;
+        for( unsigned i=0; i<m_rkI.num_stages(); i++)
+            if( m_rkI.a(i,0) != 0)
+                m_implicit_fsal = false;
+    }
 };
 
 ///@cond
@@ -399,10 +407,11 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     unsigned s = m_rkE.num_stages();
     value_type tu = t0;
     //0 stage
-    //a^E_00 = a^I_00 = 0
+    //!! Assume: a^E_00 = a^I_00 = 0
     if( t0 != m_t1)
         ex(t0, u0, m_kE[0]); //freshly compute k_0
-    im(t0, u0, m_kI[0]);
+    if( !m_implicit_fsal) // all a(i,0) == 0
+        im(t0, u0, m_kI[0]);
 
     //1 stage
     blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
@@ -429,52 +438,67 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     ex(tu, delta, m_kE[2]);
     im(tu, delta, m_kI[2]);
     //3 stage
-    blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
-             dt*m_rkE.a(3,0), m_kE[0],
-             dt*m_rkE.a(3,1), m_kE[1],
-             dt*m_rkE.a(3,2), m_kE[2],
-             dt*m_rkI.a(3,0), m_kI[0],
-             dt*m_rkI.a(3,1), m_kI[1],
-             dt*m_rkI.a(3,2), m_kI[2]);
-    tu = DG_FMA( m_rkI.c(3),dt, t0);
-    blas1::copy( m_rhs, delta); //better init with rhs
-    m_solver.solve( -dt*m_rkI.a(3,3), im, tu, delta, m_rhs);
-    ex(tu, delta, m_kE[3]);
-    im(tu, delta, m_kI[3]);
-    //higher stages
-    for( unsigned i=4; i<s; i++)
+    if( s > 3)
     {
-        dg::blas1::copy( u0, m_rhs);
-        for( unsigned j=0; j<i; j++)
-            dg::blas1::axpbypgz( dt*m_rkE.a(i,j), m_kE[j],
-                                 dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
-        tu = DG_FMA( m_rkI.c(i),dt, t0);
+        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
+                 dt*m_rkE.a(3,0), m_kE[0],
+                 dt*m_rkE.a(3,1), m_kE[1],
+                 dt*m_rkE.a(3,2), m_kE[2],
+                 dt*m_rkI.a(3,0), m_kI[0],
+                 dt*m_rkI.a(3,1), m_kI[1],
+                 dt*m_rkI.a(3,2), m_kI[2]);
+        tu = DG_FMA( m_rkI.c(3),dt, t0);
         blas1::copy( m_rhs, delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
-        ex(tu, delta, m_kE[i]);
-        im(tu, delta, m_kI[i]);
+        m_solver.solve( -dt*m_rkI.a(3,3), im, tu, delta, m_rhs);
+        ex(tu, delta, m_kE[3]);
+        im(tu, delta, m_kI[3]);
+        //higher stages
+        for( unsigned i=4; i<s; i++)
+        {
+            dg::blas1::copy( u0, m_rhs);
+            for( unsigned j=0; j<i; j++)
+                dg::blas1::axpbypgz( dt*m_rkE.a(i,j), m_kE[j],
+                                     dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
+            tu = DG_FMA( m_rkI.c(i),dt, t0);
+            blas1::copy( m_rhs, delta); //better init with rhs
+            m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
+            ex(tu, delta, m_kE[i]);
+            im(tu, delta, m_kI[i]);
+        }
     }
     m_t1 = t1 = tu;
-    // do up to 8 stages for ARK-8-4-5
     //Now compute result and error estimate
-    blas1::subroutine( dg::EmbeddedPairSum(),
+    if( s == 3)
+        blas1::subroutine( dg::EmbeddedPairSum(),
             u1, delta,
              1., 0., u0,
             dt*m_rkE.b(0), dt*m_rkE.d(0),m_kE[0],
             dt*m_rkE.b(1), dt*m_rkE.d(1),m_kE[1],
             dt*m_rkE.b(2), dt*m_rkE.d(2),m_kE[2],
-            dt*m_rkE.b(3), dt*m_rkE.d(3),m_kE[3],
             dt*m_rkI.b(0), dt*m_rkI.d(0),m_kI[0],
             dt*m_rkI.b(1), dt*m_rkI.d(1),m_kI[1],
-            dt*m_rkI.b(2), dt*m_rkI.d(2),m_kI[2],
-            dt*m_rkI.b(3), dt*m_rkI.d(3),m_kI[3]);
-    //sum the rest
-    for( unsigned i=4; i<s; i++)
+            dt*m_rkI.b(2), dt*m_rkI.d(2),m_kI[2]);
+    if( s > 3)
     {
-        dg::blas1::axpbypgz( dt*m_rkE.b(i), m_kE[i],
-                             dt*m_rkI.b(i), m_kI[i], 1., u1);
-        dg::blas1::axpbypgz( dt*m_rkE.d(i), m_kE[i],
-                             dt*m_rkI.d(i), m_kI[i], 1., delta);
+        blas1::subroutine( dg::EmbeddedPairSum(),
+                u1, delta,
+                 1., 0., u0,
+                dt*m_rkE.b(0), dt*m_rkE.d(0),m_kE[0],
+                dt*m_rkE.b(1), dt*m_rkE.d(1),m_kE[1],
+                dt*m_rkE.b(2), dt*m_rkE.d(2),m_kE[2],
+                dt*m_rkE.b(3), dt*m_rkE.d(3),m_kE[3],
+                dt*m_rkI.b(0), dt*m_rkI.d(0),m_kI[0],
+                dt*m_rkI.b(1), dt*m_rkI.d(1),m_kI[1],
+                dt*m_rkI.b(2), dt*m_rkI.d(2),m_kI[2],
+                dt*m_rkI.b(3), dt*m_rkI.d(3),m_kI[3]);
+        //sum the rest
+        for( unsigned i=4; i<s; i++)
+        {
+            dg::blas1::axpbypgz( dt*m_rkE.b(i), m_kE[i],
+                                 dt*m_rkI.b(i), m_kI[i], 1., u1);
+            dg::blas1::axpbypgz( dt*m_rkE.d(i), m_kE[i],
+                                 dt*m_rkI.d(i), m_kI[i], 1., delta);
+        }
     }
     //make sure (t1,u1) is the last call to ex
     ex(t1,u1,m_kE[0]);
@@ -715,7 +739,11 @@ struct ShuOsher
  \end{align}
 \f]
  *
- * So far we did not implement the use of a mass matrix \c M.
+ * A mass matrix \c M has to be manually included in the evaluation of the
+ * implicit part.
+ * @note A mass matrix in the implicit solve should be multiplied, else it entails a
+ * nested implicit equation where in every outer iteration the mass matrix has
+ * to be solved: Mu + a I = Mr instead of u + aM^{-1} I = r
  * You can provide your own coefficients or use one of the methods
  * in the following table:
  * @copydoc hide_implicit_butcher_tableaus
