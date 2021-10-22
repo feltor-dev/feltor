@@ -24,7 +24,7 @@ get_value_type<ContainerType> l2norm( const ContainerType& x)
 template<class value_type>
 value_type i_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
 {
-    return dt_0*pow( eps_0, -1./(value_type)order);
+    return dt_0*pow( eps_0, -1./(value_type)embedded_order);
 }
 ///\f$ h_{n+1}= h_n \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f$
 template<class value_type>
@@ -34,8 +34,8 @@ value_type pi_control( value_type dt_0, value_type dt_1, value_type dt_2, value_
         return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
                 embedded_order, order);
     value_type m_k1 = -0.8, m_k2 = 0.31;
-    value_type factor = pow( eps_0, m_k1/(value_type)order)
-                     * pow( eps_1, m_k2/(value_type)order);
+    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
+                     * pow( eps_1, m_k2/(value_type)embedded_order);
     return dt_0*factor;
 }
 /**
@@ -46,7 +46,8 @@ value_type pi_control( value_type dt_0, value_type dt_1, value_type dt_2, value_
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> in the ARKode library.
  * The PID controller is a good controller to start with, it does not overshoot
  * too much, is smooth, has no systematic over- or under-estimation and
- * converges very quickly to the desired timestep
+ * converges very quickly to the desired timestep. In fact Kennedy and Carpenter, Appl. num. Math., (2003) report
+ * that it outperformed other controllers in practical problems
  * @tparam value_type
  * @param dt_0 the present (old) timestep h_n
  * @param dt_1 the previous timestep
@@ -69,9 +70,10 @@ value_type pid_control( value_type dt_0, value_type dt_1, value_type dt_2, value
         return pi_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
                 embedded_order, order);
     value_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
-    value_type factor = pow( eps_0, m_k1/(value_type)order)
-                     * pow( eps_1, m_k2/(value_type)order)
-                     * pow( eps_2, m_k3/(value_type)order);
+    //value_type m_k1 = -0.37, m_k2 = 0.27, m_k3 = -0.1;
+    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
+                     * pow( eps_1, m_k2/(value_type)embedded_order)
+                     * pow( eps_2, m_k3/(value_type)embedded_order);
     return dt_0*factor;
 }
 
@@ -83,8 +85,8 @@ value_type ex_control( value_type dt_0, value_type dt_1, value_type dt_2, value_
         return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
                 embedded_order, order);
     value_type m_k1 = -0.367, m_k2 = 0.268;
-    value_type factor = pow( eps_0, m_k1/(value_type)order)
-                      * pow( eps_0/eps_1, m_k2/(value_type)order);
+    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
+                      * pow( eps_0/eps_1, m_k2/(value_type)embedded_order);
     return dt_0*factor;
 }
 /// \f$ h_{n+1} = h_n (h_n/h_{n-1}) \epsilon_n^{-0.98/p}(\epsilon_n/\epsilon_{n-1})^{-0.95/p} \f$
@@ -95,8 +97,8 @@ value_type im_control( value_type dt_0, value_type dt_1, value_type dt_2, value_
         return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
                 embedded_order, order);
     value_type m_k1 = -0.98, m_k2 = -0.95;
-    value_type factor = pow( eps_0, m_k1/(value_type)order)
-                     *  pow( eps_0/eps_1, m_k2/(value_type)order);
+    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
+                     *  pow( eps_0/eps_1, m_k2/(value_type)embedded_order);
     return dt_0*dt_0/dt_1*factor;
 }
 /// h_{n+1} = |ex_control| < |im_control| ? ex_control : im_control
@@ -122,8 +124,8 @@ struct Tolerance
     Tolerance( value_type rtol, value_type atol, value_type size) :
         m_rtol(rtol*sqrt(size)), m_atol( atol*sqrt(size)){}
     DG_DEVICE
-    void operator()( value_type previous, value_type& delta) const{
-        delta = delta/ ( m_rtol*fabs(previous) + m_atol);
+    void operator()( value_type u0, value_type& delta) const{
+        delta = delta/ ( m_rtol*fabs(u0) + m_atol);
     }
     private:
     value_type m_rtol, m_atol;
@@ -162,13 +164,19 @@ struct Tolerance
  * ingredients: a \c Stepper, a \c ControlFunction and an \c ErrorNorm.
  * The \c Stepper does the actual computation and advances the solution one
  * step further with a given timestep \c dt. Furthermore, it has to come up
- * with an estimate of the error of the solution and indicate the order of that
+ * with an estimate of the error of the solution \f$\delta_{n+1}\f$ and indicate the order of that
  * error.  With the \c ErrorNorm the error estimate can be converted to a
  * scalar that can be compared to given relative and absolute error tolerances
- * \c rtol and \c atol.  Based on the comparison the step is either accepted or
- * rejected. In both cases the \c ControlFunction then comes up with an adapted
- * suggestion for the timestep in the next step, however, if the step was
- * rejected, we make the stepsize decrease by at least 10\%.  For more
+ * \c rtol and \c atol.
+ * \f[ \epsilon_{n+1} = || \frac{\delta_{n+1}}{(\epsilon_{rtol} |u_{n}| + \epsilon_{atol})\sqrt{N}}|| \f]
+ * where N is the array size, \c n is the solution at the previous timestep and
+ * the fraction is to be understood as a pointwise division of the vector elements.
+ * The \c ControlFunction will try to keep \f$ \epsilon_{n+1}\f$ close to 1 and
+ * comes up with an adapted
+ * suggestion for the timestep in the next step. However, if \f$\epsilon_{n+1} > r\f$
+ * where \c r=2 by default is the user-adaptable reject-limit, the step is
+ * rejected and the step will be recomputed and the controller restarted.
+ * For more
  * information on these concepts we recommend
  * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> of the ARKode library.
  *
@@ -329,7 +337,7 @@ struct Adaptive
         return m_failed;
     }
 
-    /*!@ brief Set the limit above which a step is rejected
+    /*!@brief Set the limit above which a step is rejected
      *
      * "It is indeed necessary to reject steps every once in a while, but I
      * usually try to avoid it to the greatest possible extent. In my
@@ -338,16 +346,28 @@ struct Adaptive
      * others it is too small, and all controllers I constructed are designed
      * to be “expectation value correct” in the sense that if the errors are
      * random, the too large and too small errors basically cancel in the
-     * long run." G. Söderlind Even so, there are times when the error is way
+     * long run. Even so, there are times when the error is way
      * out of proportion. But I usually accept an error that is up to, say
-     * 2*TOL, which typically won’t cause any problems."
-     * This function is when it does cause problems i.e. when you see that
-     * the timestepper fails very often even though there are no sharp edges
-     * in the solution (e.g. in turbulence simulations)
+     * 2*TOL, which typically won’t cause any problems." (G. Söderlind)
+     *
+     * Sometimes even 2 is not enough, for example
+     * when the stepsize fluctuates very much and the stepper fails often
+     * then it may help to increase the reject_limit further (to 10 say).
+     *
      * @param new_reject_limit the default value is 2, so increase it
     */
     void set_reject_limit( value_type new_reject_limit) {
         m_reject_limit = new_reject_limit;
+    }
+
+    /**
+     * @brief Get the latest error norm relative to solution vector
+     *
+     * The error of the latest call to \c step
+     * @return eps_{n+1}
+     */
+    value_type get_error( ) const{
+        return m_eps0;
     }
     private:
     template< class ControlFunction = value_type (value_type, value_type,
@@ -367,12 +387,12 @@ struct Adaptive
     {
         dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
                     m_size), u0, m_delta);
-        value_type eps0 = norm(m_delta);
+        m_eps0 = norm(m_delta);
         value_type dt0 = dt;
-        if( eps0 > m_reject_limit || std::isnan( eps0) )
+        if( m_eps0 > m_reject_limit || std::isnan( m_eps0) )
         {
             // if stepper fails, restart controller
-            dt = control( dt0, 0., m_dt2, eps0, m_eps1, m_eps2,
+            dt = control( dt0, 0., m_dt2, m_eps0, m_eps1, m_eps2,
                     m_stepper.embedded_order(),
                     m_stepper.order());
             if( fabs( dt) > 0.9*fabs(dt0))
@@ -385,19 +405,19 @@ struct Adaptive
         }
         else
         {
-            if( eps0 < 1e-20) // small or zero
+            if( m_eps0 < 1e-20) // small or zero
             {
                 dt = 1e14*dt0; // a very large number
-                eps0 = 1e-20; // prevent storing zero
+                m_eps0 = 1e-20; // prevent storing zero
             }
             else
             {
-                dt = control( dt0, m_dt1, m_dt2, eps0, m_eps1, m_eps2,
+                dt = control( dt0, m_dt1, m_dt2, m_eps0, m_eps1, m_eps2,
                         m_stepper.embedded_order(),
                         m_stepper.order());
             }
             m_eps2 = m_eps1;
-            m_eps1 = eps0;
+            m_eps1 = m_eps0;
             m_dt2 = m_dt1;
             m_dt1 = dt0;
             dg::blas1::copy( m_next, u1);
@@ -409,7 +429,7 @@ struct Adaptive
     Stepper m_stepper;
     container_type m_next, m_delta;
     value_type m_reject_limit = 2;
-    value_type m_size, m_eps1=1, m_eps2=1;
+    value_type m_size, m_eps0 = 1, m_eps1=1, m_eps2=1;
     value_type m_t_next = 0;
     value_type m_dt1 = 0., m_dt2 = 0.;
 };
@@ -438,10 +458,15 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
  * initial stepsize).
  * On output: stepsize proposed by the controller that can be used to continue
  * the integration in the next step.
- * @param control The control function. Usually \c dg::pid_control is a good
- * choice. The task of the control function is to compute a new timestep size
+ * @param control The control function.
+ * For explicit and imex methods, \c dg::pid_control
+ * is a good choice with \c dg::ex_control or \c dg::imex_control
+ * as an alternative if too many steps fail.
+ * For implicit methods use the \c dg::im_control.
+ * The task of the control function is to compute a new timestep size
  * based on the old timestep size, the order of the method and the past
- * error(s)
+ * error(s). The behaviour of the controller is also changed by the
+ * \c set_reject_limit function
  * @param norm The error norm. Usually \c dg::l2norm is a good choice, but for
  * very small vector sizes the time for the binary reproducible dot product
  * might become a performance bottleneck. Then it's time for your own
@@ -455,10 +480,37 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
  * you are still firm, then consider using an interpolation scheme (cf.
  * \c dg::Extrapolation). Let choosing the timestep yourself be the very last
  * option if the others are not viable
- * @note For partial differential equations the exact value of \c rtol and \c
- * atol might not be important. Due to the CFL condition there might be a sharp
- * barrier in the range of possible stepsizes and the controller usually does a
- * good job finding it and keeping the timestep "just right". However, don't
+ * @note From Kennedy and Carpenter, Appl. num. Math., (2003):
+ * "Step-size control is a means by which accuracy, iteration, and to a lesser extent stability are controlled.
+The choice of (t) may be chosen from many criteria, among those are the (t) from the accuracy
+based step controller, the (t)_inviscid and (t)_viscous associated with the inviscid and viscous stability
+limits of the ERK, and the (t)_iter associated with iteration convergence."
+ *
+ * Our control method is an error based control method.
+ * However, due to the CFL (or other stability) condition there might be a sharp
+ * barrier in the range of possible stepsizes, i.e the stability limited timestep
+ * where the error sharply increses leading to a large number of rejected steps.
+ * The pid-controller usually does a good job keeping the timestep "just right"
+ * but in future work we may want to consider stability based control methods as well.
+ * Furthermore, for implicit or semi-implicit methods the chosen timestep
+ * influences how fast the iterative solver converges. If the timestep is too
+ * large the solver might take too long to converge and a smaller timestep might
+ * be preferable. Even for explicit methods where in each timestep
+ * an elliptic equation has to be solved the timestep may influence the
+ * convergence rate. Currently, there is no communication implemented between these
+ * solvers and the controller, but we may consider it in future releases.
+ * @attention When you use the ARKStep in combination with the Adaptive time
+ * step algorithm pay attention to solve the implicit part with sufficient
+ * accuracy. Else, the error propagates into the time controller, which will
+ * then choose the timestep as if the implicit part was explicit i.e. far too
+ * small. This might have to do with stiffness-leakage [Kennedy and Carpenter, Appl. num. Math., (2003)]:
+"An essential requirement for the viability of stiff/nonstiff IMEX schemes is that the stiffness remains
+truely separable. If this were not the case then stiffness would leak out of the stiff terms and stiffen the
+nonstiff terms. It would manifest itself as a loss in stability or a forced reduction in stepsize of the nonstiff
+terms. A more expensive fully implicit approach might then be required, and hence, methods that leak
+substantial stiffness might best be avoided".
+ * @note The exact values of \c rtol and \c atol might not be too important.
+ * However, don't
  * make \c rtol too large, \c 1e-1 say, since then the controller might get too
  * close to the CFL barrier. The timestepper is still able to crash, mind, even
  * though the chances of that happening are somewhat lower than in a fixed
@@ -502,10 +554,15 @@ struct EntireDomain
  * important, the stepper does not even have to succeed. Usually the
  * control function will very(!) quickly adapt the stepsize in just one or
  * two steps (even if it's several orders of magnitude off in the beginning).
- * @param control The control function. Usually \c dg::pid_control is a good
- * choice. The task of the control function is to compute a new timestep size
+ * @param control The control function.
+ * For explicit and imex methods, \c dg::pid_control
+ * is a good choice with \c dg::ex_control or \c dg::imex_control
+ * as an alternative if too many steps fail.
+ * For implicit methods use the \c dg::im_control.
+ * The task of the control function is to compute a new timestep size
  * based on the old timestep size, the order of the method and the past
- * error(s)
+ * error(s). The behaviour of the controller is also changed by the
+ * \c set_reject_limit function
  * @param norm The error norm. Usually \c dg::l2norm is a good choice, but for
  * very small vector sizes the time for the binary reproducible dot product
  * might become a performance bottleneck. Then it's time for your own

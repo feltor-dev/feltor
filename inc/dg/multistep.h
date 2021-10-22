@@ -34,7 +34,7 @@ namespace dg{
    explicit part is the interface to the timestepper. The friend construct helps to reduce
    duplicate code and memory consumption by making Implicit essentially an extension of Explicit.
  * @param ex explic part
- * @param im implicit part ( must be linear in its second argument and symmetric up to weights)
+ * @param im implicit part ( if the \c DefaultSolver is used, must be linear in its second argument and symmetric up to weights)
  */
 /*!@class hide_note_multistep
 * @note Uses only \c blas1::axpby routines to integrate one step.

@@ -265,7 +265,12 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
  * step algorithm pay attention to solve the implicit part with sufficient
  * accuracy. Else, the error propagates into the time controller, which will
  * then choose the timestep as if the implicit part was explicit i.e. far too
- * small (don't really know fully why though, maybe it has to do with stiffness-leakage).
+ * small. This might have to do with stiffness-leakage [Kennedy and Carpenter, Appl. num. Math., (2003)]:
+"An essential requirement for the viability of stiff/nonstiff IMEX schemes is that the stiffness remains
+truely separable. If this were not the case then stiffness would leak out of the stiff terms and stiffen the
+nonstiff terms. It would manifest itself as a loss in stability or a forced reduction in stepsize of the nonstiff
+terms. A more expensive fully implicit approach might then be required, and hence, methods that leak
+substantial stiffness might best be avoided".
  *
  * @copydoc hide_SolverType
  * @copydoc hide_ContainerType
