@@ -26,18 +26,44 @@ std::array<dg::x::DVec,2> initial_conditions(
        y0[1] = dg::evaluate( dg::PolynomialRectangle(p.lx*p.xfac_d, p.sigma_d,p.lx*(1-p.xfac_d), p.sigma_d), grid); 
        dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
        dg::blas1::plus(y0[0],1.0);
-       y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.sigma_p,-1.0, p.bgprofamp,p.profamp), grid);
+       if(p.bgproftype == "tanh"){
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+       }
+       else if(p.bgproftype == "exp"){
+           y0[1] = dg::evaluate( dg::ExpProfX(p.profamp, p.bgprofamp, p.ln), grid);
+       }
+       dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
+       dg::blas1::plus(y0[0],-1.0*(p.bgprofamp + p.profamp));
+       f.gamma1inv_y(y0[0], y0[1]);
+    }
+    else if( initial== "sin")
+    {
+       y0[0] = dg::evaluate( dg::SinY(p.amp, 0.0, (p.my*2*M_PI)/p.ly) , grid);
+       y0[1] = dg::evaluate( dg::PolynomialRectangle(p.lx*p.xfac_d, p.sigma_d,p.lx*(1-p.xfac_d), p.sigma_d), grid); 
+       dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
+       dg::blas1::plus(y0[0],1.0);
+       if(p.bgproftype == "tanh"){
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+       }
+       else if(p.bgproftype == "exp"){
+           y0[1] = dg::evaluate( dg::ExpProfX(p.profamp,p.bgprofamp, p.ln), grid);
+       }
        dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
        dg::blas1::plus(y0[0],-1.0*(p.bgprofamp + p.profamp));
        f.gamma1inv_y(y0[0], y0[1]);
     }
     else if ( initial =="bath")
-    {
+    { 
         y0[0] = dg::evaluate( dg::BathRZ( 16, 16, grid.x0(),grid.y0(), 30., 5., p.amp), grid);
         y0[1] = dg::evaluate( dg::PolynomialRectangle(p.lx*p.xfac_d, p.sigma_d,p.lx*(1.0-p.xfac_d), p.sigma_d), grid); 
         dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
         dg::blas1::plus(y0[0],1.0);
-        y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.sigma_p,-1.0, p.bgprofamp, p.profamp), grid); 
+        if(p.bgproftype == "tanh"){
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+       }
+       else if(p.bgproftype == "exp"){
+           y0[1] = dg::evaluate( dg::ExpProfX(p.profamp, p.bgprofamp, p.ln), grid);
+       } 
         dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
         dg::blas1::plus(y0[0],-1.0*(p.bgprofamp + p.profamp));
         f.gamma1inv_y(y0[0], y0[1]);
