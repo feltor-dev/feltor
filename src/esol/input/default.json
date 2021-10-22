@@ -52,6 +52,6 @@
     "sigma_d" : 2.0
     },
 "nu_perp": 0e-03, 
-"bc_x": "DIR_NEU", 
+"bc_x": "NEU", 
 "bc_y": "PER"
 }
