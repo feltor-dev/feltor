@@ -38,8 +38,8 @@
 "profile":
     {
      "bgproftype": "exp",
-     "bgprofamp" : 1.0,
-     "profamp": 0.0,
+     "bgprofamp" : 0.0,
+     "profamp": 1.0,
      "ln": 20.0
      },
 "init": 
