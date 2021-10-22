@@ -193,7 +193,7 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
            m_prof = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
     }
     else if(p.bgproftype == "exp"){
-           m_prof = dg::evaluate( dg::ExpProfX(p.bgprofamp, 0.0, p.ln), grid);
+           m_prof = dg::evaluate( dg::ExpProfX(p.profamp, p.bgprofamp, p.ln), grid);
     }
 }
 
