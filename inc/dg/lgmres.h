@@ -53,10 +53,10 @@ class LGMRES
      *
      * @param copyable A ContainerType must be copy-constructible from this
      * @param max_inner Maximum number of vectors to be saved in gmres. Usually 30 seems to be a decent number.
-     * @param max_outer Maximum number of solutions (actually approximations to the error) saved for restart. Usually 3-10 seems to be a good number. The Krylov Dimension is augmented to \c max_inner+max_outer. \c max_outer=0 corresponds to standard GMRES.
+     * @param max_outer Maximum number of solutions (actually approximations to the error) saved for restart. Usually 1...3 is a good number. The Krylov Dimension is augmented to \c max_inner+max_outer. \c max_outer=0 corresponds to standard GMRES.
      * @param Restarts Maximum number of restarts. This can be set high just in case. Like e.g. gridsize/max_outer.
      */
-    LGMRES( const ContainerType& copyable, unsigned max_outer, unsigned max_inner, unsigned Restarts):
+    LGMRES( const ContainerType& copyable, unsigned max_inner, unsigned max_outer, unsigned Restarts):
         m_tmp(copyable),
         m_dx(copyable),
         m_residual( copyable),
@@ -122,9 +122,9 @@ class LGMRES
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
-    template < class ContainerType0>
-    void Update(ContainerType &dx, ContainerType0 &x, unsigned dimension,
-            const std::vector<std::vector<value_type>> &H,
+    template <class Preconditioner, class ContainerType0>
+    void Update(Preconditioner& P, ContainerType &dx, ContainerType0 &x,
+            unsigned dimension, const std::vector<std::vector<value_type>> &H,
             std::vector<value_type> &s, const std::vector<ContainerType> &W);
     std::vector<std::vector<value_type>> m_H, m_givens;
     ContainerType m_tmp, m_dx, m_residual;
@@ -135,8 +135,9 @@ class LGMRES
 ///@cond
 
 template< class ContainerType>
-template < class ContainerType0>
-void LGMRES<ContainerType>::Update(ContainerType &dx, ContainerType0 &x,
+template < class Preconditioner, class ContainerType0>
+void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
+        ContainerType0 &x,
         unsigned dimension, const std::vector<std::vector<value_type>> &H,
         std::vector<value_type> &s, const std::vector<ContainerType> &W)
 {
@@ -164,11 +165,13 @@ void LGMRES<ContainerType>::Update(ContainerType &dx, ContainerType0 &x,
     //}
     //std::cout << "HessenbergB\n";
 
-    // Finally update the approximation.
-    dg::blas1::scal(dx,0.);
-    for (unsigned lupe = 0; lupe <= dimension; lupe++)
+    // Finally update the approximation. V_m*s
+    dg::blas1::axpby(s[0],W[0],0.,dx);
+    for (unsigned lupe = 1; lupe <= dimension; lupe++)
         dg::blas1::axpby(s[lupe],W[lupe],1.,dx);
-    dg::blas1::axpby(1.,dx,1.,x);
+    // right preconditioner
+    dg::blas2::symv( P, dx, m_tmp);
+    dg::blas1::axpby(1.,m_tmp,1.,x);
 }
 
 template< class ContainerType>
@@ -179,8 +182,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
     // - Use right preconditioned system such that residual norm is available in minimization
     // - do not compute Az explicitly but save on iterations
     // - too many vectors stored ( reduce storage requirements)
-    // - assemble V, W and H in correct order
-    // - make first cycle equivalent to GMRES(m+k)
+    // - first cycle equivalent to GMRES(m+k)
+    // - use SquareNorm for orthogonalization (works because 6.29 and 6.30 are also true if V_m is unitary in the S scalar product, the Hessenberg matrix is still formed in the regular 2-norm, just define J(y) with S-norm in 6.26 and form V_m with a Gram-Schmidt process in the S-norm
     value_type nrmb = sqrt( blas2::dot( S, b));
     value_type tol = eps*(nrmb + nrmb_correction);
     if( nrmb == 0)
@@ -188,63 +191,63 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
         blas1::copy( 0., x);
         return 0;
     }
-    dg::blas2::symv(A,x,m_tmp);
-    dg::blas1::axpby(1.,b,-1.,m_tmp);
-    value_type normres = sqrt(dg::blas2::dot(S,m_tmp));
-    if( normres < tol) //if x happens to be the solution
-        return 0;
-    dg::blas2::symv(P,m_tmp,m_residual);
-    value_type rho = sqrt(dg::blas1::dot(m_residual,m_residual));
 
     unsigned restartCycle = 0;
-
-    // Go through the requisite number of restarts.
-
-    while( (restartCycle < m_maxRestarts) && (normres > tol))
+    value_type rho = 1.;
+    do
 	{
+        dg::blas2::symv(A,x,m_residual);
+        dg::blas1::axpby(1.,b,-1.,m_residual);
+        rho = sqrt(dg::blas2::dot(S,m_residual));
+        if( rho < tol) //if x happens to be the solution
+            return 0;
+        // left Preconditioning
+        //dg::blas2::symv(P,m_tmp,m_residual);
+        //value_type rho = sqrt(dg::blas2::dot(m_residual,S,m_residual));
+        //if( rho < tol) //if P happens to produce the solution
+        //    return 0;
+        //
         // The first vector in the Krylov subspace is the normalized residual.
         dg::blas1::axpby(1.0/rho,m_residual,0.,m_V[0]);
 
-        m_s.assign(m_krylovDimension+1,0);
 		m_s[0] = rho;
 
 		// Go through and generate the pre-determined number of vectors for the Krylov subspace.
 		for( unsigned iteration=0;iteration<m_krylovDimension;++iteration)
 		{
             unsigned outer_w_count = std::min(restartCycle,m_outer_k);
-            if(iteration < outer_w_count){
-                // MW: I don't think we need that multiplication
-                dg::blas2::symv(A,m_outer_w[iteration],m_tmp);
-                dg::blas1::copy(m_outer_w[iteration],m_W[iteration]);
-            } else if (iteration == outer_w_count) {
-                dg::blas2::symv(A,m_V[0],m_tmp);
-                dg::blas1::copy(m_V[0],m_W[iteration]);
-            } else {
-                dg::blas2::symv(A,m_V[iteration],m_tmp);
+            if(iteration < m_inner_m){
+                dg::blas2::symv(P,m_V[iteration],m_tmp);
+                dg::blas2::symv(A,m_tmp,m_V[iteration+1]);
                 dg::blas1::copy(m_V[iteration],m_W[iteration]);
+            } else if( iteration < m_inner_m + outer_w_count){ // size of W
+                // MW: I don't think we need that multiplication
+                dg::blas2::symv(P,m_outer_w[iteration-m_inner_m],m_tmp);
+                dg::blas2::symv(A,m_tmp,m_V[iteration+1]);
+                dg::blas1::copy(m_outer_w[iteration-m_inner_m],m_W[iteration]);
             }
 
 			// Get the next entry in the vectors that form the basis for the Krylov subspace.
-            dg::blas2::symv(P,m_tmp,m_V[iteration+1]);
-
-            // modified Gram-Schmidt orthogonalization (Householder)
+            // Arnoldi modified Gram-Schmidt orthogonalization
             for(unsigned row=0;row<=iteration;++row)
 			{
-                m_H[row][iteration] = dg::blas1::dot(m_V[iteration+1],m_V[row]);
+                m_H[row][iteration] = dg::blas2::dot(m_V[iteration+1],S,m_V[row]);
                 dg::blas1::axpby(-m_H[row][iteration],m_V[row],1.,m_V[iteration+1]);
 			}
-            m_H[iteration+1][iteration] = sqrt(dg::blas1::dot(m_V[iteration+1],m_V[iteration+1]));
+            m_H[iteration+1][iteration]
+                = sqrt(dg::blas2::dot(m_V[iteration+1],S,m_V[iteration+1]));
             dg::blas1::scal(m_V[iteration+1],1.0/m_H[iteration+1][iteration]);
 
             // Now solve the least squares problem
-            // using Givens Rotations to insure that H is
-            // an upper triangular matrix. First apply previous
-            // rotations to the current matrix. (see Saad Chapter 6.5.3)
-			value_type tmp;
+            // using Givens Rotations transforming H into
+            // an upper triangular matrix (see Saad Chapter 6.5.3)
+
+            // First apply previous rotations to the current matrix.
+            value_type tmp = 0;
 			for (unsigned row = 0; row < iteration; row++)
 			{
-				tmp = m_givens[row][0]*m_H[row][iteration] +
-					m_givens[row][1]*m_H[row+1][iteration];
+				tmp = m_givens[row][0]*m_H[row][iteration] + // c_row
+					m_givens[row][1]*m_H[row+1][iteration];  // s_row
 				m_H[row+1][iteration] = -m_givens[row][1]*m_H[row][iteration]
 					+ m_givens[row][0]*m_H[row+1][iteration];
 				m_H[row][iteration]  = tmp;
@@ -253,9 +256,9 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 			// Figure out the next Givens rotation.
 			if(m_H[iteration+1][iteration] == 0.0)
 			{
-				// It is already lower diagonal. Just leave it be....
-				m_givens[iteration][0] = 1.0;
-				m_givens[iteration][1] = 0.0;
+				// It is already upper triangular. Just leave it be....
+				m_givens[iteration][0] = 1.0; // c_i
+				m_givens[iteration][1] = 0.0; // s_i
 			}
 			else if (fabs(m_H[iteration+1][iteration]) > fabs(m_H[iteration][iteration]))
 			{
@@ -279,14 +282,14 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 			tmp = m_givens[iteration][0]*m_H[iteration][iteration] +
 				  m_givens[iteration][1]*m_H[iteration+1][iteration];
 			m_H[iteration+1][iteration] = -m_givens[iteration][1]*m_H[iteration][iteration] +
-				  m_givens[iteration][0]*m_H[iteration+1][iteration];
+				  m_givens[iteration][0]*m_H[iteration+1][iteration]; // zero
 			m_H[iteration][iteration] = tmp;
 			// Finally apply the new Givens rotation on the s vector
-			tmp = m_givens[iteration][0]*m_s[iteration] + m_givens[iteration][1]*m_s[iteration+1];
-			m_s[iteration+1] = -m_givens[iteration][1]*m_s[iteration] + m_givens[iteration][1]*m_s[iteration+1];
+			tmp = m_givens[iteration][0]*m_s[iteration]; // + m_givens[iteration][1]*m_s[iteration+1];
+			m_s[iteration+1] = -m_givens[iteration][1]*m_s[iteration];// + m_givens[iteration][1]*m_s[iteration+1];
 			m_s[iteration] = tmp;
 
-            rho = fabs(m_s[iteration+1]); // this one does not have h
+            rho = fabs(m_s[iteration+1]);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
@@ -297,30 +300,28 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 #endif //DG_DEBUG
             if( rho < tol)
 			{
-                Update(m_dx,x,iteration,m_H,m_s,m_W);
-                //dg::blas2::symv(A,x,m_residual);
-                //dg::blas1::axpby(1.,b,-1.,m_residual);
-                //std::cout << sqrt(dg::blas2::dot(S,m_residual) )<< std::endl;
+                Update(P,m_dx,x,iteration,m_H,m_s,m_W);
                 return(iteration+restartCycle*m_krylovDimension);
             }
         }
-        Update(m_dx,x,m_krylovDimension-1,m_H,m_s,m_W);
-        value_type nx = sqrt(dg::blas1::dot(m_dx,m_dx));
-        if(nx>0.){
-            if (restartCycle<m_outer_k){
-                dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[restartCycle]); //new outer entry = dx/nx
-            } else {
-                std::rotate(m_outer_w.begin(),m_outer_w.begin()+1,m_outer_w.end()); //rotate one to the left.
-                dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[m_outer_k]);
-            }
-        }
-        dg::blas2::symv(A,x,m_tmp);
-        dg::blas1::axpby(1.,b,-1.,m_tmp);
-        normres = sqrt(dg::blas2::dot(S,m_tmp));
-        dg::blas2::symv(P,m_tmp,m_residual);
-        //value_type rho = sqrt(dg::blas1::dot(m_residual,m_residual));
+        Update(P,m_dx,x,m_krylovDimension-1,m_H,m_s,m_W);
+        // do not(?) normalize new z vector
+        //value_type nx = sqrt(dg::blas2::dot(m_dx,S,m_dx));
+        //if(nx>0.){
+        //    if (restartCycle<m_outer_k){
+        //        dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[restartCycle]); //new outer entry = dx/nx
+        //    } else {
+        //        std::rotate(m_outer_w.begin(),m_outer_w.begin()+1,m_outer_w.end()); //rotate one to the left.
+        //        dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[m_outer_k]);
+        //    }
+        //}
+        if( m_outer_k > 1)
+            std::rotate(m_outer_w.rbegin(),m_outer_w.rbegin()+1,m_outer_w.rend());
+        dg::blas1::copy(m_dx,m_outer_w[0]);
+
         restartCycle ++;
-    }
+    // Go through the requisite number of restarts.
+    } while( (restartCycle < m_maxRestarts) && (rho > tol));
     return restartCycle*m_krylovDimension;
 }
 ///@endcond

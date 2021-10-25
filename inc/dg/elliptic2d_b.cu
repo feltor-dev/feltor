@@ -20,7 +20,8 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
 double initial( double x, double y) {return 0.;}
-double amp = 0.9999;
+//double amp = 0.9999;
+double amp = 0.9;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
 //double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
@@ -167,8 +168,9 @@ int main()
     dg::blas1::copy( 0., x);
     dg::Timer t;
     t.tic();
-    double precon = 1.;
-    unsigned number = lgmres.solve( pol_forward, x, b, precon, w2d, eps);
+    unsigned number = lgmres.solve( pol_forward, x, b, chi_inv, w2d, eps);
+    //double precon = 1.;
+    //unsigned number = lgmres.solve( pol_forward, x, b,precon,precon, eps);
     t.toc();
     std::cout << "# of lgmres iterations "<<number<<" took "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1.,x,-1., solution, error);
