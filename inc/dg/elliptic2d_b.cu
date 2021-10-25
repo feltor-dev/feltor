@@ -8,6 +8,8 @@
 #include "blas.h"
 #include "elliptic.h"
 #include "multigrid.h"
+#include "lgmres.h"
+#include "bicgstabl.h"
 
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
@@ -159,6 +161,28 @@ int main()
     err = dg::blas2::dot( w2d, error);
     const double norm_var = dg::blas2::dot( w2d, variatio);
     std::cout << " "<<sqrt( err/norm_var) << "\n";
+    // NOW TEST LGMRES AND BICGSTABl
+    dg::LGMRES<dg::DVec> lgmres( x, 30, 1, 100);
+    pol_forward.set_norm( dg::normed);
+    dg::blas1::copy( 0., x);
+    dg::Timer t;
+    t.tic();
+    double precon = 1.;
+    unsigned number = lgmres.solve( pol_forward, x, b, precon, w2d, eps);
+    t.toc();
+    std::cout << "# of lgmres iterations "<<number<<" took "<<t.diff()<<"s\n";
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
+    dg::BICGSTABl<dg::DVec> bicg( x, 100000, 3);
+    dg::blas1::copy( 0., x);
+    t.tic();
+    number = bicg.solve( pol_forward, x, b, v2d, w2d, eps);
+    t.toc();
+    std::cout << "# of bicgstabl iterations "<<number<<" took "<<t.diff()<<"s\n";
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
     }
 
     {

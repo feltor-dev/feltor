@@ -8,6 +8,7 @@
 
 #include "blas.h"
 #include "functors.h"
+
 /*!@file
  * LGMRES class
  *
@@ -46,49 +47,51 @@ class LGMRES
     }
     ///@brief Set the number of restarts
     ///@param new_Restarts New maximum number of restarts
-    void set_max( unsigned new_Restarts) {numberRestarts = new_Restarts;}
+    void set_max( unsigned new_Restarts) {m_maxRestarts = new_Restarts;}
     ///@brief Get the current maximum number of iterations
     ///@return the current maximum
-    unsigned get_numberRestarts() const {return numberRestarts;}
+    unsigned get_maxRestarts() const {return m_maxRestarts;}
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_tmp;}
     /**
      * @brief Allocate memory for the preconditioned LGMRES method
      *
      * @param copyable A ContainerType must be copy-constructible from this
      * @param max_inner Maximum number of vectors to be saved in gmres. Usually 30 seems to be a decent number.
-     * @param max_outer Maximum number of solutions saved for restart. Usually 3-10 seems to be a good number.
+     * @param max_outer Maximum number of (additional) solutions saved for restart. Usually 3-10 seems to be a good number. The Krylov Dimension is \c max_inner+max_outer
      * @param Restarts Maximum number of restarts. This can be set high just in case. Like e.g. gridsize/max_outer.
      */
     void construct(const ContainerType& copyable, unsigned max_outer, unsigned max_inner, unsigned Restarts){
-        outer_k = max_outer;
-        inner_m = max_inner;
-        numberRestarts = Restarts;
-        krylovDimension = inner_m + outer_k;
+        m_outer_k = max_outer;
+        m_inner_m = max_inner;
+        m_maxRestarts = Restarts;
+        m_krylovDimension = m_inner_m + m_outer_k;
         //Declare Hessenberg matrix
-        for(unsigned i = 0; i < krylovDimension+1; i++){
-            H.push_back(std::vector<value_type>());
-            for(unsigned j = 0; j < krylovDimension; j++){
-                H[i].push_back(0);
+        for(unsigned i = 0; i < m_krylovDimension+1; i++){
+            m_H.push_back(std::vector<value_type>());
+            for(unsigned j = 0; j < m_krylovDimension; j++){
+                m_H[i].push_back(0);
             }
         }
         //Declare givens rotation matrix
-        for(unsigned i = 0; i < krylovDimension+1; i++){
+        for(unsigned i = 0; i < m_krylovDimension+1; i++){
             givens.push_back(std::vector<value_type>());
             for(unsigned j = 0; j < 2; j++){
                 givens[i].push_back(0);
             }
         }
-        //Declare s that minimizes the residual... something like that.
-        //s(krylovDimension+1);
-        s.assign(krylovDimension+1,0);
+        //Declare s that minimizes the residual...
+        m_s.assign(m_krylovDimension+1,0);
 
         //The residual which will be used to calculate the solution.
-        V.assign(krylovDimension+1,copyable);
-        W.assign(krylovDimension,copyable);
+        m_V.assign(m_krylovDimension+1,copyable);
+        m_W.assign(m_krylovDimension,copyable);
         //In principle we don't need this many... but just to be on board with the algorithm
-        outer_v.assign(outer_k+1,copyable);
-        z = copyable;
-        dx = copyable;
-        residual = copyable;
+        m_outer_w.assign(m_outer_k+1,copyable);
+        m_tmp = copyable;
+        m_dx = copyable;
+        m_residual = copyable;
     }
 
     /**
@@ -114,39 +117,52 @@ class LGMRES
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
-    template < class Hess, class HessContainerType1, class HessContainerType2, class HessContainerType3  >
-    void Update(HessContainerType1 &dx, HessContainerType1 &x, unsigned dimension, Hess &H, HessContainerType2 &s, HessContainerType3 &V);
-    std::vector<std::vector<value_type>> H, givens;
-    ContainerType z, dx, residual;
-    std::vector<ContainerType> V, W, outer_v;
-    std::vector<value_type> s;
-    unsigned numberRestarts, inner_m, outer_k, krylovDimension;
+    template < class ContainerType0>
+    void Update(ContainerType &dx, ContainerType0 &x, unsigned dimension,
+            const std::vector<std::vector<value_type>> &H,
+            std::vector<value_type> &s, const std::vector<ContainerType> &W);
+    std::vector<std::vector<value_type>> m_H, givens;
+    ContainerType m_tmp, m_dx, m_residual;
+    std::vector<ContainerType> m_V, m_W, m_outer_w;
+    std::vector<value_type> m_s;
+    unsigned m_maxRestarts, m_inner_m, m_outer_k, m_krylovDimension;
 };
 ///@cond
 
 template< class ContainerType>
-template < class Hess, class HessContainerType1, class HessContainerType2, class HessContainerType3  >
-void LGMRES< ContainerType>::Update(HessContainerType1 &dx, HessContainerType1 &x, unsigned dimension, Hess &H, HessContainerType2 &s, HessContainerType3 &V)
+template < class ContainerType0>
+void LGMRES<ContainerType>::Update(ContainerType &dx, ContainerType0 &x,
+        unsigned dimension, const std::vector<std::vector<value_type>> &H,
+        std::vector<value_type> &s, const std::vector<ContainerType> &W)
 {
     // Solve for the coefficients, i.e. solve for c in
     // H*c=s, but we do it in place.
-    int lupe;
-    for (lupe = dimension; lupe >= 0; --lupe)
-	    {
-		    s[lupe] = s[lupe]/H[lupe][lupe];
-            if(lupe > 0){
-                for (int innerLupe = lupe - 1; innerLupe >= 0; --innerLupe)
-                {
-                    // Subtract off the parts from the upper diagonal of the matrix.
-                    s[innerLupe] -=  s[lupe]*H[innerLupe][lupe];
-                }
+    for (int lupe = dimension; lupe >= 0; --lupe)
+    {
+        s[lupe] = s[lupe]/H[lupe][lupe];
+        if(lupe > 0){
+            for (int innerLupe = lupe - 1; innerLupe >= 0; --innerLupe)
+            {
+                // Subtract off the parts from the upper diagonal of the matrix.
+                s[innerLupe] -=  s[lupe]*H[innerLupe][lupe];
             }
+        }
 	}
+    //std::cout << "HessenbergA\n";
+    //for( unsigned i=0; i<dimension; i++)
+    //{
+    //    for( unsigned k=0; k<i; k++)
+    //        std::cout << "X ";
+    //    for( unsigned k=i; k<dimension; k++)
+    //        std::cout << H[i][k]<<" ";
+    //    std::cout << std::endl;
+    //}
+    //std::cout << "HessenbergB\n";
 
     // Finally update the approximation.
     dg::blas1::scal(dx,0.);
-    for (lupe = 0; lupe <= (int)dimension; lupe++)
-        dg::blas1::axpby(s[lupe],V[lupe],1.,dx);
+    for (unsigned lupe = 0; lupe <= dimension; lupe++)
+        dg::blas1::axpby(s[lupe],W[lupe],1.,dx);
     dg::blas1::axpby(1.,dx,1.,x);
 }
 
@@ -161,81 +177,79 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
         blas1::copy( 0., x);
         return 0;
     }
-    dg::blas2::symv(A,x,residual);
-    dg::blas1::axpby(1.,b,-1.,residual);
-    value_type normres = sqrt(dg::blas2::dot(S,residual));
+    dg::blas2::symv(A,x,m_tmp);
+    dg::blas1::axpby(1.,b,-1.,m_tmp);
+    value_type normres = sqrt(dg::blas2::dot(S,m_tmp));
     if( normres < tol) //if x happens to be the solution
         return 0;
-    dg::blas2::symv(P,residual,residual);
-    value_type rho = sqrt(dg::blas1::dot(residual,residual));
+    dg::blas2::symv(P,m_tmp,m_residual);
+    value_type rho = sqrt(dg::blas1::dot(m_residual,m_residual));
 
-    unsigned totalRestarts = 0;
+    unsigned restartCycle = 0;
 
     // Go through the requisite number of restarts.
-	unsigned iteration = 0;
 
-    while( (totalRestarts < numberRestarts) && (normres > tol))
+    while( (restartCycle < m_maxRestarts) && (normres > tol))
 	{
         // The first vector in the Krylov subspace is the normalized residual.
-        dg::blas1::axpby(1.0/rho,residual,0.,V[0]);
+        dg::blas1::axpby(1.0/rho,m_residual,0.,m_V[0]);
 
-        for(unsigned lupe=0;lupe<=krylovDimension;++lupe)
-			s[lupe] = 0.0;
-		s[0] = rho;
+        m_s.assign(m_krylovDimension+1,0);
+		m_s[0] = rho;
 
 		// Go through and generate the pre-determined number of vectors for the Krylov subspace.
-		for( iteration=0;iteration<krylovDimension;++iteration)
+		for( unsigned iteration=0;iteration<m_krylovDimension;++iteration)
 		{
-            unsigned outer_v_count = std::min(totalRestarts,outer_k);
+            unsigned outer_v_count = std::min(restartCycle,m_outer_k);
             if(iteration < outer_v_count){
-                //dg::blas1::copy(outer_v[totalRestarts-outer_v_count+iteration],z);
-                dg::blas1::copy(outer_v[iteration],z);
+                // MW: I don't think we need that multiplication
+                dg::blas2::symv(A,m_outer_w[iteration],m_tmp);
+                dg::blas1::copy(m_outer_w[iteration],m_W[iteration]);
             } else if (iteration == outer_v_count) {
-                dg::blas1::copy(V[0],z);
+                dg::blas2::symv(A,m_V[0],m_tmp);
+                dg::blas1::copy(m_V[0],m_W[iteration]);
             } else {
-                dg::blas1::copy(V[iteration],z);
+                dg::blas2::symv(A,m_V[iteration],m_tmp);
+                dg::blas1::copy(m_V[iteration],m_W[iteration]);
             }
 
 			// Get the next entry in the vectors that form the basis for the Krylov subspace.
-            dg::blas2::symv(A,z,V[iteration+1]);
-            dg::blas2::symv(P,V[iteration+1],V[iteration+1]);
-            unsigned row;
+            dg::blas2::symv(P,m_tmp,m_V[iteration+1]);
 
-            for(row=0;row<=iteration;++row)
+            for(unsigned row=0;row<=iteration;++row)
 			{
-                H[row][iteration] = dg::blas1::dot(V[iteration+1],V[row]);
-                dg::blas1::axpby(-H[row][iteration],V[row],1.,V[iteration+1]);
+                m_H[row][iteration] = dg::blas1::dot(m_V[iteration+1],m_V[row]);
+                dg::blas1::axpby(-m_H[row][iteration],m_V[row],1.,m_V[iteration+1]);
 			}
-            H[iteration+1][iteration] = sqrt(dg::blas1::dot(V[iteration+1],V[iteration+1]));
-            dg::blas1::scal(V[iteration+1],1.0/H[iteration+1][iteration]);
-            dg::blas1::copy(z,W[iteration]);
+            m_H[iteration+1][iteration] = sqrt(dg::blas1::dot(m_V[iteration+1],m_V[iteration+1]));
+            dg::blas1::scal(m_V[iteration+1],1.0/m_H[iteration+1][iteration]);
 
 			// Apply the Givens Rotations to insure that H is
 			// an upper diagonal matrix. First apply previous
 			// rotations to the current matrix.
 			value_type tmp;
-			for (row = 0; row < iteration; row++)
+			for (unsigned row = 0; row < iteration; row++)
 			{
-				tmp = givens[row][0]*H[row][iteration] +
-					givens[row][1]*H[row+1][iteration];
-				H[row+1][iteration] = -givens[row][1]*H[row][iteration]
-					+ givens[row][0]*H[row+1][iteration];
-				H[row][iteration]  = tmp;
+				tmp = givens[row][0]*m_H[row][iteration] +
+					givens[row][1]*m_H[row+1][iteration];
+				m_H[row+1][iteration] = -givens[row][1]*m_H[row][iteration]
+					+ givens[row][0]*m_H[row+1][iteration];
+				m_H[row][iteration]  = tmp;
 			}
 
 			// Figure out the next Givens rotation.
-			if(H[iteration+1][iteration] == 0.0)
+			if(m_H[iteration+1][iteration] == 0.0)
 			{
 				// It is already lower diagonal. Just leave it be....
 				givens[iteration][0] = 1.0;
 				givens[iteration][1] = 0.0;
 			}
-			else if (fabs(H[iteration+1][iteration]) > fabs(H[iteration][iteration]))
+			else if (fabs(m_H[iteration+1][iteration]) > fabs(m_H[iteration][iteration]))
 			{
 				// The off diagonal entry has a larger
 				// magnitude. Use the ratio of the
 				// diagonal entry over the off diagonal.
-				tmp = H[iteration][iteration]/H[iteration+1][iteration];
+				tmp = m_H[iteration][iteration]/m_H[iteration+1][iteration];
 				givens[iteration][1] = 1.0/sqrt(1.0+tmp*tmp);
 				givens[iteration][0] = tmp*givens[iteration][1];
 			}
@@ -244,22 +258,22 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 				// The off diagonal entry has a smaller
 				// magnitude. Use the ratio of the off
 				// diagonal entry to the diagonal entry.
-				tmp = H[iteration+1][iteration]/H[iteration][iteration];
+				tmp = m_H[iteration+1][iteration]/m_H[iteration][iteration];
 				givens[iteration][0] = 1.0/sqrt(1.0+tmp*tmp);
 				givens[iteration][1] = tmp*givens[iteration][0];
 			}
             // Apply the new Givens rotation on the new entry in the upper Hessenberg matrix.
-			tmp = givens[iteration][0]*H[iteration][iteration] +
-				  givens[iteration][1]*H[iteration+1][iteration];
-			H[iteration+1][iteration] = -givens[iteration][1]*H[iteration][iteration] +
-				  givens[iteration][0]*H[iteration+1][iteration];
-			H[iteration][iteration] = tmp;
+			tmp = givens[iteration][0]*m_H[iteration][iteration] +
+				  givens[iteration][1]*m_H[iteration+1][iteration];
+			m_H[iteration+1][iteration] = -givens[iteration][1]*m_H[iteration][iteration] +
+				  givens[iteration][0]*m_H[iteration+1][iteration];
+			m_H[iteration][iteration] = tmp;
 			// Finally apply the new Givens rotation on the s vector
-			tmp = givens[iteration][0]*s[iteration] + givens[iteration][1]*s[iteration+1];
-			s[iteration+1] = -givens[iteration][1]*s[iteration] + givens[iteration][1]*s[iteration+1];
-			s[iteration] = tmp;
+			tmp = givens[iteration][0]*m_s[iteration] + givens[iteration][1]*m_s[iteration+1];
+			m_s[iteration+1] = -givens[iteration][1]*m_s[iteration] + givens[iteration][1]*m_s[iteration+1];
+			m_s[iteration] = tmp;
 
-            rho = fabs(s[iteration+1]);
+            rho = fabs(m_s[iteration+1]);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
@@ -270,31 +284,31 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 #endif //DG_DEBUG
             if( rho < tol)
 			{
-                Update(dx,x,iteration,H,s,W);
-                //dg::blas2::symv(A,x,residual);
-                //dg::blas1::axpby(1.,b,-1.,residual);
-                //std::cout << sqrt(dg::blas2::dot(S,residual) )<< std::endl;
-                return(iteration+totalRestarts*krylovDimension);
+                Update(m_dx,x,iteration,m_H,m_s,m_W);
+                //dg::blas2::symv(A,x,m_residual);
+                //dg::blas1::axpby(1.,b,-1.,m_residual);
+                //std::cout << sqrt(dg::blas2::dot(S,m_residual) )<< std::endl;
+                return(iteration+restartCycle*m_krylovDimension);
             }
         }
-        Update(dx,x,iteration-1,H,s,W);
-        value_type nx = sqrt(dg::blas1::dot(dx,dx));
+        Update(m_dx,x,m_krylovDimension-1,m_H,m_s,m_W);
+        value_type nx = sqrt(dg::blas1::dot(m_dx,m_dx));
         if(nx>0.){
-            if (totalRestarts<outer_k){
-                dg::blas1::axpby(1.0/nx,dx,0.,outer_v[totalRestarts]); //new outer entry = dx/nx
+            if (restartCycle<m_outer_k){
+                dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[restartCycle]); //new outer entry = dx/nx
             } else {
-                std::rotate(outer_v.begin(),outer_v.begin()+1,outer_v.end()); //rotate one to the left.
-                dg::blas1::axpby(1.0/nx,dx,0.,outer_v[outer_k]);
+                std::rotate(m_outer_w.begin(),m_outer_w.begin()+1,m_outer_w.end()); //rotate one to the left.
+                dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[m_outer_k]);
             }
         }
-        dg::blas2::symv(A,x,residual);
-        dg::blas1::axpby(1.,b,-1.,residual);
-        normres = sqrt(dg::blas2::dot(S,residual));
-        dg::blas2::symv(P,residual,residual);
-        //value_type rho = sqrt(dg::blas1::dot(residual,residual));
-        totalRestarts += 1;
+        dg::blas2::symv(A,x,m_tmp);
+        dg::blas1::axpby(1.,b,-1.,m_tmp);
+        normres = sqrt(dg::blas2::dot(S,m_tmp));
+        dg::blas2::symv(P,m_tmp,m_residual);
+        //value_type rho = sqrt(dg::blas1::dot(m_residual,m_residual));
+        restartCycle ++;
     }
-    return totalRestarts*krylovDimension;
+    return restartCycle*m_krylovDimension;
 }
 ///@endcond
 }//namespace dg

@@ -57,7 +57,7 @@ class BICGSTABl
     void construct(const ContainerType& copyable, unsigned max_iterations, unsigned l_input){
         max_iter = max_iterations;
         l = l_input;
-        xhat = r = rtilde = u = copyable;
+        m_tmp=copyable;
         rhat.assign(l+1,copyable);
         uhat.assign(l+1,copyable);
         sigma.assign(l+1,0);
@@ -71,6 +71,9 @@ class BICGSTABl
             }
         }
     }
+    ///@brief Return an object of same size as the object used for construction
+    ///@return A copyable object; what it contains is undefined, its size is important
+    const ContainerType& copyable()const{ return m_tmp;}
 
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned BICGSTABl method
@@ -96,7 +99,7 @@ class BICGSTABl
 
   private:
     unsigned max_iter, l;
-    ContainerType r, rtilde, u, xhat;
+    ContainerType m_tmp;
     std::vector<ContainerType> rhat;
     std::vector<ContainerType> uhat;
     std::vector<value_type> sigma, gamma, gammap, gammapp;
@@ -117,50 +120,45 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
         return 0;
     }
 
-    dg::blas1::scal(u,0);
-
-    dg::blas2::symv(A,x,r);
-    dg::blas1::axpby(1.,b,-1.,r);
-    if( sqrt( blas2::dot(S,r) ) < tol) //if x happens to be the solution
+    dg::blas1::copy(0., uhat[0]);
+    dg::blas2::symv(A,x,m_tmp);
+    dg::blas1::axpby(1.,b,-1.,m_tmp);
+    if( sqrt( blas2::dot(S,m_tmp) ) < tol) //if x happens to be the solution
         return 0;
-    dg::blas2::symv(P,r,r); // MW: Technically this is not allowed symv must store
+    dg::blas2::symv(P,m_tmp,rhat[0]); // MW: Technically this is not allowed symv must store
     // output in a separate vector (also check lgmres.h)
-
-    dg::blas1::copy(b,rtilde);
 
     value_type rho_0 = 1;
     value_type alpha = 0;
     value_type omega = 1;
+    ContainerType0& xhat=x; // alias x for ease of notation
 
     for (unsigned k = 0; k < max_iter; k++){
-        dg::blas1::copy(u,uhat[0]);
-        dg::blas1::copy(r,rhat[0]);
-        dg::blas1::copy(x,xhat);
 
         rho_0 = -omega*rho_0;
 
         /// Bi-CG part ///
         for(unsigned j = 0; j<l;j++)
         {
-            value_type rho_1 = dg::blas1::dot(rhat[j],rtilde);
+            value_type rho_1 = dg::blas1::dot(rhat[j],b);
             value_type beta = alpha*rho_1/rho_0;
             rho_0 = rho_1;
             for(unsigned i = 0; i<=j;i++)
             {
                 dg::blas1::axpby(1.,rhat[i],-1.0*beta,uhat[i]);
             }
-            dg::blas2::symv(A,uhat[j],uhat[j+1]);
-            dg::blas2::symv(P,uhat[j+1],uhat[j+1]);
+            dg::blas2::symv(A,uhat[j],m_tmp);
+            dg::blas2::symv(P,m_tmp,uhat[j+1]);
             if( rho_0 == 0)
                 alpha = 0;
             else
-                alpha = rho_0/dg::blas1::dot(uhat[j+1],rtilde);
+                alpha = rho_0/dg::blas1::dot(uhat[j+1],b);
             for(unsigned i = 0; i<=j; i++)
             {
                 dg::blas1::axpby(-1.0*alpha,uhat[i+1],1.,rhat[i]);
             }
-            dg::blas2::symv(A,rhat[j],rhat[j+1]);
-            dg::blas2::symv(P,rhat[j+1],rhat[j+1]);
+            dg::blas2::symv(A,rhat[j],m_tmp);
+            dg::blas2::symv(P,m_tmp,rhat[j+1]);
             dg::blas1::axpby(alpha,uhat[0],1.,xhat);
         }
 
@@ -199,11 +197,8 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
             dg::blas1::axpby(-gamma[j],uhat[j],1.,uhat[0]);
             dg::blas1::axpby(-gammap[j],rhat[j],1.,rhat[0]);
         }
-        dg::blas1::copy(uhat[0],u);
-        dg::blas1::copy(rhat[0],r);
-        dg::blas1::copy(xhat,x);
 
-        value_type err = sqrt(dg::blas2::dot(S,r));
+        value_type err = sqrt(dg::blas2::dot(S,rhat[0]));
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
