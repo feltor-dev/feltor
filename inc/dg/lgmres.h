@@ -32,6 +32,13 @@ namespace dg{
 * A paper can be found at
 * https://www.cs.colorado.edu/~jessup/SUBPAGES/PS/lgmres.pdf
 *
+* Basically the Krylov subspace is augmented by \c k approximations to the error.
+* The storage requirement is m+3k vectors
+*
+* @note the first cycle of LGMRES(m,k) is equivalent to the first cycle of GMRES(m+k)
+* @note Only \c m matrix-vector multiplications need to be computed in LGMRES(m,k) per restart cycle irrespective of the value of \c k
+* @attention LGMRES can stagnate if the matrix A is not positive definite. The use of a preconditioner is
+* paramount in such a situation
 */
 template< class ContainerType>
 class LGMRES
@@ -41,9 +48,46 @@ class LGMRES
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     LGMRES(){}
-    ///@copydoc construct()
-    LGMRES( const ContainerType& copyable, unsigned max_outer, unsigned max_inner, unsigned Restarts){
-        construct(copyable, max_outer, max_inner, Restarts);
+    /**
+     * @brief Allocate memory for the preconditioned LGMRES method
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param max_inner Maximum number of vectors to be saved in gmres. Usually 30 seems to be a decent number.
+     * @param max_outer Maximum number of solutions (actually approximations to the error) saved for restart. Usually 3-10 seems to be a good number. The Krylov Dimension is augmented to \c max_inner+max_outer. \c max_outer=0 corresponds to standard GMRES.
+     * @param Restarts Maximum number of restarts. This can be set high just in case. Like e.g. gridsize/max_outer.
+     */
+    LGMRES( const ContainerType& copyable, unsigned max_outer, unsigned max_inner, unsigned Restarts):
+        m_tmp(copyable),
+        m_dx(copyable),
+        m_residual( copyable),
+        m_maxRestarts( Restarts),
+        m_inner_m( max_inner),
+        m_outer_k( max_outer),
+        m_krylovDimension( max_inner+max_outer)
+    {
+        //Declare Hessenberg matrix
+        m_H.assign( m_krylovDimension+1, std::vector<value_type>( m_krylovDimension, 0));
+        //Declare givens rotation matrix
+        m_givens.assign( m_krylovDimension+1, {0,0});
+        //Declare s that minimizes the residual:
+        m_s.assign(m_krylovDimension+1,0);
+        // m+k+1 orthogonal basis vectors:
+        m_V.assign(m_krylovDimension+1,copyable);
+        m_W.assign(m_krylovDimension,copyable);
+        // k augmented pairs
+        m_outer_w.assign(m_outer_k+1,copyable);
+    }
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = LGMRES( std::forward<Params>( ps)...);
     }
     ///@brief Set the number of restarts
     ///@param new_Restarts New maximum number of restarts
@@ -54,45 +98,6 @@ class LGMRES
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_tmp;}
-    /**
-     * @brief Allocate memory for the preconditioned LGMRES method
-     *
-     * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_inner Maximum number of vectors to be saved in gmres. Usually 30 seems to be a decent number.
-     * @param max_outer Maximum number of (additional) solutions saved for restart. Usually 3-10 seems to be a good number. The Krylov Dimension is \c max_inner+max_outer
-     * @param Restarts Maximum number of restarts. This can be set high just in case. Like e.g. gridsize/max_outer.
-     */
-    void construct(const ContainerType& copyable, unsigned max_outer, unsigned max_inner, unsigned Restarts){
-        m_outer_k = max_outer;
-        m_inner_m = max_inner;
-        m_maxRestarts = Restarts;
-        m_krylovDimension = m_inner_m + m_outer_k;
-        //Declare Hessenberg matrix
-        for(unsigned i = 0; i < m_krylovDimension+1; i++){
-            m_H.push_back(std::vector<value_type>());
-            for(unsigned j = 0; j < m_krylovDimension; j++){
-                m_H[i].push_back(0);
-            }
-        }
-        //Declare givens rotation matrix
-        for(unsigned i = 0; i < m_krylovDimension+1; i++){
-            givens.push_back(std::vector<value_type>());
-            for(unsigned j = 0; j < 2; j++){
-                givens[i].push_back(0);
-            }
-        }
-        //Declare s that minimizes the residual...
-        m_s.assign(m_krylovDimension+1,0);
-
-        //The residual which will be used to calculate the solution.
-        m_V.assign(m_krylovDimension+1,copyable);
-        m_W.assign(m_krylovDimension,copyable);
-        //In principle we don't need this many... but just to be on board with the algorithm
-        m_outer_w.assign(m_outer_k+1,copyable);
-        m_tmp = copyable;
-        m_dx = copyable;
-        m_residual = copyable;
-    }
 
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned LGMRES method
@@ -121,7 +126,7 @@ class LGMRES
     void Update(ContainerType &dx, ContainerType0 &x, unsigned dimension,
             const std::vector<std::vector<value_type>> &H,
             std::vector<value_type> &s, const std::vector<ContainerType> &W);
-    std::vector<std::vector<value_type>> m_H, givens;
+    std::vector<std::vector<value_type>> m_H, m_givens;
     ContainerType m_tmp, m_dx, m_residual;
     std::vector<ContainerType> m_V, m_W, m_outer_w;
     std::vector<value_type> m_s;
@@ -170,6 +175,12 @@ template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
 unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
+    // suggested Improvements:
+    // - Use right preconditioned system such that residual norm is available in minimization
+    // - do not compute Az explicitly but save on iterations
+    // - too many vectors stored ( reduce storage requirements)
+    // - assemble V, W and H in correct order
+    // - make first cycle equivalent to GMRES(m+k)
     value_type nrmb = sqrt( blas2::dot( S, b));
     value_type tol = eps*(nrmb + nrmb_correction);
     if( nrmb == 0)
@@ -200,12 +211,12 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 		// Go through and generate the pre-determined number of vectors for the Krylov subspace.
 		for( unsigned iteration=0;iteration<m_krylovDimension;++iteration)
 		{
-            unsigned outer_v_count = std::min(restartCycle,m_outer_k);
-            if(iteration < outer_v_count){
+            unsigned outer_w_count = std::min(restartCycle,m_outer_k);
+            if(iteration < outer_w_count){
                 // MW: I don't think we need that multiplication
                 dg::blas2::symv(A,m_outer_w[iteration],m_tmp);
                 dg::blas1::copy(m_outer_w[iteration],m_W[iteration]);
-            } else if (iteration == outer_v_count) {
+            } else if (iteration == outer_w_count) {
                 dg::blas2::symv(A,m_V[0],m_tmp);
                 dg::blas1::copy(m_V[0],m_W[iteration]);
             } else {
@@ -216,6 +227,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 			// Get the next entry in the vectors that form the basis for the Krylov subspace.
             dg::blas2::symv(P,m_tmp,m_V[iteration+1]);
 
+            // modified Gram-Schmidt orthogonalization (Householder)
             for(unsigned row=0;row<=iteration;++row)
 			{
                 m_H[row][iteration] = dg::blas1::dot(m_V[iteration+1],m_V[row]);
@@ -224,16 +236,17 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             m_H[iteration+1][iteration] = sqrt(dg::blas1::dot(m_V[iteration+1],m_V[iteration+1]));
             dg::blas1::scal(m_V[iteration+1],1.0/m_H[iteration+1][iteration]);
 
-			// Apply the Givens Rotations to insure that H is
-			// an upper diagonal matrix. First apply previous
-			// rotations to the current matrix.
+            // Now solve the least squares problem
+            // using Givens Rotations to insure that H is
+            // an upper triangular matrix. First apply previous
+            // rotations to the current matrix. (see Saad Chapter 6.5.3)
 			value_type tmp;
 			for (unsigned row = 0; row < iteration; row++)
 			{
-				tmp = givens[row][0]*m_H[row][iteration] +
-					givens[row][1]*m_H[row+1][iteration];
-				m_H[row+1][iteration] = -givens[row][1]*m_H[row][iteration]
-					+ givens[row][0]*m_H[row+1][iteration];
+				tmp = m_givens[row][0]*m_H[row][iteration] +
+					m_givens[row][1]*m_H[row+1][iteration];
+				m_H[row+1][iteration] = -m_givens[row][1]*m_H[row][iteration]
+					+ m_givens[row][0]*m_H[row+1][iteration];
 				m_H[row][iteration]  = tmp;
 			}
 
@@ -241,8 +254,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 			if(m_H[iteration+1][iteration] == 0.0)
 			{
 				// It is already lower diagonal. Just leave it be....
-				givens[iteration][0] = 1.0;
-				givens[iteration][1] = 0.0;
+				m_givens[iteration][0] = 1.0;
+				m_givens[iteration][1] = 0.0;
 			}
 			else if (fabs(m_H[iteration+1][iteration]) > fabs(m_H[iteration][iteration]))
 			{
@@ -250,8 +263,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 				// magnitude. Use the ratio of the
 				// diagonal entry over the off diagonal.
 				tmp = m_H[iteration][iteration]/m_H[iteration+1][iteration];
-				givens[iteration][1] = 1.0/sqrt(1.0+tmp*tmp);
-				givens[iteration][0] = tmp*givens[iteration][1];
+				m_givens[iteration][1] = 1.0/sqrt(1.0+tmp*tmp);
+				m_givens[iteration][0] = tmp*m_givens[iteration][1];
 			}
 			else
 			{
@@ -259,21 +272,21 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 				// magnitude. Use the ratio of the off
 				// diagonal entry to the diagonal entry.
 				tmp = m_H[iteration+1][iteration]/m_H[iteration][iteration];
-				givens[iteration][0] = 1.0/sqrt(1.0+tmp*tmp);
-				givens[iteration][1] = tmp*givens[iteration][0];
+				m_givens[iteration][0] = 1.0/sqrt(1.0+tmp*tmp);
+				m_givens[iteration][1] = tmp*m_givens[iteration][0];
 			}
             // Apply the new Givens rotation on the new entry in the upper Hessenberg matrix.
-			tmp = givens[iteration][0]*m_H[iteration][iteration] +
-				  givens[iteration][1]*m_H[iteration+1][iteration];
-			m_H[iteration+1][iteration] = -givens[iteration][1]*m_H[iteration][iteration] +
-				  givens[iteration][0]*m_H[iteration+1][iteration];
+			tmp = m_givens[iteration][0]*m_H[iteration][iteration] +
+				  m_givens[iteration][1]*m_H[iteration+1][iteration];
+			m_H[iteration+1][iteration] = -m_givens[iteration][1]*m_H[iteration][iteration] +
+				  m_givens[iteration][0]*m_H[iteration+1][iteration];
 			m_H[iteration][iteration] = tmp;
 			// Finally apply the new Givens rotation on the s vector
-			tmp = givens[iteration][0]*m_s[iteration] + givens[iteration][1]*m_s[iteration+1];
-			m_s[iteration+1] = -givens[iteration][1]*m_s[iteration] + givens[iteration][1]*m_s[iteration+1];
+			tmp = m_givens[iteration][0]*m_s[iteration] + m_givens[iteration][1]*m_s[iteration+1];
+			m_s[iteration+1] = -m_givens[iteration][1]*m_s[iteration] + m_givens[iteration][1]*m_s[iteration+1];
 			m_s[iteration] = tmp;
 
-            rho = fabs(m_s[iteration+1]);
+            rho = fabs(m_s[iteration+1]); // this one does not have h
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;

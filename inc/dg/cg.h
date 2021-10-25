@@ -43,8 +43,14 @@ class CG
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
-    ///@copydoc construct()
-    CG( const ContainerType& copyable, unsigned max_iterations):r(copyable), p(r), ap(r), max_iter(max_iterations){}
+    /**
+     * @brief Allocate memory for the pcg method
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param max_iterations Maximum number of iterations to be used
+     */
+    CG( const ContainerType& copyable, unsigned max_iterations):
+        r(copyable), p(r), ap(r), max_iter(max_iterations){}
     ///@brief Set the maximum number of iterations
     ///@param new_max New maximum number
     void set_max( unsigned new_max) {max_iter = new_max;}
@@ -56,14 +62,16 @@ class CG
     const ContainerType& copyable()const{ return r;}
 
     /**
-     * @brief Allocate memory for the pcg method
-     *
-     * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_iterations Maximum number of iterations to be used
-     */
-    void construct( const ContainerType& copyable, unsigned max_iterations) {
-        ap = p = r = copyable;
-        max_iter = max_iterations;
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = CG( std::forward<Params>( ps)...);
     }
     ///@brief DEPRECATED: use solve method instead
     ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,Preconditioner&,value_type,value_type)
