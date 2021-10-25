@@ -20,33 +20,33 @@
     {
     "curvature": 0.00015, 
     "tau"  : 0.0,  
-    "alpha"  : 0.0005, 
-    "lambda"  : 0.000001, 
+    "alpha"  : 0.000, 
+    "lambda"  : 0.00000, 
     "mu_e"  : -0.000272121, 
     "equations": "ff-lwl-O2", 
     "xfac_sep"  : 0.5, 
-    "sigma_sep"  : 1
+    "sigma_sep"  : 10
     },
 "source":
     {
-     "source_type" : "flux", 
+     "source_type" : "forced", 
      "source_rel" : "zero-pol", 
-     "omega_s" : 0.05,
+     "omega_s" : 0.0,
      "xfac_s": 0.3,
      "sigma_s" : 3.0
     },
 "profile":
     {
-     "bgprofamp" : 1.0,
-     "profamp": 9.0,
-     "sigma_p": 20.0
+     "bgproftype": "exp",
+     "bgprofamp" : 0.0,
+     "profamp": 1.0,
+     "ln": 20.0
      },
 "init": 
     {
     "type": "sin", 
-    "amplitude": 0.01,
-    "backgroundamp": 0.0,
-    "ky": 1.0, 
+    "amplitude": 0.1,
+    "my": 1.0, 
     "sigma": 5.0, 
     "posX": 0.5, 
     "posY": 0.5,
