@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <stdexcept> //std::runtime_error
 
 #include "json/json.h"
@@ -314,8 +315,11 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
     else if( comments::are_discarded == comm )
     {
         Json::CharReaderBuilder::strictMode( &parser.settings_);
-        parser.settings_["allowComments"] = true;
-        parser.settings_["collectComments"] = false;
+        // workaround for a linker bug in jsoncpp from package manager
+        Json::Value js_true (true);
+        Json::Value js_false (false);
+        parser.settings_["allowComments"].swap( js_true);
+        parser.settings_["collectComments"].swap(js_false);
     }
     else
         Json::CharReaderBuilder::setDefaults( &parser.settings_);

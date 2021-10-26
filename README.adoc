@@ -272,8 +272,8 @@ Now, we want to compile and run a simulation program. To this end, we have to
 download and install some additional libraries for I/O-operations.
 
 First, we need to install jsoncpp (distributed under the MIT License).
-The easiest way to do this on Linux is to install `libjsoncpp-dev` through the package managment system. However, if you have
-a GPU or if you do not have sudo privileges you have to install the library manually. That means you have to clone https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] and follow the build instructions in the README. After this, link the
+On Linux `libjsoncpp-dev` is available through the package managment system.
+For a manual build clone https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] and follow the build instructions in the README. After this, link the
 include path
 [source,sh]
 ----
