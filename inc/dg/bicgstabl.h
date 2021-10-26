@@ -37,9 +37,39 @@ class BICGSTABl
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     BICGSTABl(){}
-    ///@copydoc construct()
-    BICGSTABl( const ContainerType& copyable, unsigned max_iterations, unsigned l_input){
-        construct(copyable, max_iterations, l_input);
+    /**
+     * @brief Allocate memory for the preconditioned BICGSTABl method
+     *
+     * @param copyable A ContainerType must be copy-constructible from this
+     * @param max_iterations Maximum number of iterations
+     * @param l_input Size of polynomial used for stabilisation.
+     * Usually 2 or 4 is a good number. (makes l Bi-CG iterations per iteration)
+     */
+    BICGSTABl( const ContainerType& copyable, unsigned max_iterations,
+            unsigned l_input):
+        max_iter(max_iterations),
+        l(l_input),
+        m_tmp(copyable)
+    {
+        rhat.assign(l+1,copyable);
+        uhat.assign(l+1,copyable);
+        sigma.assign(l+1,0);
+        gamma.assign(l+1,0);
+        gammap.assign(l+1,0);
+        gammapp.assign(l+1,0);
+        tau.assign( l+1, std::vector<value_type>( l+1, 0));
+    }
+    /**
+    * @brief Perfect forward parameters to one of the constructors
+    *
+    * @tparam Params deduced by the compiler
+    * @param ps parameters forwarded to constructors
+    */
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = BICGSTABl( std::forward<Params>( ps)...);
     }
     ///@brief Set the maximum number of iterations
     ///@param new_max New maximum number
@@ -47,30 +77,6 @@ class BICGSTABl
     ///@brief Get the current maximum number of iterations
     ///@return the current maximum
     unsigned get_max() const {return max_iter;}
-    /**
-     * @brief Allocate memory for the preconditioned BICGSTABl method
-     *
-     * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_iterations Maximum number of iterations
-     * @param l_input Size of polynomial used for stabilisation. Usually 2 or 4 is a good number.
-     */
-    void construct(const ContainerType& copyable, unsigned max_iterations, unsigned l_input){
-        max_iter = max_iterations;
-        l = l_input;
-        m_tmp=copyable;
-        rhat.assign(l+1,copyable);
-        uhat.assign(l+1,copyable);
-        sigma.assign(l+1,0);
-        gamma.assign(l+1,0);
-        gammap.assign(l+1,0);
-        gammapp.assign(l+1,0);
-        for(unsigned i = 0; i < l; i++){
-            tau.push_back(std::vector<value_type>());
-            for(unsigned j = 0; j < l; j++){
-                tau[i].push_back(0);
-            }
-        }
-    }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_tmp;}
@@ -125,8 +131,7 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
     dg::blas1::axpby(1.,b,-1.,m_tmp);
     if( sqrt( blas2::dot(S,m_tmp) ) < tol) //if x happens to be the solution
         return 0;
-    dg::blas2::symv(P,m_tmp,rhat[0]); // MW: Technically this is not allowed symv must store
-    // output in a separate vector (also check lgmres.h)
+    dg::blas2::symv(P,m_tmp,rhat[0]);
 
     value_type rho_0 = 1;
     value_type alpha = 0;
