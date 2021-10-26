@@ -18,7 +18,7 @@
 namespace dg{
 
 /**
-* @brief Functor class for the preconditioned LGMRES method to solve
+* @brief Functor class for the right preconditioned LGMRES method to solve
 * \f[ Ax=b\f]
 *
 * @ingroup invert
@@ -32,13 +32,20 @@ namespace dg{
 * A paper can be found at
 * https://www.cs.colorado.edu/~jessup/SUBPAGES/PS/lgmres.pdf
 *
+* \sa For more information see the book
+* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
+*
 * Basically the Krylov subspace is augmented by \c k approximations to the error.
 * The storage requirement is m+3k vectors
 *
+* @note We use **right preconditioning** because this makes the residual norm automatically available in each iteration
+* @note the orthogonalization is done with respect to a user-provided inner product \c S.
 * @note the first cycle of LGMRES(m,k) is equivalent to the first cycle of GMRES(m+k)
 * @note Only \c m matrix-vector multiplications need to be computed in LGMRES(m,k) per restart cycle irrespective of the value of \c k
-* @attention LGMRES can stagnate if the matrix A is not positive definite. The use of a preconditioner is
-* paramount in such a situation
+*
+* @attention There are a lot of calls to \c dot in LGMRES such that GPUs may struggle for small vector sizes
+* @attention LGMRES can stagnate if the matrix A is not positive definite. The
+* use of a preconditioner is paramount in such a situation
 */
 template< class ContainerType>
 class LGMRES
@@ -65,17 +72,21 @@ class LGMRES
         m_outer_k( max_outer),
         m_krylovDimension( max_inner+max_outer)
     {
+        if( m_inner_m < m_outer_k)
+            std::cerr << "WARNING (LGMRES): max_inner is smaller than the restart dimension max_outer. Did you swap the constructor parameters?\n";
         //Declare Hessenberg matrix
         m_H.assign( m_krylovDimension+1, std::vector<value_type>( m_krylovDimension, 0));
+        m_HH = m_H; //copy of H to be stored unaltered
         //Declare givens rotation matrix
         m_givens.assign( m_krylovDimension+1, {0,0});
         //Declare s that minimizes the residual:
         m_s.assign(m_krylovDimension+1,0);
         // m+k+1 orthogonal basis vectors:
         m_V.assign(m_krylovDimension+1,copyable);
-        m_W.assign(m_krylovDimension,copyable);
+        m_W.assign(m_krylovDimension,nullptr);
         // k augmented pairs
-        m_outer_w.assign(m_outer_k+1,copyable);
+        m_outer_w.assign(m_outer_k,copyable);
+        m_outer_Az.assign(m_outer_k,copyable);
     }
     /**
     * @brief Perfect forward parameters to one of the constructors
@@ -100,7 +111,7 @@ class LGMRES
     const ContainerType& copyable()const{ return m_tmp;}
 
     /**
-     * @brief Solve \f$ Ax = b\f$ using a preconditioned LGMRES method
+     * @brief Solve \f$ Ax = b\f$ using a right preconditioned LGMRES method
      *
      * The iteration stops if \f$ ||Ax-b||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
      * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
@@ -108,11 +119,14 @@ class LGMRES
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
-     * @param S (Inverse) Weights used to compute the norm for the error condition
+     * @param S A diagonal matrix (a vector) that is used to define the scalar
+     * product in which the orthogonalization in LGMRES is computed and that
+     * defines the norm in which the stopping criterion is computed
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      *
-     * @return Number of iterations used to achieve desired precision
+     * @return Number of times the matrix A and the preconditioner P were
+     * multiplied to achieve the desired precision
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
@@ -122,13 +136,80 @@ class LGMRES
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
+    // this summation is numerically preferable over axpby's
+    // does not influence performance because it is only called on every restart
+    void summation( std::vector<value_type>& alpha, const std::vector<ContainerType>& v, value_type beta, ContainerType& result, unsigned size)
+    {
+        dg::blas1::scal( result, beta);
+        unsigned i=0;
+        if( size >= 8)
+            for( i=0; i<size/8; i++)
+                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
+                        alpha[i*8+0], v[i*8+0],
+                        alpha[i*8+1], v[i*8+1],
+                        alpha[i*8+2], v[i*8+2],
+                        alpha[i*8+3], v[i*8+3],
+                        alpha[i*8+4], v[i*8+4],
+                        alpha[i*8+5], v[i*8+5],
+                        alpha[i*8+6], v[i*8+6],
+                        alpha[i*8+7], v[i*8+7]);
+        unsigned l=0;
+        if( size%8 >= 4)
+            for( l=0; l<(size%8)/4; l++)
+                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
+                        alpha[i*8+l*4+0], v[i*8+l*4+0],
+                        alpha[i*8+l*4+1], v[i*8+l*4+1],
+                        alpha[i*8+l*4+2], v[i*8+l*4+2],
+                        alpha[i*8+l*4+3], v[i*8+l*4+3]);
+        unsigned k=0;
+        if( (size%8)%4 >= 2)
+            for( k=0; k<((size%8)%4)/2; k++)
+                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
+                        alpha[i*8+l*4+k*2+0], v[i*8+l*4+k*2+0],
+                        alpha[i*8+l*4+k*2+1], v[i*8+l*4+k*2+1]);
+        if( ((size%8)%4)%2 == 1)
+            dg::blas1::axpby( alpha[i*8+l*4+k*2], v[i*8+l*4+k*2], 1., result);
+    }
+    void summation( std::vector<value_type>& alpha, const std::vector<const ContainerType*>& v, value_type beta, ContainerType& result, unsigned size)
+    {
+        dg::blas1::scal( result, beta);
+        unsigned i=0;
+        if( size >= 8)
+            for( i=0; i<size/8; i++)
+                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
+                        alpha[i*8+0], *v[i*8+0],
+                        alpha[i*8+1], *v[i*8+1],
+                        alpha[i*8+2], *v[i*8+2],
+                        alpha[i*8+3], *v[i*8+3],
+                        alpha[i*8+4], *v[i*8+4],
+                        alpha[i*8+5], *v[i*8+5],
+                        alpha[i*8+6], *v[i*8+6],
+                        alpha[i*8+7], *v[i*8+7]);
+        unsigned l=0;
+        if( size%8 >= 4)
+            for( l=0; l<(size%8)/4; l++)
+                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
+                        alpha[i*8+l*4+0], *v[i*8+l*4+0],
+                        alpha[i*8+l*4+1], *v[i*8+l*4+1],
+                        alpha[i*8+l*4+2], *v[i*8+l*4+2],
+                        alpha[i*8+l*4+3], *v[i*8+l*4+3]);
+        unsigned k=0;
+        if( (size%8)%4 >= 2)
+            for( k=0; k<((size%8)%4)/2; k++)
+                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
+                        alpha[i*8+l*4+k*2+0], *v[i*8+l*4+k*2+0],
+                        alpha[i*8+l*4+k*2+1], *v[i*8+l*4+k*2+1]);
+        if( ((size%8)%4)%2 == 1)
+            dg::blas1::axpby( alpha[i*8+l*4+k*2], *v[i*8+l*4+k*2], 1., result);
+    }
     template <class Preconditioner, class ContainerType0>
     void Update(Preconditioner& P, ContainerType &dx, ContainerType0 &x,
             unsigned dimension, const std::vector<std::vector<value_type>> &H,
-            std::vector<value_type> &s, const std::vector<ContainerType> &W);
-    std::vector<std::vector<value_type>> m_H, m_givens;
+            std::vector<value_type> &s, const std::vector<const ContainerType*> &W);
+    std::vector<std::vector<value_type>> m_H, m_HH, m_givens;
     ContainerType m_tmp, m_dx, m_residual;
-    std::vector<ContainerType> m_V, m_W, m_outer_w;
+    std::vector<ContainerType> m_V, m_outer_w, m_outer_Az;
+    std::vector<ContainerType const*> m_W;
     std::vector<value_type> m_s;
     unsigned m_maxRestarts, m_inner_m, m_outer_k, m_krylovDimension;
 };
@@ -139,7 +220,7 @@ template < class Preconditioner, class ContainerType0>
 void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
         ContainerType0 &x,
         unsigned dimension, const std::vector<std::vector<value_type>> &H,
-        std::vector<value_type> &s, const std::vector<ContainerType> &W)
+        std::vector<value_type> &s, const std::vector<const ContainerType*> &W)
 {
     // Solve for the coefficients, i.e. solve for c in
     // H*c=s, but we do it in place.
@@ -154,21 +235,9 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
             }
         }
 	}
-    //std::cout << "HessenbergA\n";
-    //for( unsigned i=0; i<dimension; i++)
-    //{
-    //    for( unsigned k=0; k<i; k++)
-    //        std::cout << "X ";
-    //    for( unsigned k=i; k<dimension; k++)
-    //        std::cout << H[i][k]<<" ";
-    //    std::cout << std::endl;
-    //}
-    //std::cout << "HessenbergB\n";
 
     // Finally update the approximation. V_m*s
-    dg::blas1::axpby(s[0],W[0],0.,dx);
-    for (unsigned lupe = 1; lupe <= dimension; lupe++)
-        dg::blas1::axpby(s[lupe],W[lupe],1.,dx);
+    summation( s, W, 0., dx, dimension+1);
     // right preconditioner
     dg::blas2::symv( P, dx, m_tmp);
     dg::blas1::axpby(1.,m_tmp,1.,x);
@@ -178,12 +247,11 @@ template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
 unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
-    // suggested Improvements:
+    // Improvements over old implementation:
     // - Use right preconditioned system such that residual norm is available in minimization
     // - do not compute Az explicitly but save on iterations
-    // - too many vectors stored ( reduce storage requirements)
     // - first cycle equivalent to GMRES(m+k)
-    // - use SquareNorm for orthogonalization (works because 6.29 and 6.30 are also true if V_m is unitary in the S scalar product, the Hessenberg matrix is still formed in the regular 2-norm, just define J(y) with S-norm in 6.26 and form V_m with a Gram-Schmidt process in the S-norm
+    // - use SquareNorm for orthogonalization (works because in Saad book 6.29 and 6.30 are also true if V_m is unitary in the S scalar product, the Hessenberg matrix is still formed in the regular 2-norm, just define J(y) with S-norm in 6.26 and form V_m with a Gram-Schmidt process in the S-norm)
     value_type nrmb = sqrt( blas2::dot( S, b));
     value_type tol = eps*(nrmb + nrmb_correction);
     if( nrmb == 0)
@@ -193,48 +261,49 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
     }
 
     unsigned restartCycle = 0;
+    unsigned counter = 0;
     value_type rho = 1.;
     do
 	{
         dg::blas2::symv(A,x,m_residual);
         dg::blas1::axpby(1.,b,-1.,m_residual);
         rho = sqrt(dg::blas2::dot(S,m_residual));
+        counter ++;
         if( rho < tol) //if x happens to be the solution
-            return 0;
-        // left Preconditioning
-        //dg::blas2::symv(P,m_tmp,m_residual);
-        //value_type rho = sqrt(dg::blas2::dot(m_residual,S,m_residual));
-        //if( rho < tol) //if P happens to produce the solution
-        //    return 0;
-        //
+            return counter;
         // The first vector in the Krylov subspace is the normalized residual.
         dg::blas1::axpby(1.0/rho,m_residual,0.,m_V[0]);
 
 		m_s[0] = rho;
+        for(unsigned lupe=1;lupe<=m_krylovDimension;++lupe)
+			m_s[lupe] = 0.0;
 
 		// Go through and generate the pre-determined number of vectors for the Krylov subspace.
 		for( unsigned iteration=0;iteration<m_krylovDimension;++iteration)
 		{
             unsigned outer_w_count = std::min(restartCycle,m_outer_k);
-            if(iteration < m_inner_m){
-                dg::blas2::symv(P,m_V[iteration],m_tmp);
+            if(iteration < m_krylovDimension-outer_w_count){
+                m_W[iteration] = &m_V[iteration];
+                dg::blas2::symv(P,*m_W[iteration],m_tmp);
                 dg::blas2::symv(A,m_tmp,m_V[iteration+1]);
-                dg::blas1::copy(m_V[iteration],m_W[iteration]);
-            } else if( iteration < m_inner_m + outer_w_count){ // size of W
-                // MW: I don't think we need that multiplication
-                dg::blas2::symv(P,m_outer_w[iteration-m_inner_m],m_tmp);
-                dg::blas2::symv(A,m_tmp,m_V[iteration+1]);
-                dg::blas1::copy(m_outer_w[iteration-m_inner_m],m_W[iteration]);
+                counter++;
+            } else if( iteration < m_krylovDimension){ // size of W
+                // MW: one could get this matrix-vector multiplication from VHy_s
+                // but we unfortunately destroy m_H
+                unsigned w_idx = iteration - (m_krylovDimension - outer_w_count);
+                m_W[iteration] = &m_outer_w[w_idx];
+                dg::blas1::copy( m_outer_Az[w_idx], m_V[iteration+1]);
             }
 
 			// Get the next entry in the vectors that form the basis for the Krylov subspace.
             // Arnoldi modified Gram-Schmidt orthogonalization
             for(unsigned row=0;row<=iteration;++row)
 			{
-                m_H[row][iteration] = dg::blas2::dot(m_V[iteration+1],S,m_V[row]);
+                m_HH[row][iteration] = m_H[row][iteration]
+                    = dg::blas2::dot(m_V[iteration+1],S,m_V[row]);
                 dg::blas1::axpby(-m_H[row][iteration],m_V[row],1.,m_V[iteration+1]);
 			}
-            m_H[iteration+1][iteration]
+            m_HH[iteration+1][iteration] = m_H[iteration+1][iteration]
                 = sqrt(dg::blas2::dot(m_V[iteration+1],S,m_V[iteration+1]));
             dg::blas1::scal(m_V[iteration+1],1.0/m_H[iteration+1][iteration]);
 
@@ -285,8 +354,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 				  m_givens[iteration][0]*m_H[iteration+1][iteration]; // zero
 			m_H[iteration][iteration] = tmp;
 			// Finally apply the new Givens rotation on the s vector
-			tmp = m_givens[iteration][0]*m_s[iteration]; // + m_givens[iteration][1]*m_s[iteration+1];
-			m_s[iteration+1] = -m_givens[iteration][1]*m_s[iteration];// + m_givens[iteration][1]*m_s[iteration+1];
+			tmp = m_givens[iteration][0]*m_s[iteration] + m_givens[iteration][1]*m_s[iteration+1];
+			m_s[iteration+1] = -m_givens[iteration][1]*m_s[iteration] + m_givens[iteration][1]*m_s[iteration+1];
 			m_s[iteration] = tmp;
 
             rho = fabs(m_s[iteration+1]);
@@ -301,28 +370,33 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             if( rho < tol)
 			{
                 Update(P,m_dx,x,iteration,m_H,m_s,m_W);
-                return(iteration+restartCycle*m_krylovDimension);
+                return counter;
             }
         }
         Update(P,m_dx,x,m_krylovDimension-1,m_H,m_s,m_W);
-        // do not(?) normalize new z vector
-        //value_type nx = sqrt(dg::blas2::dot(m_dx,S,m_dx));
-        //if(nx>0.){
-        //    if (restartCycle<m_outer_k){
-        //        dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[restartCycle]); //new outer entry = dx/nx
-        //    } else {
-        //        std::rotate(m_outer_w.begin(),m_outer_w.begin()+1,m_outer_w.end()); //rotate one to the left.
-        //        dg::blas1::axpby(1.0/nx,m_dx,0.,m_outer_w[m_outer_k]);
-        //    }
-        //}
         if( m_outer_k > 1)
+        {
             std::rotate(m_outer_w.rbegin(),m_outer_w.rbegin()+1,m_outer_w.rend());
-        dg::blas1::copy(m_dx,m_outer_w[0]);
+            std::rotate(m_outer_Az.rbegin(),m_outer_Az.rbegin()+1,m_outer_Az.rend());
+        }
+        if( m_outer_k > 0)
+        {
+            dg::blas1::copy(m_dx,m_outer_w[0]);
+            // compute A P dx
+            std::vector<value_type> coeffs( m_krylovDimension+1, 0.);
+            for( unsigned i=0; i<m_krylovDimension+1; i++)
+            {
+                coeffs[i] = 0.;
+                for( unsigned k=0; k<m_krylovDimension; k++)
+                    coeffs[i] += m_HH[i][k]*m_s[k];
+            }
+            summation( coeffs, m_V, 0., m_outer_Az[0], m_krylovDimension+1);
+        }
 
         restartCycle ++;
     // Go through the requisite number of restarts.
     } while( (restartCycle < m_maxRestarts) && (rho > tol));
-    return restartCycle*m_krylovDimension;
+    return counter;
 }
 ///@endcond
 }//namespace dg
