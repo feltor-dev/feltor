@@ -12,7 +12,7 @@
 /*!@file
  * BICGSTABl class
  *
- * @author Aslak Poulsen
+ * @author Aslak Poulsen, Matthias Wiesenberger
  */
 
 namespace dg{
@@ -41,23 +41,24 @@ class BICGSTABl
      * @brief Allocate memory for the preconditioned BICGSTABl method
      *
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_iterations Maximum number of iterations
+     * @param max_iterations Maximum number of iterations (there is 2 matrix-vector products plus 2 Preconditioner-vector products per iteration)
      * @param l_input Size of polynomial used for stabilisation.
-     * Usually 2 or 4 is a good number. (makes l Bi-CG iterations per iteration)
+     * Usually 2 or 4 is a good number (makes \c l_input Bi-CG iterations before computing the minimal residual)
+     * @note \c l_input=1 computes exactly the same as Bi-CGstab does
      */
     BICGSTABl( const ContainerType& copyable, unsigned max_iterations,
             unsigned l_input):
         max_iter(max_iterations),
-        l(l_input),
+        m_l(l_input),
         m_tmp(copyable)
     {
-        rhat.assign(l+1,copyable);
-        uhat.assign(l+1,copyable);
-        sigma.assign(l+1,0);
-        gamma.assign(l+1,0);
-        gammap.assign(l+1,0);
-        gammapp.assign(l+1,0);
-        tau.assign( l+1, std::vector<value_type>( l+1, 0));
+        rhat.assign(m_l+1,copyable);
+        uhat.assign(m_l+1,copyable);
+        sigma.assign(m_l+1,0);
+        gamma.assign(m_l+1,0);
+        gammap.assign(m_l+1,0);
+        gammapp.assign(m_l+1,0);
+        tau.assign( m_l+1, std::vector<value_type>( m_l+1, 0));
     }
     /**
     * @brief Perfect forward parameters to one of the constructors
@@ -84,17 +85,18 @@ class BICGSTABl
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned BICGSTABl method
      *
-     * The iteration stops if \f$ ||Ax-b||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
+     * The iteration stops if \f$ ||P(Ax-b)||_S < \epsilon( ||Pb||_S + C) \f$ where \f$C\f$ is
      * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
+     * @attention The stopping criterion differs from that of \c CG or \c LGMRES by the preconditioner. It is unfortunately cumbersome to obtain the real residual in this algorithm. If \c P is diagonal there is the opportunity to use \c S to offset its effect.
      * @param A A matrix
      * @param x Contains an initial value on input and the solution on output.
-     * @param b The right hand side vector. x and b may be the same vector.
+     * @param b The right hand side vector. x and b may not be the same vector.
      * @param P The preconditioner to be used
-     * @param S (Inverse) Weights used to compute the norm for the error condition
+     * @param S Weights used to compute the norm for the error condition (and only for that;)
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      *
-     * @return Number of iterations used to achieve desired precision
+     * @return Number of iterations used to achieve desired precision (in each iteration the matrix has to be applied twice)
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
@@ -104,7 +106,7 @@ class BICGSTABl
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
-    unsigned max_iter, l;
+    unsigned max_iter, m_l;
     ContainerType m_tmp;
     std::vector<ContainerType> rhat;
     std::vector<ContainerType> uhat;
@@ -118,32 +120,33 @@ template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
 unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
-    value_type nrmb = sqrt(dg::blas2::dot(S,b));
+    dg::blas2::symv(P,b,m_tmp);
+    value_type nrmb = sqrt(dg::blas2::dot(S,m_tmp));
     value_type tol = eps*(nrmb + nrmb_correction);
     if( nrmb == 0)
     {
         blas1::copy( 0., x);
         return 0;
     }
-
-    dg::blas1::copy(0., uhat[0]);
     dg::blas2::symv(A,x,m_tmp);
     dg::blas1::axpby(1.,b,-1.,m_tmp);
     if( sqrt( blas2::dot(S,m_tmp) ) < tol) //if x happens to be the solution
         return 0;
     dg::blas2::symv(P,m_tmp,rhat[0]);
 
+    dg::blas1::copy(0., uhat[0]);
+
     value_type rho_0 = 1;
     value_type alpha = 0;
     value_type omega = 1;
     ContainerType0& xhat=x; // alias x for ease of notation
 
-    for (unsigned k = 0; k < max_iter; k++){
+    for (unsigned k = 0; k < max_iter; k+= m_l){
 
         rho_0 = -omega*rho_0;
 
         /// Bi-CG part ///
-        for(unsigned j = 0; j<l;j++)
+        for(unsigned j = 0; j<m_l;j++)
         {
             value_type rho_1 = dg::blas1::dot(rhat[j],b);
             value_type beta = alpha*rho_1/rho_0;
@@ -167,8 +170,8 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
             dg::blas1::axpby(alpha,uhat[0],1.,xhat);
         }
 
-        /// MR part ///
-        for(unsigned j = 1; j<=l; j++){
+        /// Minimal Residual part: modified Gram-Schmidt ///
+        for(unsigned j = 1; j<=m_l; j++){
             for(unsigned i = 1; i<j;i++){
                 tau[i][j] = 1.0/sigma[i]*dg::blas1::dot(rhat[j],rhat[i]);
                 dg::blas1::axpby(-tau[i][j],rhat[i],1.,rhat[j]);
@@ -177,32 +180,33 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
             gammap[j] = 1.0/sigma[j]*dg::blas1::dot(rhat[0],rhat[j]);
         }
 
-        gamma[l] = gammap[l];
-        omega = gamma[l];
+        gamma[m_l] = gammap[m_l];
+        omega = gamma[m_l];
 
-        for(unsigned j=l-1;j>=1;j--){
+        for(unsigned j=m_l-1;j>=1;j--){
             value_type tmp = 0;
-            for(unsigned i=j+1;i<=l;i++){
+            for(unsigned i=j+1;i<=m_l;i++){
                 tmp += tau[j][i]*gamma[i];
             }
             gamma[j] = gammap[j]-tmp;
         }
-        for(unsigned j=1;j<=l-1;j++){
+        for(unsigned j=1;j<=m_l-1;j++){
             value_type tmp = 0.;
-            for(unsigned i=j+1;i<=l-1;i++){
+            for(unsigned i=j+1;i<=m_l-1;i++){
                 tmp += tau[j][i]*gamma[i+1];
             }
             gammapp[j] = gamma[j+1]+tmp;
         }
         dg::blas1::axpby(gamma[1],rhat[0],1.,xhat);
-        dg::blas1::axpby(-gammap[l],rhat[l],1.,rhat[0]);
-        dg::blas1::axpby(-gamma[l],uhat[l],1.,uhat[0]);
-        for(unsigned j = 1; j<=l-1; j++){
+        dg::blas1::axpby(-gammap[m_l],rhat[m_l],1.,rhat[0]);
+        dg::blas1::axpby(-gamma[m_l],uhat[m_l],1.,uhat[0]);
+        for(unsigned j = 1; j<=m_l-1; j++){
             dg::blas1::axpby(gammapp[j],rhat[j],1.,xhat);
             dg::blas1::axpby(-gamma[j],uhat[j],1.,uhat[0]);
             dg::blas1::axpby(-gammap[j],rhat[j],1.,rhat[0]);
         }
 
+        // rhat[0] is P dot the actual residual
         value_type err = sqrt(dg::blas2::dot(S,rhat[0]));
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION

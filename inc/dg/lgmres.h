@@ -12,7 +12,7 @@
 /*!@file
  * LGMRES class
  *
- * @author Aslak Poulsen
+ * @author Aslak Poulsen, Matthias Wiesenberger
  */
 
 namespace dg{
@@ -59,9 +59,10 @@ class LGMRES
      * @brief Allocate memory for the preconditioned LGMRES method
      *
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_inner Maximum number of vectors to be saved in gmres. Usually 30 seems to be a decent number.
-     * @param max_outer Maximum number of solutions (actually approximations to the error) saved for restart. Usually 1...3 is a good number. The Krylov Dimension is augmented to \c max_inner+max_outer. \c max_outer=0 corresponds to standard GMRES.
-     * @param Restarts Maximum number of restarts. This can be set high just in case. Like e.g. gridsize/max_outer.
+     * @param max_inner Maximum number inner gmres iterations per restart.
+     * Usually 20-30 seems to be a decent number. Per iteration a matrix-vector product and a preconditioner-vector product needs to be computed.
+     * @param max_outer Maximum number of solutions (actually approximations to the error) saved for restart. Usually 1...3 is a good number. The Krylov Dimension is thus augmented to \c max_inner+max_outer. No new matrix-vector products need to be computed for the additional solutions. \c max_outer=0 corresponds to standard GMRES.
+     * @param Restarts Maximum number of restarts. The total maximum number of iterations/ matrix-vector products is thus \c restarts*max_inner
      */
     LGMRES( const ContainerType& copyable, unsigned max_inner, unsigned max_outer, unsigned Restarts):
         m_tmp(copyable),
