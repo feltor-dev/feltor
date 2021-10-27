@@ -33,7 +33,7 @@ struct Parameters
     double xfac_sep, sigma_sep, xfac_d, sigma_d;
     double bgprofamp, profamp, ln;
     
-    double amp, my, sigma, posX, posY;
+    double amp, mx, my, sigma, posX, posY;
 
     double lx, ly;
     dg::bc bc_x, bc_y;
@@ -98,6 +98,7 @@ struct Parameters
         
         init = ws["init"].get("type", "blob").asString();
         amp = ws["init"].get("amplitude", 1.0).asDouble();
+        mx = ws["init"].get("mx", 0.0).asDouble();
         my = ws["init"].get("my", 0.0).asDouble();
         sigma = ws["init"].get("sigma", 5.0).asDouble();
         posX = ws["init"].get("posX", 0.25).asDouble();

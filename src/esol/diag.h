@@ -122,10 +122,14 @@ std::vector<Record1d> diagnostics1d_list = {
             return v.duration;
         }
     },
-    {"mass", "volume integrated electron density minus ref density",
+    {"mass", "volume integrated electron density",
         []( Variables& v ) {
-          dg::blas1::transform( v.f.density(0), v.tmp[0], dg::PLUS<double>(-1.0*(v.p.bgprofamp + v.p.profamp)));
-          return dg::blas1::dot( v.f.volume(), v.tmp[0]);
+          return dg::blas1::dot( v.f.volume(), v.f.density(0));
+        }
+    },
+    {"potvol", "volume integrated potential",
+        []( Variables& v ) {
+          return dg::blas1::dot( v.f.volume(), v.f.potential(0));
         }
     },
     /// ------------------- Energy terms ------------------------//
