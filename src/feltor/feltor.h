@@ -18,17 +18,17 @@ struct Implicit;
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitSolver;
 template< class Geometry, class IMatrix, class Matrix, class Container >
-struct ImplicitDensity;
+struct ImplicitDensityMatrix;
 template< class Geometry, class IMatrix, class Matrix, class Container >
-struct ImplicitVelocity;
+struct ImplicitVelocityMatrix;
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
     friend class feltor::Implicit<Geometry, IMatrix, Matrix, Container>;
     friend class feltor::ImplicitSolver<Geometry, IMatrix, Matrix, Container>;
-    friend class feltor::ImplicitVelocity<Geometry, IMatrix, Matrix, Container>;
-    friend class feltor::ImplicitDensity<Geometry, IMatrix, Matrix, Container>;
+    friend class feltor::ImplicitVelocityMatrix<Geometry, IMatrix, Matrix, Container>;
+    friend class feltor::ImplicitDensityMatrix<Geometry, IMatrix, Matrix, Container>;
     using vector = std::array<std::array<Container,2>,2>;
     using container = Container;
     Explicit( const Geometry& g, feltor::Parameters p,
@@ -45,9 +45,14 @@ struct Explicit
     void implicit( double t,
         const std::array<std::array<Container,2>,2>& y,
         std::array<std::array<Container,2>,2>& yp);
-    void implicit_velocityST( double t,
+    void add_implicit_density( double t,
+        const std::array<Container,2>& density,
+        double beta,
+        std::array<Container,2>& yp);
+    void add_implicit_velocityST( double t,
         const std::array<Container,2>& densityST,
-        std::array<Container,2>& velocityST,
+        const std::array<Container,2>& velocityST,
+        double beta,
         std::array<Container,2>& yp);
     /// ///////////////////RESTART    MEMBERS //////////////////////
     const Container& restart_density(int i)const{
@@ -339,6 +344,8 @@ struct Explicit
     void update_staggered_density_and_phi( double t,
         const std::array<Container,2>& density,
         const std::array<Container,2>& potential);
+    void update_staggered_density_and_ampere( double t,
+        const std::array<Container,2>& density);
     void update_velocity_and_apar( double t,
         const std::array<Container,2>& velocityST,
         const Container& aparST);
@@ -862,28 +869,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     double time, const std::array<Container,2>& densityST,
     std::array<Container,2>& velocityST, Container& aparST, bool update)
 {
+    std::cout << "Compute APARST\n";
     //on input
     //densityST[0] = n_e, velocityST[0]:= w_e
     //densityST[1] = N_i, velocityST[1]:= W_i
-    //----------Compute and set chi----------------------------//
-    dg::blas1::axpby(  m_p.beta/m_p.mu[1], densityST[1],
-                      -m_p.beta/m_p.mu[0], densityST[0], m_temp0);
-    m_multigrid.project( m_temp0, m_multi_chi);
-    for( unsigned u=0; u<m_p.stages; u++)
-        m_multi_ampere[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
     dg::blas1::pointwiseDot(  m_p.beta, densityST[1], velocityST[1],
                              -m_p.beta, densityST[0], velocityST[0],
                               0., m_temp0);
     //----------Invert Induction Eq----------------------------//
-    m_old_aparST.extrapolate( time, aparST);
+    if( update)
+        m_old_aparST.extrapolate( time, aparST);
     std::vector<unsigned> number = m_multigrid.direct_solve(
         m_multi_ampere, aparST, m_temp0, m_p.eps_ampere);
     if( update)
         m_old_aparST.update( time, aparST);
     if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_pol[0]);
+        throw dg::Fail( m_p.eps_ampere);
 #ifdef DG_MANUFACTURED
     //dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SA{
     //    m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -894,7 +897,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
         m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
         m_R,m_Z,m_PST,time);
 #endif //DG_MANUFACTURED
-
     //----------Compute Velocities-----------------------------//
     dg::blas1::axpby( 1., velocityST[0], -1./m_p.mu[0], aparST, velocityST[0]);
     dg::blas1::axpby( 1., velocityST[1], -1./m_p.mu[1], aparST, velocityST[1]);
@@ -940,23 +942,41 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_an
 {
     for( unsigned i=0; i<2; i++)
     {
-        m_faST( dg::geo::zeroMinus, m_density[i], m_minusSTN[i]);
-        m_faST( dg::geo::einsPlus,  m_density[i], m_plusSTN[i]);
-        update_parallel_bc_1st( m_minusSTN[i], m_plusSTN[i],
-                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-        dg::blas1::axpby( 0.5, m_minusSTN[i], 0.5, m_plusSTN[i], m_densityST[i]);
 
-        m_fa( dg::geo::einsMinus, m_density[i], m_minusN[i]);
-        m_fa( dg::geo::einsPlus,  m_density[i], m_plusN[i]);
-        update_parallel_bc_2nd( m_fa, m_minusN[i], m_density[i], m_plusN[i],
+        m_fa( dg::geo::einsMinus, density[i], m_minusN[i]);
+        m_fa( dg::geo::einsPlus,  density[i], m_plusN[i]);
+        update_parallel_bc_2nd( m_fa, m_minusN[i], density[i], m_plusN[i],
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
 
-        m_faST( dg::geo::zeroMinus, m_potential[i], m_minus);
-        m_faST( dg::geo::einsPlus,  m_potential[i], m_plus);
+        m_faST( dg::geo::zeroMinus, potential[i], m_minus);
+        m_faST( dg::geo::einsPlus,  potential[i], m_plus);
         update_parallel_bc_1st( m_minus, m_plus,
                 m_p.bcxP, 0.);
         dg::geo::ds_centered( m_faST, 1., m_minus, m_plus, 0., m_dsP[i]);
         dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_potentialST[i]);
+    }
+}
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_and_ampere(
+    double t,
+    const std::array<Container,2>& density)
+{
+    for( unsigned i=0; i<2; i++)
+    {
+        m_faST( dg::geo::zeroMinus, density[i], m_minusSTN[i]);
+        m_faST( dg::geo::einsPlus,  density[i], m_plusSTN[i]);
+        update_parallel_bc_1st( m_minusSTN[i], m_plusSTN[i],
+                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+        dg::blas1::axpby( 0.5, m_minusSTN[i], 0.5, m_plusSTN[i], m_densityST[i]);
+    }
+    //----------Compute and set chi----------------------------//
+    if( m_p.beta != 0)
+    {
+        dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_densityST[1],
+                          -m_p.beta/m_p.mu[0], m_densityST[0], m_temp0);
+        m_multigrid.project( m_temp0, m_multi_chi);
+        for( unsigned u=0; u<m_p.stages; u++)
+            m_multi_ampere[u].set_chi( m_multi_chi[u]);
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -968,19 +988,19 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
     for( unsigned i=0; i<2; i++)
     {
         // Compute dsU and velocity
-        m_faST( dg::geo::einsMinus, m_velocityST[i], m_minusSTU[i]);
-        m_faST( dg::geo::zeroPlus,  m_velocityST[i], m_plusSTU[i]);
+        m_faST( dg::geo::einsMinus, velocityST[i], m_minusSTU[i]);
+        m_faST( dg::geo::zeroPlus,  velocityST[i], m_plusSTU[i]);
         update_parallel_bc_1st( m_minusSTU[i], m_plusSTU[i], m_p.bcxU, 0.);
         dg::blas1::axpby( 0.5, m_minusSTU[i], 0.5, m_plusSTU[i], m_velocity[i]);
 
-        m_fa( dg::geo::einsMinus, m_velocityST[i], m_minusU[i]);
-        m_fa( dg::geo::einsPlus,  m_velocityST[i], m_plusU[i]);
-        update_parallel_bc_2nd( m_fa, m_minusU[i], m_velocityST[i],
+        m_fa( dg::geo::einsMinus, velocityST[i], m_minusU[i]);
+        m_fa( dg::geo::einsPlus,  velocityST[i], m_plusU[i]);
+        update_parallel_bc_2nd( m_fa, m_minusU[i], velocityST[i],
                 m_plusU[i], m_p.bcxU, 0.);
     }
     // Compute apar
-    m_faST( dg::geo::einsMinus, m_aparST, m_minus);
-    m_faST( dg::geo::zeroPlus,  m_aparST, m_plus);
+    m_faST( dg::geo::einsMinus, aparST, m_minus);
+    m_faST( dg::geo::zeroPlus,  aparST, m_plus);
     update_parallel_bc_1st( m_minus, m_plus, m_p.bcxA, 0.);
     dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_apar);
     m_old_apar.update( t, m_apar);
@@ -1514,6 +1534,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
+    std::cout << "EXPLICIT\n";
     m_called++;
     m_upToDate = false;
 #ifdef MPI_VERSION
@@ -1562,6 +1583,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     //Compute m_densityST and m_potentialST
     update_staggered_density_and_phi( t, m_density, m_potential);
+    update_staggered_density_and_ampere( t, m_density);
 
     //// Now refine potential on staggered grid
     //// set m_potentialST[0]
@@ -1577,7 +1599,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     // Compute m_aparST and m_velocityST if necessary
     dg::blas1::copy( y[1], m_velocityST);
     if( m_p.beta != 0)
+    {
         compute_aparST( t, m_densityST, m_velocityST, m_aparST, true);
+    }
     //Compute m_velocity and m_apar
     update_velocity_and_apar( t, m_velocityST, m_aparST);
 
@@ -1625,30 +1649,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             },
         m_densityST[0], m_densityST[1],
         m_velocityST[0], m_velocityST[1], yp[1][0], yp[1][1]);
-
-    // add diffusion if explicit
-    if( m_p.explicit_diffusion)
-    {
-        for( unsigned i=0; i<2; i++)
-        {
-            compute_perp_diffusiveN( 1., m_density[i], m_temp0,
-                    m_temp1, 1., yp[0][i]);
-            compute_perp_diffusiveU( 1., m_velocityST[i], m_densityST[i], m_temp0,
-                    m_temp1, 1., yp[1][i]);
-            // Add parallel viscosity
-            if( m_p.nu_parallel_u[i] > 0)
-            {
-                m_fa_diff( dg::geo::einsMinus, m_velocityST[i], m_minus);
-                m_fa_diff( dg::geo::einsPlus, m_velocityST[i], m_plus);
-                update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[i],
-                        m_plus, m_p.bcxU, 0.);
-                dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[i],
-                        m_minus, m_velocityST[i], m_plus, 0., m_temp0);
-                dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[i], 1., yp[1][i]);
-            }
-        }
-    }
 #endif
+
+    // add diffusion if not partitioned (imex)
+    if( !m_p.partitioned)
+    {
+        add_implicit_density( t, m_density, 1., yp[0]);
+        add_implicit_velocityST( t, m_densityST, m_velocityST, 1., yp[1]);
+    }
 
     add_rhs_penalization( yp);
 
@@ -1684,57 +1692,42 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     std::cout << "## Add parallel dynamics and sources took "<<timer.diff()
               << "s\t A: "<<accu<<"\n";
 }
-template< class Geometry, class IMatrix, class Matrix, class Container >
-struct ImplicitDensity
-{
-    ImplicitDensity() {}
-    ImplicitDensity( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
-    void operator() ( double t,
-            const std::array<Container,2> & density,
-            std::array<Container,2>& yp)
-    {
-#if FELTORPERP == 1
-    /* y[0] := n_e
-       y[1] := N_i
-    */
-        for( unsigned i=0; i<2; i++)
-            m_ex->compute_perp_diffusiveN( 1., density[i], m_ex->m_temp0,
-                    m_ex->m_temp1, 0., yp[i]);
-#else
-    dg::blas1::copy( 0, yp);
-#endif
-    }
-    const Container& weights() const{
-        return m_ex->m_lapperpN.weights();
-    }
-    const Container& inv_weights() const {
-        return m_ex->m_lapperpN.inv_weights();
-    }
-    const Container& precond() const {
-        return m_ex->m_lapperpN.precond();
-    }
-    private:
-    Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
-};
-
 template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::implicit_velocityST(
+void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     double t,
-    const std::array<Container,2>& densityST,
-    std::array<Container,2>& velocityST,
+    const std::array<Container,2>& density,
+    double beta,
     std::array<Container,2>& yp)
 {
-    // velocityST[0] := W_e
-    // velocityST[1] := W_i
 #if FELTORPERP == 1
-    // Update velocityST if necessary
-    if( m_p.beta != 0)
-        compute_aparST( t, densityST, velocityST, m_aparST, false);
-    //don't update here: makes the solver potentially unstable...
+    for( unsigned i=0; i<2; i++)
+        compute_perp_diffusiveN( 1., density[i], m_temp0,
+                m_temp1, beta, yp[i]);
+#endif
+}
+
+template<class Geometry, class IMatrix, class Matrix, class Container>
+void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
+    double t,
+    const std::array<Container,2>& densityST,
+    const std::array<Container,2>& velocityST,
+    double beta,
+    std::array<Container,2>& yp)
+{
+    // velocityST[0] := u_e^dagger
+    // velocityST[1] := U_i^dagger
+#if FELTORPERP == 1
     for( unsigned i=0; i<2; i++)
     {
         compute_perp_diffusiveU( 1., velocityST[i], densityST[i], m_temp0,
-                m_temp1, 0., yp[i]);
+                m_temp1, beta, yp[i]);
+    }
+#else
+    dg::blas1::scal( yp, beta);
+#endif
+#if FELTORPARALLEL == 1
+    for( unsigned i=0; i<2; i++)
+    {
         // Add parallel viscosity
         if( m_p.nu_parallel_u[i] > 0)
         {
@@ -1747,55 +1740,125 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::implicit_velocityST(
             dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
         }
     }
-#else
-    dg::blas1::copy( 0, yp);
 #endif
 }
 
-template< class Geometry, class IMatrix, class Matrix, class Container >
-struct ImplicitVelocity
+template<class Geometry, class IMatrix, class Matrix, class Container>
+struct Implicit
 {
-    ImplicitVelocity() {}
-    ImplicitVelocity( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
-    void set_density( const std::array<Container, 2>& density){
-        // compute staggered density
-        for ( unsigned i=0; i<2; i++)
-        {
-            m_ex->m_faST( dg::geo::zeroMinus, density[i], m_ex->m_minus);
-            m_ex->m_faST( dg::geo::einsPlus,  density[i], m_ex->m_plus);
-            m_ex->update_parallel_bc_1st( m_ex->m_minus, m_ex->m_plus,
-                    m_ex->m_p.bcxN, m_ex->m_p.bcxN == dg::DIR ? m_ex->m_p.nbc :
-                    0.);
-            dg::blas1::axpby( 0.5, m_ex->m_minus, 0.5, m_ex->m_plus,
-                    m_ex->m_densityST[i]);
-        }
-    }
-    void operator() ( double t,
-            const std::array<Container,2> & y,
-            std::array<Container,2>& yp)
+    Implicit() {}
+    Implicit( Explicit<Geometry,IMatrix,Matrix,Container>& ex) :
+        m_ex(&ex) {}
+
+    void operator()( double t, const std::array<std::array<Container,2>,2>& y,
+        std::array<std::array<Container,2>,2>& yp)
     {
-        dg::blas1::copy( y, m_ex->m_velocityST);
-        m_ex->implicit_velocityST( t, m_ex->m_densityST, m_ex->m_velocityST, yp);
-    }
-    void update(double time){
+        std::cout << "IMPLICIT\n";
+        // y[0][0] := n_e
+        // y[0][1] := N_i
+        m_ex->add_implicit_density( t, y[0], 0., yp[0]);
+        // y[1][0] := w_e^dagger
+        // y[1][1] := W_i^dagger
+        m_ex->update_staggered_density_and_ampere( t, y[0]);
+        dg::blas1::copy( y[1], m_ex->m_velocityST);
         if( m_ex->m_p.beta != 0)
-            m_ex->m_old_aparST.update( time, m_ex->m_aparST);
+            m_ex->compute_aparST( t, m_ex->m_densityST, m_ex->m_velocityST, m_ex->m_aparST, true);
+        m_ex->add_implicit_velocityST( t, m_ex->m_densityST, m_ex->m_velocityST, 0., yp[1]);
     }
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
+};
+
+}//namespace feltor
+namespace dg
+{
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct TensorTraits<feltor::ImplicitDensityMatrix< Geometry, IMatrix, Matrix, Container >>
+{
+    using value_type      = get_value_type<Container>;
+    using tensor_category = SelfMadeMatrixTag;
+};
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct TensorTraits<feltor::ImplicitVelocityMatrix< Geometry, IMatrix, Matrix, Container >>
+{
+    using value_type      = get_value_type<Container>;
+    using tensor_category = SelfMadeMatrixTag;
+};
+}//namespace dg
+
+namespace feltor{
+
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct ImplicitDensityMatrix
+{
+    ImplicitDensityMatrix() {}
+    ImplicitDensityMatrix( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
+    void symv ( const std::array<Container,2> & density,
+            std::array<Container,2>& yp)
+    {
+        if( m_alpha != 0)
+            m_ex->add_implicit_density( m_time, density, 0., yp);
+        dg::blas1::axpby( 1., density, m_alpha, yp);
+        dg::blas2::symv( m_ex->m_lapperpN.weights(), yp, yp);
+    }
+    void set_params( double alpha, double time){
+        m_alpha = alpha;
+        m_time = time;
+    }
+    private:
+    Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
+    double m_alpha=0., m_time=0.;
+};
+template< class Geometry, class IMatrix, class Matrix, class Container >
+struct ImplicitVelocityMatrix
+{
+    ImplicitVelocityMatrix() {}
+    ImplicitVelocityMatrix( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
+    void symv( const std::array<Container,2>& w, std::array<Container,2>& wp)
+    {
+        // w[0] := w_e^dagger
+        // w[1] := W_i^dagger
+        if( m_alpha!=0)
+        {
+            dg::blas1::copy( w, m_ex->m_velocityST);
+            if( m_ex->m_p.beta !=0)
+            {
+                // use a different initial guess for the first iteration
+                if( m_counter == 0)
+                    m_ex->m_old_aparST.extrapolate( m_time, m_ex->m_aparST);
+                else
+                    dg::blas1::copy( 0, m_ex->m_aparST);
+                m_ex->compute_aparST( m_time, m_ex->m_densityST, m_ex->m_velocityST,
+                    m_ex->m_aparST, false);
+            }
+            m_ex->add_implicit_velocityST( m_time, m_ex->m_densityST, m_ex->m_velocityST, 0., wp);
+            m_counter++;
+        }
+        dg::blas1::axpby( 1., w, m_alpha, wp);
+    }
+    void set_params( double alpha, double time){
+        m_alpha = alpha;
+        m_time = time;
+        m_counter = 0;
+    }
+    private:
+    Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
+    double m_alpha = 0., m_time = 0.;
+    unsigned m_counter = 0;
 };
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitSolver
 {
     ImplicitSolver() {}
-    ImplicitSolver( Explicit<Geometry,IMatrix,Matrix,Container>& ex, double
-            eps_time) :
+    ImplicitSolver( Explicit<Geometry,IMatrix,Matrix,Container>& ex,
+        double eps_time) :
         m_ex(&ex), m_imdens(ex), m_imvelo(ex), m_eps_time(eps_time)
     {
-        m_solver = dg::DefaultSolver<std::array<Container,2>>(
-            m_ex->m_density, 10000, m_eps_time);
-        m_lgmres.construct( m_ex->m_density, 30, 3, 10000);
+        m_pcg.construct( m_ex->m_density, 3000);
+        // these should be input parameters
+        m_lgmres.construct( m_ex->m_density, 30, 3, 100);
+        //m_bicgstabl.construct( m_ex->m_density, 3000, 2);
     }
     const std::array<std::array<Container,2>,2>& copyable() const{
         return m_ex->m_s;
@@ -1811,47 +1874,37 @@ struct ImplicitSolver
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-        m_solver.solve( alpha, m_imdens, t, y[0], rhs[0]);
         dg::Timer ti;
         ti.tic();
-        m_imvelo.set_density( y[0]);
-        dg::detail::ImplicitWithoutWeights<ImplicitVelocity<Geometry, IMatrix,
-            Matrix,Container>, std::array<Container,2>> implicit( alpha, t,
-                    m_imvelo);
-        unsigned number = m_lgmres.solve( implicit, y[1], rhs[1],
-                m_imdens.precond(), m_imdens.weights(), m_eps_time);
-        m_imvelo.update(t);
+        m_imdens.set_params( alpha, t);
+        m_imvelo.set_params( alpha, t);
+
+        dg::blas2::symv( m_ex->m_lapperpN.weights(), rhs[0], m_ex->m_dssU);
+        unsigned number = m_pcg( m_imdens, y[0], m_ex->m_dssU,
+            m_ex->m_lapperpN.precond(), m_ex->m_lapperpN.inv_weights(), m_eps_time);
+        ti.toc();
+        DG_RANK0 std::cout << "# of PCG iterations time solver: "<<number<<"/"
+                  <<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+        ti.tic();
+        m_ex->update_staggered_density_and_ampere( t, y[0]);
+        double precond=1;
+        number = m_lgmres.solve( m_imvelo, y[1], rhs[1],
+        //number = m_bicgstabl.solve( m_imvelo, y[1], rhs[1],
+                // The Laplace preconditioner makes no sense 1/V
+                //m_ex->m_lapperpN.precond(), m_ex->m_lapperpN.weights(), m_eps_time);
+                precond, m_ex->m_lapperpN.weights(), m_eps_time);
         ti.toc();
         DG_RANK0 std::cout << "# of LGMRES iterations time solver: "<<number
                   <<" took "<<ti.diff()<<"s\n";
     }
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
-    dg::DefaultSolver<std::array<Container,2>> m_solver;
+    dg::CG< std::array<Container,2>> m_pcg;
     dg::LGMRES<std::array<Container,2>> m_lgmres;
-    ImplicitDensity<Geometry,IMatrix, Matrix,Container> m_imdens;
-    ImplicitVelocity<Geometry,IMatrix, Matrix,Container> m_imvelo;
+    //dg::BICGSTABl<std::array<Container,2>> m_bicgstabl;
+    ImplicitDensityMatrix<Geometry,IMatrix, Matrix,Container> m_imdens;
+    ImplicitVelocityMatrix<Geometry,IMatrix, Matrix,Container> m_imvelo;
     double m_eps_time;
-};
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-struct Implicit
-{
-    Implicit() {}
-    Implicit( Explicit<Geometry,IMatrix,Matrix,Container>& ex) :
-        m_imdens(ex), m_imvelo(ex){}
-
-    void operator()( double t, const std::array<std::array<Container,2>,2>& y,
-        std::array<std::array<Container,2>,2>& yp)
-    {
-        m_imdens( t, y[0], yp[0]);
-        m_imvelo.set_density( y[0]);
-        m_imvelo( t, y[1], yp[1]);
-        m_imvelo.update(t);
-    }
-    private:
-    ImplicitDensity < Geometry, IMatrix, Matrix, Container> m_imdens;
-    ImplicitVelocity< Geometry, IMatrix, Matrix, Container> m_imvelo;
 };
 
 #else // WITH_NAVIER_STOKES

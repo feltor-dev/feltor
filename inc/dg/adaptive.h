@@ -173,7 +173,13 @@ struct Tolerance
  * the fraction is to be understood as a pointwise division of the vector elements.
  * The \c ControlFunction will try to keep \f$ \epsilon_{n+1}\f$ close to 1 and
  * comes up with an adapted
- * suggestion for the timestep in the next step. However, if \f$\epsilon_{n+1} > r\f$
+ * suggestion for the timestep in the next step.
+ *
+ * This form of error control entails that on average every point in the solution vector on its
+ * own fulfills \f$ |\delta_{n+1,i}| \approx \epsilon_{rtol}|u_{n,i} + \epsilon_{atol}\f$, (which places
+ * emphasize on \c atol in regions where the solution is close to zero).
+ *
+ * However, if \f$\epsilon_{n+1} > r\f$
  * where \c r=2 by default is the user-adaptable reject-limit, the step is
  * rejected and the step will be recomputed and the controller restarted.
  * For more
@@ -472,7 +478,9 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
  * might become a performance bottleneck. Then it's time for your own
  * implementation.
  * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
- * @param atol the desired absolute accuracy. Usually 1e-10 is a good choice.
+ * @param atol the desired absolute accuracy. Usually 1e-7 is a good choice.
+ * @note The error tolerance is computed such that on average every point in
+ * the solution vector fulfills \f$ |\delta_i| \approx r|u_i| + a\f$
  * @note Try not to mess with dt. The controller is best left alone and it does
  * a very good job choosing timesteps. But how do I output my solution at
  * certain (equidistant) timesteps? First, think about if you really, really
@@ -568,7 +576,7 @@ struct EntireDomain
  * might become a performance bottleneck. Then it's time for your own
  * implementation.
  * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
- * @param atol the desired absolute accuracy. Usually 1e-10 is a good choice.
+ * @param atol the desired absolute accuracy. Usually 1e-7 is a good choice.
  * @param domain (optional) a restriction of the solution space. The integrator
  * checks after every step if the solution is still within the given domain
  * \c domain.contains(u1). If not, the integrator will bisect the exact domain

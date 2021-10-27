@@ -221,9 +221,9 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
 #ifdef MPI_VERSION
     if(rank==0)
 #endif //MPI
-            std::cout << "# Exited with error : " << err << " After " << k << " Iterations." << std::endl;
+            std::cout << "# Exited with error : " << err << " After " << k+m_l << " Iterations." << std::endl;
 #endif //DG_DEBUG
-            return k;
+            return k+m_l;
         }
     }
 #ifdef DG_DEBUG

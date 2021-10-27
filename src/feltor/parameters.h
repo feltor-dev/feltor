@@ -51,7 +51,7 @@ struct Parameters
     std::string output;
     bool symmetric, calibrate, periodify;
     bool penalize_wall, penalize_sheath, modify_B;
-    bool explicit_diffusion;
+    bool partitioned;
 
     //
 
@@ -68,9 +68,9 @@ struct Parameters
         boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
         tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
         timestepper = js["timestepper"].get("type", "multistep").asString();
-        explicit_diffusion = true;
+        partitioned = false;
         if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
-            explicit_diffusion = false;
+            partitioned = true;
         inner_loop  = js["output"].get("inner_loop",1).asUInt();
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
