@@ -398,9 +398,9 @@ struct Explicit
         Container& flux,
         std::string slope_limiter);
     void compute_parallel(          std::array<std::array<Container,2>,2>& yp);
-    void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
-    void add_rhs_penalization(      std::array<std::array<Container,2>,2>& yp);
+    void multiply_rhs_penalization(      Container& yp);
     void add_wall_and_sheath_terms( std::array<std::array<Container,2>,2>& yp);
+    void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
     const dg::geo::Fieldaligned<Geometry, IMatrix, Container>& fieldaligned() const
     {
         return m_fa;
@@ -1382,7 +1382,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     if( m_minrate != 0.0)
     {
         // do not make lower forcing a velocity source
-        // MW I suspect that this form does not go well with the potential
+        // MW it may be that this form does not go well with the potential
         dg::blas1::transform( m_density[0], m_temp0, dg::PolynomialHeaviside(
                     m_minne-m_minalpha/2., m_minalpha/2., -1) );
         dg::blas1::transform( m_density[0], m_temp1, dg::PLUS<double>( -m_minne));
@@ -1417,31 +1417,27 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     dg::blas1::axpby( 1., m_s, 1.0, yp);
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::add_rhs_penalization(
-        std::array<std::array<Container,2>,2>& yp)
+void Explicit<Geometry, IMatrix, Matrix, Container>::multiply_rhs_penalization(
+        Container& yp)
 {
     //mask right hand side in penalization region
-    for( unsigned i=0; i<2; i++)
-        for( unsigned j=0; j<2; j++)
-        {
-            if( m_p.penalize_wall && m_p.penalize_sheath)
-            {
-                dg::blas1::subroutine( []DG_DEVICE(
-                    double& rhs, double wall, double sheath){
-                        rhs *= (1.0-wall-sheath);
-                    }, yp[i][j], m_wall, m_sheath);
-            }
-            else if( m_p.penalize_wall)
-            {
-                dg::blas1::subroutine( []DG_DEVICE( double& rhs, double wall){
-                        rhs *= (1.0-wall); }, yp[i][j], m_wall);
-            }
-            else if( m_p.penalize_sheath)
-            {
-                dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
-                        rhs *= (1.0-sheath); }, yp[i][j], m_sheath);
-            }
-        }
+    if( m_p.penalize_wall && m_p.penalize_sheath)
+    {
+        dg::blas1::subroutine( []DG_DEVICE(
+            double& rhs, double wall, double sheath){
+                rhs *= (1.0-wall-sheath);
+            }, yp, m_wall, m_sheath);
+    }
+    else if( m_p.penalize_wall)
+    {
+        dg::blas1::subroutine( []DG_DEVICE( double& rhs, double wall){
+                rhs *= (1.0-wall); }, yp, m_wall);
+    }
+    else if( m_p.penalize_sheath)
+    {
+        dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
+                rhs *= (1.0-sheath); }, yp, m_sheath);
+    }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
@@ -1452,7 +1448,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
     {
         ////density
         ////Here, we need to find out where "downstream" is
-        //!! Does not really work without
+        //!! Simulations does not really work without
         for( unsigned i=0; i<2; i++)
         {
             //The coordinate automatically sees the reversed field
@@ -1515,16 +1511,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
             dg::blas1::axpby( +m_wall_rate*m_uwall, m_wall, 1., yp[1][i] );
         }
     }
-    // now add wall and sheath penalization "damping" term
-    // pointwiseDot catches 0 coefficients
-    for( unsigned i=0; i<2; i++)
-    {
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_density[i],
-                -m_sheath_rate, m_sheath, m_density[i], 1., yp[0][i]);
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, m_velocityST[i],
-                -m_sheath_rate, m_sheath, m_velocityST[i], 1., yp[1][i]);
-    }
-
 }
 
 #ifndef WITH_NAVIER_STOKES
@@ -1651,20 +1637,26 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_velocityST[0], m_velocityST[1], yp[1][0], yp[1][1]);
 #endif
 
-    // add diffusion if not partitioned (imex)
     if( !m_p.partitioned)
     {
+        // explicit and implicit timestepper
         add_implicit_density( t, m_density, 1., yp[0]);
         add_implicit_velocityST( t, m_densityST, m_velocityST, 1., yp[1]);
     }
+    else
+    {
+        // partitioned means imex timestepper
+        for( unsigned i=0; i<2; i++)
+        {
+            for( unsigned j=0; j<2; j++)
+                multiply_rhs_penalization( yp[i][j]); // F*(1-chi_w-chi_s)
+        }
+    }
 
-    add_rhs_penalization( yp);
-
+    add_wall_and_sheath_terms( yp);
     //Add source terms
     // set m_s
     add_source_terms( yp );
-
-    add_wall_and_sheath_terms( yp);
 
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( yp[0][0], dg::plus_equals(), manufactured::SNe{
@@ -1703,7 +1695,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     for( unsigned i=0; i<2; i++)
         compute_perp_diffusiveN( 1., density[i], m_temp0,
                 m_temp1, beta, yp[i]);
+#else
+    dg::blas1::scal( yp, beta);
 #endif
+    for( unsigned i=0; i<2; i++)
+    {
+        multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
+            -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+    }
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1741,6 +1741,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         }
     }
 #endif
+    for( unsigned i=0; i<2; i++)
+    {
+        multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
+            -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+    }
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1827,7 +1833,7 @@ struct ImplicitVelocityMatrix
                 if( m_counter == 0)
                     m_ex->m_old_aparST.extrapolate( m_time, m_ex->m_aparST);
                 else
-                    dg::blas1::copy( 0, m_ex->m_aparST);
+                    ;//dg::blas1::copy( 0, m_ex->m_aparST);
                 m_ex->compute_aparST( m_time, m_ex->m_densityST, m_ex->m_velocityST,
                     m_ex->m_aparST, false);
             }
@@ -1857,8 +1863,13 @@ struct ImplicitSolver
     {
         m_pcg.construct( m_ex->m_density, 3000);
         // these should be input parameters
-        m_lgmres.construct( m_ex->m_density, 30, 3, 100);
-        //m_bicgstabl.construct( m_ex->m_density, 3000, 2);
+        if( m_ex->m_p.solver_type == "lgmres")
+            m_lgmres.construct( m_ex->m_density, 30, 3, 100);
+        else if( m_ex->m_p.solver_type == "bicgstabl")
+            m_bicgstabl.construct( m_ex->m_density, 3000, 2);
+        else
+            throw std::runtime_error( "Implicit solver type "+
+                m_ex->m_p.solver_type+" not recognized!\n");
     }
     const std::array<std::array<Container,2>,2>& copyable() const{
         return m_ex->m_s;
@@ -1888,20 +1899,21 @@ struct ImplicitSolver
         ti.tic();
         m_ex->update_staggered_density_and_ampere( t, y[0]);
         double precond=1;
-        number = m_lgmres.solve( m_imvelo, y[1], rhs[1],
-        //number = m_bicgstabl.solve( m_imvelo, y[1], rhs[1],
-                // The Laplace preconditioner makes no sense 1/V
-                //m_ex->m_lapperpN.precond(), m_ex->m_lapperpN.weights(), m_eps_time);
+        if( m_ex->m_p.solver_type == "lgmres")
+            number = m_lgmres.solve( m_imvelo, y[1], rhs[1],
+                precond, m_ex->m_lapperpN.weights(), m_eps_time);
+        else if( m_ex->m_p.solver_type == "bicgstabl")
+            number = m_bicgstabl.solve( m_imvelo, y[1], rhs[1],
                 precond, m_ex->m_lapperpN.weights(), m_eps_time);
         ti.toc();
-        DG_RANK0 std::cout << "# of LGMRES iterations time solver: "<<number
+        DG_RANK0 std::cout << "# of "<<m_ex->m_p.solver_type<<" iterations time solver: "<<number
                   <<" took "<<ti.diff()<<"s\n";
     }
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
     dg::CG< std::array<Container,2>> m_pcg;
     dg::LGMRES<std::array<Container,2>> m_lgmres;
-    //dg::BICGSTABl<std::array<Container,2>> m_bicgstabl;
+    dg::BICGSTABl<std::array<Container,2>> m_bicgstabl;
     ImplicitDensityMatrix<Geometry,IMatrix, Matrix,Container> m_imdens;
     ImplicitVelocityMatrix<Geometry,IMatrix, Matrix,Container> m_imvelo;
     double m_eps_time;

@@ -267,7 +267,7 @@ int main( int argc, char* argv[])
     }
     else if( p.timestepper == "multistep-imex")
     {
-        double eps_time = js[ "timestepper"]["eps_time"].asDouble( 1e-10);
+        double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
         multistep_imex.construct( p.tableau, feltor, eps_time);
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
     }
@@ -283,7 +283,7 @@ int main( int argc, char* argv[])
     }
     else if (p.timestepper == "adaptive-imex")
     {
-        double eps_time = js[ "timestepper"]["eps_time"].asDouble( 1e-10);
+        double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
         adapt_ark.construct( p.tableau, feltor, eps_time);
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
