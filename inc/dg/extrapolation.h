@@ -135,7 +135,7 @@ struct LeastSquaresExtrapolation
         }
     }
     /**
-    * @brief extrapolate value at a new unkown value \f$ y = \alpha f(x) + \beta y \f$
+    * @brief extrapolate value at a new unkown value \f$ y = f(x) \f$
     * @param x (read only) value to extrapolate for
     * @param y (write only) contains extrapolated value on output
     */

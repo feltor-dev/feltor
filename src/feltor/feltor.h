@@ -49,11 +49,12 @@ struct Explicit
         const std::array<Container,2>& density,
         double beta,
         std::array<Container,2>& yp);
+    template<size_t N>
     void add_implicit_velocityST( double t,
         const std::array<Container,2>& densityST,
         const std::array<Container,2>& velocityST,
         double beta,
-        std::array<Container,2>& yp);
+        std::array<Container,N>& yp);
     /// ///////////////////RESTART    MEMBERS //////////////////////
     const Container& restart_density(int i)const{
         return m_density[i];
@@ -869,7 +870,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     double time, const std::array<Container,2>& densityST,
     std::array<Container,2>& velocityST, Container& aparST, bool update)
 {
-    std::cout << "Compute APARST\n";
     //on input
     //densityST[0] = n_e, velocityST[0]:= w_e
     //densityST[1] = N_i, velocityST[1]:= W_i
@@ -1520,7 +1520,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     const std::array<std::array<Container,2>,2>& y,
     std::array<std::array<Container,2>,2>& yp)
 {
-    std::cout << "EXPLICIT\n";
     m_called++;
     m_upToDate = false;
 #ifdef MPI_VERSION
@@ -1707,12 +1706,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
+template<size_t N>
 void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
     double t,
     const std::array<Container,2>& densityST,
     const std::array<Container,2>& velocityST,
     double beta,
-    std::array<Container,2>& yp)
+    std::array<Container,N>& yp)
 {
     // velocityST[0] := u_e^dagger
     // velocityST[1] := U_i^dagger
@@ -1759,7 +1759,6 @@ struct Implicit
     void operator()( double t, const std::array<std::array<Container,2>,2>& y,
         std::array<std::array<Container,2>,2>& yp)
     {
-        std::cout << "IMPLICIT\n";
         // y[0][0] := n_e
         // y[0][1] := N_i
         m_ex->add_implicit_density( t, y[0], 0., yp[0]);
@@ -1820,27 +1819,35 @@ struct ImplicitVelocityMatrix
 {
     ImplicitVelocityMatrix() {}
     ImplicitVelocityMatrix( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
-    void symv( const std::array<Container,2>& w, std::array<Container,2>& wp)
+    void symv( const std::array<Container,3>& w, std::array<Container,3>& wp)
     {
         // w[0] := w_e^dagger
         // w[1] := W_i^dagger
         if( m_alpha!=0)
         {
-            dg::blas1::copy( w, m_ex->m_velocityST);
             if( m_ex->m_p.beta !=0)
             {
-                // use a different initial guess for the first iteration
-                if( m_counter == 0)
-                    m_ex->m_old_aparST.extrapolate( m_time, m_ex->m_aparST);
-                else
-                    ;//dg::blas1::copy( 0, m_ex->m_aparST);
-                m_ex->compute_aparST( m_time, m_ex->m_densityST, m_ex->m_velocityST,
-                    m_ex->m_aparST, false);
+                dg::blas1::axpby( 1., w[0], -1./m_ex->m_p.mu[0], w[2], m_ex->m_velocityST[0]);
+                dg::blas1::axpby( 1., w[1], -1./m_ex->m_p.mu[1], w[2], m_ex->m_velocityST[1]);
+            }
+            else
+            {
+                dg::blas1::copy( w[0], m_ex->m_velocityST[0]);
+                dg::blas1::copy( w[1], m_ex->m_velocityST[1]);
             }
             m_ex->add_implicit_velocityST( m_time, m_ex->m_densityST, m_ex->m_velocityST, 0., wp);
-            m_counter++;
         }
-        dg::blas1::axpby( 1., w, m_alpha, wp);
+        dg::blas1::axpby( 1., w[0], m_alpha, wp[0]);
+        dg::blas1::axpby( 1., w[1], m_alpha, wp[1]);
+
+        if( m_ex->m_p.beta != 0)
+        {
+            dg::blas2::symv( m_ex->m_multi_ampere[0], w[2], wp[2]);
+            dg::blas1::pointwiseDot( m_ex->m_multi_ampere[0].inv_weights(), wp[2], wp[2]);
+            dg::blas1::pointwiseDot( -m_ex->m_p.beta, m_ex->m_densityST[1], w[1],
+                                      m_ex->m_p.beta, m_ex->m_densityST[0], w[0],
+                                      1., wp[2]);
+        }
     }
     void set_params( double alpha, double time){
         m_alpha = alpha;
@@ -1859,14 +1866,16 @@ struct ImplicitSolver
     ImplicitSolver() {}
     ImplicitSolver( Explicit<Geometry,IMatrix,Matrix,Container>& ex,
         double eps_time) :
-        m_ex(&ex), m_imdens(ex), m_imvelo(ex), m_eps_time(eps_time)
+        m_ex(&ex), m_imdens(ex), m_imvelo(ex),
+        m_y({ m_ex->m_density[0], m_ex->m_density[0], m_ex->m_density[0]}),
+        m_rhs(m_y), m_eps_time(eps_time)
     {
         m_pcg.construct( m_ex->m_density, 3000);
         // these should be input parameters
         if( m_ex->m_p.solver_type == "lgmres")
-            m_lgmres.construct( m_ex->m_density, 30, 3, 100);
+            m_lgmres.construct( m_rhs, 30, 3, 100);
         else if( m_ex->m_p.solver_type == "bicgstabl")
-            m_bicgstabl.construct( m_ex->m_density, 3000, 2);
+            m_bicgstabl.construct( m_rhs, 3000, 2);
         else
             throw std::runtime_error( "Implicit solver type "+
                 m_ex->m_p.solver_type+" not recognized!\n");
@@ -1899,23 +1908,37 @@ struct ImplicitSolver
         ti.tic();
         m_ex->update_staggered_density_and_ampere( t, y[0]);
         double precond=1;
+        dg::blas1::copy( y[1][0], m_y[0]);
+        dg::blas1::copy( y[1][1], m_y[1]);
+        m_ex->m_old_aparST.extrapolate( t, m_y[2]);
+        dg::blas1::copy( rhs[1][0], m_rhs[0]);
+        dg::blas1::copy( rhs[1][1], m_rhs[1]);
+        dg::blas1::copy( 0., m_rhs[2]);
         if( m_ex->m_p.solver_type == "lgmres")
-            number = m_lgmres.solve( m_imvelo, y[1], rhs[1],
+            number = m_lgmres.solve( m_imvelo, m_y, m_rhs,
                 precond, m_ex->m_lapperpN.weights(), m_eps_time);
         else if( m_ex->m_p.solver_type == "bicgstabl")
-            number = m_bicgstabl.solve( m_imvelo, y[1], rhs[1],
+            number = m_bicgstabl.solve( m_imvelo, m_y, m_rhs,
                 precond, m_ex->m_lapperpN.weights(), m_eps_time);
+
+
+        m_ex->m_old_aparST.update( t, m_y[2]);
+        dg::blas1::copy( m_y[0], y[1][0]);
+        dg::blas1::copy( m_y[1], y[1][1]);
+
         ti.toc();
         DG_RANK0 std::cout << "# of "<<m_ex->m_p.solver_type<<" iterations time solver: "<<number
                   <<" took "<<ti.diff()<<"s\n";
+
     }
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
     dg::CG< std::array<Container,2>> m_pcg;
-    dg::LGMRES<std::array<Container,2>> m_lgmres;
-    dg::BICGSTABl<std::array<Container,2>> m_bicgstabl;
+    dg::LGMRES<std::array<Container,3>> m_lgmres;
+    dg::BICGSTABl<std::array<Container,3>> m_bicgstabl;
     ImplicitDensityMatrix<Geometry,IMatrix, Matrix,Container> m_imdens;
     ImplicitVelocityMatrix<Geometry,IMatrix, Matrix,Container> m_imvelo;
+    std::array<Container,3> m_y, m_rhs;
     double m_eps_time;
 };
 

@@ -1842,15 +1842,15 @@ The explicit parallel electron viscosity term leads to a CFL condition of the
 form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 \end{tcolorbox}
 
-% In every iteration of the implicit inversion we need to solve an equation of the form
-% \begin{align}
-%     n_e + a \hat L n_e = \hat n_e \\
-%     N_i + a \hat L N_i = \hat N_i \\
-%     w_e + a \hat L u_e = \hat w_e \\
-%     W_i + a \hat L U_i = \hat W_i
-% \end{align}
-% with $W=U+A_\parallel/\mu$ and $-\Delta_\perp A_\parallel = \beta (N_i U_i -n_e u_e)$
-%     and $\hat L = -\nu_\perp \Delta_\perp^2$.
+ In every iteration of the implicit inversion we need to solve an equation of the form
+ \begin{align}
+     n_e + a \hat L n_e = \hat n_e \\
+     N_i + a \hat L N_i = \hat N_i \\
+     w_e + a \hat L u_e = \hat w_e \\
+     W_i + a \hat L U_i = \hat W_i
+ \end{align}
+ with $W=U+A_\parallel/\mu$ and $-\Delta_\perp A_\parallel = \beta (N_i U_i -n_e u_e)$
+     and $\hat L = -\nu_\perp \Delta_\perp^2$.
 % This makes 7 equations for 7 unkown quantities.
 % We solve the system by first isolating and solving the two density equations for $n_e$ and $N_i$. These can then be inserted into the velocity equations as
 % fixed solutions, which makes these equations linear.
