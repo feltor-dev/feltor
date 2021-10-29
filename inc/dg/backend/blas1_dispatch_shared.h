@@ -1,10 +1,6 @@
 #ifndef _DG_BLAS_VECTOR_
 #define _DG_BLAS_VECTOR_
 
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
@@ -77,11 +73,6 @@ template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
 
-//#ifdef DG_DEBUG
-    //is this possible?
-    //assert( !x.empty());
-    //assert( x.size() == xs.size() );
-//#endif //DG_DEBUG
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     using execution_policy = get_execution_policy<vector_type>;
     static_assert( all_true<

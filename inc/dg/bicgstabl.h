@@ -8,6 +8,7 @@
 
 #include "blas.h"
 #include "functors.h"
+#include "backend/typedefs.h"
 
 /*!@file
  * BICGSTABl class
@@ -82,6 +83,10 @@ class BICGSTABl
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_tmp;}
 
+    ///@brief Set or unset debugging output during iterations
+    ///@param verbose If true, additional output will be written to \c std::cout during solution
+    void set_verbose( bool verbose){ m_verbose = verbose;}
+
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned BICGSTABl method
      *
@@ -112,6 +117,7 @@ class BICGSTABl
     std::vector<ContainerType> uhat;
     std::vector<value_type> sigma, gamma, gammap, gammapp;
     std::vector<std::vector<value_type>> tau;
+    bool m_verbose = false;
 
 };
 ///@cond
@@ -120,6 +126,10 @@ template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
 unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
     dg::blas2::symv(P,b,m_tmp);
     value_type nrmb = sqrt(dg::blas2::dot(S,m_tmp));
     value_type tol = eps*(nrmb + nrmb_correction);
@@ -208,30 +218,16 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
 
         // rhat[0] is P dot the actual residual
         value_type err = sqrt(dg::blas2::dot(S,rhat[0]));
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank==0)
-#endif //MPI
-        std::cout << "# Error is now : " << err << " Against " << tol << std::endl;
-#endif //DG_DEBUG
+        if( m_verbose)
+            DG_RANK0 std::cout << "# Error is now : " << err << " Against " << tol << std::endl;
         if( err < tol){
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-    if(rank==0)
-#endif //MPI
-            std::cout << "# Exited with error : " << err << " After " << k+m_l << " Iterations." << std::endl;
-#endif //DG_DEBUG
+            if( m_verbose)
+                DG_RANK0 std::cout << "# Exited with error : " << err << " After " << k+m_l << " Iterations." << std::endl;
             return k+m_l;
         }
     }
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-    if(rank==0)
-#endif //MPI
-    std::cout << "# Failed to converge within max_iter" << std::endl;
-#endif //DG_DEBUG
+    if( m_verbose)
+        DG_RANK0 std::cout << "# Failed to converge within max_iter" << std::endl;
     return max_iter;
 }
 ///@endcond

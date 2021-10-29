@@ -2,7 +2,6 @@
 #include <iomanip>
 #include <functional>
 
-#undef DG_DEBUG
 #include "multistep.h"
 #include "adaptive.h"
 #include "elliptic.h"

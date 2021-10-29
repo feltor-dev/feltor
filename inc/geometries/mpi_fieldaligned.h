@@ -11,9 +11,7 @@
 #include "dg/topology/functions.h"
 #include "dg/runge_kutta.h"
 #include "fieldaligned.h"
-#ifdef DG_BENCHMARK
 #include "dg/backend/timer.h"
-#endif
 
 namespace dg{
 namespace geo{
@@ -71,7 +69,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1, std::string interpolation_method = "dg"):
+        double deltaPhi = -1, std::string interpolation_method = "dg",
+        bool benchmark = true):
             Fieldaligned( dg::geo::createBHat(vec), grid, bcx, bcy, limit, eps,
                     mx, my, deltaPhi, interpolation_method)
     {
@@ -84,7 +83,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1, std::string interpolation_method = "dg");
+        double deltaPhi = -1, std::string interpolation_method = "dg",
+        bool benchmark = true);
     template<class ...Params>
     void construct( Params&& ...ps)
     {
@@ -200,8 +200,11 @@ template <class Limiter>
 Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::Fieldaligned(
     const dg::geo::CylindricalVectorLvl1& vec, const MPIGeometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method)
+    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method, bool benchmark
+    )
 {
+    int rank;
+    MPI_Comm_rank( grid.communicator(), &rank);
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
@@ -224,12 +227,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     m_recv_buffer = m_send_buffer = m_ghostP.data();
 #endif
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
-#ifdef DG_BENCHMARK
     dg::Timer t;
-    int rank;
-    MPI_Comm_rank( grid.communicator(), &rank);
-    t.tic();
-#endif
+    if( benchmark) t.tic();
     std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
@@ -237,11 +236,12 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         grid_magnetic->global_geometry();
     dg::MPIGrid2d grid_fine( *grid_coarse);//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
-#ifdef DG_BENCHMARK
-    t.toc();
-    if(rank==0) std::cout << "# DS: High order grid gen   took: "<<t.diff()<<"\n";
-    t.tic();
-#endif
+    if( benchmark)
+    {
+        t.toc();
+        if(rank==0) std::cout << "# DS: High order grid gen   took: "<<t.diff()<<"\n";
+        t.tic();
+    }
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
     auto vol = dg::tensor::volume(grid.metric()), vol2d0(vol);
@@ -261,11 +261,12 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
         dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
     }
-#ifdef DG_BENCHMARK
-    t.toc();
-    if(rank==0) std::cout << "# DS: Fieldline integration took: "<<t.diff()<<"\n";
-    t.tic();
-#endif
+    if(benchmark)
+    {
+        t.toc();
+        if(rank==0) std::cout << "# DS: Fieldline integration took: "<<t.diff()<<"\n";
+        t.tic();
+    }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
             grid_coarse->global(), bcx, bcy, interpolation_method), plus;
@@ -284,20 +285,22 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         cusp::multiply( projection, plusFine, plus);
         cusp::multiply( projection, minusFine, minus);
     }
-#ifdef DG_BENCHMARK
-    t.toc();
-    if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
-    t.tic();
-#endif
+    if( benchmark)
+    {
+        t.toc();
+        if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
+        t.tic();
+    }
     dg::MIHMatrix temp = dg::convert( plus, *grid_coarse); //, tempT;
     dg::blas2::transfer( temp, m_plus);
     temp = dg::convert( minus, *grid_coarse);
     dg::blas2::transfer( temp, m_minus);
 
-#ifdef DG_BENCHMARK
-    t.toc();
-    if(rank==0) std::cout << "# DS: Conversion            took: "<<t.diff()<<"\n";
-#endif
+    if( benchmark)
+    {
+        t.toc();
+        if(rank==0) std::cout << "# DS: Conversion            took: "<<t.diff()<<"\n";
+    }
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
     dg::HVec hbphi( yp_coarse[2]), hbphiP(hbphi), hbphiM(hbphi);
     auto tmp = dg::pullback( vec.z(), *grid_coarse);

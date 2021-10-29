@@ -55,9 +55,7 @@ class Operator
     {
         unsigned n = std::distance( first, last);
         n_ = (unsigned)sqrt( (value_type)n);
-#ifdef DG_DEBUG
         if( n_*n_!=n) throw Error( Message(_ping_)<<"Too few elements "<<n<<" need "<<n_*n_<<"\n");
-#endif
     }
     /**
      * @brief Copy from existing data
@@ -68,9 +66,7 @@ class Operator
     {
         unsigned n = src.size();
         n_ = (unsigned)sqrt( (value_type)n);
-#ifdef DG_DEBUG
         if( n_*n_!=n) throw Error( Message(_ping_)<<"Wrong number of elements "<<n<<" need "<<n_*n_<<"\n");
-#endif
     }
 
     /**

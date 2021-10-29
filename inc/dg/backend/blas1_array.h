@@ -1,10 +1,6 @@
 #ifndef _DG_BLAS_ARRAY_
 #define _DG_BLAS_ARRAY_
 
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-
 #include <array>
 #include <type_traits>
 #include "exblas/exdot_serial.h"

@@ -360,14 +360,6 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
 			m_s[iteration] = tmp;
 
             rho = fabs(m_s[iteration+1]);
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank==0)
-#endif //MPI
-            std::cout << "# rho = " << rho << std::endl;
-#endif //DG_DEBUG
             if( rho < tol)
 			{
                 Update(P,m_dx,x,iteration,m_H,m_s,m_W);

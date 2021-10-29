@@ -6,10 +6,9 @@
 #include "blas.h"
 #include "functors.h"
 #include "extrapolation.h"
+#include "backend/typedefs.h"
 
-#ifdef DG_BENCHMARK
 #include "backend/timer.h"
-#endif //DG_BENCHMARK
 
 /*!@file
  * Conjugate gradient class and functions
@@ -60,6 +59,10 @@ class CG
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return r;}
+
+    ///@brief Set or unset debugging output during iterations
+    ///@param verbose If true, additional output will be written to \c std::cout during solution
+    void set_verbose( bool verbose){ m_verbose = verbose;}
 
     /**
     * @brief Perfect forward parameters to one of the constructors
@@ -140,6 +143,7 @@ class CG
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
+    bool m_verbose = false;
 };
 
 /*
@@ -165,17 +169,15 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
     value_type tol = eps*(nrmb + nrmb_correction);
-#ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank==0)
 #endif //MPI
+    if( m_verbose)
     {
-    std::cout << "# Norm of b "<<nrmb <<"\n";
-    std::cout << "# Residual errors: \n";
+        DG_RANK0 std::cout << "# Norm of b "<<nrmb <<"\n";
+        DG_RANK0 std::cout << "# Residual errors: \n";
     }
-#endif //DG_DEBUG
     if( nrmb == 0)
     {
         blas1::copy( 0., x);
@@ -204,16 +206,12 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 //             }
         blas1::axpby( -alpha, ap, 1., r);
         nrm2r_new = blas2::dot( P, r);
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif //MPI
+        if( m_verbose)
         {
-            std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
-            std::cout << "#  < Critical "<<tol <<"\t ";
-            std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+            DG_RANK0 std::cout << "# Absolute "<<sqrt( nrm2r_new) <<"\t ";
+            DG_RANK0 std::cout << "#  < Critical "<<tol <<"\t ";
+            DG_RANK0 std::cout << "# (Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
         }
-#endif //DG_DEBUG
         if( sqrt( nrm2r_new) < tol)
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
@@ -229,17 +227,15 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
     value_type tol = eps*(nrmb + nrmb_correction);
-#ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank==0)
 #endif //MPI
+    if( m_verbose)
     {
-    std::cout << "# Norm of S b "<<nrmb <<"\n";
-    std::cout << "# Residual errors: \n";
+        DG_RANK0 std::cout << "# Norm of S b "<<nrmb <<"\n";
+        DG_RANK0 std::cout << "# Residual errors: \n";
     }
-#endif //DG_DEBUG
     if( nrmb == 0)
     {
         blas1::copy( 0., x);
@@ -261,18 +257,14 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
         blas1::axpby( -alpha, ap, 1., r);
         if( 0 == i%save_on_dots )
         {
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-            if(rank==0)
-#endif //MPI
+            if( m_verbose)
             {
-                std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-                std::cout << "#  < Critical "<<tol <<"\t ";
-                std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+                DG_RANK0 std::cout << "# Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+                DG_RANK0 std::cout << "#  < Critical "<<tol <<"\t ";
+                DG_RANK0 std::cout << "# (Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
             }
-#endif //DG_DEBUG
-                if( sqrt( blas2::dot(S,r)) < tol)
-                    return i;
+            if( sqrt( blas2::dot(S,r)) < tol)
+                return i;
         }
         blas2::symv(P,r,ap);
         nrmzr_new = blas1::dot( ap, r);
@@ -395,7 +387,6 @@ struct Invert
      * @param phi solution (write only)
      * @param rho right-hand-side (will be multiplied by \c weights)
      * @note computes inverse weights from the weights
-     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      *
      * @return number of iterations used
      */
@@ -404,6 +395,10 @@ struct Invert
     {
         return solve(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
     }
+
+    ///@brief Set or unset performance timings during iterations
+    ///@param benchmark If true, additional output will be written to \c std::cout during solution
+    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
     ///@brief DEPRECATED: use solve method instead
     ///@copydetails solve(MatrixType&,ContainerType0&,const ContainerType1&,const SquareNorm0&,const SquareNorm1&,Preconditioner&)
@@ -430,19 +425,20 @@ struct Invert
      * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner
      * @note (15+N)memops per iteration where N is the memops contained in \c op.
-     *   If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      *
      * @return number of iterations used
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm0, class SquareNorm1, class Preconditioner >
     unsigned solve( MatrixType& op, ContainerType0& phi, const ContainerType1& rho, const SquareNorm0& weights, const SquareNorm1& inv_weights, Preconditioner& p)
     {
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
         assert( phi.size() != 0);
         assert( &rho != &phi);
-#ifdef DG_BENCHMARK
         Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
+        if( m_benchmark) t.tic();
         m_ex.extrapolate( phi);
 
         unsigned number;
@@ -455,18 +451,12 @@ struct Invert
             number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
 
         m_ex.update(phi);
-#ifdef DG_BENCHMARK
-        t.toc();
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
+        if( m_benchmark)
         {
-            std::cout << "# of cg iterations \t"<< number << "\t";
-            std::cout << "# took \t"<<t.diff()<<"s\n";
+            t.toc();
+            DG_RANK0 std::cout << "# of cg iterations \t"<< number << "\t";
+            DG_RANK0 std::cout << "# took \t"<<t.diff()<<"s\n";
         }
-#endif //DG_BENCHMARK
         return number;
     }
 
@@ -476,6 +466,7 @@ struct Invert
     Extrapolation<ContainerType> m_ex;
     ContainerType m_rhs;
     bool multiplyWeights_;
+    bool m_benchmark = true;
 };
 
 } //namespace dg

@@ -120,34 +120,34 @@ struct DefaultSolver
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_rhs;}
+    ///@brief Set or unset performance timings during iterations
+    ///@param benchmark If true, additional output will be written to \c std::cout during solution
+    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
     template< class Implicit>
     void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
-        detail::ImplicitWithWeights<Implicit, ContainerType> implicit( alpha,
-                t, im);
-        blas2::symv( im.weights(), rhs, m_rhs);
-#ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
+        detail::ImplicitWithWeights<Implicit, ContainerType> implicit( alpha,
+                t, im);
+        blas2::symv( im.weights(), rhs, m_rhs);
         Timer ti;
-        ti.tic();
+        if(m_benchmark) ti.tic();
         unsigned number = m_pcg( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
-        ti.toc();
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif//MPI
-        std::cout << "# of pcg iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
-#else
-        m_pcg( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+        {
+            ti.toc();
+            DG_RANK0 std::cout << "# of pcg iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+        }
     }
     private:
     CG< ContainerType> m_pcg;
     ContainerType m_rhs;
     value_type m_eps;
+    bool m_benchmark = true;
 };
 
 /*!@brief Fixed point iterator for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
@@ -182,17 +182,20 @@ struct FixedPointSolver
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_current;}
 
+    ///@brief Set or unset performance timings during iterations
+    ///@param benchmark If true, additional output will be written to \c std::cout during solution
+    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
+
     template< class Implicit>
     void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
-#ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
         Timer ti;
-        ti.tic();
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+            ti.tic();
         unsigned number = 0;
         value_type error = 0;
         do
@@ -204,18 +207,17 @@ struct FixedPointSolver
             number++;
             error = sqrt( dg::blas1::dot( m_current, m_current));
         }while ( error > m_eps && number < m_max_iter);
-#ifdef DG_BENCHMARK
-        ti.toc();
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif//MPI
-        std::cout << "# of iterations Fixed Point time solver: "<<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+        {
+            ti.toc();
+            DG_RANK0 std::cout << "# of iterations Fixed Point time solver: "<<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
+        }
     }
     private:
     ContainerType m_current;
     value_type m_eps;
     unsigned m_max_iter;
+    bool m_benchmark = true;
 };
 
 /*!@brief Fixed Point iterator with Anderson Acceleration for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
@@ -251,35 +253,34 @@ struct AndersonSolver
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_acc.copyable();}
+    ///@brief Set or unset performance timings during iterations
+    ///@param benchmark If true, additional output will be written to \c std::cout during solution
+    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
     template< class Implicit>
     void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
     {
-        //dg::WhichType<Implicit> {};
-        detail::ImplicitWithoutWeights<Implicit, ContainerType> implicit(
-                alpha, t, im);
-#ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
+        //dg::WhichType<Implicit> {};
+        detail::ImplicitWithoutWeights<Implicit, ContainerType> implicit(
+                alpha, t, im);
         Timer ti;
-        ti.tic();
+        if( m_benchmark) ti.tic();
         unsigned number = m_acc.solve( implicit, y, rhs, im.weights(), m_eps,
                 m_eps, m_max, m_damp, m_restart, false);
-        ti.toc();
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif//MPI
-        std::cout << "# of Anderson iterations time solver: "<<number<<"/"<<m_max<<" took "<<ti.diff()<<"s\n";
-#else
-        m_acc.solve( implicit, y, rhs, im.weights(), m_eps, m_eps, m_max,
-                m_damp, m_restart, false);
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+        {
+            ti.toc();
+            DG_RANK0 std::cout << "# of Anderson iterations time solver: "<<number<<"/"<<m_max<<" took "<<ti.diff()<<"s\n";
+        }
     }
     private:
     AndersonAcceleration< ContainerType> m_acc;
     value_type m_eps, m_damp;
     unsigned m_max, m_restart;
+    bool m_benchmark = true;
 };
 }//namespace dg

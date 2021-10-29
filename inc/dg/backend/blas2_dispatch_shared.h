@@ -1,10 +1,6 @@
 #ifndef _DG_BLAS_PRECONDITIONER_
 #define _DG_BLAS_PRECONDITIONER_
 
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-
 #include "tensor_traits.h"
 #include "matrix_categories.h"
 #include "vector_categories.h"

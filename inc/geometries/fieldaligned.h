@@ -357,6 +357,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
      * **linear** searches for the two (in 2d four, etc.) closest points and
      * linearly interpolates their values, **cubic** searches for the four (in
      * 2d 16, etc) closest points and interpolates a cubic polynomial
+     * @param benchmark If true write construction timings to std::cout
     */
 //////////////////////////////FieldalignedCLASS////////////////////////////////////////////
 /**
@@ -389,7 +390,8 @@ struct Fieldaligned
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
         double deltaPhi = -1,
-        std::string interpolation_method = "dg"
+        std::string interpolation_method = "dg",
+        bool benchmark=true
         ):
             Fieldaligned( dg::geo::createBHat(vec),
                 grid, bcx, bcy, limit, eps, mx, my, deltaPhi, interpolation_method)
@@ -408,7 +410,9 @@ struct Fieldaligned
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
         double deltaPhi = -1,
-        std::string interpolation_method = "dg");
+        std::string interpolation_method = "dg",
+        bool benchmark=true
+        );
     /**
     * @brief Perfect forward parameters to one of the constructors
     * @tparam Params deduced by the compiler
@@ -646,7 +650,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     const dg::geo::CylindricalVectorLvl1& vec,
     const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method)
+    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method, bool benchmark)
 {
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
@@ -664,20 +668,19 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::assign( dg::evaluate(dg::zero, *grid_coarse), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
-#ifdef DG_BENCHMARK
     dg::Timer t;
-    t.tic();
-#endif //DG_BENCHMARK
+    if( benchmark) t.tic();
     std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     dg::Grid2d grid_fine( *grid_coarse );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
-#ifdef DG_BENCHMARK
-    t.toc();
-    std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
-    t.tic();
-#endif //DG_BENCHMARK
+    if( benchmark)
+    {
+        t.toc();
+        std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
+        t.tic();
+    }
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
     thrust::host_vector<double> vol = dg::tensor::volume(grid.metric()), vol2d0;
@@ -696,11 +699,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
         dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
     }
-#ifdef DG_BENCHMARK
-    t.toc();
-    std::cout << "# DS: Computing all points took: "<<t.diff()<<"\n";
-    t.tic();
-#endif //DG_BENCHMARK
+    if( benchmark)
+    {
+        t.toc();
+        std::cout << "# DS: Computing all points took: "<<t.diff()<<"\n";
+        t.tic();
+    }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
             *grid_coarse, bcx, bcy, interpolation_method), plus, plusT;
@@ -717,10 +721,11 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         cusp::multiply( projection, plusFine, plus);
         cusp::multiply( projection, minusFine, minus);
     }
-#ifdef DG_BENCHMARK
-    t.toc();
-    std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
-#endif //DG_BENCHMARK
+    if( benchmark)
+    {
+        t.toc();
+        std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
+    }
     dg::blas2::transfer( plus, m_plus);
     dg::blas2::transfer( minus, m_minus);
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//

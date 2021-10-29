@@ -1,10 +1,6 @@
 #ifndef _DG_BLAS_STD_VECTOR_
 #define _DG_BLAS_STD_VECTOR_
 
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-
 #include <vector>
 #include <array>
 #include "blas1_dispatch_shared.h"

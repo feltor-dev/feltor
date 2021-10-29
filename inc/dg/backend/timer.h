@@ -14,7 +14,7 @@ class Timer //CPU/ OMP + MPI
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
     double diff()const{ return stop - start; }
   private:
-    double start, stop;
+    double start = 0., stop = 0.;
 };
 }//namespace dg
 ///@endcond
@@ -57,7 +57,7 @@ class Timer //OMP non-MPI
      * \return Time in seconds between calls of tic and toc*/
     double diff()const{ return stop - start; }
   private:
-    double start, stop;
+    double start = 0., stop = 0.;
 };
 }//namespace dg
 #else // MPI_VERSION not defined and THRUST == CPU
@@ -120,7 +120,7 @@ class Timer //GPU MPI
     }
     double diff()const{ return stop - start; }
   private:
-    double start, stop;
+    double start = 0., stop = 0.;
 };
 }//namespace dg
 

@@ -8,9 +8,7 @@
 #include "cg.h"
 #include "chebyshev.h"
 #include "eve.h"
-#ifdef DG_BENCHMARK
 #include "backend/timer.h"
-#endif //DG_BENCHMARK
 #ifdef MPI_VERSION
 #include "topology/mpi_projection.h"
 #endif
@@ -167,6 +165,9 @@ struct MultigridCG2d
      * @param new_max new maximum number of iterations allowed at stage 0
     */
     void set_max_iter(unsigned new_max){ m_cg[0].set_max(new_max);}
+    ///@brief Set or unset performance timings during iterations
+    ///@param benchmark If true, additional output will be written to \c std::cout during solution
+    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
     ///@brief Return an object of same size as the object used for construction on the finest grid
     ///@return A copyable object; what it contains is undefined, its size is important
@@ -190,7 +191,6 @@ struct MultigridCG2d
      * the accuracy can be set for each stage separately. Per default the same
      * accuracy is used at all stages.
      * @return the number of iterations in each of the stages beginning with the finest grid
-     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      * @note the convergence test on the coarse grids is only evaluated every
      * 10th iteration. This effectively saves one dot product per iteration.
      * The dot product is the main performance bottleneck on the coarse grids.
@@ -207,6 +207,10 @@ struct MultigridCG2d
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
     {
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
         std::vector<unsigned> number(m_stages, 0);
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
         value_type nrmb = sqrt( blas2::dot( op[0].inv_weights(), m_b[0]));
@@ -223,48 +227,33 @@ struct MultigridCG2d
         // project residual down to coarse grid
         for( unsigned u=0; u<m_stages-1; u++)
             dg::blas2::gemv( m_interT[u], m_r[u], m_r[u+1]);
-#ifdef DG_BENCHMARK
-        Timer t;
-#endif //DG_BENCHMARK
 
-        dg::blas1::scal( m_x[m_stages-1], 0.0);
+        dg::blas1::copy( 0., m_x[m_stages-1]);
         //now solve residual equations
 		for( unsigned u=m_stages-1; u>0; u--)
         {
-#ifdef DG_BENCHMARK
-            t.tic();
-#endif //DG_BENCHMARK
+            if(m_benchmark)m_timer.tic();
             number[u] = m_cg[u].solve( op[u], m_x[u], m_r[u], op[u].precond(),
                 op[u].inv_weights(), eps[u], 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
-#ifdef DG_BENCHMARK
-            t.toc();
-#ifdef MPI_VERSION
-            int rank;
-            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-            if(rank==0)
-#endif //MPI
-            std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+            if( m_benchmark)
+            {
+                m_timer.toc();
+                DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<m_timer.diff()<<"s\n";
+            }
 
         }
-#ifdef DG_BENCHMARK
-        t.tic();
-#endif //DG_BENCHMARK
+        if( m_benchmark) m_timer.tic();
 
         //update initial guess
         dg::blas1::axpby( 1., m_x[0], 1., x);
         number[0] = m_cg[0].solve( op[0], x, m_b[0], op[0].precond(),
             op[0].inv_weights(), eps[0]);
-#ifdef DG_BENCHMARK
-        t.toc();
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
-        std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+        {
+            m_timer.toc();
+            DG_RANK0 std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<m_timer.diff()<<"s\n";
+        }
 
         return number;
     }
@@ -295,10 +284,10 @@ struct MultigridCG2d
 	template<class SymmetricOp, class ContainerType0, class ContainerType1>
     std::vector<unsigned> direct_solve_with_chebyshev( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps, std::vector<unsigned> num_cheby)
     {
-#ifdef DG_BENCHMARK
-        Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
         dg::blas2::symv(op[0].weights(), b, m_b[0]);
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
@@ -312,28 +301,26 @@ struct MultigridCG2d
         //now solve residual equations
 		for( unsigned u=m_stages-1; u>0; u--)
         {
-#ifdef DG_BENCHMARK
-            t.tic();
-#endif //DG_BENCHMARK
-        unsigned lowest = u;
-        dg::EVE<Container> eve( m_x[lowest]);
-        double evu_max;
-        Container tmp = m_x[lowest];
-        dg::blas1::scal( tmp, 0.);
-        //unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
-        unsigned counter = eve.solve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
-        counter++;
-        //std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
-        //    t.toc();
-        //    std::cout << " took "<<t.diff()<<"s\n";
-        //    t.tic();
+            if(m_benchmark) m_timer.tic();
+            unsigned lowest = u;
+            dg::EVE<Container> eve( m_x[lowest]);
+            double evu_max;
+            Container tmp = m_x[lowest];
+            dg::blas1::scal( tmp, 0.);
+            //unsigned counter = eve( op[lowest], tmp, m_r[lowest], op[u].precond(), evu_max, 1e-10);
+            unsigned counter = eve.solve( op[lowest], tmp, m_r[lowest], evu_max, 1e-10);
+            counter++;
+            //DG_RANK0 std::cout << "# MAX EV is "<<evu_max<<" in "<<counter<<" iterations\t";
+            //    m_timer.toc();
+            //    DG_RANK0 std::cout << " took "<<m_timer.diff()<<"s\n";
+            //    m_timer.tic();
 
             //double evu_min;
             //dg::detail::WrapperSpectralShift<SymmetricOp, Container> shift(
             //        op[u], evu_max);
             //counter = eve.solve( shift, m_x[u], m_r[u], evu_min, eps);
             //evu_min = evu_max - evu_min;
-            //std::cout << "# MIN EV is "<<evu_min<<" in "<<counter<<"iterations\n";
+            //DG_RANK0 std::cout << "# MIN EV is "<<evu_min<<" in "<<counter<<"iterations\n";
             dg::ChebyshevPreconditioner<SymmetricOp&, Container> precond(
                     op[u], m_x[u], 0.01*evu_max, 1.1*evu_max, num_cheby[u] );
             //dg::ModifiedChebyshevPreconditioner<SymmetricOp&, Container> precond(
@@ -343,20 +330,14 @@ struct MultigridCG2d
             number[u] = m_cg[u].solve( op[u], m_x[u], m_r[u], precond,
                 op[u].inv_weights(), eps[u], 1., 10);
             dg::blas2::symv( m_inter[u-1], m_x[u], m_x[u-1]);
-#ifdef DG_BENCHMARK
-            t.toc();
-#ifdef MPI_VERSION
-            int rank;
-            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-            if(rank==0)
-#endif //MPI
-            std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+            if( m_benchmark)
+            {
+                m_timer.toc();
+                DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<m_timer.diff()<<"s\n";
+            }
 
         }
-#ifdef DG_BENCHMARK
-        t.tic();
-#endif //DG_BENCHMARK
+        if(m_benchmark)m_timer.tic();
         //unsigned lowest = 0;
         //dg::EVE<Container> eve.solve( m_x[lowest]);
         //double evu_max;
@@ -373,15 +354,11 @@ struct MultigridCG2d
         number[0] = m_cg[0].solve( op[0], x, m_b[0], op[0].precond(),
                 //precond,
             op[0].inv_weights(), eps[0]);
-#ifdef DG_BENCHMARK
-        t.toc();
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
-        std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+        {
+            m_timer.toc();
+            DG_RANK0 std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<m_timer.diff()<<"s\n";
+        }
 
         return number;
     }
@@ -429,7 +406,7 @@ struct MultigridCG2d
         dg::blas1::axpby( -1., m_r[0], 1., m_b[0]);
         dg::blas1::copy( 0., m_x[0]);
         value_type error = sqrt( blas2::dot(op[0].inv_weights(),m_b[0]) );
-        //std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
+        //DG_RANK0 std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
 
         while ( error >  eps*(nrmb + 1))
         {
@@ -446,7 +423,7 @@ struct MultigridCG2d
             dg::blas1::axpby( -1., m_r[0], 1., m_b[0]);
             dg::blas1::copy( 0., m_x[0]);
             error = sqrt( blas2::dot(op[0].inv_weights(),m_b[0]) );
-            //std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
+            //DG_RANK0 std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
         }
     }
 
@@ -505,7 +482,7 @@ struct MultigridCG2d
             blas1::axpby( alpha, m_p, 1., x);
             blas1::axpby( -alpha, m_x[0], 1., m_cgr);
             value_type error = sqrt( blas2::dot(op[0].inv_weights(), m_cgr))/(nrmb+1);
-            //std::cout << "\t\t\tError at "<<i<<" is "<<error<<"\n";
+            //DG_RANK0 std::cout << "\t\t\tError at "<<i<<" is "<<error<<"\n";
             if( error < eps)
                 return;
             dg::blas1::copy( 0, m_x[0]);
@@ -537,14 +514,11 @@ struct MultigridCG2d
         // nu1, nu2: typically in {0,1,2,3}
 
         // 1. Pre-Smooth nu1 times
-        //std::cout << "STAGE "<<p<<"\n";
+        //DG_RANK0 std::cout << "STAGE "<<p<<"\n";
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         //value_type norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
-        //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
-//#ifdef DG_BENCHMARK
-//        Timer t;
-//#endif //DG_BENCHMARK
+        //DG_RANK0 std::cout<< " Norm residuum befor "<<norm_res<<"\n";
 
         //std::vector<Container> out( x);
 
@@ -554,32 +528,25 @@ struct MultigridCG2d
         dg::blas2::symv( op[p], x[p], m_r[p]);
         dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
-        //std::cout<< " Norm residuum after  "<<norm_res<<"\n";
+        //DG_RANK0 std::cout<< " Norm residuum after  "<<norm_res<<"\n";
         // 3. Coarsen
         dg::blas2::symv( m_interT[p], m_r[p], b[p+1]);
         // 4. Solve or recursive call to get x[p+1] with initial guess 0
         dg::blas1::scal( x[p+1], 0.);
         if( p+1 == m_stages-1)
         {
-//#ifdef DG_BENCHMARK
-//            t.tic();
-//#endif //DG_BENCHMARK
+//if( m_benchmark) m_timer.tic();
             int number = m_cg[p+1].solve( op[p+1], x[p+1], b[p+1], op[p+1].precond(),
                 op[p+1].inv_weights(), eps/2.);
             number++;//avoid compiler warning
-//#ifdef DG_BENCHMARK
-//            t.toc();
-//#ifdef MPI_VERSION
-//            int rank;
-//            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-//            if(rank==0)
-//#endif //MPI
-            //std::cout << "# Multigrid stage: " << p+1 << ", iter: " << number << ", took "<<t.diff()<<"s\n";
-//#endif //DG_BENCHMARK
+//if( m_benchmark){
+//            m_timer.toc();
+            //DG_RANK0 std::cout << "# Multigrid stage: " << p+1 << ", iter: " << number << ", took "<<m_timer.diff()<<"s\n";
+            //}
             //dg::blas2::symv( op[p+1], x[p+1], m_r[p+1]);
             //dg::blas1::axpby( 1., b[p+1], -1., m_r[p+1]);
             //value_type norm_res = sqrt(dg::blas1::dot( m_r[p+1], m_r[p+1]));
-            //std::cout<< " Exact solution "<<norm_res<<"\n";
+            //DG_RANK0 std::cout<< " Exact solution "<<norm_res<<"\n";
         }
         else
         {
@@ -593,14 +560,14 @@ struct MultigridCG2d
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         //norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
-        //std::cout<< " Norm residuum befor "<<norm_res<<"\n";
+        //DG_RANK0 std::cout<< " Norm residuum befor "<<norm_res<<"\n";
         // 6. Post-Smooth nu2 times
         m_cheby[p].solve( op[p], x[p], b[p], 1e-2*ev[p], 1.1*ev[p], nu2);
         //m_cheby[p].solve( op[p], x[p], b[p], 0.1*ev[p], 1.1*ev[p], nu2, op[p].inv_weights());
         //dg::blas2::symv( op[p], x[p], m_r[p]);
         //dg::blas1::axpby( 1., b[p], -1., m_r[p]);
         //value_type norm_res = sqrt(dg::blas1::dot( m_r[p], m_r[p]));
-        //std::cout<< " Norm residuum after "<<norm_res<<"\n";
+        //DG_RANK0 std::cout<< " Norm residuum after "<<norm_res<<"\n";
     }
 
 
@@ -609,6 +576,10 @@ struct MultigridCG2d
         std::vector<Container>& x, std::vector<Container>& b, std::vector<value_type> ev,
         unsigned nu1, unsigned nu2, unsigned gamma, unsigned mu, value_type eps)
     {
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
         for( unsigned u=0; u<m_stages-1; u++)
         {
             dg::blas2::gemv( m_interT[u], x[u], x[u+1]);
@@ -617,22 +588,15 @@ struct MultigridCG2d
         //std::vector<Container> out( x);
         //begins on coarsest level and cycles through to highest
         unsigned s = m_stages-1;
-#ifdef DG_BENCHMARK
-        dg::Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
+        if( m_benchmark) m_timer.tic();
         int number = m_cg[s].solve( op[s], x[s], b[s], op[s].precond(),
             op[s].inv_weights(), eps/2.);
         number++;//avoid compiler warning
-#ifdef DG_BENCHMARK
-        t.toc();
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
-        std::cout << "# Multigrid stage: " << s << ", iter: " << number << ", took "<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+        if( m_benchmark)
+        {
+            m_timer.toc();
+            DG_RANK0 std::cout << "# Multigrid stage: " << s << ", iter: " << number << ", took "<<m_timer.diff()<<"s\n";
+        }
 
 		for( int p=m_stages-2; p>=0; p--)
         {
@@ -650,6 +614,8 @@ struct MultigridCG2d
     std::vector< ChebyshevIteration<Container>> m_cheby;
     std::vector< Container> m_x, m_r, m_b;
     Container  m_p, m_cgr;
+    Timer m_timer;
+    bool m_benchmark = true;
 
 };
 

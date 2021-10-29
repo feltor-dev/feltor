@@ -2,7 +2,6 @@
 #include <iomanip>
 
 #include <mpi.h>
-#undef DG_BENCHMARK //we don't want output
 #ifdef _OPENMP
 #include <omp.h>
 #endif//_OPENMP
@@ -221,7 +220,7 @@ int main(int argc, char* argv[])
         dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector>
             dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 5, 5);
         dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>
-            ds ( dsFA, dg::centered);
+            ds ( dsFA);
 
         ds.centered(x,y);//warm up
         t.tic();
