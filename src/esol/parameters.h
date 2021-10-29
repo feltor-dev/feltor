@@ -36,7 +36,7 @@ struct Parameters
     double amp, my, sigma, posX, posY;
 
     double lx, ly;
-    dg::bc bc_x, bc_y;
+    dg::bc bc_x, bc_y, bc_N_x;
 
     std::string init, equations, output, timestepper, source_rel, source_type, bgproftype;
 
@@ -108,6 +108,7 @@ struct Parameters
         nu = ws["nu_perp"].asDouble();
         bc_x = dg::str2bc(ws["bc_x"].asString());
         bc_y = dg::str2bc(ws["bc_y"].asString());
+        bc_N_x = dg::str2bc(ws["bc_N_x"].asString());
     }
 
 };

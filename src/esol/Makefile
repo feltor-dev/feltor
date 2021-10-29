@@ -20,11 +20,10 @@ esol_mpi: esol.cu esol.h init.h diag.h parameters.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW
 
 doc:
-	mkdir -p doc;
-	pdflatex -output-directory doc ./esol.tex;
-	bibtex doc/esol.aux;
-	pdflatex -output-directory doc ./esol.tex;
-	pdflatex -output-directory doc ./esol.tex;
+	pdflatex -shell-escape esol.tex;
+	bibtex esol.aux;
+	pdflatex -shell-escape esol.tex;
+	pdflatex -shell-escape esol.tex;
 
 
 .PHONY: clean doc
