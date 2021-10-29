@@ -166,12 +166,19 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_p(p)
 {
     if(p.source_type == "flux") {
-        m_source = dg::evaluate( dg::CauchyX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
+        if (p.source_shape == "cauchy"){
+            m_source = dg::evaluate( dg::CauchyX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
 //         m_source = dg::evaluate( dg::GaussianX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
+        }
+        else if (p.source_shape == "gaussian"){
+            m_source = dg::evaluate( dg::GaussianX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
+        }
     }
     else if (p.source_type == "forced") {
         m_source = dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, -1), grid);
     }
+    
+
     m_psi[0] = m_psi[1] = m_N[0] = m_N[1]  = m_gradn[0] = m_gradn[1] = m_gradphi[0] = m_gradphi[1]= m_chi; 
     m_multi_chi= m_multigrid.project( m_chi);
     m_multi_iota= m_multigrid.project( m_chi);

@@ -38,7 +38,7 @@ struct Parameters
     double lx, ly;
     dg::bc bc_x, bc_y;
 
-    std::string init, equations, output, timestepper, source_rel, source_type, bgproftype;
+    std::string init, equations, output, timestepper, source_rel, source_type, source_shape, bgproftype;
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
         n  = ws["grid"].get("n", 5).asUInt();
@@ -85,7 +85,8 @@ struct Parameters
         mu[0] = ws["physical"].get("mu_e", -0.000272121).asDouble();
         mu[1] = 1.;
         
-        source_type = ws["source"].get("source_type", "zero-pol").asString();        
+        source_type = ws["source"].get("source_type", "zero-pol").asString();
+        source_shape = ws["source"].get("source_shape", "cauchy").asString();
         source_rel = ws["source"].get("source_rel", "zero-pol").asString();        
         omega_s = ws["source"].get("omega_s", 0.05).asDouble();
         xfac_s = ws["source"].get("xfac_s", 0.1).asDouble();
