@@ -7,15 +7,15 @@
      "tableau": "Bogacki-Shampine-4-2-3", 
      //"type": "multistep",
      //"tableau": "TVB-3-3",
-     "rtol": 1e-6,
+     "rtol": 1e-5,
      "atol": 1e-10,
-     "dt": 4.0
+     "dt": 1   
      }, 
 "output": 
     {
     "type": "glfw", 
     "itstp": 1, 
-    "maxout": 1000000, 
+    "maxout": 2e6, 
     "n": 3, 
     "Nx": 64, 
     "Ny": 32
@@ -23,13 +23,13 @@
 "elliptic": 
     {
     "stages": 3, 
-    "eps_pol": [1e-7, 1.0,1.0], 
+    "eps_pol": [1e-6, 1.0,1.0], 
     "jumpfactor": 1
     },
 "helmholtz": 
     {
-     "eps_gamma1": 1e-7, 
-     "eps_gamma0": 1e-7, 
+     "eps_gamma1": 1e-6, 
+     "eps_gamma0": 1e-6, 
      "maxiter_sqrt": 500, 
      "maxiter_cauchy": 30, 
      "eps_cauchy": 1e-12
@@ -39,31 +39,31 @@
     "curvature": 0.00015, 
     "tau"  : 1.0,  
     "alpha"  : 0.005, 
-    "lambda"  : 0.000001, 
+    "lambda"  : 5e-4, 
     "mu_e"  : -0.000272121, 
-    "equations": "ff-lwl", 
+    "equations": "ff-lwl-OB", 
     "xfac_sep"  : 0.5, 
     "sigma_sep"  : 1.0
     },
 "source":
     {
-     "source_type" : "forced", 
+     "source_type" : "flux", 
      "source_rel" : "finite-pol", 
-     "omega_s" : 0.00,
-     "xfac_s": 0.3,
-     "sigma_s" : 5.0
+     "omega_s" : 0.055,
+     "xfac_s": 0.05,
+     "sigma_s" : 8.0
     },
 "profile":
     {
      "bgproftype": "exp",
      "bgprofamp" : 1.0,
-     "profamp": 1.0,
+     "profamp": 0.0,
      "ln": 32.0
      },
 "init": 
     {
     "type": "bath", 
-    "amplitude": 0.01, 
+    "amplitude": 0.1, 
     "my": 1.0, 
     "sigma": 5.0, 
     "posX": 0.5, 
@@ -73,6 +73,6 @@
     },
 "nu_perp": 1e-03, 
 "bc_x": "DIR_NEU", 
-"bc_N_x": "DIR_NEU", 
+"bc_N_x": "NEU", 
 "bc_y": "PER"
 }
