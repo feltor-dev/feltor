@@ -85,6 +85,9 @@ class LGMRES
         // m+k+1 orthogonal basis vectors:
         m_V.assign(m_krylovDimension+1,copyable);
         m_W.assign(m_krylovDimension,nullptr);
+        m_Vptr.assign(m_krylovDimension+1,nullptr);
+        for( unsigned i=0; i<m_krylovDimension+1; i++)
+            m_Vptr[i] = &m_V[i];
         // k augmented pairs
         m_outer_w.assign(m_outer_k,copyable);
         m_outer_Az.assign(m_outer_k,copyable);
@@ -104,9 +107,9 @@ class LGMRES
     ///@brief Set the number of restarts
     ///@param new_Restarts New maximum number of restarts
     void set_max( unsigned new_Restarts) {m_maxRestarts = new_Restarts;}
-    ///@brief Get the current maximum number of iterations
-    ///@return the current maximum
-    unsigned get_maxRestarts() const {return m_maxRestarts;}
+    ///@brief Get the current maximum number of restarts
+    ///@return the current maximum of restarts
+    unsigned get_max() const {return m_maxRestarts;}
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_tmp;}
@@ -139,38 +142,6 @@ class LGMRES
   private:
     // this summation is numerically preferable over axpby's
     // does not influence performance because it is only called on every restart
-    void summation( std::vector<value_type>& alpha, const std::vector<ContainerType>& v, value_type beta, ContainerType& result, unsigned size)
-    {
-        dg::blas1::scal( result, beta);
-        unsigned i=0;
-        if( size >= 8)
-            for( i=0; i<size/8; i++)
-                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
-                        alpha[i*8+0], v[i*8+0],
-                        alpha[i*8+1], v[i*8+1],
-                        alpha[i*8+2], v[i*8+2],
-                        alpha[i*8+3], v[i*8+3],
-                        alpha[i*8+4], v[i*8+4],
-                        alpha[i*8+5], v[i*8+5],
-                        alpha[i*8+6], v[i*8+6],
-                        alpha[i*8+7], v[i*8+7]);
-        unsigned l=0;
-        if( size%8 >= 4)
-            for( l=0; l<(size%8)/4; l++)
-                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
-                        alpha[i*8+l*4+0], v[i*8+l*4+0],
-                        alpha[i*8+l*4+1], v[i*8+l*4+1],
-                        alpha[i*8+l*4+2], v[i*8+l*4+2],
-                        alpha[i*8+l*4+3], v[i*8+l*4+3]);
-        unsigned k=0;
-        if( (size%8)%4 >= 2)
-            for( k=0; k<((size%8)%4)/2; k++)
-                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
-                        alpha[i*8+l*4+k*2+0], v[i*8+l*4+k*2+0],
-                        alpha[i*8+l*4+k*2+1], v[i*8+l*4+k*2+1]);
-        if( ((size%8)%4)%2 == 1)
-            dg::blas1::axpby( alpha[i*8+l*4+k*2], v[i*8+l*4+k*2], 1., result);
-    }
     void summation( std::vector<value_type>& alpha, const std::vector<const ContainerType*>& v, value_type beta, ContainerType& result, unsigned size)
     {
         dg::blas1::scal( result, beta);
@@ -210,7 +181,7 @@ class LGMRES
     std::vector<std::vector<value_type>> m_H, m_HH, m_givens;
     ContainerType m_tmp, m_dx, m_residual;
     std::vector<ContainerType> m_V, m_outer_w, m_outer_Az;
-    std::vector<ContainerType const*> m_W;
+    std::vector<ContainerType const*> m_W, m_Vptr;
     std::vector<value_type> m_s;
     unsigned m_maxRestarts, m_inner_m, m_outer_k, m_krylovDimension;
 };
@@ -383,7 +354,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
                 for( unsigned k=0; k<m_krylovDimension; k++)
                     coeffs[i] += m_HH[i][k]*m_s[k];
             }
-            summation( coeffs, m_V, 0., m_outer_Az[0], m_krylovDimension+1);
+            summation( coeffs, m_Vptr, 0., m_outer_Az[0], m_krylovDimension+1);
         }
 
         restartCycle ++;
