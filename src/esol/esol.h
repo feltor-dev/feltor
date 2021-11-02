@@ -168,7 +168,6 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     if(p.source_type == "flux") {
         if (p.source_shape == "cauchy"){
             m_source = dg::evaluate( dg::CauchyX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
-//         m_source = dg::evaluate( dg::GaussianX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
         }
         else if (p.source_shape == "gaussian"){
             m_source = dg::evaluate( dg::GaussianX( p.xfac_s*p.lx, p.sigma_s, p.omega_s)  , grid);
