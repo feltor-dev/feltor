@@ -11,14 +11,14 @@
      "dt": 0.012326525515798496
      }, 
 "output": 
-    {"type": "glfw", "itstp": 1, "maxout": 10, "n": 5, "Nx": 32, "Ny": 32}, 
+    {"type": "glfw", "itstp": 10, "maxout": 10, "n": 5, "Nx": 32, "Ny": 32}, 
 "elliptic": 
     {"stages": 3, "eps_pol": [1e-08, 1.0,1.0], "jumpfactor": 1},
 "helmholtz": 
     {"eps_gamma1": 1e-08, "eps_gamma0": 1e-8, "maxiter_sqrt": 500, "maxiter_cauchy": 30, "eps_cauchy": 1e-12}, 
 "physical": 
-    {"curvature": 0.00015, "tau": 4.0, "equations": "ff-O2"}, 
+    {"curvature": 0.00015, "tau": 4.0, "equations": "ff-lwl"}, 
 "init": 
     {"type": "blob_zeropol", "amplitude": 1.0, "sigma": 5.0, "posX": 0.5, "posY": 0.5}, 
-"nu_perp": 6.8465319688145758e-05, "bc_x": "DIR", "bc_y": "PER"
+"nu_perp": 6.8465319688145758e-05, "bc_x": "PER", "bc_y": "PER"
 }
