@@ -131,6 +131,13 @@ int main()
         dg::blas1::subroutine( test_inplace(), x, y, z, u, v);
     t.toc();
     std::cout<<"Subroutine ( G Cdot x = x)       "<<t.diff()/multi<<"s\t"<<7*gbytes*multi/t.diff()<<"GB/s\n";
+    std::vector<ArrayVec> matrix( 10, x);
+    std::vector<value_type> coeffs( 10, 0.5);
+    t.tic();
+    for( int i=0; i<multi/10; i++)
+        dg::blas2::symv( 1., dg::asDenseMatrix(matrix), coeffs, 0.,  x);
+    t.toc();
+    std::cout<<"Dense Matrix Symv (Mc = x)       "<<t.diff()/multi/10<<"s\t"<<32*gbytes*multi/10/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
     std::cout<<"\nLocal communication\n";
     Matrix M;

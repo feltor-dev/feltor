@@ -890,6 +890,7 @@ EXCLUDE                = topology/ell_interpolation.cuh \
                          backend/blas1_dispatch_shared.h \
                          backend/blas1_dispatch_vector.h \
                          backend/blas2_cusp.h \
+                         backend/blas2_densematrix.h \
                          backend/blas2_dispatch_mpi.h \
                          backend/blas2_dispatch_scalar.h \
                          backend/blas2_dispatch_shared.h \
@@ -897,6 +898,9 @@ EXCLUDE                = topology/ell_interpolation.cuh \
                          backend/blas2_selfmade.h \
                          backend/blas2_sparseblockmat.h \
                          backend/config.h \
+                         backend/densematrix_serial.h\
+                         backend/densematrix_omp.h\
+                         backend/densematrix_cuda.h\
                          backend/predicate.h \
                          backend/sparseblockmat_gpu_kernels.cuh \
                          backend/sparseblockmat_omp_kernels.h \

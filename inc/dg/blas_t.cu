@@ -44,6 +44,7 @@ int main()
     dg::blas1::plus( dvec1, 1);
     std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
+    std::cout << dvec1[0]<< " "<<array_w[2][0]<<"\n";
     dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
     std::cout << "Example in documentation          "<< (dvec1[0] ==374)<<std::endl;
     dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
@@ -64,6 +65,9 @@ int main()
     std::array<std::vector<dg::DVec>,1> recursive{ arrdvec1};
     dg::blas2::symv( arrdvec1[0], recursive, recursive);
     std::cout << "symv deep Recursion               "<<( recursive[0][0][0] == 52*52) << std::endl;
+    dg::blas2::symv( 0.5, dg::asDenseMatrix(arrdvec1),
+            std::array<double,3>({0.1, 10, 1000}), 0.001, dvec1);
+    std::cout << "symv as DenseMatrix               "<<( dvec1[0] == 66462.974) << std::endl;
 
     return 0;
 }

@@ -48,10 +48,14 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
     if(rank==0)std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0].data()[0] == 26 && arrdvec1[1].data()[0]==46.)<<std::endl;
     // test the examples in the documentation
+    dg::blas1::plus( dvec1, 1);
     std::array<dg::MDVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
+    if(rank==0)std::cout << dvec1.data()[0]<< " "<<array_w[2].data()[0]<<"\n";
+    dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
+    if(rank==0)std::cout << "Example in documentation          "<< (dvec1.data()[0] ==374)<<std::endl;
     dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
-    if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 110 && array_v[1].data()[1] == 820)<<std::endl;
+    if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 132 && array_v[1].data()[1] == 903)<<std::endl;
     if(rank==0)std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
     if(rank==0)std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";
@@ -68,6 +72,9 @@ int main( int argc, char* argv[])
     std::array<std::vector<dg::MDVec>,1> recursive{ arrdvec1};
     dg::blas2::symv( arrdvec1[0], recursive, recursive);
     if(rank==0)std::cout << "symv deep Recursion               "<<( recursive[0][0].data()[0] == 52*52) << std::endl;
+    dg::blas2::symv( 0.5, dg::asDenseMatrix(arrdvec1),
+            std::array<double,3>({0.1, 10, 1000}), 0.001, dvec1);
+    if(rank==0)std::cout << "symv as DenseMatrix               "<<( dvec1.data()[0] == 66462.974) << std::endl;
     MPI_Finalize();
 
     return 0;

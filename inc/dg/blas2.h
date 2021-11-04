@@ -9,6 +9,7 @@
 #include "backend/blas2_cusp.h"
 #include "backend/blas2_sparseblockmat.h"
 #include "backend/blas2_selfmade.h"
+#include "backend/blas2_densematrix.h"
 #ifdef MPI_VERSION
 #include "backend/blas2_dispatch_mpi.h"
 #endif //MPI_VERSION

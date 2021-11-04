@@ -145,6 +145,9 @@ class LGMRES
     void summation( std::vector<value_type>& alpha, const std::vector<const ContainerType*>& v, value_type beta, ContainerType& result, unsigned size)
     {
         dg::blas1::scal( result, beta);
+        //// This takes almost 100 iterations more in tests !!!
+        //for( unsigned i=0; i<size; i++)
+        //    dg::blas1::axpby( alpha[i], *v[i], 1., result);
         unsigned i=0;
         if( size >= 8)
             for( i=0; i<size/8; i++)
@@ -209,7 +212,8 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
 	}
 
     // Finally update the approximation. V_m*s
-    summation( s, W, 0., dx, dimension+1);
+    //summation( s, W, 0., dx, dimension+1);
+    dg::blas2::symv( 1., dg::asDenseMatrix( &W[0], &W[dimension+1]), std::vector<value_type>( s.begin(), s.begin()+dimension+1), 0., dx);
     // right preconditioner
     dg::blas2::symv( P, dx, m_tmp);
     dg::blas1::axpby(1.,m_tmp,1.,x);
@@ -274,6 +278,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
                 m_HH[row][iteration] = m_H[row][iteration]
                     = dg::blas2::dot(m_V[iteration+1],S,m_V[row]);
                 dg::blas1::axpby(-m_H[row][iteration],m_V[row],1.,m_V[iteration+1]);
+
 			}
             m_HH[iteration+1][iteration] = m_H[iteration+1][iteration]
                 = sqrt(dg::blas2::dot(m_V[iteration+1],S,m_V[iteration+1]));
@@ -352,9 +357,10 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             {
                 coeffs[i] = 0.;
                 for( unsigned k=0; k<m_krylovDimension; k++)
-                    coeffs[i] += m_HH[i][k]*m_s[k];
+                    coeffs[i] = DG_FMA( m_HH[i][k],m_s[k], coeffs[i]);
             }
-            summation( coeffs, m_Vptr, 0., m_outer_Az[0], m_krylovDimension+1);
+            //summation( coeffs, m_Vptr, 0., m_outer_Az[0], m_krylovDimension+1);
+            dg::blas2::symv( 1., dg::asDenseMatrix( m_Vptr), coeffs, 0., m_outer_Az[0]);
         }
 
         restartCycle ++;

@@ -24,8 +24,10 @@ struct SelfMadeMatrixTag: public AnyMatrixTag {};
 struct CuspMatrixTag: public AnyMatrixTag {};
 /// indicate one of our mpi matrices
 struct MPIMatrixTag: public AnyMatrixTag {};
-/// indicate one of our mpi matrices
+/// indicate our sparse block matrix format
 struct SparseBlockMatrixTag: public AnyMatrixTag {};
+/// indicate our dense matrix format
+struct DenseMatrixTag: public AnyMatrixTag {};
 
 }//namespace dg
 
