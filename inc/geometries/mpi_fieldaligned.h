@@ -28,7 +28,14 @@ void sendForward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) 
     MPI_Cart_shift( comm, 2, +1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
-        cudaDeviceSynchronize();//wait until device functions are finished before sending data
+    {
+        cudaError_t code = cudaGetLastError( );
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+        code = cudaDeviceSynchronize(); //wait until device functions are finished before sending data
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    }
 #endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
     MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
@@ -46,7 +53,14 @@ void sendBackward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm)
     MPI_Cart_shift( comm, 2, -1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
-        cudaDeviceSynchronize();//wait until device functions are finished before sending data
+    {
+        cudaError_t code = cudaGetLastError( );
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+        code = cudaDeviceSynchronize(); //wait until device functions are finished before sending data
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    }
 #endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
     MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender

@@ -326,13 +326,20 @@ struct NearestNeighborComm
     if( std::is_same< get_execution_policy<Vector>, CudaTag>::value ) //could be serial tag
     {
         unsigned size = buffer_size();
-        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
+        cudaError_t code = cudaGetLastError( );
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
                     thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]), //src
                     size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
 
-        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
                     thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]), //src
                     size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
     }
 #endif
     }
@@ -481,7 +488,12 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_t
         unsigned size = buffer_size();
         thrust::gather( thrust::cuda::tag(), m_gather_map_middle.begin(), m_gather_map_middle.end(), input, m_internal_buffer.data().begin()+size);
     }
-    cudaDeviceSynchronize(); //wait until device functions are finished before sending data
+    cudaError_t code = cudaGetLastError( );
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    code = cudaDeviceSynchronize(); //wait until device functions are finished before sending data
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
 }
 #endif
 
@@ -492,10 +504,17 @@ void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_poi
 #ifdef _DG_CUDA_UNAWARE_MPI
     if( std::is_same< get_execution_policy<V>, CudaTag>::value ) //could be serial tag
     {
-        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
+        cudaError_t code = cudaGetLastError( );
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
             sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-        cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
             sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
+        if( code != cudaSuccess)
+            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
         sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
         sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
         rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
