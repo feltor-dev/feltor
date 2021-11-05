@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
     std::array<std::vector<dg::MDVec>,1> recursive{ arrdvec1};
     dg::blas2::symv( arrdvec1[0], recursive, recursive);
     if(rank==0)std::cout << "symv deep Recursion               "<<( recursive[0][0].data()[0] == 52*52) << std::endl;
-    dg::blas2::symv( 0.5, dg::asDenseMatrix(arrdvec1),
+    dg::blas2::symv( 0.5, dg::asDenseMatrix(dg::asPointers(arrdvec1)),
             std::array<double,3>({0.1, 10, 1000}), 0.001, dvec1);
     if(rank==0)std::cout << "symv as DenseMatrix               "<<( dvec1.data()[0] == 66462.974) << std::endl;
     MPI_Finalize();

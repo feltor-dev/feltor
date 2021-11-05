@@ -213,7 +213,7 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
 
     // Finally update the approximation. V_m*s
     //summation( s, W, 0., dx, dimension+1);
-    dg::blas2::symv( 1., dg::asDenseMatrix( &W[0], &W[dimension+1]), std::vector<value_type>( s.begin(), s.begin()+dimension+1), 0., dx);
+    dg::blas2::symv( 1., dg::asDenseMatrix( W, dimension+1), std::vector<value_type>( s.begin(), s.begin()+dimension+1), 0., dx);
     // right preconditioner
     dg::blas2::symv( P, dx, m_tmp);
     dg::blas1::axpby(1.,m_tmp,1.,x);

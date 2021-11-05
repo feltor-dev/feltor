@@ -66,21 +66,28 @@ void doDenseSymv_gpu(unsigned num_rows, unsigned num_cols, T alpha,
 }
 
 
-template<class T, class Vector1>
+template<class Vector0, class Vector1, class T>
 void doDenseSymv(CudaTag, unsigned num_rows, unsigned num_cols, T alpha,
-        const std::vector<const T*>& m_ptr, const Vector1& x,
-        T beta, T* y)
+        const std::vector<const Vector0*>& matrix, const Vector1& x,
+        T beta, T* y_ptr)
 {
     constexpr unsigned NBFPE = 2;
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((num_rows-1)/BLOCK_SIZE+1, 65000);
-    thrust::device_vector<const T*> m_dev( m_ptr.begin(), m_ptr.end());
+
+    using value_type = get_value_type<Vector0>;
+
     thrust::device_vector<T> x_dev( x.begin(), x.end());
     T* x_ptr = thrust::raw_pointer_cast( x_dev.data());
-    thrust::device_vector<T> m_dev0( m_dev[0]+0, m_dev[0]+3);
+
+    std::vector<const value_type *> m_ptr( num_cols, nullptr);
+    for( unsigned i=0; i<num_cols; i++)
+        m_ptr[i] = thrust::raw_pointer_cast( matrix[i]->data());
+
+    thrust::device_vector<const value_type*> m_dev( m_ptr.begin(), m_ptr.end());
     T const * const * m_dev_ptr = thrust::raw_pointer_cast( m_dev.data());
     doDenseSymv_gpu<T,NBFPE><<<NUM_BLOCKS, BLOCK_SIZE>>>(num_rows, num_cols,
-            alpha, m_dev_ptr, x_ptr, beta, y);
+            alpha, m_dev_ptr, x_ptr, beta, y_ptr);
 }
 
 }//namespace detail

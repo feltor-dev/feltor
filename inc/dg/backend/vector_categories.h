@@ -64,8 +64,8 @@ struct MPIVectorTag     : public AnyVectorTag {};
  * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is the inner type and N is the size of the array
  */
 struct RecursiveVectorTag  : public AnyVectorTag {};
-
-struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of containers
+struct RecursiveScalarTag : public RecursiveVectorTag {};
+struct ArrayVectorTag  : public RecursiveVectorTag {};
 
 /**
  * @brief Indicate thrust/std - like behaviour
@@ -89,7 +89,6 @@ struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of con
  */
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays
-struct StdArrayTag      : public ThrustVectorTag {}; //!< <tt> std::array< primitive_type, N> </tt>
 
 }//namespace dg
 

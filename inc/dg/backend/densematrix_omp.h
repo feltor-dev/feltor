@@ -8,9 +8,9 @@
 namespace dg{
 namespace blas2{
 namespace detail{
-template<class T, unsigned NBFPE>
-void doDenseSymv_omp(unsigned num_rows, unsigned num_cols, T alpha, const
-        std::vector<const T*>& m_ptr, const T* RESTRICT x,
+template<class Vector0, class T, unsigned NBFPE>
+void doDenseSymv_omp(unsigned num_rows, unsigned num_cols, T alpha,
+        const std::vector<const Vector0*>& matrix, const T* RESTRICT x,
         T beta, T* RESTRICT y)
 {
 #pragma omp for nowait
@@ -19,7 +19,7 @@ void doDenseSymv_omp(unsigned num_rows, unsigned num_cols, T alpha, const
         T fpe [NBFPE] = {0};
         for( unsigned k=0; k<num_cols; k++)
         {
-            T a = m_ptr[k][i];
+            T a = (*matrix[k])[i];
             T b = x[ k];
             AccumulateFPE<T,NBFPE>( a,b, fpe);
         }
@@ -37,23 +37,23 @@ void doDenseSymv_omp(unsigned num_rows, unsigned num_cols, T alpha, const
     }
 }
 
-template<class T, class Vector1>
-void doDenseSymv(OmpTag, unsigned num_rows, unsigned num_cols, T alpha, const
-        std::vector<const T*>& m_ptr, const Vector1& x,
+template<class Vector0, class Vector1, class T>
+void doDenseSymv(OmpTag, unsigned num_rows, unsigned num_cols, T alpha,
+        const std::vector<const Vector0*>& m_ptr, const Vector1& x,
         T beta, T* RESTRICT y)
 {
     constexpr unsigned NBFPE = 2;
     const T* x_ptr = x.data();
     if(omp_in_parallel())
     {
-        doDenseSymv_omp<T,NBFPE>( num_rows, num_cols, alpha, m_ptr, x_ptr, beta, y);
+        doDenseSymv_omp<Vector0, T,NBFPE>( num_rows, num_cols, alpha, m_ptr, x_ptr, beta, y);
         return;
     }
     if(num_rows>dg::blas1::detail::MIN_SIZE)
     {
         #pragma omp parallel
         {
-            doDenseSymv_omp<T,NBFPE>( num_rows, num_cols, alpha, m_ptr, x_ptr, beta, y);
+            doDenseSymv_omp<Vector0,T,NBFPE>( num_rows, num_cols, alpha, m_ptr, x_ptr, beta, y);
         }
     }
     else

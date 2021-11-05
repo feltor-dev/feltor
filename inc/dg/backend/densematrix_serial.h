@@ -35,9 +35,9 @@ void AccumulateFPE( T a, T b, T* fpe)
     fpe[NBFPE-1] += s; // we throw away the rest
 }
 
-template<class T, class Vector1>
-void doDenseSymv(SerialTag, unsigned num_rows, unsigned num_cols, T alpha, const
-        std::vector<const T*>& m_ptr, const Vector1& x,
+template<class Vector0, class Vector1, class T>
+void doDenseSymv(SerialTag, unsigned num_rows, unsigned num_cols, T alpha,
+        const std::vector<const Vector0*>& matrix, const Vector1& x,
         T beta, T* RESTRICT y)
 {
     constexpr unsigned NBFPE = 2;
@@ -46,7 +46,7 @@ void doDenseSymv(SerialTag, unsigned num_rows, unsigned num_cols, T alpha, const
         T fpe [NBFPE] = {0};
         for( unsigned k=0; k<num_cols; k++)
         {
-            T a = m_ptr[k][i];
+            T a = (*matrix[k])[i];
             T b = x[k];
             AccumulateFPE<T,NBFPE>( a,b, fpe);
         }
