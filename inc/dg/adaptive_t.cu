@@ -122,6 +122,7 @@ int main()
         dg::Adaptive< dg::DIRKStep<
             std::array<double,2>, dg::FixedPointSolver<std::array<double,2> > > >
                 pd( name, u_start, 100, 1e-14);
+        pd.stepper().solver().set_benchmark(false);
         counter = integrateAdaptive( pd, functor, t_start, u_start, t_end,
             u_end, dt, dg::im_control, dg::l2norm, 1e-6, 1e-10);
 

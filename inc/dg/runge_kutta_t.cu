@@ -149,7 +149,9 @@ int main()
     {
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::ImplicitRungeKutta<std::array<double,2>, dg::FixedPointSolver<std::array<double,2>> > irk( name, u, 100, 1e-14);
+        dg::ImplicitRungeKutta<std::array<double,2>,
+            dg::FixedPointSolver<std::array<double,2>> > irk( name, u, 100, 1e-14);
+        irk.solver().set_benchmark(false);
         double t=t_start;
         for( unsigned i=0; i<N_im; i++)
             irk.step( functor, t, u1, t, u1, dt_im); //step inplace
