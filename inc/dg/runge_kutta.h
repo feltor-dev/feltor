@@ -639,8 +639,15 @@ struct DIRKStep
          m_solver( std::forward<SolverParams>(ps)...),
          m_rhs( m_solver.copyable()),
          m_rkI(im_tableau),
-         m_kI(m_rkI.num_stages(), m_rhs)
+         m_kI(m_rkI.num_stages(), m_rhs),
+         m_kIptr( asPointers( m_kI))
     {
+        m_rkIb.resize(m_kI.size()), m_rkId.resize(m_kI.size());
+        for( unsigned i=0; i<m_kI.size(); i++)
+        {
+            m_rkIb[i] = m_rkI.b(i);
+            m_rkId[i] = m_rkI.d(i);
+        }
     }
 
     /*!@brief Construct with a diagonally implicit Butcher Tableau
@@ -704,6 +711,8 @@ struct DIRKStep
     ContainerType m_rhs;
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
+    std::vector<value_type> m_rkIb, m_rkId;
+    std::vector<const ContainerType*> m_kIptr;
 };
 
 ///@cond
@@ -721,81 +730,23 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
         m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
     rhs(tu, delta, m_kI[0]);
 
-    //1 stage
-    if( s>1){
-        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
-                dt*m_rkI.a(1,0), m_kI[0]);
-        tu = DG_FMA( m_rkI.c(1),dt, t0);
-        //store solution in delta, init with last solution
+    for( unsigned i=1; i<s; i++)
+    {
+        tu = DG_FMA( m_rkI.c(i),dt, t0);
+        dg::blas1::copy( u0, m_rhs);
+        std::vector<value_type> coeffs( i);
+        for( unsigned l=0; l<i; l++)
+            coeffs[l] = m_rkI.a(i,l);
+        dg::blas2::symv( dt, dg::asDenseMatrix(m_kIptr,i), coeffs, 1., m_rhs);
         blas1::copy( m_rhs, delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(1,1), rhs, tu, delta, m_rhs);
-        rhs(tu, delta, m_kI[1]);
-    }
-    //2 stage
-    if( s>2){
-        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
-                 dt*m_rkI.a(2,0), m_kI[0],
-                 dt*m_rkI.a(2,1), m_kI[1]);
-        tu = DG_FMA( m_rkI.c(2),dt, t0);
-        //just take last solution as init
-        blas1::copy( m_rhs, delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(2,2), rhs, tu, delta, m_rhs);
-        rhs(tu, delta, m_kI[2]);
-    }
-    //3 stage and higher
-    if( s>3){
-        blas1::evaluate( m_rhs, dg::equals(), PairSum(), 1., u0,
-                 dt*m_rkI.a(3,0), m_kI[0],
-                 dt*m_rkI.a(3,1), m_kI[1],
-                 dt*m_rkI.a(3,2), m_kI[2]);
-        tu = DG_FMA( m_rkI.c(3),dt, t0);
-        blas1::copy( m_rhs, delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(3,3), rhs, tu, delta, m_rhs);
-        rhs(tu, delta, m_kI[3]);
-        for( unsigned i=4; i<s; i++)
-        {
-            dg::blas1::copy( u0, m_rhs);
-            for( unsigned j=0; j<i; j++)
-                dg::blas1::axpby( dt*m_rkI.a(i,j), m_kI[j], 1., m_rhs);
-            tu = DG_FMA( m_rkI.c(i),dt, t0);
-            blas1::copy( m_rhs, delta); //better init with rhs
-            m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
-            rhs(tu, delta, m_kI[i]);
-        }
+        m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
+        rhs(tu, delta, m_kI[i]);
     }
     t1 = t0 + dt;
     //Now compute result and error estimate
-    switch( s)
-    {
-        case 1: blas1::subroutine( dg::EmbeddedPairSum(),
-                            u1, delta,
-                            1., 0., u0,
-                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0]); break;
-        case 2: blas1::subroutine( dg::EmbeddedPairSum(),
-                            u1, delta,
-                            1., 0., u0,
-                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
-                            dt*m_rkI.b(1), dt*m_rkI.d(1), m_kI[1]); break;
-        case 3: blas1::subroutine( dg::EmbeddedPairSum(),
-                            u1, delta,
-                            1., 0., u0,
-                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
-                            dt*m_rkI.b(1), dt*m_rkI.d(1), m_kI[1],
-                            dt*m_rkI.b(2), dt*m_rkI.d(2), m_kI[2]); break;
-        default: blas1::subroutine( dg::EmbeddedPairSum(),
-                            u1, delta,
-                            1., 0., u0,
-                            dt*m_rkI.b(0), dt*m_rkI.d(0), m_kI[0],
-                            dt*m_rkI.b(1), dt*m_rkI.d(1), m_kI[1],
-                            dt*m_rkI.b(2), dt*m_rkI.d(2), m_kI[2],
-                            dt*m_rkI.b(3), dt*m_rkI.d(3), m_kI[3]);
-            //sum the rest
-            for( unsigned i=4; i<s; i++)
-            {
-                dg::blas1::axpby( dt*m_rkI.b(i), m_kI[i], 1., u1);
-                dg::blas1::axpby( dt*m_rkI.d(i), m_kI[i], 1., delta);
-            }
-    }
+    dg::blas1::copy( u0, u1);
+    dg::blas2::symv( dt, dg::asDenseMatrix( m_kIptr), m_rkIb, 1., u1);
+    dg::blas2::symv( dt, dg::asDenseMatrix( m_kIptr), m_rkId, 0., delta);
 }
 ///@endcond
 /**

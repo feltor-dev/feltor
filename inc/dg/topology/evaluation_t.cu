@@ -151,6 +151,20 @@ int main()
     std::cout << " 0 1 2 ="<<minmod( 0,1,2)<< " (0) "<<std::endl;
     std::cout << " -1 1 2 ="<<minmod( -1,1,2)<< " (0) "<<std::endl;
     std::cout << " -5 -3 -2 ="<<minmod( -5,-3,-2)<< " (-2) "<<std::endl;
+    std::cout << "Test accuracy Dense Matrix\n";
+    // massage a scalar product into dg::blas2::symv
+    const dg::HVec func_h = dg::evaluate( function<double>, g2d);
+    const dg::DVec w_h = dg::create::weights( g2d);
+    std::vector<dg::DVec> matrix( func_h.size());
+    for( unsigned i=0; i<func_h.size(); i++)
+        matrix[i] = dg::DVec( 1, func_h[i]);
+    dg::DVec integral_d( 1);
+    dg::blas2::symv( 1., dg::asDenseMatrix( dg::asPointers( matrix)), w_h,
+            0., integral_d);
+    res.d = integral_d[0];
+    std::cout << "2D integral               "<<std::setw(6)<<res.d <<"\t" << res.i + 4823280491526356992<< "\n";
+    std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
+    std::cout << "2d error is               "<<(res.d-sol2d)<<"\n\n";
 
     std::cout << "\nFINISHED! Continue with topology/derivatives_t.cu !\n\n";
     return 0;

@@ -14,8 +14,8 @@ __device__
 inline T gpuKnuthTwoFMA(T a, T b, T c, T & s)
 {
     T r = __fma_rn( a,b,c);
-    T z = r - c;
-    s = (c - (r - z)) + __fma_rn( a,b, -z);
+    T z = __fma_rn( 1., r,  - c);
+    s = __fma_rn(1., c - __fma_rn(1., r, - z) , __fma_rn( a,b, -z));
     return r;
 }
 
@@ -23,13 +23,24 @@ template<class T, unsigned NBFPE>
 __device__
 void gpuAccumulateFPE( T a, T b, T* fpe)
 {
-    T s;
-    fpe[0] = gpuKnuthTwoFMA( a, b, fpe[0], s);
-    for(unsigned i = 1; i != NBFPE-1; ++i) {
-        T x = s;
-        fpe[i] = dg::exblas::gpu::KnuthTwoSum(x, fpe[i], &s);
+    // MW : let's make it consistent with exdot
+    T x = a*b;
+#pragma unroll
+    for(unsigned i = 0; i != NBFPE; ++i) {
+        T s = 0;
+        //MW: this if is important because TwoSum does not work well for 0
+        if( fpe[i] == 0)
+            fpe[i] = x;
+        else
+            fpe[i] = gpuKnuthTwoFMA( 1.,fpe[i],x, s);
+        x = s;
     }
-    fpe[NBFPE-1] += s; // we throw away the rest
+    //fpe[0] = gpuKnuthTwoFMA( a, b, fpe[0], s);
+    //for(unsigned i = 1; i != NBFPE-1; ++i) {
+    //    T x = s;
+    //    fpe[i] = gpuKnuthTwoFMA(1., x, fpe[i], s);
+    //}
+    //fpe[NBFPE-1] += s; // we throw away the rest
 }
 
 

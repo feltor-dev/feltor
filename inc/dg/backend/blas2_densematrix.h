@@ -34,26 +34,7 @@ inline void doSymv_dispatch(
     if( size_x != m.num_cols()) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
     }
-    constexpr unsigned NBFPE = 2;
-    using T = get_value_type<Vector1>;
-    T fpe [NBFPE] = {0};
-    for( unsigned k=0; k<size_x; k++)
-    {
-        T a = (*m.get()[k]);
-        T b = x[k];
-        AccumulateFPE<T,NBFPE>( a,b, fpe);
-    }
-    // multiply fpe with alpha
-    T fpe2 [NBFPE] = {0};
-    for( unsigned k=0; k<NBFPE; k++)
-        AccumulateFPE<T,NBFPE>( alpha, fpe[k], fpe2);
-    // Finally add beta*y
-    AccumulateFPE<T,NBFPE>( beta, y, fpe2);
-    // Finally sum up everything starting with smallest value
-    y = 0;
-    for( int k=(int)NBFPE-1; k>=0; k--)
-        // round to nearest
-        y = y + fpe2[k];
+    doDenseSymv_scalar( m.num_cols(), alpha, m.get(), x, beta, y);
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -68,7 +49,6 @@ inline void doSymv_dispatch(
               AnyPolicyTag)
 {
     using value_type = get_value_type<Vector1>;
-
     unsigned size_x = x.size();
     unsigned size_y = y.size();
     if( size_x != m.num_cols()) {
