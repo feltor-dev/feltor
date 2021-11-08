@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include "predicate.h"
-#include "blas1_serial.h"
 
 namespace dg
 {
@@ -56,13 +55,6 @@ auto asDenseMatrix( const std::vector<const ContainerType*>& in, unsigned size)
 {
     return DenseMatrix<ContainerType>(in, size);
 }
-template<class ContainerType0, class ...ContainerTypes>
-auto asDenseMatrix( const ContainerType0& v0, const ContainerTypes& ...vs)
-{
-    using CT = std::common_type_t<ContainerType0, ContainerTypes...>;
-    std::vector<const CT*> vec{ &v0, &vs...};
-    return dg::DenseMatrix<CT>( vec);
-}
 
 template<class ContainerType>
 std::vector<const ContainerType*> asPointers( const std::vector<ContainerType>& in)
@@ -72,17 +64,5 @@ std::vector<const ContainerType*> asPointers( const std::vector<ContainerType>& 
         ptrs[i] = &in[i];
     return ptrs;
 }
-
-
-
-template<class ContainerType>
-DenseMatrix<ContainerType> asDenseMatrix( ContainerType const* begin, ContainerType const* end)
-{
-    std::vector<ContainerType const*> in;
-    for( auto it = begin; it < end; it++)
-        in.push_back( it);
-    return DenseMatrix<ContainerType>( in);
-}
-//
 
 } // namespace dg

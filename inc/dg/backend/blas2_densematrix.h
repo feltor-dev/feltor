@@ -1,177 +1,10 @@
 #pragma once
 
 #include "densematrix.h"
-#include "densematrix_serial.h"
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-#include "densematrix_cuda.cuh"
-#else
-#include "densematrix_omp.h"
-#endif
 
 namespace dg{
 namespace blas2{
 namespace detail{
-//forward declare
-template< class Matrix, class Vector1, class Vector2>
-void doSymv(  get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag);
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv_dispatch(
-              get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag,
-              ScalarTag,
-              AnyPolicyTag)
-{
-    unsigned size_x = x.size();
-    if( size_x != m.num_cols()) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
-    }
-    doDenseSymv_scalar( m.num_cols(), alpha, m.get(), x, beta, y);
-}
-
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv_dispatch(
-              get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag,
-              RecursiveScalarTag,
-              AnyPolicyTag)
-{
-    using value_type = get_value_type<Vector1>;
-    unsigned size_x = x.size();
-    unsigned size_y = y.size();
-    if( size_x != m.num_cols()) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
-    }
-    if( size_y != m[0]->size()) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m[0]->size());
-    }
-    value_type * y_ptr = thrust::raw_pointer_cast(y.data());
-    doDenseSymv( SerialTag(), size_y, size_x,
-            alpha, m.get(), x, beta, y_ptr);
-}
-
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv_dispatch(
-              get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag,
-              SharedVectorTag,
-              AnyPolicyTag)
-{
-    using value_type = get_value_type<Vector1>;
-
-    unsigned size_x = x.size();
-    unsigned size_y = y.size();
-    if( size_x != m.num_cols()) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
-    }
-    if( size_y != m[0]->size()) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m[0]->size());
-    }
-    value_type * y_ptr = thrust::raw_pointer_cast(y.data());
-    doDenseSymv( get_execution_policy<Vector2>(), size_y, size_x,
-            alpha, m.get(), x, beta, y_ptr);
-}
-
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv_dispatch(
-              get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag,
-              RecursiveVectorTag,
-              AnyPolicyTag)
-{
-    using inner_vector = std::vector<const typename
-        std::decay_t<Matrix>::container_type::value_type*>;
-    // Commute std::vector with DenseMatrix
-    std::vector<inner_vector >
-        mtx(m[0]->size(), inner_vector( m.num_cols()));
-    for( unsigned i=0; i<m.num_cols(); i++)
-        for( unsigned k=0; k<m[0]->size(); k++)
-            mtx[k][i] = &((*m[i])[k]);
-
-    // x is a coefficients vector
-    for(unsigned i=0; i<y.size(); i++)
-        doSymv( alpha, asDenseMatrix(mtx[i]), x, beta, y[i],
-                DenseMatrixTag());
-}
-#ifdef _OPENMP
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv_dispatch(
-              get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag,
-              RecursiveVectorTag,
-              OmpTag)
-{
-    using inner_vector = std::vector<const typename
-        std::decay_t<Matrix>::container_type::value_type*>;
-    // Commute std::vector with DenseMatrix
-    std::vector<inner_vector >
-        mtx(m[0]->size(), inner_vector( m.num_cols()));
-    for( unsigned i=0; i<m.num_cols(); i++)
-        for( unsigned k=0; k<m[0]->size(); k++)
-            mtx[k][i] = &((*m[i])[k]);
-    if( !omp_in_parallel())
-    {
-        #pragma omp parallel
-        {
-            for(unsigned i=0; i<y.size(); i++)
-            {
-                doSymv( alpha, asDenseMatrix(mtx[i]), x, beta, y[i],
-                        DenseMatrixTag());
-            }
-        }
-    }
-    else
-        for(unsigned i=0; i<y.size(); i++)
-            doSymv( alpha, asDenseMatrix(mtx[i]), x, beta, y[i],
-                    DenseMatrixTag());
-}
-#endif//_OPENMP
-#ifdef MPI_VERSION
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv_dispatch(
-              get_value_type<Vector1> alpha,
-              Matrix&& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              DenseMatrixTag,
-              MPIVectorTag,
-              AnyPolicyTag)
-{
-    // Commute std::vector with DenseMatrix
-    std::vector<const typename std::decay_t<Matrix>::container_type::container_type *>
-        mtx(m.num_cols());
-    for( unsigned i=0; i<m.num_cols(); i++)
-        mtx[i] = &(m[i]->data());
-
-    doSymv( alpha, asDenseMatrix(mtx), x, beta, y.data(), DenseMatrixTag());
-}
-#endif //MPI_VERSION
-
 
 // symv will call this function first
 template< class Matrix, class Vector1, class Vector2>
@@ -194,11 +27,44 @@ inline void doSymv(
                             typename std::decay_t<Matrix>::container_type>,
                         get_tensor_category<Vector2>>::value,
                 "Dense Matrix and output Vector type must have same data layout");
-    doSymv_dispatch(alpha, std::forward<Matrix>(m), x, beta, y,
-            DenseMatrixTag(),
-            get_tensor_category<Vector2>(),
-            get_execution_policy<Vector2>()
-            );
+    unsigned size_x = x.size();
+    if( size_x != m.num_cols()) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
+    }
+    dg::blas1::scal( y, beta);
+    // naive summation
+    //for( unsigned i=0; i<size; i++)
+    //    dg::blas1::axpby( alpha[i], *m.get()[i], 1., y);
+    using value_type = get_value_type<Vector1>;
+    const unsigned size = m.num_cols();
+    unsigned i=0;
+    if( size >= 8)
+        for( i=0; i<size/8; i++)
+            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,1.), dg::PairSum(),
+                    x[i*8+0], *m.get()[i*8+0],
+                    x[i*8+1], *m.get()[i*8+1],
+                    x[i*8+2], *m.get()[i*8+2],
+                    x[i*8+3], *m.get()[i*8+3],
+                    x[i*8+4], *m.get()[i*8+4],
+                    x[i*8+5], *m.get()[i*8+5],
+                    x[i*8+6], *m.get()[i*8+6],
+                    x[i*8+7], *m.get()[i*8+7]);
+    unsigned l=0;
+    if( size%8 >= 4)
+        for( l=0; l<(size%8)/4; l++)
+            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,1.), dg::PairSum(),
+                    x[i*8+l*4+0], *m.get()[i*8+l*4+0],
+                    x[i*8+l*4+1], *m.get()[i*8+l*4+1],
+                    x[i*8+l*4+2], *m.get()[i*8+l*4+2],
+                    x[i*8+l*4+3], *m.get()[i*8+l*4+3]);
+    unsigned k=0;
+    if( (size%8)%4 >= 2)
+        for( k=0; k<((size%8)%4)/2; k++)
+            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,1.), dg::PairSum(),
+                    x[i*8+l*4+k*2+0], *m.get()[i*8+l*4+k*2+0],
+                    x[i*8+l*4+k*2+1], *m.get()[i*8+l*4+k*2+1]);
+    if( ((size%8)%4)%2 == 1)
+        dg::blas1::axpby( alpha*x[i*8+l*4+k*2], *m.get()[i*8+l*4+k*2], 1., y);
 }
 
 template< class Matrix, class Vector1, class Vector2>
